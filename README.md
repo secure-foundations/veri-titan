@@ -1,2 +1,1 @@
-# veri-titan
-Verifying OpenTitan
+# Verifying [OpenTitan](https://opentitan.org/)
