@@ -1,0 +1,194 @@
+
+IGNORE_DEPENDENCY_GRAPH?=
+ifeq ($(IGNORE_DEPENDENCY_GRAPH),)
+obj/RSALemmas.dfy.ver: obj/NativeTypes.dfy.ver
+
+obj/RSALemmas.dfy.ver: obj/SeqInt.dfy.ver
+
+obj/RSALemmas.dfy.ver: obj/Powers.dfy.ver
+
+obj/RSALemmas.dfy.ver: obj/Congruences.dfy.ver
+
+obj/RSAE3v2.dfy.ver: obj/NativeTypes.dfy.ver
+
+obj/RSAE3v2.dfy.ver: obj/Powers.dfy.ver
+
+obj/RSAE3v2.dfy.ver: obj/Congruences.dfy.ver
+
+obj/RSAE3v2.dfy.ver: obj/SeqInt.dfy.ver
+
+obj/RSAE3v2.dfy.ver: obj/RSAE3v1.dfy.ver
+
+obj/RSAE3v2.dfy.ver: obj/RSALemmas.dfy.ver
+
+obj/SeqInt.dfy.ver: obj/NativeTypes.dfy.ver
+
+obj/SeqInt.dfy.ver: obj/Powers.dfy.ver
+
+obj/SeqInt.dfy.ver: obj/Congruences.dfy.ver
+
+obj/Powers.dfy.ver: obj/Congruences.dfy.ver
+
+obj/RSAE3v0.dfy.ver: obj/Powers.dfy.ver
+
+obj/RSAE3v1.dfy.ver: obj/NativeTypes.dfy.ver
+
+obj/RSAE3v1.dfy.ver: obj/Powers.dfy.ver
+
+obj/RSAE3v1.dfy.ver: obj/Congruences.dfy.ver
+
+obj/RSAE3v1.dfy.ver: obj/SeqInt.dfy.ver
+
+obj/RSALemmas.dfy.versyn: obj/NativeTypes.dfy.versyn
+
+obj/RSALemmas.dfy.versyn: obj/SeqInt.dfy.versyn
+
+obj/RSALemmas.dfy.versyn: obj/Powers.dfy.versyn
+
+obj/RSALemmas.dfy.versyn: obj/Congruences.dfy.versyn
+
+obj/RSAE3v2.dfy.versyn: obj/NativeTypes.dfy.versyn
+
+obj/RSAE3v2.dfy.versyn: obj/Powers.dfy.versyn
+
+obj/RSAE3v2.dfy.versyn: obj/Congruences.dfy.versyn
+
+obj/RSAE3v2.dfy.versyn: obj/SeqInt.dfy.versyn
+
+obj/RSAE3v2.dfy.versyn: obj/RSAE3v1.dfy.versyn
+
+obj/RSAE3v2.dfy.versyn: obj/RSALemmas.dfy.versyn
+
+obj/SeqInt.dfy.versyn: obj/NativeTypes.dfy.versyn
+
+obj/SeqInt.dfy.versyn: obj/Powers.dfy.versyn
+
+obj/SeqInt.dfy.versyn: obj/Congruences.dfy.versyn
+
+obj/Powers.dfy.versyn: obj/Congruences.dfy.versyn
+
+obj/RSAE3v0.dfy.versyn: obj/Powers.dfy.versyn
+
+obj/RSAE3v1.dfy.versyn: obj/NativeTypes.dfy.versyn
+
+obj/RSAE3v1.dfy.versyn: obj/Powers.dfy.versyn
+
+obj/RSAE3v1.dfy.versyn: obj/Congruences.dfy.versyn
+
+obj/RSAE3v1.dfy.versyn: obj/SeqInt.dfy.versyn
+
+obj/RSALemmas.cpp: obj/NativeTypes.cpp
+
+obj/RSALemmas.cpp: obj/SeqInt.cpp
+
+obj/RSALemmas.cpp: obj/Powers.cpp
+
+obj/RSALemmas.cpp: obj/Congruences.cpp
+
+obj/RSAE3v2.cpp: obj/NativeTypes.cpp
+
+obj/RSAE3v2.cpp: obj/Powers.cpp
+
+obj/RSAE3v2.cpp: obj/Congruences.cpp
+
+obj/RSAE3v2.cpp: obj/SeqInt.cpp
+
+obj/RSAE3v2.cpp: obj/RSAE3v1.cpp
+
+obj/RSAE3v2.cpp: obj/RSALemmas.cpp
+
+obj/SeqInt.cpp: obj/NativeTypes.cpp
+
+obj/SeqInt.cpp: obj/Powers.cpp
+
+obj/SeqInt.cpp: obj/Congruences.cpp
+
+obj/Powers.cpp: obj/Congruences.cpp
+
+obj/RSAE3v0.cpp: obj/Powers.cpp
+
+obj/RSAE3v1.cpp: obj/NativeTypes.cpp
+
+obj/RSAE3v1.cpp: obj/Powers.cpp
+
+obj/RSAE3v1.cpp: obj/Congruences.cpp
+
+obj/RSAE3v1.cpp: obj/SeqInt.cpp
+
+obj/RSALemmas.o: obj/NativeTypes.o
+
+obj/RSALemmas.o: obj/SeqInt.o
+
+obj/RSALemmas.o: obj/Powers.o
+
+obj/RSALemmas.o: obj/Congruences.o
+
+obj/RSAE3v2.o: obj/NativeTypes.o
+
+obj/RSAE3v2.o: obj/Powers.o
+
+obj/RSAE3v2.o: obj/Congruences.o
+
+obj/RSAE3v2.o: obj/SeqInt.o
+
+obj/RSAE3v2.o: obj/RSAE3v1.o
+
+obj/RSAE3v2.o: obj/RSALemmas.o
+
+obj/SeqInt.o: obj/NativeTypes.o
+
+obj/SeqInt.o: obj/Powers.o
+
+obj/SeqInt.o: obj/Congruences.o
+
+obj/Powers.o: obj/Congruences.o
+
+obj/RSAE3v0.o: obj/Powers.o
+
+obj/RSAE3v1.o: obj/NativeTypes.o
+
+obj/RSAE3v1.o: obj/Powers.o
+
+obj/RSAE3v1.o: obj/Congruences.o
+
+obj/RSAE3v1.o: obj/SeqInt.o
+
+obj/RSALemmas.cs: obj/NativeTypes.cs
+
+obj/RSALemmas.cs: obj/SeqInt.cs
+
+obj/RSALemmas.cs: obj/Powers.cs
+
+obj/RSALemmas.cs: obj/Congruences.cs
+
+obj/RSAE3v2.cs: obj/NativeTypes.cs
+
+obj/RSAE3v2.cs: obj/Powers.cs
+
+obj/RSAE3v2.cs: obj/Congruences.cs
+
+obj/RSAE3v2.cs: obj/SeqInt.cs
+
+obj/RSAE3v2.cs: obj/RSAE3v1.cs
+
+obj/RSAE3v2.cs: obj/RSALemmas.cs
+
+obj/SeqInt.cs: obj/NativeTypes.cs
+
+obj/SeqInt.cs: obj/Powers.cs
+
+obj/SeqInt.cs: obj/Congruences.cs
+
+obj/Powers.cs: obj/Congruences.cs
+
+obj/RSAE3v0.cs: obj/Powers.cs
+
+obj/RSAE3v1.cs: obj/NativeTypes.cs
+
+obj/RSAE3v1.cs: obj/Powers.cs
+
+obj/RSAE3v1.cs: obj/Congruences.cs
+
+obj/RSAE3v1.cs: obj/SeqInt.cs
+
+endif
