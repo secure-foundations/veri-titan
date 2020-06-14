@@ -19,13 +19,6 @@ module RSALemmas
     	requires cong(a, b, n);
     	ensures exists k :int :: a - b == n * k;
 
-	lemma power_power_lemma(b: int, e1: nat, e2: nat)
-        ensures power(power(b, e1), e2) == power(b, e1 * e2);
-
-    lemma power_mod_lemma_2(b: int, e: nat, n: int)
-        requires n != 0;
-        ensures power(b % n, e) % n == power(b, e) % n;
-
     lemma fermats_little_theorem(a: int, p: nat)
     	requires prime(p) && !cong(a, 0, p);
     	ensures cong(power(a, p - 1), 1, p);
