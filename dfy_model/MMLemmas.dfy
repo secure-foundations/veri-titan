@@ -283,6 +283,7 @@ module MMLemmas {
         ghost var b := x[i] as int * p;
 
         assert assertion_1 : (sint(x_1) * p_inv * p + x[i] as int * p) * p_inv % m_val == (sint(x_1) + x[i] as int * p) * p_inv % m_val by {
+            assert cong(p * p_inv, 1, m_val);
             calc ==> {
                 cong(p * p_inv, 1, m_val);
                 {
