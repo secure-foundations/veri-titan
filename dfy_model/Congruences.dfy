@@ -186,11 +186,6 @@ module Congruences {
         calc == {
             a * c - b * d;
             (k1 * n + r1) * (k3 * n + r3) - (k2 * n + r1) * (k4 * n + r3);
-            (k1 * n + r1) * k3 * n + (k1 * n + r1) * r3 - (k2 * n + r1) * k4 * n - (k2 * n + r1) * r3;
-            ((k1 * n + r1) * k3 - (k2 * n + r1) * k4) * n + (k1 * n + r1) * r3 - (k2 * n + r1) * r3;
-            ((k1 * n + r1) * k3 - (k2 * n + r1) * k4) * n + k1 * n * r3 + r1 * r3 - k2 * n * r3 - r1 * r3;
-            ((k1 * n + r1) * k3 - (k2 * n + r1) * k4) * n + k1 * n * r3 - k2 * n * r3;
-            ((k1 * n + r1) * k3 - (k2 * n + r1) * k4) * n + (k1 * r3 - k2 * r3) * n;
             ((k1 * n + r1) * k3 - (k2 * n + r1) * k4 + k1 * r3 - k2 * r3) * n;
         }
         var temp := (k1 * n + r1) * k3 - (k2 * n + r1) * k4 + k1 * r3 - k2 * r3;
