@@ -99,4 +99,96 @@ module Powers
             }
         }
     }
+
+    lemma {:induction e2} power_same_base_lemma(a: int, e1: nat, e2: nat)
+        ensures power(a, e1) * power(a, e2) == power(a, e1 + e2);
+    {
+        if e2 == 0 {
+            reveal power();
+        } else {
+            calc ==> {
+                true;
+                {
+                    power_same_base_lemma(a, e1, e2 - 1);
+                }
+                power(a, e1) * power(a, e2 - 1) == power(a, e1 + e2 - 1);
+                power(a, e1) * power(a, e2 - 1) * a == power(a, e1 + e2 - 1) * a;
+                {
+                    assert power(a, e2 - 1) * a == power(a, e2) by {
+                        power_add_one_lemma(a, e2 - 1);
+                    }
+                }
+                power(a, e1) * power(a, e2) == power(a, e1 + e2 - 1) * a;
+                {
+                    assert power(a, e1 + e2 - 1) * a == power(a, e1 + e2) by {
+                        power_add_one_lemma(a, e1 + e2 - 1);
+                    }
+                }
+                power(a, e1) * power(a, e2) == power(a, e1 + e2);
+            }
+            assert power(a, e1) * power(a, e2) == power(a, e1 + e2);
+        }
+    }
+
+    lemma {:inudction e2} power_power_lemma(b: int, e1: nat, e2: nat)
+        ensures power(power(b, e1), e2) == power(b, e1 * e2);
+    {
+        if e2 == 0 {
+            reveal power();
+        } else {
+            assert power(power(b, e1), e2 - 1) == power(b, e1 * (e2 - 1)) by {
+                power_power_lemma(b, e1, e2 - 1);
+            }
+
+            assert power(power(b, e1), e2 - 1) * power(b, e1) == power(power(b, e1), e2) by {
+                power_add_one_lemma(power(b, e1), e2 - 1);
+            }
+
+            assert power(b, e1 * (e2 - 1)) * power(b, e1) == power(b, e1 * e2) by {
+                power_same_base_lemma(b,  e1 * (e2 - 1), e1);
+                assert e1 * (e2 - 1) + e1 == e1 * e2;
+            }
+        }
+    }
+
+    lemma {:induction e} power_mod_lemma_2(b: int, e: nat, n: int)
+        requires n != 0;
+        ensures power(b % n, e) % n == power(b, e) % n;
+    {
+        if e == 0 {
+            reveal power();
+        } else {
+            calc ==> {
+                true;
+                {
+                    power_mod_lemma_2(b, e - 1, n);
+                }
+                power(b % n, e - 1) % n == power(b, e - 1) % n;
+                {
+                    reveal cong();
+                }                
+                cong(power(b % n, e - 1), power(b, e - 1), n);
+                {
+                    assert cong(b % n, b, n) by {
+                        reveal cong();
+                    }
+                    cong_mul_lemma_2(power(b % n, e - 1), power(b, e - 1), b % n, b, n);
+                }
+                cong(power(b % n, e - 1) * (b % n), power(b, e - 1) * b, n);
+                {
+                    power_add_one_lemma(b % n, e - 1);
+                }
+                cong(power(b % n, e), power(b, e - 1) * b, n);
+                {
+                    power_add_one_lemma(b, e - 1);
+                }
+                cong(power(b % n, e), power(b, e), n);
+            }
+
+            assert power(b % n, e) % n == power(b, e) % n by {
+                assert cong(power(b % n, e), power(b, e), n);
+                reveal cong();
+            }
+        }
+    }
 }

@@ -186,11 +186,6 @@ module Congruences {
         calc == {
             a * c - b * d;
             (k1 * n + r1) * (k3 * n + r3) - (k2 * n + r1) * (k4 * n + r3);
-            (k1 * n + r1) * k3 * n + (k1 * n + r1) * r3 - (k2 * n + r1) * k4 * n - (k2 * n + r1) * r3;
-            ((k1 * n + r1) * k3 - (k2 * n + r1) * k4) * n + (k1 * n + r1) * r3 - (k2 * n + r1) * r3;
-            ((k1 * n + r1) * k3 - (k2 * n + r1) * k4) * n + k1 * n * r3 + r1 * r3 - k2 * n * r3 - r1 * r3;
-            ((k1 * n + r1) * k3 - (k2 * n + r1) * k4) * n + k1 * n * r3 - k2 * n * r3;
-            ((k1 * n + r1) * k3 - (k2 * n + r1) * k4) * n + (k1 * r3 - k2 * r3) * n;
             ((k1 * n + r1) * k3 - (k2 * n + r1) * k4 + k1 * r3 - k2 * r3) * n;
         }
         var temp := (k1 * n + r1) * k3 - (k2 * n + r1) * k4 + k1 * r3 - k2 * r3;
@@ -210,6 +205,19 @@ module Congruences {
             }
             cong(a * c, b * d, n);
         }        
+    }
+
+    lemma cong_mul_lemma_3(a: int, b:int, c: int, d: int, n: int)
+        requires n != 0;
+        requires cong(a, b * c, n) && cong(c, d, n);
+        ensures cong(a, b * d, n);
+    {
+        assert cong(b * c, b * d, n) by {
+            cong_mul_lemma_1(c, d, b, n);
+        }
+        assert cong(a, b * d, n) by {
+            cong_trans_lemma(a, b * c, b * d, n);
+        }
     }
 
     lemma cong_add_lemma_1(a: int, b: int, c: int, n: int)
