@@ -72,11 +72,11 @@ module RSAE3v2 {
         requires p_2 as int == u_i as int * m[0] as int + lh64(p_1) as int;
         requires cong(p_2 as int, 0, BASE);
 
-        ensures x_i as nat * seq_interp(y[..1]) + u_i as nat * seq_interp(m[..1]) + seq_interp(A[..1]) as nat == 
+        ensures x_i as nat * sint(y[..1]) + u_i as nat * sint(m[..1]) + sint(A[..1]) as nat == 
             uh64(p_2) as int * power(BASE, 1) + uh64(p_1) as int * power(BASE, 1);
     {
         calc == {
-            x_i as nat * seq_interp(y[..1]) + u_i as nat * seq_interp(m[..1]) + seq_interp(A[..1]);
+            x_i as nat * sint(y[..1]) + u_i as nat * sint(m[..1]) + sint(A[..1]);
             {
                 assert power(BASE, 0) == 1 by {
                     reveal power();
@@ -129,95 +129,95 @@ module RSAE3v2 {
         requires |S| == j;
         requires S == S' + [lh64(p_2)];
 
-        requires x_i as nat * seq_interp(y[..j-1]) + u_i as nat * seq_interp(m[..j-1]) + seq_interp(A[..j-1]) == 
-                seq_interp(S') + uh64(p_2') as int * power(BASE, j-1) + uh64(p_1') as int * power(BASE, j-1);
+        requires x_i as nat * sint(y[..j-1]) + u_i as nat * sint(m[..j-1]) + sint(A[..j-1]) == 
+                sint(S') + uh64(p_2') as int * power(BASE, j-1) + uh64(p_1') as int * power(BASE, j-1);
         requires p_1 as nat == uh64(p_1') as nat + x_i as nat * y[j-1] as nat + A[j-1] as nat;
         requires p_2 as nat == uh64(p_2') as nat + u_i as nat * m[j-1] as nat + lh64(p_1) as nat;
 
-        ensures u_i as nat * seq_interp(m[..j]) + x_i as nat * seq_interp(y[..j]) + seq_interp(A[..j]) == 
-            seq_interp(S) + uh64(p_2) as int * power(BASE, j) + uh64(p_1) as int * power(BASE, j);
+        ensures u_i as nat * sint(m[..j]) + x_i as nat * sint(y[..j]) + sint(A[..j]) == 
+            sint(S) + uh64(p_2) as int * power(BASE, j) + uh64(p_1) as int * power(BASE, j);
     {
         calc == {
-            seq_interp(S) + uh64(p_2) as int * power(BASE, j) + uh64(p_1) as int * power(BASE, j);
+            sint(S) + uh64(p_2) as int * power(BASE, j) + uh64(p_1) as int * power(BASE, j);
             lh64(p_2) as nat * power(BASE, j-1) + interp(S, j-1) + uh64(p_2) as int * power(BASE, j) + uh64(p_1) as int * power(BASE, j);
             {
                 prefix_sum_lemma(S, S', j-1);
             }
-            lh64(p_2) as nat * power(BASE, j-1) + seq_interp(S') + uh64(p_2) as int * power(BASE, j) + uh64(p_1) as int * power(BASE, j);
+            lh64(p_2) as nat * power(BASE, j-1) + sint(S') + uh64(p_2) as int * power(BASE, j) + uh64(p_1) as int * power(BASE, j);
             {
                 power_add_one_lemma(BASE, j - 1);
                 assert uh64(p_2) as int * power(BASE, j) == uh64(p_2) as int * BASE * power(BASE, j - 1);
             }
-            lh64(p_2) as nat * power(BASE, j-1) + seq_interp(S') + uh64(p_2) as int * BASE * power(BASE, j - 1) + uh64(p_1) as int * power(BASE, j);
-            lh64(p_2) as nat * power(BASE, j-1) + uh64(p_2) as int * BASE * power(BASE, j - 1 ) + seq_interp(S') + uh64(p_1) as int * power(BASE, j);
+            lh64(p_2) as nat * power(BASE, j-1) + sint(S') + uh64(p_2) as int * BASE * power(BASE, j - 1) + uh64(p_1) as int * power(BASE, j);
+            lh64(p_2) as nat * power(BASE, j-1) + uh64(p_2) as int * BASE * power(BASE, j - 1 ) + sint(S') + uh64(p_1) as int * power(BASE, j);
             {
                 assert lh64(p_2) as nat * power(BASE, j-1) + uh64(p_2) as int * BASE * power(BASE, j - 1) == 
                     (lh64(p_2) as nat + uh64(p_2) as int * BASE) * power(BASE, j - 1);
             }
-            (lh64(p_2) as int  + uh64(p_2) as int * BASE) * power(BASE, j-1) + seq_interp(S') + uh64(p_1) as int * power(BASE, j);
+            (lh64(p_2) as int  + uh64(p_2) as int * BASE) * power(BASE, j-1) + sint(S') + uh64(p_1) as int * power(BASE, j);
             {
                 split64_lemma(p_2);
             }
-            p_2 as int * power(BASE, j-1) + seq_interp(S') + uh64(p_1) as int * power(BASE, j);
+            p_2 as int * power(BASE, j-1) + sint(S') + uh64(p_1) as int * power(BASE, j);
             {
                 assert p_2 as nat == uh64(p_2') as nat + u_i as nat * m[j-1] as nat + lh64(p_1) as nat;
             }
-            (uh64(p_2') as nat + u_i as nat * m[j-1] as nat + lh64(p_1) as nat) * power(BASE, j-1) + seq_interp(S') + uh64(p_1) as int * power(BASE, j);
-            (uh64(p_2') as nat + u_i as nat * m[j-1] as nat) * power(BASE, j-1) + lh64(p_1) as nat * power(BASE, j-1) + seq_interp(S') + uh64(p_1) as int * power(BASE, j);
+            (uh64(p_2') as nat + u_i as nat * m[j-1] as nat + lh64(p_1) as nat) * power(BASE, j-1) + sint(S') + uh64(p_1) as int * power(BASE, j);
+            (uh64(p_2') as nat + u_i as nat * m[j-1] as nat) * power(BASE, j-1) + lh64(p_1) as nat * power(BASE, j-1) + sint(S') + uh64(p_1) as int * power(BASE, j);
             {
                 power_add_one_lemma(BASE, j - 1);
                 assert uh64(p_1) as int * power(BASE, j) == uh64(p_1) as int * BASE * power(BASE, j - 1);
             }
-            (uh64(p_2') as nat + u_i as nat * m[j-1] as nat) * power(BASE, j-1) + lh64(p_1) as nat * power(BASE, j-1) + seq_interp(S') +  uh64(p_1) as int * BASE * power(BASE, j - 1);
-            (uh64(p_2') as nat + u_i as nat * m[j-1] as nat) * power(BASE, j-1) + seq_interp(S') + lh64(p_1) as nat * power(BASE, j-1) +  uh64(p_1) as int * BASE * power(BASE, j - 1);
+            (uh64(p_2') as nat + u_i as nat * m[j-1] as nat) * power(BASE, j-1) + lh64(p_1) as nat * power(BASE, j-1) + sint(S') +  uh64(p_1) as int * BASE * power(BASE, j - 1);
+            (uh64(p_2') as nat + u_i as nat * m[j-1] as nat) * power(BASE, j-1) + sint(S') + lh64(p_1) as nat * power(BASE, j-1) +  uh64(p_1) as int * BASE * power(BASE, j - 1);
             {
                 assert lh64(p_1) as nat * power(BASE, j-1) +  uh64(p_1) as int * BASE * power(BASE, j - 1) == (lh64(p_1) as nat +  uh64(p_1) as int * BASE) * power(BASE, j - 1);
             }
-            (uh64(p_2') as nat + u_i as nat * m[j-1] as nat) * power(BASE, j-1) + seq_interp(S')  + (lh64(p_1) as nat + uh64(p_1) as nat * BASE)* power(BASE, j-1);
+            (uh64(p_2') as nat + u_i as nat * m[j-1] as nat) * power(BASE, j-1) + sint(S')  + (lh64(p_1) as nat + uh64(p_1) as nat * BASE)* power(BASE, j-1);
             {
                 split64_lemma(p_1);
             }
-            (uh64(p_2') as nat + u_i as nat * m[j-1] as nat) * power(BASE, j-1) + seq_interp(S')  + p_1 as nat * power(BASE, j-1);
-            (u_i as nat * m[j-1] as nat) * power(BASE, j-1) + uh64(p_2') as nat * power(BASE, j-1) + seq_interp(S')  + p_1 as nat * power(BASE, j-1);
+            (uh64(p_2') as nat + u_i as nat * m[j-1] as nat) * power(BASE, j-1) + sint(S')  + p_1 as nat * power(BASE, j-1);
+            (u_i as nat * m[j-1] as nat) * power(BASE, j-1) + uh64(p_2') as nat * power(BASE, j-1) + sint(S')  + p_1 as nat * power(BASE, j-1);
             {
                 assert p_1 as nat == uh64(p_1') as nat + x_i as nat * y[j-1] as nat + A[j-1] as nat;
             }
-            (u_i as nat * m[j-1] as nat) * power(BASE, j-1) + uh64(p_2') as nat * power(BASE, j-1) + seq_interp(S')  + (uh64(p_1') as nat + x_i as nat * y[j-1] as nat + A[j-1] as nat) as nat * power(BASE, j-1);
-            (u_i as nat * m[j-1] as nat) * power(BASE, j-1) + uh64(p_2') as nat * power(BASE, j-1) + seq_interp(S')  + uh64(p_1') as nat * power(BASE, j-1) + (x_i as nat * y[j-1] as nat + A[j-1] as nat) as nat * power(BASE, j-1);
+            (u_i as nat * m[j-1] as nat) * power(BASE, j-1) + uh64(p_2') as nat * power(BASE, j-1) + sint(S')  + (uh64(p_1') as nat + x_i as nat * y[j-1] as nat + A[j-1] as nat) as nat * power(BASE, j-1);
+            (u_i as nat * m[j-1] as nat) * power(BASE, j-1) + uh64(p_2') as nat * power(BASE, j-1) + sint(S')  + uh64(p_1') as nat * power(BASE, j-1) + (x_i as nat * y[j-1] as nat + A[j-1] as nat) as nat * power(BASE, j-1);
             {
-                assert x_i as nat * seq_interp(y[..j-1]) + u_i as nat * seq_interp(m[..j-1]) + seq_interp(A[..j-1]) == 
-                seq_interp(S') + uh64(p_2') as int * power(BASE, j-1) + uh64(p_1') as int * power(BASE, j-1);
+                assert x_i as nat * sint(y[..j-1]) + u_i as nat * sint(m[..j-1]) + sint(A[..j-1]) == 
+                sint(S') + uh64(p_2') as int * power(BASE, j-1) + uh64(p_1') as int * power(BASE, j-1);
             }
-            (u_i as nat * m[j-1] as nat) * power(BASE, j-1) + x_i as nat * seq_interp(y[..j-1]) + u_i as nat * seq_interp(m[..j-1]) + seq_interp(A[..j-1]) + (x_i as nat * y[j-1] as nat + A[j-1] as nat) as nat * power(BASE, j-1);
-            u_i as nat * m[j-1] as nat * power(BASE, j-1) + x_i as nat * seq_interp(y[..j-1]) + u_i as nat * seq_interp(m[..j-1]) + seq_interp(A[..j-1]) + x_i as nat * y[j-1] as nat * power(BASE, j-1) + A[j-1] as nat as nat * power(BASE, j-1);
-            (u_i as nat * m[j-1] as nat * power(BASE, j-1) + u_i as nat * seq_interp(m[..j-1])) + (x_i as nat * seq_interp(y[..j-1]) + x_i as nat * y[j-1] as nat * power(BASE, j-1)) + (seq_interp(A[..j-1]) + A[j-1] as nat as nat * power(BASE, j-1));
+            (u_i as nat * m[j-1] as nat) * power(BASE, j-1) + x_i as nat * sint(y[..j-1]) + u_i as nat * sint(m[..j-1]) + sint(A[..j-1]) + (x_i as nat * y[j-1] as nat + A[j-1] as nat) as nat * power(BASE, j-1);
+            u_i as nat * m[j-1] as nat * power(BASE, j-1) + x_i as nat * sint(y[..j-1]) + u_i as nat * sint(m[..j-1]) + sint(A[..j-1]) + x_i as nat * y[j-1] as nat * power(BASE, j-1) + A[j-1] as nat as nat * power(BASE, j-1);
+            (u_i as nat * m[j-1] as nat * power(BASE, j-1) + u_i as nat * sint(m[..j-1])) + (x_i as nat * sint(y[..j-1]) + x_i as nat * y[j-1] as nat * power(BASE, j-1)) + (sint(A[..j-1]) + A[j-1] as nat as nat * power(BASE, j-1));
             {
                 calc == {
-                    u_i as nat * m[j-1] as nat * power(BASE, j-1) + u_i as nat * seq_interp(m[..j-1]);
-                    u_i as nat * (m[j-1] as nat * power(BASE, j-1) + seq_interp(m[..j-1]));
+                    u_i as nat * m[j-1] as nat * power(BASE, j-1) + u_i as nat * sint(m[..j-1]);
+                    u_i as nat * (m[j-1] as nat * power(BASE, j-1) + sint(m[..j-1]));
                     {
                         prefix_interp_lemma_2(m, j);
                     }
-                    u_i as nat * seq_interp(m[..j]);
+                    u_i as nat * sint(m[..j]);
                 }
             }
-            u_i as nat * seq_interp(m[..j]) + (x_i as nat * seq_interp(y[..j-1]) + x_i as nat * y[j-1] as nat * power(BASE, j-1)) + (seq_interp(A[..j-1])  + A[j-1] as nat as nat * power(BASE, j-1));
+            u_i as nat * sint(m[..j]) + (x_i as nat * sint(y[..j-1]) + x_i as nat * y[j-1] as nat * power(BASE, j-1)) + (sint(A[..j-1])  + A[j-1] as nat as nat * power(BASE, j-1));
             {
                 calc == { // refactor
-                    x_i as nat * seq_interp(y[..j-1]) + x_i as nat * y[j-1] as nat * power(BASE, j-1);
-                    x_i as nat * (seq_interp(y[..j-1]) + y[j-1] as nat * power(BASE, j-1) );
+                    x_i as nat * sint(y[..j-1]) + x_i as nat * y[j-1] as nat * power(BASE, j-1);
+                    x_i as nat * (sint(y[..j-1]) + y[j-1] as nat * power(BASE, j-1) );
                     {
                         prefix_interp_lemma_2(y, j);
                     }
-                    x_i as nat * seq_interp(y[..j]);
+                    x_i as nat * sint(y[..j]);
                 }
             }
-            u_i as nat * seq_interp(m[..j]) + x_i as nat * seq_interp(y[..j]) + (seq_interp(A[..j-1]) + A[j-1] as nat as nat * power(BASE, j-1));
+            u_i as nat * sint(m[..j]) + x_i as nat * sint(y[..j]) + (sint(A[..j-1]) + A[j-1] as nat as nat * power(BASE, j-1));
            {
                 prefix_interp_lemma_2(A, j);
-                assert seq_interp(A[..j-1])  + A[j-1] as nat as nat * power(BASE, j-1) == seq_interp(A[..j]);
+                assert sint(A[..j-1])  + A[j-1] as nat as nat * power(BASE, j-1) == sint(A[..j]);
             }
-            u_i as nat * seq_interp(m[..j]) + x_i as nat * seq_interp(y[..j]) + seq_interp(A[..j]);
+            u_i as nat * sint(m[..j]) + x_i as nat * sint(y[..j]) + sint(A[..j]);
         }
     }
 
@@ -239,53 +239,53 @@ module RSAE3v2 {
         requires p_1 as nat == uh64(p_1') as nat + uh64(p_2') as nat;
         requires S == S' + [lh64(p_1), uh64(p_1)];
 
-        requires x_i as nat * seq_interp(y[..n]) + u_i as nat * seq_interp(m[..n]) + seq_interp(A[..n]) == 
-            seq_interp(S') + uh64(p_2') as int * power(BASE, n) + uh64(p_1') as int * power(BASE, n);
-        ensures seq_interp(S) == 
-            x_i as nat * seq_interp(y) + u_i as nat * seq_interp(m) + seq_interp(A);
+        requires x_i as nat * sint(y[..n]) + u_i as nat * sint(m[..n]) + sint(A[..n]) == 
+            sint(S') + uh64(p_2') as int * power(BASE, n) + uh64(p_1') as int * power(BASE, n);
+        ensures sint(S) == 
+            x_i as nat * sint(y) + u_i as nat * sint(m) + sint(A);
     {
         calc == {
-            seq_interp(S);
+            sint(S);
             interp(S, n + 2);
             interp(S, n + 1) + uh64(p_1) as nat * power(BASE, n+1);
             word_interp(S, n) + interp(S, n) + uh64(p_1) as nat * power(BASE, n+1);
             {
                 prefix_sum_lemma(S, S', n);
             }
-            S[n] as nat * power(BASE, n) + seq_interp(S') + uh64(p_1) as nat * power(BASE, n+1);
-            lh64(p_1) as nat * power(BASE, n) + seq_interp(S') + uh64(p_1) as nat * power(BASE, n+1);
-            lh64(p_1) as nat * power(BASE, n) + uh64(p_1) as nat * power(BASE, n+1) + seq_interp(S') ;
+            S[n] as nat * power(BASE, n) + sint(S') + uh64(p_1) as nat * power(BASE, n+1);
+            lh64(p_1) as nat * power(BASE, n) + sint(S') + uh64(p_1) as nat * power(BASE, n+1);
+            lh64(p_1) as nat * power(BASE, n) + uh64(p_1) as nat * power(BASE, n+1) + sint(S') ;
             {
                 assert power(BASE, n+1) == BASE * power(BASE, n) by {
                     power_add_one_lemma(BASE, n);
                 }
             }
-            lh64(p_1) as nat * power(BASE, n) + uh64(p_1) as nat * BASE * power(BASE, n) + seq_interp(S') ;
+            lh64(p_1) as nat * power(BASE, n) + uh64(p_1) as nat * BASE * power(BASE, n) + sint(S') ;
             {
                 assert lh64(p_1) as nat * power(BASE, n) + uh64(p_1) as nat * BASE * power(BASE, n) ==
                     (lh64(p_1) as nat + uh64(p_1) as nat * BASE) * power(BASE, n);
             }
-            (lh64(p_1) as nat + uh64(p_1) as nat * BASE) * power(BASE, n) + seq_interp(S');
+            (lh64(p_1) as nat + uh64(p_1) as nat * BASE) * power(BASE, n) + sint(S');
             {
                 split64_lemma(p_1);
             }
-            p_1 as nat * power(BASE, n) + seq_interp(S');
+            p_1 as nat * power(BASE, n) + sint(S');
             {
                 assert p_1 as nat == uh64(p_1') as nat + uh64(p_2') as nat;
             }
-            (uh64(p_1') as nat + uh64(p_2') as nat) * power(BASE, n) + seq_interp(S');
-            uh64(p_1') as nat * power(BASE, n) + uh64(p_2') as nat * power(BASE, n) + seq_interp(S');
+            (uh64(p_1') as nat + uh64(p_2') as nat) * power(BASE, n) + sint(S');
+            uh64(p_1') as nat * power(BASE, n) + uh64(p_2') as nat * power(BASE, n) + sint(S');
             {
-                assert x_i as nat * seq_interp(y[..n]) + u_i as nat * seq_interp(m[..n]) + seq_interp(A[..n]) == 
-                    seq_interp(S') + uh64(p_2') as int * power(BASE, n) + uh64(p_1') as int * power(BASE, n);
+                assert x_i as nat * sint(y[..n]) + u_i as nat * sint(m[..n]) + sint(A[..n]) == 
+                    sint(S') + uh64(p_2') as int * power(BASE, n) + uh64(p_1') as int * power(BASE, n);
             }
-            x_i as nat * seq_interp(y[..n]) + u_i as nat * seq_interp(m[..n]) + seq_interp(A[..n]);
+            x_i as nat * sint(y[..n]) + u_i as nat * sint(m[..n]) + sint(A[..n]);
             {
                 assert y == y[..n];
                 assert m == m[..n];
                 assert A == A[..n];
             }
-            x_i as nat * seq_interp(y) + u_i as nat * seq_interp(m) + seq_interp(A);
+            x_i as nat * sint(y) + u_i as nat * sint(m) + sint(A);
         }
     }
     
@@ -293,9 +293,9 @@ module RSAE3v2 {
         requires pub_key_valid(key);
         requires |S| == key.len + 2;
         requires S[0] == 0;
-        ensures seq_interp(S) == seq_interp(S[1..]) * BASE;
+        ensures sint(S) == sint(S[1..]) * BASE;
     {
-        assert seq_interp(S) % BASE == 0 && seq_interp(S) / BASE == seq_interp(S[1..]) by {
+        assert sint(S) % BASE == 0 && sint(S) / BASE == sint(S[1..]) by {
             assert cong(S[0] as int , 0, BASE) by {
                 reveal cong();
             } 
@@ -308,19 +308,19 @@ module RSAE3v2 {
         requires A' == S[1..n+1];
         requires S[n + 1] as int == uh64(p_1) as int;
 
-        ensures uh64(p_1) as nat * power(BASE, n) + seq_interp(A') == seq_interp(S[1..]);
+        ensures uh64(p_1) as nat * power(BASE, n) + sint(A') == sint(S[1..]);
     {
-        assert uh64(p_1) as nat * power(BASE, n) + seq_interp(A') == seq_interp(S[1..]) by {
+        assert uh64(p_1) as nat * power(BASE, n) + sint(A') == sint(S[1..]) by {
             calc == {
-                seq_interp(S[1..]);
+                sint(S[1..]);
                 word_interp(S[1..], n) + interp(S[1..], n);
                 {
                     prefix_sum_lemma(S[1..], S[1..n+1], n);
                     prefix_sum_lemma(S[1..n+1], A', n);
                 }
                 word_interp(S[1..], n) + interp(A', n);
-                word_interp(S[1..], n) + seq_interp(A');
-                uh64(p_1) as nat * power(BASE, n) + seq_interp(A');
+                word_interp(S[1..], n) + sint(A');
+                uh64(p_1) as nat * power(BASE, n) + sint(A');
             }
         }
     }
@@ -329,13 +329,13 @@ module RSAE3v2 {
         requires pub_key_valid(key);
         requires i < |x| == key.len && x[i] as int == x_i;
 
-        requires cong(A_val, seq_interp(x[..i]) * y_val * power(key.BASE_INV, i), key.n_val);
+        requires cong(A_val, sint(x[..i]) * y_val * power(key.BASE_INV, i), key.n_val);
         requires cong(A_val' * BASE, x_i * y_val + u_i * key.n_val + A_val, key.n_val);
 
-        ensures cong(A_val', (seq_interp(x[..i]) * y_val * power(key.BASE_INV, i) + x_i * y_val) * key.BASE_INV, key.n_val);
+        ensures cong(A_val', (sint(x[..i]) * y_val * power(key.BASE_INV, i) + x_i * y_val) * key.BASE_INV, key.n_val);
     {
         ghost var ps_inv := power(key.BASE_INV, i);
-        var temp := seq_interp(x[..i]) * y_val * ps_inv;
+        var temp := sint(x[..i]) * y_val * ps_inv;
 
         assert assert_1 : cong(A_val', (A_val + x_i * y_val) * key.BASE_INV, key.n_val) by {
             calc ==> {
@@ -391,46 +391,46 @@ module RSAE3v2 {
         requires pub_key_valid(key);
         requires i < |x| == key.len && x[i] as int == x_i;
 
-        requires cong(A_val, seq_interp(x[..i]) * y_val * power(key.BASE_INV, i), key.n_val);
+        requires cong(A_val, sint(x[..i]) * y_val * power(key.BASE_INV, i), key.n_val);
         requires cong(A_val' * BASE, x_i * y_val + u_i * key.n_val + A_val, key.n_val);
 
-        ensures cong(A_val', seq_interp(x[..i+1]) * y_val * power(key.BASE_INV, i+1), key.n_val);
+        ensures cong(A_val', sint(x[..i+1]) * y_val * power(key.BASE_INV, i+1), key.n_val);
     {
         ghost var ps_inv := power(key.BASE_INV, i);
 
-        assert cong(A_val', y_val * seq_interp(x[..i+1]) * ps_inv * key.BASE_INV, key.n_val) by {
-            var temp := seq_interp(x[..i]) * y_val * ps_inv;
+        assert cong(A_val', y_val * sint(x[..i+1]) * ps_inv * key.BASE_INV, key.n_val) by {
+            var temp := sint(x[..i]) * y_val * ps_inv;
             var temp2 := (temp + x_i * y_val) * key.BASE_INV;
 
             assert cong(A_val', temp2, key.n_val) by {
                 cmm_congruent_lemma_2(key, x, i, x_i, u_i, A_val, A_val', y_val);
             }
 
-            assert cong(temp2, y_val * seq_interp(x[..i+1]) * ps_inv * key.BASE_INV, key.n_val) by {
+            assert cong(temp2, y_val * sint(x[..i+1]) * ps_inv * key.BASE_INV, key.n_val) by {
                 calc == {
                     (temp + x_i * y_val) % key.n_val;
                     {
-                        assert temp == seq_interp(x[..i]) * y_val * ps_inv;
+                        assert temp == sint(x[..i]) * y_val * ps_inv;
                     }
-                    (seq_interp(x[..i]) * y_val * ps_inv + x_i * y_val) % key.n_val;
-                    (y_val * (seq_interp(x[..i]) * ps_inv + x_i)) % key.n_val;
+                    (sint(x[..i]) * y_val * ps_inv + x_i * y_val) % key.n_val;
+                    (y_val * (sint(x[..i]) * ps_inv + x_i)) % key.n_val;
                     {
                         mont_mul_congruent_aux_lemma_1(x, i, y_val, power(BASE, i), power(key.BASE_INV, i), key.BASE_INV, key.n_val);
                     }
-                    (y_val * seq_interp(x[..i+1]) * ps_inv) % key.n_val;
+                    (y_val * sint(x[..i+1]) * ps_inv) % key.n_val;
                 }
                 reveal cong();
-                assert cong(temp + x_i * y_val, y_val * seq_interp(x[..i+1]) * ps_inv, key.n_val);
-                cong_mul_lemma_1(temp + x_i * y_val, y_val * seq_interp(x[..i+1]) * ps_inv, key.BASE_INV, key.n_val);
+                assert cong(temp + x_i * y_val, y_val * sint(x[..i+1]) * ps_inv, key.n_val);
+                cong_mul_lemma_1(temp + x_i * y_val, y_val * sint(x[..i+1]) * ps_inv, key.BASE_INV, key.n_val);
             }
-            cong_trans_lemma(A_val', temp2, y_val * seq_interp(x[..i+1]) * ps_inv * key.BASE_INV, key.n_val);
+            cong_trans_lemma(A_val', temp2, y_val * sint(x[..i+1]) * ps_inv * key.BASE_INV, key.n_val);
         }
 
-        assert cong(A_val', seq_interp(x[..i+1]) * y_val * power(key.BASE_INV, i + 1), key.n_val) by {
+        assert cong(A_val', sint(x[..i+1]) * y_val * power(key.BASE_INV, i + 1), key.n_val) by {
             assert ps_inv * key.BASE_INV == power(key.BASE_INV, i + 1) by {
                 power_add_one_lemma(key.BASE_INV, i);
             }
-            assert y_val * seq_interp(x[..i+1]) * power(key.BASE_INV, i + 1) == seq_interp(x[..i+1]) * y_val * power(key.BASE_INV, i + 1);
+            assert y_val * sint(x[..i+1]) * power(key.BASE_INV, i + 1) == sint(x[..i+1]) * y_val * power(key.BASE_INV, i + 1);
         }
     }
 
@@ -445,50 +445,50 @@ module RSAE3v2 {
 
         requires pub_key_valid(key);
         requires |A'| == |A| == |y| == key.len;
-        requires seq_interp(A) < key.n_val + seq_interp(y);
-        requires (higher as nat * key.R + seq_interp(A')) * BASE == 
-            x_i as nat * seq_interp(y) + u_i as nat * key.n_val + seq_interp(A);
-        ensures (higher as nat * key.R + seq_interp(A')) < (seq_interp(y) + key.n_val);
+        requires sint(A) < key.n_val + sint(y);
+        requires (higher as nat * key.R + sint(A')) * BASE == 
+            x_i as nat * sint(y) + u_i as nat * key.n_val + sint(A);
+        ensures (higher as nat * key.R + sint(A')) < (sint(y) + key.n_val);
         ensures higher <= 1;
-        ensures (higher == 1 ==> seq_interp(A') < key.n_val);
+        ensures (higher == 1 ==> sint(A') < key.n_val);
     {
-        assert (higher as nat * key.R + seq_interp(A')) * BASE < BASE * (seq_interp(y) + key.n_val) by {
-            assert (higher as nat * key.R + seq_interp(A')) * BASE <
-                (x_i as nat + 1) * seq_interp(y) + (u_i as nat + 1) * key.n_val by {
-                    assert seq_interp(A) < key.n_val + seq_interp(y);
+        assert (higher as nat * key.R + sint(A')) * BASE < BASE * (sint(y) + key.n_val) by {
+            assert (higher as nat * key.R + sint(A')) * BASE <
+                (x_i as nat + 1) * sint(y) + (u_i as nat + 1) * key.n_val by {
+                    assert sint(A) < key.n_val + sint(y);
             }
 
             calc <= {
-                (x_i as nat + 1) * seq_interp(y) + (u_i as nat + 1) * key.n_val;
+                (x_i as nat + 1) * sint(y) + (u_i as nat + 1) * key.n_val;
                 {
                     assert x_i as nat + 1 <= BASE;
                 }
-                BASE * seq_interp(y) + (u_i as nat + 1) * key.n_val;
+                BASE * sint(y) + (u_i as nat + 1) * key.n_val;
                 {
                     assert u_i as nat + 1 <= BASE;
                 }
-                BASE * seq_interp(y) + BASE * key.n_val;
-                BASE * (seq_interp(y) + key.n_val);
+                BASE * sint(y) + BASE * key.n_val;
+                BASE * (sint(y) + key.n_val);
             }
         }
 
-        assert (higher as nat * key.R + seq_interp(A')) < (seq_interp(y) + key.n_val);
+        assert (higher as nat * key.R + sint(A')) < (sint(y) + key.n_val);
 
        if higher > 1 {
             assert higher >= 2;
-            assert higher as nat * key.R + seq_interp(A') >= 2 * key.R + seq_interp(A');
+            assert higher as nat * key.R + sint(A') >= 2 * key.R + sint(A');
             
-            assert seq_interp(y) < key.R by {
-                seq_interp_upper_bound_lemma(y, key.len);
+            assert sint(y) < key.R by {
+                sint_upper_bound_lemma(y, key.len);
             }
 
             assert key.n_val < key.R;
             assert false;
         }
 
-        if higher == 1 && seq_interp(A') >= key.n_val {
-            assert key.R + seq_interp(A') < seq_interp(y) + key.n_val;
-            seq_interp_upper_bound_lemma(y, key.len);
+        if higher == 1 && sint(A') >= key.n_val {
+            assert key.R + sint(A') < sint(y) + key.n_val;
+            sint_upper_bound_lemma(y, key.len);
         }
     }
 
@@ -523,13 +523,13 @@ module RSAE3v2 {
 
         requires |A| == |y| == |x| == key.len;
         requires i < |x| == key.len && x[i] == x_i;
-        requires cong(seq_interp(A), seq_interp(x[..i]) * seq_interp(y) * power(key.BASE_INV, i), key.n_val);
+        requires cong(sint(A), sint(x[..i]) * sint(y) * power(key.BASE_INV, i), key.n_val);
 
-        requires seq_interp(A) < key.n_val + seq_interp(y);
+        requires sint(A) < key.n_val + sint(y);
     
-        ensures cong(seq_interp(A'), seq_interp(x[..i+1]) * seq_interp(y) * power(key.BASE_INV, i+1), key.n_val);
+        ensures cong(sint(A'), sint(x[..i+1]) * sint(y) * power(key.BASE_INV, i+1), key.n_val);
         ensures |A'| == key.len;
-        ensures seq_interp(A') < seq_interp(y) + key.n_val;
+        ensures sint(A') < sint(y) + key.n_val;
     {
         single_digit_mul_lemma(x_i, y[0], A[0]);
         var p_1 :uint64 := x_i as uint64 * y[0] as uint64 + A[0] as uint64;
@@ -547,7 +547,7 @@ module RSAE3v2 {
 
         var j := 1;
 
-        assert x_i as nat * seq_interp(y[..j]) + u_i as nat * seq_interp(key.m[..j]) + seq_interp(A[..1]) as nat == 
+        assert x_i as nat * sint(y[..j]) + u_i as nat * sint(key.m[..j]) + sint(A[..1]) as nat == 
             uh64(p_2) as int * power(BASE, j) + uh64(p_1) as int * power(BASE, j)
         by {
             cmm_invarint_lemma_1(key.m, A, x_i, y, key.len, p_1, p_2, u_i);
@@ -559,8 +559,8 @@ module RSAE3v2 {
             invariant |A'| == key.len;
             invariant |S| == j;
             invariant S[0] == 0;
-            invariant x_i as nat * seq_interp(y[..j]) + u_i as nat * seq_interp(key.m[..j]) + seq_interp(A[..j]) == 
-                seq_interp(S) + uh64(p_2) as int * power(BASE, j) + uh64(p_1) as int * power(BASE, j);
+            invariant x_i as nat * sint(y[..j]) + u_i as nat * sint(key.m[..j]) + sint(A[..j]) == 
+                sint(S) + uh64(p_2) as int * power(BASE, j) + uh64(p_1) as int * power(BASE, j);
             invariant forall k :: 0 <= k < j - 1 ==> A'[k] == S[k + 1];
         {
             ghost var S', j', p_1', p_2' := S, j, p_1, p_2;
@@ -581,18 +581,18 @@ module RSAE3v2 {
         A' := A'[j-1 := lh64(temp)];
         S := S + [lh64(temp), uh64(temp)];
 
-        assert (uh64(temp) as nat * key.R + seq_interp(A')) * BASE == 
-            x_i as nat * seq_interp(y) + u_i as nat * key.n_val + seq_interp(A)
+        assert (uh64(temp) as nat * key.R + sint(A')) * BASE == 
+            x_i as nat * sint(y) + u_i as nat * key.n_val + sint(A)
         by {
-            assert seq_interp(S) == x_i as nat * seq_interp(y) + u_i as nat * key.n_val + seq_interp(A) by {
+            assert sint(S) == x_i as nat * sint(y) + u_i as nat * key.n_val + sint(A) by {
                 cmm_invarint_lemma_3(key.m, A, x_i, y, key.len, temp, p_1', p_2, p_2', u_i, S, S');
             }
 
-            assert seq_interp(S) == seq_interp(S[1..]) * BASE by {
+            assert sint(S) == sint(S[1..]) * BASE by {
                 cmm_divisible_lemma_2(key, S);
             }
 
-            assert uh64(temp) as nat * key.R + seq_interp(A') == seq_interp(S[1..]) by {
+            assert uh64(temp) as nat * key.R + sint(A') == sint(S[1..]) by {
                 assert A' == A'[0..key.len] == S[1..key.len+1] by {
                     assert forall k :: 0 <= k < key.len ==> A'[k] == S[k + 1];
                 }
@@ -600,14 +600,14 @@ module RSAE3v2 {
             }
         }
 
-        assert uh64(temp) as nat * key.R + seq_interp(A') < seq_interp(y) + key.n_val
+        assert uh64(temp) as nat * key.R + sint(A') < sint(y) + key.n_val
             && uh64(temp) <= 1 
-            && (uh64(temp) == 1 ==> seq_interp(A') < key.n_val)
+            && (uh64(temp) == 1 ==> sint(A') < key.n_val)
         by {
             cmm_bounded_lemma_1(key, u_i, x_i, uh64(temp), y, A', A);
         }
 
-        ghost var result := x_i as nat * seq_interp(y) + u_i as nat * key.n_val + seq_interp(A);
+        ghost var result := x_i as nat * sint(y) + u_i as nat * key.n_val + sint(A);
 
         if uh64(temp) != 0 {
             var b, A'' := seq_sub(A', key.m);
@@ -616,44 +616,44 @@ module RSAE3v2 {
                 {
                     assert uh64(temp) == 1;
                 }
-                (key.R + seq_interp(A')) * BASE;
+                (key.R + sint(A')) * BASE;
                 {
-                    assert seq_interp(A') + key.R == seq_interp(A'') + key.n_val;
+                    assert sint(A') + key.R == sint(A'') + key.n_val;
                 }
-                (seq_interp(A'') + key.n_val) * BASE;
+                (sint(A'') + key.n_val) * BASE;
             }
             
-            assert cong((seq_interp(A'') + key.n_val) * BASE, result, key.n_val) by {
+            assert cong((sint(A'') + key.n_val) * BASE, result, key.n_val) by {
                 reveal cong();
             }
 
             calc ==> {
-                cong((seq_interp(A'') + key.n_val) * BASE, result, key.n_val);
+                cong((sint(A'') + key.n_val) * BASE, result, key.n_val);
                 {
                     mod_mul_lemma(-BASE, key.n_val, key.n_val);
-                    cong_add_lemma_3((seq_interp(A'') + key.n_val) * BASE, -key.n_val * BASE,  key.n_val);
+                    cong_add_lemma_3((sint(A'') + key.n_val) * BASE, -key.n_val * BASE,  key.n_val);
                     reveal cong();
                 }
-                cong((seq_interp(A'') + key.n_val) * BASE - key.n_val * BASE, result, key.n_val);
+                cong((sint(A'') + key.n_val) * BASE - key.n_val * BASE, result, key.n_val);
                 {
-                    assert (seq_interp(A'') + key.n_val) * BASE - key.n_val * BASE == seq_interp(A'') * BASE;
+                    assert (sint(A'') + key.n_val) * BASE - key.n_val * BASE == sint(A'') * BASE;
                 }
-                cong(seq_interp(A'') * BASE, result, key.n_val);
+                cong(sint(A'') * BASE, result, key.n_val);
             }
 
-            assert cong(seq_interp(A'') * BASE, result, key.n_val);
+            assert cong(sint(A'') * BASE, result, key.n_val);
 
             A' := A'';
         } else {
-            assert seq_interp(A') < seq_interp(y) + key.n_val;
-            assert cong(seq_interp(A') * BASE, result, key.n_val) by {
-                assert seq_interp(A') * BASE == result;
+            assert sint(A') < sint(y) + key.n_val;
+            assert cong(sint(A') * BASE, result, key.n_val) by {
+                assert sint(A') * BASE == result;
                 reveal cong();
             }
         }
 
-        assert cong(seq_interp(A'), seq_interp(x[..i+1]) * seq_interp(y) * power(key.BASE_INV, i+1), key.n_val) by {
-            cmm_congruent_lemma(key, x, i, x_i as nat, u_i as nat, seq_interp(A), seq_interp(A'), seq_interp(y));
+        assert cong(sint(A'), sint(x[..i+1]) * sint(y) * power(key.BASE_INV, i+1), key.n_val) by {
+            cmm_congruent_lemma(key, x, i, x_i as nat, u_i as nat, sint(A), sint(A'), sint(y));
         }
     }
 
@@ -663,19 +663,19 @@ module RSAE3v2 {
         requires pub_key_valid(key);
         requires |x| == |y| == key.len;
 
-        ensures cong(seq_interp(A), seq_interp(x) * seq_interp(y) * key.R_INV, key.n_val);
-        ensures seq_interp(A) < key.n_val + seq_interp(y);
+        ensures cong(sint(A), sint(x) * sint(y) * key.R_INV, key.n_val);
+        ensures sint(A) < key.n_val + sint(y);
         ensures |A| == key.len;
     {
         A  := zero_seq_int(key.len);
-        assert seq_interp(A) == 0;
+        assert sint(A) == 0;
 
-        ghost var y_val := seq_interp(y);
+        ghost var y_val := sint(y);
 
         var i := 0;
 
-        assert cong(seq_interp(A), seq_interp(x[..i]) * seq_interp(y) * power(key.BASE_INV, i), key.n_val) by {
-            assert seq_interp(A) == seq_interp(x[..i]) * seq_interp(y) * power(key.BASE_INV, i);
+        assert cong(sint(A), sint(x[..i]) * sint(y) * power(key.BASE_INV, i), key.n_val) by {
+            assert sint(A) == sint(x[..i]) * sint(y) * power(key.BASE_INV, i);
             reveal cong();
         }
         
@@ -684,43 +684,43 @@ module RSAE3v2 {
             invariant i <= |x|;
             invariant |A| == key.len;
 
-            invariant cong(seq_interp(A), seq_interp(x[..i]) * seq_interp(y) * power(key.BASE_INV, i), key.n_val);
-            invariant seq_interp(A) < key.n_val + seq_interp(y);
+            invariant cong(sint(A), sint(x[..i]) * sint(y) * power(key.BASE_INV, i), key.n_val);
+            invariant sint(A) < key.n_val + sint(y);
         {
             A := montMulAdd(key, A, x[i], y, i, x);
             i := i + 1;
         }
 
-        assert cong(seq_interp(A), seq_interp(x) * seq_interp(y) * power(key.BASE_INV, i), key.n_val) by {
+        assert cong(sint(A), sint(x) * sint(y) * power(key.BASE_INV, i), key.n_val) by {
             assert x == x[..key.len];
         }
 
-        assert cong(seq_interp(A), seq_interp(x) * seq_interp(y) * key.R_INV, key.n_val);
+        assert cong(sint(A), sint(x) * sint(y) * key.R_INV, key.n_val);
     }
 
     method modpow3(key: pub_key, a: seq<uint32>) 
         returns (aaa: seq<uint32>)
 
         requires pub_key_valid(key);
-        requires 0 <= seq_interp(a) < key.n_val; 
+        requires 0 <= sint(a) < key.n_val; 
         requires |a| == key.len;
-        ensures seq_interp(aaa) == power(seq_interp(a), 3) % key.n_val;
+        ensures sint(aaa) == power(sint(a), 3) % key.n_val;
         ensures |aaa| == key.len;
     {
         var aR := montMul(key, a, key.RR); /* aR = a * RR / R mod M   */
         var aaR := montMul(key, aR, aR); /* aaR = aR * aR / R mod M */
         aaa := montMul(key, aaR, a); /* aaa = aaR * a / R mod M */
 
-        ghost var aaa_val := seq_interp(aaa);
-        ghost var a_val := seq_interp(a);
+        ghost var aaa_val := sint(aaa);
+        ghost var a_val := sint(a);
 
-        mod_pow3_congruent_lemma_1(key, a_val, seq_interp(aR), seq_interp(aaR), aaa_val, seq_interp(key.RR));
+        mod_pow3_congruent_lemma_1(key, a_val, sint(aR), sint(aaR), aaa_val, sint(key.RR));
 
         var geq := seq_geq(aaa, key.m);
 
         if geq {
             var _, temp := seq_sub(aaa, key.m);
-            ghost var temp_val := seq_interp(temp);
+            ghost var temp_val := sint(temp);
             
             assert cong(aaa_val, temp_val, key.n_val) by {
                 assert temp_val == aaa_val - key.n_val;
@@ -731,10 +731,10 @@ module RSAE3v2 {
             aaa := temp;
         }
 
-        assert seq_interp(aaa) == (a_val * a_val * a_val) % key.n_val by {
-            assert 0 <= seq_interp(aaa) < key.n_val;
-            assert cong(seq_interp(aaa), a_val * a_val * a_val, key.n_val);
-            cong_remainder_lemma(seq_interp(aaa), a_val * a_val * a_val, key.n_val);
+        assert sint(aaa) == (a_val * a_val * a_val) % key.n_val by {
+            assert 0 <= sint(aaa) < key.n_val;
+            assert cong(sint(aaa), a_val * a_val * a_val, key.n_val);
+            cong_remainder_lemma(sint(aaa), a_val * a_val * a_val, key.n_val);
         }
 
         assert (a_val * a_val * a_val == power(a_val, 3)) by {
@@ -747,16 +747,16 @@ module RSAE3v2 {
 
         requires pub_key_connect_valid(rsa, key);
         requires |signature| == |sha| == key.len;
-        requires 0 <= seq_interp(signature) < key.n_val;
-        requires 0 <= seq_interp(sha) < key.n_val;
+        requires 0 <= sint(signature) < key.n_val;
+        requires 0 <= sint(sha) < key.n_val;
 
-        ensures x <==> seq_interp(signature) == power(seq_interp(sha), rsa.d) % key.n_val;
+        ensures x <==> sint(signature) == power(sint(sha), rsa.d) % key.n_val;
     {
         var buf := modpow3(key, signature);
         var i := 0;
 
-        ghost var s := seq_interp(signature);
-        ghost var m := seq_interp(sha);
+        ghost var s := sint(signature);
+        ghost var m := sint(sha);
 
         while i < key.len
             decreases key.len - i;
@@ -765,7 +765,7 @@ module RSAE3v2 {
         {
             if buf[i] != sha[i] {
                 assert (s != power(m, rsa.d) % rsa.n) by {
-                    assert seq_interp(buf) != m by {
+                    assert sint(buf) != m by {
                         assert buf != sha;
                         neq_lemma(buf, sha, key.len);
                     }

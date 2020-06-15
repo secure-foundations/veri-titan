@@ -57,14 +57,14 @@ module SeqInt {
         }
     }
 
-    function seq_interp(A: seq<uint32>) : nat
+    function sint(A: seq<uint32>) : nat
     {
         interp(A, |A|)
     }
 
-    lemma {:induction A} seq_interp_upper_bound_lemma(A: seq<uint32>, n: nat)
+    lemma {:induction A} sint_upper_bound_lemma(A: seq<uint32>, n: nat)
         requires |A| == n;
-        ensures seq_interp(A) < R(n);
+        ensures sint(A) < R(n);
     {
         if |A| == 0 {
             reveal power();
@@ -72,26 +72,26 @@ module SeqInt {
             ghost var A' := A[..(|A| - 1)];
 
             calc ==> {
-                seq_interp(A) == word_interp(A, |A| - 1) + interp(A, |A| - 1);
+                sint(A) == word_interp(A, |A| - 1) + interp(A, |A| - 1);
                 {
-                    assert seq_interp(A') == interp(A, |A| - 1) by {
+                    assert sint(A') == interp(A, |A| - 1) by {
                         prefix_sum_lemma(A, A', |A| - 1);
                     }   
                 }
-                seq_interp(A) == word_interp(A, |A| - 1) + seq_interp(A');
+                sint(A) == word_interp(A, |A| - 1) + sint(A');
                 {
-                    assert seq_interp(A') < power(BASE, |A'|) by {
-                        seq_interp_upper_bound_lemma(A', |A'|);
+                    assert sint(A') < power(BASE, |A'|) by {
+                        sint_upper_bound_lemma(A', |A'|);
                     }
                 }
-                seq_interp(A) < word_interp(A, |A| - 1) + power(BASE, |A'|);
+                sint(A) < word_interp(A, |A| - 1) + power(BASE, |A'|);
                 {
                     assert word_interp(A, |A| - 1) <= power(BASE, |A|) - power(BASE, |A| - 1) by {
                         word_interp_upper_bound_lemma(A, |A| - 1);
                     }
                 }
-                seq_interp(A) < power(BASE, |A|) - power(BASE, |A| - 1) + power(BASE, |A'|);
-                seq_interp(A) < power(BASE, |A|);
+                sint(A) < power(BASE, |A|) - power(BASE, |A| - 1) + power(BASE, |A'|);
+                sint(A) < power(BASE, |A|);
             }
         }
     }
@@ -123,24 +123,24 @@ module SeqInt {
 
     lemma prefix_interp_lemma_2(S: seq<uint32>, n: nat)
         requires 0 < n <= |S|;
-        ensures seq_interp(S[..n]) == S[n-1] as nat * power(BASE, n-1) + seq_interp(S[..n-1])
+        ensures sint(S[..n]) == S[n-1] as nat * power(BASE, n-1) + sint(S[..n-1])
     {
         calc == {
-            seq_interp(S[..n]);
+            sint(S[..n]);
             interp(S[..n], n);
             word_interp(S[..n], n - 1) + interp(S[..n], n - 1);
             {
                 prefix_sum_lemma(S[..n], S[..n-1], n -1);
             }
             word_interp(S[..n], n - 1) + interp(S[..n-1], n - 1);
-            S[n-1] as nat * power(BASE, n-1) + seq_interp(S[..n-1]);
+            S[n-1] as nat * power(BASE, n-1) + sint(S[..n-1]);
         }
     }
 
     lemma {:induction n} neq_lemma(A: seq<uint32>, B: seq<uint32>, n: nat)
         requires |A| == |B| == n;
         requires A != B;
-        ensures seq_interp(A) != seq_interp(B);
+        ensures sint(A) != sint(B);
     {
         ghost var i: nat := n - 1;
 
@@ -157,26 +157,26 @@ module SeqInt {
         assert A[i+1..] == B[i+1..];
         assert A[i] != B[i];
 
-        ghost var A_i_cval := seq_interp(A[..i]);
-        ghost var B_i_cval := seq_interp(B[..i]);
+        ghost var A_i_cval := sint(A[..i]);
+        ghost var B_i_cval := sint(B[..i]);
 
         assert 0 <= A_i_cval < power(BASE, i) by {
-            seq_interp_upper_bound_lemma(A[..i], i);
+            sint_upper_bound_lemma(A[..i], i);
         }
 
         assert 0 <= B_i_cval < power(BASE, i) by {
-            seq_interp_upper_bound_lemma(B[..i], i);
+            sint_upper_bound_lemma(B[..i], i);
         }
 
-        assert seq_interp(A[..i+1]) == A[i] as nat * power(BASE, i) + A_i_cval by {
+        assert sint(A[..i+1]) == A[i] as nat * power(BASE, i) + A_i_cval by {
             prefix_interp_lemma_2(A, i+1);
         }
 
-        assert seq_interp(B[..i+1]) == B[i] as nat * power(BASE, i) + B_i_cval by {
+        assert sint(B[..i+1]) == B[i] as nat * power(BASE, i) + B_i_cval by {
             prefix_interp_lemma_2(B, i+1);
         }
 
-        assert seq_interp(A[..i+1]) != seq_interp(B[..i+1]) by {
+        assert sint(A[..i+1]) != sint(B[..i+1]) by {
             neq_aux_lemma_1(A, A_i_cval, B, B_i_cval, i, n);
         }
 
@@ -187,18 +187,18 @@ module SeqInt {
         requires i < |A| == |B| == n;
         requires A[i] != B[i];
 
-        requires seq_interp(A[..i+1]) == A[i] as int * power(BASE, i) + A_i_cval;
-        requires seq_interp(B[..i+1]) == B[i] as int * power(BASE, i) + B_i_cval;
+        requires sint(A[..i+1]) == A[i] as int * power(BASE, i) + A_i_cval;
+        requires sint(B[..i+1]) == B[i] as int * power(BASE, i) + B_i_cval;
 
-        requires A_i_cval == seq_interp(A[..i]);
-        requires B_i_cval == seq_interp(B[..i]);
+        requires A_i_cval == sint(A[..i]);
+        requires B_i_cval == sint(B[..i]);
 
         requires 0 <= A_i_cval < power(BASE, i);
         requires 0 <= B_i_cval < power(BASE, i);
 
-        ensures seq_interp(A[..i+1]) != seq_interp(B[..i+1]);
+        ensures sint(A[..i+1]) != sint(B[..i+1]);
     {
-        var diff := seq_interp(A[..i+1]) - seq_interp(B[..i+1]);
+        var diff := sint(A[..i+1]) - sint(B[..i+1]);
         var R := power(BASE, i);
 
         if A[i] > B[i] {
@@ -239,41 +239,41 @@ module SeqInt {
     lemma neq_aux_lemma_2(A: seq<uint32>, B: seq<uint32>, i: nat, n: nat)
         requires i < |A| == |B| == n;
         requires A[i+1..] == B[i+1..];
-        requires seq_interp(A[..i+1]) != seq_interp(B[..i+1]);
-        ensures seq_interp(A) != seq_interp(B);
+        requires sint(A[..i+1]) != sint(B[..i+1]);
+        ensures sint(A) != sint(B);
     {
         if i == n - 1 {
             assert A[..i+1] == A && B[..i+1] == B;
-            assert seq_interp(A) != seq_interp(B);
+            assert sint(A) != sint(B);
         } else {
             var n' := n - 1;
             var A', B' := A[..n'], B[..n'];
 
             assert A[..i+1] == A'[..i+1] && B[..i+1] == B'[..i+1];
-            assert seq_interp(A'[..i+1]) != seq_interp(B'[..i+1]);
+            assert sint(A'[..i+1]) != sint(B'[..i+1]);
 
-            assert seq_interp(A') != seq_interp(B') by {
+            assert sint(A') != sint(B') by {
                 neq_aux_lemma_2(A', B', i, n');
             }
 
-            assert seq_interp(A) == A[n-1] as nat * power(BASE, n-1) + seq_interp(A') by {
+            assert sint(A) == A[n-1] as nat * power(BASE, n-1) + sint(A') by {
                 prefix_interp_lemma_2(A, n);
                 assert A[..n] == A;
             }   
 
-            assert seq_interp(B) == B[n-1] as nat * power(BASE, n-1) + seq_interp(B') by {
+            assert sint(B) == B[n-1] as nat * power(BASE, n-1) + sint(B') by {
                 prefix_interp_lemma_2(B, n);
                 assert B[..n] == B;
             }
 
-            assert seq_interp(A) != seq_interp(B);
+            assert sint(A) != sint(B);
         }
     }
 
     method seq_add_impl(A: seq<uint32>, B: seq<uint32>, n: nat) returns (c: uint2, S:seq<uint32>)
         requires |A| == |B| == n;
         ensures |S| == n;
-        ensures seq_interp(A) + seq_interp(B) == seq_interp(S) + c as int * postional_weight(n);
+        ensures sint(A) + sint(B) == sint(S) + c as int * postional_weight(n);
         ensures n != 0 ==> cong(S[0] as int, A[0] as int + B[0] as int, BASE);
     {
         var temp := new uint32[|A|];
@@ -373,28 +373,28 @@ module SeqInt {
     method seq_add(A: seq<uint32>, B: seq<uint32>, n: nat) returns (S: seq<uint32>)
         requires |A| == |B| == n;
         ensures |S| == n;
-        ensures cong(seq_interp(A) + seq_interp(B), seq_interp(S), power(BASE, n));
+        ensures cong(sint(A) + sint(B), sint(S), power(BASE, n));
         ensures n != 0 ==> cong(S[0] as int, A[0] as int + B[0] as int, BASE);
     {
         var c;
         c, S := seq_add_impl(A, B, n);
 
         if c == 0 {
-            assert cong(seq_interp(A) + seq_interp(B), seq_interp(S), power(BASE, n)) by {
-                assert seq_interp(A) + seq_interp(B) == seq_interp(S);
+            assert cong(sint(A) + sint(B), sint(S), power(BASE, n)) by {
+                assert sint(A) + sint(B) == sint(S);
                 reveal cong();
             }
         } else {
-            assert cong(seq_interp(A) + seq_interp(B), seq_interp(S), power(BASE, n)) by {
-                assert cong(seq_interp(A) + seq_interp(B), seq_interp(S) + postional_weight(n), power(BASE, n)) by {
-                    assert seq_interp(A) + seq_interp(B) == seq_interp(S) + postional_weight(n);
+            assert cong(sint(A) + sint(B), sint(S), power(BASE, n)) by {
+                assert cong(sint(A) + sint(B), sint(S) + postional_weight(n), power(BASE, n)) by {
+                    assert sint(A) + sint(B) == sint(S) + postional_weight(n);
                     reveal cong();
                 }
-                assert cong(seq_interp(S) + power(BASE, n), seq_interp(S), power(BASE, n)) by {
-                    cong_add_lemma_3(seq_interp(S), power(BASE, n), power(BASE, n));
+                assert cong(sint(S) + power(BASE, n), sint(S), power(BASE, n)) by {
+                    cong_add_lemma_3(sint(S), power(BASE, n), power(BASE, n));
                     reveal cong();
                 }
-                cong_trans_lemma(seq_interp(A) + seq_interp(B), seq_interp(S) + power(BASE, n), seq_interp(S), power(BASE, n));
+                cong_trans_lemma(sint(A) + sint(B), sint(S) + power(BASE, n), sint(S), power(BASE, n));
             }
         }
     }
@@ -402,21 +402,21 @@ module SeqInt {
     method seq_add_c(A: seq<uint32>, B: seq<uint32>, n: nat) returns (S: seq<uint32>)
         requires |A| == |B| == n;
         ensures |S| == n + 1;
-        ensures seq_interp(A) + seq_interp(B) == seq_interp(S)
+        ensures sint(A) + sint(B) == sint(S)
         ensures n != 0 ==> cong(S[0] as int, A[0] as int + B[0] as int, BASE);
     {
         var c, S' := seq_add_impl(A, B, n);
         S := S' + [c as uint32];
         calc == {
-            seq_interp(A) + seq_interp(B);
-            seq_interp(S') + c as int * postional_weight(n);
-            seq_interp(S') + word_interp(S, n);
+            sint(A) + sint(B);
+            sint(S') + c as int * postional_weight(n);
+            sint(S') + word_interp(S, n);
             interp(S', n) + word_interp(S, n);
             {
                 prefix_sum_lemma(S, S', n);
             }
             interp(S, n) + word_interp(S, n);
-            seq_interp(S);
+            sint(S);
         }
     }
 
@@ -425,11 +425,11 @@ module SeqInt {
         requires n < m;
         requires forall i :: 0 <= i < n ==> A[i] == A'[i];
         requires forall i :: n <= i < m ==> A'[i] == 0;
-        ensures seq_interp(A') == seq_interp(A); 
+        ensures sint(A') == sint(A); 
     {
         if m == n + 1{
             calc == {
-                seq_interp(A');
+                sint(A');
                 interp(A', n + 1);
                 word_interp(A', n) + interp(A', n);
                 A'[n] as nat * postional_weight(n) + interp(A', n);
@@ -438,13 +438,13 @@ module SeqInt {
                     prefix_sum_lemma(A, A', n);
                 }
                 interp(A, n);
-                seq_interp(A);
+                sint(A);
             }
         } else {
             var A'' := A'[..m - 1];
     
             calc == {
-                seq_interp(A');
+                sint(A');
                 interp(A', m);
                 word_interp(A', m - 1) + interp(A', m - 1);
                 A'[m - 1] as nat * postional_weight(m - 1) + interp(A', m - 1);
@@ -453,18 +453,18 @@ module SeqInt {
                     prefix_sum_lemma(A'', A', m - 1);
                 }
                 interp(A'', m - 1);
-                seq_interp(A'');
+                sint(A'');
                 {
                     zero_extend_lemma(A, n, A'', m - 1);
                 }
-                seq_interp(A);
+                sint(A);
             }
         }
     }
 
     method zero_seq_int(len: nat) returns (A: seq<uint32>)
         requires len != 0;
-        ensures seq_interp(A) == 0;
+        ensures sint(A) == 0;
         ensures |A| == len;
     {
         var temp := new uint32[len];
@@ -478,7 +478,7 @@ module SeqInt {
             i := i + 1;
         }
         A := temp[..];
-        assert seq_interp(A[..0]) == 0;
+        assert sint(A[..0]) == 0;
         zero_extend_lemma(A[..0], 0, A, len);
     }
 
@@ -486,7 +486,7 @@ module SeqInt {
         requires |A| == n;
         requires m > n;
         ensures |A'| == m;
-        ensures seq_interp(A') == seq_interp(A); 
+        ensures sint(A') == sint(A); 
         ensures forall i :: 0 <= i < n ==> A[i] == A'[i];
         ensures forall i :: n <= i < m ==> A'[i] == 0;
     {
@@ -518,9 +518,9 @@ module SeqInt {
     method seq_sub(A: seq<uint32>, B: seq<uint32>) returns (b: uint2, S:seq<uint32>)
         requires |A| == |B|;
         ensures |S| == |A|;
-        ensures seq_interp(A) - seq_interp(B) == seq_interp(S) - b as int * postional_weight(|A|);
-        ensures seq_interp(A) >= seq_interp(B) ==> b == 0;
-        ensures seq_interp(A) < seq_interp(B) ==> b == 1;
+        ensures sint(A) - sint(B) == sint(S) - b as int * postional_weight(|A|);
+        ensures sint(A) >= sint(B) ==> b == 0;
+        ensures sint(A) < sint(B) ==> b == 1;
     {
         var temp := new uint32[|A|];
         b, S := 0, temp[..];
@@ -606,26 +606,26 @@ module SeqInt {
 
     lemma seq_sub_borrow_bit_lemma(A: seq<uint32>, B: seq<uint32>, S:seq<uint32>, b: uint2)
         requires |A| == |B| == |S|;
-        requires seq_interp(A) - seq_interp(B) == seq_interp(S) - b as int * postional_weight(|A|);
-        ensures seq_interp(A) >= seq_interp(B) ==> b == 0;
-        ensures seq_interp(A) < seq_interp(B) ==> b == 1;
+        requires sint(A) - sint(B) == sint(S) - b as int * postional_weight(|A|);
+        ensures sint(A) >= sint(B) ==> b == 0;
+        ensures sint(A) < sint(B) ==> b == 1;
     {
         var n := |A|;
 
-        if seq_interp(A) >= seq_interp(B) && b != 0 {
+        if sint(A) >= sint(B) && b != 0 {
             assert b == 1;
-            assert seq_interp(S) < R(n) by {
-                seq_interp_upper_bound_lemma(S, n);
+            assert sint(S) < R(n) by {
+                sint_upper_bound_lemma(S, n);
             }
 
-            assert seq_interp(S) - b as int * postional_weight(|A|) < 0;
+            assert sint(S) - b as int * postional_weight(|A|) < 0;
             assert false;
         }
     }
 
     method seq_geq(A: seq<uint32>, B: seq<uint32>) returns (x: bool)
         requires |A| == |B| as int;
-        ensures x == (seq_interp(A) >= seq_interp(B));
+        ensures x == (sint(A) >= sint(B));
     {
         x := false;
         var i := |A|;
@@ -640,11 +640,11 @@ module SeqInt {
             cmp_sufficient_lemma(A, B, i');
 
             if A[i'] < B[i'] {
-                assert seq_interp(A) < seq_interp(B);
+                assert sint(A) < sint(B);
                 return false;
             }
             if A[i'] > B[i'] {
-                assert seq_interp(A) > seq_interp(B);
+                assert sint(A) > sint(B);
                 return true;
             }
 
@@ -658,8 +658,8 @@ module SeqInt {
     lemma {:induction A, i} cmp_sufficient_lemma(A: seq<uint32>, B: seq<uint32>, i: nat)
         requires 0 <= i < |A| == |B|;
         requires forall j :: i < j < |A| ==> (A[j] == B[j]);
-        ensures A[i] > B[i] ==> (seq_interp(A) > seq_interp(B));
-        ensures A[i] < B[i] ==> (seq_interp(A) < seq_interp(B));
+        ensures A[i] > B[i] ==> (sint(A) > sint(B));
+        ensures A[i] < B[i] ==> (sint(A) < sint(B));
     {
         var n := |A|;
         if n != 0 {
@@ -675,7 +675,7 @@ module SeqInt {
                     {
                         cmp_sufficient_lemma(A', B', i);
                     }
-                    seq_interp(A') > seq_interp(B');
+                    sint(A') > sint(B');
                     {
                         prefix_sum_lemma(A, A', n - 1);
                         prefix_sum_lemma(B, B', n - 1);
@@ -685,16 +685,16 @@ module SeqInt {
                         assert word_interp(A, n - 1) == word_interp(B, n - 1);
                     }
                     interp(A, n - 1) +  word_interp(A, n - 1) > interp(B, n - 1) + word_interp(B, n - 1);
-                    seq_interp(A) > seq_interp(B);
+                    sint(A) > sint(B);
                 }
-                assert A[i] > B[i] ==> (seq_interp(A) > seq_interp(B));
+                assert A[i] > B[i] ==> (sint(A) > sint(B));
 
                 calc ==> {
                     A[i] < B[i];
                     {
                         cmp_sufficient_lemma(A', B', i);
                     }
-                    seq_interp(A') < seq_interp(B');
+                    sint(A') < sint(B');
                     {
                         prefix_sum_lemma(A, A', n - 1);
                         prefix_sum_lemma(B, B', n - 1);
@@ -704,77 +704,77 @@ module SeqInt {
                         assert word_interp(A, n - 1) == word_interp(B, n - 1);
                     }
                     interp(A, n - 1) +  word_interp(A, n - 1) < interp(B, n - 1) + word_interp(B, n - 1);
-                    seq_interp(A) < seq_interp(B);
+                    sint(A) < sint(B);
                 }
-                assert A[i] < B[i] ==> (seq_interp(A) < seq_interp(B));
+                assert A[i] < B[i] ==> (sint(A) < sint(B));
             }
         }
     }
 
     lemma cmp_msw_lemma(A: seq<uint32>, B: seq<uint32>)
         requires |A| == |B| != 0;
-        ensures A[|A| - 1] > B[|B| - 1] ==> (seq_interp(A) > seq_interp(B));
-        ensures A[|A| - 1] < B[|B| - 1] ==> (seq_interp(A) < seq_interp(B));
+        ensures A[|A| - 1] > B[|B| - 1] ==> (sint(A) > sint(B));
+        ensures A[|A| - 1] < B[|B| - 1] ==> (sint(A) < sint(B));
     {
         var n := |A|;
         var A' := A[..n-1];
         var B' := B[..n-1];
         calc == {
-            seq_interp(A) - seq_interp(B);
+            sint(A) - sint(B);
             {
                 prefix_sum_lemma(A, A', n - 1);
                 prefix_sum_lemma(B, B', n - 1);
             }
             interp(A', n - 1) +  word_interp(A, n - 1) - interp(B', n - 1) - word_interp(B, n - 1);
-            seq_interp(A') - seq_interp(B') + word_interp(A, n - 1) - word_interp(B, n - 1);
-            seq_interp(A') - seq_interp(B') + (A[n - 1] as int - B[n - 1] as int)  * postional_weight(n - 1);
+            sint(A') - sint(B') + word_interp(A, n - 1) - word_interp(B, n - 1);
+            sint(A') - sint(B') + (A[n - 1] as int - B[n - 1] as int)  * postional_weight(n - 1);
         }
 
         if A[n - 1] > B[n - 1] {
             calc >= {
-                seq_interp(A') - seq_interp(B') + (A[n - 1] as int - B[n - 1] as int)  * postional_weight(n - 1);
+                sint(A') - sint(B') + (A[n - 1] as int - B[n - 1] as int)  * postional_weight(n - 1);
                 {
                     assert (A[n - 1] as int - B[n - 1] as int) >= 1;
                 }
-                seq_interp(A') - seq_interp(B') + postional_weight(n - 1);
+                sint(A') - sint(B') + postional_weight(n - 1);
                 {
-                    assert seq_interp(A') >= 0;
+                    assert sint(A') >= 0;
                 }
-                postional_weight(n - 1) - seq_interp(B');
-                power(BASE, n - 1) - seq_interp(B');
+                postional_weight(n - 1) - sint(B');
+                power(BASE, n - 1) - sint(B');
             }
 
-            assert seq_interp(B') < power(BASE, n - 1) by {
-                seq_interp_upper_bound_lemma(B', n - 1);
+            assert sint(B') < power(BASE, n - 1) by {
+                sint_upper_bound_lemma(B', n - 1);
             }
 
-            assert power(BASE, n - 1) - seq_interp(B') > 0;
-            assert seq_interp(A) > seq_interp(B);
+            assert power(BASE, n - 1) - sint(B') > 0;
+            assert sint(A) > sint(B);
         } else if A[n - 1] < B[n - 1] {
             calc <= {
-                seq_interp(A') - seq_interp(B') + (A[n - 1] as int - B[n - 1] as int)  * postional_weight(n - 1);
+                sint(A') - sint(B') + (A[n - 1] as int - B[n - 1] as int)  * postional_weight(n - 1);
                 {
                     assert (B[n - 1] as int - A[n - 1] as int) >= 1;
                 }
-                seq_interp(A') - seq_interp(B') - postional_weight(n - 1);
+                sint(A') - sint(B') - postional_weight(n - 1);
                 {
-                    assert seq_interp(B') >= 0;
+                    assert sint(B') >= 0;
                 }
-                seq_interp(A') - postional_weight(n - 1);
-                seq_interp(A') - power(BASE, n - 1);
+                sint(A') - postional_weight(n - 1);
+                sint(A') - power(BASE, n - 1);
             }
 
-            assert seq_interp(A') < power(BASE, n - 1) by {
-                seq_interp_upper_bound_lemma(A', n - 1);
+            assert sint(A') < power(BASE, n - 1) by {
+                sint_upper_bound_lemma(A', n - 1);
             }
 
-            assert seq_interp(A') - power(BASE, n - 1) < 0;
-            assert seq_interp(A) < seq_interp(B);
+            assert sint(A') - power(BASE, n - 1) < 0;
+            assert sint(A) < sint(B);
         }
     }
 
     lemma {:induction A} lsw_mod_lemma(A: seq<uint32>)
-        ensures |A| != 0 ==> (seq_interp(A) % BASE == A[0] as int);
+        ensures |A| != 0 ==> (sint(A) % BASE == A[0] as int);
     {
         if |A| == 0 || |A| == 1 {
             reveal power();
@@ -784,13 +784,13 @@ module SeqInt {
             ghost var A' := A[..n - 1];
 
             calc ==> {
-                seq_interp(A') % BASE == A'[0] as int;
+                sint(A') % BASE == A'[0] as int;
                 {
-                    cong_residual_lemma(seq_interp(A'), A[0] as int, BASE);
+                    cong_residual_lemma(sint(A'), A[0] as int, BASE);
                 }
-                cong(seq_interp(A'), A[0] as int, BASE);
+                cong(sint(A'), A[0] as int, BASE);
                 {
-                    assert seq_interp(A') == interp(A', n - 1);
+                    assert sint(A') == interp(A', n - 1);
                 }
                 cong(interp(A', n - 1), A[0] as int, BASE);
                 {
@@ -823,37 +823,37 @@ module SeqInt {
                     cong_add_lemma_2(interp(A, n - 1), A[0] as int, word_interp(A, n - 1), 0, BASE);
                 }
                 cong(interp(A, n - 1) + word_interp(A, n - 1), A[0] as int, BASE);
-                cong(seq_interp(A), A[0] as int, BASE);
+                cong(sint(A), A[0] as int, BASE);
             }
 
-            assert cong( seq_interp(A), A[0] as int, BASE);
+            assert cong( sint(A), A[0] as int, BASE);
             assert A[0] as int < BASE;
-            cong_residual_lemma(seq_interp(A), A[0] as nat, BASE);
+            cong_residual_lemma(sint(A), A[0] as nat, BASE);
         }
     }
 
     lemma lsw_inverse_lemma(m: seq<uint32>, m': uint32)
         requires |m| != 0;
-        requires cong(m' as int * seq_interp(m), -1, BASE);
+        requires cong(m' as int * sint(m), -1, BASE);
         ensures cong(m' as int * m[0] as int, -1, BASE);
     {
-        assert cong(seq_interp(m), seq_interp(m) % BASE, BASE) by {
-            cong_mod_lemma(seq_interp(m), BASE);
+        assert cong(sint(m), sint(m) % BASE, BASE) by {
+            cong_mod_lemma(sint(m), BASE);
             reveal cong();
         }
 
         calc ==> {
-            cong(seq_interp(m), seq_interp(m) % BASE, BASE);
+            cong(sint(m), sint(m) % BASE, BASE);
             {
-                assert (seq_interp(m) % BASE == m[0] as int) by {
+                assert (sint(m) % BASE == m[0] as int) by {
                     lsw_mod_lemma(m);
                 }
             }
-            cong(seq_interp(m),  m[0] as int, BASE);
+            cong(sint(m),  m[0] as int, BASE);
             {
-                cong_mul_lemma_1(seq_interp(m), m[0] as int, m' as int, BASE);
+                cong_mul_lemma_1(sint(m), m[0] as int, m' as int, BASE);
             }
-            cong(seq_interp(m) * m' as int,  m[0] as int * m' as int, BASE);
+            cong(sint(m) * m' as int,  m[0] as int * m' as int, BASE);
             {
                 reveal cong();
             }
@@ -864,8 +864,8 @@ module SeqInt {
     lemma {:induction T} seq_div_base_lemma(T: seq<uint32>, n: nat)
         requires |T| == n > 0;
         requires cong(T[0] as int, 0, BASE);
-        ensures seq_interp(T) % BASE == 0;
-        ensures seq_interp(T) / BASE == seq_interp(T[1..]);
+        ensures sint(T) % BASE == 0;
+        ensures sint(T) / BASE == sint(T[1..]);
     {
         if n == 1 {
             reveal cong();
@@ -873,54 +873,54 @@ module SeqInt {
             var T' := T[..n-1];
 
             calc =={
-                seq_interp(T); 
+                sint(T); 
                 (T[n-1] as int * postional_weight(n-1) + interp(T, n - 1));
                 {
                     prefix_sum_lemma(T, T', n - 1);
                 }
                 (T[n-1] as int * postional_weight(n-1) + interp(T', n - 1));
-                (T[n-1] as int * postional_weight(n-1) + seq_interp(T'));
-                (T[n-1] as int * power(BASE, n-1) + seq_interp(T'));
+                (T[n-1] as int * postional_weight(n-1) + sint(T'));
+                (T[n-1] as int * power(BASE, n-1) + sint(T'));
             }
 
             assert A1: power(BASE, n-1) % BASE == 0 by {
                 power_mod_lemma_1(BASE, n-1);
             }
 
-            assert A2: seq_interp(T') % BASE == 0 by {
+            assert A2: sint(T') % BASE == 0 by {
                 seq_div_base_lemma(T', n - 1);
             }
 
-            assert seq_interp(T) % BASE == 0 by {
+            assert sint(T) % BASE == 0 by {
                 reveal A1, A2;
                 assert (T[n-1] as int * power(BASE, n-1)) % BASE == 0 by {
                     mod_mul_lemma(T[n-1] as int, power(BASE, n-1), BASE);
                 }
-                assert (T[n-1] as int * power(BASE, n-1) + seq_interp(T')) % BASE == 0;
+                assert (T[n-1] as int * power(BASE, n-1) + sint(T')) % BASE == 0;
             }
 
             calc == {
-                seq_interp(T) / BASE;
-                (T[n-1] as int * power(BASE, n-1) + seq_interp(T')) / BASE;
+                sint(T) / BASE;
+                (T[n-1] as int * power(BASE, n-1) + sint(T')) / BASE;
                 {
                     reveal A1, A2;
                 }
-                T[n-1] as int * (power(BASE, n-1) / BASE) + seq_interp(T') / BASE;
+                T[n-1] as int * (power(BASE, n-1) / BASE) + sint(T') / BASE;
                 {
-                    assert seq_interp(T') / BASE == seq_interp(T'[1..]) by {
+                    assert sint(T') / BASE == sint(T'[1..]) by {
                         seq_div_base_lemma(T', n - 1);
                     }
                 }
-                T[n-1] as int * (power(BASE, n-1) / BASE) + seq_interp(T'[1..]);
+                T[n-1] as int * (power(BASE, n-1) / BASE) + sint(T'[1..]);
                 {
                     assert  power(BASE, n-1) / BASE ==  power(BASE, n-2) by {
                         power_sub_one_lemma(BASE, n-1);
                     }
                 }
-                T[n-1] as int * power(BASE, n-2) + seq_interp(T'[1..]);
-                T[n-1] as int * power(BASE, n-2) + seq_interp(T[1..n-1]);
+                T[n-1] as int * power(BASE, n-2) + sint(T'[1..]);
+                T[n-1] as int * power(BASE, n-2) + sint(T[1..n-1]);
                 {
-                    assert seq_interp(T[1..n-1]) == interp(T[1..n-1], n - 2);
+                    assert sint(T[1..n-1]) == interp(T[1..n-1], n - 2);
                 }
                 T[n-1] as int * power(BASE, n-2) + interp(T[1..n-1], n - 2);
                 {
@@ -930,21 +930,21 @@ module SeqInt {
                 }
                 T[n-1] as int * power(BASE, n-2) + interp(T[1..], n -2);
                 word_interp(T[1..], n - 2) + interp(T[1..], n - 2);
-                seq_interp(T[1..]);
+                sint(T[1..]);
             }
         }
     }
 
     lemma msw_zero_lemma(T: seq<uint32>, n: nat)
         requires |T| == n + 2;
-        requires seq_interp(T) < 2 * R(n) - 1;
+        requires sint(T) < 2 * R(n) - 1;
         ensures T[n+1] == 0;
     {
         if T[n+1] != 0 {
             assert T[n+1] as int >= 1;
 
             calc >= {
-                seq_interp(T);
+                sint(T);
                 interp(T, n + 2);
                 word_interp(T, n + 1) + interp(T, n + 1);
                 T[n+1] as int * postional_weight(n+1) + interp(T, n + 1);

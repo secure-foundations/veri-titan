@@ -15,22 +15,22 @@ module RSAE3v1 {
         requires n > 2;
         requires |m| == n && |x| == n && |y| == n;
         requires R == power(BASE, n);
-        requires cong(m' as int * seq_interp(m), -1, BASE);
-        requires 0 <= seq_interp(x) < seq_interp(m); 
-        requires 0 <= seq_interp(y) < seq_interp(m); 
-        requires cong(BASE * BASE_INV, 1, seq_interp(m));
+        requires cong(m' as int * sint(m), -1, BASE);
+        requires 0 <= sint(x) < sint(m); 
+        requires 0 <= sint(y) < sint(m); 
+        requires cong(BASE * BASE_INV, 1, sint(m));
 
-        ensures seq_interp(A) == (seq_interp(x) * seq_interp(y) * power(BASE_INV, n)) % seq_interp(m);
+        ensures sint(A) == (sint(x) * sint(y) * power(BASE_INV, n)) % sint(m);
     {
         A  := zero_seq_int(n + 1);
-        assert seq_interp(A) == 0;
+        assert sint(A) == 0;
 
-        ghost var m_val := seq_interp(m);
-        ghost var y_val := seq_interp(y);
+        ghost var m_val := sint(m);
+        ghost var y_val := sint(y);
 
         var i := 0;
 
-        assert cong(seq_interp(A), seq_interp(x[..i]) * y_val * power(BASE_INV, i), m_val) by {
+        assert cong(sint(A), sint(x[..i]) * y_val * power(BASE_INV, i), m_val) by {
             calc ==> {
                 m_val != 0;
                 {
@@ -38,14 +38,14 @@ module RSAE3v1 {
                 }
                 cong(0, 0, m_val);
                 {
-                    assert seq_interp(A) == 0;
+                    assert sint(A) == 0;
                 }
-                cong(seq_interp(A), 0, m_val);
+                cong(sint(A), 0, m_val);
                 {
-                    assert seq_interp(x[..i]) == 0;
-                    assert seq_interp(x[..i]) * y_val * power(BASE_INV, i) == 0;
+                    assert sint(x[..i]) == 0;
+                    assert sint(x[..i]) * y_val * power(BASE_INV, i) == 0;
                 }
-                cong(seq_interp(A), seq_interp(x[..i]) * y_val * power(BASE_INV, i), m_val);
+                cong(sint(A), sint(x[..i]) * y_val * power(BASE_INV, i), m_val);
             }
         }
         
@@ -53,9 +53,9 @@ module RSAE3v1 {
             decreases n - i;
             invariant |A| == n + 1;
             invariant i <= |x|;
-            invariant cong(seq_interp(A), seq_interp(x[..i]) * seq_interp(y) * power(BASE_INV, i), seq_interp(m));
-            invariant seq_interp(A) < 2 * m_val - 1;
-            invariant cong(BASE * BASE_INV, 1, seq_interp(m));
+            invariant cong(sint(A), sint(x[..i]) * sint(y) * power(BASE_INV, i), sint(m));
+            invariant sint(A) < 2 * m_val - 1;
+            invariant cong(BASE * BASE_INV, 1, sint(m));
         {
             var u_i_ := ((A[0] as int + x[i] as int * y[0] as int) * m' as int) % BASE; 
             var u_i := u_i_ as uint32;
@@ -67,17 +67,17 @@ module RSAE3v1 {
             A := seq_zero_extend(A, n + 1, n + 2);
             var A' := seq_add_c(A, S, n + 2);
 
-            assert seq_interp(A') % BASE == 0 && cong(A'[0] as int, 0, BASE) by {
+            assert sint(A') % BASE == 0 && cong(A'[0] as int, 0, BASE) by {
                 mont_mul_divisible_lemma(m, x, y, P_1, P_2, S, A, A', i, u_i, m', n);
             }
 
             var A'' := A'[1..n+2];
 
-            assert (seq_interp(A'') == seq_interp(A') / BASE) && seq_interp(A'') < 2 * m_val - 1 by {
+            assert (sint(A'') == sint(A') / BASE) && sint(A'') < 2 * m_val - 1 by {
                 mont_mul_bounded_lemma(m, x, y, P_1, P_2, S, A, A', A'', i, u_i, m', n);
             }
 
-            assert cong(seq_interp(A''), seq_interp(x[..i + 1]) * y_val * power(BASE_INV, i+1), m_val) by {
+            assert cong(sint(A''), sint(x[..i + 1]) * y_val * power(BASE_INV, i+1), m_val) by {
                 mont_mul_congruent_lemma(m, x, y, P_1, P_2, S, A, A', A'', i, u_i, m', n, BASE_INV);
             }
 
@@ -87,8 +87,8 @@ module RSAE3v1 {
 
         assert x[..n] == x;
 
-        assert seq_interp(A) < 2 * m_val - 1;
-        assert cong(seq_interp(A), seq_interp(x) * seq_interp(y) * power(BASE_INV, n), seq_interp(m));
+        assert sint(A) < 2 * m_val - 1;
+        assert cong(sint(A), sint(x) * sint(y) * power(BASE_INV, n), sint(m));
 
         var m_ext := seq_zero_extend(m, n, n + 1);
         var geq := seq_geq(A, m_ext);
@@ -96,38 +96,38 @@ module RSAE3v1 {
         if geq {
             var b, D := seq_sub(A, m_ext);
 
-            assert cong(seq_interp(A), seq_interp(A) - m_val, m_val) by {
-                cong_add_lemma_3(seq_interp(A), - (m_val as int), m_val);
+            assert cong(sint(A), sint(A) - m_val, m_val) by {
+                cong_add_lemma_3(sint(A), - (m_val as int), m_val);
             }
 
             calc ==> {
-                cong(seq_interp(A), seq_interp(A) - m_val, m_val);
+                cong(sint(A), sint(A) - m_val, m_val);
                 {
                    reveal cong(); 
                 }
-                cong(seq_interp(A) - m_val, seq_interp(A), m_val);
+                cong(sint(A) - m_val, sint(A), m_val);
                 {
-                    assert cong(seq_interp(A), seq_interp(x) * seq_interp(y) * power(BASE_INV, n), seq_interp(m));
-                    cong_trans_lemma(seq_interp(A) - m_val, seq_interp(A), seq_interp(x) * seq_interp(y) * power(BASE_INV, n), seq_interp(m));
+                    assert cong(sint(A), sint(x) * sint(y) * power(BASE_INV, n), sint(m));
+                    cong_trans_lemma(sint(A) - m_val, sint(A), sint(x) * sint(y) * power(BASE_INV, n), sint(m));
                 }
-                cong(seq_interp(A) - m_val, seq_interp(x) * seq_interp(y) * power(BASE_INV, n), seq_interp(m));
+                cong(sint(A) - m_val, sint(x) * sint(y) * power(BASE_INV, n), sint(m));
                 {
-                    assert seq_interp(D) == seq_interp(A) - m_val;
+                    assert sint(D) == sint(A) - m_val;
                 }
-                cong(seq_interp(D), seq_interp(x) * seq_interp(y) * power(BASE_INV, n), seq_interp(m));
+                cong(sint(D), sint(x) * sint(y) * power(BASE_INV, n), sint(m));
             }
             A := D;
         }
 
-        ghost var temp := seq_interp(x) * seq_interp(y) * power(BASE_INV, n);
+        ghost var temp := sint(x) * sint(y) * power(BASE_INV, n);
 
-        assert seq_interp(A) == temp % seq_interp(m) by {
-            assert cong(temp, seq_interp(A), seq_interp(m)) by {
-                assert cong(seq_interp(A), temp, seq_interp(m));
+        assert sint(A) == temp % sint(m) by {
+            assert cong(temp, sint(A), sint(m)) by {
+                assert cong(sint(A), temp, sint(m));
                 reveal cong();
             }
-            assert seq_interp(A) < m_val;
-            cong_residual_lemma(temp, seq_interp(A), seq_interp(m));
+            assert sint(A) < m_val;
+            cong_residual_lemma(temp, sint(A), sint(m));
         }
     }
 
@@ -149,7 +149,7 @@ module RSAE3v1 {
         requires |P_1| ==|P_2| == n + 1;
         requires |S| == |A| == n + 2;
         requires |A'| == n + 3;
-        requires cong(m' as int * seq_interp(m), -1, BASE);
+        requires cong(m' as int * sint(m), -1, BASE);
 
         requires u_i as int == ((A[0] as int + x[i] as int * y[0] as int) * m' as int) % BASE;
 
@@ -157,12 +157,12 @@ module RSAE3v1 {
         requires cong(P_2[0] as int, m[0] as int * u_i as int, BASE);
         requires cong(A'[0] as int, A[0] as int + S[0] as int, BASE);
 
-        requires seq_interp(A) + seq_interp(S) == seq_interp(A');
+        requires sint(A) + sint(S) == sint(A');
 
         requires cong(S[0] as int, P_1[0] as int + P_2[0] as int, BASE);
 
         ensures cong(A'[0] as int, 0, BASE);
-        ensures seq_interp(A') % BASE == 0;
+        ensures sint(A') % BASE == 0;
     {
         assert cong(m' as int * m[0] as int, -1, BASE) by {
                 lsw_inverse_lemma(m, m');
@@ -206,7 +206,7 @@ module RSAE3v1 {
         }
         assert cong(A'[0] as int, 0, BASE);
 
-        assert seq_interp(A') % BASE == 0 by {
+        assert sint(A') % BASE == 0 by {
             seq_div_base_lemma(A', n + 3);
         }
     }
@@ -310,79 +310,79 @@ module RSAE3v1 {
 
         requires A'' == A'[1..n+2];
 
-        requires seq_interp(A) < 2 * seq_interp(m) - 1;
-        requires seq_interp(A) + seq_interp(S) == seq_interp(A');
-        requires seq_interp(P_1) + seq_interp(P_2) == seq_interp(S);
-        requires seq_interp(P_1) == seq_interp(y) * x [i] as int;
-        requires seq_interp(P_2) == seq_interp(m) * u_i as int;
+        requires sint(A) < 2 * sint(m) - 1;
+        requires sint(A) + sint(S) == sint(A');
+        requires sint(P_1) + sint(P_2) == sint(S);
+        requires sint(P_1) == sint(y) * x [i] as int;
+        requires sint(P_2) == sint(m) * u_i as int;
 
-        requires 0 <= seq_interp(x) < seq_interp(m);
-        requires 0 <= seq_interp(y) < seq_interp(m);
+        requires 0 <= sint(x) < sint(m);
+        requires 0 <= sint(y) < sint(m);
 
         requires cong(A'[0] as int, 0, BASE);
 
-        ensures seq_interp(A'') < 2 * seq_interp(m) - 1;
-        ensures seq_interp(A'') == seq_interp(A') / BASE;
+        ensures sint(A'') < 2 * sint(m) - 1;
+        ensures sint(A'') == sint(A') / BASE;
     {
-        ghost var m_val := seq_interp(m);
+        ghost var m_val := sint(m);
         ghost var m_bound := m_val - 1;
         ghost var base_bound := BASE - 1;
 
         calc <= {
-            seq_interp(A');
-            seq_interp(A) + seq_interp(S);
-            seq_interp(A) + seq_interp(P_1) + seq_interp(P_2);
-            seq_interp(A) + seq_interp(y) * x [i] as int + seq_interp(P_2);
+            sint(A');
+            sint(A) + sint(S);
+            sint(A) + sint(P_1) + sint(P_2);
+            sint(A) + sint(y) * x [i] as int + sint(P_2);
             {
-                assert seq_interp(y) <= m_bound;
+                assert sint(y) <= m_bound;
             }
-            seq_interp(A) + m_bound * x [i] as int + seq_interp(P_2);
+            sint(A) + m_bound * x [i] as int + sint(P_2);
             {
                 assert x [i] as int <= base_bound;
             }
-            seq_interp(A) + m_bound * base_bound + seq_interp(P_2);
-            seq_interp(A) + m_bound * base_bound + seq_interp(m) * u_i as int;
+            sint(A) + m_bound * base_bound + sint(P_2);
+            sint(A) + m_bound * base_bound + sint(m) * u_i as int;
             {
                 assert u_i as int <= base_bound;
             }
-            seq_interp(A) + m_bound * base_bound + seq_interp(m) * base_bound;
-            seq_interp(A) + m_bound * base_bound + m_val * base_bound;
+            sint(A) + m_bound * base_bound + sint(m) * base_bound;
+            sint(A) + m_bound * base_bound + m_val * base_bound;
         }
 
         calc ==> {
-            seq_interp(A') < 2 * m_val - 1 + m_bound * base_bound + m_val * base_bound;
-            seq_interp(A') < 2 * m_val - 1 + (m_val - 1) * base_bound + m_val * base_bound;
-            seq_interp(A') < 2 * m_val - 1 + m_val * base_bound - base_bound + m_val * base_bound;
-            seq_interp(A') < 2 * m_val - 1 + m_val * (BASE - 1) - (BASE - 1) + m_val * (BASE - 1);
-            seq_interp(A') < 2 * m_val + m_val * (BASE - 1) - BASE + m_val * (BASE - 1);
-            seq_interp(A') < 2 * m_val + m_val * BASE - m_val - BASE + m_val * (BASE - 1);
-            seq_interp(A') < 2 * m_val + m_val * BASE - m_val - BASE + m_val * BASE - m_val;
-            seq_interp(A') < m_val * BASE - BASE + m_val * BASE;
-            seq_interp(A') < 2 * m_val * BASE - BASE;
-            seq_interp(A') < BASE * (2 * m_val - 1);
-            seq_interp(A') < BASE * (2 * seq_interp(m) - 1);
+            sint(A') < 2 * m_val - 1 + m_bound * base_bound + m_val * base_bound;
+            sint(A') < 2 * m_val - 1 + (m_val - 1) * base_bound + m_val * base_bound;
+            sint(A') < 2 * m_val - 1 + m_val * base_bound - base_bound + m_val * base_bound;
+            sint(A') < 2 * m_val - 1 + m_val * (BASE - 1) - (BASE - 1) + m_val * (BASE - 1);
+            sint(A') < 2 * m_val + m_val * (BASE - 1) - BASE + m_val * (BASE - 1);
+            sint(A') < 2 * m_val + m_val * BASE - m_val - BASE + m_val * (BASE - 1);
+            sint(A') < 2 * m_val + m_val * BASE - m_val - BASE + m_val * BASE - m_val;
+            sint(A') < m_val * BASE - BASE + m_val * BASE;
+            sint(A') < 2 * m_val * BASE - BASE;
+            sint(A') < BASE * (2 * m_val - 1);
+            sint(A') < BASE * (2 * sint(m) - 1);
         }
 
         var T_1 := A'[1..];
     
-        assert seq_interp(T_1) == seq_interp(A') / BASE by {
+        assert sint(T_1) == sint(A') / BASE by {
             seq_div_base_lemma(A', n + 3);
         }
-        assert seq_interp(T_1) < 2 * seq_interp(m) - 1;
+        assert sint(T_1) < 2 * sint(m) - 1;
 
         var T_2 := T_1[..n+1];
         assert T_2 == A'[1..n+2];
 
-        assert seq_interp(T_2) == seq_interp(T_1) by {
-            assert seq_interp(T_1) < 2 * R(n) - 1 by {
-                seq_interp_upper_bound_lemma(m, n);
+        assert sint(T_2) == sint(T_1) by {
+            assert sint(T_1) < 2 * R(n) - 1 by {
+                sint_upper_bound_lemma(m, n);
             }
             msw_zero_lemma(T_1, n);
             zero_extend_lemma(T_2, n + 1, T_1, n + 2);
         }
 
-        assert seq_interp(A'[1..n+2]) < 2 * seq_interp(m) - 1;
-        assert seq_interp(A'') == seq_interp(A') / BASE;
+        assert sint(A'[1..n+2]) < 2 * sint(m) - 1;
+        assert sint(A'') == sint(A') / BASE;
     }
 
     lemma mont_mul_congruent_aux_lemma_1(
@@ -400,7 +400,7 @@ module RSAE3v1 {
         requires p == power(BASE, i);
         requires p_inv == power(BASE_INV, i);
         
-        ensures (y_val * (seq_interp(x[..i]) * p_inv + x[i] as int)) % m_val == (y_val * seq_interp(x[..i+1]) * p_inv) % m_val;
+        ensures (y_val * (sint(x[..i]) * p_inv + x[i] as int)) % m_val == (y_val * sint(x[..i+1]) * p_inv) % m_val;
     {
         ghost var x_1 := x[..i];
         ghost var x_2 := x[..i+1];
@@ -429,30 +429,30 @@ module RSAE3v1 {
         }
 
         calc == {
-            (seq_interp(x_1) * p_inv + x[i] as int) % m_val;
+            (sint(x_1) * p_inv + x[i] as int) % m_val;
             {
-                ghost var a := seq_interp(x_1) * p_inv + x[i] as int;
+                ghost var a := sint(x_1) * p_inv + x[i] as int;
                 assert a % m_val == a * p * p_inv % m_val by {
                     cong_mul_lemma_1(1, p * p_inv, a, m_val);
                     reveal cong();
                 }
             }
-            ((seq_interp(x_1) * p_inv + x[i] as int) * p * p_inv) % m_val;
+            ((sint(x_1) * p_inv + x[i] as int) * p * p_inv) % m_val;
             {
-                assert (seq_interp(x_1) * p_inv + x[i] as int) * p == (seq_interp(x_1) * p_inv * p  + x[i] as int * p);
+                assert (sint(x_1) * p_inv + x[i] as int) * p == (sint(x_1) * p_inv * p  + x[i] as int * p);
             }
-            ((seq_interp(x_1) * p_inv * p + x[i] as int * p) * p_inv) % m_val;
+            ((sint(x_1) * p_inv * p + x[i] as int * p) * p_inv) % m_val;
             {
                 mont_mul_congruent_aux_lemma_2(x, i, x_1, x_2, p, p_inv, BASE_INV, m_val);
             }
-            (seq_interp(x_2) * p_inv) % m_val;
+            (sint(x_2) * p_inv) % m_val;
         }
         
-        ghost var a := seq_interp(x_1) * p_inv + x[i] as int;
-        ghost var b := seq_interp(x_2) * p_inv;
+        ghost var a := sint(x_1) * p_inv + x[i] as int;
+        ghost var b := sint(x_2) * p_inv;
 
         assert a % m_val == b % m_val by {
-            assert (seq_interp(x_1) * p_inv + x[i] as int) % m_val == (seq_interp(x_2) * p_inv) % m_val;
+            assert (sint(x_1) * p_inv + x[i] as int) % m_val == (sint(x_2) * p_inv) % m_val;
         }
 
         calc ==> {
@@ -469,14 +469,14 @@ module RSAE3v1 {
                 reveal cong();
             }
             (y_val * a) % m_val == (y_val * b) % m_val;
-            (y_val * (seq_interp(x_1) * p_inv + x[i] as int)) % m_val == (y_val * (seq_interp(x_2) * p_inv)) % m_val;
+            (y_val * (sint(x_1) * p_inv + x[i] as int)) % m_val == (y_val * (sint(x_2) * p_inv)) % m_val;
             {
-                assert y_val * (seq_interp(x_2) * p_inv) == y_val * seq_interp(x_2) * p_inv;
+                assert y_val * (sint(x_2) * p_inv) == y_val * sint(x_2) * p_inv;
             }
-            (y_val * (seq_interp(x_1) * p_inv + x[i] as int)) % m_val == (y_val * seq_interp(x_2) * p_inv) % m_val;
+            (y_val * (sint(x_1) * p_inv + x[i] as int)) % m_val == (y_val * sint(x_2) * p_inv) % m_val;
         }
 
-        assert (y_val * (seq_interp(x_1) * p_inv + x[i] as int)) % m_val == (y_val * seq_interp(x_2) * p_inv) % m_val;
+        assert (y_val * (sint(x_1) * p_inv + x[i] as int)) % m_val == (y_val * sint(x_2) * p_inv) % m_val;
     }
 
     lemma mont_mul_congruent_aux_lemma_2(
@@ -496,16 +496,16 @@ module RSAE3v1 {
         requires m_val != 0;
         requires cong(p * p_inv, 1, m_val);
 
-        ensures ((seq_interp(x_1) * p_inv * p + x[i] as int * p) * p_inv) % m_val == (seq_interp(x_2) * p_inv) % m_val;
+        ensures ((sint(x_1) * p_inv * p + x[i] as int * p) * p_inv) % m_val == (sint(x_2) * p_inv) % m_val;
     {
-        ghost var a := seq_interp(x_1);
+        ghost var a := sint(x_1);
         ghost var b := x[i] as int * p;
 
-        assert assertion_1 : (seq_interp(x_1) * p_inv * p + x[i] as int * p) * p_inv % m_val == (seq_interp(x_1) + x[i] as int * p) * p_inv % m_val by {
+        assert assertion_1 : (sint(x_1) * p_inv * p + x[i] as int * p) * p_inv % m_val == (sint(x_1) + x[i] as int * p) * p_inv % m_val by {
             calc ==> {
                 cong(p * p_inv, 1, m_val);
                 {
-                    cong_mul_lemma_1(p * p_inv, 1, seq_interp(x_1), m_val);
+                    cong_mul_lemma_1(p * p_inv, 1, sint(x_1), m_val);
                 }
                 cong(a * p * p_inv, a, m_val);
                 { 
@@ -525,20 +525,20 @@ module RSAE3v1 {
         }
 
         calc == {
-            seq_interp(x_2);
+            sint(x_2);
             interp(x_2, i + 1);
             x_2[i] as int * p + interp(x_2, i);
             {
                 prefix_sum_lemma(x_1, x_2, i);
                 assert interp(x_1, i) == interp(x_2, i);
-                assert seq_interp(x_1) == interp(x_2, i);
+                assert sint(x_1) == interp(x_2, i);
             }
-            x_2[i] as int * p + seq_interp(x_1);
+            x_2[i] as int * p + sint(x_1);
         }
 
-        assert ((seq_interp(x_1) * p_inv * p + x[i] as int * p) * p_inv) % m_val == (seq_interp(x_2) * p_inv) % m_val by {
+        assert ((sint(x_1) * p_inv * p + x[i] as int * p) * p_inv) % m_val == (sint(x_2) * p_inv) % m_val by {
             reveal assertion_1;
-            assert seq_interp(x_2) == x_2[i] as int * p + seq_interp(x_1);
+            assert sint(x_2) == x_2[i] as int * p + sint(x_1);
         }
     }
 
@@ -564,107 +564,107 @@ module RSAE3v1 {
         requires |A'| == n + 3;
 
         requires A'' == A'[1..n+2];
-        requires seq_interp(A'') == seq_interp(A') / BASE;
-        requires seq_interp(A') % BASE == 0;
+        requires sint(A'') == sint(A') / BASE;
+        requires sint(A') % BASE == 0;
 
-        requires seq_interp(m) != 0;
-        requires seq_interp(A) + seq_interp(S) == seq_interp(A');
-        requires seq_interp(P_1) + seq_interp(P_2) == seq_interp(S);
-        requires seq_interp(P_1) == seq_interp(y) * x [i] as int;
-        requires seq_interp(P_2) == seq_interp(m) * u_i as int;
+        requires sint(m) != 0;
+        requires sint(A) + sint(S) == sint(A');
+        requires sint(P_1) + sint(P_2) == sint(S);
+        requires sint(P_1) == sint(y) * x [i] as int;
+        requires sint(P_2) == sint(m) * u_i as int;
 
-        requires cong(BASE * BASE_INV, 1, seq_interp(m));
+        requires cong(BASE * BASE_INV, 1, sint(m));
 
-        requires cong(seq_interp(A), seq_interp(x[..i]) * seq_interp(y) * power(BASE_INV, i), seq_interp(m));
-        ensures cong(seq_interp(A''), seq_interp(x[..i + 1]) * seq_interp(y) * power(BASE_INV, i+1), seq_interp(m));
+        requires cong(sint(A), sint(x[..i]) * sint(y) * power(BASE_INV, i), sint(m));
+        ensures cong(sint(A''), sint(x[..i + 1]) * sint(y) * power(BASE_INV, i+1), sint(m));
     {
-        ghost var m_val := seq_interp(m);
-        ghost var y_val := seq_interp(y);
+        ghost var m_val := sint(m);
+        ghost var y_val := sint(y);
         ghost var p := power(BASE, i);
         ghost var p_inv := power(BASE_INV, i);
 
         ghost var x_1 := x[..i];
         ghost var x_2 := x[..i+1];
 
-        ghost var A_val' := seq_interp(A');
+        ghost var A_val' := sint(A');
 
         calc == {
-            seq_interp(A') % m_val;
-            (seq_interp(A) + seq_interp(S)) % m_val;
-            (seq_interp(A) + seq_interp(P_1) + seq_interp(P_2)) % m_val;
+            sint(A') % m_val;
+            (sint(A) + sint(S)) % m_val;
+            (sint(A) + sint(P_1) + sint(P_2)) % m_val;
             {
                 calc ==> {
-                    seq_interp(P_2) == seq_interp(m) * u_i as int;
+                    sint(P_2) == sint(m) * u_i as int;
                     {
-                        mod_mul_lemma(u_i as int, seq_interp(m), m_val);
+                        mod_mul_lemma(u_i as int, sint(m), m_val);
                     }
-                    seq_interp(P_2) % m_val == 0;
+                    sint(P_2) % m_val == 0;
                     {
-                         cong_add_lemma_3(seq_interp(A) + seq_interp(P_1), seq_interp(P_2), m_val);
+                         cong_add_lemma_3(sint(A) + sint(P_1), sint(P_2), m_val);
                      }
-                    cong(seq_interp(A) + seq_interp(P_1), seq_interp(A) + seq_interp(P_1) + seq_interp(P_2), m_val);
+                    cong(sint(A) + sint(P_1), sint(A) + sint(P_1) + sint(P_2), m_val);
                 }
                 reveal cong();
             }
-            (seq_interp(A) + seq_interp(P_1)) % m_val;
+            (sint(A) + sint(P_1)) % m_val;
             {
-                assert cong(seq_interp(A), seq_interp(x_1) * y_val * p_inv, m_val);
-                cong_add_lemma_1(seq_interp(A), seq_interp(x_1) * y_val * p_inv, seq_interp(P_1), m_val);
+                assert cong(sint(A), sint(x_1) * y_val * p_inv, m_val);
+                cong_add_lemma_1(sint(A), sint(x_1) * y_val * p_inv, sint(P_1), m_val);
                 reveal cong();
             }
-            (seq_interp(x_1) * y_val * p_inv + seq_interp(P_1)) % m_val;
+            (sint(x_1) * y_val * p_inv + sint(P_1)) % m_val;
             {
-                assert seq_interp(P_1) == seq_interp(y) * x [i] as int;
+                assert sint(P_1) == sint(y) * x [i] as int;
             }
-            (seq_interp(x_1) * y_val * p_inv + y_val * x[i] as int) % m_val;
+            (sint(x_1) * y_val * p_inv + y_val * x[i] as int) % m_val;
             {
-                assert seq_interp(x_1) * y_val * p_inv == y_val * seq_interp(x_1) * p_inv by {
-                    assert seq_interp(x_1) * y_val == y_val * seq_interp(x_1);
+                assert sint(x_1) * y_val * p_inv == y_val * sint(x_1) * p_inv by {
+                    assert sint(x_1) * y_val == y_val * sint(x_1);
                 }
             }
-            (y_val * seq_interp(x_1) * p_inv + y_val * x[i] as int) % m_val;
+            (y_val * sint(x_1) * p_inv + y_val * x[i] as int) % m_val;
             {
-                assert y_val * seq_interp(x_1) * p_inv + y_val * x[i] as int == y_val * (seq_interp(x_1) * p_inv + x[i] as int);
+                assert y_val * sint(x_1) * p_inv + y_val * x[i] as int == y_val * (sint(x_1) * p_inv + x[i] as int);
             }
-            (y_val * (seq_interp(x_1) * p_inv + x[i] as int)) % m_val;
+            (y_val * (sint(x_1) * p_inv + x[i] as int)) % m_val;
             {
                 mont_mul_congruent_aux_lemma_1(x, i, y_val, p, p_inv, BASE_INV, m_val);
             }
-            (y_val * seq_interp(x_2) * p_inv) % m_val;
+            (y_val * sint(x_2) * p_inv) % m_val;
         }
 
-        assert assertion_1: cong(seq_interp(A'), y_val * seq_interp(x_2) * p_inv, m_val) by {
+        assert assertion_1: cong(sint(A'), y_val * sint(x_2) * p_inv, m_val) by {
             reveal cong();
         }
 
         calc == {
-            seq_interp(A'') % m_val;
+            sint(A'') % m_val;
             {
-                assert seq_interp(A'') == seq_interp(A') / BASE;
+                assert sint(A'') == sint(A') / BASE;
             }
-            (seq_interp(A') / BASE) % m_val;
+            (sint(A') / BASE) % m_val;
             {
-                mod_div_inv_leamma(seq_interp(A'), BASE, BASE_INV, m_val);
+                mod_div_inv_leamma(sint(A'), BASE, BASE_INV, m_val);
                 reveal cong();
             }
-            (seq_interp(A') * BASE_INV) % m_val;
+            (sint(A') * BASE_INV) % m_val;
             {
                 reveal assertion_1;
                 calc ==> {
-                    cong(seq_interp(A'), y_val * seq_interp(x_2) * p_inv, m_val);
+                    cong(sint(A'), y_val * sint(x_2) * p_inv, m_val);
                     {
-                        cong_mul_lemma_1(seq_interp(A'), y_val * seq_interp(x_2) * p_inv, BASE_INV, m_val);
+                        cong_mul_lemma_1(sint(A'), y_val * sint(x_2) * p_inv, BASE_INV, m_val);
                     }
-                    cong(seq_interp(A') * BASE_INV, y_val * seq_interp(x_2) * p_inv * BASE_INV, m_val);
+                    cong(sint(A') * BASE_INV, y_val * sint(x_2) * p_inv * BASE_INV, m_val);
                     {
                         reveal cong();
                     }
-                    (seq_interp(A') * BASE_INV) % m_val == (y_val * seq_interp(x_2) * p_inv * BASE_INV) % m_val;
+                    (sint(A') * BASE_INV) % m_val == (y_val * sint(x_2) * p_inv * BASE_INV) % m_val;
                 }
             }
-            (y_val * seq_interp(x_2) * p_inv * BASE_INV) % m_val;
+            (y_val * sint(x_2) * p_inv * BASE_INV) % m_val;
             {
-                ghost var a := y_val * seq_interp(x_2);
+                ghost var a := y_val * sint(x_2);
                 assert a * p_inv * BASE_INV == a * power(BASE_INV, i+1) by {
                     calc == {
                         p_inv * BASE_INV;
@@ -677,11 +677,11 @@ module RSAE3v1 {
                     assert p_inv * BASE_INV == power(BASE_INV, i+1);
                 }
             }
-            (y_val * seq_interp(x_2) * power(BASE_INV, i+1)) % m_val;
+            (y_val * sint(x_2) * power(BASE_INV, i+1)) % m_val;
         }
         
-        assert cong(seq_interp(A''), y_val * seq_interp(x_2) * power(BASE_INV, i+1), seq_interp(m)) by {
-            assert seq_interp(A'') % m_val == (y_val * seq_interp(x_2)* power(BASE_INV, i+1)) % m_val;
+        assert cong(sint(A''), y_val * sint(x_2) * power(BASE_INV, i+1), sint(m)) by {
+            assert sint(A'') % m_val == (y_val * sint(x_2)* power(BASE_INV, i+1)) % m_val;
             reveal cong();
         }
     }
@@ -691,7 +691,7 @@ module RSAE3v1 {
         requires n != 0;
         requires |A| == n;
         ensures |P| == n + 1;
-        ensures seq_interp(P) == seq_interp(A) * b as int;
+        ensures sint(P) == sint(A) * b as int;
         ensures cong(P[0] as int, A[0] as int * b as int, BASE);
     {
         var temp := new uint32[n + 1];
@@ -708,7 +708,7 @@ module RSAE3v1 {
             invariant |A| == n;
             invariant |P| == n + 1;
             invariant i < |P|;
-            invariant seq_interp(P[..i]) + c as int * power(BASE, i) == seq_interp(A[..i]) * b as int;
+            invariant sint(P[..i]) + c as int * power(BASE, i) == sint(A[..i]) * b as int;
             invariant i >= 1 ==> P[0] as int == (A[0] as int * b as int) % BASE;
         {
             single_digit_mul_lemma(A[i], b, c);
@@ -727,7 +727,7 @@ module RSAE3v1 {
             i := i + 1;
 
             calc == {
-                seq_interp(P[..i]) + upper as int * power(BASE, i);
+                sint(P[..i]) + upper as int * power(BASE, i);
                 word_interp(P[..i], i - 1) + interp(P[..i], i - 1) + upper as int * power(BASE, i) ;
                 {
                     prefix_sum_lemma(P[..i], P[..i - 1], i - 1);
@@ -751,18 +751,18 @@ module RSAE3v1 {
                 power(BASE, i - 1) * product as int + interp(P[..i - 1], i - 1);
                 power(BASE, i - 1) * (A[i - 1]  as int * b  as int + c as int) + interp(P[..i - 1], i - 1);
                 {
-                    assert seq_interp(P[..i - 1]) + c as int * power(BASE, i - 1) == seq_interp(A[..i -1]) * b as int;
-                    assert seq_interp(P[..i - 1]) == seq_interp(A[..i -1]) * b as int - c as int * power(BASE, i - 1);
+                    assert sint(P[..i - 1]) + c as int * power(BASE, i - 1) == sint(A[..i -1]) * b as int;
+                    assert sint(P[..i - 1]) == sint(A[..i -1]) * b as int - c as int * power(BASE, i - 1);
                 }
-                power(BASE, i - 1) * (A[i - 1]  as int * b  as int + c as int) + seq_interp(A[..i -1]) * b as int - c as int * power(BASE, i - 1);
-                power(BASE, i - 1) * A[i - 1] as int * b  as int + seq_interp(A[..i -1]) * b as int;
-                (power(BASE, i - 1) * A[i - 1] as int + seq_interp(A[..i -1])) * b as int;
+                power(BASE, i - 1) * (A[i - 1]  as int * b  as int + c as int) + sint(A[..i -1]) * b as int - c as int * power(BASE, i - 1);
+                power(BASE, i - 1) * A[i - 1] as int * b  as int + sint(A[..i -1]) * b as int;
+                (power(BASE, i - 1) * A[i - 1] as int + sint(A[..i -1])) * b as int;
                 (word_interp(A, i - 1) + interp(A[..i-1], i - 1)) * b as int;
                 {
                     prefix_sum_lemma(A[..i-1], A[..i], i - 1);
                 }
                 (word_interp(A, i - 1) + interp(A[..i], i - 1)) * b as int;
-                seq_interp(A[..i]) * b as int;
+                sint(A[..i]) * b as int;
             }
 
             c := upper;
@@ -771,19 +771,19 @@ module RSAE3v1 {
         P := P[n := c];
         
         calc ==> {
-            seq_interp(P[..i]) + c as int * power(BASE, i) == seq_interp(A[..i]) * b as int;
+            sint(P[..i]) + c as int * power(BASE, i) == sint(A[..i]) * b as int;
             {
                 prefix_sum_lemma(A, A[..i], i);
             }
-            seq_interp(P[..i]) + c as int * power(BASE, i) == seq_interp(A) * b as int;
+            sint(P[..i]) + c as int * power(BASE, i) == sint(A) * b as int;
             {
-                assert seq_interp(P[..i]) == interp(P[..i], i);
+                assert sint(P[..i]) == interp(P[..i], i);
                 prefix_sum_lemma(P, P[..i], i);
             }
-            interp(P, i) + c as int * power(BASE, i) == seq_interp(A) * b as int;
-            interp(P, i) + word_interp(P, i) == seq_interp(A) * b as int;
-            interp(P, i + 1) == seq_interp(A) * b as int;
-            seq_interp(P) == seq_interp(A) * b as int;
+            interp(P, i) + c as int * power(BASE, i) == sint(A) * b as int;
+            interp(P, i) + word_interp(P, i) == sint(A) * b as int;
+            interp(P, i + 1) == sint(A) * b as int;
+            sint(P) == sint(A) * b as int;
         }
 
         assert cong(P[0] as int, A[0] as int * b as int, BASE) by {

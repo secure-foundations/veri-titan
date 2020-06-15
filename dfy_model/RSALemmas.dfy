@@ -44,15 +44,15 @@ module RSALemmas
     predicate pub_key_valid(key: pub_key) {
         && key.e == 3
         && |key.m| == |key.RR| == key.len >= 1
-        && seq_interp(key.m) == key.n_val
+        && sint(key.m) == key.n_val
         && 0 != key.n_val < power(BASE, key.len)
         && cong(key.m' as nat * key.m[0] as nat, -1, BASE)
         && cong(BASE * key.BASE_INV, 1, key.n_val)
         && key.R == power(BASE, key.len)
         && key.R_INV == power(key.BASE_INV, key.len)
         && cong(key.R_INV * key.R, 1, key.n_val)
-        && 0 <= seq_interp(key.RR) < key.n_val
-        && cong(seq_interp(key.RR), key.R * key.R, key.n_val)
+        && 0 <= sint(key.RR) < key.n_val
+        && cong(sint(key.RR), key.R * key.R, key.n_val)
     }
 
     datatype rsa_params = rsa_params(
