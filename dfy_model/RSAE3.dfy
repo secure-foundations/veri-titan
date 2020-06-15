@@ -5,7 +5,7 @@ include "SeqInt.dfy"
 include "RSALemmas.dfy"
 include "MMLemmas.dfy"
 
-module RSAE3v2 {
+module RSAE3 {
     import opened NativeTypes
     import opened Powers
     import opened Congruences
