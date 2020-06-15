@@ -698,7 +698,6 @@ module RSAE3v2 {
         assert cong(seq_interp(A), seq_interp(x) * seq_interp(y) * key.R_INV, key.n_val);
     }
 
-
     method modpow3(key: pub_key, a: seq<uint32>) 
         returns (aaa: seq<uint32>)
 

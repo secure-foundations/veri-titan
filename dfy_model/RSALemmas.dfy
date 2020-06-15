@@ -83,10 +83,9 @@ module RSALemmas
         && rsa.n == key.n_val
     }
 
-    lemma R_inv_cancel_lemma(key: pub_key, a: int, v: int)
+    lemma R_inv_cancel_lemma(key: pub_key, v: int)
         requires pub_key_valid(key);
-        requires cong(a, v * key.R * key.R_INV, key.n_val);
-        ensures cong(a, v, key.n_val);
+        ensures cong(v * key.R * key.R_INV, v, key.n_val);
     {
         calc ==> {
             cong(key.R * key.R_INV, 1, key.n_val);
@@ -94,10 +93,6 @@ module RSALemmas
                 cong_mul_lemma_1(key.R * key.R_INV, 1, v, key.n_val);
             }
             cong(key.R * key.R_INV * v, v, key.n_val);
-            {
-                cong_trans_lemma(a, v * key.R * key.R_INV, v, key.n_val);
-            }
-            cong(a, v, key.n_val);
         }
     }
 
@@ -109,133 +104,111 @@ module RSALemmas
         requires cong(aaa, aar * a * key.R_INV, key.n_val);
         ensures cong(aaa, a * a * a, key.n_val);
     {
-        ghost var n := key.n_val;
-
-        calc ==> {
-            true;
-            {
-                assert cong(ar, a * key.R_INV * rr, n);
-                assert cong(rr, key.R * key.R, n);
-                cong_mul_lemma_3(ar, a * key.R_INV, rr, key.R * key.R, n);
-            }
-            // cong(ar, a * key.R * key.R_INV * key.R, n);
-            // {
-
-            // }
-
-
+        assert cong(aar, key.R * a * a, key.n_val) by {
+            mod_pow3_congruent_lemma_2(key, a, ar, aar, rr);
         }
 
-        // assert cong(ar, a * key.R, n) by {
-        //     cong_mul_lemma_3(ar, a * key.R, key.R_INV * key.R, 1, n);
-        // }
+        assert cong(aar * key.R_INV, a * a, key.n_val) by {
+            assert cong(aar * key.R_INV, key.R * a * a * key.R_INV, key.n_val) by {
+                cong_mul_lemma_1(aar, key.R * a * a, key.R_INV, key.n_val);
+            }
+            assert cong(key.R * a * a  *  key.R_INV, a * a, key.n_val) by {
+                R_inv_cancel_lemma(key, a * a);
+            }
+            cong_trans_lemma(aar * key.R_INV, key.R * a * a * key.R_INV, a * a, key.n_val);
+        }
 
-        // assert cong(aar, a * key.R * ar * key.R_INV, n) by {
-        //     assert cong(aar, ar * ar * key.R_INV, n);
-        //     assert cong(ar, a * key.R, n);
-        //     cong_mul_lemma_3(aar, ar * key.R_INV, ar, a * key.R, n);
-        // }
-
-        // assert cong(aar, a * ar, n) by {
-        //     cong_mul_lemma_3(aar, a * ar, key.R_INV * key.R, 1, n);
-        // }
-
-        // assert cong(aaa, a * ar * a * key.R_INV, n) by {
-        //     cong_mul_lemma_3(aaa, a * key.R_INV, aar, a * ar, n);
-        // }
-
-        // assert cong(aaa, a * a * key.R * a * key.R_INV, n) by {
-        //     cong_mul_lemma_3(aaa, a * a * key.R_INV, ar, a * key.R, n);
-        // }
-
-        // assert cong(aaa, a * a * a, n) by {
-        //     assert cong(aaa, aar * a * key.R_INV, key.n_val);
-        //     cong_mul_lemma_3(aaa, a * a * a, key.R_INV * key.R, 1, n);
-        // }
-        assume false;
+        assert cong(aaa, a * a * a, key.n_val) by {
+            assert cong(aaa, aar * a * key.R_INV, key.n_val);
+            assert cong(aar * a * key.R_INV, a * a * a, key.n_val) by {
+                cong_mul_lemma_1(aar * key.R_INV, a * a, a, key.n_val);
+            }
+            cong_trans_lemma(aaa, aar * a * key.R_INV, a * a * a, key.n_val);
+        }
+        assert cong(aaa, a * a * a, key.n_val);
     }
 
-    // lemma mod_pow3_congruent_lemma_2(key: pub_key, a: int, ar: int, aar: int, rr: int)
-    //     requires pub_key_valid(key);
-    //     requires cong(rr, key.R * key.R, key.n_val);
-    //     requires cong(ar, a * rr * key.R_INV, key.n_val);
-    //     requires cong(aar, ar * ar * key.R_INV, key.n_val);
-    //     ensures cong(aar, key.R * a * a, key.n_val);
-    // {
-    //     assert cong(ar, key.R * a, key.n_val) && cong(ar * key.R_INV, a, key.n_val) by {
-    //         mod_pow3_congruent_lemma_3(key, a, ar, aar, rr);
-    //     }
+    lemma mod_pow3_congruent_lemma_2(key: pub_key, a: int, ar: int, aar: int, rr: int)
+        requires pub_key_valid(key);
+        requires cong(rr, key.R * key.R, key.n_val);
+        requires cong(ar, a * rr * key.R_INV, key.n_val);
+        requires cong(aar, ar * ar * key.R_INV, key.n_val);
+        ensures cong(aar, key.R * a * a, key.n_val);
+    {
+        assert cong(ar, key.R * a, key.n_val) && cong(ar * key.R_INV, a, key.n_val) by {
+            mod_pow3_congruent_lemma_3(key, a, ar, aar, rr);
+        }
 
-    //     assert cong_a4: cong(aar, ar * a, key.n_val) by {
-    //         calc ==> {
-    //             cong(ar * key.R_INV, a, key.n_val);
-    //             {
-    //                 cong_mul_lemma_1(ar * key.R_INV, a, ar, key.n_val);
-    //             }
-    //             cong( ar * ar * key.R_INV, ar * a, key.n_val);
-    //             {
-    //                 assert cong(aar,  ar * ar * key.R_INV, key.n_val);
-    //                 cong_trans_lemma(aar,  ar * ar * key.R_INV, ar * a, key.n_val);
-    //             }
-    //             cong(aar, ar * a, key.n_val);            
-    //         }
-    //     }
+        assert cong_a4: cong(aar, ar * a, key.n_val) by {
+            calc ==> {
+                cong(ar * key.R_INV, a, key.n_val);
+                {
+                    cong_mul_lemma_1(ar * key.R_INV, a, ar, key.n_val);
+                }
+                cong( ar * ar * key.R_INV, ar * a, key.n_val);
+                {
+                    assert cong(aar,  ar * ar * key.R_INV, key.n_val);
+                    cong_trans_lemma(aar,  ar * ar * key.R_INV, ar * a, key.n_val);
+                }
+                cong(aar, ar * a, key.n_val);            
+            }
+        }
 
-    //     assert cong(aar, key.R * a * a, key.n_val) by {
-    //         assert cong(ar * a, key.R * a * a, key.n_val) by {
-    //             assert cong(ar, key.R * a, key.n_val);
-    //             cong_mul_lemma_1(ar, key.R * a, a, key.n_val);
-    //         }
-    //         reveal cong_a4;
-    //         cong_trans_lemma(aar, ar * a, key.R * a * a, key.n_val);
-    //     }
-    // }
+        assert cong(aar, key.R * a * a, key.n_val) by {
+            assert cong(ar * a, key.R * a * a, key.n_val) by {
+                assert cong(ar, key.R * a, key.n_val);
+                cong_mul_lemma_1(ar, key.R * a, a, key.n_val);
+            }
+            reveal cong_a4;
+            cong_trans_lemma(aar, ar * a, key.R * a * a, key.n_val);
+        }
+    }
 
-    // lemma mod_pow3_congruent_lemma_3(key: pub_key, a: int, ar: int, aar: int, rr: int)
-    //     requires pub_key_valid(key);
-    //     requires cong(rr, key.R * key.R, key.n_val);
-    //     requires cong(ar, a * rr * key.R_INV, key.n_val);
-    //     requires cong(aar, ar * ar * key.R_INV, key.n_val);
-    //     ensures cong(ar, key.R * a, key.n_val);
-    //     ensures cong(ar * key.R_INV, a, key.n_val);
-    // {
-    //     assert cong_a1: cong(rr * a * key.R_INV, key.R * a, key.n_val) by {
-    //         assert cong(rr, key.R * key.R, key.n_val);
-    //         calc ==> {
-    //             cong(rr, key.R * key.R, key.n_val);
-    //             {
-    //                 cong_mul_lemma_1(rr, key.R * key.R, a * key.R_INV, key.n_val);
-    //             }
-    //             cong(rr * a * key.R_INV, key.R * key.R * a * key.R_INV, key.n_val);
-    //             {
-    //                 R_inv_cancel_lemma(key, key.R * a);
-    //                 cong_trans_lemma(rr * a * key.R_INV,
-    //                     key.R * key.R * a * key.R_INV,
-    //                     key.R * a, key.n_val);
-    //             }
-    //             cong(rr * a * key.R_INV, key.R * a, key.n_val);
-    //         }
-    //     }
+    lemma mod_pow3_congruent_lemma_3(key: pub_key, a: int, ar: int, aar: int, rr: int)
+        requires pub_key_valid(key);
+        requires cong(rr, key.R * key.R, key.n_val);
+        requires cong(ar, a * rr * key.R_INV, key.n_val);
+        requires cong(aar, ar * ar * key.R_INV, key.n_val);
+        ensures cong(ar, key.R * a, key.n_val);
+        ensures cong(ar * key.R_INV, a, key.n_val);
+    {
+        assert cong_a1: cong(rr * a * key.R_INV, key.R * a, key.n_val) by {
+            assert cong(rr, key.R * key.R, key.n_val);
+            calc ==> {
+                cong(rr, key.R * key.R, key.n_val);
+                {
+                    cong_mul_lemma_1(rr, key.R * key.R, a * key.R_INV, key.n_val);
+                }
+                cong(rr * a * key.R_INV, key.R * key.R * a * key.R_INV, key.n_val);
+                {
+                    R_inv_cancel_lemma(key, key.R * a);
+                    cong_trans_lemma(rr * a * key.R_INV,
+                        key.R * key.R * a * key.R_INV,
+                        key.R * a, key.n_val);
+                }
+                cong(rr * a * key.R_INV, key.R * a, key.n_val);
+            }
+        }
 
-    //     assert cong(ar, key.R * a, key.n_val) by {
-    //         assert cong(ar, a * rr * key.R_INV, key.n_val);
-    //         reveal cong_a1;
-    //         cong_trans_lemma(ar, a * rr * key.R_INV, key.R * a, key.n_val);
-    //     }
+        assert cong(ar, key.R * a, key.n_val) by {
+            assert cong(ar, a * rr * key.R_INV, key.n_val);
+            reveal cong_a1;
+            cong_trans_lemma(ar, a * rr * key.R_INV, key.R * a, key.n_val);
+        }
 
-    //     assert cong(ar * key.R_INV, a, key.n_val) by {
-    //         assert cong(ar * key.R_INV, key.R * a * key.R_INV, key.n_val) by {
-    //             cong_mul_lemma_1(ar, key.R * a, key.R_INV, key.n_val);
-    //         }
-    //         assert cong(key.R * a * key.R_INV, a, key.n_val) by {
-    //             R_inv_cancel_lemma(key, a);
-    //         }
-    //         cong_trans_lemma(ar * key.R_INV, key.R * a * key.R_INV, a, key.n_val);
-    //     }
+        assert cong(ar * key.R_INV, a, key.n_val) by {
+            assert cong(ar * key.R_INV, key.R * a * key.R_INV, key.n_val) by {
+                cong_mul_lemma_1(ar, key.R * a, key.R_INV, key.n_val);
+            }
+            assert cong(key.R * a * key.R_INV, a, key.n_val) by {
+                R_inv_cancel_lemma(key, a);
+            }
+            cong_trans_lemma(ar * key.R_INV, key.R * a * key.R_INV, a, key.n_val);
+        }
 
-    //     assert cong(ar, key.R * a, key.n_val);
-    //     assert cong(ar * key.R_INV, a, key.n_val);
-    // }
+        assert cong(ar, key.R * a, key.n_val);
+        assert cong(ar * key.R_INV, a, key.n_val);
+    }
 
     lemma rsa_cong_lemma_1(rsa: rsa_params, m: nat, p: nat)
         requires rsa_valid(rsa);
