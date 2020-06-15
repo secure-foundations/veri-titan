@@ -207,6 +207,19 @@ module Congruences {
         }        
     }
 
+    lemma cong_mul_lemma_3(a: int, b:int, c: int, d: int, n: int)
+        requires n != 0;
+        requires cong(a, b * c, n) && cong(c, d, n);
+        ensures cong(a, b * d, n);
+    {
+        assert cong(b * c, b * d, n) by {
+            cong_mul_lemma_1(c, d, b, n);
+        }
+        assert cong(a, b * d, n) by {
+            cong_trans_lemma(a, b * c, b * d, n);
+        }
+    }
+
     lemma cong_add_lemma_1(a: int, b: int, c: int, n: int)
         requires n != 0;
         requires cong(a, b, n);
