@@ -304,6 +304,53 @@ module MMLemmas {
         }
     }
 
+    lemma cmm_invarint_lemma_2_aux(
+        x_i: int,
+        u_i: int,
+        j: nat,
+
+        p_1: uint64,
+        p_1': uint64,
+        p_2: uint64,
+        p_2': uint64,
+
+        s_y_j_1: int,
+        s_m_j_1: int,
+        s_A_j_1: int,
+        
+        y_j_1: int,
+        m_j_1: int,
+        A_j_1: int,
+
+        s_m_j: int,
+        s_y_j: int,
+        s_A_j: int,
+
+        s_s': int,
+        s_s: int)
+    
+        requires j > 0;
+        requires s_s == s_s' + lh64(p_2) as int * power(BASE, j - 1);
+        requires power(BASE, j-1) * BASE ==  power(BASE, j);
+
+        requires s_y_j_1 + y_j_1 * power(BASE, j-1) == s_y_j;
+        requires s_A_j_1 + A_j_1 * power(BASE, j-1) == s_A_j;
+        requires s_m_j_1 + m_j_1 * power(BASE, j-1) == s_m_j;
+
+        requires x_i * s_y_j_1 + u_i * s_m_j_1 + s_A_j_1 == 
+                s_s' + uh64(p_2') as int * power(BASE, j-1) + uh64(p_1') as int * power(BASE, j-1);
+        requires p_1 as nat == uh64(p_1') as nat + x_i * y_j_1 + A_j_1;
+        requires p_2 as nat == uh64(p_2') as nat + u_i * m_j_1 + lh64(p_1) as nat;
+
+        ensures u_i * s_m_j + x_i * s_y_j + s_A_j == 
+            s_s + uh64(p_2) as int * power(BASE, j) + uh64(p_1) as int * power(BASE, j);
+    {
+        split64_lemma(p_1);
+        split64_lemma(p_2);
+        split64_lemma(p_1');
+        split64_lemma(p_2');
+    }
+
     lemma cmm_invarint_lemma_3(
         m: seq<uint32>,
         A: seq<uint32>, 
