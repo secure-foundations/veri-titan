@@ -342,38 +342,12 @@ module MMLemmas {
         ensures x_i as nat * sint(y[..1]) + u_i as nat * sint(m[..1]) + sint(A[..1]) as nat == 
             uh64(p_2) as int * power(BASE, 1) + uh64(p_1) as int * power(BASE, 1);
     {
-        calc == {
-            x_i as nat * sint(y[..1]) + u_i as nat * sint(m[..1]) + sint(A[..1]);
-            {
-                assert power(BASE, 0) == 1 by {
-                    reveal power();
-                }
-            }
-            x_i as nat * y[0] as nat + u_i as nat * m[0] as nat + A[0] as nat;
-            u_i as nat * m[0] as nat + p_1 as int;
-            {
-                split64_lemma(p_1);
-            }
-            u_i as nat * m[0] as nat + lh64(p_1) as int + uh64(p_1) as int * BASE;
-            p_2 as int + uh64(p_1) as int * BASE;
-            {
-                split64_lemma(p_2);
-            }
-            lh64(p_2) as int + uh64(p_2) as int * BASE + uh64(p_1) as int * BASE;
-            {
-                assert p_2 as int % BASE == 0 by {
-                    assert cong(p_2 as int, 0, BASE);
-                    reveal cong();
-                }
-                split64_lemma(p_2);
-                assert lh64(p_2) == 0;
-            }
-            uh64(p_2) as int * BASE + uh64(p_1) as int * BASE;
-            {
-                reveal power();
-            }
-            uh64(p_2) as int * power(BASE, 1) + uh64(p_1) as int * power(BASE, 1);
+        assert p_2 as int == uh64(p_2) as int * BASE by {
+            split64_lemma(p_2);
+            reveal cong();
         }
+        split64_lemma(p_1);
+        reveal power();
     }
 
     lemma cmm_invarint_lemma_2(
