@@ -166,164 +166,6 @@ module MMLemmas {
         assert cong(m * (((a + x * y) * m') % BASE), -(a + x * y), BASE);
     }
 
-    lemma mont_mul_congruent_aux_lemma_1(
-        x: seq<uint32>,
-        i: nat,
-        y_val: int,
-        p: int,
-        p_inv: int,
-        BASE_INV: int,
-        m_val: int)
-
-        requires m_val != 0;
-        requires i + 1 <= |x|;
-        requires cong(BASE * BASE_INV, 1, m_val);
-        requires p == power(BASE, i);
-        requires p_inv == power(BASE_INV, i);
-        
-        ensures (y_val * (sint(x[..i]) * p_inv + x[i] as int)) % m_val == (y_val * sint(x[..i+1]) * p_inv) % m_val;
-    {
-        ghost var x_1 := x[..i];
-        ghost var x_2 := x[..i+1];
-
-        calc ==> {
-            cong(BASE * BASE_INV, 1, m_val);
-            {
-                cong_power_lemma(BASE * BASE_INV, 1, i, m_val);
-            }
-            cong(power(BASE * BASE_INV, i), power(1, i), m_val);
-            {
-                power_base_one_lemma(i);
-            }
-            cong(power(BASE * BASE_INV, i), 1, m_val);
-            {
-                power_same_exp_lemma(BASE, BASE_INV, i);
-            }
-            cong(power(BASE, i) * power(BASE_INV, i), 1, m_val);
-            cong(p * p_inv, 1, m_val);
-        }
-
-        assert cong(p * p_inv, 1, m_val);
-
-        assert cong(1, p * p_inv, m_val) by {
-            reveal cong();
-        }
-
-        calc == {
-            (sint(x_1) * p_inv + x[i] as int) % m_val;
-            {
-                ghost var a := sint(x_1) * p_inv + x[i] as int;
-                assert a % m_val == a * p * p_inv % m_val by {
-                    cong_mul_lemma_1(1, p * p_inv, a, m_val);
-                    reveal cong();
-                }
-            }
-            ((sint(x_1) * p_inv + x[i] as int) * p * p_inv) % m_val;
-            {
-                assert (sint(x_1) * p_inv + x[i] as int) * p == (sint(x_1) * p_inv * p  + x[i] as int * p);
-            }
-            ((sint(x_1) * p_inv * p + x[i] as int * p) * p_inv) % m_val;
-            {
-                mont_mul_congruent_aux_lemma_2(x, i, x_1, x_2, p, p_inv, BASE_INV, m_val);
-            }
-            (sint(x_2) * p_inv) % m_val;
-        }
-        
-        ghost var a := sint(x_1) * p_inv + x[i] as int;
-        ghost var b := sint(x_2) * p_inv;
-
-        assert a % m_val == b % m_val by {
-            assert (sint(x_1) * p_inv + x[i] as int) % m_val == (sint(x_2) * p_inv) % m_val;
-        }
-
-        calc ==> {
-            a % m_val == b % m_val;
-            {
-                reveal cong();
-            }
-            cong(a, b, m_val);
-            {
-                cong_mul_lemma_1(a, b, y_val, m_val);
-            }
-            cong(y_val * a, y_val * b, m_val);
-            {
-                reveal cong();
-            }
-            (y_val * a) % m_val == (y_val * b) % m_val;
-            (y_val * (sint(x_1) * p_inv + x[i] as int)) % m_val == (y_val * (sint(x_2) * p_inv)) % m_val;
-            {
-                assert y_val * (sint(x_2) * p_inv) == y_val * sint(x_2) * p_inv;
-            }
-            (y_val * (sint(x_1) * p_inv + x[i] as int)) % m_val == (y_val * sint(x_2) * p_inv) % m_val;
-        }
-
-        assert (y_val * (sint(x_1) * p_inv + x[i] as int)) % m_val == (y_val * sint(x_2) * p_inv) % m_val;
-    }
-
-    lemma mont_mul_congruent_aux_lemma_2(
-        x: seq<uint32>,
-        i: nat,
-        x_1: seq<uint32>,
-        x_2: seq<uint32>,
-        p: int,
-        p_inv: int,
-        BASE_INV: int,
-        m_val: int)
-
-        requires i + 1 <= |x|;
-        requires x_1 == x[..i] && x_2 == x[..i+1];
-        requires p == power(BASE, i);
-        requires p_inv == power(BASE_INV, i);
-        requires m_val != 0;
-        requires cong(p * p_inv, 1, m_val);
-
-        ensures ((sint(x_1) * p_inv * p + x[i] as int * p) * p_inv) % m_val == (sint(x_2) * p_inv) % m_val;
-    {
-        ghost var a := sint(x_1);
-        ghost var b := x[i] as int * p;
-
-        assert assertion_1 : (sint(x_1) * p_inv * p + x[i] as int * p) * p_inv % m_val == (sint(x_1) + x[i] as int * p) * p_inv % m_val by {
-            assert cong(p * p_inv, 1, m_val);
-            calc ==> {
-                cong(p * p_inv, 1, m_val);
-                {
-                    cong_mul_lemma_1(p * p_inv, 1, sint(x_1), m_val);
-                }
-                cong(a * p * p_inv, a, m_val);
-                { 
-                    cong_add_lemma_1(a * p * p_inv, a, b, m_val);
-                }
-                cong(a * p * p_inv + b, a + b, m_val);
-                {
-                    cong_mul_lemma_1(a * p * p_inv + b, a + b, p_inv, m_val);
-                }
-                cong((a * p * p_inv + b) * p_inv, (a + b) * p_inv, m_val);
-                {
-                    reveal cong();    
-                }
-                ((a * p * p_inv + b) * p_inv) % m_val == (a + b) * p_inv % m_val;
-            }
-            assert ((a * p * p_inv + b) * p_inv) % m_val == (a + b) * p_inv % m_val;
-        }
-
-        calc == {
-            sint(x_2);
-            interp(x_2, i + 1);
-            x_2[i] as int * p + interp(x_2, i);
-            {
-                prefix_sum_lemma(x_1, x_2, i);
-                assert interp(x_1, i) == interp(x_2, i);
-                assert sint(x_1) == interp(x_2, i);
-            }
-            x_2[i] as int * p + sint(x_1);
-        }
-
-        assert ((sint(x_1) * p_inv * p + x[i] as int * p) * p_inv) % m_val == (sint(x_2) * p_inv) % m_val by {
-            reveal assertion_1;
-            assert sint(x_2) == x_2[i] as int * p + sint(x_1);
-        }
-    }
-
     lemma cmm_invarint_lemma_1(
         m: seq<uint32>,
         A: seq<uint32>, 
@@ -566,68 +408,7 @@ module MMLemmas {
         }
     }
 
-    lemma cmm_congruent_lemma_2(key: pub_key, x: seq<uint32>, i: nat, x_i: nat, u_i: nat, A_val: nat, A_val': nat, y_val: nat)
-        requires pub_key_valid(key);
-        requires i < |x| == key.len && x[i] as int == x_i;
-
-        requires cong(A_val, sint(x[..i]) * y_val * power(key.BASE_INV, i), key.n_val);
-        requires cong(A_val' * BASE, x_i * y_val + u_i * key.n_val + A_val, key.n_val);
-
-        ensures cong(A_val', (sint(x[..i]) * y_val * power(key.BASE_INV, i) + x_i * y_val) * key.BASE_INV, key.n_val);
-    {
-        ghost var ps_inv := power(key.BASE_INV, i);
-        var temp := sint(x[..i]) * y_val * ps_inv;
-
-        assert assert_1 : cong(A_val', (A_val + x_i * y_val) * key.BASE_INV, key.n_val) by {
-            calc ==> {
-                cong(A_val' * BASE, x_i * y_val + u_i * key.n_val + A_val, key.n_val);
-                {
-                    mod_mul_lemma(u_i, key.n_val, key.n_val);
-                    cong_add_lemma_3(x_i * y_val + A_val, u_i * key.n_val, key.n_val);
-                    assert cong(x_i * y_val + A_val, x_i * y_val + A_val + u_i * key.n_val, key.n_val);
-                    reveal cong();
-                }
-                cong(A_val' * BASE, x_i * y_val + A_val, key.n_val);
-                {
-                    cong_mul_lemma_1(A_val' * BASE, x_i * y_val + A_val, key.BASE_INV, key.n_val);
-                }
-                cong(A_val' * BASE * key.BASE_INV, (x_i * y_val + A_val) * key.BASE_INV, key.n_val);
-                {
-                    mod_mul_lemma(A_val', BASE,  BASE);
-                    mod_div_inv_leamma(A_val' * BASE, BASE, key.BASE_INV, key.n_val);
-                    assert cong(A_val' * BASE * key.BASE_INV, A_val', key.n_val);
-                    reveal cong();
-                }
-                cong(A_val', (x_i * y_val + A_val) * key.BASE_INV, key.n_val);
-                {
-                    assert A_val + x_i * y_val == x_i * y_val + A_val;
-                }
-                cong(A_val', (A_val + x_i * y_val) * key.BASE_INV, key.n_val);
-            }
-        }
-
-
-        assert assert_2: cong((A_val + x_i * y_val) * key.BASE_INV, (temp + x_i * y_val) * key.BASE_INV, key.n_val) by {
-            calc ==> {
-                cong(A_val, temp, key.n_val);
-                {
-                    cong_add_lemma_1(A_val, temp, x_i * y_val, key.n_val);
-                }
-                cong(A_val + x_i * y_val, temp + x_i * y_val, key.n_val);
-                {
-                    cong_mul_lemma_1(A_val + x_i * y_val, temp + x_i * y_val, key.BASE_INV, key.n_val);
-                }
-                cong((A_val + x_i * y_val) * key.BASE_INV, (temp + x_i * y_val) * key.BASE_INV, key.n_val);
-            }
-        }
-
-        assert cong(A_val', (temp + x_i * y_val) * key.BASE_INV, key.n_val) by {
-            reveal assert_1;
-            reveal assert_2;
-            cong_trans_lemma(A_val', (A_val + x_i * y_val) * key.BASE_INV, (temp + x_i * y_val) * key.BASE_INV, key.n_val);
-        }
-    }
-
+    // BEGIN cmm_congruent_lemma ZONE
     lemma {:timeLimit 10} cmm_congruent_lemma(key: pub_key, x: seq<uint32>, i: nat, x_i: nat, u_i: nat, A_val: nat, A_val': nat, y_val: nat)
         requires pub_key_valid(key);
         requires i < |x| == key.len && x[i] as int == x_i;
@@ -674,6 +455,226 @@ module MMLemmas {
             assert y_val * sint(x[..i+1]) * power(key.BASE_INV, i + 1) == sint(x[..i+1]) * y_val * power(key.BASE_INV, i + 1);
         }
     }
+
+    lemma cmm_congruent_lemma_2(key: pub_key, x: seq<uint32>, i: nat, x_i: nat, u_i: nat, A_val: nat, A_val': nat, y_val: nat)
+        requires pub_key_valid(key);
+        requires i < |x| == key.len && x[i] as int == x_i;
+
+        requires cong(A_val, sint(x[..i]) * y_val * power(key.BASE_INV, i), key.n_val);
+        requires cong(A_val' * BASE, x_i * y_val + u_i * key.n_val + A_val, key.n_val);
+
+        ensures cong(A_val', (sint(x[..i]) * y_val * power(key.BASE_INV, i) + x_i * y_val) * key.BASE_INV, key.n_val);
+    {
+        ghost var ps_inv := power(key.BASE_INV, i);
+        var temp := sint(x[..i]) * y_val * ps_inv;
+
+        assert assert_1 : cong(A_val', (A_val + x_i * y_val) * key.BASE_INV, key.n_val) by {
+            calc ==> {
+                cong(A_val' * BASE, x_i * y_val + u_i * key.n_val + A_val, key.n_val);
+                {
+                    mod_mul_lemma(u_i, key.n_val, key.n_val);
+                    cong_add_lemma_3(x_i * y_val + A_val, u_i * key.n_val, key.n_val);
+                    assert cong(x_i * y_val + A_val, x_i * y_val + A_val + u_i * key.n_val, key.n_val);
+                    reveal cong();
+                }
+                cong(A_val' * BASE, x_i * y_val + A_val, key.n_val);
+                {
+                    cong_mul_lemma_1(A_val' * BASE, x_i * y_val + A_val, key.BASE_INV, key.n_val);
+                }
+                cong(A_val' * BASE * key.BASE_INV, (x_i * y_val + A_val) * key.BASE_INV, key.n_val);
+                {
+                    mod_mul_lemma(A_val', BASE,  BASE);
+                    mod_div_inv_leamma(A_val' * BASE, BASE, key.BASE_INV, key.n_val);
+                    assert cong(A_val' * BASE * key.BASE_INV, A_val', key.n_val);
+                    reveal cong();
+                }
+                cong(A_val', (x_i * y_val + A_val) * key.BASE_INV, key.n_val);
+                {
+                    assert A_val + x_i * y_val == x_i * y_val + A_val;
+                }
+                cong(A_val', (A_val + x_i * y_val) * key.BASE_INV, key.n_val);
+            }
+        }
+
+        assert assert_2: cong((A_val + x_i * y_val) * key.BASE_INV, (temp + x_i * y_val) * key.BASE_INV, key.n_val) by {
+            calc ==> {
+                cong(A_val, temp, key.n_val);
+                {
+                    cong_add_lemma_1(A_val, temp, x_i * y_val, key.n_val);
+                }
+                cong(A_val + x_i * y_val, temp + x_i * y_val, key.n_val);
+                {
+                    cong_mul_lemma_1(A_val + x_i * y_val, temp + x_i * y_val, key.BASE_INV, key.n_val);
+                }
+                cong((A_val + x_i * y_val) * key.BASE_INV, (temp + x_i * y_val) * key.BASE_INV, key.n_val);
+            }
+        }
+
+        assert cong(A_val', (temp + x_i * y_val) * key.BASE_INV, key.n_val) by {
+            reveal assert_1;
+            reveal assert_2;
+            cong_trans_lemma(A_val', (A_val + x_i * y_val) * key.BASE_INV, (temp + x_i * y_val) * key.BASE_INV, key.n_val);
+        }
+    }
+
+    lemma mont_mul_congruent_aux_lemma_1(
+        x: seq<uint32>,
+        i: nat,
+        y_val: int,
+        p: int,
+        p_inv: int,
+        BASE_INV: int,
+        m_val: int)
+
+        requires m_val != 0;
+        requires i + 1 <= |x|;
+        requires cong(BASE * BASE_INV, 1, m_val);
+        requires p == power(BASE, i);
+        requires p_inv == power(BASE_INV, i);
+        
+        ensures (y_val * (sint(x[..i]) * p_inv + x[i] as int)) % m_val == (y_val * sint(x[..i+1]) * p_inv) % m_val;
+    {
+        ghost var x_1 := x[..i];
+        ghost var x_2 := x[..i+1];
+
+        calc ==> {
+            cong(BASE * BASE_INV, 1, m_val);
+            {
+                cong_power_lemma(BASE * BASE_INV, 1, i, m_val);
+            }
+            cong(power(BASE * BASE_INV, i), power(1, i), m_val);
+            {
+                power_base_one_lemma(i);
+            }
+            cong(power(BASE * BASE_INV, i), 1, m_val);
+            {
+                power_same_exp_lemma(BASE, BASE_INV, i);
+            }
+            cong(power(BASE, i) * power(BASE_INV, i), 1, m_val);
+            cong(p * p_inv, 1, m_val);
+        }
+
+        assert cong(p * p_inv, 1, m_val);
+
+        assert cong(1, p * p_inv, m_val) by {
+            reveal cong();
+        }
+
+        calc == {
+            (sint(x_1) * p_inv + x[i] as int) % m_val;
+            {
+                ghost var a := sint(x_1) * p_inv + x[i] as int;
+                assert a % m_val == a * p * p_inv % m_val by {
+                    cong_mul_lemma_1(1, p * p_inv, a, m_val);
+                    reveal cong();
+                }
+            }
+            ((sint(x_1) * p_inv + x[i] as int) * p * p_inv) % m_val;
+            {
+                assert (sint(x_1) * p_inv + x[i] as int) * p == (sint(x_1) * p_inv * p  + x[i] as int * p);
+            }
+            ((sint(x_1) * p_inv * p + x[i] as int * p) * p_inv) % m_val;
+            {
+                mont_mul_congruent_aux_lemma_2(x, i, x_1, x_2, p, p_inv, BASE_INV, m_val);
+            }
+            (sint(x_2) * p_inv) % m_val;
+        }
+        
+        ghost var a := sint(x_1) * p_inv + x[i] as int;
+        ghost var b := sint(x_2) * p_inv;
+
+        assert a % m_val == b % m_val by {
+            assert (sint(x_1) * p_inv + x[i] as int) % m_val == (sint(x_2) * p_inv) % m_val;
+        }
+
+        calc ==> {
+            a % m_val == b % m_val;
+            {
+                reveal cong();
+            }
+            cong(a, b, m_val);
+            {
+                cong_mul_lemma_1(a, b, y_val, m_val);
+            }
+            cong(y_val * a, y_val * b, m_val);
+            {
+                reveal cong();
+            }
+            (y_val * a) % m_val == (y_val * b) % m_val;
+            (y_val * (sint(x_1) * p_inv + x[i] as int)) % m_val == (y_val * (sint(x_2) * p_inv)) % m_val;
+            {
+                assert y_val * (sint(x_2) * p_inv) == y_val * sint(x_2) * p_inv;
+            }
+            (y_val * (sint(x_1) * p_inv + x[i] as int)) % m_val == (y_val * sint(x_2) * p_inv) % m_val;
+        }
+
+        assert (y_val * (sint(x_1) * p_inv + x[i] as int)) % m_val == (y_val * sint(x_2) * p_inv) % m_val;
+    }
+
+    lemma mont_mul_congruent_aux_lemma_2(
+        x: seq<uint32>,
+        i: nat,
+        x_1: seq<uint32>,
+        x_2: seq<uint32>,
+        p: int,
+        p_inv: int,
+        BASE_INV: int,
+        m_val: int)
+
+        requires i + 1 <= |x|;
+        requires x_1 == x[..i] && x_2 == x[..i+1];
+        requires p == power(BASE, i);
+        requires p_inv == power(BASE_INV, i);
+        requires m_val != 0;
+        requires cong(p * p_inv, 1, m_val);
+
+        ensures ((sint(x_1) * p_inv * p + x[i] as int * p) * p_inv) % m_val == (sint(x_2) * p_inv) % m_val;
+    {
+        ghost var a := sint(x_1);
+        ghost var b := x[i] as int * p;
+
+        assert assertion_1 : (sint(x_1) * p_inv * p + x[i] as int * p) * p_inv % m_val == (sint(x_1) + x[i] as int * p) * p_inv % m_val by {
+            assert cong(p * p_inv, 1, m_val);
+            calc ==> {
+                cong(p * p_inv, 1, m_val);
+                {
+                    cong_mul_lemma_1(p * p_inv, 1, sint(x_1), m_val);
+                }
+                cong(a * p * p_inv, a, m_val);
+                { 
+                    cong_add_lemma_1(a * p * p_inv, a, b, m_val);
+                }
+                cong(a * p * p_inv + b, a + b, m_val);
+                {
+                    cong_mul_lemma_1(a * p * p_inv + b, a + b, p_inv, m_val);
+                }
+                cong((a * p * p_inv + b) * p_inv, (a + b) * p_inv, m_val);
+                {
+                    reveal cong();    
+                }
+                ((a * p * p_inv + b) * p_inv) % m_val == (a + b) * p_inv % m_val;
+            }
+            assert ((a * p * p_inv + b) * p_inv) % m_val == (a + b) * p_inv % m_val;
+        }
+
+        calc == {
+            sint(x_2);
+            interp(x_2, i + 1);
+            x_2[i] as int * p + interp(x_2, i);
+            {
+                prefix_sum_lemma(x_1, x_2, i);
+                assert interp(x_1, i) == interp(x_2, i);
+                assert sint(x_1) == interp(x_2, i);
+            }
+            x_2[i] as int * p + sint(x_1);
+        }
+
+        assert ((sint(x_1) * p_inv * p + x[i] as int * p) * p_inv) % m_val == (sint(x_2) * p_inv) % m_val by {
+            reveal assertion_1;
+            assert sint(x_2) == x_2[i] as int * p + sint(x_1);
+        }
+    }
+    // END cmm_congruent_lemma ZONE
 
     lemma cmm_bounded_lemma_1(
         key: pub_key,
