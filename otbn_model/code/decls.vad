@@ -46,8 +46,6 @@ var x29:uint32 {:state reg32(X29)}
 var x30:uint32 {:state reg32(X30)}
 var x31:uint32 {:state reg32(X31)}
 
-var xmod0:uint32 {:state reg32(Mod)}
-
 var w0:Bignum {:state Bignum(0)}
 var w1:Bignum {:state Bignum(1)}
 var w2:Bignum {:state Bignum(2)}
@@ -96,9 +94,7 @@ operand_type reg32:uint32 :=
 | inout x20 | inout x21 | inout x22 | inout x23
 | inout x24 | inout x25 | inout x26 | inout x27
 | inout x28 | inout x29 | inout x30 | inout x31
-| inout xmod0 | inout xmod1 | inout xmod2 | inout xmod3
-| inout xmod4 | inout xmod5 | inout xmod6 | inout xmod7
-| inout xnrd
+| inout xrnd
 ;
 
 operand_type reg256:Bignum :=
@@ -116,8 +112,8 @@ operand_type reg256:Bignum :=
 operand_type opr32:uint32 := reg32 | const;
 operand_type opr256:Bignum := reg256 | const;
 
-procedure XAdd(inout dst:opr32, in src:opr32)
-    {:instruction XIns(ADD(dst, src1, src2))}
+procedure Add32(inout dst:opr32, in src:opr32)
+    {:instruction Ins32(ADD(dst, src1, src2))}
     requires
         src1 + src2 < 0x1_0000_0000;
     modifies

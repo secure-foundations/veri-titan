@@ -7,7 +7,6 @@ module bignum_def {
 // General purpose and control registers, 32b
 datatype Reg32 =
 | Gpr(x:int)
-| Mod(mod:int) // 0 through 7
 | Rnd // Random number
 
 // Wide data and special registers, 256b
@@ -67,8 +66,8 @@ datatype ins256 =
 datatype codes = CNil | va_CCons(hd:code, tl:codes)
 
 datatype code =
-| Ins(xins:xins)
-| BNIns(bn_ins:ins)
+| Ins32(ins:ins32)
+| Ins256(ins:ins256)
 | Block(block:codes)
 
 type Frame = map<int, uint32>
