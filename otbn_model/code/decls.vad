@@ -46,7 +46,7 @@ var x29:uint32 {:state reg32(X29)}
 var x30:uint32 {:state reg32(X30)}
 var x31:uint32 {:state reg32(X31)}
 
-var xmod0:uint32 {:state reg32(XMod)}
+var xmod0:uint32 {:state reg32(Mod)}
 
 var w0:Bignum {:state Bignum(0)}
 var w1:Bignum {:state Bignum(1)}
@@ -80,6 +80,7 @@ var w28:Bignum {:state Bignum(28)}
 var w29:Bignum {:state Bignum(29)}
 var w30:Bignum {:state Bignum(30)}
 var w31:Bignum {:state Bignum(31)}
+
 var wmod:Bignum {:state Bignum(WMod)}
 var wrnd:Bignum {:state Bignum(WRnd)}
 
