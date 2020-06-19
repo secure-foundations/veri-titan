@@ -1,4 +1,6 @@
+#verbatim
 module bignum_decls {
+#endverbatim
 
 type state:Type(0) {:primitive} extern;
 type uint32:Type(0) := int_range(0, 0xffff_ffff);
@@ -13,76 +15,76 @@ function operator(.ok :=) (s:state, b:bool):state extern;
 
 var ok:bool {:state ok()};
 
-var x0:uint32 {:state reg32(X0)}
-var x1:uint32 {:state reg32(X1)}
-var x2:uint32 {:state reg32(X2)}
-var x3:uint32 {:state reg32(X3)}
-var x4:uint32 {:state reg32(X4)}
-var x5:uint32 {:state reg32(X5)}
-var x6:uint32 {:state reg32(X6)}
-var x7:uint32 {:state reg32(X7)}
-var x8:uint32 {:state reg32(X8)}
-var x9:uint32 {:state reg32(X9)}
-var x10:uint32 {:state reg32(X10)}
-var x11:uint32 {:state reg32(X11)}
-var x12:uint32 {:state reg32(X12)}
-var x13:uint32 {:state reg32(X13)}
-var x14:uint32 {:state reg32(X14)}
-var x15:uint32 {:state reg32(X15)}
-var x16:uint32 {:state reg32(X16)}
-var x17:uint32 {:state reg32(X17)}
-var x18:uint32 {:state reg32(X18)}
-var x19:uint32 {:state reg32(X19)}
-var x20:uint32 {:state reg32(X20)}
-var x21:uint32 {:state reg32(X21)}
-var x22:uint32 {:state reg32(X22)}
-var x23:uint32 {:state reg32(X23)}
-var x24:uint32 {:state reg32(X24)}
-var x25:uint32 {:state reg32(X25)}
-var x26:uint32 {:state reg32(X26)}
-var x27:uint32 {:state reg32(X27)}
-var x28:uint32 {:state reg32(X28)}
-var x29:uint32 {:state reg32(X29)}
-var x30:uint32 {:state reg32(X30)}
-var x31:uint32 {:state reg32(X31)}
+var x0:uint32 {:state reg32(X0)};
+var x1:uint32 {:state reg32(X1)};
+var x2:uint32 {:state reg32(X2)};
+var x3:uint32 {:state reg32(X3)};
+var x4:uint32 {:state reg32(X4)};
+var x5:uint32 {:state reg32(X5)};
+var x6:uint32 {:state reg32(X6)};
+var x7:uint32 {:state reg32(X7)};
+var x8:uint32 {:state reg32(X8)};
+var x9:uint32 {:state reg32(X9)};
+var x10:uint32 {:state reg32(X10)};
+var x11:uint32 {:state reg32(X11)};
+var x12:uint32 {:state reg32(X12)};
+var x13:uint32 {:state reg32(X13)};
+var x14:uint32 {:state reg32(X14)};
+var x15:uint32 {:state reg32(X15)};
+var x16:uint32 {:state reg32(X16)};
+var x17:uint32 {:state reg32(X17)};
+var x18:uint32 {:state reg32(X18)};
+var x19:uint32 {:state reg32(X19)};
+var x20:uint32 {:state reg32(X20)};
+var x21:uint32 {:state reg32(X21)};
+var x22:uint32 {:state reg32(X22)};
+var x23:uint32 {:state reg32(X23)};
+var x24:uint32 {:state reg32(X24)};
+var x25:uint32 {:state reg32(X25)};
+var x26:uint32 {:state reg32(X26)};
+var x27:uint32 {:state reg32(X27)};
+var x28:uint32 {:state reg32(X28)};
+var x29:uint32 {:state reg32(X29)};
+var x30:uint32 {:state reg32(X30)};
+var x31:uint32 {:state reg32(X31)};
 
-var w0:Bignum {:state Bignum(0)}
-var w1:Bignum {:state Bignum(1)}
-var w2:Bignum {:state Bignum(2)}
-var w3:Bignum {:state Bignum(3)}
-var w4:Bignum {:state Bignum(4)}
-var w5:Bignum {:state Bignum(5)}
-var w6:Bignum {:state Bignum(6)}
-var w7:Bignum {:state Bignum(7)}
-var w8:Bignum {:state Bignum(8)}
-var w9:Bignum {:state Bignum(9)}
-var w10:Bignum {:state Bignum(10)}
-var w11:Bignum {:state Bignum(11)}
-var w12:Bignum {:state Bignum(12)}
-var w13:Bignum {:state Bignum(13)}
-var w14:Bignum {:state Bignum(14)}
-var w15:Bignum {:state Bignum(15)}
-var w16:Bignum {:state Bignum(16)}
-var w17:Bignum {:state Bignum(17)}
-var w18:Bignum {:state Bignum(18)}
-var w19:Bignum {:state Bignum(19)}
-var w20:Bignum {:state Bignum(20)}
-var w21:Bignum {:state Bignum(21)}
-var w22:Bignum {:state Bignum(22)}
-var w23:Bignum {:state Bignum(23)}
-var w24:Bignum {:state Bignum(24)}
-var w25:Bignum {:state Bignum(25)}
-var w26:Bignum {:state Bignum(26)}
-var w27:Bignum {:state Bignum(27)}
-var w28:Bignum {:state Bignum(28)}
-var w29:Bignum {:state Bignum(29)}
-var w30:Bignum {:state Bignum(30)}
-var w31:Bignum {:state Bignum(31)}
+var w0:Bignum {:state Bignum(0)};
+var w1:Bignum {:state Bignum(1)};
+var w2:Bignum {:state Bignum(2)};
+var w3:Bignum {:state Bignum(3)};
+var w4:Bignum {:state Bignum(4)};
+var w5:Bignum {:state Bignum(5)};
+var w6:Bignum {:state Bignum(6)};
+var w7:Bignum {:state Bignum(7)};
+var w8:Bignum {:state Bignum(8)};
+var w9:Bignum {:state Bignum(9)};
+var w10:Bignum {:state Bignum(10)};
+var w11:Bignum {:state Bignum(11)};
+var w12:Bignum {:state Bignum(12)};
+var w13:Bignum {:state Bignum(13)};
+var w14:Bignum {:state Bignum(14)};
+var w15:Bignum {:state Bignum(15)};
+var w16:Bignum {:state Bignum(16)};
+var w17:Bignum {:state Bignum(17)};
+var w18:Bignum {:state Bignum(18)};
+var w19:Bignum {:state Bignum(19)};
+var w20:Bignum {:state Bignum(20)};
+var w21:Bignum {:state Bignum(21)};
+var w22:Bignum {:state Bignum(22)};
+var w23:Bignum {:state Bignum(23)};
+var w24:Bignum {:state Bignum(24)};
+var w25:Bignum {:state Bignum(25)};
+var w26:Bignum {:state Bignum(26)};
+var w27:Bignum {:state Bignum(27)};
+var w28:Bignum {:state Bignum(28)};
+var w29:Bignum {:state Bignum(29)};
+var w30:Bignum {:state Bignum(30)};
+var w31:Bignum {:state Bignum(31)};
 
-var wmod:Bignum {:state Bignum(WMod)}
-var wrnd:Bignum {:state Bignum(WRnd)}
+var wmod:Bignum {:state Bignum(WMod)};
+var wrnd:Bignum {:state Bignum(WRnd)};
 
-var flags:map<int, bool> {:state flags()};
+var flags:map(int, bool) {:state flags()};
 var stack:Stack {:state stack()};
 
 operand_type reg32:uint32 :=
@@ -112,16 +114,18 @@ operand_type reg256:Bignum :=
 operand_type opr32:uint32 := reg32 | const;
 operand_type opr256:Bignum := reg256 | const;
 
-procedure Add32(inout dst:opr32, in src:opr32)
+procedure Add32(inout dst:opr32, in src1:opr32, in src2:opr32)
     {:instruction Ins32(ADD(dst, src1, src2))}
     requires
         src1 + src2 < 0x1_0000_0000;
     modifies
-        efl;
+        flags;
     ensures
         dst == old(src1) + old(src2);
 {
-	assume false;
+assume false;
 }
 
-}
+#verbatim
+} // end module bignum_decls
+#endverbatim
