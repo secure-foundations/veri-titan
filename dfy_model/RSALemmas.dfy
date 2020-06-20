@@ -96,7 +96,7 @@ module RSALemmas
         }
     }
 
-    lemma mod_pow3_congruent_lemma_1(key: pub_key, a: int, ar: int, aar: int, aaa: int, rr: int)
+    lemma mod_pow3_congruent_lemma(key: pub_key, a: int, ar: int, aar: int, aaa: int, rr: int)
         requires pub_key_valid(key);
         requires cong(rr, key.R * key.R, key.n_val);
         requires cong(ar, a * rr * key.R_INV, key.n_val);
@@ -105,7 +105,7 @@ module RSALemmas
         ensures cong(aaa, a * a * a, key.n_val);
     {
         assert cong(aar, key.R * a * a, key.n_val) by {
-            mod_pow3_congruent_lemma_2(key, a, ar, aar, rr);
+            mod_pow3_congruent_aux_lemma_1(key, a, ar, aar, rr);
         }
 
         assert cong(aar * key.R_INV, a * a, key.n_val) by {
@@ -128,7 +128,7 @@ module RSALemmas
         assert cong(aaa, a * a * a, key.n_val);
     }
 
-    lemma mod_pow3_congruent_lemma_2(key: pub_key, a: int, ar: int, aar: int, rr: int)
+    lemma mod_pow3_congruent_aux_lemma_1(key: pub_key, a: int, ar: int, aar: int, rr: int)
         requires pub_key_valid(key);
         requires cong(rr, key.R * key.R, key.n_val);
         requires cong(ar, a * rr * key.R_INV, key.n_val);
@@ -136,7 +136,7 @@ module RSALemmas
         ensures cong(aar, key.R * a * a, key.n_val);
     {
         assert cong(ar, key.R * a, key.n_val) && cong(ar * key.R_INV, a, key.n_val) by {
-            mod_pow3_congruent_lemma_3(key, a, ar, aar, rr);
+            mod_pow3_congruent_aux_lemma_2(key, a, ar, aar, rr);
         }
 
         assert cong_a4: cong(aar, ar * a, key.n_val) by {
@@ -164,7 +164,7 @@ module RSALemmas
         }
     }
 
-    lemma mod_pow3_congruent_lemma_3(key: pub_key, a: int, ar: int, aar: int, rr: int)
+    lemma mod_pow3_congruent_aux_lemma_2(key: pub_key, a: int, ar: int, aar: int, rr: int)
         requires pub_key_valid(key);
         requires cong(rr, key.R * key.R, key.n_val);
         requires cong(ar, a * rr * key.R_INV, key.n_val);
