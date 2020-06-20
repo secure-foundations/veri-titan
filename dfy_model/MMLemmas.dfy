@@ -45,6 +45,7 @@ module MMLemmas {
         assert true;
     }
 
+    // BEGIN cmm_divisible_lemma_1 ZONE # Singular
     lemma cmm_divisible_lemma_1(p_1: nat, p_2: nat, x_i: nat, y_0: nat, a_0: nat, u_i: nat, m': nat, m_0: nat)
         requires cong(m' * m_0, -1, BASE);
         requires p_1 <= UINT64_MAX as nat;
@@ -165,6 +166,7 @@ module MMLemmas {
 
         assert cong(m * (((a + x * y) * m') % BASE), -(a + x * y), BASE);
     }
+    // END cmm_divisible_lemma_1 ZONE # Singular
 
     lemma cmm_invarint_lemma_1(
         m: seq<uint32>,
