@@ -96,6 +96,7 @@ module RSALemmas
         }
     }
 
+    // BEGIN mod_pow3_congruent_lemma ZONE # Singular
     lemma mod_pow3_congruent_lemma(key: pub_key, a: int, ar: int, aar: int, aaa: int, rr: int)
         requires pub_key_valid(key);
         requires cong(rr, key.R * key.R, key.n_val);
@@ -209,6 +210,7 @@ module RSALemmas
         assert cong(ar, key.R * a, key.n_val);
         assert cong(ar * key.R_INV, a, key.n_val);
     }
+    // END mod_pow3_congruent_lemma ZONE # Singular
 
     lemma rsa_cong_lemma_1(rsa: rsa_params, m: nat, p: nat)
         requires rsa_valid(rsa);

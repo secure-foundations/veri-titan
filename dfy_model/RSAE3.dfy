@@ -235,7 +235,7 @@ module RSAE3 {
         ghost var aaa_val := sint(aaa);
         ghost var a_val := sint(a);
 
-        mod_pow3_congruent_lemma_1(key, a_val, sint(aR), sint(aaR), aaa_val, sint(key.RR));
+        mod_pow3_congruent_lemma(key, a_val, sint(aR), sint(aaR), aaa_val, sint(key.RR));
 
         var geq := seq_geq(aaa, key.m);
 
