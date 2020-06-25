@@ -1,7 +1,11 @@
 include{:verbatim} "vale.dfy"
+include{:verbatim} "../spec/def.dfy"
 
 #verbatim
 module bignum_decls {
+
+import opened bignum_vale
+import opened bignum_def
 #endverbatim
 
 type state:Type(0) {:primitive} extern;
@@ -86,7 +90,7 @@ var w31:Bignum {:state Bignum(31)};
 var wmod:Bignum {:state Bignum(WMod)};
 var wrnd:Bignum {:state Bignum(WRnd)};
 
-var flags:map(int, bool) {:state flags()};
+//var flags:map(int, bool) {:state flags()};
 var stack:Stack {:state stack()};
 
 operand_type reg32:uint32 :=
@@ -113,15 +117,10 @@ operand_type reg256:Bignum :=
 | inout wmod | inout wrnd
 ;
 
-operand_type opr32:uint32 := reg32 | const;
-operand_type opr256:Bignum := reg256 | const;
-
-procedure Add32(inout dst:opr32, in src1:opr32, in src2:opr32)
+procedure Add32(inout dst:reg32, in src1:reg32, in src2:reg32)
     {:instruction Ins32(ADD(dst, src1, src2))}
     requires
         src1 + src2 < 0x1_0000_0000;
-    modifies
-        flags;
     ensures
         dst == old(src1) + old(src2);
 {

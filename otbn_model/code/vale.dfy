@@ -1,10 +1,9 @@
 include "../spec/def.dfy"
 
-module _vale {
+module bignum_vale {
 
+import opened types	
 import opened bignum_def
-
-type opr = operand
 
 ////////////////////////////////////////////////////////////////////////
 //
@@ -23,73 +22,146 @@ type va_state = state
 ////////////////////////////////////////////////////////////////////////
 
 function va_get_ok(s:va_state):bool { s.ok }
-function va_get_reg32(r:Reg32, s:va_state):uint32 requires r in s.regs32 { s.regs32[r] }
-function va_get_reg256(r:Reg256, s:va_state):Bignum requires r in s.regs256 { s.regs256[r] }
+function va_get_reg32(r:Reg32, s:va_state):uint32 requires r in s.xregs { s.xregs[r] }
+function va_get_reg256(r:Reg256, s:va_state):Bignum requires r in s.wregs { s.wregs[r] }
 
 // TODO: Distinguish between flag groups 1 and 2
-function va_get_flags(f:int, s:va_state):bool requires f in s.flags { s.flags[f] }
+//function va_get_flags(f:int, s:va_state):bool requires f in s.flags { s.flags[f] }
 function va_get_stack(s:va_state):Stack { s.stack }
 
 function va_update_ok(sM:va_state, sK:va_state):va_state { sK.(ok := sM.ok) }
 
 function va_update_reg32(r:Reg32, sM:va_state, sK:va_state):va_state
-    requires r in sM.regs32
-{ sK.(regs32 := sK.regs32[r := sM.regs[r]]) }
+    requires r in sM.xregs
+{ sK.(xregs := sK.xregs[r := sM.xregs[r]]) }
 
 function va_update_reg256(r:Reg256, sM:va_state, sK:va_state):va_state
-    requires r in sM.regs256
-{ sK.(regs256 := sK.regs256[r := sM.regs[r]]) }
+    requires r in sM.wregs
+{ sK.(wregs := sK.wregs[r := sM.wregs[r]]) }
 
-function va_update_flags(f:int, sM:va_state, sK:va_state):va_state
-    requires f in sM.flags
-{ sK.(flags := sK.flags[f := sM.flags[f]]) }
+//function va_update_flags(f:int, sM:va_state, sK:va_state):va_state
+//    requires f in sM.flags
+//{ sK.(flags := sK.flags[f := sM.flags[f]]) }
 
 function va_update_stack(sM:va_state, sK:va_state):va_state { sK.(stack := sM.stack) }
 
-type va_value_opr32 = uint32
-type va_operand_opr32 = operand
-predicate is_src_opr32(o:opr, s:va_state) { (o.OConst? && IsUInt32(o.n)) || (o.OReg? && !o.r.Reg32?) }
+type va_value_reg32 = uint32
+type va_operand_reg32 = Reg32
+predicate is_src_reg32(r:Reg32, s:va_state) { (r.Gpr? && 0 <= r.x <= 31) }
 
-predicate va_is_src_opr32(o:opr, s:va_state) { (o.OConst? && IsUInt32(o.n)) || (o.OReg? && !o.r.Reg256? && o.r in s.regs32 && IsUInt32(s.regs[o.r])) }
-predicate va_is_dst_opr32(o:opr, s:va_state) { o.OReg? && !o.r.Reg256? && o.r in s.regs32 && IsUInt32(s.regs[o.r]) }
+predicate va_is_src_reg32(r:Reg32, s:va_state) { (r in s.xregs && IsUInt32(s.xregs[r])) }
+predicate va_is_dst_reg32(r:Reg32, s:va_state) { (r in s.xregs && IsUInt32(s.xregs[r])) }
 
-type va_value_opr256 = Bignum
-type va_operand_opr256 = operand
-predicate va_is_src_opr256(o:opr, s:va_state) { o.OReg? && o.r.Reg256? && 0 <= o.r.reg256 <= 31 }
-predicate va_is_dst_opr256(o:opr, s:va_state) { o.OReg? && o.r.Reg256? && 0 <= o.r.reg256 <= 31 }
-
-function va_eval_opr32(s:va_state, o:opr):uint32
-    requires is_src_opr32(o, s);
+function va_eval_reg32(s:va_state, r:Reg32):uint32
+  requires is_src_reg32(r, s);
+	requires r in s.xregs;
 {
-    eval_op32(s, o)
+    s.xregs[r]
 }
 
-function va_eval_opr256(s:va_state, o:opr):Bignum
-    requires va_is_src_opr256(o, s);
+function va_update_operand_reg32(r:Reg32, sM:va_state, sK:va_state):va_state
+    requires r in sM.xregs;
+    requires r.Gpr? ==> ValidRegisterIndex(r.x);
 {
-    eval_op256(s, o)
+    va_update_reg32(r, sM, sK)
 }
 
-function va_eval_opr256(s:va_state, o:opr):Bignum
-    requires va_is_src_opr256(o, s);
-    requires o.r.reg256 in s.reg256;
+predicate va_state_eq(s0:va_state, s1:va_state)
 {
-    s.reg256[o.r.reg256]
+    s0.xregs == s1.xregs
+ && s0.wregs == s1.wregs
+// && s0.flags == s1.flags
+ && s0.stack == s1.stack
+ && s0.ok == s1.ok
 }
 
-function va_update_operand_opr32(o:opr, sM:va_state, sK:va_state):va_state
-    requires o.OReg?;
-    requires o.r in sM.regs;
-    requires o.r.Reg256? ==> o.r.reg256 in sM.reg256;
+predicate{:opaque} evalCodeOpaque(c:code, s0:state, sN:state)
 {
-    va_update_operand(o, sM, sK)
+	  true
+    //evalCode(c, s0, sN)
 }
 
-function va_update_operand_opr256(o:opr, sM:va_state, sK:va_state):va_state
-    requires o.OReg?;
-    requires o.r in sM.reg256;
-    requires o.r.Reg256? ==> o.r.reg256 in sM.reg256;
+predicate eval_code(c:code, s:state, r:state)
 {
-    va_update_operand(o, sM, sK)
+    s.ok ==> evalCodeOpaque(c, s, r)
 }
+
+function method va_CNil():codes { CNil }
+predicate cHeadIs(b:codes, c:code) { b.va_CCons? && b.hd == c }
+predicate cTailIs(b:codes, t:codes) { b.va_CCons? && b.tl == t }
+
+predicate va_require(b0:codes, c1:code, s0:va_state, sN:va_state)
+{
+    cHeadIs(b0, c1)
+ && eval_code(Block(b0), s0, sN)
+ && BN_ValidState(s0)
+}
+
+// Weaker form of eval_code that we can actually ensure generically in instructions
+predicate eval_weak(c:code, s:state, r:state)
+{
+    s.ok && r.ok ==> evalCodeOpaque(c, s, r)
+}
+
+predicate va_ensure(b0:codes, b1:codes, s0:va_state, s1:va_state, sN:va_state)
+{
+    cTailIs(b0, b1)
+ && eval_weak(b0.hd, s0, s1)
+ && eval_code(Block(b1), s1, sN)
+ && BN_ValidState(s1)
+}
+
+lemma va_ins_lemma(b0:code, s0:va_state)
+{
+}
+
+
+lemma va_lemma_block(b:codes, s0:va_state, r:va_state) returns(r1:va_state, c0:code, b1:codes)
+    requires b.va_CCons?
+    requires eval_code(Block(b), s0, r)
+    ensures  b == va_CCons(c0, b1)
+    ensures  eval_code(c0, s0, r1)
+    ensures  eval_code(Block(b1), r1, r)
+{
+    reveal_evalCodeOpaque();
+    c0 := b.hd;
+    b1 := b.tl;
+    if s0.ok {
+        assert evalBlock(b, s0, r);
+        var r':state :| evalCode(b.hd, s0, r') && evalBlock(b.tl, r', r);
+        c0 := b.hd;
+        b1 := b.tl;
+				// TODO: add in flags
+        r1 := state(r'.xregs, r'.wregs, r'.stack, r'.ok);
+        if BN_ValidState(s0) {
+            reveal_BN_ValidState();
+            // TODO: code_state_validity(c0, s0, r1);
+        }
+        assert eval_code(c0, s0, r1);
+    } else {
+        // If s0 isn't okay, we can do whatever we want,
+        // so we ensure r1.ok is false, and hence eval_code(*, r1, *) is trivially true
+        r1 := s0;
+    }
+}
+
+////////////////////////////////////////////////////////////////////////
+//
+//  Invariants over the state
+//
+////////////////////////////////////////////////////////////////////////
+
+predicate valid_state(s:state)
+{
+    |s.stack| > 0
+ && (forall r :: r in s.xregs)
+ && (forall r :: r in s.wregs)
+}
+
+predicate {:opaque} BN_ValidState(s:state)
+    ensures BN_ValidState(s) ==> valid_state(s);
+{
+    valid_state(s)
+}
+
 }
