@@ -47,13 +47,13 @@ function va_update_stack(sM:va_state, sK:va_state):va_state { sK.(stack := sM.st
 
 type va_value_reg32 = uint32
 type va_operand_reg32 = Reg32
-predicate is_src_reg32(r:Reg32, s:va_state) { (r.Gpr? && 0 <= r.x <= 31) }
+//predicate is_src_reg32(r:Reg32, s:va_state) { r.Rnd? || (r.Gpr? && 0 <= r.x <= 31)}
 
-predicate va_is_src_reg32(r:Reg32, s:va_state) { (r in s.xregs && IsUInt32(s.xregs[r])) }
-predicate va_is_dst_reg32(r:Reg32, s:va_state) { (r in s.xregs && IsUInt32(s.xregs[r])) }
+predicate va_is_src_reg32(r:Reg32, s:va_state) { (r.Gpr? ==> 0 <= r.x <= 31) && r in s.xregs && IsUInt32(s.xregs[r]) }
+predicate va_is_dst_reg32(r:Reg32, s:va_state) { (r in s.xregs && IsUInt32(s.xregs[r]) && r.Gpr? && 0 <= r.x <= 31) }
 
 function va_eval_reg32(s:va_state, r:Reg32):uint32
-  requires is_src_reg32(r, s);
+  requires va_is_src_reg32(r, s);
 	requires r in s.xregs;
 {
     s.xregs[r]
@@ -77,8 +77,7 @@ predicate va_state_eq(s0:va_state, s1:va_state)
 
 predicate{:opaque} evalCodeOpaque(c:code, s0:state, sN:state)
 {
-	  true
-    //evalCode(c, s0, sN)
+    evalCode(c, s0, sN)
 }
 
 predicate eval_code(c:code, s:state, r:state)
