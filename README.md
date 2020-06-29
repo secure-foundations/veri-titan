@@ -8,4 +8,6 @@
 [Decrypto implementation](https://chromium.googlesource.com/chromiumos/platform/ec/+/refs/heads/cr50_stab/chip/g/dcrypto/dcrypto_bn.c)
 
 
-## Proof Triaging()
+## [Proof Triaging](https://github.com/secure-foundations/veri-titan/blob/master/docs/Triaging.md)
+
+## [Proof Generation Proposal](https://github.com/secure-foundations/veri-titan/blob/master/docs/Proposal.md)
