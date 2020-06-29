@@ -1,6 +1,6 @@
-## Proof Triaging:
+# Proof Triaging:
 ----
-### Congruence Proofs: 
+## Congruence Proofs: 
 
 There are some lemma that are about proving congruences, which can be automated using Grobner bases method via Singular. 
 
@@ -47,7 +47,7 @@ reduce(aaa - a * a * a, G);
 ```
 
 ----
-### Equational Proofs: 
+## Equational Proofs: 
 
 There are a few lemmas where we need to show some equality, given some equalities.
 * Dafny is actually quite good at equational reasoning, even with non-linear math (surprisingly), which is at the core of these lemmas.
@@ -61,7 +61,7 @@ There are a few lemmas where we need to show some equality, given some equalitie
 [cmm_invarint_lemma_3](https://github.com/secure-foundations/veri-titan/blob/8b219fe6228ca42f3c0ce4bb99cd865c73541ae0/dfy_model/MMLemmas.dfy#L356)
 
 ----
-### Big Int Induction Proofs: 
+## Big Int Induction Proofs: 
 
 There are a few cases where we need to induct on the big integer
 * The proofs themselves are quite intuitive (trivial), just some basic properties about the big ints in general.
@@ -72,7 +72,7 @@ There are a few cases where we need to induct on the big integer
 [seq_div_base_lemma](https://github.com/secure-foundations/veri-titan/blob/2fd39315020e3c094b0cc1c1a0ccd315803128cb/dfy_model/SeqInt.dfy#L864)
 
 ----
-### Power() Proofs: 
+## Power() Proofs: 
 
 Reasoning around `Power()` is a bit awkward.
 * lemmas related to `Power()` needs to be proved
