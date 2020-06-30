@@ -47,13 +47,13 @@ function va_update_stack(sM:va_state, sK:va_state):va_state { sK.(stack := sM.st
 
 type va_value_reg32 = uint32
 type va_operand_reg32 = Reg32
-predicate is_src_reg32(r:Reg32, s:va_state) { (r.Gpr? && 0 <= r.x <= 31) }
+//predicate is_src_reg32(r:Reg32, s:va_state) { r.Rnd? || (r.Gpr? && 0 <= r.x <= 31)}
 
-predicate va_is_src_reg32(r:Reg32, s:va_state) { (r in s.xregs && IsUInt32(s.xregs[r])) }
-predicate va_is_dst_reg32(r:Reg32, s:va_state) { (r in s.xregs && IsUInt32(s.xregs[r])) }
+predicate va_is_src_reg32(r:Reg32, s:va_state) { (r.Gpr? ==> 0 <= r.x <= 31) && r in s.xregs && IsUInt32(s.xregs[r]) }
+predicate va_is_dst_reg32(r:Reg32, s:va_state) { (r in s.xregs && IsUInt32(s.xregs[r]) && r.Gpr? && 0 <= r.x <= 31) }
 
 function va_eval_reg32(s:va_state, r:Reg32):uint32
-  requires is_src_reg32(r, s);
+  requires va_is_src_reg32(r, s);
 	requires r in s.xregs;
 {
     s.xregs[r]
@@ -77,8 +77,7 @@ predicate va_state_eq(s0:va_state, s1:va_state)
 
 predicate{:opaque} evalCodeOpaque(c:code, s0:state, sN:state)
 {
-	  true
-    //evalCode(c, s0, sN)
+    evalCode(c, s0, sN)
 }
 
 predicate eval_code(c:code, s:state, r:state)
@@ -115,12 +114,21 @@ lemma va_ins_lemma(b0:code, s0:va_state)
 {
 }
 
+lemma code_state_validity(c:code, s:state, r:state)
+    requires evalCode(c, s, r);
+    requires valid_state(s);
+    decreases c, 0;
+    ensures  r.ok ==> valid_state(r);
+{
+	assume false;
+}
 
 lemma va_lemma_block(b:codes, s0:va_state, r:va_state) returns(r1:va_state, c0:code, b1:codes)
     requires b.va_CCons?
     requires eval_code(Block(b), s0, r)
     ensures  b == va_CCons(c0, b1)
     ensures  eval_code(c0, s0, r1)
+		ensures BN_ValidState(s0) && r1.ok ==> BN_ValidState(r1);
     ensures  eval_code(Block(b1), r1, r)
 {
     reveal_evalCodeOpaque();
@@ -135,7 +143,7 @@ lemma va_lemma_block(b:codes, s0:va_state, r:va_state) returns(r1:va_state, c0:c
         r1 := state(r'.xregs, r'.wregs, r'.stack, r'.ok);
         if BN_ValidState(s0) {
             reveal_BN_ValidState();
-            // TODO: code_state_validity(c0, s0, r1);
+            code_state_validity(c0, s0, r1);
         }
         assert eval_code(c0, s0, r1);
     } else {
@@ -153,7 +161,7 @@ lemma va_lemma_block(b:codes, s0:va_state, r:va_state) returns(r1:va_state, c0:c
 
 predicate valid_state(s:state)
 {
-    |s.stack| > 0
+    |s.stack| >= 0
  && (forall r :: r in s.xregs)
  && (forall r :: r in s.wregs)
 }

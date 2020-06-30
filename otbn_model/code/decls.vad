@@ -124,7 +124,8 @@ procedure Add32(inout dst:reg32, in src1:reg32, in src2:reg32)
     ensures
         dst == old(src1) + old(src2);
 {
-assume false;
+reveal evalCodeOpaque;
+reveal BN_ValidState;
 }
 
 #verbatim
