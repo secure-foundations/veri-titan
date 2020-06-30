@@ -54,7 +54,6 @@ predicate va_is_dst_reg32(r:Reg32, s:va_state) { (r in s.xregs && IsUInt32(s.xre
 
 function va_eval_reg32(s:va_state, r:Reg32):uint32
   requires va_is_src_reg32(r, s);
-	requires r in s.xregs;
 {
     s.xregs[r]
 }
@@ -114,13 +113,60 @@ lemma va_ins_lemma(b0:code, s0:va_state)
 {
 }
 
+lemma lemma_FailurePreservedByBlock(block:codes, s:state, r:state)
+    requires evalBlock(block, s, r);
+    ensures  !s.ok ==> !r.ok;
+    decreases block;
+{
+    if !block.CNil? {
+        var r' :| evalCode(block.hd, s, r') && evalBlock(block.tl, r', r);
+        lemma_FailurePreservedByCode(block.hd, s, r');
+        lemma_FailurePreservedByBlock(block.tl, r', r);
+    }
+}
+
+lemma lemma_FailurePreservedByCode(c:code, s:state, r:state)
+    requires evalCode(c, s, r);
+    ensures  !s.ok ==> !r.ok;
+{
+    if c.Block? {
+        lemma_FailurePreservedByBlock(c.block, s, r);
+    }
+}
+
+lemma block_state_validity(block:codes, s:state, r:state)
+	requires evalBlock(block, s, r);
+	requires valid_state(s);
+	decreases block, 0;
+	ensures r.ok ==> valid_state(r);
+{
+	if block.va_CCons? {
+		var r':state :| evalCode(block.hd, s, r') && evalBlock(block.tl, r', r);
+		code_state_validity(block.hd, s, r');
+		if r'.ok {
+			block_state_validity(block.tl, r', s);
+		}
+		else {
+			lemma_FailurePreservedByBlock(block.tl, r', r);
+		}
+	}
+}
+
 lemma code_state_validity(c:code, s:state, r:state)
     requires evalCode(c, s, r);
     requires valid_state(s);
     decreases c, 0;
     ensures  r.ok ==> valid_state(r);
 {
-	assume false;
+    if r.ok {
+        if c.Ins32? {
+            assert valid_state(r);
+        } else if c.Block? {
+            block_state_validity(c.block, s, r);
+				} else {
+					assume false;
+				}
+		}
 }
 
 lemma va_lemma_block(b:codes, s0:va_state, r:va_state) returns(r1:va_state, c0:code, b1:codes)
@@ -163,7 +209,7 @@ predicate valid_state(s:state)
 {
     |s.stack| >= 0
  && (forall r :: r in s.xregs)
- && (forall r :: r in s.wregs)
+ && (forall t :: t in s.wregs)
 }
 
 predicate {:opaque} BN_ValidState(s:state)
