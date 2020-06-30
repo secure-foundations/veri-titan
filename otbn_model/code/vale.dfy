@@ -114,12 +114,21 @@ lemma va_ins_lemma(b0:code, s0:va_state)
 {
 }
 
+lemma code_state_validity(c:code, s:state, r:state)
+    requires evalCode(c, s, r);
+    requires valid_state(s);
+    decreases c, 0;
+    ensures  r.ok ==> valid_state(r);
+{
+	assume false;
+}
 
 lemma va_lemma_block(b:codes, s0:va_state, r:va_state) returns(r1:va_state, c0:code, b1:codes)
     requires b.va_CCons?
     requires eval_code(Block(b), s0, r)
     ensures  b == va_CCons(c0, b1)
     ensures  eval_code(c0, s0, r1)
+		ensures BN_ValidState(s0) && r1.ok ==> BN_ValidState(r1);
     ensures  eval_code(Block(b1), r1, r)
 {
     reveal_evalCodeOpaque();
@@ -134,7 +143,7 @@ lemma va_lemma_block(b:codes, s0:va_state, r:va_state) returns(r1:va_state, c0:c
         r1 := state(r'.xregs, r'.wregs, r'.stack, r'.ok);
         if BN_ValidState(s0) {
             reveal_BN_ValidState();
-            // TODO: code_state_validity(c0, s0, r1);
+            code_state_validity(c0, s0, r1);
         }
         assert eval_code(c0, s0, r1);
     } else {
@@ -152,7 +161,7 @@ lemma va_lemma_block(b:codes, s0:va_state, r:va_state) returns(r1:va_state, c0:c
 
 predicate valid_state(s:state)
 {
-    |s.stack| > 0
+    |s.stack| >= 0
  && (forall r :: r in s.xregs)
  && (forall r :: r in s.wregs)
 }
