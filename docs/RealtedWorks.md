@@ -1,8 +1,7 @@
 # Related Works:
-----
 
-## Get rid of inline assembly through verification-oriented lifting
 ----
+## [Get Rid of Inline Assembly through Verification-Oriented Lifting](https://rbonichon.github.io/papers/tina-ase19.pdf)
 
 ### Motivation:
 Inline assembly code is often needed along side with C code. The problem is that inline assembly makes formal analysis on the code difficult. Say I have some tool that works on C, it will not be able to handle the inline assembly parts.
@@ -62,9 +61,9 @@ The validation is done through something called block-based semantic equivalence
 * The validation process in this paper (Figure 4) is a bit circular. 
 * This paper uses the term verification a lot, but it is more general formal analysis. The evaluation section seems a bit short. 
 * It is a fair point that os/hardware specific instructions cannot be lifted/decompiled easily, since there is no correspondence with C.
-
-## Certified Verification of Algebraic Properties on LowLevel Mathematical Constructs in Cryptographic Programs
 ----
+
+## [Certified Verification of Algebraic Properties on LowLevel Mathematical Constructs in Cryptographic Programs](https://dl.acm.org/doi/pdf/10.1145/3133956.3134076)
 
 They develop a certified technique to verify low-level mathematical constructs in X25519. 
 They translate algebraic specification of mathematical constructs into an algebraic problem.
@@ -73,7 +72,21 @@ Range problems are solved by  SMT solvers.
 They certify the translation using Coq.
 
 ### Comments:
-* bvCryptoLine is supposed to be close to assembly code. It is not completely clear how close that is, would be interesting to know how well it translates from SIMD extensions for example. 
+* the translation from assembly to bvCryptoLine is pushed into future work
+* moreover, bvCryptoLine is supposedly close to assembly code, but it is unclear how large the gap is. would be interesting to know how well it translates from SIMD extensions for example. 
 * the Gröbner Bases method is sound but incomplete
 * the verification time is pretty long (131 hours), which seems high for interactive development
- 
+
+----
+## [Signed Cryptographic Program Verification with Typed CryptoLine](https://dl.acm.org/doi/pdf/10.1145/3319535.3354199)
+
+### Comments:
+* the extension from CryptoLine seems somewhat incremental
+* the translation from GIMPLE to CryptoLine does not seem to be verified, so the TCB excludes C -> GIMPLE, but includes GIMPLE -> CryptoLine. The GIMPLE -> ASM part is still in the TCB. 
+
+----
+## [Verifying Arithmetic in Cryptographic C Programs](https://www.iis.sinica.edu.tw/~bywang/papers/ase19.pdf)
+
+### Comments:
+* the diff between this work and Signed CryptoLine does not seem very significant. not sure how the LLVM -> CryptoLine differs greatly from GIMPLE -> CryptoLine.
+* instead of a equivalence proof, the translation have a soundness theorem, which is a contribution
