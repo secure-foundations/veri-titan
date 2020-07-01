@@ -61,4 +61,19 @@ The validation is done through something called block-based semantic equivalence
 ### Comments:
 * The validation process in this paper (Figure 4) is a bit circular. 
 * This paper uses the term verification a lot, but it is more general formal analysis. The evaluation section seems a bit short. 
-* It is a fair point that os/hardware specific instructions cannot be lifted/decompiled easily
+* It is a fair point that os/hardware specific instructions cannot be lifted/decompiled easily, since there is no correspondence with C.
+
+## Certified Verification of Algebraic Properties on LowLevel Mathematical Constructs in Cryptographic Programs
+----
+
+They develop a certified technique to verify low-level mathematical constructs in X25519. 
+They translate algebraic specification of mathematical constructs into an algebraic problem.
+Algebraic problems are solved by algebra system Singular.
+Range problems are solved by  SMT solvers.
+They certify the translation using Coq.
+
+### Comments:
+* bvCryptoLine is supposed to be close to assembly code. It is not completely clear how close that is, would be interesting to know how well it translates from SIMD extensions for example. 
+* the Gröbner Bases method is sound but incomplete
+* the verification time is pretty long (131 hours), which seems high for interactive development
+ 
