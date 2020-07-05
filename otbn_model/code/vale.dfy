@@ -113,6 +113,11 @@ lemma va_ins_lemma(b0:code, s0:va_state)
 {
 }
 
+function method va_op_reg32_reg32(r:Reg32):Reg32 { r }
+function method va_Block(block:codes):code { Block(block) }
+
+function method va_get_block(c:code):codes requires c.Block? { c.block }
+
 lemma lemma_FailurePreservedByBlock(block:codes, s:state, r:state)
     requires evalBlock(block, s, r);
     ensures  !s.ok ==> !r.ok;
@@ -167,6 +172,16 @@ lemma code_state_validity(c:code, s:state, r:state)
 					assume false;
 				}
 		}
+}
+
+lemma va_lemma_empty(s:va_state, r:va_state) returns(r':va_state)
+    requires eval_code(Block(va_CNil()), s, r)
+    ensures  s.ok ==> r.ok
+    ensures  r' == s
+    ensures  s.ok ==> r == s
+{
+    reveal_evalCodeOpaque();
+    r' := s;
 }
 
 lemma va_lemma_block(b:codes, s0:va_state, r:va_state) returns(r1:va_state, c0:code, b1:codes)

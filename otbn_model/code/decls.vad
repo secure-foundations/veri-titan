@@ -27,38 +27,38 @@ ghost procedure lemma_BitwiseAdd32EquivalentToAddMod2To32(ghost x:uint32, ghost 
 
 var ok:bool {:state ok()};
 
-var x0:uint32 {:state reg32(X0)};
-var x1:uint32 {:state reg32(X1)};
-var x2:uint32 {:state reg32(X2)};
-var x3:uint32 {:state reg32(X3)};
-var x4:uint32 {:state reg32(X4)};
-var x5:uint32 {:state reg32(X5)};
-var x6:uint32 {:state reg32(X6)};
-var x7:uint32 {:state reg32(X7)};
-var x8:uint32 {:state reg32(X8)};
-var x9:uint32 {:state reg32(X9)};
-var x10:uint32 {:state reg32(X10)};
-var x11:uint32 {:state reg32(X11)};
-var x12:uint32 {:state reg32(X12)};
-var x13:uint32 {:state reg32(X13)};
-var x14:uint32 {:state reg32(X14)};
-var x15:uint32 {:state reg32(X15)};
-var x16:uint32 {:state reg32(X16)};
-var x17:uint32 {:state reg32(X17)};
-var x18:uint32 {:state reg32(X18)};
-var x19:uint32 {:state reg32(X19)};
-var x20:uint32 {:state reg32(X20)};
-var x21:uint32 {:state reg32(X21)};
-var x22:uint32 {:state reg32(X22)};
-var x23:uint32 {:state reg32(X23)};
-var x24:uint32 {:state reg32(X24)};
-var x25:uint32 {:state reg32(X25)};
-var x26:uint32 {:state reg32(X26)};
-var x27:uint32 {:state reg32(X27)};
-var x28:uint32 {:state reg32(X28)};
-var x29:uint32 {:state reg32(X29)};
-var x30:uint32 {:state reg32(X30)};
-var x31:uint32 {:state reg32(X31)};
+var x0:uint32 {:state reg32(Gpr(0))};
+var x1:uint32 {:state reg32(Gpr(1))};
+var x2:uint32 {:state reg32(Gpr(2))};
+var x3:uint32 {:state reg32(Gpr(3))};
+var x4:uint32 {:state reg32(Gpr(4))};
+var x5:uint32 {:state reg32(Gpr(5))};
+var x6:uint32 {:state reg32(Gpr(6))};
+var x7:uint32 {:state reg32(Gpr(7))};
+var x8:uint32 {:state reg32(Gpr(8))};
+var x9:uint32 {:state reg32(Gpr(9))};
+var x10:uint32 {:state reg32(Gpr(10))};
+var x11:uint32 {:state reg32(Gpr(11))};
+var x12:uint32 {:state reg32(Gpr(12))};
+var x13:uint32 {:state reg32(Gpr(13))};
+var x14:uint32 {:state reg32(Gpr(14))};
+var x15:uint32 {:state reg32(Gpr(15))};
+var x16:uint32 {:state reg32(Gpr(16))};
+var x17:uint32 {:state reg32(Gpr(17))};
+var x18:uint32 {:state reg32(Gpr(18))};
+var x19:uint32 {:state reg32(Gpr(19))};
+var x20:uint32 {:state reg32(Gpr(20))};
+var x21:uint32 {:state reg32(Gpr(21))};
+var x22:uint32 {:state reg32(Gpr(22))};
+var x23:uint32 {:state reg32(Gpr(23))};
+var x24:uint32 {:state reg32(Gpr(24))};
+var x25:uint32 {:state reg32(Gpr(25))};
+var x26:uint32 {:state reg32(Gpr(26))};
+var x27:uint32 {:state reg32(Gpr(27))};
+var x28:uint32 {:state reg32(Gpr(28))};
+var x29:uint32 {:state reg32(Gpr(29))};
+var x30:uint32 {:state reg32(Gpr(30))};
+var x31:uint32 {:state reg32(Gpr(31))};
 
 var w0:Bignum {:state Bignum(0)};
 var w1:Bignum {:state Bignum(1)};
@@ -130,9 +130,27 @@ procedure Add32(inout dst:reg32, in src1:reg32, in src2:reg32)
     ensures
         dst == old(src1) + old(src2);
 {
-reveal evalCodeOpaque;
-reveal BN_ValidState;
-lemma_BitwiseAdd32EquivalentToAddMod2To32(old(src1), old(src2));
+assume false;
+}
+
+procedure DoubleExample32(inout dst:reg32, in src:reg32)
+    requires
+        src + src < 0x1_0000_0000;
+    ensures
+        dst = old(src) + old(src);
+{
+    Add32(dst, src, src);
+}
+
+procedure DoubleRegExample32()
+    requires
+        x2 + x2 < 0x1_0000_0000;
+    ensures
+        x2 = old(x2) + old(x2);
+    modifies
+        x2;
+{
+    Add32(x2, x2, x2);
 }
 
 #verbatim

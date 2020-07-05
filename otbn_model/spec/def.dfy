@@ -123,16 +123,11 @@ function eval_reg32(s:state, r:Reg32) : uint32
 
 predicate evalIns32(xins:ins32, s:state, r:state)
 {
-	// TODO: actual implementation
-	if !s.ok then
-		!r.ok
-	else
-		r.ok
+	true
 }
 
 predicate evalIns256(wins:ins256, s:state, r:state)
 {
-	// TODO: actual implementation
 	if !s.ok then
 		!r.ok
 	else
