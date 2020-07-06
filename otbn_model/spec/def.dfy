@@ -1,10 +1,12 @@
 // Trusted specification for the OpenTitan Bignum semantics
 
 include "types.dfy"
+include "ops.dfy"
 
 module bignum_def {
 
 import opened types
+import opened ops	
 
 // General purpose and control registers, 32b
 datatype Reg32 =
@@ -152,5 +154,33 @@ predicate evalCode(c:code, s:state, r:state)
         //case IfElse(cond, ifT, ifF) => evalIfElse(cond, ifT, ifF, s, r)
         //case While(cond, body) => exists n:nat :: evalWhile(cond, body, n, s, r)
 }
+
+function xor32(x:uint32, y:uint32) : uint32  { BitwiseXor(x, y) }
+
+function or32(x:uint32, y:uint32) : uint32  { BitwiseOr(x, y) }
+
+function and32(x:uint32, y:uint32) : uint32  { BitwiseAnd(x, y) }
+
+function not32(x:uint32) : uint32 { BitwiseNot(x) }
+
+function rol32(x:uint32, amount:uint32) : uint32
+    requires 0 <= amount < 32;
+    { RotateLeft(x, amount) }
+
+function ror32(x:uint32, amount:uint32) : uint32
+    requires 0 <= amount < 32;
+    { RotateRight(x, amount) }
+
+function shl32(x:uint32, amount:uint32) : uint32
+    requires 0 <= amount < 32;
+    { LeftShift(x, amount) }
+
+function shr32(x:uint32, amount:uint32) : uint32
+    requires 0 <= amount < 32;
+    { RightShift(x, amount) }
+
+function sext32(x:uint32, sz:int) : uint32
+  requires 0 < sz < 32;
+    { BitwiseSignExtend(x, sz) }
 
 }

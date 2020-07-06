@@ -21,9 +21,19 @@ type Stack:Type(0) := seq(Frame);
 function operator(.ok) (s:state):bool extern;
 function operator(.ok :=) (s:state, b:bool):state extern;
 
+function BitwiseAnd(x:uint32, y:uint32):uint32 extern;
+function BitwiseXor(x:uint32, y:uint32):uint32 extern;
 function BitwiseAdd32(x:uint32, y:uint32):uint32 extern;
-
-ghost procedure lemma_BitwiseAdd32EquivalentToAddMod2To32(ghost x:uint32, ghost y:uint32) extern;
+function xor32(x:uint32, y:uint32):uint32 extern;
+function or32(x:uint32, y:uint32):uint32 extern;
+function and32(x:uint32, y:uint32):uint32 extern;
+function not32(x:uint32):uint32 extern;
+function rol32(x:uint32, amount:uint32):uint32 extern; // TODO: requires clause
+function ror32(x:uint32, amount:uint32):uint32 extern; // TODO: requires clause
+function shl32(x:uint32, amount:uint32):uint32 extern; // TODO: requires clause
+function shr32(x:uint32, amount:uint32):uint32 extern; // TODO: requires clause
+function sext32(x:uint32, size:int):uint32 extern;
+function BignumXor(a:Bignum, b:Bignum):Bignum extern;
 
 var ok:bool {:state ok()};
 
@@ -123,35 +133,88 @@ operand_type reg256:Bignum :=
 | inout wmod | inout wrnd
 ;
 
+operand_type imm32:uint32 := uint32;
+
 procedure Add32(inout dst:reg32, in src1:reg32, in src2:reg32)
     {:instruction Ins32(ADD32(dst, src1, src2))}
-    requires
-        src1 + src2 < 0x1_0000_0000;
     ensures
-        dst == old(src1) + old(src2);
+        dst == (old(src1) + old(src2)) %0x1_0000_0000;
 {
 assume false;
 }
 
-procedure DoubleExample32(inout dst:reg32, in src:reg32)
+procedure Addi32(inout dst:reg32, in src1:reg32, in src2:imm32)
+    {:instruction Ins32(ADDI32(dst, src1, src2))}
     requires
-        src + src < 0x1_0000_0000;
+        src2 < 0x1000;
     ensures
-        dst = old(src) + old(src);
+        dst = old(src1) + sext32(old(src2), 12);
 {
-    Add32(dst, src, src);
+assume false;
 }
 
-procedure DoubleRegExample32()
-    requires
-        x2 + x2 < 0x1_0000_0000;
+procedure Sub32(inout dst:reg32, in src1:reg32, in src2:reg32)
+    {:instruction Ins32(SUB32(dst, src1, src2))}
     ensures
-        x2 = old(x2) + old(x2);
-    modifies
-        x2;
+        dst == (old(src1) - old(src2)) % 0x1_0000_0000;
 {
-    Add32(x2, x2, x2);
+assume false;
 }
+
+procedure And32(inout dst:reg32, in src1:reg32, in src2:reg32)
+    {:instruction Ins32(AND32(dst, src1, src2))}
+    ensures
+        dst == and32(old(src1), old(src2));
+{
+assume false;
+}
+
+procedure Andi32(inout dst:reg32, in src1:reg32, in src2:imm32)
+    {:instruction Ins32(ANDI32(dst, src1, src2))}
+    requires
+        src2 < 0x1000;
+    ensures
+        dst == and32(old(src1), sext32(old(src2), 12));
+{
+assume false;
+}
+
+procedure Or32(inout dst:reg32, in src1:reg32, in src2:reg32)
+    {:instruction Ins32(OR32(dst, src1, src2))}
+    ensures
+        dst == or32(old(src1), old(src2));
+{
+assume false;
+}
+
+procedure Ori32(inout dst:reg32, in src1:reg32, in src2:imm32)
+    {:instruction Ins32(ORI32(dst, src1, src2))}
+    requires
+        src2 < 0x1000;
+    ensures
+        dst == or32(old(src1), sext32(old(src2), 12));
+{
+assume false;
+}
+
+procedure Xor32(inout dst:reg32, in src1:reg32, in src2:reg32)
+    {:instruction Ins32(XOR32(dst, src1, src2))}
+    ensures
+        dst == xor32(old(src1), old(src2));
+{
+assume false;
+}
+
+procedure Xori32(inout dst:reg32, in src1:reg32, in src2:imm32)
+    {:instruction Ins32(XORI32(dst, src1, src2))}
+    requires
+        src2 < 0x1000;
+    ensures
+        dst == xor32(old(src1), sext32(old(src2), 12));
+{
+assume false;
+}
+
 
 #verbatim
 } // end module bignum_decls

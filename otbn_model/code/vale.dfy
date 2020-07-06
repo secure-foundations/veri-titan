@@ -45,6 +45,14 @@ function va_update_reg256(r:Reg256, sM:va_state, sK:va_state):va_state
 
 function va_update_stack(sM:va_state, sK:va_state):va_state { sK.(stack := sM.stack) }
 
+type va_operand_imm32 = uint32
+predicate va_is_src_imm32(v:uint32, s:va_state) { IsUInt32(v) }
+function va_eval_imm32(s:va_state, v:uint32):uint32
+	requires va_is_src_imm32(v, s);
+{
+	v
+}
+
 type va_value_reg32 = uint32
 type va_operand_reg32 = Reg32
 //predicate is_src_reg32(r:Reg32, s:va_state) { r.Rnd? || (r.Gpr? && 0 <= r.x <= 31)}

@@ -1,0 +1,29 @@
+include{:verbatim} "decls.vad"
+
+#verbatim
+module examples {
+#endverbatim
+
+procedure DoubleExample32(inout dst:reg32, in src:reg32)
+    requires
+        src + src < 0x1_0000_0000;
+    ensures
+        dst = old(src) + old(src);
+{
+    Add32(dst, src, src);
+}
+
+procedure DoubleRegExample32()
+    requires
+        x2 + x2 < 0x1_0000_0000;
+    ensures
+        x2 = old(x2) + old(x2);
+    modifies
+        x2;
+{
+    Add32(x2, x2, x2);
+}
+
+#verbatim
+}
+#endverbatim
