@@ -28,11 +28,10 @@ function xor32(x:uint32, y:uint32):uint32 extern;
 function or32(x:uint32, y:uint32):uint32 extern;
 function and32(x:uint32, y:uint32):uint32 extern;
 function not32(x:uint32):uint32 extern;
-function rol32(x:uint32, amount:uint32):uint32 extern; // TODO: requires clause
-function ror32(x:uint32, amount:uint32):uint32 extern; // TODO: requires clause
 function shl32(x:uint32, amount:uint32):uint32 extern; // TODO: requires clause
 function shr32(x:uint32, amount:uint32):uint32 extern; // TODO: requires clause
 function sext32(x:uint32, size:int):uint32 extern;
+
 function BignumXor(a:Bignum, b:Bignum):Bignum extern;
 
 var ok:bool {:state ok()};
@@ -138,7 +137,7 @@ operand_type imm32:uint32 := uint32;
 procedure Add32(inout dst:reg32, in src1:reg32, in src2:reg32)
     {:instruction Ins32(ADD32(dst, src1, src2))}
     ensures
-        dst == (old(src1) + old(src2)) %0x1_0000_0000;
+        dst == (old(src1) + old(src2)) & 0xFFFF_FFFF;
 {
 assume false;
 }
@@ -156,7 +155,7 @@ assume false;
 procedure Sub32(inout dst:reg32, in src1:reg32, in src2:reg32)
     {:instruction Ins32(SUB32(dst, src1, src2))}
     ensures
-        dst == (old(src1) - old(src2)) % 0x1_0000_0000;
+        dst == (old(src1) - old(src2)) & 0xFFFF_FFFF;
 {
 assume false;
 }
@@ -211,6 +210,28 @@ procedure Xori32(inout dst:reg32, in src1:reg32, in src2:imm32)
         src2 < 0x1000;
     ensures
         dst == xor32(old(src1), sext32(old(src2), 12));
+{
+assume false;
+}
+
+procedure Lui32(inout dst:reg32, src:imm32)
+    {:instruction Ins32(LUI32(dst, src))}
+    requires
+        src < 0x100000; // 20-bit immediate
+    ensures
+        dst = shl32(old(src), 12)
+{
+assume false;
+}
+
+// TODO: Handle case where dst is x0
+procedure Csrrw32(inout dst:reg32, csr:reg32, src:reg32)
+    {:instruction Ins32(CSRRW32(dst, csr, src))}
+    requires
+        ValidCsr(csr);
+    ensures
+        dst = old(csr);
+	csr = old(src);
 {
 assume false;
 }
