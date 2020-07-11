@@ -25,8 +25,7 @@ function va_get_ok(s:va_state):bool { s.ok }
 function va_get_reg32(r:Reg32, s:va_state):uint32 requires r in s.xregs { s.xregs[r] }
 function va_get_reg256(r:Reg256, s:va_state):Bignum requires r in s.wregs { s.wregs[r] }
 
-// TODO: Distinguish between flag groups 1 and 2
-//function va_get_flags(f:int, s:va_state):bool requires f in s.flags { s.flags[f] }
+function va_get_flag(flag: int, group:bool, s:va_state):bool requires 0 <= flag < 4 { s.flags[group][flag] }
 function va_get_stack(s:va_state):Stack { s.stack }
 
 function va_update_ok(sM:va_state, sK:va_state):va_state { sK.(ok := sM.ok) }
@@ -39,9 +38,9 @@ function va_update_reg256(r:Reg256, sM:va_state, sK:va_state):va_state
     requires r in sM.wregs
 { sK.(wregs := sK.wregs[r := sM.wregs[r]]) }
 
-//function va_update_flags(f:int, sM:va_state, sK:va_state):va_state
-//    requires f in sM.flags
-//{ sK.(flags := sK.flags[f := sM.flags[f]]) }
+function va_update_flag(group:bool, sM:va_state, sK:va_state):va_state
+	  requires group in sM.flags
+{ sK.(flags := sK.flags[group := sM.flags[group]]) }
 
 function va_update_stack(sM:va_state, sK:va_state):va_state { sK.(stack := sM.stack) }
 
@@ -55,7 +54,6 @@ function va_eval_imm32(s:va_state, v:uint32):uint32
 
 type va_value_reg32 = uint32
 type va_operand_reg32 = Reg32
-//predicate is_src_reg32(r:Reg32, s:va_state) { r.Rnd? || (r.Gpr? && 0 <= r.x <= 31)}
 
 predicate va_is_src_reg32(r:Reg32, s:va_state) { (r.Gpr? ==> 0 <= r.x <= 31) && r in s.xregs && IsUInt32(s.xregs[r]) }
 predicate va_is_dst_reg32(r:Reg32, s:va_state) { (r in s.xregs && IsUInt32(s.xregs[r]) && r.Gpr? && 0 <= r.x <= 31) }
@@ -77,7 +75,7 @@ predicate va_state_eq(s0:va_state, s1:va_state)
 {
     s0.xregs == s1.xregs
  && s0.wregs == s1.wregs
-// && s0.flags == s1.flags
+ && s0.flags == s1.flags
  && s0.stack == s1.stack
  && s0.ok == s1.ok
 }
@@ -208,8 +206,7 @@ lemma va_lemma_block(b:codes, s0:va_state, r:va_state) returns(r1:va_state, c0:c
         var r':state :| evalCode(b.hd, s0, r') && evalBlock(b.tl, r', r);
         c0 := b.hd;
         b1 := b.tl;
-				// TODO: add in flags
-        r1 := state(r'.xregs, r'.wregs, r'.stack, r'.ok);
+        r1 := state(r'.xregs, r'.wregs, r'.flags, r'.stack, r'.ok);
         if BN_ValidState(s0) {
             reveal_BN_ValidState();
             code_state_validity(c0, s0, r1);

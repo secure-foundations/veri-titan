@@ -17,12 +17,21 @@ type uint16  = i:int | 0 <= i < 0x10000
 type uint32  = i:int | 0 <= i < 0x1_0000_0000
 type uint64  = i:int | 0 <= i < 0x1_0000_0000_0000_0000
 type uint128 = i:int | 0 <= i < 0x1_00000000_00000000_00000000_00000000
+type uint256 = i:int | 0 <= i < 0x1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
 
 /////////////////
 // Bignum
 /////////////////
 	
-datatype Bignum = Bignum(l7:uint32, l6:uint32, l5:uint32, l4:uint32, l3:uint32, l2:uint32, l1:uint32, l0:uint32)
+datatype Bignum = Bignum(
+	l7:uint32,
+	l6:uint32,
+	l5:uint32,
+	l4:uint32,
+	l3:uint32,
+	l2:uint32,
+	l1:uint32,
+	l0:uint32)
 
 /////////////////
 // BitsOfByte

@@ -12,18 +12,23 @@ import opened bignum_def
 
 type state:Type(0) {:primitive} extern;
 type uint32:Type(0) := int_range(0, 0xffff_ffff);
+type uint256:Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff);
 type seq(a:Type(0)):Type(0) {:primitive} extern;
 type map(a:Type(0), b:Type(0)):Type(0) extern;
 type Bignum:Type(0) extern;
 type Frame:Type(0) := map(int, uint32);
 type Stack:Type(0) := seq(Frame);
 
+type bool_op:Type(0) := int_range(0, 1);
+
 function operator(.ok) (s:state):bool extern;
 function operator(.ok :=) (s:state, b:bool):state extern;
 
-function BitwiseAnd(x:uint32, y:uint32):uint32 extern;
-function BitwiseXor(x:uint32, y:uint32):uint32 extern;
-function BitwiseAdd32(x:uint32, y:uint32):uint32 extern;
+function operator([]) #[a:Type(0)](s:seq(a), i:int):a extern; // TODO: requires clause
+function operator([ := ]) #[a:Type(0)](s:seq(a), i:int, v:a):seq(a) extern; // TODO: requires clause
+function operator([]) #[a:Type(0), b:Type(0)](m:map(a, b), key:a):b extern; // TODO: requires clause
+function operator([ := ]) #[a:Type(0), b:Type(0)](m:map(a, b), key:a, v:b):map(a, b) extern;
+
 function xor32(x:uint32, y:uint32):uint32 extern;
 function or32(x:uint32, y:uint32):uint32 extern;
 function and32(x:uint32, y:uint32):uint32 extern;
@@ -35,6 +40,7 @@ function sext32(x:uint32, size:int):uint32 extern;
 function BignumXor(a:Bignum, b:Bignum):Bignum extern;
 
 var ok:bool {:state ok()};
+var flags:map(bool, array(bool)) {:state flags()};
 
 var x0:uint32 {:state reg32(Gpr(0))};
 var x1:uint32 {:state reg32(Gpr(1))};
@@ -68,6 +74,8 @@ var x28:uint32 {:state reg32(Gpr(28))};
 var x29:uint32 {:state reg32(Gpr(29))};
 var x30:uint32 {:state reg32(Gpr(30))};
 var x31:uint32 {:state reg32(Gpr(31))};
+
+var xrnd:uint32 {:state reg32(XRnd)};
 
 var w0:Bignum {:state Bignum(0)};
 var w1:Bignum {:state Bignum(1)};
@@ -133,11 +141,13 @@ operand_type reg256:Bignum :=
 ;
 
 operand_type imm32:uint32 := uint32;
+operand_type bop:bool := bool_op;
 
 procedure Add32(inout dst:reg32, in src1:reg32, in src2:reg32)
     {:instruction Ins32(ADD32(dst, src1, src2))}
     ensures
-        dst == (old(src1) + old(src2)) & 0xFFFF_FFFF;
+        // TODO: How does Dafny addition handle overflows?
+        dst == (old(src1) + old(src2));
 {
 assume false;
 }
@@ -155,7 +165,7 @@ assume false;
 procedure Sub32(inout dst:reg32, in src1:reg32, in src2:reg32)
     {:instruction Ins32(SUB32(dst, src1, src2))}
     ensures
-        dst == (old(src1) - old(src2)) & 0xFFFF_FFFF;
+        dst == old(src1) - old(src2);
 {
 assume false;
 }
@@ -214,24 +224,52 @@ procedure Xori32(inout dst:reg32, in src1:reg32, in src2:imm32)
 assume false;
 }
 
-procedure Lui32(inout dst:reg32, src:imm32)
+procedure Lui32(inout dst:reg32, in src:imm32)
     {:instruction Ins32(LUI32(dst, src))}
     requires
         src < 0x100000; // 20-bit immediate
     ensures
-        dst = shl32(old(src), 12)
+        dst == shl32(old(src), 12);
 {
 assume false;
 }
 
 // TODO: Handle case where dst is x0
-procedure Csrrw32(inout dst:reg32, csr:reg32, src:reg32)
+procedure Csrrw32(inout dst:reg32, inout csr:reg32, in src:reg32)
     {:instruction Ins32(CSRRW32(dst, csr, src))}
     requires
-        ValidCsr(csr);
+        csr == xrnd; // TODO: check if this is correct
     ensures
-        dst = old(csr);
-	csr = old(src);
+        dst == old(csr);
+        csr == old(src);
+{
+assume false;
+}
+
+// Bignum Instructions
+
+procedure Add256(inout dst:reg256, in src1:reg256, in src2:reg256, in st:bop, in sb:imm32, in fg:bop)
+    {:instruction Ins256(ADD256(dst, src1, src2, st, sb, fg))}
+    requires
+        sb < 32;
+    modifies
+        flags;
+    ensures
+        dst == add256(old(src1), old(src2), st, sb);
+        carry(fg) == IsUint256(old(src1 + src2 + (if carry(fg) then 1 else 0)));
+{
+assume false;
+}
+
+procedure Addc256(inout dst:reg256, in src1:reg256, in src2:reg256, in st:bop, in sb:imm32, in fg:bop)
+    {:instruction Ins256(ADDC256(dst, src1, src2, st, sb, fg))}
+    requires
+        sb < 32;
+    modifies
+        flags;
+    ensures
+        dst == old(add256(add256(src1, src2), if carry(fg) then 1 else 0));
+        carry(fg) == IsUint256(old(src1 + src2 + (if carry(fg) then 1 else 0)));
 {
 assume false;
 }

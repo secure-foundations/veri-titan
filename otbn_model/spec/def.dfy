@@ -30,8 +30,8 @@ datatype ins32 =
 | ORI32(xrd:Reg32, xrs1:Reg32, imm:uint32)
 | XOR32(xrd:Reg32, xrs1:Reg32, xrs2:Reg32)
 | XORI32(xrd:Reg32, xrs1:Reg32, imm:uint32)
-| LW // TODO
-| SW // TODO
+| LW32 // TODO
+| SW32 // TODO
 | BEQ32(xrs1:Reg32, xrs2:Reg32, offset:uint32)
 | BNE32(xrs1:Reg32, xrs2:Reg32, offset:uint32)
 | LOOP32(xrs1:Reg32, bodysize:uint32)
@@ -39,7 +39,7 @@ datatype ins32 =
 | JAL32(xrd:Reg32, offset:uint32)
 | JALR32(xrd:Reg32, xrs1:Reg32, offset:uint32)
 | CSRRS32(xrd:Reg32, csr:uint32, xrs2:Reg32)
-| ECALL // TODO
+| ECALL32 // TODO
 
 datatype ins256 =
 | ADD256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:Bignum, flg:bool)
@@ -60,12 +60,12 @@ datatype ins256 =
 | SEL256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, flg:bool)
 | CMP256(wrs1:Reg256, wrs2:Reg256, flg:bool)
 | CMPB256(wrs1:Reg256, wrs2:Reg256, flg:bool)
-| LID // TODO
-| SID // TODO
+| LID256 // TODO
+| SID256 // TODO
 | MOV256(wrd:Reg256, wrs:Bignum)
-| MOVR // TODO
-| WSRRS // TODO
-| WSRRW // TODO
+| MOVR256 // TODO
+| WSRRS256 // TODO
+| WSRRW256 // TODO
 
 datatype codes = CNil | va_CCons(hd:code, tl:codes)
 
@@ -76,11 +76,12 @@ datatype code =
 
 type Frame = map<int, uint32>
 type Stack = seq<Frame>
+type Flags = array<bool>
 
 datatype state = state(
 	 xregs: map<Reg32, uint32>, // 32-bit registers
 	 wregs: map<Reg256, Bignum>, // 256-bit registers
-	 //flags: map<int, bool>,
+	 flags: map<bool, Flags>,
 	 stack: Stack,
 	 ok: bool)
 
@@ -89,6 +90,12 @@ predicate IsUInt32(i:int) { 0 <= i < 0x1_0000_0000 }
 predicate ValidRegister32(xregs:map<Reg32, uint32>, r:Reg32)
 {
 	r in xregs
+}
+
+predicate ValidCsr32(r:Reg32)
+{
+	// TODO: Other CSRs are limbs of WMod or flags-- will these ever be used?
+	r.Rnd?
 }
 
 function eval_xreg(xregs:map<Reg32, uint32>, r:Reg32) : uint32
@@ -182,5 +189,7 @@ function shr32(x:uint32, amount:uint32) : uint32
 function sext32(x:uint32, sz:int) : uint32
   requires 0 < sz < 32;
     { BitwiseSignExtend(x, sz) }
+
+function add256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum { BignumAdd(x, y, st, sb) }
 
 }

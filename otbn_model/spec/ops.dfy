@@ -139,7 +139,7 @@ include "types.dfy"
 				(x + y) % 0x1_0000_0000
 			}
 
-			function {:opaque} BitwiseAdd64(x:uint64, y:uint64):uint64
+			function {:opaque} BitwiseAddCarry(x:uint32, y:uint32):uint64
 			{
 				(x + y) % 0x1_0000_0000_0000_0000
 			}
@@ -172,6 +172,10 @@ include "types.dfy"
 				if size == 0 then x else BitsToWord(BitSignExtend(WordToBits(x), size))
 			}
 
+			////////////////////////
+			// Operations on Bignums
+			////////////////////////
+			
 			function BignumXor(a:Bignum, b:Bignum) : Bignum
 			{
 				Bignum(BitwiseXor(a.l7, b.l7),
@@ -182,6 +186,21 @@ include "types.dfy"
 					BitwiseXor(a.l2, b.l2),
 					BitwiseXor(a.l1, b.l1),
 					BitwiseXor(a.l0, b.l0))
+			}
+
+			function BignumShift(b:Bignum, st:bool, sb:bool) : Bignum
+			{
+				// TODO: Shift b by sb bytes, left if st == 1 else right
+			}
+
+			function BignumAddr(a:Bignum, b:Bignum, c:bool) : Bignum
+			{
+				// TODO: Add Bignums plus carry bit
+			}
+
+			function BignumAdd(a:Bignum, b:Bignum, st:bool, sb:uint32) : Bignum
+			{
+				BignumAddr(a, BignumShift(b, st, sb), 0)
 			}
 
 			lemma {:axiom} lemma_BitMulEquiv(x:uint32, y:uint32)
