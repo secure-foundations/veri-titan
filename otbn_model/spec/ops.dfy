@@ -85,6 +85,21 @@ include "types.dfy"
 			{
 				(x ^ (1 << (sz - 1))) - (1 << (sz - 1))
 			}
+			
+			////////////////////////
+			// Operations on bv256s
+			////////////////////////
+			function method {:opaque} BitShiftLeft256(x:bv256, amount:int): bv256
+				requires 0 <= amount < 256;
+			{
+				x << amount
+			}
+
+			function method {:opaque} BitShiftRight256(x:bv256, amount:int): bv256
+				requires 0 <= amount < 256;
+			{
+				x >> amount
+			}
 
 			////////////////////////
 			// Operations on words
@@ -176,31 +191,33 @@ include "types.dfy"
 			// Operations on Bignums
 			////////////////////////
 			
+			function RightShift256(x:Bignum, amount:uint32) : Bignum
+				requires amount < 256;
+			{
+				BitsToBignum(BitShiftRight256(BignumToBits(x), amount))
+			}
+
+			function LeftShift256(x:uint256, amount:uint32) : Bignum
+				requires amount < 256;
+			{
+				BitsToBignum(BitShiftLeft256(BignumToBits(x), amount))
+			}
+			
 			function BignumXor(a:Bignum, b:Bignum) : Bignum
 			{
-				Bignum(BitwiseXor(a.l7, b.l7),
-					BitwiseXor(a.l6, b.l6),
-					BitwiseXor(a.l5, b.l5),
-					BitwiseXor(a.l4, b.l4),
-					BitwiseXor(a.l3, b.l3),
-					BitwiseXor(a.l2, b.l2),
-					BitwiseXor(a.l1, b.l1),
-					BitwiseXor(a.l0, b.l0))
+			    BitsToBignum(BignumToBits(a) ^ BignumToBits(b))
 			}
 
-			function BignumShift(b:Bignum, st:bool, sb:bool) : Bignum
+			function BignumShift(b:Bignum, st:bool, sb:uint32) : Bignum
+				requires sb < 256;
 			{
-				// TODO: Shift b by sb bytes, left if st == 1 else right
-			}
-
-			function BignumAddr(a:Bignum, b:Bignum, c:bool) : Bignum
-			{
-				// TODO: Add Bignums plus carry bit
+				if st == false then RightShift256(b, sb) else LeftShift256(b, sb)
 			}
 
 			function BignumAdd(a:Bignum, b:Bignum, st:bool, sb:uint32) : Bignum
+				requires sb < 256;
 			{
-				BignumAddr(a, BignumShift(b, st, sb), 0)
+			    BitsToBignum(BignumToBits(a) + BignumToBits(BignumShift(b, st, sb)))
 			}
 
 			lemma {:axiom} lemma_BitMulEquiv(x:uint32, y:uint32)

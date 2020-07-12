@@ -42,20 +42,20 @@ datatype ins32 =
 | ECALL32 // TODO
 
 datatype ins256 =
-| ADD256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:Bignum, flg:bool)
-| ADDC256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:Bignum, flg:bool)
+| ADD256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
+| ADDC256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
 | ADDI256(wrd:Reg256, wrs1:Reg256, imm:Bignum, flg:bool)
 | ADDM256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256)
 | MULQACC
 | MULH256(wrd:Reg256, wrs1:Reg256, hw1:bool, wrs2:Reg256, hw2:bool)
-| SUB256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:Bignum, flg:bool)
-| SUBB256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:Bignum, flg:bool)
+| SUB256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
+| SUBB256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
 | SUBI256(wrd:Reg256, wrs1:Reg256, imm:Bignum, flg:bool)
 | SUBM256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256)
-| AND256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:Bignum)
-| OR256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:Bignum)
-| NOT256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:Bignum)
-| XOR256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:Bignum, flg:bool)
+| AND256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
+| OR256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
+| NOT256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
+| XOR256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
 | RSHI256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, imm:Bignum)
 | SEL256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, flg:bool)
 | CMP256(wrs1:Reg256, wrs2:Reg256, flg:bool)
@@ -86,10 +86,16 @@ datatype state = state(
 	 ok: bool)
 
 predicate IsUInt32(i:int) { 0 <= i < 0x1_0000_0000 }
+predicate IsUInt256(i:int) { 0 <= i < 0x1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000 }
 
 predicate ValidRegister32(xregs:map<Reg32, uint32>, r:Reg32)
 {
 	r in xregs
+}
+
+predicate ValidRegister256(wregs:map<Reg256, uint256>, r:Reg256)
+{
+	r in wregs
 }
 
 predicate ValidCsr32(r:Reg32)
@@ -100,8 +106,14 @@ predicate ValidCsr32(r:Reg32)
 
 function eval_xreg(xregs:map<Reg32, uint32>, r:Reg32) : uint32
 {
-	if !ValidRegister32(xregs, r) then 24
+	if !ValidRegister32(xregs, r) then 24 // TODO: better error message
 	else xregs[r]
+}
+
+function eval_wreg(wregs:map<Reg256, uint256>, r:Reg256) : uint256
+{
+	if !ValidRegister256(wregs, r) then 24 // TODO: better error message
+	else wregs[r]
 }
 
 predicate ValidRegisterIndex(index:int)
@@ -133,6 +145,27 @@ function eval_reg32(s:state, r:Reg32) : uint32
 predicate evalIns32(xins:ins32, s:state, r:state)
 {
 	true
+}
+
+predicate ValidSourceRegister256(s:state, r:Reg256)
+{
+	if r.WRnd? || r.WMod? then
+		ValidRegister256(s.wregs, r)
+	else
+		ValidRegister256(s.wregs, r) && ValidRegisterIndex(r.w)
+}
+
+predicate ValidDestinationRegister256(s:state, r:Reg256)
+{
+		!r.WRnd? && ValidRegister256(s.wregs, r) && ValidRegisterIndex(r.w)
+}
+
+function eval_reg256(s:state, r:Reg256) : uint256
+{
+	if !ValidSourceRegister256(s, r) then
+		42
+	else
+		s.wregs[r]
 }
 
 predicate evalIns256(wins:ins256, s:state, r:state)
@@ -190,6 +223,10 @@ function sext32(x:uint32, sz:int) : uint32
   requires 0 < sz < 32;
     { BitwiseSignExtend(x, sz) }
 
-function add256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum { BignumAdd(x, y, st, sb) }
+function add256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
+	requires sb < 32;
+		{ BignumAdd(x, y, st, sb) }
+
+function xor256(x:Bignum, y:Bignum) : Bignum  { BignumXor(x, y) }
 
 }

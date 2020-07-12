@@ -71,6 +71,25 @@ function va_update_operand_reg32(r:Reg32, sM:va_state, sK:va_state):va_state
     va_update_reg32(r, sM, sK)
 }
 
+type va_value_reg256 = uint256
+type va_operand_reg256 = Reg256
+
+predicate va_is_src_reg256(r:Reg256, s:va_state) { (r.Wdr? ==> 0 <= r.w <= 31) && r in s.wregs && IsUInt256(s.wregs[r]) }
+predicate va_is_dst_reg256(r:Reg256, s:va_state) { (r in s.wregs && IsUInt256(s.wregs[r]) && r.Wdr? && 0 <= r.w <= 31) }
+
+function va_eval_reg256(s:va_state, r:Reg256):uint256
+  requires va_is_src_reg256(r, s);
+{
+    s.wregs[r]
+}
+
+function va_update_operand_reg256(r:Reg256, sM:va_state, sK:va_state):va_state
+    requires r in sM.wregs;
+    requires r.Wdr? ==> ValidRegisterIndex(r.w);
+{
+    va_update_reg256(r, sM, sK)
+}
+
 predicate va_state_eq(s0:va_state, s1:va_state)
 {
     s0.xregs == s1.xregs
