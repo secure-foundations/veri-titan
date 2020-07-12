@@ -38,7 +38,8 @@ datatype ins32 =
 | LOOPI32(iterations:uint32, bodysize:uint32)
 | JAL32(xrd:Reg32, offset:uint32)
 | JALR32(xrd:Reg32, xrs1:Reg32, offset:uint32)
-| CSRRS32(xrd:Reg32, csr:uint32, xrs2:Reg32)
+| CSRRS32(xrd:Reg32, csr:Reg32, xrs2:Reg32)
+| CSRRW32(xrd:Reg32, csr:Reg32, xrs2:Reg32)
 | ECALL32 // TODO
 
 datatype ins256 =
@@ -55,7 +56,7 @@ datatype ins256 =
 | AND256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
 | OR256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
 | NOT256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
-| XOR256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
+| XOR256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
 | RSHI256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, imm:Bignum)
 | SEL256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, flg:bool)
 | CMP256(wrs1:Reg256, wrs2:Reg256, flg:bool)
@@ -227,6 +228,8 @@ function add256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;
 		{ BignumAdd(x, y, st, sb) }
 
-function xor256(x:Bignum, y:Bignum) : Bignum  { BignumXor(x, y) }
+function xor256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
+	requires sb < 32;
+		{ BignumXor(x, y, st, sb) }
 
 }

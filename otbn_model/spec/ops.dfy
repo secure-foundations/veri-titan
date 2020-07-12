@@ -203,9 +203,10 @@ include "types.dfy"
 				BitsToBignum(BitShiftLeft256(BignumToBits(x), amount))
 			}
 			
-			function BignumXor(a:Bignum, b:Bignum) : Bignum
+			function BignumXor(a:Bignum, b:Bignum, st:bool, sb:uint32) : Bignum
+				requires sb < 32;
 			{
-			    BitsToBignum(BignumToBits(a) ^ BignumToBits(b))
+			    BitsToBignum(BignumToBits(a) ^ BignumToBits(BignumShift(b, st, sb)))
 			}
 
 			function BignumShift(b:Bignum, st:bool, sb:uint32) : Bignum

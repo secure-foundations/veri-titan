@@ -25,7 +25,7 @@ function va_get_ok(s:va_state):bool { s.ok }
 function va_get_reg32(r:Reg32, s:va_state):uint32 requires r in s.xregs { s.xregs[r] }
 function va_get_reg256(r:Reg256, s:va_state):Bignum requires r in s.wregs { s.wregs[r] }
 
-function va_get_flag(flag: int, group:bool, s:va_state):bool requires 0 <= flag < 4 { s.flags[group][flag] }
+function va_get_flags(group:bool, s:va_state):array<bool> requires group in s.flags { s.flags[group] }
 function va_get_stack(s:va_state):Stack { s.stack }
 
 function va_update_ok(sM:va_state, sK:va_state):va_state { sK.(ok := sM.ok) }
@@ -38,7 +38,7 @@ function va_update_reg256(r:Reg256, sM:va_state, sK:va_state):va_state
     requires r in sM.wregs
 { sK.(wregs := sK.wregs[r := sM.wregs[r]]) }
 
-function va_update_flag(group:bool, sM:va_state, sK:va_state):va_state
+function va_update_flags(group:bool, sM:va_state, sK:va_state):va_state
 	  requires group in sM.flags
 { sK.(flags := sK.flags[group := sM.flags[group]]) }
 
