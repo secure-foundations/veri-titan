@@ -20,6 +20,8 @@ module NativeTypes {
  	const INT64_MAX : int64 := 0x7fffffffffffffff;
  	const INT64_MIN : int64 := -0x7fffffffffffffff; // what?
 
+ 	type uint128 = i:int | 0 <= i < 0x100000000000000000000000000000000
+
  	function method {:extern "NativeTypes", "xor8"} xor8(x:uint8, y:uint8) : uint8
 
  	function method {:extern "NativeTypes", "xor16"} xor16(x:uint16, y:uint16) : uint16
