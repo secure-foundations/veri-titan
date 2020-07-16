@@ -21,6 +21,7 @@ module NativeTypes {
  	const INT64_MIN : int64 := -0x7fffffffffffffff; // what?
 
  	type uint128 = i:int | 0 <= i < 0x100000000000000000000000000000000
+ 	const UINT128_MAX :uint128 := 0xffffffffffffffffffffffffffffffff;
 
  	function method {:extern "NativeTypes", "xor8"} xor8(x:uint8, y:uint8) : uint8
 

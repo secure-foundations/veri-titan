@@ -39,7 +39,7 @@ module MultiplyExpr {
     }
 
     lemma product_fits(a: uint64, b: uint64)
-        ensures a as int * b as int < 0x100000000000000000000000000000000;
+        ensures a as uint128 * b as uint128 < 0x100000000000000000000000000000000;
     {
         assert a as int < 0x10000000000000000;
         assert b as int < 0x10000000000000000;
@@ -52,19 +52,12 @@ module MultiplyExpr {
         ensures interp_half(a) * interp_half(b) == 
             interp_half(c) * B() * B() + interp_half(d);
     {
-        var accu :uint128 := a[0] as uint128 * b[0] as uint128 ;
+        var a_0 := a[0] as uint128;
+        var b_0 := b[0] as uint128;
+
+        product_fits(a[0], b[0]);
+        var accu :uint128 :=  a_0 * b_0;
 
         assume false;
-        // product := a[0] as int * b[0] as int +
-        //     a[1] as int * b[0] as int * B() +
-        //     a[0] as int * b[1] as int * B() +
-        //     a[1] as int * b[1] as int * B() * B();
     }
-
-
-
-    // method test_mul(wr1 : wide_register, wr2 : wide_register)
-    // {
-    // }
-
 }
