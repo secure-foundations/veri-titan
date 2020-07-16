@@ -38,13 +38,27 @@ module MultiplyExpr {
             a[1] as int * b[1] as int * B() * B();
     }
 
-    lemma product_fits(a: uint64, b: uint64)
-        ensures a as uint128 * b as uint128 < 0x100000000000000000000000000000000;
+    method test_half_mul_2(a : half_register, b : half_register)
+        returns (c : wide_register)
+        // ensures interp_half(a) * interp_half(b) == 
+            // interp_half(c) * B() * B() + interp_half(d);
     {
-        assert a as int < 0x10000000000000000;
-        assert b as int < 0x10000000000000000;
-        assume a as int * b as int < 0x10000000000000000 * 0x10000000000000000;
-        assert 0x10000000000000000 * 0x10000000000000000 <= 0x100000000000000000000000000000000;
+        var p1 :uint128 := mul_limb(a[0], b[0]);
+        var p2 :uint128 := mul_limb(a[1], b[0]);
+        var p3 :uint128 := mul_limb(a[0], b[1]);
+        var p4 :uint128 := mul_limb(a[1], b[1]);
+        
+        assume uh(p1) <= 1;
+        var t1 : uint128 := uh(p1) as uint128 + lh(p2) as uint128 + lh(p3) as uint128;
+        assume uh(t1) <= 1;
+        var t2 : uint128 := uh(p2) as uint128 + uh(p3) as uint128 + lh(p4) as uint128 + uh(t1) as uint128;
+        assume uh(p4) as int + uh(t2) as int <= UINT64_MAX as int;
+        var t3 : uint64 := uh(p4) + uh(t2);
+
+        c := c[0 := lh(p1)]; 
+        c := c[1 := lh(t1)];
+        c := c[2 := lh(t2)];
+        c := c[3 := t3];
     }
 
     method mul_limb(a: uint64, b: uint64)
@@ -52,16 +66,6 @@ module MultiplyExpr {
         ensures c as int == a as int * b as int;
     {
         c := a as uint128 * b as uint128;
-    }
-
-    method test_half_mul_2(a : half_register, b : half_register)
-        returns (c : half_register, d: half_register)
-        // ensures interp_half(a) * interp_half(b) == 
-            // interp_half(c) * B() * B() + interp_half(d);
-    {
-        var accu :uint128 := mul_limb(a[0], b[0]);
-        ghost var p1 := accu as int;
-
     }
 
  	// lemma split_lemma(x: uint64)
