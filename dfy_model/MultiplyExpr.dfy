@@ -14,9 +14,18 @@ module MultiplyExpr {
         [1, 2]
 
     function method {: opaque} B() : int
+        ensures B() != 0;
     {
         UINT64_MAX as int + 1
     }
+
+    function method lh(x: uint128) : (r: uint64)
+
+ 	function method uh(x: uint128) : (r: uint64)
+
+ 	lemma split_lemma(x: uint128)
+ 	 	ensures lh(x) as int * B() + lh(x) as int == x as int;
+ 	 	ensures lh(x) as int == x as int % B();
 
     // function interp_wide(wr: wide_register) : int
     // {
@@ -48,7 +57,6 @@ module MultiplyExpr {
         var p3 :uint128 := mul_limb(a[0], b[1]);
         var p4 :uint128 := mul_limb(a[1], b[1]);
         
-        assume uh(p1) <= 1;
         var t1 : uint128 := uh(p1) as uint128 + lh(p2) as uint128 + lh(p3) as uint128;
         assume uh(t1) <= 1;
         var t2 : uint128 := uh(p2) as uint128 + uh(p3) as uint128 + lh(p4) as uint128 + uh(t1) as uint128;
@@ -59,6 +67,47 @@ module MultiplyExpr {
         c := c[1 := lh(t1)];
         c := c[2 := lh(t2)];
         c := c[3 := t3];
+
+        calc == {
+            c[0] as int + c[1] as int * B() + c[2] as int * B() * B() + c[3] as int * B() * B() * B();
+            lh(p1) as int + lh(t1) as int * B() + lh(t2) as int * B() * B() + t3 as int * B() * B() * B();
+            lh(p1) as int + lh(t1) as int * B() + lh(t2) as int * B() * B() + (uh(p4) + uh(t2)) as int * B() * B() * B();
+            lh(p1) as int + lh(t1) as int * B() + lh(t2) as int * B() * B() + uh(p4) as int * B() * B() * B() + uh(t2) as int * B() * B() * B();
+            {
+                assume lh(t2) as int * B() * B() + uh(t2) as int * B() * B() * B() == t2 as int * B() * B();
+            }
+            lh(p1) as int + lh(t1) as int * B() + t2 as int * B() * B() + uh(p4) as int * B() * B() * B();
+            {
+                assert t2 as int == uh(p2) as int + uh(p3) as int + lh(p4) as int + uh(t1) as int;
+            }
+            lh(p1) as int + lh(t1) as int * B() + (uh(p2) as int + uh(p3) as int + lh(p4) as int + uh(t1) as int) * B() * B() + uh(p4) as int * B() * B() * B();
+            lh(p1) as int + lh(t1) as int * B() + uh(p2) as int * B() * B() + uh(p3) as int * B() * B() + lh(p4) as int * B() * B() + uh(t1) as int * B() * B() + uh(p4) as int * B() * B() * B();
+            {
+                assume lh(p4) as int * B() * B() + uh(p4) as int * B() * B() * B() == p4 as int * B() * B(); 
+            }
+            lh(p1) as int + lh(t1) as int * B() + uh(p2) as int * B() * B() + uh(p3) as int * B() * B() + uh(t1) as int * B() * B() + p4 as int * B() * B();
+            {
+                assume lh(t1) as int * B() + uh(t1) as int * B() * B() == t1 * B(); 
+            }
+            lh(p1) as int + uh(p2) as int * B() * B() + uh(p3) as int * B() * B() + t1 as int * B() + p4 as int * B() * B();
+            {
+                assert t1 as int == uh(p1) as int + lh(p2) as int + lh(p3) as int;
+            }
+            lh(p1) as int + uh(p2) as int * B() * B() + uh(p3) as int * B() * B() + (uh(p1) as int + lh(p2) as int + lh(p3) as int) * B() + p4 as int * B() * B();
+            lh(p1) as int + uh(p2) as int * B() * B() + uh(p3) as int * B() * B() + uh(p1) as int * B() + lh(p2) as int * B() + lh(p3) as int * B() + p4 as int * B() * B();
+            {
+                assume uh(p3) as int * B() * B() + lh(p3) as int * B() == p3 as int * B();
+            }
+            lh(p1) as int + uh(p2) as int * B() * B() + p3 as int * B() + uh(p1) as int * B() + lh(p2) as int * B() + p4 as int * B() * B();
+            {
+                assume uh(p2) as int * B() * B() + lh(p2) as int * B() == p2 as int * B();
+            }
+            lh(p1) as int + p2 as int * B() + p3 as int * B() + uh(p1) as int * B() + p4 as int * B() * B();
+            {
+                assume uh(p1) as int * B() + lh(p1) as int == p1 as int;
+            }
+            p1 as int + p2 as int * B() + p3 as int * B() + p4 as int * B() * B();
+        }
     }
 
     method mul_limb(a: uint64, b: uint64)
@@ -67,12 +116,4 @@ module MultiplyExpr {
     {
         c := a as uint128 * b as uint128;
     }
-
- 	// lemma split_lemma(x: uint64)
- 	//  	ensures uh64(x) as int * (UINT32_MAX as int + 1) + lh64(x) as int == x as int;
- 	//  	ensures lh64(x) as int == x as int % (UINT32_MAX as int + 1);
-
-    function method lh(x: uint128) : (r: uint64)
-
- 	function method uh(x: uint128) : (r: uint64)
 }
