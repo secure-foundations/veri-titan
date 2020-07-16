@@ -18,7 +18,7 @@ module MultiplyExpr {
         UINT64_MAX as int + 1
     }
 
-    // function interp(wr: wide_register) : int
+    // function interp_wide(wr: wide_register) : int
     // {
     //     wr[0] as int + wr[1] as int * BASE + 
     // }
@@ -47,17 +47,28 @@ module MultiplyExpr {
         assert 0x10000000000000000 * 0x10000000000000000 <= 0x100000000000000000000000000000000;
     }
 
+    method mul_limb(a: uint64, b: uint64)
+        returns (c: uint128)
+        ensures c as int == a as int * b as int;
+    {
+        c := a as uint128 * b as uint128;
+    }
+
     method test_half_mul_2(a : half_register, b : half_register)
         returns (c : half_register, d: half_register)
-        ensures interp_half(a) * interp_half(b) == 
-            interp_half(c) * B() * B() + interp_half(d);
+        // ensures interp_half(a) * interp_half(b) == 
+            // interp_half(c) * B() * B() + interp_half(d);
     {
-        var a_0 := a[0] as uint128;
-        var b_0 := b[0] as uint128;
+        var accu :uint128 := mul_limb(a[0], b[0]);
+        ghost var p1 := accu as int;
 
-        product_fits(a[0], b[0]);
-        var accu :uint128 :=  a_0 * b_0;
-
-        assume false;
     }
+
+ 	// lemma split_lemma(x: uint64)
+ 	//  	ensures uh64(x) as int * (UINT32_MAX as int + 1) + lh64(x) as int == x as int;
+ 	//  	ensures lh64(x) as int == x as int % (UINT32_MAX as int + 1);
+
+    function method lh(x: uint128) : (r: uint64)
+
+ 	function method uh(x: uint128) : (r: uint64)
 }
