@@ -125,15 +125,26 @@ module MultiplyExpr {
     lemma test_half_mul_lemma_2(c: half_register, d: half_register, a: half_register, b: half_register,
         p0: uint128, p1: uint128, p2: uint128, p3: uint128)
         requires
-            c[0] as int + c[1] as int * B() + d[0] as int * B() * B() + d[1] as int * B() * B() * B()
-            == 
+            c[0] as int + c[1] as int * B() + d[0] as int * B() * B() + d[1] as int * B() * B() * B() == 
             p0 as int + p1 as int * B() + p2 as int * B() + p3 as int * B() * B();
-        // ensures 
-        //     a[0] as int * b[0] as int +
-        //     a[1] as int * b[0] as int * B() +
-        //     a[0] as int * b[1] as int * B() +
-        //     a[1] as int * b[1] as int * B() * B();
-    {
 
+        requires p0 == a[0] as int * b[0] as int;
+        requires p1 == a[1] as int * b[0] as int;
+        requires p2 == a[0] as int * b[1] as int;
+        requires p3 == a[1] as int * b[1] as int;
+        ensures 
+            interp_half(c) + interp_half(d) * B() * B() == 
+            interp_half(a) * interp_half(b);
+    {
+        calc == {
+            interp_half(c) + interp_half(d) * B() * B();
+            c[0] as int + c[1] as int * B() + d[0] as int * B() * B() + d[1] as int * B() * B() * B();
+            p0 as int + p1 as int * B() + p2 as int * B() + p3 as int * B() * B();
+            a[0] as int * b[0] as int +
+            a[1] as int * b[0] as int * B() +
+            a[0] as int * b[1] as int * B() +
+            a[1] as int * b[1] as int * B() * B();
+            interp_half(a) * interp_half(b);
+        }
     }
 }
