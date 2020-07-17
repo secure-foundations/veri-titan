@@ -27,6 +27,13 @@ module MultiplyExpr {
  	 	ensures lh(x) as int * B() + lh(x) as int == x as int;
  	 	ensures lh(x) as int == x as int % B();
 
+    method mul_limb(a: uint64, b: uint64)
+        returns (c: uint128)
+        ensures c as int == a as int * b as int;
+    {
+        c := a as uint128 * b as uint128;
+    }
+
     // function interp_wide(wr: wide_register) : int
     // {
     //     wr[0] as int + wr[1] as int * BASE + 
@@ -37,18 +44,8 @@ module MultiplyExpr {
         hr[0] as int + hr[1] as int * B()
     }
 
-    method test_half_mul_1(a : half_register, b : half_register)
-        returns (product: int)
-        ensures interp_half(a) * interp_half(b) == product;
-    {
-        product := a[0] as int * b[0] as int +
-            a[1] as int * b[0] as int * B() +
-            a[0] as int * b[1] as int * B() +
-            a[1] as int * b[1] as int * B() * B();
-    }
-
-    method test_half_mul_2(a : half_register, b : half_register)
-        returns (c : wide_register)
+    method test_half_mul(a : half_register, b : half_register)
+        returns (c : half_register, d : half_register)
         // ensures interp_half(a) * interp_half(b) == 
             // interp_half(c) * B() * B() + interp_half(d);
     {
@@ -64,23 +61,27 @@ module MultiplyExpr {
 
         c := c[0 := lh(p0)]; 
         c := c[1 := lh(t0)];
-        c := c[2 := lh(t1)];
-        c := c[3 := t2];
+        d := c[0 := lh(t1)];
+        d := d[1 := t2];
 
-        test_half_mul_2_lemma(c, p0, p1, p2, p3, t0, t1, t2);
+        test_half_mul_lemma_1(c, d, p0, p1, p2, p3, t0, t1, t2);
     }
 
-    lemma test_half_mul_2_lemma(c: wide_register, p0: uint128, p1: uint128, p2: uint128, p3: uint128, t0: uint128, t1: uint128, t2: uint64)
+    lemma test_half_mul_lemma_1(
+        c: half_register, d: half_register,
+        p0: uint128, p1: uint128, p2: uint128, p3: uint128,
+        t0: uint128, t1: uint128, t2: uint64)
+
         requires c[0] == lh(p0);
         requires c[1] == lh(t0);
-        requires c[2] == lh(t1);
-        requires c[3] == t2;
+        requires d[0] == lh(t1);
+        requires d[1] == t2;
         requires t0 == uh(p0) as uint128 + lh(p1) as uint128 + lh(p2) as uint128;
         requires t1 == uh(p1) as uint128 + uh(p2) as uint128 + lh(p3) as uint128 + uh(t0) as uint128;
         requires t2 as int == uh(p3) as int + uh(t1) as int;
     {
         calc == {
-            c[0] as int + c[1] as int * B() + c[2] as int * B() * B() + c[3] as int * B() * B() * B();
+            c[0] as int + c[1] as int * B() + d[0] as int * B() * B() + d[1] as int * B() * B() * B();
             lh(p0) as int + lh(t0) as int * B() + lh(t1) as int * B() * B() + t2 as int * B() * B() * B();
             lh(p0) as int + lh(t0) as int * B() + lh(t1) as int * B() * B() + (uh(p3) + uh(t1)) as int * B() * B() * B();
             lh(p0) as int + lh(t0) as int * B() + lh(t1) as int * B() * B() + uh(p3) as int * B() * B() * B() + uh(t1) as int * B() * B() * B();
@@ -121,10 +122,18 @@ module MultiplyExpr {
         }
     }
 
-    method mul_limb(a: uint64, b: uint64)
-        returns (c: uint128)
-        ensures c as int == a as int * b as int;
+    lemma test_half_mul_lemma_2(c: half_register, d: half_register, a: half_register, b: half_register,
+        p0: uint128, p1: uint128, p2: uint128, p3: uint128)
+        requires
+            c[0] as int + c[1] as int * B() + d[0] as int * B() * B() + d[1] as int * B() * B() * B()
+            == 
+            p0 as int + p1 as int * B() + p2 as int * B() + p3 as int * B() * B();
+        // ensures 
+        //     a[0] as int * b[0] as int +
+        //     a[1] as int * b[0] as int * B() +
+        //     a[0] as int * b[1] as int * B() +
+        //     a[1] as int * b[1] as int * B() * B();
     {
-        c := a as uint128 * b as uint128;
+
     }
 }
