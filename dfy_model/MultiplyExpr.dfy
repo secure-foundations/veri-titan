@@ -46,8 +46,8 @@ module MultiplyExpr {
 
     method test_half_mul(a : half_register, b : half_register)
         returns (c : half_register, d : half_register)
-        // ensures interp_half(a) * interp_half(b) == 
-            // interp_half(c) * B() * B() + interp_half(d);
+        ensures interp_half(c) + interp_half(d) * B() * B() == 
+            interp_half(a) * interp_half(b);
     {
         var p0 :uint128 := mul_limb(a[0], b[0]);
         var p1 :uint128 := mul_limb(a[1], b[0]);
@@ -65,6 +65,7 @@ module MultiplyExpr {
         d := d[1 := t2];
 
         test_half_mul_lemma_1(c, d, p0, p1, p2, p3, t0, t1, t2);
+        test_half_mul_lemma_2(c, d, a, b, p0, p1, p2, p3);
     }
 
     lemma test_half_mul_lemma_1(
@@ -79,6 +80,8 @@ module MultiplyExpr {
         requires t0 == uh(p0) as uint128 + lh(p1) as uint128 + lh(p2) as uint128;
         requires t1 == uh(p1) as uint128 + uh(p2) as uint128 + lh(p3) as uint128 + uh(t0) as uint128;
         requires t2 as int == uh(p3) as int + uh(t1) as int;
+        ensures  c[0] as int + c[1] as int * B() + d[0] as int * B() * B() + d[1] as int * B() * B() * B() == 
+            p0 as int + p1 as int * B() + p2 as int * B() + p3 as int * B() * B();
     {
         calc == {
             c[0] as int + c[1] as int * B() + d[0] as int * B() * B() + d[1] as int * B() * B() * B();
@@ -132,8 +135,7 @@ module MultiplyExpr {
         requires p1 == a[1] as int * b[0] as int;
         requires p2 == a[0] as int * b[1] as int;
         requires p3 == a[1] as int * b[1] as int;
-        ensures 
-            interp_half(c) + interp_half(d) * B() * B() == 
+        ensures interp_half(c) + interp_half(d) * B() * B() == 
             interp_half(a) * interp_half(b);
     {
         calc == {
