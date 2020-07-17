@@ -52,61 +52,72 @@ module MultiplyExpr {
         // ensures interp_half(a) * interp_half(b) == 
             // interp_half(c) * B() * B() + interp_half(d);
     {
-        var p1 :uint128 := mul_limb(a[0], b[0]);
-        var p2 :uint128 := mul_limb(a[1], b[0]);
-        var p3 :uint128 := mul_limb(a[0], b[1]);
-        var p4 :uint128 := mul_limb(a[1], b[1]);
+        var p0 :uint128 := mul_limb(a[0], b[0]);
+        var p1 :uint128 := mul_limb(a[1], b[0]);
+        var p2 :uint128 := mul_limb(a[0], b[1]);
+        var p3 :uint128 := mul_limb(a[1], b[1]);
         
-        var t1 : uint128 := uh(p1) as uint128 + lh(p2) as uint128 + lh(p3) as uint128;
-        assume uh(t1) <= 1;
-        var t2 : uint128 := uh(p2) as uint128 + uh(p3) as uint128 + lh(p4) as uint128 + uh(t1) as uint128;
-        assume uh(p4) as int + uh(t2) as int <= UINT64_MAX as int;
-        var t3 : uint64 := uh(p4) + uh(t2);
+        var t0 : uint128 := uh(p0) as uint128 + lh(p1) as uint128 + lh(p2) as uint128;
+        var t1 : uint128 := uh(p1) as uint128 + uh(p2) as uint128 + lh(p3) as uint128 + uh(t0) as uint128;
+        assume uh(p3) as int + uh(t1) as int <= UINT64_MAX as int;
+        var t2 : uint64 := uh(p3) + uh(t1);
 
-        c := c[0 := lh(p1)]; 
-        c := c[1 := lh(t1)];
-        c := c[2 := lh(t2)];
-        c := c[3 := t3];
+        c := c[0 := lh(p0)]; 
+        c := c[1 := lh(t0)];
+        c := c[2 := lh(t1)];
+        c := c[3 := t2];
 
+        test_half_mul_2_lemma(c, p0, p1, p2, p3, t0, t1, t2);
+    }
+
+    lemma test_half_mul_2_lemma(c: wide_register, p0: uint128, p1: uint128, p2: uint128, p3: uint128, t0: uint128, t1: uint128, t2: uint64)
+        requires c[0] == lh(p0);
+        requires c[1] == lh(t0);
+        requires c[2] == lh(t1);
+        requires c[3] == t2;
+        requires t0 == uh(p0) as uint128 + lh(p1) as uint128 + lh(p2) as uint128;
+        requires t1 == uh(p1) as uint128 + uh(p2) as uint128 + lh(p3) as uint128 + uh(t0) as uint128;
+        requires t2 as int == uh(p3) as int + uh(t1) as int;
+    {
         calc == {
             c[0] as int + c[1] as int * B() + c[2] as int * B() * B() + c[3] as int * B() * B() * B();
-            lh(p1) as int + lh(t1) as int * B() + lh(t2) as int * B() * B() + t3 as int * B() * B() * B();
-            lh(p1) as int + lh(t1) as int * B() + lh(t2) as int * B() * B() + (uh(p4) + uh(t2)) as int * B() * B() * B();
-            lh(p1) as int + lh(t1) as int * B() + lh(t2) as int * B() * B() + uh(p4) as int * B() * B() * B() + uh(t2) as int * B() * B() * B();
+            lh(p0) as int + lh(t0) as int * B() + lh(t1) as int * B() * B() + t2 as int * B() * B() * B();
+            lh(p0) as int + lh(t0) as int * B() + lh(t1) as int * B() * B() + (uh(p3) + uh(t1)) as int * B() * B() * B();
+            lh(p0) as int + lh(t0) as int * B() + lh(t1) as int * B() * B() + uh(p3) as int * B() * B() * B() + uh(t1) as int * B() * B() * B();
             {
-                assume lh(t2) as int * B() * B() + uh(t2) as int * B() * B() * B() == t2 as int * B() * B();
+                assume lh(t1) as int * B() * B() + uh(t1) as int * B() * B() * B() == t1 as int * B() * B();
             }
-            lh(p1) as int + lh(t1) as int * B() + t2 as int * B() * B() + uh(p4) as int * B() * B() * B();
+            lh(p0) as int + lh(t0) as int * B() + t1 as int * B() * B() + uh(p3) as int * B() * B() * B();
             {
-                assert t2 as int == uh(p2) as int + uh(p3) as int + lh(p4) as int + uh(t1) as int;
+                assert t1 as int == uh(p1) as int + uh(p2) as int + lh(p3) as int + uh(t0) as int;
             }
-            lh(p1) as int + lh(t1) as int * B() + (uh(p2) as int + uh(p3) as int + lh(p4) as int + uh(t1) as int) * B() * B() + uh(p4) as int * B() * B() * B();
-            lh(p1) as int + lh(t1) as int * B() + uh(p2) as int * B() * B() + uh(p3) as int * B() * B() + lh(p4) as int * B() * B() + uh(t1) as int * B() * B() + uh(p4) as int * B() * B() * B();
+            lh(p0) as int + lh(t0) as int * B() + (uh(p1) as int + uh(p2) as int + lh(p3) as int + uh(t0) as int) * B() * B() + uh(p3) as int * B() * B() * B();
+            lh(p0) as int + lh(t0) as int * B() + uh(p1) as int * B() * B() + uh(p2) as int * B() * B() + lh(p3) as int * B() * B() + uh(t0) as int * B() * B() + uh(p3) as int * B() * B() * B();
             {
-                assume lh(p4) as int * B() * B() + uh(p4) as int * B() * B() * B() == p4 as int * B() * B(); 
+                assume lh(p3) as int * B() * B() + uh(p3) as int * B() * B() * B() == p3 as int * B() * B(); 
             }
-            lh(p1) as int + lh(t1) as int * B() + uh(p2) as int * B() * B() + uh(p3) as int * B() * B() + uh(t1) as int * B() * B() + p4 as int * B() * B();
+            lh(p0) as int + lh(t0) as int * B() + uh(p1) as int * B() * B() + uh(p2) as int * B() * B() + uh(t0) as int * B() * B() + p3 as int * B() * B();
             {
-                assume lh(t1) as int * B() + uh(t1) as int * B() * B() == t1 * B(); 
+                assume lh(t0) as int * B() + uh(t0) as int * B() * B() == t0 * B(); 
             }
-            lh(p1) as int + uh(p2) as int * B() * B() + uh(p3) as int * B() * B() + t1 as int * B() + p4 as int * B() * B();
+            lh(p0) as int + uh(p1) as int * B() * B() + uh(p2) as int * B() * B() + t0 as int * B() + p3 as int * B() * B();
             {
-                assert t1 as int == uh(p1) as int + lh(p2) as int + lh(p3) as int;
+                assert t0 as int == uh(p0) as int + lh(p1) as int + lh(p2) as int;
             }
-            lh(p1) as int + uh(p2) as int * B() * B() + uh(p3) as int * B() * B() + (uh(p1) as int + lh(p2) as int + lh(p3) as int) * B() + p4 as int * B() * B();
-            lh(p1) as int + uh(p2) as int * B() * B() + uh(p3) as int * B() * B() + uh(p1) as int * B() + lh(p2) as int * B() + lh(p3) as int * B() + p4 as int * B() * B();
-            {
-                assume uh(p3) as int * B() * B() + lh(p3) as int * B() == p3 as int * B();
-            }
-            lh(p1) as int + uh(p2) as int * B() * B() + p3 as int * B() + uh(p1) as int * B() + lh(p2) as int * B() + p4 as int * B() * B();
+            lh(p0) as int + uh(p1) as int * B() * B() + uh(p2) as int * B() * B() + (uh(p0) as int + lh(p1) as int + lh(p2) as int) * B() + p3 as int * B() * B();
+            lh(p0) as int + uh(p1) as int * B() * B() + uh(p2) as int * B() * B() + uh(p0) as int * B() + lh(p1) as int * B() + lh(p2) as int * B() + p3 as int * B() * B();
             {
                 assume uh(p2) as int * B() * B() + lh(p2) as int * B() == p2 as int * B();
             }
-            lh(p1) as int + p2 as int * B() + p3 as int * B() + uh(p1) as int * B() + p4 as int * B() * B();
+            lh(p0) as int + uh(p1) as int * B() * B() + p2 as int * B() + uh(p0) as int * B() + lh(p1) as int * B() + p3 as int * B() * B();
             {
-                assume uh(p1) as int * B() + lh(p1) as int == p1 as int;
+                assume uh(p1) as int * B() * B() + lh(p1) as int * B() == p1 as int * B();
             }
-            p1 as int + p2 as int * B() + p3 as int * B() + p4 as int * B() * B();
+            lh(p0) as int + p1 as int * B() + p2 as int * B() + uh(p0) as int * B() + p3 as int * B() * B();
+            {
+                assume uh(p0) as int * B() + lh(p0) as int == p0 as int;
+            }
+            p0 as int + p1 as int * B() + p2 as int * B() + p3 as int * B() * B();
         }
     }
 
