@@ -64,12 +64,11 @@ module MultiplyExpr {
         d := c[0 := lh(t1)];
         d := d[1 := t2];
 
-        test_half_mul_lemma_1(c, d, p0, p1, p2, p3, t0, t1, t2);
-        test_half_mul_lemma_2(c, d, a, b, p0, p1, p2, p3);
+        test_half_mul_lemma(c, d, a, b, p0, p1, p2, p3, t0, t1, t2);
     }
 
-    lemma test_half_mul_lemma_1(
-        c: half_register, d: half_register,
+    lemma test_half_mul_lemma(
+        c: half_register, d: half_register, a: half_register, b: half_register,
         p0: uint128, p1: uint128, p2: uint128, p3: uint128,
         t0: uint128, t1: uint128, t2: uint64)
 
@@ -80,8 +79,14 @@ module MultiplyExpr {
         requires t0 == uh(p0) as uint128 + lh(p1) as uint128 + lh(p2) as uint128;
         requires t1 == uh(p1) as uint128 + uh(p2) as uint128 + lh(p3) as uint128 + uh(t0) as uint128;
         requires t2 as int == uh(p3) as int + uh(t1) as int;
-        ensures  c[0] as int + c[1] as int * B() + d[0] as int * B() * B() + d[1] as int * B() * B() * B() == 
-            p0 as int + p1 as int * B() + p2 as int * B() + p3 as int * B() * B();
+
+        requires p0 == a[0] as int * b[0] as int;
+        requires p1 == a[1] as int * b[0] as int;
+        requires p2 == a[0] as int * b[1] as int;
+        requires p3 == a[1] as int * b[1] as int;
+
+        ensures interp_half(c) + interp_half(d) * B() * B() == 
+            interp_half(a) * interp_half(b);
     {
         calc == {
             c[0] as int + c[1] as int * B() + d[0] as int * B() * B() + d[1] as int * B() * B() * B();
@@ -123,21 +128,10 @@ module MultiplyExpr {
             }
             p0 as int + p1 as int * B() + p2 as int * B() + p3 as int * B() * B();
         }
-    }
 
-    lemma test_half_mul_lemma_2(c: half_register, d: half_register, a: half_register, b: half_register,
-        p0: uint128, p1: uint128, p2: uint128, p3: uint128)
-        requires
-            c[0] as int + c[1] as int * B() + d[0] as int * B() * B() + d[1] as int * B() * B() * B() == 
+        assert c[0] as int + c[1] as int * B() + d[0] as int * B() * B() + d[1] as int * B() * B() * B() == 
             p0 as int + p1 as int * B() + p2 as int * B() + p3 as int * B() * B();
-
-        requires p0 == a[0] as int * b[0] as int;
-        requires p1 == a[1] as int * b[0] as int;
-        requires p2 == a[0] as int * b[1] as int;
-        requires p3 == a[1] as int * b[1] as int;
-        ensures interp_half(c) + interp_half(d) * B() * B() == 
-            interp_half(a) * interp_half(b);
-    {
+        
         calc == {
             interp_half(c) + interp_half(d) * B() * B();
             c[0] as int + c[1] as int * B() + d[0] as int * B() * B() + d[1] as int * B() * B() * B();
