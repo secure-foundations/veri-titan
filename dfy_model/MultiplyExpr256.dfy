@@ -14,7 +14,6 @@ module MultiplyExpr256 {
     const B4 : int;
     const B5 : int;
     const B6 : int;
-    const B7 : int;
 
     function method lh(x: uint256) : uint128
         ensures flh(x) == lh(x) as int;
@@ -80,6 +79,7 @@ module MultiplyExpr256 {
         d_23 := lh(t3);
 
         assume uh(t3) == 0;
+        assume d_23 == t3;
         test_full_mul_lemma(a, b, t0, t1, t2, t3, c_01, c_23, d_01, d_23);
     }
 
@@ -99,11 +99,44 @@ module MultiplyExpr256 {
         requires c_01 == lh(t0);
         requires c_23 == lh(t1);
         requires d_01 == lh(t2);
-        requires d_23 == lh(t3);
-        requires uh(t3) == 0;
+        requires d_23 == t3;
     {
-                
+        var g0 := a[2] * b[0] + a[1] * b[1] + a[0] * b[2] +
+            a[3] * b[0] * B + a[2] * b[1] * B + a[1] * b[2] * B + a[0] * b[3] * B;
 
+        var g1 := a[3] * b[1] + a[2] * b[2] + a[1] * b[3] + 
+            a[3] * b[2] * B + a[2] * b[3] * B;
+
+        var g2 :int := a[3] as int * b[3];
+
+        assert t1 == g0 + uh(t0);
+        assert t2 == g1 + uh(t1);
+        assert t3 == g2 + uh(t2);
+
+        calc == {
+            c_01 + c_23 * B2 + d_01 * B4 + d_23 * B6;
+            c_01 + c_23 * B2 + d_01 * B4 + (g2 + uh(t2)) * B6;
+            c_01 + c_23 * B2 + lh(t2) * B4 + (g2 + uh(t2)) * B6;
+            c_01 + c_23 * B2 + lh(t2) * B4 + g2 * B6 + uh(t2) * B6;
+            {
+                assume lh(t2) * B4 + uh(t2) * B6 == t2 * B4;
+            }
+            c_01 + c_23 * B2 + t2 * B4 + g2 * B6;
+            c_01 + lh(t1) * B2 + t2 * B4 + g2 * B6;
+            c_01 + lh(t1) * B2 + (g1 + uh(t1)) * B4 + g2 * B6;
+            c_01 + lh(t1) * B2 + g1 * B4 + uh(t1) * B4 + g2 * B6;
+            {
+                assume lh(t1) * B2 + uh(t1) * B4 == t1 * B2;
+            }
+            c_01 + t1 * B2 + g1 * B4 + g2 * B6;
+            lh(t0) + t1 * B2 + g1 * B4 + g2 * B6;
+            lh(t0) + (g0 + uh(t0)) * B2 + g1 * B4 + g2 * B6;
+            lh(t0) + g0 * B2 + uh(t0) * B2 + g1 * B4 + g2 * B6;
+            {
+                assume lh(t0) + uh(t0) * B2 == t0;
+            }
+            t0 + g0 * B2 + g1 * B4 + g2 * B6;
+        }
     }
 
 }
