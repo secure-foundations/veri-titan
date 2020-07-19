@@ -36,10 +36,10 @@ module MultiplyExpr256 {
         c := a as uint128 * b as uint128;
     }
 
-    // function interp_wide(wr: wide_register) : int
-    // {
-    //     wr[0] as int + wr[1] as int * BASE + 
-    // }
+    function interp_wide(wr: wide_register) : int
+    {
+        wr[0] + wr[1] * B + wr[2] * B2 + wr[3] * B3 
+    }
 
     method test_full_mul(a : wide_register, b : wide_register)
         returns (c_01: uint128, c_23: uint128, d_01: uint128, d_23: uint128)
@@ -78,7 +78,6 @@ module MultiplyExpr256 {
 
         d_23 := lh(t3);
 
-        assume uh(t3) == 0;
         assume d_23 == t3;
         test_full_mul_lemma(a, b, t0, t1, t2, t3, c_01, c_23, d_01, d_23);
     }
