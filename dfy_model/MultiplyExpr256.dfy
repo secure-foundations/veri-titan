@@ -79,6 +79,7 @@ module MultiplyExpr256 {
 
         d_23 := lh(t3);
 
+        assume uh(t3) == 0;
         test_full_mul_lemma(a, b, t0, t1, t2, t3, c_01, c_23, d_01, d_23);
     }
 
@@ -87,11 +88,21 @@ module MultiplyExpr256 {
         t0 : uint256, t1 : uint256, t2 : uint256, t3 : uint256,
         c_01: uint128, c_23: uint128, d_01: uint128, d_23: uint128)
         
-        // requires t0 == a[0] * b[0] + 
-            // a[1] * b[1] * B + a[0] * b[1] * B;
+        requires t0 == a[0] * b[0] + 
+            a[1] * b[0] * B + a[0] * b[1] * B;
         requires t1 == a[2] * b[0] + a[1] * b[1] + a[0] * b[2] +
             a[3] * b[0] * B + a[2] * b[1] * B + a[1] * b[2] * B + a[0] * b[3] * B + uh(t0);
+        requires t2 == a[3] * b[1] + a[2] * b[2] + a[1] * b[3] + 
+            a[3] * b[2] * B + a[2] * b[3] * B + uh(t1);
+        requires t3 == a[3] * b[3] + uh(t2);
+
+        requires c_01 == lh(t0);
+        requires c_23 == lh(t1);
+        requires d_01 == lh(t2);
+        requires d_23 == lh(t3);
+        requires uh(t3) == 0;
     {
+                
 
     }
 
