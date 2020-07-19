@@ -50,18 +50,19 @@ module MultiplyExpr256 {
         var p2 :uint128 := mul_limb(a[0], b[1]);
 
         var t0 :uint256 := p0 + p1 * B + p2 * B;
-        // c_01 :=
+        c_01 := lh(t0);
     
         var p3 :uint128 := mul_limb(a[2], b[0]);
         var p4 :uint128 := mul_limb(a[1], b[1]);
         var p5 :uint128 := mul_limb(a[0], b[2]);
 
-        var t1 :uint256 := p0 + p1 * B + p2 * B;
-
         var p6 :uint128 := mul_limb(a[3], b[0]);
         var p7 :uint128 := mul_limb(a[2], b[1]);
         var p8 :uint128 := mul_limb(a[1], b[2]);
         var p9 :uint128 := mul_limb(a[0], b[3]);
+
+        var t1 :uint256 := p3 + p4 + p5 + p6 * B + p7 * B + p8 * B + uh(t0);
+        c_23 := lh(t1);
 
         var p10 :uint128 := mul_limb(a[3], b[1]);
         var p11 :uint128 := mul_limb(a[2], b[2]);
@@ -70,6 +71,12 @@ module MultiplyExpr256 {
         var p13 :uint128 := mul_limb(a[3], b[2]);
         var p14 :uint128 := mul_limb(a[2], b[3]);
 
+        var t2 :uint256 := p10 + p11 + p12 + p13 * B + p14 * B + uh(t1);
+        d_01 := lh(t2);
+
         var p15 :uint128 := mul_limb(a[3], b[3]);
+
+        assume p15 + uh(t2) < UINT128_MAX;
+        d_23 := p15 + uh(t2);
     }
 }
