@@ -13,10 +13,7 @@ module MultiplyExpr {
     witness
         [1, 2]
 
-    function method B() : int
-    {
-        UINT64_MAX as int + 1
-    }
+    const B : int := UINT64_MAX as int + 1;
 
     function method B2() : int
     function method B3() : int
@@ -36,8 +33,8 @@ module MultiplyExpr {
     function fuh(x: int) : (r: int)
 
  	lemma split_lemma(x: uint128)
- 	 	ensures flh(x) * B() + flh(x) == x;
- 	 	ensures flh(x) == x % B();
+ 	 	ensures flh(x) * B + flh(x) == x;
+ 	 	ensures flh(x) == x % B;
 
     method mul_limb(a: uint64, b: uint64)
         returns (c: uint128)
@@ -53,12 +50,12 @@ module MultiplyExpr {
 
     function interp_half(hr: half_register) : int
     {
-        hr[0] as int + hr[1] as int * B()
+        hr[0] as int + hr[1] as int * B
     }
 
     method test_half_mul(a : half_register, b : half_register)
         returns (c : half_register, d : half_register)
-        ensures interp_half(c) + interp_half(d) * B() * B() == 
+        ensures interp_half(c) + interp_half(d) * B * B == 
             interp_half(a) * interp_half(b);
     {
         var p0 :uint128 := mul_limb(a[0], b[0]);
@@ -97,61 +94,61 @@ module MultiplyExpr {
         requires p2 == a[0] as int * b[1] as int;
         requires p3 == a[1] as int * b[1] as int;
 
-        ensures interp_half(c) + interp_half(d) * B() * B() == 
+        ensures interp_half(c) + interp_half(d) * B * B == 
             interp_half(a) * interp_half(b);
     {
         calc == {
-            c[0] as int + c[1] as int * B() + d[0] as int * B() * B() + d[1] as int * B() * B() * B();
-            flh(p0) + flh(t0) * B() + flh(t1) * B() * B() + t2 as int * B() * B() * B();
-            flh(p0) + flh(t0) * B() + flh(t1) * B() * B() + (uh(p3) + uh(t1)) as int * B() * B() * B();
-            flh(p0) + flh(t0) * B() + flh(t1) * B() * B() + fuh(p3) * B() * B() * B() + fuh(t1) * B() * B() * B();
+            c[0] as int + c[1] as int * B + d[0] as int * B * B + d[1] as int * B * B * B;
+            flh(p0) + flh(t0) * B + flh(t1) * B * B + t2 as int * B * B * B;
+            flh(p0) + flh(t0) * B + flh(t1) * B * B + (uh(p3) + uh(t1)) as int * B * B * B;
+            flh(p0) + flh(t0) * B + flh(t1) * B * B + fuh(p3) * B * B * B + fuh(t1) * B * B * B;
             {
-                assume flh(t1) * B() * B() + fuh(t1) * B() * B() * B() == t1 as int * B() * B();
+                assume flh(t1) * B * B + fuh(t1) * B * B * B == t1 as int * B * B;
             }
-            flh(p0) + flh(t0) * B() + t1 as int * B() * B() + fuh(p3) * B() * B() * B();
+            flh(p0) + flh(t0) * B + t1 as int * B * B + fuh(p3) * B * B * B;
             {
                 assert t1 as int == fuh(p1) + fuh(p2) + flh(p3) + fuh(t0);
             }
-            flh(p0) + flh(t0) * B() + (fuh(p1) + fuh(p2) + flh(p3) + fuh(t0)) * B() * B() + fuh(p3) * B() * B() * B();
-            flh(p0) + flh(t0) * B() + fuh(p1) * B() * B() + fuh(p2) * B() * B() + flh(p3) * B() * B() + fuh(t0) * B() * B() + fuh(p3) * B() * B() * B();
+            flh(p0) + flh(t0) * B + (fuh(p1) + fuh(p2) + flh(p3) + fuh(t0)) * B * B + fuh(p3) * B * B * B;
+            flh(p0) + flh(t0) * B + fuh(p1) * B * B + fuh(p2) * B * B + flh(p3) * B * B + fuh(t0) * B * B + fuh(p3) * B * B * B;
             {
-                assume flh(p3) * B() * B() + fuh(p3) * B() * B() * B() == p3 as int * B() * B(); 
+                assume flh(p3) * B * B + fuh(p3) * B * B * B == p3 as int * B * B; 
             }
-            flh(p0) + flh(t0) * B() + fuh(p1) * B() * B() + fuh(p2) * B() * B() + fuh(t0) * B() * B() + p3 as int * B() * B();
+            flh(p0) + flh(t0) * B + fuh(p1) * B * B + fuh(p2) * B * B + fuh(t0) * B * B + p3 as int * B * B;
             {
-                assume flh(t0) * B() + fuh(t0) * B() * B() == t0 * B(); 
+                assume flh(t0) * B + fuh(t0) * B * B == t0 * B; 
             }
-            flh(p0) + fuh(p1) * B() * B() + fuh(p2) * B() * B() + t0 as int * B() + p3 as int * B() * B();
+            flh(p0) + fuh(p1) * B * B + fuh(p2) * B * B + t0 as int * B + p3 as int * B * B;
             {
                 assert t0 as int == fuh(p0) + flh(p1) + flh(p2);
             }
-            flh(p0) + fuh(p1) * B() * B() + fuh(p2) * B() * B() + (fuh(p0) + flh(p1) + flh(p2)) * B() + p3 as int * B() * B();
-            flh(p0) + fuh(p1) * B() * B() + fuh(p2) * B() * B() + fuh(p0) * B() + flh(p1) * B() + flh(p2) * B() + p3 as int * B() * B();
+            flh(p0) + fuh(p1) * B * B + fuh(p2) * B * B + (fuh(p0) + flh(p1) + flh(p2)) * B + p3 as int * B * B;
+            flh(p0) + fuh(p1) * B * B + fuh(p2) * B * B + fuh(p0) * B + flh(p1) * B + flh(p2) * B + p3 as int * B * B;
             {
-                assume fuh(p2) * B() * B() + flh(p2) * B() == p2 as int * B();
+                assume fuh(p2) * B * B + flh(p2) * B == p2 as int * B;
             }
-            flh(p0) + fuh(p1) * B() * B() + p2 as int * B() + fuh(p0) * B() + flh(p1) * B() + p3 as int * B() * B();
+            flh(p0) + fuh(p1) * B * B + p2 as int * B + fuh(p0) * B + flh(p1) * B + p3 as int * B * B;
             {
-                assume fuh(p1) * B() * B() + flh(p1) * B() == p1 as int * B();
+                assume fuh(p1) * B * B + flh(p1) * B == p1 as int * B;
             }
-            flh(p0) + p1 as int * B() + p2 as int * B() + fuh(p0) * B() + p3 as int * B() * B();
+            flh(p0) + p1 as int * B + p2 as int * B + fuh(p0) * B + p3 as int * B * B;
             {
-                assume fuh(p0) * B() + flh(p0) == p0 as int;
+                assume fuh(p0) * B + flh(p0) == p0 as int;
             }
-            p0 as int + p1 as int * B() + p2 as int * B() + p3 as int * B() * B();
+            p0 as int + p1 as int * B + p2 as int * B + p3 as int * B * B;
         }
 
-        assert c[0] as int + c[1] as int * B() + d[0] as int * B() * B() + d[1] as int * B() * B() * B() == 
-            p0 as int + p1 as int * B() + p2 as int * B() + p3 as int * B() * B();
+        assert c[0] as int + c[1] as int * B + d[0] as int * B * B + d[1] as int * B * B * B == 
+            p0 as int + p1 as int * B + p2 as int * B + p3 as int * B * B;
         
         calc == {
-            interp_half(c) + interp_half(d) * B() * B();
-            c[0] as int + c[1] as int * B() + d[0] as int * B() * B() + d[1] as int * B() * B() * B();
-            p0 as int + p1 as int * B() + p2 as int * B() + p3 as int * B() * B();
+            interp_half(c) + interp_half(d) * B * B;
+            c[0] as int + c[1] as int * B + d[0] as int * B * B + d[1] as int * B * B * B;
+            p0 as int + p1 as int * B + p2 as int * B + p3 as int * B * B;
             a[0] as int * b[0] as int +
-            a[1] as int * b[0] as int * B() +
-            a[0] as int * b[1] as int * B() +
-            a[1] as int * b[1] as int * B() * B();
+            a[1] as int * b[0] as int * B +
+            a[0] as int * b[1] as int * B +
+            a[1] as int * b[1] as int * B * B;
             interp_half(a) * interp_half(b);
         }
     }
@@ -162,7 +159,7 @@ module MultiplyExpr {
         var p1 :uint128 := mul_limb(a[1], b[0]);
         var p2 :uint128 := mul_limb(a[0], b[1]);
 
-        var accu: uint256 := p0 + p1 * B() + p2 * B();
+        var accu: uint256 := p0 + p1 * B + p2 * B;
     
         var p3 :uint128 := mul_limb(a[2], b[0]);
         var p4 :uint128 := mul_limb(a[1], b[1]);
