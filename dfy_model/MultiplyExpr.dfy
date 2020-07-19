@@ -13,11 +13,17 @@ module MultiplyExpr {
     witness
         [1, 2]
 
-    function method {: opaque} B() : int
-        ensures B() != 0;
+    function method B() : int
     {
         UINT64_MAX as int + 1
     }
+
+    function method B2() : int
+    function method B3() : int
+    function method B4() : int
+    function method B5() : int
+    function method B6() : int
+    function method B7() : int
 
     function method lh(x: uint128) : uint64
         ensures flh(x) == lh(x) as int;
@@ -29,10 +35,9 @@ module MultiplyExpr {
 
     function fuh(x: int) : (r: int)
 
-
  	lemma split_lemma(x: uint128)
- 	 	ensures lh(x) as int * B() + lh(x) as int == x as int;
- 	 	ensures lh(x) as int == x as int % B();
+ 	 	ensures flh(x) * B() + flh(x) == x;
+ 	 	ensures flh(x) == x % B();
 
     method mul_limb(a: uint64, b: uint64)
         returns (c: uint128)
