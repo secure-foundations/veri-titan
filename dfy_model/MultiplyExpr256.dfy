@@ -51,7 +51,7 @@ module MultiplyExpr256 {
 
         var t0 :uint256 := p0 + p1 * B + p2 * B;
         c_01 := lh(t0);
-    
+
         var p3 :uint128 := mul_limb(a[2], b[0]);
         var p4 :uint128 := mul_limb(a[1], b[1]);
         var p5 :uint128 := mul_limb(a[0], b[2]);
@@ -61,7 +61,7 @@ module MultiplyExpr256 {
         var p8 :uint128 := mul_limb(a[1], b[2]);
         var p9 :uint128 := mul_limb(a[0], b[3]);
 
-        var t1 :uint256 := p3 + p4 + p5 + p6 * B + p7 * B + p8 * B + uh(t0);
+        var t1 :uint256 := p3 + p4 + p5 + p6 * B + p7 * B + p8 * B + p9 * B + uh(t0);
         c_23 := lh(t1);
 
         var p10 :uint128 := mul_limb(a[3], b[1]);
@@ -75,8 +75,24 @@ module MultiplyExpr256 {
         d_01 := lh(t2);
 
         var p15 :uint128 := mul_limb(a[3], b[3]);
+        var t3 :uint256 := p15 + uh(t2);
 
-        assume p15 + uh(t2) < UINT128_MAX;
-        d_23 := p15 + uh(t2);
+        d_23 := lh(t3);
+
+        test_full_mul_lemma(a, b, t0, t1, t2, t3, c_01, c_23, d_01, d_23);
     }
+
+    lemma test_full_mul_lemma(
+        a : wide_register, b : wide_register,
+        t0 : uint256, t1 : uint256, t2 : uint256, t3 : uint256,
+        c_01: uint128, c_23: uint128, d_01: uint128, d_23: uint128)
+        
+        // requires t0 == a[0] * b[0] + 
+            // a[1] * b[1] * B + a[0] * b[1] * B;
+        requires t1 == a[2] * b[0] + a[1] * b[1] + a[0] * b[2] +
+            a[3] * b[0] * B + a[2] * b[1] * B + a[1] * b[2] * B + a[0] * b[3] * B + uh(t0);
+    {
+
+    }
+
 }
