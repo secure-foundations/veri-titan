@@ -19,9 +19,16 @@ module MultiplyExpr {
         UINT64_MAX as int + 1
     }
 
-    function method lh(x: uint128) : (r: uint64)
+    function method lh(x: uint128) : uint64
+        ensures flh(x) == lh(x) as int;
+
+    function flh(x: int) : (r: int)
 
  	function method uh(x: uint128) : (r: uint64)
+        ensures fuh(x) == uh(x) as int;
+
+    function fuh(x: int) : (r: int)
+
 
  	lemma split_lemma(x: uint128)
  	 	ensures lh(x) as int * B() + lh(x) as int == x as int;
@@ -56,7 +63,7 @@ module MultiplyExpr {
         
         var t0 : uint128 := uh(p0) as uint128 + lh(p1) as uint128 + lh(p2) as uint128;
         var t1 : uint128 := uh(p1) as uint128 + uh(p2) as uint128 + lh(p3) as uint128 + uh(t0) as uint128;
-        assume uh(p3) as int + uh(t1) as int <= UINT64_MAX as int;
+        assume fuh(p3) + fuh(t1) <= UINT64_MAX as int;
         var t2 : uint64 := uh(p3) + uh(t1);
 
         c := c[0 := lh(p0)]; 
@@ -78,7 +85,7 @@ module MultiplyExpr {
         requires d[1] == t2;
         requires t0 == uh(p0) as uint128 + lh(p1) as uint128 + lh(p2) as uint128;
         requires t1 == uh(p1) as uint128 + uh(p2) as uint128 + lh(p3) as uint128 + uh(t0) as uint128;
-        requires t2 as int == uh(p3) as int + uh(t1) as int;
+        requires t2 as int == fuh(p3) + fuh(t1);
 
         requires p0 == a[0] as int * b[0] as int;
         requires p1 == a[1] as int * b[0] as int;
@@ -90,41 +97,41 @@ module MultiplyExpr {
     {
         calc == {
             c[0] as int + c[1] as int * B() + d[0] as int * B() * B() + d[1] as int * B() * B() * B();
-            lh(p0) as int + lh(t0) as int * B() + lh(t1) as int * B() * B() + t2 as int * B() * B() * B();
-            lh(p0) as int + lh(t0) as int * B() + lh(t1) as int * B() * B() + (uh(p3) + uh(t1)) as int * B() * B() * B();
-            lh(p0) as int + lh(t0) as int * B() + lh(t1) as int * B() * B() + uh(p3) as int * B() * B() * B() + uh(t1) as int * B() * B() * B();
+            flh(p0) + flh(t0) * B() + flh(t1) * B() * B() + t2 as int * B() * B() * B();
+            flh(p0) + flh(t0) * B() + flh(t1) * B() * B() + (uh(p3) + uh(t1)) as int * B() * B() * B();
+            flh(p0) + flh(t0) * B() + flh(t1) * B() * B() + fuh(p3) * B() * B() * B() + fuh(t1) * B() * B() * B();
             {
-                assume lh(t1) as int * B() * B() + uh(t1) as int * B() * B() * B() == t1 as int * B() * B();
+                assume flh(t1) * B() * B() + fuh(t1) * B() * B() * B() == t1 as int * B() * B();
             }
-            lh(p0) as int + lh(t0) as int * B() + t1 as int * B() * B() + uh(p3) as int * B() * B() * B();
+            flh(p0) + flh(t0) * B() + t1 as int * B() * B() + fuh(p3) * B() * B() * B();
             {
-                assert t1 as int == uh(p1) as int + uh(p2) as int + lh(p3) as int + uh(t0) as int;
+                assert t1 as int == fuh(p1) + fuh(p2) + flh(p3) + fuh(t0);
             }
-            lh(p0) as int + lh(t0) as int * B() + (uh(p1) as int + uh(p2) as int + lh(p3) as int + uh(t0) as int) * B() * B() + uh(p3) as int * B() * B() * B();
-            lh(p0) as int + lh(t0) as int * B() + uh(p1) as int * B() * B() + uh(p2) as int * B() * B() + lh(p3) as int * B() * B() + uh(t0) as int * B() * B() + uh(p3) as int * B() * B() * B();
+            flh(p0) + flh(t0) * B() + (fuh(p1) + fuh(p2) + flh(p3) + fuh(t0)) * B() * B() + fuh(p3) * B() * B() * B();
+            flh(p0) + flh(t0) * B() + fuh(p1) * B() * B() + fuh(p2) * B() * B() + flh(p3) * B() * B() + fuh(t0) * B() * B() + fuh(p3) * B() * B() * B();
             {
-                assume lh(p3) as int * B() * B() + uh(p3) as int * B() * B() * B() == p3 as int * B() * B(); 
+                assume flh(p3) * B() * B() + fuh(p3) * B() * B() * B() == p3 as int * B() * B(); 
             }
-            lh(p0) as int + lh(t0) as int * B() + uh(p1) as int * B() * B() + uh(p2) as int * B() * B() + uh(t0) as int * B() * B() + p3 as int * B() * B();
+            flh(p0) + flh(t0) * B() + fuh(p1) * B() * B() + fuh(p2) * B() * B() + fuh(t0) * B() * B() + p3 as int * B() * B();
             {
-                assume lh(t0) as int * B() + uh(t0) as int * B() * B() == t0 * B(); 
+                assume flh(t0) * B() + fuh(t0) * B() * B() == t0 * B(); 
             }
-            lh(p0) as int + uh(p1) as int * B() * B() + uh(p2) as int * B() * B() + t0 as int * B() + p3 as int * B() * B();
+            flh(p0) + fuh(p1) * B() * B() + fuh(p2) * B() * B() + t0 as int * B() + p3 as int * B() * B();
             {
-                assert t0 as int == uh(p0) as int + lh(p1) as int + lh(p2) as int;
+                assert t0 as int == fuh(p0) + flh(p1) + flh(p2);
             }
-            lh(p0) as int + uh(p1) as int * B() * B() + uh(p2) as int * B() * B() + (uh(p0) as int + lh(p1) as int + lh(p2) as int) * B() + p3 as int * B() * B();
-            lh(p0) as int + uh(p1) as int * B() * B() + uh(p2) as int * B() * B() + uh(p0) as int * B() + lh(p1) as int * B() + lh(p2) as int * B() + p3 as int * B() * B();
+            flh(p0) + fuh(p1) * B() * B() + fuh(p2) * B() * B() + (fuh(p0) + flh(p1) + flh(p2)) * B() + p3 as int * B() * B();
+            flh(p0) + fuh(p1) * B() * B() + fuh(p2) * B() * B() + fuh(p0) * B() + flh(p1) * B() + flh(p2) * B() + p3 as int * B() * B();
             {
-                assume uh(p2) as int * B() * B() + lh(p2) as int * B() == p2 as int * B();
+                assume fuh(p2) * B() * B() + flh(p2) * B() == p2 as int * B();
             }
-            lh(p0) as int + uh(p1) as int * B() * B() + p2 as int * B() + uh(p0) as int * B() + lh(p1) as int * B() + p3 as int * B() * B();
+            flh(p0) + fuh(p1) * B() * B() + p2 as int * B() + fuh(p0) * B() + flh(p1) * B() + p3 as int * B() * B();
             {
-                assume uh(p1) as int * B() * B() + lh(p1) as int * B() == p1 as int * B();
+                assume fuh(p1) * B() * B() + flh(p1) * B() == p1 as int * B();
             }
-            lh(p0) as int + p1 as int * B() + p2 as int * B() + uh(p0) as int * B() + p3 as int * B() * B();
+            flh(p0) + p1 as int * B() + p2 as int * B() + fuh(p0) * B() + p3 as int * B() * B();
             {
-                assume uh(p0) as int * B() + lh(p0) as int == p0 as int;
+                assume fuh(p0) * B() + flh(p0) == p0 as int;
             }
             p0 as int + p1 as int * B() + p2 as int * B() + p3 as int * B() * B();
         }
