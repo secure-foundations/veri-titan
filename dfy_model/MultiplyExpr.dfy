@@ -155,4 +155,32 @@ module MultiplyExpr {
             interp_half(a) * interp_half(b);
         }
     }
+
+    method test_full_mul(a : wide_register, b : wide_register)
+    {
+        var p0 :uint128 := mul_limb(a[0], b[0]);
+        var p1 :uint128 := mul_limb(a[1], b[0]);
+        var p2 :uint128 := mul_limb(a[0], b[1]);
+
+        var accu: uint256 := p0 + p1 * B() + p2 * B();
+    
+        var p3 :uint128 := mul_limb(a[2], b[0]);
+        var p4 :uint128 := mul_limb(a[1], b[1]);
+        var p5 :uint128 := mul_limb(a[0], b[2]);
+
+        var p6 :uint128 := mul_limb(a[3], b[0]);
+        var p7 :uint128 := mul_limb(a[2], b[1]);
+        var p8 :uint128 := mul_limb(a[1], b[2]);
+        var p9 :uint128 := mul_limb(a[0], b[3]);
+
+        var p10 :uint128 := mul_limb(a[3], b[1]);
+        var p11 :uint128 := mul_limb(a[2], b[2]);
+        var p12 :uint128 := mul_limb(a[1], b[3]);
+
+        var p13 :uint128 := mul_limb(a[3], b[2]);
+        var p14 :uint128 := mul_limb(a[2], b[3]);
+
+        var p15 :uint128 := mul_limb(a[3], b[3]);
+
+    }
 }
