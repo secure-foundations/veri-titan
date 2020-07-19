@@ -1,4 +1,4 @@
-include "../dfy_model/NativeTypes.dfy"
+include "NativeTypes.dfy"
 
 module MultiplyExpr128 {
     import opened NativeTypes
