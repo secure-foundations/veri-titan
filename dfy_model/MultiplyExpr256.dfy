@@ -99,6 +99,9 @@ module MultiplyExpr256 {
         requires c_23 == lh(t1);
         requires d_01 == lh(t2);
         requires d_23 == t3;
+
+        ensures c_01 + c_23 * B2 + d_01 * B4 + d_23 * B6 ==
+            interp_wide(a) * interp_wide(b);
     {
         var g0 := a[2] * b[0] + a[1] * b[1] + a[0] * b[2] +
             a[3] * b[0] * B + a[2] * b[1] * B + a[1] * b[2] * B + a[0] * b[3] * B;
@@ -135,6 +138,10 @@ module MultiplyExpr256 {
                 assume lh(t0) + uh(t0) * B2 == t0;
             }
             t0 + g0 * B2 + g1 * B4 + g2 * B6;
+        }
+
+        assert interp_wide(a) * interp_wide(b) == t0 + g0 * B2 + g1 * B4 + g2 * B6 by {
+            test_full_mul_aux_lemma(a, b, t0, g0, g1, g2);
         }
     }
 
@@ -210,5 +217,4 @@ module MultiplyExpr256 {
             t0 + g0 * B2 + g1 * B4 + g2 * B6;
         }
     }
-
 }
