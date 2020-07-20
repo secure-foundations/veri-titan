@@ -138,19 +138,19 @@ module MultiplyExpr256 {
         }
     }
 
-    lemma test_full_mul_aux_lemma(a: wide_register, b: wide_register)
-    {
-        var t0 := a[0] * b[0] + 
+    lemma test_full_mul_aux_lemma(a: wide_register, b: wide_register,
+        t0: int, g0: int, g1: int, g2: int)
+
+        requires t0 == a[0] * b[0] + 
             a[1] * b[0] * B + a[0] * b[1] * B;
-
-        var g0 := a[2] * b[0] + a[1] * b[1] + a[0] * b[2] +
+        requires g0 == a[2] * b[0] + a[1] * b[1] + a[0] * b[2] +
             a[3] * b[0] * B + a[2] * b[1] * B + a[1] * b[2] * B + a[0] * b[3] * B;
+        requires g1 == a[3] * b[1] + a[2] * b[2] + a[1] * b[3] + 
+            a[3] * b[2] * B + a[2] * b[3] * B;
+        requires g2 == a[3] as int * b[3];
 
-        // var g1 := a[3] * b[1] + a[2] * b[2] + a[1] * b[3] + 
-        //     a[3] * b[2] * B + a[2] * b[3] * B;
-
-        // var g2 :int := a[3] as int * b[3];
-
+        ensures interp_wide(a) * interp_wide(b) == t0 + g0 * B2 + g1 * B4 + g2 * B6;
+    {
         calc == {
             interp_wide(a) * interp_wide(b);
             ==
@@ -202,6 +202,12 @@ module MultiplyExpr256 {
             a[1] * b[3] * B4 +
             a[2] * b[2] * B4 + a[2] *b[3] * B5 +
             a[3] * b[1] * B4 + a[3] * b[2] * B5 + a[3] * b[3] * B6;
+            {
+                assume g1 * B4 == a[3] * b[1] * B4 + a[2] * b[2] * B4 + a[1] * b[3] * B4 + 
+                    a[3] * b[2] * B5 + a[2] * b[3] * B5;
+            }
+            t0 + g0 * B2 + g1 * B4 + a[3] * b[3] * B6;
+            t0 + g0 * B2 + g1 * B4 + g2 * B6;
         }
     }
 
