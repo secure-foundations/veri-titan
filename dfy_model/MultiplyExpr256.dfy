@@ -38,7 +38,7 @@ module MultiplyExpr256 {
 
     function interp_wide(wr: wide_register) : int
     {
-        wr[0] + wr[1] * B + wr[2] * B2 + wr[3] * B3 
+        wr[0] + wr[1] * B + wr[2] * B2 + wr[3] * B3
     }
 
     method test_full_mul(a : wide_register, b : wide_register)
@@ -135,6 +135,73 @@ module MultiplyExpr256 {
                 assume lh(t0) + uh(t0) * B2 == t0;
             }
             t0 + g0 * B2 + g1 * B4 + g2 * B6;
+        }
+    }
+
+    lemma test_full_mul_aux_lemma(a: wide_register, b: wide_register)
+    {
+        var t0 := a[0] * b[0] + 
+            a[1] * b[0] * B + a[0] * b[1] * B;
+
+        var g0 := a[2] * b[0] + a[1] * b[1] + a[0] * b[2] +
+            a[3] * b[0] * B + a[2] * b[1] * B + a[1] * b[2] * B + a[0] * b[3] * B;
+
+        // var g1 := a[3] * b[1] + a[2] * b[2] + a[1] * b[3] + 
+        //     a[3] * b[2] * B + a[2] * b[3] * B;
+
+        // var g2 :int := a[3] as int * b[3];
+
+        calc == {
+            interp_wide(a) * interp_wide(b);
+            ==
+            (a[0] + a[1] * B + a[2] * B2 + a[3] * B3) * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3);
+            ==
+            a[0] * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3) +
+            a[1] * B * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3) +
+            a[2] * B2 * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3) +
+            a[3] * B3 * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3);
+            ==
+            a[0] * b[0] + a[0] * b[1] * B + a[0] * b[2] * B2 + a[0] * b[3] * B3 +
+            a[1] * B * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3) +
+            a[2] * B2 * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3) +
+            a[3] * B3 * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3);
+            {
+                assume a[1] * B * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3) ==
+                    a[1] * b[0] * B + a[1] * b[1] * B2 + a[1] * b[2] * B3 + a[1] * b[3] * B4;
+            }
+            a[0] * b[0] + a[0] * b[1] * B + a[0] * b[2] * B2 + a[0] * b[3] * B3 +
+            a[1] * b[0] * B + a[1] * b[1] * B2 + a[1] * b[2] * B3 + a[1] * b[3] * B4 +
+            a[2] * B2 * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3) +
+            a[3] * B3 * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3);
+            ==
+            t0 + a[0] * b[2] * B2 + a[0] * b[3] * B3 +
+            a[1] * b[1] * B2 + a[1] * b[2] * B3 + a[1] * b[3] * B4 +
+            a[2] * B2 * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3) +
+            a[3] * B3 * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3);
+            {
+                assume a[2] * B2 * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3) ==
+                    a[2] * b[0] * B2 + a[2] * b[1] * B3 + a[2] * b[2] * B4 + a[2] *b[3] * B5;
+            }
+            t0 + a[0] * b[2] * B2 + a[0] * b[3] * B3 +
+            a[1] * b[1] * B2 + a[1] * b[2] * B3 + a[1] * b[3] * B4 +
+            a[2] * b[0] * B2 + a[2] * b[1] * B3 + a[2] * b[2] * B4 + a[2] *b[3] * B5 +
+            a[3] * B3 * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3);
+            {
+                assume a[3] * B3 * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3) == 
+                    a[3] * b[0] * B3 + a[3] * b[1] * B4 + a[3] * b[2] * B5 + a[3] * b[3] * B6;
+            }
+            t0 + a[0] * b[2] * B2 + a[0] * b[3] * B3 +
+            a[1] * b[1] * B2 + a[1] * b[2] * B3 + a[1] * b[3] * B4 +
+            a[2] * b[0] * B2 + a[2] * b[1] * B3 + a[2] * b[2] * B4 + a[2] *b[3] * B5 +
+            a[3] * b[0] * B3 + a[3] * b[1] * B4 + a[3] * b[2] * B5 + a[3] * b[3] * B6;
+            {
+                assume g0 * B2 == a[2] * b[0] * B2 + a[1] * b[1] * B2 + a[0] * b[2] * B2 +
+                    a[3] * b[0] * B3 + a[2] * b[1] * B3 + a[1] * b[2] * B3 + a[0] * b[3] * B3;
+            }
+            t0 + g0 * B2 +
+            a[1] * b[3] * B4 +
+            a[2] * b[2] * B4 + a[2] *b[3] * B5 +
+            a[3] * b[1] * B4 + a[3] * b[2] * B5 + a[3] * b[3] * B6;
         }
     }
 
