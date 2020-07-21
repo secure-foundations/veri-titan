@@ -6,7 +6,7 @@ module NativeTypes {
  	newtype{:nativeType "int"} int32 = i:int | -0x80000000 <= i < 0x80000000
  	newtype{:nativeType "uint"} uint32 = i:int | 0 <= i < 0x100000000
  	newtype{:nativeType "long"} int64 = i:int | -0x8000000000000000 <= i < 0x8000000000000000
- 	newtype{:nativeType "ulong"} uint64 = i:int | 0 <= i < 0x10000000000000000
+ 	type uint64 = i:int | 0 <= i < 0x10000000000000000
  	newtype{:nativeType "sbyte"} nat8 = i:int | 0 <= i < 0x80
  	newtype{:nativeType "short"} nat16 = i:int | 0 <= i < 0x8000
  	newtype{:nativeType "int"} nat32 = i:int | 0 <= i < 0x80000000
@@ -21,7 +21,9 @@ module NativeTypes {
  	const INT64_MIN : int64 := -0x7fffffffffffffff; // what?
 
  	type uint128 = i:int | 0 <= i < 0x100000000000000000000000000000000
+ 	type uint256 = i:int | 0 <= i < 0x10000000000000000000000000000000000000000000000000000000000000000
  	const UINT128_MAX :uint128 := 0xffffffffffffffffffffffffffffffff;
+ 	// const UINT256_MAX :uint256 := 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
  	function method {:extern "NativeTypes", "xor8"} xor8(x:uint8, y:uint8) : uint8
 
