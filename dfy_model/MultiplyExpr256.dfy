@@ -139,10 +139,10 @@ module MultiplyExpr256 {
                 assume lh(t0) + uh(t0) * B2 == t0;
             }
             t0 + g0 * B2 + g1 * B4 + g2 * B6;
-        }
-
-        assert interp_wide(a) * interp_wide(b) == t0 + g0 * B2 + g1 * B4 + g2 * B6 by {
-            test_full_mul_aux_lemma(a, b, t0, g0, g1, g2);
+            {
+                test_full_mul_aux_lemma(a, b, t0, g0, g1, g2);
+            }
+            interp_wide(a) * interp_wide(b);
         }
     }
 
