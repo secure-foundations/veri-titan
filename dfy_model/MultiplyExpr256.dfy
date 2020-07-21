@@ -43,6 +43,8 @@ module MultiplyExpr256 {
 
     method test_full_mul(a : wide_register, b : wide_register)
         returns (c_01: uint128, c_23: uint128, d_01: uint128, d_23: uint128)
+        ensures c_01 + c_23 * B2 + d_01 * B4 + d_23 * B6 ==
+            interp_wide(a) * interp_wide(b);
     {
         var p0 :uint128 := mul_limb(a[0], b[0]);
         var p1 :uint128 := mul_limb(a[1], b[0]);
@@ -77,7 +79,6 @@ module MultiplyExpr256 {
         var t3 :uint256 := p15 + uh(t2);
 
         d_23 := lh(t3);
-
         assume d_23 == t3;
         test_full_mul_lemma(a, b, t0, t1, t2, t3, c_01, c_23, d_01, d_23);
     }
