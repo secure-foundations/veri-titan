@@ -10,10 +10,10 @@ module MultiplyExpr256 {
 
     const B : int := UINT64_MAX as int + 1;
     const B2 : int := B * B;
-    const B3 : int;
-    const B4 : int;
-    const B5 : int;
-    const B6 : int;
+    const B3 : int := B * B * B;
+    const B4 : int := B * B * B * B;
+    const B5 : int := B * B * B * B * B;
+    const B6 : int := B * B * B * B * B * B;
 
     function method lh(x: uint256) : uint128
         ensures flh(x) == lh(x) as int;
@@ -159,63 +159,6 @@ module MultiplyExpr256 {
 
         ensures interp_wide(a) * interp_wide(b) == t0 + g0 * B2 + g1 * B4 + g2 * B6;
     {
-        calc == {
-            interp_wide(a) * interp_wide(b);
-            ==
-            (a[0] + a[1] * B + a[2] * B2 + a[3] * B3) * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3);
-            ==
-            a[0] * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3) +
-            a[1] * B * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3) +
-            a[2] * B2 * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3) +
-            a[3] * B3 * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3);
-            ==
-            a[0] * b[0] + a[0] * b[1] * B + a[0] * b[2] * B2 + a[0] * b[3] * B3 +
-            a[1] * B * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3) +
-            a[2] * B2 * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3) +
-            a[3] * B3 * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3);
-            {
-                assume a[1] * B * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3) ==
-                    a[1] * b[0] * B + a[1] * b[1] * B2 + a[1] * b[2] * B3 + a[1] * b[3] * B4;
-            }
-            a[0] * b[0] + a[0] * b[1] * B + a[0] * b[2] * B2 + a[0] * b[3] * B3 +
-            a[1] * b[0] * B + a[1] * b[1] * B2 + a[1] * b[2] * B3 + a[1] * b[3] * B4 +
-            a[2] * B2 * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3) +
-            a[3] * B3 * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3);
-            ==
-            t0 + a[0] * b[2] * B2 + a[0] * b[3] * B3 +
-            a[1] * b[1] * B2 + a[1] * b[2] * B3 + a[1] * b[3] * B4 +
-            a[2] * B2 * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3) +
-            a[3] * B3 * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3);
-            {
-                assume a[2] * B2 * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3) ==
-                    a[2] * b[0] * B2 + a[2] * b[1] * B3 + a[2] * b[2] * B4 + a[2] *b[3] * B5;
-            }
-            t0 + a[0] * b[2] * B2 + a[0] * b[3] * B3 +
-            a[1] * b[1] * B2 + a[1] * b[2] * B3 + a[1] * b[3] * B4 +
-            a[2] * b[0] * B2 + a[2] * b[1] * B3 + a[2] * b[2] * B4 + a[2] *b[3] * B5 +
-            a[3] * B3 * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3);
-            {
-                assume a[3] * B3 * (b[0] + b[1] * B + b[2] * B2 + b[3] * B3) == 
-                    a[3] * b[0] * B3 + a[3] * b[1] * B4 + a[3] * b[2] * B5 + a[3] * b[3] * B6;
-            }
-            t0 + a[0] * b[2] * B2 + a[0] * b[3] * B3 +
-            a[1] * b[1] * B2 + a[1] * b[2] * B3 + a[1] * b[3] * B4 +
-            a[2] * b[0] * B2 + a[2] * b[1] * B3 + a[2] * b[2] * B4 + a[2] *b[3] * B5 +
-            a[3] * b[0] * B3 + a[3] * b[1] * B4 + a[3] * b[2] * B5 + a[3] * b[3] * B6;
-            {
-                assume g0 * B2 == a[2] * b[0] * B2 + a[1] * b[1] * B2 + a[0] * b[2] * B2 +
-                    a[3] * b[0] * B3 + a[2] * b[1] * B3 + a[1] * b[2] * B3 + a[0] * b[3] * B3;
-            }
-            t0 + g0 * B2 +
-            a[1] * b[3] * B4 +
-            a[2] * b[2] * B4 + a[2] *b[3] * B5 +
-            a[3] * b[1] * B4 + a[3] * b[2] * B5 + a[3] * b[3] * B6;
-            {
-                assume g1 * B4 == a[3] * b[1] * B4 + a[2] * b[2] * B4 + a[1] * b[3] * B4 + 
-                    a[3] * b[2] * B5 + a[2] * b[3] * B5;
-            }
-            t0 + g0 * B2 + g1 * B4 + a[3] * b[3] * B6;
-            t0 + g0 * B2 + g1 * B4 + g2 * B6;
-        }
+        assert true;
     }
 }
