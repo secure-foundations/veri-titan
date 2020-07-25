@@ -29,11 +29,10 @@ y = BitVec('y', 32)
 prove(
     Implies(
         And(
-            x < 4294967296,
+            x <= 0x7fffffff,
             x >= 0,
-            # y == Int2BV(x, 32) >> 16,
         ),
-        (Int2BV(x, 32) >> 16) < 2147483648,
+        (Int2BV(x, 32) >> 16) <= 0x7fffffff,
     )
 )
 

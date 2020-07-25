@@ -18,7 +18,7 @@ module MultiplyExpr256 {
     function method {:opaque} lh(x: uint256) : uint128
     {
         assume false;
-        (x as bv256 & 340282366920938463463374607431768211455) as uint128
+        (x as bv256 & 0xffffffffffffffffffffffffffffffff) as uint128
     }
 
  	function method uh(x: uint256) : uint128
