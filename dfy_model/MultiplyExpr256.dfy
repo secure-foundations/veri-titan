@@ -60,41 +60,38 @@ module MultiplyExpr256 {
         var a9 :uint256 := a8 + mul_limb(a[0], b[3]) * B;
         c_23 := lh(a9);
 
-        var p10 :uint128 := mul_limb(a[3], b[1]);
-        var p11 :uint128 := mul_limb(a[2], b[2]);
-        var p12 :uint128 := mul_limb(a[1], b[3]);
+        var a10 :uint256 := uh(a9) + mul_limb(a[3], b[1]);
+        var a11 :uint256 := a10 + mul_limb(a[2], b[2]);
+        var a12 :uint256 := a11 + mul_limb(a[1], b[3]);
 
-        var p13 :uint128 := mul_limb(a[3], b[2]);
-        var p14 :uint128 := mul_limb(a[2], b[3]);
+        var a13 :uint256 := a12 + mul_limb(a[3], b[2]) * B;
+        var a14 :uint256 := a13 + mul_limb(a[2], b[3]) * B;
+        d_01 := lh(a14);
 
-        var t2 :uint256 := p10 + p11 + p12 + p13 * B + p14 * B + uh(a9);
-        d_01 := lh(t2);
+        var a15 :uint256 := uh(a14) + mul_limb(a[3], b[3]);
+        d_23 := lh(a15);
 
-        var p15 :uint128 := mul_limb(a[3], b[3]);
-        var t3 :uint256 := p15 + uh(t2);
-
-        d_23 := lh(t3);
-        assume d_23 == t3;
-        test_full_mul_lemma(a, b, a2, a9, t2, t3, c_01, c_23, d_01, d_23);
+        assume d_23 == a15;
+        test_full_mul_lemma(a, b, a2, a9, a14, a15, c_01, c_23, d_01, d_23);
     }
 
     lemma test_full_mul_lemma(
         a : wide_register, b : wide_register,
-        a2 : uint256, a9: uint256, t2 : uint256, t3 : uint256,
+        a2 : uint256, a9: uint256, a14: uint256, a15 : uint256,
         c_01: uint128, c_23: uint128, d_01: uint128, d_23: uint128)
         
         requires a2 == a[0] * b[0] + 
             a[1] * b[0] * B + a[0] * b[1] * B;
         requires a9== a[2] * b[0] + a[1] * b[1] + a[0] * b[2] +
             a[3] * b[0] * B + a[2] * b[1] * B + a[1] * b[2] * B + a[0] * b[3] * B + uh(a2);
-        requires t2 == a[3] * b[1] + a[2] * b[2] + a[1] * b[3] + 
+        requires a14== a[3] * b[1] + a[2] * b[2] + a[1] * b[3] + 
             a[3] * b[2] * B + a[2] * b[3] * B + uh(a9);
-        requires t3 == a[3] * b[3] + uh(t2);
+        requires a15 == a[3] * b[3] + uh(a14);
 
         requires c_01 == lh(a2);
         requires c_23 == lh(a9);
-        requires d_01 == lh(t2);
-        requires d_23 == t3;
+        requires d_01 == lh(a14);
+        requires d_23 == a15;
 
         ensures c_01 + c_23 * B2 + d_01 * B4 + d_23 * B6 ==
             interp_wide(a) * interp_wide(b);
@@ -107,20 +104,20 @@ module MultiplyExpr256 {
 
         var g2 :int := a[3] as int * b[3];
 
-        assert a9== g0 + uh(a2);
-        assert t2 == g1 + uh(a9);
-        assert t3 == g2 + uh(t2);
+        assert a9 == g0 + uh(a2);
+        assert a14 == g1 + uh(a9);
+        assert a15 == g2 + uh(a14);
 
         calc == {
             c_01 + c_23 * B2 + d_01 * B4 + d_23 * B6;
-            c_01 + c_23 * B2 + d_01 * B4 + (g2 + uh(t2)) * B6;
-            c_01 + c_23 * B2 + lh(t2) * B4 + (g2 + uh(t2)) * B6;
-            c_01 + c_23 * B2 + lh(t2) * B4 + g2 * B6 + uh(t2) * B6;
+            c_01 + c_23 * B2 + d_01 * B4 + (g2 + uh(a14)) * B6;
+            c_01 + c_23 * B2 + lh(a14) * B4 + (g2 + uh(a14)) * B6;
+            c_01 + c_23 * B2 + lh(a14) * B4 + g2 * B6 + uh(a14) * B6;
             {
-                assume lh(t2) * B4 + uh(t2) * B6 == t2 * B4;
+                assume lh(a14) * B4 + uh(a14) * B6 == a14* B4;
             }
-            c_01 + c_23 * B2 + t2 * B4 + g2 * B6;
-            c_01 + lh(a9) * B2 + t2 * B4 + g2 * B6;
+            c_01 + c_23 * B2 + a14* B4 + g2 * B6;
+            c_01 + lh(a9) * B2 + a14* B4 + g2 * B6;
             c_01 + lh(a9) * B2 + (g1 + uh(a9)) * B4 + g2 * B6;
             c_01 + lh(a9) * B2 + g1 * B4 + uh(a9) * B4 + g2 * B6;
             {
