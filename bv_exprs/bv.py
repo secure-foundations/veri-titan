@@ -31,8 +31,20 @@ prove(
         And(
             x <= 0x7fffffff,
             x >= 0,
+            y == (Int2BV(x, 32) >> 16),
         ),
-        (Int2BV(x, 32) >> 16) <= 0x7fffffff,
+        y <= 0x7fffffff,
+    )
+)
+
+prove(
+    Implies(
+        And(
+            x <= 0x7fffffff,
+            x >= 0,
+            y == (Int2BV(x, 32) >> 16),
+        ),
+        BV2Int(y) <= 0x7fffffff,
     )
 )
 
