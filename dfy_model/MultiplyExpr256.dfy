@@ -15,9 +15,17 @@ module MultiplyExpr256 {
     const B5 : int := B * B * B * B * B;
     const B6 : int := B * B * B * B * B * B;
 
-    function method lh(x: uint256) : uint128
+    function method {:opaque} lh(x: uint256) : uint128
+    {
+        assume false;
+        (x as bv256 & 340282366920938463463374607431768211455) as uint128
+    }
 
  	function method uh(x: uint256) : uint128
+    {
+        assume false;
+        (x as bv256 >> 128) as uint128
+    }
 
  	lemma split_lemma(x: uint256)
  	 	ensures lh(x) * B2 + lh(x) == x;
