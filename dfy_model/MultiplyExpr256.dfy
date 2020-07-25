@@ -16,21 +16,15 @@ module MultiplyExpr256 {
     const B6 : int := B * B * B * B * B * B;
 
     function method lh(x: uint256) : uint128
-        ensures flh(x) == lh(x) as int;
 
-    function flh(x: int) : (r: int)
-
- 	function method uh(x: uint256) : (r: uint128)
-        ensures fuh(x) == uh(x) as int;
-
-    function fuh(x: int) : (r: int)
+ 	function method uh(x: uint256) : uint128
 
  	lemma split_lemma(x: uint256)
- 	 	ensures flh(x) * B2 + flh(x) == x;
- 	 	ensures flh(x) == x % B2;
+ 	 	ensures lh(x) * B2 + lh(x) == x;
+ 	 	ensures lh(x) == x % B2;
 
-    function method mul_limb(a: uint64, b: uint64) : uint128
-        ensures mul_limb(a, b) == a as int * b as int;
+    function method mul_limb(a: uint64, b: uint64) : (p: uint128)
+        ensures p == a as int * b as int;
     {
         a as uint128 * b as uint128
     }
