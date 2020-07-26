@@ -34,6 +34,7 @@ module MultiplyExpr256 {
 
     function method mul_limb(a: uint64, b: uint64) : (p: uint128)
         ensures p == a as int * b as int;
+        ensures p <= UINT64_MAX * UINT64_MAX;
     {
         assume false;
         a as uint128 * b as uint128
@@ -79,16 +80,31 @@ module MultiplyExpr256 {
         test_full_mul_lemma(a, b, a2, a9, a14, a15, c_01, c_23, d_01, d_23);
     }
 
+    lemma a15_upper_bound_lemma(
+        a : wide_register, b : wide_register,
+        a9 : uint256, a14 : uint256, a15 : uint256)
+        requires a14 == a[3] * b[1] + a[2] * b[2] + a[1] * b[3] + 
+            a[3] * b[2] * B + a[2] * b[3] * B + uh256(a9);
+        requires a15 == a[3] * b[3] + uh256(a14);
+    {
+        calc <= {
+            a14;
+            a[3] * b[1] + a[2] * b[2] + a[1] * b[3] + a[3] * b[2] * B + a[2] * b[3] * B + uh256(a9);
+            UINT64_MAX * UINT64_MAX * 3 + UINT64_MAX * UINT64_MAX * 2 * B + uh256(a9);
+        }
+        // reveal uh256();
+    }
+
     lemma test_full_mul_lemma(
         a : wide_register, b : wide_register,
-        a2 : uint256, a9: uint256, a14: uint256, a15 : uint256,
+        a2 : uint256, a9 : uint256, a14 : uint256, a15 : uint256,
         c_01: uint128, c_23: uint128, d_01: uint128, d_23: uint128)
         
         requires a2 == a[0] * b[0] + 
             a[1] * b[0] * B + a[0] * b[1] * B;
-        requires a9== a[2] * b[0] + a[1] * b[1] + a[0] * b[2] +
+        requires a9 == a[2] * b[0] + a[1] * b[1] + a[0] * b[2] +
             a[3] * b[0] * B + a[2] * b[1] * B + a[1] * b[2] * B + a[0] * b[3] * B + uh256(a2);
-        requires a14== a[3] * b[1] + a[2] * b[2] + a[1] * b[3] + 
+        requires a14 == a[3] * b[1] + a[2] * b[2] + a[1] * b[3] + 
             a[3] * b[2] * B + a[2] * b[3] * B + uh256(a9);
         requires a15 == a[3] * b[3] + uh256(a14);
 
