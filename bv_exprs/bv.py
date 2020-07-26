@@ -14,28 +14,23 @@ query = Implies(
             And(
                 x == y * z,
                 lh == x & 340282366920938463463374607431768211455,
-                uh == x >> 128,
+                uh == LShR(x, 128),
             ),
             uh * 340282366920938463463374607431768211456 + lh == y * z,
         )
 
 prove(query)
-# solve(query)
 
+query = Implies(
+            And(
+                x == y * z,
+                lh == x & 340282366920938463463374607431768211455,
+                uh == LShR(x, 128),
+            ),
+            BV2Int(uh * 340282366920938463463374607431768211456 + lh) == BV2Int(y * z),
+        )
 
-# x = Int('x')
-# y = BitVec('y', 32)
-
-# prove(
-#     Implies(
-#         And(
-#             x < 0xffffffff,
-#             x >= 0,
-#             y == (Int2BV(x, 32) >> 16),
-#         ),
-#         BV2Int(y, is_signed=False) < 0xffff,
-#     )
-# )
+prove(query)
 
 x = BitVec('x', 32)
 y = BitVec('y', 32)
@@ -53,6 +48,7 @@ prove(
         BV2Int(y, is_signed=False) <= 0xffff,
     )
 )
+
 
 
 
