@@ -23,30 +23,38 @@ prove(query)
 # solve(query)
 
 
-x = Int('x')
+# x = Int('x')
+# y = BitVec('y', 32)
+
+# prove(
+#     Implies(
+#         And(
+#             x < 0xffffffff,
+#             x >= 0,
+#             y == (Int2BV(x, 32) >> 16),
+#         ),
+#         BV2Int(y, is_signed=False) < 0xffff,
+#     )
+# )
+
+x = BitVec('x', 32)
 y = BitVec('y', 32)
 
 prove(
     Implies(
-        And(
-            x <= 0x7fffffff,
-            x >= 0,
-            y == (Int2BV(x, 32) >> 16),
-        ),
-        y <= 0x7fffffff,
+        y == (LShR(x, 16)),
+        y <= 0xffff,
     )
 )
 
 prove(
     Implies(
-        And(
-            x <= 0x7fffffff,
-            x >= 0,
-            y == (Int2BV(x, 32) >> 16),
-        ),
-        BV2Int(y) <= 0x7fffffff,
+        y == (LShR(x, 16)),
+        BV2Int(y, is_signed=False) <= 0xffff,
     )
 )
+
+
 
 # x = Int('x')
 # y = Int('y')

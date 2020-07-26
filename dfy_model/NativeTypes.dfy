@@ -2,9 +2,9 @@ module NativeTypes {
  	newtype{:nativeType "sbyte"} int8 = i:int | -0x80 <= i < 0x80
  	newtype{:nativeType "byte"} uint8 = i:int | 0 <= i < 0x100
  	newtype{:nativeType "short"} int16 = i:int | -0x8000 <= i < 0x8000
- 	newtype{:nativeType "ushort"} uint16 = i:int | 0 <= i < 0x10000
+ 	type uint16 = i:int | 0 <= i < 0x10000
  	newtype{:nativeType "int"} int32 = i:int | -0x80000000 <= i < 0x80000000
- 	newtype{:nativeType "uint"} uint32 = i:int | 0 <= i < 0x100000000
+ 	type uint32 = i:int | 0 <= i < 0x100000000
  	newtype{:nativeType "long"} int64 = i:int | -0x8000000000000000 <= i < 0x8000000000000000
  	type uint64 = i:int | 0 <= i < 0x10000000000000000
  	newtype{:nativeType "sbyte"} nat8 = i:int | 0 <= i < 0x80
