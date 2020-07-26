@@ -15,20 +15,26 @@ module MultiplyExpr256 {
     const B5 : int := B * B * B * B * B;
     const B6 : int := B * B * B * B * B * B;
 
+    // lemma shift_test(x: uint32)
+    // {
+    //     var shifted :bv16 := ((x as bv32) >> 16) as bv16;
+    //     assert 0 <= shifted as int < 65536;
+    // }
+
     function method {:opaque} lh(x: uint256) : uint128
     {
         assume false;
         (x as bv256 & 0xffffffffffffffffffffffffffffffff) as uint128
     }
 
- 	function method uh(x: uint256) : uint128
+ 	function method {:opaque} uh(x: uint256) : uint128
     {
         assume false;
         (x as bv256 >> 128) as uint128
     }
 
  	lemma split_lemma(x: uint256)
- 	 	ensures lh(x) * B2 + lh(x) == x;
+ 	 	ensures uh(x) * B2 + lh(x) == x;
  	 	ensures lh(x) == x % B2;
 
     function method mul_limb(a: uint64, b: uint64) : (p: uint128)
@@ -116,21 +122,21 @@ module MultiplyExpr256 {
             c_01 + c_23 * B2 + lh(a14) * B4 + (g2 + uh(a14)) * B6;
             c_01 + c_23 * B2 + lh(a14) * B4 + g2 * B6 + uh(a14) * B6;
             {
-                assume lh(a14) * B4 + uh(a14) * B6 == a14* B4;
+        		split_lemma(a14);
             }
             c_01 + c_23 * B2 + a14* B4 + g2 * B6;
             c_01 + lh(a9) * B2 + a14* B4 + g2 * B6;
             c_01 + lh(a9) * B2 + (g1 + uh(a9)) * B4 + g2 * B6;
             c_01 + lh(a9) * B2 + g1 * B4 + uh(a9) * B4 + g2 * B6;
             {
-                assume lh(a9) * B2 + uh(a9) * B4 == a9* B2;
+        		split_lemma(a9);
             }
             c_01 + a9* B2 + g1 * B4 + g2 * B6;
             lh(a2) + a9* B2 + g1 * B4 + g2 * B6;
             lh(a2) + (g0 + uh(a2)) * B2 + g1 * B4 + g2 * B6;
             lh(a2) + g0 * B2 + uh(a2) * B2 + g1 * B4 + g2 * B6;
             {
-                assume lh(a2) + uh(a2) * B2 == a2;
+        		split_lemma(a2);
             }
             a2 + g0 * B2 + g1 * B4 + g2 * B6;
             {
