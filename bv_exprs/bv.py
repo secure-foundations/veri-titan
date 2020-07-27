@@ -40,27 +40,38 @@ def bv2int_test():
             )
     prove(query)
 
-def int2bv2int_test():
-    x = Int('x')
-    y = Int('y')
-    z = Int('z')
-    lh = Int('lh')
-    uh = Int('uh')
+def int2bv2int_test(bits):
+    full = int(2 ** bits)
+    shift = int(bits / 2)
+    half = int(2 ** shift)
+    mask = half - 1
 
-    query = Implies(
-                And(
-                    0 <= y,
-                    y < 340282366920938463463374607431768211456,
-                    0 <= z,
-                    z < 340282366920938463463374607431768211456,
-                    x == y * z,
-                    lh == BV2Int(Int2BV(x, 256) & 340282366920938463463374607431768211455),
-                    uh == BV2Int(LShR(Int2BV(x, 256), 128)),
-                ),
-                uh * 340282366920938463463374607431768211456 + lh == y * z,
-            )
-    prove(query)
+    x = BitVec('x', bits)
 
-pure_bv_test()
-bv2int_test()
-int2bv2int_test()
+    prove(
+        x == LShR(x, shift) * half + (x & mask)
+    )
+
+    # x = Int('x')
+    # y = Int('y')
+    # z = Int('z')
+    # lh = Int('lh')
+    # uh = Int('uh')
+
+    # query = Implies(
+    #             And(
+    #                 0 <= x, x < half,
+    #                 0 <= y, y < half,
+    #                 0 <= z, z < full,
+
+    #                 z == x * y,
+
+    #                 lh == BV2Int(Int2BV(z, bits) & (half - 1)),
+    #                 uh == BV2Int(LShR(Int2BV(z, bits), bits / 2)),
+    #             ),
+    #             uh * half + lh == x * y,
+    #         )
+
+# pure_bv_test()
+# bv2int_test()
+int2bv2int_test(256)
