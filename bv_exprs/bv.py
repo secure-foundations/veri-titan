@@ -46,11 +46,28 @@ def int2bv2int_test(bits):
     half = int(2 ** shift)
     mask = half - 1
 
-    x = BitVec('x', bits)
-
+    bvx = BitVec('x', bits)
     prove(
-        x == LShR(x, shift) * half + (x & mask)
+        bvx == LShR(bvx, shift) * half + (bvx & mask)
     )
+
+    x = Int('x')
+    bvx = Int2BV(x, bits)
+    query = Implies(
+                And(
+                    0 <= x, x < full,
+                ),
+                bvx == LShR(bvx, shift) * half + (bvx & mask)
+            )
+    prove(query)
+
+    query = Implies(
+                And(
+                    0 <= x, x < full,
+                ),
+                x == BV2Int(LShR(bvx, shift) * half + BV2Int(bvx & mask)
+            )
+    prove(query)
 
     # x = Int('x')
     # y = Int('y')
