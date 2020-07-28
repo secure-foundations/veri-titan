@@ -29,6 +29,8 @@ for line in source.readlines():
 
 print("# procedures: %d" % procedure_count)
 print("# bn instructions: %d" % bn_ins_count)
-print("# unique bn intruction: %d" % len(bn_ins))
+print("# unique bn instructions: %d" % len(bn_ins))
 print("# none bn instructions: %d" % none_bn_ins_count)
-print("# unique none bn intruction: %d" % len(none_bn_ins))
+print("# unique none bn instructions: %d" % len(none_bn_ins))
+
+# print(none_bn_ins)
