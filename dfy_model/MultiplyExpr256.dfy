@@ -91,8 +91,13 @@ module MultiplyExpr256 {
             a14;
             a[3] * b[1] + a[2] * b[2] + a[1] * b[3] + a[3] * b[2] * B + a[2] * b[3] * B + uh256(a9);
             UINT64_MAX * UINT64_MAX * 3 + UINT64_MAX * UINT64_MAX * 2 * B + uh256(a9);
+            {
+                assume uh256(a9) < UINT64_MAX * UINT64_MAX;
+            }
+            UINT64_MAX * UINT64_MAX * 4 + UINT64_MAX * UINT64_MAX * 2 * B;
         }
         // reveal uh256();
+        // assume uh256(a14) 4 + 2 * B;
     }
 
     lemma test_full_mul_lemma(
