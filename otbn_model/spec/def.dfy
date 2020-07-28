@@ -30,42 +30,43 @@ datatype ins32 =
 | ORI32(xrd:Reg32, xrs1:Reg32, imm:uint32)
 | XOR32(xrd:Reg32, xrs1:Reg32, xrs2:Reg32)
 | XORI32(xrd:Reg32, xrs1:Reg32, imm:uint32)
-| LW // TODO
-| SW // TODO
+| LW32 // TODO
+| SW32 // TODO
 | BEQ32(xrs1:Reg32, xrs2:Reg32, offset:uint32)
 | BNE32(xrs1:Reg32, xrs2:Reg32, offset:uint32)
 | LOOP32(xrs1:Reg32, bodysize:uint32)
 | LOOPI32(iterations:uint32, bodysize:uint32)
 | JAL32(xrd:Reg32, offset:uint32)
 | JALR32(xrd:Reg32, xrs1:Reg32, offset:uint32)
-| CSRRS32(xrd:Reg32, csr:uint32, xrs2:Reg32)
-| ECALL // TODO
+| CSRRS32(xrd:Reg32, csr:Reg32, xrs2:Reg32)
+| CSRRW32(xrd:Reg32, csr:Reg32, xrs2:Reg32)
+| ECALL32 // TODO
 
 datatype ins256 =
-| ADD256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:Bignum, flg:bool)
-| ADDC256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:Bignum, flg:bool)
+| ADD256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
+| ADDC256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
 | ADDI256(wrd:Reg256, wrs1:Reg256, imm:Bignum, flg:bool)
 | ADDM256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256)
 | MULQACC
 | MULH256(wrd:Reg256, wrs1:Reg256, hw1:bool, wrs2:Reg256, hw2:bool)
-| SUB256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:Bignum, flg:bool)
-| SUBB256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:Bignum, flg:bool)
+| SUB256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
+| SUBB256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
 | SUBI256(wrd:Reg256, wrs1:Reg256, imm:Bignum, flg:bool)
 | SUBM256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256)
-| AND256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:Bignum)
-| OR256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:Bignum)
-| NOT256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:Bignum)
-| XOR256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:Bignum, flg:bool)
+| AND256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
+| OR256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
+| NOT256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
+| XOR256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
 | RSHI256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, imm:Bignum)
 | SEL256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, flg:bool)
 | CMP256(wrs1:Reg256, wrs2:Reg256, flg:bool)
 | CMPB256(wrs1:Reg256, wrs2:Reg256, flg:bool)
-| LID // TODO
-| SID // TODO
+| LID256 // TODO
+| SID256 // TODO
 | MOV256(wrd:Reg256, wrs:Bignum)
-| MOVR // TODO
-| WSRRS // TODO
-| WSRRW // TODO
+| MOVR256 // TODO
+| WSRRS256 // TODO
+| WSRRW256 // TODO
 
 datatype codes = CNil | va_CCons(hd:code, tl:codes)
 
@@ -76,25 +77,44 @@ datatype code =
 
 type Frame = map<int, uint32>
 type Stack = seq<Frame>
+type Flags = array<bool>
 
 datatype state = state(
 	 xregs: map<Reg32, uint32>, // 32-bit registers
 	 wregs: map<Reg256, Bignum>, // 256-bit registers
-	 //flags: map<int, bool>,
+	 flags: map<bool, Flags>,
 	 stack: Stack,
 	 ok: bool)
 
 predicate IsUInt32(i:int) { 0 <= i < 0x1_0000_0000 }
+predicate IsUInt256(i:int) { 0 <= i < 0x1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000 }
 
 predicate ValidRegister32(xregs:map<Reg32, uint32>, r:Reg32)
 {
 	r in xregs
 }
 
+predicate ValidRegister256(wregs:map<Reg256, uint256>, r:Reg256)
+{
+	r in wregs
+}
+
+predicate ValidCsr32(r:Reg32)
+{
+	// TODO: Other CSRs are limbs of WMod or flags-- will these ever be used?
+	r.Rnd?
+}
+
 function eval_xreg(xregs:map<Reg32, uint32>, r:Reg32) : uint32
 {
-	if !ValidRegister32(xregs, r) then 24
+	if !ValidRegister32(xregs, r) then 24 // TODO: better error message
 	else xregs[r]
+}
+
+function eval_wreg(wregs:map<Reg256, uint256>, r:Reg256) : uint256
+{
+	if !ValidRegister256(wregs, r) then 24 // TODO: better error message
+	else wregs[r]
 }
 
 predicate ValidRegisterIndex(index:int)
@@ -126,6 +146,27 @@ function eval_reg32(s:state, r:Reg32) : uint32
 predicate evalIns32(xins:ins32, s:state, r:state)
 {
 	true
+}
+
+predicate ValidSourceRegister256(s:state, r:Reg256)
+{
+	if r.WRnd? || r.WMod? then
+		ValidRegister256(s.wregs, r)
+	else
+		ValidRegister256(s.wregs, r) && ValidRegisterIndex(r.w)
+}
+
+predicate ValidDestinationRegister256(s:state, r:Reg256)
+{
+		!r.WRnd? && ValidRegister256(s.wregs, r) && ValidRegisterIndex(r.w)
+}
+
+function eval_reg256(s:state, r:Reg256) : uint256
+{
+	if !ValidSourceRegister256(s, r) then
+		42
+	else
+		s.wregs[r]
 }
 
 predicate evalIns256(wins:ins256, s:state, r:state)
@@ -182,5 +223,13 @@ function shr32(x:uint32, amount:uint32) : uint32
 function sext32(x:uint32, sz:int) : uint32
   requires 0 < sz < 32;
     { BitwiseSignExtend(x, sz) }
+
+function add256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
+	requires sb < 32;
+		{ BignumAdd(x, y, st, sb) }
+
+function xor256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
+	requires sb < 32;
+		{ BignumXor(x, y, st, sb) }
 
 }

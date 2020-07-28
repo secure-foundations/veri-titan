@@ -17,12 +17,9 @@ type uint16  = i:int | 0 <= i < 0x10000
 type uint32  = i:int | 0 <= i < 0x1_0000_0000
 type uint64  = i:int | 0 <= i < 0x1_0000_0000_0000_0000
 type uint128 = i:int | 0 <= i < 0x1_00000000_00000000_00000000_00000000
-
-/////////////////
-// Bignum
-/////////////////
 	
-datatype Bignum = Bignum(l7:uint32, l6:uint32, l5:uint32, l4:uint32, l3:uint32, l2:uint32, l1:uint32, l0:uint32)
+type uint256 = i:int | 0 <= i < 0x1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+type Bignum = uint256
 
 /////////////////
 // BitsOfByte
@@ -51,10 +48,19 @@ function byte_to_bits(b:uint8) : BitsOfByte
 function method {:opaque} BitsToWord(b:bv32) : uint32 { b as uint32 }
 function method {:opaque} WordToBits(w:uint32) : bv32 { w as bv32 }
 
+function method {:opaque} BitsToBignum(b:bv256) : uint256 { b as uint256 }
+function method {:opaque} BignumToBits(bn:uint256) : bv256 { bn as bv256 }
+
 lemma {:axiom} lemma_BitsToWordToBits(b:bv32)
     ensures WordToBits(BitsToWord(b)) == b;
 
 lemma {:axiom} lemma_WordToBitsToWord(w:uint32)
     ensures BitsToWord(WordToBits(w)) == w;
 
+lemma {:axiom} lemma_BitsToBignumToBits(b:bv256)
+    ensures BignumToBits(BitsToBignum(b)) == b;
+
+lemma {:axiom} lemma_BignumToBitsToBignum(bn:uint256)
+    ensures BitsToBignum(BignumToBits(bn)) == bn;
+	
 } // end module types

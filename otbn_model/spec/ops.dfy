@@ -85,6 +85,21 @@ include "types.dfy"
 			{
 				(x ^ (1 << (sz - 1))) - (1 << (sz - 1))
 			}
+			
+			////////////////////////
+			// Operations on bv256s
+			////////////////////////
+			function method {:opaque} BitShiftLeft256(x:bv256, amount:int): bv256
+				requires 0 <= amount < 256;
+			{
+				x << amount
+			}
+
+			function method {:opaque} BitShiftRight256(x:bv256, amount:int): bv256
+				requires 0 <= amount < 256;
+			{
+				x >> amount
+			}
 
 			////////////////////////
 			// Operations on words
@@ -139,7 +154,7 @@ include "types.dfy"
 				(x + y) % 0x1_0000_0000
 			}
 
-			function {:opaque} BitwiseAdd64(x:uint64, y:uint64):uint64
+			function {:opaque} BitwiseAddCarry(x:uint32, y:uint32):uint64
 			{
 				(x + y) % 0x1_0000_0000_0000_0000
 			}
@@ -172,16 +187,38 @@ include "types.dfy"
 				if size == 0 then x else BitsToWord(BitSignExtend(WordToBits(x), size))
 			}
 
-			function BignumXor(a:Bignum, b:Bignum) : Bignum
+			////////////////////////
+			// Operations on Bignums
+			////////////////////////
+			
+			function RightShift256(x:Bignum, amount:uint32) : Bignum
+				requires amount < 256;
 			{
-				Bignum(BitwiseXor(a.l7, b.l7),
-					BitwiseXor(a.l6, b.l6),
-					BitwiseXor(a.l5, b.l5),
-					BitwiseXor(a.l4, b.l4),
-					BitwiseXor(a.l3, b.l3),
-					BitwiseXor(a.l2, b.l2),
-					BitwiseXor(a.l1, b.l1),
-					BitwiseXor(a.l0, b.l0))
+				BitsToBignum(BitShiftRight256(BignumToBits(x), amount))
+			}
+
+			function LeftShift256(x:uint256, amount:uint32) : Bignum
+				requires amount < 256;
+			{
+				BitsToBignum(BitShiftLeft256(BignumToBits(x), amount))
+			}
+			
+			function BignumXor(a:Bignum, b:Bignum, st:bool, sb:uint32) : Bignum
+				requires sb < 32;
+			{
+			    BitsToBignum(BignumToBits(a) ^ BignumToBits(BignumShift(b, st, sb)))
+			}
+
+			function BignumShift(b:Bignum, st:bool, sb:uint32) : Bignum
+				requires sb < 256;
+			{
+				if st == false then RightShift256(b, sb) else LeftShift256(b, sb)
+			}
+
+			function BignumAdd(a:Bignum, b:Bignum, st:bool, sb:uint32) : Bignum
+				requires sb < 256;
+			{
+			    BitsToBignum(BignumToBits(a) + BignumToBits(BignumShift(b, st, sb)))
 			}
 
 			lemma {:axiom} lemma_BitMulEquiv(x:uint32, y:uint32)
