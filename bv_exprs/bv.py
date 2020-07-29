@@ -159,8 +159,10 @@ def mul(x, y):
     return x * y
 
 def mulhu(x, y, bits):
-    p = x * y
-    return Extract(bits * 2 - 1, bits, p)
+    assert(x.size() == y.size() == bits)
+    extend = bits * 2
+    p = ZeroExt(bits, x) * ZeroExt(bits, y)
+    return Extract(extend - 1, bits, p)
     # return LShR(p, bits)
 
 def div(x, y):
@@ -175,39 +177,39 @@ half_bits = int(full_bits / 2)
 x = BitVec('x', full_bits)
 y = BitVec('y', full_bits)
 
-xlo = BitVec('xlo', full_bits)
-xhi = BitVec('xhi', full_bits)
+xlo = BitVec('xlo', half_bits)
+xhi = BitVec('xhi', half_bits)
 
-ylo = BitVec('ylo', full_bits)
-yhi = BitVec('yhi', full_bits)
+ylo = BitVec('ylo', half_bits)
+yhi = BitVec('yhi', half_bits)
 
-# query = (mul(x, y) == mul(y, x))
+query = (mul(x, y) == mul(y, x))
+prove(query)
+
+query = (mulhu(x, y, full_bits) == mulhu(y, x, full_bits))
+prove(query)
+
+# x = Int("x")
+# y = Int("y")
+
+# query = Implies(
+#     And(
+#         y > 0,
+#         x > y,
+#     ),
+#     rem(x, y) == x - mul(div(x, y), y),
+# )
 # prove(query)
-
-query = (mulhu(x, y, half_bits) == mulhu(y, x, half_bits))
-prove(query)
-
-x = Int("x")
-y = Int("y")
-
-query = Implies(
-    And(
-        y > 0,
-        x > y,
-    ),
-    rem(x, y) == x - mul(div(x, y), y),
-)
-prove(query)
 
 # print(mulhu(xlo, ylo, half_bits))
 
 # query = (
 #     Implies(
 #         And(
-#             Extract(full_bits-1, half_bits, x) == Extract(half_bits-1, 0, xhi),
-#             Extract(half_bits-1, 0, x) == Extract(half_bits-1, 0, xlo),
-#             Extract(full_bits-1, half_bits, y) == Extract(half_bits-1, 0, yhi),
-#             Extract(half_bits-1, 0, y) == Extract(half_bits-1, 0, ylo),
+#             Extract(full_bits-1, half_bits, x) == xhi,
+#             Extract(half_bits-1, 0, x) == xlo,
+#             Extract(full_bits-1, half_bits, y) == yhi,
+#             Extract(half_bits-1, 0, y) == ylo,
 #         ),
 #         (mul(x, y) == mulhu(xlo, ylo, half_bits)
 #             + mul(xhi, ylo)
