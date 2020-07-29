@@ -159,8 +159,9 @@ def mul(x, y):
     return x * y
 
 def mulhu(x, y, bits):
-    p = BitVecSort(bits * 2).cast(x) * BitVecSort(bits * 2).cast(y) 
-    return LShR(p, bits)
+    p = x * y
+    return Extract(bits * 2 - 1, bits, p)
+    # return LShR(p, bits)
 
 def div(x, y):
     return x / y
@@ -168,31 +169,51 @@ def div(x, y):
 def rem(x, y):
     return x % y
 
-full_bits = 64
+full_bits = 32
 half_bits = int(full_bits / 2)
 
 x = BitVec('x', full_bits)
 y = BitVec('y', full_bits)
-query = (mul(x, y) == mul(y, x))
-prove(query)
 
-# x = Int("x")
-# y = Int("y")
+xlo = BitVec('xlo', full_bits)
+xhi = BitVec('xhi', full_bits)
 
-# query = Implies(
-#     y != 0,
-#     rem(x, y) == x - mul(div(x, y), y),
-# )
+ylo = BitVec('ylo', full_bits)
+yhi = BitVec('yhi', full_bits)
+
+# query = (mul(x, y) == mul(y, x))
 # prove(query)
 
-# z = mulhu128(x, y)
+query = (mulhu(x, y, half_bits) == mulhu(y, x, half_bits))
+prove(query)
 
+x = Int("x")
+y = Int("y")
 
-query = (
-
-
-
+query = Implies(
+    And(
+        y > 0,
+        x > y,
+    ),
+    rem(x, y) == x - mul(div(x, y), y),
 )
+prove(query)
 
-# print(z.sort)
+# print(mulhu(xlo, ylo, half_bits))
 
+# query = (
+#     Implies(
+#         And(
+#             Extract(full_bits-1, half_bits, x) == Extract(half_bits-1, 0, xhi),
+#             Extract(half_bits-1, 0, x) == Extract(half_bits-1, 0, xlo),
+#             Extract(full_bits-1, half_bits, y) == Extract(half_bits-1, 0, yhi),
+#             Extract(half_bits-1, 0, y) == Extract(half_bits-1, 0, ylo),
+#         ),
+#         (mul(x, y) == mulhu(xlo, ylo, half_bits)
+#             + mul(xhi, ylo)
+#             + mul(xlo, yhi)
+#             + mul(xlo, ylo) 
+#         ),
+#     )
+# )
+# prove(query)
