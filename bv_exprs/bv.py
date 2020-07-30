@@ -155,7 +155,8 @@ def misc_test():
     prove(query)
 
 
-def mul(x, y):
+def mul(x, y, bits):
+    assert(x.size() == y.size() == bits)
     return x * y
 
 def mulhu(x, y, bits):
@@ -171,7 +172,7 @@ def div(x, y):
 def rem(x, y):
     return x % y
 
-full_bits = 32
+full_bits = 8
 half_bits = int(full_bits / 2)
 
 x = BitVec('x', full_bits)
@@ -183,7 +184,7 @@ xhi = BitVec('xhi', half_bits)
 ylo = BitVec('ylo', half_bits)
 yhi = BitVec('yhi', half_bits)
 
-query = (mul(x, y) == mul(y, x))
+query = (mul(x, y, full_bits) == mul(y, x, full_bits))
 prove(query)
 
 query = (mulhu(x, y, full_bits) == mulhu(y, x, full_bits))
@@ -203,19 +204,21 @@ prove(query)
 
 # print(mulhu(xlo, ylo, half_bits))
 
-# query = (
-#     Implies(
-#         And(
-#             Extract(full_bits-1, half_bits, x) == xhi,
-#             Extract(half_bits-1, 0, x) == xlo,
-#             Extract(full_bits-1, half_bits, y) == yhi,
-#             Extract(half_bits-1, 0, y) == ylo,
-#         ),
-#         (mul(x, y) == mulhu(xlo, ylo, half_bits)
-#             + mul(xhi, ylo)
-#             + mul(xlo, yhi)
-#             + mul(xlo, ylo) 
-#         ),
-#     )
-# )
-# prove(query)
+query = (
+    Implies(
+        And(
+            Extract(full_bits-1, half_bits, x) == xhi,
+            Extract(half_bits-1, 0, x) == xlo,
+            Extract(full_bits-1, half_bits, y) == yhi,
+            Extract(half_bits-1, 0, y) == ylo,
+        ),
+        And(
+            Extract(full_bits-1, half_bits, mul(x, y, full_bits)) == 
+                mulhu(xlo, ylo, half_bits) +
+                mul(xhi, ylo, half_bits) +
+                mul(xlo, yhi, half_bits),
+            Extract(half_bits-1, 0, mul(x, y, full_bits)) == mul(xlo, ylo, half_bits),
+        )
+    )
+)
+prove(query)
