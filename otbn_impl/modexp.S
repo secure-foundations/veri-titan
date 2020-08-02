@@ -17,27 +17,6 @@
  *
  */
 
-d0inv:
-BN.XOR w0, w0, w0
-BN.ADDI w0, w0, 1
-BN.MOV w29, w0
-LOOPI 256, 13
-BN.MULQACC.Z w28.0, w29.0, 0
-BN.MULQACC w28.1, w29.0, 64
-BN.MULQACC.SO w1.L, w28.0, w29.1, 64
-BN.MULQACC w28.2, w29.0, 0
-BN.MULQACC w28.1, w29.1, 0
-BN.MULQACC w28.0, w29.2, 0
-BN.MULQACC w28.3, w29.0, 64
-BN.MULQACC w28.2, w29.1, 64
-BN.MULQACC w28.1, w29.2, 64
-BN.MULQACC.SO w1.U, w28.0, w29.3, 64
-BN.AND w1, w1, w0
-BN.OR w29, w29, w1
-BN.ADD w0, w0, w0
-BN.SUB w29, w31, w29
-JALR x0, x1, 0
-
 selcxSub:
 ADDI x8, x0, 5
 ADDI x10, x0, 3
@@ -498,7 +477,7 @@ JAL x1, mul1_exp
 JALR x0, x1, 0
 
 modload:
-BN.XOR w31, w31, w31
+BN.XOR w31, w31, w31 
 ADDI x3, x0, 0
 BN.LID x3, 0(x0)
 LW x16, 0(x0)
@@ -525,8 +504,32 @@ LW x12, 4(x0)
 LW x13, 5(x0)
 LW x14, 6(x0)
 LW x15, 7(x0)
-BN.LID x8, 0(x16)
+BN.LID x8, 0(x16) ; x8 should point to w28, TODO: what does x16 contain?
 JAL x1, d0inv
-BN.SID x9, 0(x17)
+BN.SID x9, 0(x17) ; x9 should point to w29, TODO: what does x17 contain?
 JAL x1, computeRR
 JALR x0, x1, 0
+
+d0inv:
+; w31 is cleared (can be used as the BASE = 2 ** 256 for mod sub)
+; w28 seems to contain some value, best guess is the least significant word of the modulo
+BN.XOR w0, w0, w0 ; w0 = 0
+BN.ADDI w0, w0, 1 ; w0 = 1
+BN.MOV w29, w0 ; w29 = 1
+LOOPI 256, 13 ; loop 256 times
+    BN.MULQACC.Z w28.0, w29.0, 0
+    BN.MULQACC w28.1, w29.0, 64
+    BN.MULQACC.SO w1.L, w28.0, w29.1, 64
+    BN.MULQACC w28.2, w29.0, 0
+    BN.MULQACC w28.1, w29.1, 0
+    BN.MULQACC w28.0, w29.2, 0
+    BN.MULQACC w28.3, w29.0, 64
+    BN.MULQACC w28.2, w29.1, 64
+    BN.MULQACC w28.1, w29.2, 64
+    BN.MULQACC.SO w1.U, w28.0, w29.3, 64
+    BN.AND w1, w1, w0
+    BN.OR w29, w29, w1
+    BN.ADD w0, w0, w0
+; assuming now w29 * w28 = 1 (mod BASE)
+BN.SUB w29, w31, w29 ; w29 * w28 = -1 (mod BASE)
+JALR x0, x1, 0 ; return 
