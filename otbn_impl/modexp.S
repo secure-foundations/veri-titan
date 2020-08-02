@@ -513,23 +513,24 @@ JALR x0, x1, 0
 d0inv:
 ; w31 is cleared (can be used as the BASE = 2 ** 256 for mod sub)
 ; w28 seems to contain some value, best guess is the least significant word of the modulo
-BN.XOR w0, w0, w0 ; w0 = 0
+BN.XOR w0, w0, w0
 BN.ADDI w0, w0, 1 ; w0 = 1
 BN.MOV w29, w0 ; w29 = 1
 LOOPI 256, 13 ; loop 256 times
-    BN.MULQACC.Z w28.0, w29.0, 0
-    BN.MULQACC w28.1, w29.0, 64
-    BN.MULQACC.SO w1.L, w28.0, w29.1, 64
-    BN.MULQACC w28.2, w29.0, 0
-    BN.MULQACC w28.1, w29.1, 0
-    BN.MULQACC w28.0, w29.2, 0
-    BN.MULQACC w28.3, w29.0, 64
-    BN.MULQACC w28.2, w29.1, 64
-    BN.MULQACC w28.1, w29.2, 64
-    BN.MULQACC.SO w1.U, w28.0, w29.3, 64
-    BN.AND w1, w1, w0
-    BN.OR w29, w29, w1
-    BN.ADD w0, w0, w0
+    BN.MULQACC.Z w28.0, w29.0, 0 ; a0 * b0
+    BN.MULQACC w28.1, w29.0, 64  ; a1 * b0
+    BN.MULQACC.SO w1.L, w28.0, w29.1, 64 ; a0 * b1
+    BN.MULQACC w28.2, w29.0, 0  ; a2 * b0
+    BN.MULQACC w28.1, w29.1, 0  ; a1 * b1
+    BN.MULQACC w28.0, w29.2, 0  ; a0 * b2
+    BN.MULQACC w28.3, w29.0, 64 ; a3 * b0
+    BN.MULQACC w28.2, w29.1, 64 ; a2 * b1
+    BN.MULQACC w28.1, w29.2, 64 ; a1 * b2
+    BN.MULQACC.SO w1.U, w28.0, w29.3, 64 ; a0 * b3
+    ; w1 = w28 * w29 (mod BASE)
+    BN.AND w1, w1, w0  ; mask a single bit
+    BN.OR w29, w29, w1 ; or the bit to the result
+    BN.ADD w0, w0, w0  ; w0 = 2 ** i
 ; assuming now w29 * w28 = 1 (mod BASE)
 BN.SUB w29, w31, w29 ; w29 * w28 = -1 (mod BASE)
 JALR x0, x1, 0 ; return 
