@@ -1,7 +1,9 @@
 include "NativeTypes.dfy"
+include "Powers.dfy"
 
 module MultiplyExpr256 {
     import opened NativeTypes
+    import opened Powers
 
     type wide_register = wr:seq<uint64> |
         |wr| == 4
@@ -181,19 +183,27 @@ module MultiplyExpr256 {
 
     method d0inv(w28: uint32)
     {
-        var w0: uint32 := 1;
-        var w29 : uint32 := 2;
+        var w0: int := 2;
+        var w29 : uint32 := 1;
         var i := 1;
-
+        
+        assert w0 == power(2, i) by {
+            reveal power();
+        }
+    
         while i < 32
+            invariant w0 == power(2, i);
+            invariant 1 <= i <= 32;
             decreases 32 - i;
         {
             var w1 := (w28 * w29) % UINT32_MAX;
+            assume w0 <= UINT32_MAX;
             w1 := (w1 as bv32 & w0 as bv32) as int;
             w29 := (w29 as bv32 | w1 as bv32) as int;
-            assume false;
+
             w0 := w0 * 2;
             i := i + 1;
+            assume w0 == power(2, i);
         }
     }
 }
