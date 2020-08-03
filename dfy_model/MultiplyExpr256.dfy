@@ -178,4 +178,22 @@ module MultiplyExpr256 {
     {
         assert true;
     }
+
+    method d0inv(w28: uint32)
+    {
+        var w0: uint32 := 1;
+        var w29 : uint32 := 2;
+        var i := 1;
+
+        while i < 32
+            decreases 32 - i;
+        {
+            var w1 := (w28 * w29) % UINT32_MAX;
+            w1 := (w1 as bv32 & w0 as bv32) as int;
+            w29 := (w29 as bv32 | w1 as bv32) as int;
+            assume false;
+            w0 := w0 * 2;
+            i := i + 1;
+        }
+    }
 }
