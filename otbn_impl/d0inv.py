@@ -10,11 +10,19 @@ def d0inv(w28):
 
     for i in range(1, num_bits):
 
-        # start asserts
         x = w29 * w28
         q = x // 2 ** i
 
-        if q % 2 == 0:        
+        w1 = (w28 * w29) % BASE
+        w1 = w1 & w0
+
+        assert ((w1 == 0) == (q % 2 == 0))
+
+        if q % 2 == 0:
+            # print_bin(x)
+            # print_bin(q)
+            # print_bin(2 ** i)
+
             assert(w29 * w28 % 2 ** i == 1)
             # ==> 
             assert(x % 2 ** (i + 1) == 1)
@@ -22,10 +30,8 @@ def d0inv(w28):
             assert(w29 * w28 % 2 ** i == 1)
             # ==>
             assert((x + w28 * 2 ** i) % 2 ** (i + 1) == 1)
-        # end asserts
 
-        w1 = (w28 * w29) % BASE
-        w1 = w1 & w0
+
         w29 = w29 | w1
         w0 = w0 * 2
         assert((w29 * w28) % w0 == 1)
