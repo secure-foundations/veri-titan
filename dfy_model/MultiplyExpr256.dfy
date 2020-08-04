@@ -182,6 +182,7 @@ module MultiplyExpr256 {
     }
 
     method d0inv(w28: uint32)
+        requires w28 % 2 == 1;
     {
         var w0: int := 2;
         var w29 : uint32 := 1;
@@ -194,16 +195,19 @@ module MultiplyExpr256 {
         while i < 32
             invariant w0 == power(2, i);
             invariant 1 <= i <= 32;
+            invariant (w29 * w28) % w0 == 1;
             decreases 32 - i;
         {
             var w1 := (w28 * w29) % UINT32_MAX;
             assume w0 <= UINT32_MAX;
+            
             w1 := (w1 as bv32 & w0 as bv32) as int;
             w29 := (w29 as bv32 | w1 as bv32) as int;
 
             w0 := w0 * 2;
             i := i + 1;
             assume w0 == power(2, i);
+            assume (w29 * w28) % w0 == 1;
         }
     }
 }
