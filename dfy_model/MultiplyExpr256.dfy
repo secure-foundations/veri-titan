@@ -198,9 +198,14 @@ module MultiplyExpr256 {
             invariant (w29 * w28) % w0 == 1;
             decreases 32 - i;
         {
+            ghost var x := w29 * w28;
+            assert x % w0 == 1;
+            ghost var q := x / w0;
+            assert q * w0 + 1 == x;
+
             var w1 := (w28 * w29) % UINT32_MAX;
             assume w0 <= UINT32_MAX;
-            
+
             w1 := (w1 as bv32 & w0 as bv32) as int;
             w29 := (w29 as bv32 | w1 as bv32) as int;
 
