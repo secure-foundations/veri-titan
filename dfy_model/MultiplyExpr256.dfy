@@ -207,7 +207,16 @@ module MultiplyExpr256 {
             assume w0 <= UINT32_MAX;
 
             w1 := (w1 as bv32 & w0 as bv32) as int;
+
+            assume w1 == 0 <==> q % 2  == 0;
+
             w29 := (w29 as bv32 | w1 as bv32) as int;
+
+            if w1 == 0 {
+                assert x % power(2, i) == 1;
+                // assert x as bv32 & w0 as bv32 == 0;
+                // assume (x % power(2, i) == 1) ==> ;
+            }
 
             w0 := w0 * 2;
             i := i + 1;
