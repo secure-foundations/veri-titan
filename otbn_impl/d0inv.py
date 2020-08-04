@@ -52,14 +52,14 @@ query = Implies(
     And(
         0 <= i,
         i < num_bits,
-        x % (1 << i) == 1,
+        URem(x, (1 << i)) == 1,
         x & (1 << i) == 0,
     ),
-    x % (1 << (i + 1)) == 1,
+    URem(x, (1 << (i + 1))) == 1,
 )
 prove(query)
 
-x = BitVecVal(2147483649, 32)
 # i = BitVecVal(30, 32)
 # print(simplify(1 << (i + 1)))
+x = BitVecVal(2147483649, 32)
 print(simplify(x % 2147483648))
