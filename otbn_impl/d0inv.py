@@ -2,7 +2,7 @@ num_bits = 32
 BASE = 2 ** num_bits
 
 def print_bin(num):
-    print(bin(num)[2:].zfill(num_bits * 2))
+    print(bin(num)[2:][-num_bits:].zfill(num_bits))
 
 def d0inv(w28):
     w0 = 2
@@ -22,12 +22,14 @@ def d0inv(w28):
             # print_bin(x)
             # print_bin(q)
             # print_bin(2 ** i)
+            # print_bin(2 ** (i + 1))
+            # print()
 
-            assert(w29 * w28 % 2 ** i == 1)
+            assert(x % 2 ** i == 1)
             # ==> 
             assert(x % 2 ** (i + 1) == 1)
         else:
-            assert(w29 * w28 % 2 ** i == 1)
+            assert(x % 2 ** i == 1)
             # ==>
             assert((x + w28 * 2 ** i) % 2 ** (i + 1) == 1)
 
@@ -39,3 +41,25 @@ def d0inv(w28):
     assert((w29 * w28) % BASE == 1)
 
 d0inv(2109612375)
+
+from z3 import *
+
+# w1 = BitVec("w1", num_bits)
+x = BitVec("x", num_bits)
+i = BitVec("i", num_bits)
+
+query = Implies(
+    And(
+        0 <= i,
+        i < num_bits,
+        x % (1 << i) == 1,
+        x & (1 << i) == 0,
+    ),
+    x % (1 << (i + 1)) == 1,
+)
+prove(query)
+
+x = BitVecVal(2147483649, 32)
+# i = BitVecVal(30, 32)
+# print(simplify(1 << (i + 1)))
+print(simplify(x % 2147483648))
