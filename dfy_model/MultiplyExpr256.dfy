@@ -200,28 +200,30 @@ module MultiplyExpr256 {
         {
             ghost var x := w29 * w28;
             assert x % w0 == 1;
-            ghost var q := x / w0;
-            assert q * w0 + 1 == x;
 
             var w1 := (w28 * w29) % UINT32_MAX;
             assume w0 <= UINT32_MAX;
 
             w1 := (w1 as bv32 & w0 as bv32) as int;
-
-            assume w1 == 0 <==> q % 2  == 0;
-
             w29 := (w29 as bv32 | w1 as bv32) as int;
 
             if w1 == 0 {
                 assert x % power(2, i) == 1;
-                // assert x as bv32 & w0 as bv32 == 0;
-                // assume (x % power(2, i) == 1) ==> ;
             }
 
             w0 := w0 * 2;
             i := i + 1;
+
             assume w0 == power(2, i);
             assume (w29 * w28) % w0 == 1;
         }
+
+        assert (w29 * w28) % power(2, 32) == 1;
     }
 }
+
+lemma d0inv_bv_lemma_1(i: bv32, x: bv32)
+    requires 0 <= i < 32;
+    requires x % (1 << i) == 1;
+    requires x & (1 << i) == 0;
+    ensures x % (1 << (i + 1)) == 1;

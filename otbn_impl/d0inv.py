@@ -74,4 +74,3 @@ query = Implies(
     URem(x + w28 * (1 << i), (1 << (i + 1))) == 1,
 )
 prove(query)
-
