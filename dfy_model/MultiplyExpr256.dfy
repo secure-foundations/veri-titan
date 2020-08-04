@@ -198,32 +198,41 @@ module MultiplyExpr256 {
             invariant (w29 * w28) % w0 == 1;
             decreases 32 - i;
         {
-            ghost var x := w29 * w28;
-            assert x % w0 == 1;
-
             var w1 := (w28 * w29) % UINT32_MAX;
+
+            ghost var x: uint32 := w1;
+            ghost var w29' := w29;
+
             assume w0 <= UINT32_MAX;
 
             w1 := (w1 as bv32 & w0 as bv32) as int;
             w29 := (w29 as bv32 | w1 as bv32) as int;
 
-            if w1 == 0 {
-                assert x % power(2, i) == 1;
-            }
-
             w0 := w0 * 2;
             i := i + 1;
 
             assume w0 == power(2, i);
-            assume (w29 * w28) % w0 == 1;
+
+            if w1 == 0 {
+                assume w29 == w29';
+                assert (w29 * w28) % w0 == 1 by {
+                    d0inv_bv_lemma_1(x, i);
+                }
+            } else {
+
+                assume (w29 * w28) % w0 == 1;
+            }
         }
 
         assert (w29 * w28) % power(2, 32) == 1;
     }
+
+    lemma d0inv_bv_lemma_1(x: uint32, i: int)
+        requires 0 <= i < 32;
+        requires power(2, i) <= UINT32_MAX;
+        requires x % power(2, i) == 1;
+        requires x as bv32 & power(2, i) as bv32 == 0;
+        ensures x % power(2, i + 1) == 1;
+
 }
 
-lemma d0inv_bv_lemma_1(i: bv32, x: bv32)
-    requires 0 <= i < 32;
-    requires x % (1 << i) == 1;
-    requires x & (1 << i) == 0;
-    ensures x % (1 << (i + 1)) == 1;
