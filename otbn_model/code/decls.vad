@@ -18,6 +18,8 @@ type map(a:Type(0), b:Type(0)):Type(0) extern;
 type Bignum:Type(0) extern;
 type Frame:Type(0) := map(int, uint32);
 type Stack:Type(0) := seq(Frame);
+type FlagsGroup:Type(0) extern;
+type Flags:Type(0) extern;
 
 function operator(.ok) (s:state):bool extern;
 function operator(.ok :=) (s:state, b:bool):state extern;
@@ -37,10 +39,15 @@ function sext32(x:uint32, size:int):uint32 extern;
 
 function xor256(a:Bignum, b:Bignum, st:bool, sb:uint32):Bignum extern;
 function add256(a:Bignum, b:Bignum, st:bool, sb:uint32):Bignum extern;
+function addc256(a:Bignum, b:Bignum, st:bool, sb:uint32, cf:bool):Bignum extern;
+
+function get_flags_group(fg:bool, flags:Flags):FlagsGroup extern;
+function update_flags(b:bool, f:Flags, fg:FlagsGroup):Flags extern;
+function cf(flags_group:FlagsGroup):bool extern;
 
 var ok:bool {:state ok()};
 var stack:Stack {:state stack()};
-var flags:map(bool, array(bool)) {:state flags()};
+var flags:Flags {:state flags() };
 
 var x0:uint32 {:state reg32(Gpr(0))};
 var x1:uint32 {:state reg32(Gpr(1))};
@@ -259,12 +266,27 @@ procedure Add256(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:boo
     requires
         sb < 32;
     modifies
-        flags(fg);
+        flags;
     ensures
         dst == add256(old(src1), old(src2), st, sb);
 {
 assume false;
 }
+
+procedure Addc256(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:bool, in sb:imm32, inline fg:bool)
+    {:instruction Ins256(ADDC256(dst, src1, src2, st, sb, fg))}
+    requires
+        sb < 32;
+    modifies
+        flags;
+    ensures
+        let sum, new_flags_group := addc256(old(src1), old(src2), st, sb, get_flags_group(fg, old(flags))); dst == sum && flags == update_fg(fg, old(flags), new_flags_group);
+{
+assume false;
+}
+
+
+
 
 #verbatim
 } // end module bignum_decls

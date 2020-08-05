@@ -77,12 +77,14 @@ datatype code =
 
 type Frame = map<int, uint32>
 type Stack = seq<Frame>
-type Flags = array<bool>
+
+datatype FlagsGroup = FlagsGroup(cf:bool, lsb:bool, msb:bool, zero:bool)
+datatype Flags = Flags(fg0:FlagsGroup, fg1:FlagsGroup)
 
 datatype state = state(
 	 xregs: map<Reg32, uint32>, // 32-bit registers
 	 wregs: map<Reg256, Bignum>, // 256-bit registers
-	 flags: map<bool, Flags>,
+	 flags: Flags,
 	 stack: Stack,
 	 ok: bool)
 
@@ -196,6 +198,12 @@ predicate evalCode(c:code, s:state, r:state)
         //case While(cond, body) => exists n:nat :: evalWhile(cond, body, n, s, r)
 }
 
+function get_flags_group(fg:bool, flags:Flags) : FlagsGroup { if fg then flags.fg1 else flags.fg0 }
+
+function update_fg(b:bool, f:Flags, fg:FlagsGroup) : Flags { if b then f.(fg1 := fg) else f.(fg0 := fg) }
+
+function cf(flags_group:FlagsGroup) : bool { flags_group.cf }
+
 function xor32(x:uint32, y:uint32) : uint32  { BitwiseXor(x, y) }
 
 function or32(x:uint32, y:uint32) : uint32  { BitwiseOr(x, y) }
@@ -227,6 +235,10 @@ function sext32(x:uint32, sz:int) : uint32
 function add256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;
 		{ BignumAdd(x, y, st, sb) }
+
+function addc256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
+	requires sb < 32;
+{  var (sum, new_carry) := BignumAddCarry(x, y, st, sb, cf(flags_group)); (sum, flags_group[cf := new_carry])  }
 
 function xor256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;

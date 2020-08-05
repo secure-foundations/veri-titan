@@ -20,6 +20,7 @@ type uint128 = i:int | 0 <= i < 0x1_00000000_00000000_00000000_00000000
 	
 type uint256 = i:int | 0 <= i < 0x1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
 type Bignum = uint256
+const BignumSize : int := 115792089237316195423570985008687907853269984665640564039457584007913129639936
 
 /////////////////
 // BitsOfByte
@@ -50,6 +51,11 @@ function method {:opaque} WordToBits(w:uint32) : bv32 { w as bv32 }
 
 function method {:opaque} BitsToBignum(b:bv256) : uint256 { b as uint256 }
 function method {:opaque} BignumToBits(bn:uint256) : bv256 { bn as bv256 }
+
+function method {:opaque} BoolToBits(bl:bool) : bv256
+{
+	if bl then 1 as bv256 else 0 as bv256
+}
 
 lemma {:axiom} lemma_BitsToWordToBits(b:bv32)
     ensures WordToBits(BitsToWord(b)) == b;
