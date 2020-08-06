@@ -51,6 +51,12 @@ d0inv(2109612375)
 
 from z3 import *
 
+def export_to_smtlib(query):
+    s = Solver()
+    s.add(Not(query))
+    print(s.sexpr())
+    print("(check-sat)")
+
 x = BitVec("x", num_bits)
 i = BitVec("i", num_bits)
 
@@ -63,18 +69,19 @@ query = Implies(
     ),
     URem(x, (1 << (i + 1))) == 1,
 )
-prove(query)
+# prove(query)
 
 w28 = BitVec("w28", num_bits)
 
-query = Implies(
-    And(
-        0 <= i,
-        i < num_bits,
-        URem(x, (1 << i)) == 1,
-        x & (1 << i) == 1,
-        URem(w28, 2) == 1,
-    ),
-    URem(x + w28 * (1 << i), (1 << (i + 1))) == 1,
-)
-prove(query)
+# query = Implies(
+#     And(
+#         0 <= i,
+#         i < num_bits,
+#         URem(x, (1 << i)) == 1,
+#         x & (1 << i) == 1,
+#         URem(w28, 2) == 1,
+#     ),
+#     URem(x + w28 * (1 << i), (1 << (i + 1))) == 1,
+# )
+# prove(query)
+
