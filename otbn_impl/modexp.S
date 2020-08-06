@@ -517,6 +517,7 @@ BN.XOR w0, w0, w0
 BN.ADDI w0, w0, 1 ; w0 = 1
 BN.MOV w29, w0 ; w29 = 1
 LOOPI 256, 13 ; loop 256 times
+    ; invariant (w29 * w28) % (1 << i) == 1
     BN.MULQACC.Z w28.0, w29.0, 0 ; a0 * b0
     BN.MULQACC w28.1, w29.0, 64  ; a1 * b0
     BN.MULQACC.SO w1.L, w28.0, w29.1, 64 ; a0 * b1
@@ -528,9 +529,34 @@ LOOPI 256, 13 ; loop 256 times
     BN.MULQACC w28.1, w29.2, 64 ; a1 * b2
     BN.MULQACC.SO w1.U, w28.0, w29.3, 64 ; a0 * b3
     ; w1 = w28 * w29 (mod BASE)
-    BN.AND w1, w1, w0  ; mask out a single bit
-    BN.OR w29, w29, w1 ; or the bit to the result
-    BN.ADD w0, w0, w0  ; w0 = 2 ** i
-; assuming now w29 * w28 = 1 (mod BASE)
+    BN.AND w1, w1, w0  ; mask out the i th bit
+    BN.OR w29, w29, w1 ; or the bit to w29
+    BN.ADD w0, w0, w0  ; w0 = 1 << (i + 1)
+    ; since (w29 * w28) % (1 << i) == 1
+    ; let p = w29 * w28
+    ; the 0th bit of p is 1
+    ; 1..i-1 th bits are 0s
+
+    ; if the i th bit of p is 0
+    ; w29' = w29
+    ; consiser (w29' * w28)
+    ; == (w29 * w28)
+    ; since the 0th bit of p is 1
+    ; 1..i th bits are all 0s
+    ; so (w29' * w28) % (1 << i + 1) == 1
+
+    ; else i th bit is p is 1
+    ; w29' = w29 + (1 << i)
+    ; consiser (w29' * w28)
+    ; == w29 * w28 + (1 << i) * w28
+    ; == p + (1 << i) * w28
+    ; since w28 is odd
+    ; then the i th bit of p + (1 << i) * w28 must be zero
+    ; 1..i th bits are all 0s
+    ; so (w29' * w28) % (1 << i + 1) == 1
+
+    ; implicit i' = i + 1
+
+; now w29 * w28 = 1 (mod BASE)
 BN.SUB w29, w31, w29 ; w29 * w28 = -1 (mod BASE)
 JALR x0, x1, 0 ; return 
