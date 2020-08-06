@@ -1,4 +1,4 @@
-num_bits = 64
+num_bits = 32
 BASE = 2 ** num_bits
 
 def print_bin(num):
@@ -10,35 +10,39 @@ def d0inv(w28):
     w29 = 1
 
     for i in range(1, num_bits):
-
-        x = w29 * w28
-
         w1 = (w28 * w29) % BASE
-        w1 = w1 & w0
+        w29_ = w29
 
-        # q = x // 2 ** i
-        # assert ((w1 == 0) == (q % 2 == 0))
+        w1 = w1 & w0
+        w29 = w29 | w1
+        w0 = w0 * 2
+
+        assert(((w28 * w29_) % BASE) % (1 << i) == 1)
 
         if w1 == 0:
+            assert (w29_ == w29)
+
             # print_bin(x)
             # print_bin(1 << i)
             # print_bin(1 << (i + 1))
 
-            assert(x % (1 << i) == 1)
             # ==> 
-            assert(x % (1 << (i + 1)) == 1)
+            # assert(x % (1 << (i + 1)) == 1)
         else:
+            assert(w29 == w29_ + (1 << i))
+
             # print_bin(x)
             # print_bin(1 << i)
-            # # print_bin(1 << (i + 1))
+            # print_bin(1 << (i + 1))
             # print()
 
-            assert(x % (1 << i) == 1)
-            # ==>
-            assert((x + w28 * (1 << i)) % (1 << (i + 1)) == 1)
+            # assert(x % (1 << i) == 1)
+            # # ==>
+            # assert((x + w28 * (1 << i)) % w0 == 1)
 
-        w29 = w29 | w1
-        w0 = w0 * 2
+            # assert ((x + w28 * (1 << i)) % BASE == 
+            # (w29 * w28) % BASE)
+
         assert((w29 * w28) % w0 == 1)
 
     assert((w29 * w28) % BASE == 1)
