@@ -1,4 +1,6 @@
-num_bits = 32
+import sys
+
+num_bits = int(sys.argv[1])
 BASE = 2 ** num_bits
 
 def print_bin(num):
@@ -51,7 +53,7 @@ d0inv(2109612375)
 
 from z3 import *
 
-def export_to_smtlib(query):
+def export_to_smtlib(query, file_name):
     s = Solver()
     s.add(Not(query))
     print(s.sexpr())
@@ -69,19 +71,21 @@ query = Implies(
     ),
     URem(x, (1 << (i + 1))) == 1,
 )
-# prove(query)
+prove(query)
+
+# export_to_smtlib(query, "test1.smt2")
 
 w28 = BitVec("w28", num_bits)
 
-# query = Implies(
-#     And(
-#         0 <= i,
-#         i < num_bits,
-#         URem(x, (1 << i)) == 1,
-#         x & (1 << i) == 1,
-#         URem(w28, 2) == 1,
-#     ),
-#     URem(x + w28 * (1 << i), (1 << (i + 1))) == 1,
-# )
-# prove(query)
+query = Implies(
+    And(
+        0 <= i,
+        i < num_bits,
+        URem(x, (1 << i)) == 1,
+        x & (1 << i) == 1,
+        URem(w28, 2) == 1,
+    ),
+    URem(x + w28 * (1 << i), (1 << (i + 1))) == 1,
+)
+prove(query)
 
