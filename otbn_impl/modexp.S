@@ -539,15 +539,16 @@ LOOPI 256, 13 ; loop 256 times
 
     ; if the i th bit of p is 0
     ; w29' = w29
-    ; consiser (w29' * w28)
-    ; == (w29 * w28)
+    ; consiser w29' * w28
+    ; == w29 * w28
     ; since the 0th bit of p is 1
     ; 1..i th bits are all 0s
     ; so (w29' * w28) % (1 << i + 1) == 1
 
     ; else i th bit is p is 1
     ; w29' = w29 + (1 << i)
-    ; consiser (w29' * w28)
+    ; consiser w29' * w28
+    ; == (w29 + (1 << i)) * w28
     ; == w29 * w28 + (1 << i) * w28
     ; == p + (1 << i) * w28
     ; since w28 is odd
