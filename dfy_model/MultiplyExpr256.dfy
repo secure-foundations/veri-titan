@@ -191,7 +191,7 @@ module MultiplyExpr256 {
         assert (w29 * w28) % power(2, i) == 1 by {
             reveal power();
         }
-    
+
         while i < 32
             invariant 1 <= i <= 32;
             invariant (w29 * w28) % power(2, i) == 1;
@@ -200,23 +200,21 @@ module MultiplyExpr256 {
             var w1 := (w28 * w29) % UINT32_MAX;
             w1 := (w1 as bv32 & w0 as bv32) as int;
 
-            // ghost var w29_old := w29;
-            // w29 := (w29 as bv32 | w1 as bv32) as int;
+            ghost var w29_old := w29;
+            w29 := (w29 as bv32 | w1 as bv32) as int;
 
-            // if w1 == 0 {
-            //     assume w29 == w29_old;
+            if w1 == 0 {
+                assume w29_old == w29;
+                assert 0 <= i < 32;
+                assume power(2, i) <= UINT32_MAX;
+                assume (w28 * w29 % UINT32_MAX) as bv32 & power(2, i) as bv32 == 0;
 
-            //     assume (w29 * w28) % power(2, i + 1) == 1;
-
-            //     // d0inv_bv_lemma_1(w28 * w29, i) by {
-            //     //     assume false;
-            //     // };
-            //     // assume false;
-            // } else {
-            //     assume false;
-            // }
-
-            assume (w29 * w28) % power(2, i + 1) == 1;
+                d0inv_bv_lemma_1(w28 * w29, i);
+        
+                assume (w29 * w28) % power(2, i + 1) == 1;
+            } else {
+                assume (w29 * w28) % power(2, i + 1) == 1;
+            }
 
             w0 := if w0 <= UINT32_MAX / 2 then w0 * 2 else 0;
             i := i + 1;
