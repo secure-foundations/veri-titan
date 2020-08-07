@@ -21,12 +21,14 @@ def d0inv(w28):
 
         assert(((w28 * w29_) % BASE) % (1 << i) == 1)
 
+        # print_bin((w28 * w29_) % BASE)
+        # print_bin((w28 * w29) % BASE)
+        # print()
+        # print_bin(1 << i)
+        # print_bin(1 << (i + 1))
+
         if w1 == 0:
             assert (w29_ == w29)
-
-            # print_bin(x)
-            # print_bin(1 << i)
-            # print_bin(1 << (i + 1))
 
             # ==> 
             # assert(x % (1 << (i + 1)) == 1)
