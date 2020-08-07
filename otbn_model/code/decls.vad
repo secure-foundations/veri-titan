@@ -38,12 +38,16 @@ function shr32(x:uint32, amount:uint32):uint32 extern; // TODO: requires clause
 function sext32(x:uint32, size:int):uint32 extern;
 
 function xor256(a:Bignum, b:Bignum, st:bool, sb:uint32):Bignum extern;
-function add256(a:Bignum, b:Bignum, st:bool, sb:uint32):Bignum extern;
-function addc256(a:Bignum, b:Bignum, st:bool, sb:uint32, cf:bool):Bignum extern;
+function add256(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
+function addc256(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
+function addi256(a:Bignum, b:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
 
 function get_flags_group(fg:bool, flags:Flags):FlagsGroup extern;
-function update_flags(b:bool, f:Flags, fg:FlagsGroup):Flags extern;
+function update_fg(b:bool, f:Flags, fg:FlagsGroup):Flags extern;
 function cf(flags_group:FlagsGroup):bool extern;
+
+function fst(t:tuple(Bignum, FlagsGroup)):Bignum extern;
+function snd(t:tuple(Bignum, FlagsGroup)):FlagsGroup extern;
 
 var ok:bool {:state ok()};
 var stack:Stack {:state stack()};
@@ -144,6 +148,7 @@ operand_type reg256:Bignum :=
 | inout wmod | inout wrnd
 ;
 
+operand_type imm32:uint32 := const;
 operand_type imm32:uint32 := const;
 
 procedure Add32(inout dst:reg32, in src1:reg32, in src2:reg32)
@@ -268,7 +273,8 @@ procedure Add256(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:boo
     modifies
         flags;
     ensures
-        dst == add256(old(src1), old(src2), st, sb);
+        let result := add256(old(src1), old(src2), st, sb, get_flags_group(fg, old(flags)));
+        dst == fst(result) && flags == update_fg(fg, old(flags), snd(result));
 {
 assume false;
 }
@@ -280,11 +286,34 @@ procedure Addc256(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:bo
     modifies
         flags;
     ensures
-        let sum, new_flags_group := addc256(old(src1), old(src2), st, sb, get_flags_group(fg, old(flags))); dst == sum && flags == update_fg(fg, old(flags), new_flags_group);
+        let result := addc256(old(src1), old(src2), st, sb, get_flags_group(fg, old(flags)));
+        dst == fst(result) && flags == update_fg(fg, old(flags), snd(result));
 {
 assume false;
 }
 
+procedure Addi256(inout dst:reg256, in src:reg256, in imm:imm32, inline fg:bool)
+    {:instruction Ins256(ADDI256(dst, src, imm, fg))}
+    requires
+        imm < 1024;
+    modifies
+        flags;
+    ensures
+        let result := addi256(old(src), imm, get_flags_group(fg, old(flags)));
+        dst == fst(result) && flags == update_fg(fg, old(flags), snd(result));
+{
+    assume false;
+}
+
+//procedure Addm256(inout dst:reg256, in src1:reg256, in src2:reg256)
+//    {:instruction Ins256(ADDM256(dst, src1, src2))}
+//    reads
+//        wmod;
+//    ensures
+//        dst == addm256(old(src1), old(src2), old(wmod));
+//{
+//    assume false;
+//}
 
 
 

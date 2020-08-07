@@ -88,6 +88,9 @@ datatype state = state(
 	 stack: Stack,
 	 ok: bool)
 
+function fst(t:(Bignum, FlagsGroup)) : Bignum { t.0 }
+function snd(t:(Bignum, FlagsGroup)) : FlagsGroup { t.1 }
+
 predicate IsUInt32(i:int) { 0 <= i < 0x1_0000_0000 }
 predicate IsUInt256(i:int) { 0 <= i < 0x1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000 }
 
@@ -232,13 +235,17 @@ function sext32(x:uint32, sz:int) : uint32
   requires 0 < sz < 32;
     { BitwiseSignExtend(x, sz) }
 
-function add256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
+function add256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
 	requires sb < 32;
-		{ BignumAdd(x, y, st, sb) }
+{  var (sum, new_carry) := BignumAddCarry(x, y, st, sb, false); (sum, flags_group.(cf := new_carry))  }
 
 function addc256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
 	requires sb < 32;
-{  var (sum, new_carry) := BignumAddCarry(x, y, st, sb, cf(flags_group)); (sum, flags_group[cf := new_carry])  }
+{  var (sum, new_carry) := BignumAddCarry(x, y, st, sb, cf(flags_group)); (sum, flags_group.(cf := new_carry))  }
+
+function addi256(x:Bignum, imm:Bignum, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
+	requires imm < 1024;
+{  var (sum, new_carry) := BignumAddCarry(x, imm, false, 0, false); (sum, flags_group.(cf := new_carry))  }
 
 function xor256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;
