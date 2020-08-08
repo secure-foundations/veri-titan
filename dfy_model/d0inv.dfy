@@ -36,27 +36,15 @@ module d0inv {
                 assume w1 == 1;
                 ghost var x :int := w28 * w29_old;
 
-                calc ==> {
-                    true;
-                    {
-                        calc == {
-                            w29 * w28;
-                            {
-                                assume w29 == w29_old + power(2, i);
-                            }
-                            (w29_old + power(2, i)) * w28;
-                            w28 * w29_old + w28 * power(2, i);
-                            x + w28 * power(2, i);
-                        }
-                    }
-                    w29 * w28 == x + w28 * power(2, i);
-                    {
-                        assert (x + w28 * power(2, i)) % power(2, i + 1) == 1 by {
-                            d0inv_bv_lemma_2(x, w28, i);
-                        }    
-                    }
-                    (w29 * w28) % power(2, i + 1) == 1;
+                assert (x + w28 * power(2, i)) % power(2, i + 1) == 1 by {
+                    d0inv_bv_lemma_2(x, w28, i);
                 }
+
+                assert w29 * w28 == x + w28 * power(2, i) by {
+                    assume w29 == w29_old + power(2, i);
+                    d0inv_aux_lemma(x, w29, w29_old, w28, i);
+                }
+
                 assert (w29 * w28) % power(2, i + 1) == 1;
             }
 
@@ -70,6 +58,14 @@ module d0inv {
         }
 
         assert (w29 * w28) % power(2, 32) == 1;
+    }
+
+    lemma d0inv_aux_lemma(x: int, w29: int, w29_old: int, w28: int, i: nat)
+        requires w29 == w29_old + power(2, i);
+        requires x == w28 * w29_old;
+        ensures w29 * w28 == x + w28 * power(2, i);
+    {
+        assert w29 * w28 == x + w28 * power(2, i);
     }
 
     lemma power_2_bounded_lemma(i: int)
