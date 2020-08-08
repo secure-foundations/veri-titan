@@ -212,7 +212,25 @@ module MultiplyExpr256 {
                 assume w29_old == w29;
                 d0inv_bv_lemma_1(w28 * w29, i);
             } else {
+                ghost var x :int := w28 * w29_old;
+                assume w1 == 1;
+	                
+				assert (x + w28 * power(2, i)) % power(2, i + 1) == 1 by {
+	                d0inv_bv_lemma_2(x, w28, i);
+                }
 
+                calc == {
+                	w29 as int * w28 as int;
+                	{
+                		assume w29 as int == w29_old as int + power(2, i);
+                		assume false; // having trouble with this step
+                	}
+                	(w29_old as int + power(2, i)) * w28 as int;
+                	w28 * w29_old + w28 * power(2, i);
+                	x + w28 * power(2, i);
+                }
+
+                // assert w29 * w28 == x + w28 * power(2, i);
                 assume (w29 * w28) % power(2, i + 1) == 1;
             }
 
@@ -239,11 +257,11 @@ module MultiplyExpr256 {
         requires (x % UINT32_MAX) as bv32 & power(2, i) as bv32 == 0;
         ensures x % power(2, i + 1) == 1;
 
-    lemma d0inv_bv_lemma_2(x: uint32, w28: uint32, i: int)
+    lemma d0inv_bv_lemma_2(x: int, w28: uint32, i: int)
         requires 0 <= i < 32;
         requires power(2, i) <= UINT32_MAX;
         requires x % power(2, i) == 1;
-        requires x as bv32 & power(2, i) as bv32 == 1;
+        requires (x % UINT32_MAX) as bv32 & power(2, i) as bv32 == 1;
         requires w28 % 2 == 1;
         ensures (x + w28 * power(2, i)) % power(2, i + 1) == 1;
 
