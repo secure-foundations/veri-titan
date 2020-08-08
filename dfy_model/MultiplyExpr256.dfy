@@ -188,11 +188,8 @@ module MultiplyExpr256 {
         var w29 : uint32 := 1;
         var i := 1;
         
-        assert (w29 * w28) % power(2, i) == 1 by {
-            reveal power();
-        }
-
-        assert w0 == power(2, i) by {
+        assert (w29 * w28) % power(2, i) == 1 
+	        && w0 == power(2, i) by {
             reveal power();
         }
 
@@ -212,26 +209,31 @@ module MultiplyExpr256 {
                 assume w29_old == w29;
                 d0inv_bv_lemma_1(w28 * w29, i);
             } else {
-                ghost var x :int := w28 * w29_old;
                 assume w1 == 1;
-	                
-				assert (x + w28 * power(2, i)) % power(2, i + 1) == 1 by {
-	                d0inv_bv_lemma_2(x, w28, i);
-                }
+                ghost var x :int := w28 * w29_old;
 
-                calc == {
-                	w29 as int * w28 as int;
+                calc ==> {
+                	true;
                 	{
-                		assume w29 as int == w29_old as int + power(2, i);
-                		assume false; // having trouble with this step
+						calc == {
+							w29 * w28;
+							{
+								assume w29 == w29_old + power(2, i);
+							}
+							(w29_old + power(2, i)) * w28;
+							w28 * w29_old + w28 * power(2, i);
+							x + w28 * power(2, i);
+						}
                 	}
-                	(w29_old as int + power(2, i)) * w28 as int;
-                	w28 * w29_old + w28 * power(2, i);
-                	x + w28 * power(2, i);
+                	w29 * w28 == x + w28 * power(2, i);
+                	{
+    					assert (x + w28 * power(2, i)) % power(2, i + 1) == 1 by {
+							d0inv_bv_lemma_2(x, w28, i);
+						}	
+                	}
+                	(w29 * w28) % power(2, i + 1) == 1;
                 }
-
-                // assert w29 * w28 == x + w28 * power(2, i);
-                assume (w29 * w28) % power(2, i + 1) == 1;
+                assert (w29 * w28) % power(2, i + 1) == 1;
             }
 
             if i != 31 {
