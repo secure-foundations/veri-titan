@@ -198,31 +198,30 @@ module MultiplyExpr256 {
 
         while i < 32
             invariant 1 <= i <= 32;
-            // invariant (w29 * w28) % power(2, i) == 1;
+            invariant (w29 * w28) % power(2, i) == 1;
             invariant i != 32 ==> w0 == power(2, i);
             decreases 32 - i;
         {
-            // var w1 := (w28 * w29) % UINT32_MAX;
-            // w1 := (w1 as bv32 & w0 as bv32) as int;
+            var w1 := (w28 * w29) % UINT32_MAX;
+            w1 := (w1 as bv32 & w0 as bv32) as int;
 
-            // ghost var w29_old := w29;
-            // w29 := (w29 as bv32 | w1 as bv32) as int;
+            ghost var w29_old := w29;
+            w29 := (w29 as bv32 | w1 as bv32) as int;
 
-            // if w1 == 0 {
-            //     assume w29_old == w29;
-            //     assume w0 == power(2, i);
+            if w1 == 0 {
+                assume w29_old == w29;
+                assume w0 == power(2, i);
+                d0inv_bv_lemma_1(w28 * w29, i);
 
-            //     d0inv_bv_lemma_1(w28 * w29, i);
-            // } else {
-            //     assume (w29 * w28) % power(2, i + 1) == 1;
-            // }
+            } else {
+                assume (w29 * w28) % power(2, i + 1) == 1;
+            }
 
             if i != 31 {
                 power_2_bounded_lemma(i + 1);
             }
 
             w0 := if i != 31 then power(2, i + 1) else 0;
-            // assert i != 31 ==> w0 == power(2, i);
             i := i + 1;
             assert i != 32 ==> w0 == power(2, i);
         }
