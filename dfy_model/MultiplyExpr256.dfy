@@ -192,36 +192,47 @@ module MultiplyExpr256 {
             reveal power();
         }
 
+        assert w0 == power(2, i) by {
+            reveal power();
+        }
+
         while i < 32
             invariant 1 <= i <= 32;
-            invariant (w29 * w28) % power(2, i) == 1;
+            // invariant (w29 * w28) % power(2, i) == 1;
+            invariant i != 32 ==> w0 == power(2, i);
             decreases 32 - i;
         {
-            var w1 := (w28 * w29) % UINT32_MAX;
-            w1 := (w1 as bv32 & w0 as bv32) as int;
+            // var w1 := (w28 * w29) % UINT32_MAX;
+            // w1 := (w1 as bv32 & w0 as bv32) as int;
 
-            ghost var w29_old := w29;
-            w29 := (w29 as bv32 | w1 as bv32) as int;
+            // ghost var w29_old := w29;
+            // w29 := (w29 as bv32 | w1 as bv32) as int;
 
-            if w1 == 0 {
-                assume w29_old == w29;
-                assert 0 <= i < 32;
-                assume power(2, i) <= UINT32_MAX;
-                assume (w28 * w29 % UINT32_MAX) as bv32 & power(2, i) as bv32 == 0;
+            // if w1 == 0 {
+            //     assume w29_old == w29;
+            //     assume w0 == power(2, i);
 
-                d0inv_bv_lemma_1(w28 * w29, i);
-        
-                assume (w29 * w28) % power(2, i + 1) == 1;
-            } else {
-                assume (w29 * w28) % power(2, i + 1) == 1;
+            //     d0inv_bv_lemma_1(w28 * w29, i);
+            // } else {
+            //     assume (w29 * w28) % power(2, i + 1) == 1;
+            // }
+
+            if i != 31 {
+                power_2_bounded_lemma(i + 1);
             }
 
-            w0 := if w0 <= UINT32_MAX / 2 then w0 * 2 else 0;
+            w0 := if i != 31 then power(2, i + 1) else 0;
+            // assert i != 31 ==> w0 == power(2, i);
             i := i + 1;
+            assert i != 32 ==> w0 == power(2, i);
         }
 
         // assert (w29 * w28) % power(2, 32) == 1;
     }
+
+    lemma power_2_bounded_lemma(i: int)
+        requires 0 <= i < 32;
+        ensures power(2, i) <= UINT32_MAX; 
 
     lemma d0inv_bv_lemma_1(x: int, i: int)
         requires 0 <= i < 32;
