@@ -210,10 +210,9 @@ module MultiplyExpr256 {
 
             if w1 == 0 {
                 assume w29_old == w29;
-                assume w0 == power(2, i);
                 d0inv_bv_lemma_1(w28 * w29, i);
-
             } else {
+
                 assume (w29 * w28) % power(2, i + 1) == 1;
             }
 
@@ -226,7 +225,7 @@ module MultiplyExpr256 {
             assert i != 32 ==> w0 == power(2, i);
         }
 
-        // assert (w29 * w28) % power(2, 32) == 1;
+        assert (w29 * w28) % power(2, 32) == 1;
     }
 
     lemma power_2_bounded_lemma(i: int)
