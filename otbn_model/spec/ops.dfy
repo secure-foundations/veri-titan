@@ -220,12 +220,6 @@ include "types.dfy"
 				if st == false then RightShift256(b, sb) else LeftShift256(b, sb)
 			}
 
-			function BignumAdd(a:Bignum, b:Bignum, st:bool, sb:uint32) : Bignum
-				requires sb < 32;
-			{
-			    BitsToBignum(BignumToBits(a) + BignumToBits(BignumShift(b, st, sb)))
-			}
-
 			function BignumAddCarry(a:Bignum, b:Bignum, st:bool, sb:uint32, cf:bool) : (Bignum, bool)
 				requires sb < 32;
 			{

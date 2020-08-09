@@ -237,15 +237,18 @@ function sext32(x:uint32, sz:int) : uint32
 
 function add256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
 	requires sb < 32;
-{  var (sum, new_carry) := BignumAddCarry(x, y, st, sb, false); (sum, flags_group.(cf := new_carry))  }
+{ var (sum, new_carry) := BignumAddCarry(x, y, st, sb, false); (sum, flags_group.(cf := new_carry))  }
 
 function addc256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
 	requires sb < 32;
-{  var (sum, new_carry) := BignumAddCarry(x, y, st, sb, cf(flags_group)); (sum, flags_group.(cf := new_carry))  }
+{ var (sum, new_carry) := BignumAddCarry(x, y, st, sb, cf(flags_group)); (sum, flags_group.(cf := new_carry))  }
 
 function addi256(x:Bignum, imm:Bignum, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
 	requires imm < 1024;
-{  var (sum, new_carry) := BignumAddCarry(x, imm, false, 0, false); (sum, flags_group.(cf := new_carry))  }
+{ var (sum, new_carry) := BignumAddCarry(x, imm, false, 0, false); (sum, flags_group.(cf := new_carry))  }
+
+function addm256(x:Bignum, y:Bignum, mod:Bignum) : Bignum
+{ var (sum, new_carry) := BignumAddCarry(x, y, false, 0, false); if sum >= mod then sum - mod else sum }
 
 function xor256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;

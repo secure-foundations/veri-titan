@@ -305,15 +305,15 @@ procedure Addi256(inout dst:reg256, in src:reg256, in imm:imm32, inline fg:bool)
     assume false;
 }
 
-//procedure Addm256(inout dst:reg256, in src1:reg256, in src2:reg256)
-//    {:instruction Ins256(ADDM256(dst, src1, src2))}
-//    reads
-//        wmod;
-//    ensures
-//        dst == addm256(old(src1), old(src2), old(wmod));
-//{
-//    assume false;
-//}
+procedure Addm256(inout dst:reg256, in src1:reg256, in src2:reg256)
+    {:instruction Ins256(ADDM256(dst, src1, src2))}
+    reads
+        wmod;
+    ensures
+        dst == addm256(old(src1), old(src2), old(wmod));
+{
+    assume false;
+}
 
 
 
