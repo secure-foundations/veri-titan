@@ -25,29 +25,27 @@ module d0inv {
         {
             var w1 :uint32 := (w28 * w29) % UINT32_MAX;
 
+            ghost var p :int := w1;
             ghost var w29_old := w29;
-            ghost var w1_old := w1;
 
             w1 := (w1 as bv32 & w0 as bv32) as uint32;
-
             w29 := (w29 as bv32 | w1 as bv32) as uint32;
 
             if w1 == 0 {
                 assume w29_old == w29;
                 d0inv_bv_lemma_1(w28 * w29, w0, i);
             } else {
-                assume w29 == w29_old + power(2, i);
-                assume w1 == w0;
+                // assume w29 == w29_old + power(2, i);
+                // assume w1 == w0;
 
-                // assert (w1_old as bv32 & w0 as bv32) as uint32 == w1;
-                // assume (w1_old as bv32 & w0 as bv32) == w1 as bv32;
-                // assert w1_old == (w28 * w29_old) % UINT32_MAX;
-                assume ((w28 * w29_old) % UINT32_MAX) as bv32 & w0 as bv32 == w1 as bv32;
+                assert p == (w28 * w29_old) % UINT32_MAX;
+                assert ((p as bv32) & w0 as bv32) as uint32 == w1;
 
-                assert (w29 * w28) % power(2, i + 1) == 1 by {
-                    assume false;
-                    // d0inv_aux_lemma(w29, w29_old, w28, w0, i);
-                }
+                assume false;
+                // assert (w29 * w28) % power(2, i + 1) == 1 by {
+                //     assume false;
+                //     d0inv_aux_lemma(p, w29, w29_old, w28, w0, i);
+                // }
             }
 
             if i != 31 {
@@ -63,21 +61,21 @@ module d0inv {
     }
 
     lemma d0inv_aux_lemma(p: int, w29: int, w29_old: int, w28: uint32, w0: uint32, i: nat)
-        requires p == w28 * w29_old;
+        requires p == (w28 * w29_old) % UINT32_MAX;
         requires w0 == power(2, i);
         requires w28 % 2 == 1;
-        requires p % w0 == 1;
-        requires (p % UINT32_MAX) as bv32 & w0 as bv32 == w0 as bv32;
+        requires w28 * w29_old % w0 == 1;
+        requires p as bv32 & w0 as bv32 == w0 as bv32;
 
         requires w29 == w29_old + w0;
         ensures (w29 * w28) % power(2, i + 1) == 1;
     {
-        assert w29 * w28 == p + w28 * w0 by {
+        assert w29 * w28 == w28 * w29_old + w28 * w0 by {
             assert w29 == w29_old + w0;
         }
 
-        assert (p + w28 * w0) % power(2, i + 1) == 1 by {
-            d0inv_bv_lemma_2(p, w28, w0, i);
+        assert (w28 * w29_old + w28 * w0) % power(2, i + 1) == 1 by {
+            d0inv_bv_lemma_2(w28 * w29_old, w28, w0, i);
         }
 
         assert (w29 * w28) % power(2, i + 1) == 1;
