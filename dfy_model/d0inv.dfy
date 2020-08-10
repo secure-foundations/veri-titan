@@ -61,16 +61,17 @@ module d0inv {
         requires ((w28 * w29_old) % UINT32_MAX) as bv32 & w0 as bv32 == w0 as bv32;
 
         requires w29 == w29_old + w0;
-        // ensures (w29 * w28) % power(2, i + 1) == 1;
+        ensures (w29 * w28) % power(2, i + 1) == 1;
     {
-        assert w29 * w28 == w28 * w29_old + w0;
+        assert w29 * w28 == w28 * w29_old + w28 * w0 by {
+            assert w29 == w29_old + w0;
+        }
 
         assert (w28 * w29_old + w28 * w0) % power(2, i + 1) == 1 by {
             d0inv_bv_lemma_2(w28 * w29_old, w28, w0, i);
         }
-        assume false;
 
-        // assert (w29 * w28) % power(2, i + 1) == 1;
+        assert (w29 * w28) % power(2, i + 1) == 1;
     }
 
     lemma power_2_bounded_lemma(i: int)
