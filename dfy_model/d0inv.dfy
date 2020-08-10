@@ -33,12 +33,13 @@ module d0inv {
                 assume w29_old == w29;
                 d0inv_bv_lemma_1(w28 * w29, i);
             } else {
-                assume w1 == 1;
                 assume w29 == w29_old + power(2, i);
+                assume w1 == power(2, i);
 
                 assert (w29 * w28) % power(2, i + 1) == 1 by {
-                    ghost var x :int := w28 * w29_old;
-                    d0inv_aux_lemma(w29, w29_old, w28, i);
+                    // ghost var x :int := w28 * w29_old;
+                    // d0inv_aux_lemma(w29, w29_old, w28, i);
+                    assume false;
                 }
             }
 
@@ -54,29 +55,29 @@ module d0inv {
         assert (w29 * w28) % power(2, 32) == 1;
     }
 
-    lemma d0inv_aux_lemma(w29: int, w29_old: int, w28: uint32, i: nat)
-        requires w29 == w29_old + power(2, i);
-        requires 0 <= i < 32;
-        requires power(2, i) <= UINT32_MAX;
-        requires (w28 * w29_old) % power(2, i) == 1;
-        requires ((w28 * w29_old) % UINT32_MAX) as bv32 & power(2, i) as bv32 == 1;
-        requires w28 % 2 == 1;
+    // lemma d0inv_aux_lemma(w29: int, w29_old: int, w28: uint32, i: nat)
+    //     requires w29 == w29_old + power(2, i);
+    //     requires 0 <= i < 32;
+    //     requires power(2, i) <= UINT32_MAX;
+    //     requires (w28 * w29_old) % power(2, i) == 1;
+    //     requires ((w28 * w29_old) % UINT32_MAX) as bv32 & power(2, i) as bv32 == power(2, i) as bv32;
+    //     requires w28 % 2 == 1;
 
-        ensures (w29 * w28) % power(2, i + 1) == 1;
-    {
-        assert w29 * w28 == w28 * w29_old + w28 * power(2, i);
+    //     ensures (w29 * w28) % power(2, i + 1) == 1;
+    // {
+    //     assert w29 * w28 == w28 * w29_old + w28 * power(2, i);
 
-        assert (w28 * w29_old + w28 * power(2, i)) % power(2, i + 1) == 1 by {
-            d0inv_bv_lemma_2(w28 * w29_old, w28, i);
-        }
+    //     assert (w28 * w29_old + w28 * power(2, i)) % power(2, i + 1) == 1 by {
+    //         d0inv_bv_lemma_2(w28 * w29_old, w28, i);
+    //     }
 
-        assert (w29 * w28) % power(2, i + 1) == 1;
-    }
+    //     assert (w29 * w28) % power(2, i + 1) == 1;
+    // }
 
     lemma power_2_bounded_lemma(i: int)
         requires 0 <= i < 32;
         ensures power(2, i) <= UINT32_MAX; 
-
+    
     lemma d0inv_bv_lemma_1(x: int, i: int)
         requires 0 <= i < 32;
         requires power(2, i) <= UINT32_MAX;
@@ -84,11 +85,11 @@ module d0inv {
         requires (x % UINT32_MAX) as bv32 & power(2, i) as bv32 == 0;
         ensures x % power(2, i + 1) == 1;
 
-    lemma d0inv_bv_lemma_2(x: int, w28: uint32, i: int)
+    lemma d0inv_bv_lemma_2(x: int, w28: uint32, w0: uint32, i: int)
         requires 0 <= i < 32;
-        requires power(2, i) <= UINT32_MAX;
-        requires x % power(2, i) == 1;
-        requires (x % UINT32_MAX) as bv32 & power(2, i) as bv32 == 1;
+        requires w0 == power(2, i);
+        requires x % w0 == 1;
+        requires (x % UINT32_MAX) as bv32 & w0 as bv32 == w0 as bv32;
         requires w28 % 2 == 1;
-        ensures (x + w28 * power(2, i)) % power(2, i + 1) == 1;
+        ensures (x + w28 * w0) % power(2, i + 1) == 1;
 }
