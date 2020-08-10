@@ -31,7 +31,7 @@ module d0inv {
 
             if w1 == 0 {
                 assume w29_old == w29;
-                d0inv_bv_lemma_1(w28 * w29, i);
+                d0inv_bv_lemma_1(w28 * w29, w0, i);
             } else {
                 assume w29 == w29_old + power(2, i);
                 assume w1 == power(2, i);
@@ -78,15 +78,13 @@ module d0inv {
         requires 0 <= i < 32;
         ensures power(2, i) <= UINT32_MAX; 
     
-    lemma d0inv_bv_lemma_1(x: int, i: int)
-        requires 0 <= i < 32;
-        requires power(2, i) <= UINT32_MAX;
-        requires x % power(2, i) == 1;
-        requires (x % UINT32_MAX) as bv32 & power(2, i) as bv32 == 0;
+    lemma {:axiom} d0inv_bv_lemma_1(x: int, w0: uint32, i: nat)
+        requires w0 == power(2, i);
+        requires x % w0 == 1;
+        requires (x % UINT32_MAX) as bv32 & w0 as bv32 == 0;
         ensures x % power(2, i + 1) == 1;
 
-    lemma d0inv_bv_lemma_2(x: int, w28: uint32, w0: uint32, i: int)
-        requires 0 <= i < 32;
+    lemma {:axiom} d0inv_bv_lemma_2(x: int, w28: uint32, w0: uint32, i: nat)
         requires w0 == power(2, i);
         requires x % w0 == 1;
         requires (x % UINT32_MAX) as bv32 & w0 as bv32 == w0 as bv32;
