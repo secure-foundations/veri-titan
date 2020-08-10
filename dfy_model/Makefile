@@ -56,6 +56,10 @@ ifdef PROFILE
 DAFNY_VERIFY += "/z3opt:smt.qi.profile=true" "/z3opt:smt.qi.profile_freq=100"
 endif
 
+ifdef NL
+DAFNY_VERIFY += /noNLarith
+endif
+
 CXX:=clang++
 
 CLEAR_FLYCHECK_FILES:=$(shell rm -f flycheck_*.dfy)
