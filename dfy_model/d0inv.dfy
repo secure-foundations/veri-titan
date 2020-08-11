@@ -35,17 +35,12 @@ module d0inv {
                 assume w29_old == w29;
                 d0inv_bv_lemma_1(w28 * w29, w0, i);
             } else {
-                // assume w29 == w29_old + power(2, i);
-                // assume w1 == w0;
+                assume w29 == w29_old + w0;
+                assume w1 == w0;
 
-                assert p == (w28 * w29_old) % UINT32_MAX;
-                assert ((p as bv32) & w0 as bv32) as uint32 == w1;
-
-                assume false;
-                // assert (w29 * w28) % power(2, i + 1) == 1 by {
-                //     assume false;
-                //     d0inv_aux_lemma(p, w29, w29_old, w28, w0, i);
-                // }
+                // assert p == (w28 * w29_old) % UINT32_MAX;
+                // assert (p as bv32 & w0 as bv32) as uint32 == w0;
+                d0inv_aux_lemma(p, w29, w29_old, w28, w0, i);
             }
 
             if i != 31 {
@@ -61,25 +56,39 @@ module d0inv {
     }
 
     lemma d0inv_aux_lemma(p: int, w29: int, w29_old: int, w28: uint32, w0: uint32, i: nat)
+        requires w29 == w29_old + w0;
+
         requires p == (w28 * w29_old) % UINT32_MAX;
         requires w0 == power(2, i);
         requires w28 % 2 == 1;
         requires w28 * w29_old % w0 == 1;
-        requires p as bv32 & w0 as bv32 == w0 as bv32;
+        requires (p as bv32 & w0 as bv32) as uint32 == w0;
 
-        requires w29 == w29_old + w0;
         ensures (w29 * w28) % power(2, i + 1) == 1;
     {
         assert w29 * w28 == w28 * w29_old + w28 * w0 by {
-            assert w29 == w29_old + w0;
+            d0inv_nl_aux_lemma(w29, w29_old, w28, w0);
         }
 
         assert (w28 * w29_old + w28 * w0) % power(2, i + 1) == 1 by {
+            assert p as bv32 & w0 as bv32 == w0 as bv32 by {
+                bv32_uint32_casting(p as bv32 & w0 as bv32, w0);
+            }
             d0inv_bv_lemma_2(w28 * w29_old, w28, w0, i);
         }
 
         assert (w29 * w28) % power(2, i + 1) == 1;
     }
+
+    lemma d0inv_nl_aux_lemma(w29: int, w29_old: int, w28: uint32, w0: uint32)
+        requires w29 == w29_old + w0;
+        ensures w29 * w28 == w28 * w29_old + w28 * w0;
+    {
+        assert true;
+    }
+
+    lemma bv32_uint32_casting(bvx: bv32, uintx: uint32)
+        ensures (bvx as uint32 == uintx) <==> (bvx == uintx as bv32);
 
     lemma power_2_bounded_lemma(i: int)
         requires 0 <= i < 32;
