@@ -29,14 +29,22 @@ module d0inv {
             ghost var p := w1;
             ghost var w29_old := w29;
 
-            w1 := (w1 as bv256 & w0 as bv256) as uint256;
-            w29 := (w29 as bv256 | w1 as bv256) as uint256;
+            w1 := and_256(w1, w0);
+            w29 := or_256(w29, w1);
 
             // and_single_bit_lemma(p, w1, w0, i);
 
             if w1 == 0 {
-                // assume w29 == w29_old;
-                assert (p as bv256 & w0 as bv256) as uint256 == 0;
+                assume w29 == w29_old;
+                // assert (p as bv256 & w0 as bv256) as uint256 == 0;
+                ghost var x := w28 * w29;
+
+                assert x % power(2, i + 1) == 1 by {
+                    // assert w0 == power(2, i);
+                    // assume x % w0 == 1;
+                    // assume and_256(x % UINT256_MAX, w0) == 0;
+                    d0inv_bv_lemma_1(x, w0, i);
+                }
 
                 // d0inv_aux_lemma_1(p, w29, w29_old, w28, w0, i);
 
@@ -63,6 +71,17 @@ module d0inv {
         }
 
         // assert (w29 * w28) % power(2, 256) == 1;
+    }
+
+
+    function method {:opaque} and_256(a:uint256, b:uint256) : uint256
+    {
+        (a as bv256 & b as bv256) as uint256
+    }
+
+    function method {:opaque} or_256(a:uint256, b:uint256) : uint256
+    {
+        (a as bv256 | b as bv256) as uint256
     }
 
     lemma d0inv_aux_lemma_1(p: int, w29: int, w29_old: int, w28: uint256, w0: uint256, i: nat)
@@ -136,7 +155,7 @@ module d0inv {
     lemma {:axiom} d0inv_bv_lemma_1(x: int, w0: uint256, i: nat)
         requires w0 == power(2, i);
         requires x % w0 == 1;
-        requires (x % UINT256_MAX) as bv256 & w0 as bv256 == 0;
+        requires and_256(x % UINT256_MAX, w0) == 0;
         ensures x % power(2, i + 1) == 1;
 
     lemma {:axiom} d0inv_bv_lemma_2(x: int, w28: uint256, w0: uint256, i: nat)
