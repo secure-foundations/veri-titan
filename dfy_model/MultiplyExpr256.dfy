@@ -1,7 +1,9 @@
 include "NativeTypes.dfy"
+include "Powers.dfy"
 
 module MultiplyExpr256 {
     import opened NativeTypes
+    import opened Powers
 
     type wide_register = wr:seq<uint64> |
         |wr| == 4
