@@ -41,7 +41,7 @@ def bv2int_test(bits):
                     lh == x & mask,
                     uh == LShR(x, shift),
                 ),
-                BV2Int(uh * half + lh) == BV2Int(y * z),
+                uh * half + lh == y * z,
             )
     prove(query)
 
@@ -154,7 +154,6 @@ def misc_test():
     )
     prove(query)
 
-
 def mul(x, y, bits):
     assert(x.size() == y.size() == bits)
     return x * y
@@ -172,7 +171,7 @@ def div(x, y):
 def rem(x, y):
     return x % y
 
-full_bits = 8
+full_bits = 32
 half_bits = int(full_bits / 2)
 
 x = BitVec('x', full_bits)
@@ -193,14 +192,14 @@ prove(query)
 # x = Int("x")
 # y = Int("y")
 
-# query = Implies(
-#     And(
-#         y > 0,
-#         x > y,
-#     ),
-#     rem(x, y) == x - mul(div(x, y), y),
-# )
-# prove(query)
+query = Implies(
+    And(
+        y > 0,
+        x > y,
+    ),
+    rem(x, y) == x - mul(div(x, y), y, full_bits),
+)
+prove(query)
 
 # print(mulhu(xlo, ylo, half_bits))
 
@@ -221,4 +220,4 @@ query = (
         )
     )
 )
-prove(query)
+# prove(query)
