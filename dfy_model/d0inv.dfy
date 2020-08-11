@@ -25,11 +25,13 @@ module d0inv {
         {
             var w1 :uint32 := (w28 * w29) % UINT32_MAX;
 
-            ghost var p :int := w1;
+            ghost var p := w1;
             ghost var w29_old := w29;
 
             w1 := (w1 as bv32 & w0 as bv32) as uint32;
             w29 := (w29 as bv32 | w1 as bv32) as uint32;
+
+            and_single_bit_lemma(p, w1, w0, i);
 
             if w1 == 0 {
                 or_zero_nop_lemma(w29_old, w1);
@@ -37,7 +39,7 @@ module d0inv {
                 d0inv_bv_lemma_1(w28 * w29, w0, i);
             } else {
                 assume w29 == w29_old + w0;
-                assume w1 == w0;
+                assert w1 == w0;
 
                 // assert p == (w28 * w29_old) % UINT32_MAX;
                 // assert (p as bv32 & w0 as bv32) as uint32 == w0;
@@ -55,6 +57,11 @@ module d0inv {
 
         assert (w29 * w28) % power(2, 32) == 1;
     }
+
+    lemma {:axiom} and_single_bit_lemma(x: uint32, x': uint32, w0: uint32, i: nat)
+        requires w0 == power(2, i);
+        requires x' == (x as bv32 & w0 as bv32) as uint32;
+        ensures x' == power(2, i) || x' == 0;
 
     lemma or_zero_nop_lemma(x: uint32, z: uint32)
         requires z == 0;
@@ -99,7 +106,7 @@ module d0inv {
         assert true;
     }
 
-    lemma bv32_uint32_casting(bvx: bv32, uintx: uint32)
+    lemma {:axiom} bv32_uint32_casting(bvx: bv32, uintx: uint32)
         ensures (bvx as uint32 == uintx) <==> (bvx == uintx as bv32);
 
     lemma power_2_bounded_lemma(i: int)
