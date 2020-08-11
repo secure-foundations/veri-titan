@@ -59,6 +59,13 @@ module d0inv {
     lemma or_zero_nop_lemma(x: uint32, z: uint32)
         requires z == 0;
         ensures (x as bv32 | z as bv32) as uint32 == x;
+    {
+        assert z as bv32 == 0 by {
+            bv32_uint32_casting(z as bv32, z);
+        }
+        assert x as bv32 | z as bv32 == x as bv32;
+        bv32_uint32_casting(x as bv32, x);
+    }
 
     lemma d0inv_aux_lemma(p: int, w29: int, w29_old: int, w28: uint32, w0: uint32, i: nat)
         requires w29 == w29_old + w0;
