@@ -84,7 +84,7 @@ query = Implies(
         0 <= i,
         i < num_bits,
         URem(x, (1 << i)) == 1,
-        x & (1 << i) == 1,
+        x & (1 << i) == (1 << i),
         URem(w28, 2) == 1,
     ),
     URem(x + w28 * (1 << i), (1 << (i + 1))) == 1,
