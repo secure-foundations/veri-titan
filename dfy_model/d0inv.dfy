@@ -32,7 +32,8 @@ module d0inv {
             w29 := (w29 as bv32 | w1 as bv32) as uint32;
 
             if w1 == 0 {
-                assume w29_old == w29;
+                or_zero_nop_lemma(w29_old, w1);
+                // assert w29_old == w29;
                 d0inv_bv_lemma_1(w28 * w29, w0, i);
             } else {
                 assume w29 == w29_old + w0;
@@ -54,6 +55,10 @@ module d0inv {
 
         assert (w29 * w28) % power(2, 32) == 1;
     }
+
+    lemma or_zero_nop_lemma(x: uint32, z: uint32)
+        requires z == 0;
+        ensures (x as bv32 | z as bv32) as uint32 == x;
 
     lemma d0inv_aux_lemma(p: int, w29: int, w29_old: int, w28: uint32, w0: uint32, i: nat)
         requires w29 == w29_old + w0;
