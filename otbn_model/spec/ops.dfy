@@ -4,6 +4,10 @@ include "types.dfy"
 
 		import opened types
 
+		function pow2(n:nat) : nat {
+			if n == 0 then 1 else 2 * pow2(n-1)
+		}
+
 			///////////////////////////
 			// Operations on bv32s
 			///////////////////////////
@@ -195,6 +199,10 @@ include "types.dfy"
 			////////////////////////
 			// Operations on Bignums
 			////////////////////////
+
+			function GetQuarterWord(x:Bignum, qw:int) : Bignum
+				requires 0 <= wq <= 3;
+			{ x / pow2(5) * wq % pow2(5) }
 			
 			function RightShift256(x:Bignum, amount:uint32) : Bignum
 				requires amount < 32;
@@ -214,6 +222,18 @@ include "types.dfy"
 			    BitsToBignum(BignumToBits(a) ^ BignumToBits(BignumShift(b, st, sb)))
 			}
 
+			function BignumXor(a:Bignum, b:Bignum, st:bool, sb:uint32) : Bignum
+				requires sb < 32;
+			{
+			    BitsToBignum(BignumToBits(a) | BignumToBits(BignumShift(b, st, sb)))
+			}
+			
+			function BignumAnd(a:Bignum, b:Bignum, st:bool, sb:uint32) : Bignum
+				requires sb < 32;
+			{
+			    BitsToBignum(BignumToBits(a) & BignumToBits(BignumShift(b, st, sb)))
+			}
+			
 			function BignumShift(b:Bignum, st:bool, sb:uint32) : Bignum
 				requires sb < 32;
 			{

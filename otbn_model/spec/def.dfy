@@ -217,7 +217,7 @@ function not32(x:uint32) : uint32 { BitwiseNot(x) }
 
 function rol32(x:uint32, amount:uint32) : uint32
     requires 0 <= amount < 32;
-    { RotateLeft(x, amount) }
+{ RotateLeft(x, amount) }
 
 function ror32(x:uint32, amount:uint32) : uint32
     requires 0 <= amount < 32;
@@ -250,8 +250,23 @@ function addi256(x:Bignum, imm:Bignum, flags_group:FlagsGroup) : (Bignum, FlagsG
 function addm256(x:Bignum, y:Bignum, mod:Bignum) : Bignum
 { var (sum, new_carry) := BignumAddCarry(x, y, false, 0, false); if sum >= mod then sum - mod else sum }
 
+function sub256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
+	requires sb < 32;
+{ var (sum, new_carry) := BignumAddCarry(x, -y, st, sb, cf(flags_group)); (sum, flags_group.(cf := new_carry))  }
+
+function mulqacc256(x:Bignum, qx:int, y:Bignum, qy:int, shift:int, macc:Bignum) : Bignum
+	requires shift <= 3; 0 <= qx <= 3; 0 <= qy <= 3;
+{ var result := LeftShift256(GetQuarterWord(x, qx) * GetQuarterWord(y, qy), shift * 64); if zero then result else macc + result }
+	
 function xor256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;
 		{ BignumXor(x, y, st, sb) }
 
+function or256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
+	requires sb < 32;
+		{ BignumOr(x, y, st, sb) }
+		
+function and256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
+	requires sb < 32;
+		{ BignumAnd(x, y, st, sb) }
 }
