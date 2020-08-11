@@ -201,8 +201,8 @@ include "types.dfy"
 			////////////////////////
 
 			function GetQuarterWord(x:Bignum, qw:int) : Bignum
-				requires 0 <= wq <= 3;
-			{ x / pow2(5) * wq % pow2(5) }
+				requires 0 <= qw <= 3;
+			{ x / pow2(5) * qw % pow2(5) }
 			
 			function RightShift256(x:Bignum, amount:uint32) : Bignum
 				requires amount < 32;
@@ -222,7 +222,7 @@ include "types.dfy"
 			    BitsToBignum(BignumToBits(a) ^ BignumToBits(BignumShift(b, st, sb)))
 			}
 
-			function BignumXor(a:Bignum, b:Bignum, st:bool, sb:uint32) : Bignum
+			function BignumOr(a:Bignum, b:Bignum, st:bool, sb:uint32) : Bignum
 				requires sb < 32;
 			{
 			    BitsToBignum(BignumToBits(a) | BignumToBits(BignumShift(b, st, sb)))

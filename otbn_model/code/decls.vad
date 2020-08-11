@@ -38,9 +38,14 @@ function shr32(x:uint32, amount:uint32):uint32 extern; // TODO: requires clause
 function sext32(x:uint32, size:int):uint32 extern;
 
 function xor256(a:Bignum, b:Bignum, st:bool, sb:uint32):Bignum extern;
+function or256(a:Bignum, b:Bignum, st:bool, sb:uint32):Bignum extern;
+function and256(a:Bignum, b:Bignum, st:bool, sb:uint32):Bignum extern;
 function add256(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
 function addc256(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
 function addi256(a:Bignum, b:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
+function addm256(a:Bignum, b:Bignum, mod:Bignum):Bignum extern;
+function sub256(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
+function mulqacc256(a:Bignum, qa:uint32, b:Bignum, qb:uint32, shift:uint32, zero:bool, macc:Bignum):Bignum extern;
 
 function get_flags_group(fg:bool, flags:Flags):FlagsGroup extern;
 function update_fg(b:bool, f:Flags, fg:FlagsGroup):Flags extern;
@@ -88,42 +93,42 @@ var x31:uint32 {:state reg32(Gpr(31))};
 
 var rnd:uint32 {:state reg32(Rnd)};
 
-var w0:Bignum {:state Bignum(0)};
-var w1:Bignum {:state Bignum(1)};
-var w2:Bignum {:state Bignum(2)};
-var w3:Bignum {:state Bignum(3)};
-var w4:Bignum {:state Bignum(4)};
-var w5:Bignum {:state Bignum(5)};
-var w6:Bignum {:state Bignum(6)};
-var w7:Bignum {:state Bignum(7)};
-var w8:Bignum {:state Bignum(8)};
-var w9:Bignum {:state Bignum(9)};
-var w10:Bignum {:state Bignum(10)};
-var w11:Bignum {:state Bignum(11)};
-var w12:Bignum {:state Bignum(12)};
-var w13:Bignum {:state Bignum(13)};
-var w14:Bignum {:state Bignum(14)};
-var w15:Bignum {:state Bignum(15)};
-var w16:Bignum {:state Bignum(16)};
-var w17:Bignum {:state Bignum(17)};
-var w18:Bignum {:state Bignum(18)};
-var w19:Bignum {:state Bignum(19)};
-var w20:Bignum {:state Bignum(20)};
-var w21:Bignum {:state Bignum(21)};
-var w22:Bignum {:state Bignum(22)};
-var w23:Bignum {:state Bignum(23)};
-var w24:Bignum {:state Bignum(24)};
-var w25:Bignum {:state Bignum(25)};
-var w26:Bignum {:state Bignum(26)};
-var w27:Bignum {:state Bignum(27)};
-var w28:Bignum {:state Bignum(28)};
-var w29:Bignum {:state Bignum(29)};
-var w30:Bignum {:state Bignum(30)};
-var w31:Bignum {:state Bignum(31)};
+var w0:Bignum {:state reg256(Wdr(0))};
+var w1:Bignum {:state reg256(Wdr(1))};
+var w2:Bignum {:state reg256(Wdr(2))};
+var w3:Bignum {:state reg256(Wdr(3))};
+var w4:Bignum {:state reg256(Wdr(4))};
+var w5:Bignum {:state reg256(Wdr(5))};
+var w6:Bignum {:state reg256(Wdr(6))};
+var w7:Bignum {:state reg256(Wdr(7))};
+var w8:Bignum {:state reg256(Wdr(8))};
+var w9:Bignum {:state reg256(Wdr(9))};
+var w10:Bignum {:state reg256(Wdr(10))};
+var w11:Bignum {:state reg256(Wdr(11))};
+var w12:Bignum {:state reg256(Wdr(12))};
+var w13:Bignum {:state reg256(Wdr(13))};
+var w14:Bignum {:state reg256(Wdr(14))};
+var w15:Bignum {:state reg256(Wdr(15))};
+var w16:Bignum {:state reg256(Wdr(16))};
+var w17:Bignum {:state reg256(Wdr(17))};
+var w18:Bignum {:state reg256(Wdr(18))};
+var w19:Bignum {:state reg256(Wdr(19))};
+var w20:Bignum {:state reg256(Wdr(20))};
+var w21:Bignum {:state reg256(Wdr(21))};
+var w22:Bignum {:state reg256(Wdr(22))};
+var w23:Bignum {:state reg256(Wdr(23))};
+var w24:Bignum {:state reg256(Wdr(24))};
+var w25:Bignum {:state reg256(Wdr(25))};
+var w26:Bignum {:state reg256(Wdr(26))};
+var w27:Bignum {:state reg256(Wdr(27))};
+var w28:Bignum {:state reg256(Wdr(28))};
+var w29:Bignum {:state reg256(Wdr(29))};
+var w30:Bignum {:state reg256(Wdr(30))};
+var w31:Bignum {:state reg256(Wdr(31))};
 
-var wmod:Bignum {:state Bignum(WMod)};
-var wrnd:Bignum {:state Bignum(WRnd)};
-var wacc:Bignum {:state Bignum(WAcc)};
+var wmod:Bignum {:state reg256(WMod)};
+var wrnd:Bignum {:state reg256(WRnd)};
+var wacc:Bignum {:state reg256(WAcc)};
 
 operand_type reg32:uint32 :=
 | inout x0 | inout x1 | inout x2 | inout x3
@@ -336,8 +341,7 @@ procedure Or256(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:bool
     modifies
         flags;
     ensures
-        let result := or256(old(src1), old(src2), st, sb, get_flags_group(fg, old(flags)));
-        dst == fst(result) && flags == update_fg(fg, old(flags), snd(result));
+        dst == or256(old(src1), old(src2), st, sb);
 {
 assume false;
 }
@@ -349,22 +353,21 @@ procedure And256(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:boo
     modifies
         flags;
     ensures
-        let result := and256(old(src1), old(src2), st, sb, get_flags_group(fg, old(flags)));
-        dst == fst(result) && flags == update_fg(fg, old(flags), snd(result));
+        dst == and256(old(src1), old(src2), st, sb);
 {
 assume false;
 }
 
 procedure Mulqacc256(inline zero: bool, in src1:reg256, in qwsel1:imm32, in src2:reg256, in qwsel2:imm32, in shift:imm32)
-    {:instruction Ins256(MULQACC256(zero, src1, qsel1, src2, qsel2, shift)}
+    {:instruction Ins256(MULQACC256(zero, src1, qwsel1, src2, qwsel2, shift))}
     requires
-        qwsel1 >= 3;
-        qwsel2 >= 3;
-        shift >= 3;
+        qwsel1 <= 3;
+        qwsel2 <= 3;
+        shift <= 3;
     modifies
         wacc;
     ensures
-        wacc == mulacc256(src1, qwsel1, src2, qsel2, shift, zero);
+        wacc == mulqacc256(src1, qwsel1, src2, qwsel2, shift, zero, old(wacc));
 {
     assume false;
 }

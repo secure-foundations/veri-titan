@@ -18,6 +18,7 @@ datatype Reg256 =
 | Wdr(w:int)
 | WMod // Wide modulo register
 | WRnd // Wide random number
+| WAcc // Wide accumulator
 
 datatype ins32 =
 | ADD32(xrd:Reg32, xrs1:Reg32, xrs2:Reg32)
@@ -47,7 +48,7 @@ datatype ins256 =
 | ADDC256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
 | ADDI256(wrd:Reg256, wrs1:Reg256, imm:Bignum, flg:bool)
 | ADDM256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256)
-| MULQACC
+| MULQACC256(zero:bool, wrs1:Reg256, qwsel1:uint32, wrs2:Reg256, qwsel2:uint32, shift:uint32)
 | MULH256(wrd:Reg256, wrs1:Reg256, hw1:bool, wrs2:Reg256, hw2:bool)
 | SUB256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
 | SUBB256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
@@ -63,7 +64,7 @@ datatype ins256 =
 | CMPB256(wrs1:Reg256, wrs2:Reg256, flg:bool)
 | LID256 // TODO
 | SID256 // TODO
-| MOV256(wrd:Reg256, wrs:Bignum)
+| MOV256(wrd:Reg256, wrs:Reg256)
 | MOVR256 // TODO
 | WSRRS256 // TODO
 | WSRRW256 // TODO
@@ -254,9 +255,11 @@ function sub256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) 
 	requires sb < 32;
 { var (sum, new_carry) := BignumAddCarry(x, -y, st, sb, cf(flags_group)); (sum, flags_group.(cf := new_carry))  }
 
-function mulqacc256(x:Bignum, qx:int, y:Bignum, qy:int, shift:int, macc:Bignum) : Bignum
-	requires shift <= 3; 0 <= qx <= 3; 0 <= qy <= 3;
-{ var result := LeftShift256(GetQuarterWord(x, qx) * GetQuarterWord(y, qy), shift * 64); if zero then result else macc + result }
+function mulqacc256(x:Bignum, qx:int, y:Bignum, qy:int, shift:int, zero:bool, wacc:Bignum) : Bignum
+	requires 0 <= shift <= 3;
+	requires 0 <= qx <= 3;
+	requires 0 <= qy <= 3;
+{ var result := LeftShift256(GetQuarterWord(x, qx) * GetQuarterWord(y, qy), shift * 64); if zero then result else wacc + result }
 	
 function xor256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;
