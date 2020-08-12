@@ -1,9 +1,13 @@
 include "NativeTypes.dfy"
 include "Powers.dfy"
+include "Congruences.dfy"
 
 module d0inv {
     import opened NativeTypes
     import opened Powers
+    import opened Congruences
+
+ 	const BASE256 :int := power(2, 256);
 
     method d0inv(w28: uint256)
         requires w28 % 2 == 1;
@@ -64,14 +68,45 @@ module d0inv {
             assert i != 256 ==> w0 == power(2, i);
 
             if i == 1 {
-                assert w0 == 2 by {
-                    reveal power();
-                }
+                reveal power();
+                assert w0 == 2;
             }
         }
 
-        assert (w29 * w28) % power(2, 256) == 1;
+        ghost var w29_old := w29;
+        w29 := sub_from_zero(w29);
     }
+
+    lemma mod_inv_lemma(w29: int, w29_old: int, w28: int)
+        requires (w29_old * w28) % BASE256 == 1;
+        requires w29_old + w29 == BASE256;
+        ensures cong(w29 * w28, -1, BASE256);
+    {
+        calc ==> {
+            (w29_old * w28) % BASE256 == 1;
+            {
+                reveal cong();
+            }
+            cong(w29_old * w28, 1, BASE256);
+            {
+                assert w29_old == BASE256 - w29;
+            }
+            cong((BASE256 - w29) * w28, 1, BASE256);
+            cong(BASE256 * w28 - w29 * w28, 1, BASE256);
+            {
+                assume cong(-BASE256 * w28, 0, BASE256);
+                cong_add_lemma_2(BASE256 * w28 - w29 * w28, 1, -BASE256 * w28, 0, BASE256);
+            }
+            cong(-w29 * w28, 1, BASE256);
+            {
+                cong_mul_lemma_1(-w29 * w28, 1, -1, BASE256);
+            }
+            cong(w29 * w28, -1, BASE256);
+        }
+    }
+
+    method {:opaque} sub_from_zero(x: uint256) returns (y: uint256)
+        ensures x + y == BASE256;
 
     function method {:opaque} and_256(a:uint256, b:uint256) : uint256
     {
@@ -83,13 +118,6 @@ module d0inv {
         (a as bv256 | b as bv256) as uint256
     }
     
-    // lemma mod_max_nop_lemma(x: uint256)
-    //     requires 
-    //     ensures x % UINT256_MAX == x;
-    // {
-    //     assert x <= 
-    // }
-
     lemma {:axiom} odd_and_one_lemma(x: uint256) 
         requires x % 2 == 1;
         ensures and_256(x, 1) == 1;
