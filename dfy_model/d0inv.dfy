@@ -8,21 +8,16 @@ module d0inv {
     method d0inv(w28: uint256)
         requires w28 % 2 == 1;
     {
-        var w0: uint256 := 2;
+        var w0: uint256 := 1;
         var w29 : uint256 := 1;
-        var i := 1;
+        var i := 0;
         
-        assert (w29 * w28) % power(2, i) == 1 
-            && w0 == power(2, i) by {
-            reveal power();
-        }
-
-
         while i < 256
-            invariant 1 <= i <= 256;
-            invariant (w29 * w28) % power(2, i) == 1;
-            invariant i != 256 ==> w0 == power(2, i);
-            invariant w29 < power(2, i);
+            invariant 0 <= i <= 256;
+            invariant (i == 0) ==> w29 == 1;
+            invariant (i > 0) ==> ((w29 * w28) % power(2, i) == 1);
+            invariant (i > 0) ==> (w29 < power(2, i));
+            invariant (0 < i < 256) ==> w0 == power(2, i);
             decreases 256 - i;
         {
             var w1 :uint256 := (w28 * w29) % UINT256_MAX;
@@ -33,18 +28,20 @@ module d0inv {
             w1 := and_256(w1, w0);
             w29 := or_256(w29, w1);
 
-            and_single_bit_lemma(w1, w1_old, w0, i);
+            if i > 0 {
+                and_single_bit_lemma(w1, w1_old, w0, i);
 
-            if w1 == 0 {
-                or_zero_nop_lemma(w29_old, w1);
-                d0inv_bv_lemma_1(w28 * w29, w0, i);
-                assert w29 < power(2, i + 1) by {
-                    reveal power();
+                if w1 == 0 {
+                    or_zero_nop_lemma(w29_old, w1);
+                    d0inv_bv_lemma_1(w28 * w29, w0, i);
+                    assert w29 < power(2, i + 1) by {
+                        reveal power();
+                    }
+                } else {
+                    or_single_bit_add_lemma(w29, w29_old, w0, i);
+                    d0inv_bv_lemma_2(w28 * w29_old, w28, w0, i);
                 }
-            } else {
-                or_single_bit_add_lemma(w29, w29_old, w0, i);
-                d0inv_bv_lemma_2(w28 * w29_old, w28, w0, i);
-            }
+            } 
 
             if i != 255 {
                 power_2_bounded_lemma(i + 1);
@@ -53,6 +50,14 @@ module d0inv {
             w0 := if i != 255 then power(2, i + 1) else 0;
             i := i + 1;
             assert i != 256 ==> w0 == power(2, i);
+
+            if i == 1 {
+                assert w0 == 2 by {
+                    reveal power();
+                }
+                assert w29_old == 1;
+                assume w29 == 1;
+            }
         }
 
         assert (w29 * w28) % power(2, 256) == 1;
