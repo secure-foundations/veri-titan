@@ -9,12 +9,13 @@ module d0inv {
 
  	const BASE256 :int := power(2, 256);
 
-    method d0inv(w28: uint256)
+    method d0inv(w28: uint256) returns (w29 : uint256)
         requires w28 % 2 == 1;
         requires w28 < UINT256_MAX;
+        ensures cong(w29 * w28, -1, BASE256);
     {
         var w0: uint256 := 1;
-        var w29 : uint256 := 1;
+        w29 := 1;
         var i := 0;
         
         assert w0 == power(2, 0) by {
@@ -75,6 +76,7 @@ module d0inv {
 
         ghost var w29_old := w29;
         w29 := sub_from_zero(w29);
+        mod_inv_lemma(w29, w29_old, w28);
     }
 
     lemma mod_inv_lemma(w29: int, w29_old: int, w28: int)
@@ -94,7 +96,10 @@ module d0inv {
             cong((BASE256 - w29) * w28, 1, BASE256);
             cong(BASE256 * w28 - w29 * w28, 1, BASE256);
             {
-                assume cong(-BASE256 * w28, 0, BASE256);
+                assert cong(-BASE256 * w28, 0, BASE256) by {
+                    mod_mul_lemma(w28, -BASE256, BASE256);
+                    reveal cong();
+                }
                 cong_add_lemma_2(BASE256 * w28 - w29 * w28, 1, -BASE256 * w28, 0, BASE256);
             }
             cong(-w29 * w28, 1, BASE256);
