@@ -7,6 +7,7 @@ module d0inv {
 
     method d0inv(w28: uint256)
         requires w28 % 2 == 1;
+        requires w28 < UINT256_MAX;
     {
         var w0: uint256 := 1;
         var w29 : uint256 := 1;
@@ -33,7 +34,12 @@ module d0inv {
             w29 := or_256(w29, w1);
 
             if i == 0 {
-                assume w29 == 1;
+                assert w1_old == w28 * w29_old;
+                odd_and_one_lemma(w1_old);
+                assert w29 == or_256(1, 1);
+                assert w29 == 1 by {
+                    reveal or_256();
+                }
             } else {
                 and_single_bit_lemma(w1, w1_old, w0, i);
 
@@ -76,6 +82,17 @@ module d0inv {
     {
         (a as bv256 | b as bv256) as uint256
     }
+    
+    // lemma mod_max_nop_lemma(x: uint256)
+    //     requires 
+    //     ensures x % UINT256_MAX == x;
+    // {
+    //     assert x <= 
+    // }
+
+    lemma {:axiom} odd_and_one_lemma(x: uint256) 
+        requires x % 2 == 1;
+        ensures and_256(x, 1) == 1;
 
     lemma {:axiom} and_single_bit_lemma(x': uint256, x: uint256, w0: uint256, i: nat)
         requires w0 == power(2, i);
