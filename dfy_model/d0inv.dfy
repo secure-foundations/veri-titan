@@ -12,12 +12,16 @@ module d0inv {
         var w29 : uint256 := 1;
         var i := 0;
         
+        assert w0 == power(2, 0) by {
+            reveal power();
+        }
+
         while i < 256
             invariant 0 <= i <= 256;
             invariant (i == 0) ==> w29 == 1;
             invariant (i > 0) ==> ((w29 * w28) % power(2, i) == 1);
             invariant (i > 0) ==> (w29 < power(2, i));
-            invariant (0 < i < 256) ==> w0 == power(2, i);
+            invariant (i < 256) ==> w0 == power(2, i);
             decreases 256 - i;
         {
             var w1 :uint256 := (w28 * w29) % UINT256_MAX;
@@ -28,7 +32,9 @@ module d0inv {
             w1 := and_256(w1, w0);
             w29 := or_256(w29, w1);
 
-            if i > 0 {
+            if i == 0 {
+                assume w29 == 1;
+            } else {
                 and_single_bit_lemma(w1, w1_old, w0, i);
 
                 if w1 == 0 {
@@ -41,7 +47,7 @@ module d0inv {
                     or_single_bit_add_lemma(w29, w29_old, w0, i);
                     d0inv_bv_lemma_2(w28 * w29_old, w28, w0, i);
                 }
-            } 
+            }
 
             if i != 255 {
                 power_2_bounded_lemma(i + 1);
@@ -55,8 +61,6 @@ module d0inv {
                 assert w0 == 2 by {
                     reveal power();
                 }
-                assert w29_old == 1;
-                assume w29 == 1;
             }
         }
 
