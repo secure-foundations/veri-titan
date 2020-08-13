@@ -139,8 +139,11 @@ lemma va_ins_lemma(b0:code, s0:va_state)
 
 function method va_op_reg32_reg32(r:Reg32):Reg32 { r }
 function method va_Block(block:codes):code { Block(block) }
+function method va_While(wcond:whileCond, wcode:code):code { While(wcond, wcode) }
 
 function method va_get_block(c:code):codes requires c.Block? { c.block }
+function method va_get_whileCond(c:code):whileCond requires c.While? {c.whileCond }
+function method va_get_whileBody(c:code):code requires c.While? { c.whileBody }
 
 lemma lemma_FailurePreservedByBlock(block:codes, s:state, r:state)
     requires evalBlock(block, s, r);
@@ -161,6 +164,11 @@ lemma lemma_FailurePreservedByCode(c:code, s:state, r:state)
     if c.Block? {
         lemma_FailurePreservedByBlock(c.block, s, r);
     }
+}
+
+predicate BN_branchRelation(s:state, r:state, cond:bool)
+{
+	branchRelation(s, r, cond)
 }
 
 lemma block_state_validity(block:codes, s:state, r:state)
@@ -195,7 +203,11 @@ lemma code_state_validity(c:code, s:state, r:state)
 				} else {
 					assume false;
 				}
-		}
+		} else if c.While? {
+            var n:nat :| evalWhile(c.whileCond, c.whileBody, n, s, r);
+            evalWhile_validity(c.whileCond, c.whileBody, n, s, r);
+            assert valid_state(r);
+        }
 }
 
 lemma va_lemma_empty(s:va_state, r:va_state) returns(r':va_state)
@@ -237,6 +249,102 @@ lemma va_lemma_block(b:codes, s0:va_state, r:va_state) returns(r1:va_state, c0:c
     }
 }
 
+predicate{:opaque} evalWhileOpaque(w:whileCond, c:code, n:nat, s:state, r:state) { evalWhile(w, c, n, s, r) }
+predicate evalWhileLax(w:whileCond, c:code, n:nat, s:state, r:state) { s.ok ==> evalWhileOpaque(w, c, n, s, r) }
+
+predicate va_whileInv(w:whileCond, c:code, n:int, r1:va_state, r2:va_state)
+{
+    n >= 0 && BN_ValidState(r1) && evalWhileLax(w, c, n, r1, r2)
+}
+
+lemma va_lemma_while(w:whileCond, c:code, s:va_state, r:va_state) returns(n:nat, r':va_state)
+    requires va_is_src_reg32(w.r1, s);
+    requires va_is_src_reg32(w.r2, s);
+    requires BN_ValidState(s);
+    requires eval_code(While(w, c), s, r)
+    ensures  evalWhileLax(w, c, n, s, r)
+    //ensures  r'.ok
+    ensures  BN_ValidState(r');
+    ensures  r' == s
+{
+    reveal_evalCodeOpaque();
+    reveal_BN_ValidState();
+    reveal_evalWhileOpaque();
+    if s.ok {
+        assert evalCode(While(w, c), s, r);
+        n :| evalWhile(w, c, n, s, r);
+    } else {
+        n := 0;
+    }
+    r' := s;
+}
+
+lemma va_lemma_whileTrue(w:whileCond, c:code, n:nat, s:va_state, r:va_state) returns(s':va_state, r':va_state)
+    requires va_is_src_reg32(w.r1, s) && ValidSourceRegister32(s, w.r1);
+    requires va_is_src_reg32(w.r2, s) && ValidSourceRegister32(s, w.r2);
+    requires n > 0
+    requires evalWhileLax(w, c, n, s, r)
+    ensures  BN_ValidState(s) ==> BN_ValidState(s');
+    ensures  evalWhileLax(w, c, n - 1, r', r)
+    ensures  eval_code(c, s', r');
+    ensures  BN_ValidState(s) ==> if s.ok then BN_branchRelation(s, s', true) else s' == s;
+    ensures  if s.ok && BN_ValidState(s) then
+                    s'.ok
+                 && va_is_src_reg32(w.r1, s)
+                 && evalWhileCond(s, w)
+             else
+                 true; //!r.ok;
+{
+    reveal_evalCodeOpaque();
+    reveal_evalWhileOpaque();
+    reveal_BN_ValidState();
+
+    if !s.ok {
+        s' := s;
+        r' := s;
+        return;
+    }
+    assert evalWhile(w, c, n, s, r); // TODO: Dafny reveal/opaque issue
+
+    if BN_ValidState(s) {
+        var s'':state, r'':state :| evalWhileCond(s, w) && branchRelation(s, s'', true) && evalCode(c, s'', r'')
+                                && evalWhile(w, c, n - 1, r'', r);
+        s' := state(s''.xregs, s''.wregs, s''.flags, s''.stack, s''.ok);
+        r' := state(r''.xregs, r''.wregs, r''.flags, r''.stack, r''.ok);
+        code_state_validity(c, s'', r'');
+    } else {
+        s' := s.(ok := false);
+        r' := s.(ok := false);
+    }
+}
+
+lemma va_lemma_whileFalse(w:whileCond, c:code, s:va_state, r:va_state) returns(r':va_state)
+    requires va_is_src_reg32(w.r1, s) && ValidSourceRegister32(s, w.r1);
+    requires va_is_src_reg32(w.r2, s) && ValidSourceRegister32(s, w.r2);
+    requires evalWhileLax(w, c, 0, s, r)
+    ensures  if s.ok then
+                (if BN_ValidState(s) then
+                    (r'.ok ==> BN_ValidState(r'))
+                 && BN_branchRelation(s, r', false)
+                 && !evalWhileCond(s, w)
+                 && r.ok
+                 else
+                    true)
+                  && r' == r
+            else
+                r' == s; //!r.ok;
+{
+    reveal_evalCodeOpaque();
+    reveal_evalWhileOpaque();
+    reveal_BN_ValidState();
+
+    if !s.ok {
+        r' := s;
+        return;
+    }
+    r' := r;
+}
+
 ////////////////////////////////////////////////////////////////////////
 //
 //  Invariants over the state
@@ -254,6 +362,25 @@ predicate {:opaque} BN_ValidState(s:state)
     ensures BN_ValidState(s) ==> valid_state(s);
 {
     valid_state(s)
+}
+
+////////////////////////////////////////////////////////////////////////
+//
+//  Helper lemmas about control flow
+//
+////////////////////////////////////////////////////////////////////////
+
+lemma evalWhile_validity(w:whileCond, c:code, n:nat, s:state, r:state)
+	requires evalWhile(w, c, n, s, r);
+	decreases c, 1, n;
+	ensures valid_state(s) && r.ok ==> valid_state(r);
+{
+	if valid_state(s) && r.ok && ValidRegister32(s.xregs, w.r1) && ValidRegister32(s.xregs, w.r2) && n > 0 {
+		var s', r' :| evalWhileCond(s, w) && branchRelation(s, s', true) && evalCode(c, s', r') && evalWhile(w, c, n - 1, r', r);
+		code_state_validity(c, s', r');
+		evalWhile_validity(w, c, n - 1, r', r);
+		assert valid_state(r);
+	}
 }
 
 }

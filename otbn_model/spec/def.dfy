@@ -71,10 +71,14 @@ datatype ins256 =
 
 datatype codes = CNil | va_CCons(hd:code, tl:codes)
 
+datatype cmp = Eq | Ne | Gt | Ge | Lt | Le
+datatype whileCond = WhileCond(cmp:cmp, r1:Reg32, r2:Reg32)
+
 datatype code =
 | Ins32(ins:ins32)
 | Ins256(bn_ins:ins256)
 | Block(block:codes)
+| While(whileCond:whileCond, whileBody:code)
 
 type Frame = map<int, uint32>
 type Stack = seq<Frame>
@@ -191,6 +195,47 @@ predicate evalBlock(block:codes, s:state, r:state)
         exists r':state :: evalCode(block.hd, s, r') && evalBlock(block.tl, r', r)
 }
 
+function evalCmp(c:cmp, i1:uint32, i2:uint32):bool
+{
+	match c
+		case Eq => i1 == i2
+		case Ne => i1 != i2
+		case Gt => i1 > i2
+		case Ge => i1 >= i2
+		case Lt => i1 < i2
+		case Le => i1 <= i2
+}
+
+function evalWhileCond(s:state, wc:whileCond):bool
+	requires ValidSourceRegister32(s, wc.r1);
+	requires ValidSourceRegister32(s, wc.r2);
+{
+	evalCmp(wc.cmp, eval_reg32(s, wc.r1), eval_reg32(s, wc.r2))
+}
+
+// TODO
+function {:axiom} updateFlagsUsingCondition(flags:Flags, cond:bool) : Flags
+
+predicate branchRelation(s:state, s':state, cond:bool)
+{
+	s' == s.(flags := updateFlagsUsingCondition(s.flags, cond))
+}
+
+predicate evalWhile(wc:whileCond, c:code, n:nat, s:state, r:state)
+	decreases c, n
+{
+	if s.ok && ValidSourceRegister32(s, wc.r1) && ValidSourceRegister32(s, wc.r2) then
+		if n == 0 then
+		!evalWhileCond(s, wc) && branchRelation(s, r, false)
+		else
+			exists loop_start:state, loop_end:state :: evalWhileCond(s, wc)
+			&& branchRelation(s, loop_start, true)
+			&& evalCode(c, loop_start, loop_end)
+			&& evalWhile(wc, c, n - 1, loop_end, r)
+		else
+			!r.ok
+}
+
 predicate evalCode(c:code, s:state, r:state)
     decreases c, 0
 {
@@ -199,7 +244,7 @@ predicate evalCode(c:code, s:state, r:state)
         case Ins256(ins) => evalIns256(ins, s, r)
         case Block(block) => evalBlock(block, s, r)
         //case IfElse(cond, ifT, ifF) => evalIfElse(cond, ifT, ifF, s, r)
-        //case While(cond, body) => exists n:nat :: evalWhile(cond, body, n, s, r)
+        case While(cond, body) => exists n:nat :: evalWhile(cond, body, n, s, r)
 }
 
 function get_flags_group(fg:bool, flags:Flags) : FlagsGroup { if fg then flags.fg1 else flags.fg0 }
