@@ -364,23 +364,23 @@ modload:
 BN.XOR w31, w31, w31
 ADDI x3, x0, 0
 BN.LID x3, 0(x0)
-LW x16, 0(x0) ; pMod
-LW x17, 1(x0) ; pDinv
-LW x18, 2(x0)
-LW x19, 3(x0)
-LW x20, 4(x0)
-LW x21, 5(x0)
-LW x22, 6(x0)
-LW x23, 7(x0)
+LW x16, 0(x0)   ; pMod
+LW x17, 1(x0)   ; pDinv
+LW x18, 2(x0)   ; pRR
+LW x19, 3(x0)   ; pA
+LW x20, 4(x0)   ; pB
+LW x21, 5(x0)   ; pC
+LW x22, 6(x0)   ; n
+LW x23, 7(x0)   ; n-1
 
-LW x24, 0(x0)
-LW x25, 1(x0)
-LW x26, 2(x0)
-LW x27, 3(x0)
-LW x28, 4(x0)
-LW x29, 5(x0)
-LW x30, 6(x0)
-LW x31, 7(x0)
+LW x24, 0(x0)   ; pMod
+LW x25, 1(x0)   ; pDinv
+LW x26, 2(x0)   ; pRR
+LW x27, 3(x0)   ; pA
+LW x28, 4(x0)   ; pB
+LW x29, 5(x0)   ; pC
+LW x30, 6(x0)   ; n
+LW x31, 7(x0)   ; n-1
 
 ADDI x8, x0, 28 ; x8 = 28
 ADDI x9, x0, 29 ; x9 = 29
@@ -391,9 +391,9 @@ LW x12, 4(x0)
 LW x13, 5(x0)
 LW x14, 6(x0)
 LW x15, 7(x0)
-BN.LID x8, 0(x16) ; x8 -> w28, 
-JAL x1, d0inv     ; computes m0'
-BN.SID x9, 0(x17) ; x9 -> w29, m0' is written back
+BN.LID x8, 0(x16)   ; x8 -> w28, 
+JAL x1, d0inv       ; computes m0'
+BN.SID x9, 0(x17)   ; x9 -> w29, m0' is written back
 JAL x1, computeRR
 JALR x0, x1, 0
 
@@ -407,17 +407,16 @@ LW x18, 2(x0)
 LW x19, 3(x0)
 LW x20, 4(x0)
 LW x21, 5(x0)
-LW x22, 6(x0)           ; x22 = n (number of words?)
+LW x22, 6(x0)           ; x22 = n
 LW x23, 7(x0)
-BN.XOR w3, w3, w3
+BN.XOR w3, w3, w3       ; w3 = 0
 SLLI x24, x22, 8        ; x24 = 256 * n (number of bits?)
 ADDI x8, x0, 5          ; x8 = 5
 ADDI x10, x0, 3         ; x10 = 3
 BN.XOR w3, w3, w3       ; w3 = 0
-
 ; x8 -> w5, x10 -> w3, x30 = n
-LOOP x30, 1             
-    BN.MOVR x8++, x10   
+LOOP x30, 1
+    BN.MOVR x8++, x10
 BN.SUB w3, w31, w0, FG1
 JAL x1, selcxSub
 LOOP x24, 16
@@ -436,7 +435,7 @@ LOOP x24, 16
         BN.MOVR x11, x8++
         BN.CMPB w3, w2, FG1
     JAL x1, selcxSub
-ADDI x0, x0, 0
+    ADDI x0, x0, 0
 ADDI x8, x0, 5
 LOOP x30, 2
     BN.SID x8, 0(x18++)
