@@ -17,84 +17,6 @@
  *
  */
 
-selcxSub:
-ADDI x8, x0, 5
-ADDI x10, x0, 3
-ADDI x11, x0, 2
-ADDI x12, x0, 4
-LW x16, 0(x0)
-BN.WSRRW w4, 2, w4
-BN.ADD w4, w4, w31
-CSRRS x2, 1984, x0
-ANDI x2, x2, 2
-BNE x2, x0, selcxSub_invsel
-BN.ADDC w3, w4, w4 << 16B, FG1
-LOOP x30, 7
-BN.LID x10, 0(x16++)
-BN.MOVR x11, x8
-BN.MOVR x8, x12
-BN.SUBB w4, w2, w3
-BN.WSRRW w3, 2, w3
-BN.SEL w3, w4, w2, FG1.L
-BN.MOVR x8++, x10
-JALR x0, x1, 0
-
-selcxSub_invsel:
-BN.ADDC w3, w4, w4 << 16B, FG1
-LOOP x30, 7
-BN.LID x10, 0(x16++)
-BN.MOVR x11, x8
-BN.MOVR x8, x12
-BN.SUBB w4, w2, w3
-BN.WSRRW w3, 2, w3
-BN.SEL w3, w2, w4, FG1.L
-BN.MOVR x8++, x10
-JALR x0, x1, 0
-
-computeRR:
-BN.XOR w31, w31, w31
-ADDI x3, x0, 0
-BN.LID x3, 0(x0)
-LW x16, 0(x0)
-LW x17, 1(x0)
-LW x18, 2(x0)
-LW x19, 3(x0)
-LW x20, 4(x0)
-LW x21, 5(x0)
-LW x22, 6(x0)
-LW x23, 7(x0)
-BN.XOR w3, w3, w3
-SLLI x24, x22, 8
-ADDI x8, x0, 5
-ADDI x10, x0, 3
-BN.XOR w3, w3, w3
-LOOP x30, 1
-BN.MOVR x8++, x10
-BN.SUB w3, w31, w0, FG1
-JAL x1, selcxSub
-LOOP x24, 16
-ADDI x8, x0, 5
-BN.SUB w3, w3, w3, FG1
-LOOP x30, 3
-BN.MOVR x11, x8
-BN.ADDC w2, w2, w2, FG1
-BN.MOVR x8++, x11
-JAL x1, selcxSub
-ADDI x8, x0, 5
-LW x16, 0(x0)
-BN.SUB w3, w3, w3, FG1
-LOOP x30, 3
-BN.LID x10, 0(x16++)
-BN.MOVR x11, x8++
-BN.CMPB w3, w2, FG1
-JAL x1, selcxSub
-ADDI x0, x0, 0
-ADDI x8, x0, 5
-LOOP x30, 2
-BN.SID x8, 0(x18++)
-ADDI x8, x8, 1
-JALR x0, x1, 0
-
 dmXd0:
 BN.MULQACC.Z w30.0, w25.0, 0
 BN.MULQACC w30.1, w25.0, 64
@@ -508,6 +430,84 @@ BN.LID x8, 0(x16) ; x8 should point to w28, TODO: what does x16 contain?
 JAL x1, d0inv
 BN.SID x9, 0(x17) ; x9 should point to w29, TODO: what does x17 contain?
 JAL x1, computeRR
+JALR x0, x1, 0
+
+computeRR:
+BN.XOR w31, w31, w31 ; w31 = 0
+ADDI x3, x0, 0
+BN.LID x3, 0(x0)
+LW x16, 0(x0)
+LW x17, 1(x0)
+LW x18, 2(x0)
+LW x19, 3(x0)
+LW x20, 4(x0)
+LW x21, 5(x0)
+LW x22, 6(x0)
+LW x23, 7(x0)
+BN.XOR w3, w3, w3
+SLLI x24, x22, 8
+ADDI x8, x0, 5
+ADDI x10, x0, 3
+BN.XOR w3, w3, w3
+LOOP x30, 1
+    BN.MOVR x8++, x10
+BN.SUB w3, w31, w0, FG1
+JAL x1, selcxSub
+LOOP x24, 16
+    ADDI x8, x0, 5
+    BN.SUB w3, w3, w3, FG1
+    LOOP x30, 3
+        BN.MOVR x11, x8
+        BN.ADDC w2, w2, w2, FG1
+        BN.MOVR x8++, x11
+    JAL x1, selcxSub
+    ADDI x8, x0, 5
+    LW x16, 0(x0)
+    BN.SUB w3, w3, w3, FG1
+    LOOP x30, 3
+        BN.LID x10, 0(x16++)
+        BN.MOVR x11, x8++
+        BN.CMPB w3, w2, FG1
+    JAL x1, selcxSub
+ADDI x0, x0, 0
+ADDI x8, x0, 5
+LOOP x30, 2
+    BN.SID x8, 0(x18++)
+    ADDI x8, x8, 1
+JALR x0, x1, 0
+
+selcxSub:
+ADDI x8, x0, 5
+ADDI x10, x0, 3
+ADDI x11, x0, 2
+ADDI x12, x0, 4
+LW x16, 0(x0)
+BN.WSRRW w4, 2, w4
+BN.ADD w4, w4, w31
+CSRRS x2, 1984, x0
+ANDI x2, x2, 2
+BNE x2, x0, selcxSub_invsel
+BN.ADDC w3, w4, w4 << 16B, FG1
+LOOP x30, 7
+    BN.LID x10, 0(x16++)
+    BN.MOVR x11, x8
+    BN.MOVR x8, x12
+    BN.SUBB w4, w2, w3
+    BN.WSRRW w3, 2, w3
+    BN.SEL w3, w4, w2, FG1.L
+    BN.MOVR x8++, x10
+JALR x0, x1, 0
+
+selcxSub_invsel:
+BN.ADDC w3, w4, w4 << 16B, FG1
+LOOP x30, 7
+    BN.LID x10, 0(x16++)
+    BN.MOVR x11, x8
+    BN.MOVR x8, x12
+    BN.SUBB w4, w2, w3
+    BN.WSRRW w3, 2, w3
+    BN.SEL w3, w2, w4, FG1.L
+    BN.MOVR x8++, x10
 JALR x0, x1, 0
 
 d0inv:

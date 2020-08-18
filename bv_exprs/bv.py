@@ -171,53 +171,110 @@ def div(x, y):
 def rem(x, y):
     return x % y
 
-full_bits = 32
-half_bits = int(full_bits / 2)
+def reasm_test():
+    full_bits = 32
+    half_bits = int(full_bits / 2)
 
-x = BitVec('x', full_bits)
-y = BitVec('y', full_bits)
+    x = BitVec('x', full_bits)
+    y = BitVec('y', full_bits)
 
-xlo = BitVec('xlo', half_bits)
-xhi = BitVec('xhi', half_bits)
+    xlo = BitVec('xlo', half_bits)
+    xhi = BitVec('xhi', half_bits)
 
-ylo = BitVec('ylo', half_bits)
-yhi = BitVec('yhi', half_bits)
+    ylo = BitVec('ylo', half_bits)
+    yhi = BitVec('yhi', half_bits)
 
-query = (mul(x, y, full_bits) == mul(y, x, full_bits))
-prove(query)
+    query = (mul(x, y, full_bits) == mul(y, x, full_bits))
+    prove(query)
 
-query = (mulhu(x, y, full_bits) == mulhu(y, x, full_bits))
-prove(query)
+    query = (mulhu(x, y, full_bits) == mulhu(y, x, full_bits))
+    prove(query)
 
-# x = Int("x")
-# y = Int("y")
+    # x = Int("x")
+    # y = Int("y")
 
-query = Implies(
-    And(
-        y > 0,
-        x > y,
-    ),
-    rem(x, y) == x - mul(div(x, y), y, full_bits),
-)
-prove(query)
-
-# print(mulhu(xlo, ylo, half_bits))
-
-query = (
-    Implies(
+    query = Implies(
         And(
-            Extract(full_bits-1, half_bits, x) == xhi,
-            Extract(half_bits-1, 0, x) == xlo,
-            Extract(full_bits-1, half_bits, y) == yhi,
-            Extract(half_bits-1, 0, y) == ylo,
+            y > 0,
+            x > y,
         ),
-        And(
-            Extract(full_bits-1, half_bits, mul(x, y, full_bits)) == 
-                mulhu(xlo, ylo, half_bits) +
-                mul(xhi, ylo, half_bits) +
-                mul(xlo, yhi, half_bits),
-            Extract(half_bits-1, 0, mul(x, y, full_bits)) == mul(xlo, ylo, half_bits),
+        rem(x, y) == x - mul(div(x, y), y, full_bits),
+    )
+    prove(query)
+
+    # print(mulhu(xlo, ylo, half_bits))
+
+    query = (
+        Implies(
+            And(
+                Extract(full_bits-1, half_bits, x) == xhi,
+                Extract(half_bits-1, 0, x) == xlo,
+                Extract(full_bits-1, half_bits, y) == yhi,
+                Extract(half_bits-1, 0, y) == ylo,
+            ),
+            And(
+                Extract(full_bits-1, half_bits, mul(x, y, full_bits)) == 
+                    mulhu(xlo, ylo, half_bits) +
+                    mul(xhi, ylo, half_bits) +
+                    mul(xlo, yhi, half_bits),
+                Extract(half_bits-1, 0, mul(x, y, full_bits)) == mul(xlo, ylo, half_bits),
+            )
         )
     )
-)
-# prove(query)
+    # prove(query)
+
+# Name: AddSub:1043
+# %Y = and %Z, C1
+# %X = xor %Y, C1
+# %LHS = add %X, 1
+# %r = add %LHS, %RHS
+#   =>
+# %or = or %Z, ~C1
+# %r = sub %RHS, %or
+
+def AddSub_1043():
+	full_bits = 2
+	x = BitVec("x", full_bits)
+	y = BitVec("y", full_bits)
+
+	# query = 1 << (full_bits - 1) != ((z & c) ^ c) + 1 + (z | ~c)
+	# prove(query)
+
+	query = 0 == ((x & y) ^ y) + 1 + (x | ~y)
+	prove(query)
+
+	def nott(y):
+		if y == 0:
+			return 1
+		return 0
+
+	def test(x, y):
+		print((x & y) ^ y)
+		print(x | nott(y))
+		print("")
+
+	test(0, 0)
+	test(0, 1)
+	test(1, 0)
+	test(1, 1)
+
+# Name: AddSub:1156
+# %a = add %b, %b
+#   =>
+# %a = shl %b, 1
+
+def AddSub_1156():
+	full_bits = 32
+	x = BitVec("x", full_bits)
+	query = (x + x == (x << 1))
+	prove(query)
+
+	x = BitVec("x", 2)
+	query = Implies(
+		And(x == 3),
+		0 - x == 1,
+	)
+	prove(query)
+
+
+AddSub_1156()
