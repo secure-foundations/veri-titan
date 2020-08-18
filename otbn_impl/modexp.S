@@ -361,17 +361,18 @@ JAL x1, mul1_exp
 JALR x0, x1, 0
 
 modload:
-BN.XOR w31, w31, w31 
+BN.XOR w31, w31, w31
 ADDI x3, x0, 0
 BN.LID x3, 0(x0)
-LW x16, 0(x0)
-LW x17, 1(x0)
+LW x16, 0(x0) ; pMod
+LW x17, 1(x0) ; pDinv
 LW x18, 2(x0)
 LW x19, 3(x0)
 LW x20, 4(x0)
 LW x21, 5(x0)
 LW x22, 6(x0)
 LW x23, 7(x0)
+
 LW x24, 0(x0)
 LW x25, 1(x0)
 LW x26, 2(x0)
@@ -380,22 +381,24 @@ LW x28, 4(x0)
 LW x29, 5(x0)
 LW x30, 6(x0)
 LW x31, 7(x0)
-ADDI x8, x0, 28
-ADDI x9, x0, 29
+
+ADDI x8, x0, 28 ; x8 = 28
+ADDI x9, x0, 29 ; x9 = 29
+
 LW x10, 2(x0)
 LW x11, 3(x0)
 LW x12, 4(x0)
 LW x13, 5(x0)
 LW x14, 6(x0)
 LW x15, 7(x0)
-BN.LID x8, 0(x16) ; x8 should point to w28, TODO: what does x16 contain?
-JAL x1, d0inv
-BN.SID x9, 0(x17) ; x9 should point to w29, TODO: what does x17 contain?
+BN.LID x8, 0(x16) ; x8 -> w28, 
+JAL x1, d0inv     ; computes m0'
+BN.SID x9, 0(x17) ; x9 -> w29, m0' is written back
 JAL x1, computeRR
 JALR x0, x1, 0
 
 computeRR:
-BN.XOR w31, w31, w31 ; w31 = 0
+BN.XOR w31, w31, w31    ; w31 = 0
 ADDI x3, x0, 0
 BN.LID x3, 0(x0)
 LW x16, 0(x0)
@@ -404,15 +407,17 @@ LW x18, 2(x0)
 LW x19, 3(x0)
 LW x20, 4(x0)
 LW x21, 5(x0)
-LW x22, 6(x0)
+LW x22, 6(x0)           ; x22 = n (number of words?)
 LW x23, 7(x0)
 BN.XOR w3, w3, w3
-SLLI x24, x22, 8
-ADDI x8, x0, 5
-ADDI x10, x0, 3
-BN.XOR w3, w3, w3
-LOOP x30, 1
-    BN.MOVR x8++, x10
+SLLI x24, x22, 8        ; x24 = 256 * n (number of bits?)
+ADDI x8, x0, 5          ; x8 = 5
+ADDI x10, x0, 3         ; x10 = 3
+BN.XOR w3, w3, w3       ; w3 = 0
+
+; x8 -> w5, x10 -> w3, x30 = n
+LOOP x30, 1             
+    BN.MOVR x8++, x10   
 BN.SUB w3, w31, w0, FG1
 JAL x1, selcxSub
 LOOP x24, 16
@@ -440,10 +445,10 @@ JALR x0, x1, 0
 
 selcxSub:
 ADDI x8, x0, 5  ; x8 = 5 
-ADDI x10, x0, 3 ; 
-ADDI x11, x0, 2
-ADDI x12, x0, 4
-LW x16, 0(x0)
+ADDI x10, x0, 3 ; x10 = 3 
+ADDI x11, x0, 2 ; x11 = 2
+ADDI x12, x0, 4 ; x12 = 4
+LW x16, 0(x0)   ; 
 BN.WSRRW w4, 2, w4
 BN.ADD w4, w4, w31
 CSRRS x2, 1984, x0
