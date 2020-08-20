@@ -3,7 +3,7 @@ include "decls.vad"
 #verbatim
 include "vale.dfy"
 include "../spec/def.dfy"
-include "generated.dfy"
+include "decls.dfy"
 
 module examples {
 
