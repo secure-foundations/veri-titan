@@ -1,7 +1,16 @@
-include{:verbatim} "decls.vad"
+include "decls.vad"
 
 #verbatim
+include "vale.dfy"
+include "../spec/def.dfy"
+include "generated.dfy"
+
 module examples {
+
+import opened bignum_vale
+import opened bignum_def
+import opened bignum_decls
+
 #endverbatim
 
 procedure DoubleExample32(inout dst:reg32, in src:reg32)
@@ -22,6 +31,22 @@ procedure DoubleRegExample32()
         x2;
 {
     Add32(x2, x2, x2);
+}
+
+procedure d0inv()
+    modifies
+        w0; w29; flags;
+{
+    Xor256(w0, w0, w0, false, 0);
+    assert(w0 == 0);
+    Addi256(w0, w0, 1, false);
+    Mov256(w29, w0);
+
+//while (i >= 0)
+//    {
+//    Mulqacc256(w28, 1, w29, 0, 1);
+//    }
+    
 }
 
 #verbatim

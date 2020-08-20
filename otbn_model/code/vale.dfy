@@ -138,8 +138,11 @@ lemma va_ins_lemma(b0:code, s0:va_state)
 }
 
 function method va_op_reg32_reg32(r:Reg32):Reg32 { r }
+function method va_op_reg256_reg256(r:Reg256):Reg256 { r }
 function method va_Block(block:codes):code { Block(block) }
 function method va_While(wcond:whileCond, wcode:code):code { While(wcond, wcode) }
+
+function method va_const_imm32(n:uint32):uint32 { n }
 
 function method va_get_block(c:code):codes requires c.Block? { c.block }
 function method va_get_whileCond(c:code):whileCond requires c.While? {c.whileCond }

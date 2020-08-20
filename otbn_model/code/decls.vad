@@ -15,7 +15,7 @@ type uint32:Type(0) := int_range(0, 0xffff_ffff);
 type uint256:Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff);
 type seq(a:Type(0)):Type(0) {:primitive} extern;
 type map(a:Type(0), b:Type(0)):Type(0) extern;
-type Bignum:Type(0) extern;
+type Bignum:Type(0) := uint256;
 type Frame:Type(0) := map(int, uint32);
 type Stack:Type(0) := seq(Frame);
 type FlagsGroup:Type(0) extern;
@@ -46,6 +46,7 @@ function addi256(a:Bignum, b:uint32, flags_group:FlagsGroup):tuple(Bignum, Flags
 function addm256(a:Bignum, b:Bignum, mod:Bignum):Bignum extern;
 function sub256(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
 function mulqacc256(a:Bignum, qa:uint32, b:Bignum, qb:uint32, shift:uint32, zero:bool, macc:Bignum):Bignum extern;
+function mulqacc256_so(a:Bignum, qa:uint32, b:Bignum, qb:uint32, shift:uint32, zero:bool, macc:Bignum):Bignum extern;
 
 function get_flags_group(fg:bool, flags:Flags):FlagsGroup extern;
 function update_fg(b:bool, f:Flags, fg:FlagsGroup):Flags extern;
@@ -372,6 +373,20 @@ procedure Mulqacc256(inline zero: bool, in src1:reg256, in qwsel1:imm32, in src2
     assume false;
 }
     
+procedure Mulqacc256_so(inline zero: bool, in src1:reg256, in qwsel1:imm32, in src2:reg256, in qwsel2:imm32, in shift:imm32)
+    {:instruction Ins256(MULQACC256(zero, src1, qwsel1, src2, qwsel2, shift))}
+    requires
+        qwsel1 <= 3;
+        qwsel2 <= 3;
+        shift <= 3;
+    modifies
+        wacc;
+    ensures
+        wacc == mulqacc256_so(src1, qwsel1, src2, qwsel2, shift, zero, old(wacc));
+{
+    assume false;
+}
+
 procedure Mov256(inout dst:reg256, in src:reg256)
     {:instruction Ins256(MOV256(dst, src))}
     ensures
