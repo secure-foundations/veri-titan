@@ -251,30 +251,30 @@ include "types.dfy"
 				requires 0 <= x * y < 0x1_0000_0000;
 				ensures  BitsToWord(BitMul(WordToBits(x), WordToBits(y))) == x * y;
 
-				lemma {:axiom} lemma_BitDivEquiv(x:uint32, y:uint32)
-					requires y != 0;
-					requires WordToBits(y) != 0;
-					ensures  BitsToWord(BitDiv(WordToBits(x), WordToBits(y))) == x / y;
+			lemma {:axiom} lemma_BitDivEquiv(x:uint32, y:uint32)
+				requires y != 0;
+				requires WordToBits(y) != 0;
+				ensures  BitsToWord(BitDiv(WordToBits(x), WordToBits(y))) == x / y;
 
-					lemma {:axiom} lemma_BitCmpEquiv(x:uint32, y:uint32)
-						ensures x > y ==> WordToBits(x) > WordToBits(y)
-						ensures x < y ==> WordToBits(x) < WordToBits(y)
-						ensures x == y ==> WordToBits(x) == WordToBits(y)
+			lemma {:axiom} lemma_BitCmpEquiv(x:uint32, y:uint32)
+				ensures x > y ==> WordToBits(x) > WordToBits(y)
+				ensures x < y ==> WordToBits(x) < WordToBits(y)
+				ensures x == y ==> WordToBits(x) == WordToBits(y)
 
-						lemma {:axiom} lemma_RotateRightCommutesXor(x:uint32, amt_0:nat, amt_1:nat, amt_2:nat)
-							requires 0 <= amt_0 < 32;
-							requires 0 <= amt_1 < 32;
-							requires 0 <= amt_2 < 32;
-							requires amt_1 >= amt_0;
-							requires amt_2 >= amt_0;
-							ensures  RotateRight(BitwiseXor(BitwiseXor(x, RotateRight(x, amt_1-amt_0)), RotateRight(x, amt_2-amt_0)), amt_0)
-								== BitwiseXor(BitwiseXor(RotateRight(x, amt_0), RotateRight(x, amt_1)),
-								RotateRight(x, amt_2));
-								// TODO: Waiting on Dafny to support RotateRight
-								//{
-								//    reveal_BitXor();
-								//    reveal_RotateRight();
-								//    lemma_BitsAndWordConversions();
+			lemma {:axiom} lemma_RotateRightCommutesXor(x:uint32, amt_0:nat, amt_1:nat, amt_2:nat)
+				requires 0 <= amt_0 < 32;
+				requires 0 <= amt_1 < 32;
+				requires 0 <= amt_2 < 32;
+				requires amt_1 >= amt_0;
+				requires amt_2 >= amt_0;
+				ensures  RotateRight(BitwiseXor(BitwiseXor(x, RotateRight(x, amt_1-amt_0)), RotateRight(x, amt_2-amt_0)), amt_0)
+					== BitwiseXor(BitwiseXor(RotateRight(x, amt_0), RotateRight(x, amt_1)),
+					RotateRight(x, amt_2));
+					// TODO: Waiting on Dafny to support RotateRight
+					//{
+					//    reveal_BitXor();
+					//    reveal_RotateRight();
+					//    lemma_BitsAndWordConversions();
 	//}
 
 	lemma {:axiom} lemma_BitShiftsSum(x: bv32, a: nat, b: nat)
