@@ -25,25 +25,25 @@ ANDI x2, x2, 2
 BNE x2, x0, mma_invsel
 BN.ADDC w28, w28, w28 << 16B, FG1
 LOOP x30, 7
-BN.LID x13, 0(x16++)
-BN.MOVR x12, x8
-BN.SUBB w29, w30, w24
-BN.WSRRW w24, 2, w24
-BN.MOVR x8, x13
-BN.SEL w24, w29, w30, FG1.L
-BN.MOVR x8++, x13
+    BN.LID x13, 0(x16++)
+    BN.MOVR x12, x8
+    BN.SUBB w29, w30, w24
+    BN.WSRRW w24, 2, w24
+    BN.MOVR x8, x13
+    BN.SEL w24, w29, w30, FG1.L
+    BN.MOVR x8++, x13
 JALR x0, x1, 0
 
 mma_invsel:
 BN.ADDC w28, w28, w28 << 16B, FG1
 LOOP x30, 7
-BN.LID x13, 0(x16++)
-BN.MOVR x12, x8
-BN.SUBB w29, w30, w24
-BN.WSRRW w24, 2, w24
-BN.MOVR x8, x13
-BN.SEL w24, w30, w29, FG1.L
-BN.MOVR x8++, x13
+    BN.LID x13, 0(x16++)
+    BN.MOVR x12, x8
+    BN.SUBB w29, w30, w24
+    BN.WSRRW w24, 2, w24
+    BN.MOVR x8, x13
+    BN.SEL w24, w30, w29, FG1.L
+    BN.MOVR x8++, x13
 JALR x0, x1, 0
 
 mma:
@@ -66,21 +66,20 @@ JAL x1, dmXd0
 BN.ADD w27, w27, w24
 BN.ADDC w28, w26, w31
 LOOP x31, 14
-BN.LID x12, 0(x19++)
-JAL x1, dmXa
-BN.MOVR x13, x8++
-BN.ADD w27, w27, w24
-BN.ADDC w26, w26, w31
-BN.ADD w24, w27, w29
-BN.ADDC w29, w26, w31
-BN.LID x12, 0(x16++)
-JAL x1, dmXd0
-BN.ADD w27, w27, w24
-BN.ADDC w26, w26, w31
-BN.ADD w24, w27, w28, FG1
-BN.MOVR x10++, x13
-BN.ADDC w28, w26, w31, FG1
-
+    BN.LID x12, 0(x19++)
+    JAL x1, dmXa
+    BN.MOVR x13, x8++
+    BN.ADD w27, w27, w24
+    BN.ADDC w26, w26, w31
+    BN.ADD w24, w27, w29
+    BN.ADDC w29, w26, w31
+    BN.LID x12, 0(x16++)
+    JAL x1, dmXd0
+    BN.ADD w27, w27, w24
+    BN.ADDC w26, w26, w31
+    BN.ADD w24, w27, w28, FG1
+    BN.MOVR x10++, x13
+    BN.ADDC w28, w26, w31, FG1
 BN.ADDC w24, w29, w28, FG1
 BN.MOVR x10++, x13
 LW x16, 0(x0)
@@ -127,18 +126,18 @@ LOOP x30, 1
 BN.MOVR x10++, x11
 ADDI x10, x0, 4
 LOOP x30, 8
-BN.LID x11, 0(x20++)
-ADD x4, x16, x0
-ADD x5, x19, x0
-ADD x6, x20, x0
-JAL x1, mma
-ADD x16, x4, x0
-ADD x19, x5, x0
-ADD x20, x6, x0
+    BN.LID x11, 0(x20++)
+    ADD x4, x16, x0
+    ADD x5, x19, x0
+    ADD x6, x20, x0
+    JAL x1, mma
+    ADD x16, x4, x0
+    ADD x19, x5, x0
+    ADD x20, x6, x0
 ADDI x8, x0, 4
 LOOP x30, 2
-BN.SID x8, 0(x21++)
-ADDI x8, x8, 1
+    BN.SID x8, 0(x21++)
+    ADDI x8, x8, 1
 ADDI x8, x0, 4
 JALR x0, x1, 0
 
@@ -150,47 +149,47 @@ ANDI x2, x2, 2
 BNE x2, x0, mm1_invsel
 BN.ADDC w3, w3, w3 << 16B, FG1
 LOOP x30, 6
-BN.LID x9, 0(x16++)
-BN.MOVR x11, x8++
-BN.SUBB w3, w2, w3
-BN.SEL w2, w3, w2, FG1.L
-BN.SID x11, 0(x21++)
-NOP
+    BN.LID x9, 0(x16++)
+    BN.MOVR x11, x8++
+    BN.SUBB w3, w2, w3
+    BN.SEL w2, w3, w2, FG1.L
+    BN.SID x11, 0(x21++)
+    NOP
 JALR x0, x1, 0
 NOP
 
 mm1_invsel:
 BN.ADDC w3, w3, w3 << 16B, FG1
 LOOP x30, 6
-BN.LID x9, 0(x16++)
-BN.MOVR x11, x8++
-BN.SUBB w3, w2, w3
-BN.SEL w2, w2, w3, FG1.L
-BN.SID x11, 0(x21++)
-NOP
+    BN.LID x9, 0(x16++)
+    BN.MOVR x11, x8++
+    BN.SUBB w3, w2, w3
+    BN.SEL w2, w2, w3, FG1.L
+    BN.SID x11, 0(x21++)
+    NOP
 JALR x0, x1, 0
 
 mul1_exp:
 BN.LID x9, 0(x17)
 BN.MOV w2, w31
 LOOP x30, 1
-BN.MOVR x10++, x11
+    BN.MOVR x10++, x11
 BN.XOR w2, w2, w2
 BN.ADDI w2, w2, 1
 ADDI x6, x16, 0
 ADDI x7, x19, 0
 LOOP x30, 4
-ADDI x16, x6, 0
-ADDI x19, x7, 0
-JAL x1, mma
-BN.MOV w2, w31
+    ADDI x16, x6, 0
+    ADDI x19, x7, 0
+    JAL x1, mma
+    BN.MOV w2, w31
 ADDI x16, x6, 0
 ADDI x19, x7, 0
 BN.SUB w2, w2, w2, FG1
 LOOP x30, 3
-BN.LID x9, 0(x16++)
-BN.MOVR x11, x8++
-BN.CMPB w3, w2, FG1
+    BN.LID x9, 0(x16++)
+    BN.MOVR x11, x8++
+    BN.CMPB w3, w2, FG1
 ADDI x8, x0, 4
 ADDI x10, x0, 4
 ADDI x16, x6, 0
@@ -219,22 +218,22 @@ LW x23, 15(x0)
 BN.LID x9, 0(x17)
 BN.MOV w2, w31
 LOOP x30, 1
-BN.MOVR x10++, x11
+    BN.MOVR x10++, x11
 LW x10, 2(x0)
 LOOP x30, 8
-BN.LID x11, 0(x20++)
-ADDI x5, x20, 0
-ADDI x6, x16, 0
-ADDI x7, x19, 0
-JAL x1, mma
-ADDI x20, x5, 0
-ADDI x16, x6, 0
-ADDI x19, x7, 0
+    BN.LID x11, 0(x20++)
+    ADDI x5, x20, 0
+    ADDI x6, x16, 0
+    ADDI x7, x19, 0
+    JAL x1, mma
+    ADDI x20, x5, 0
+    ADDI x16, x6, 0
+    ADDI x19, x7, 0
 ADDI x10, x0, 4
 ADDI x8, x0, 4
 LOOP x30, 2
-BN.SID x8, 0(x21++)
-ADDI x8, x8, 1
+    BN.SID x8, 0(x21++)
+    ADDI x8, x8, 1
 ADDI x8, x0, 4
 ADDI x10, x0, 4
 LW x12, 4(x0)
@@ -253,20 +252,20 @@ LW x23, 23(x0)
 BN.LID x9, 0(x17)
 BN.MOV w2, w31
 LOOP x30, 1
-BN.MOVR x10++, x11
+    BN.MOVR x10++, x11
 ADDI x8, x0, 4
 ADDI x10, x0, 4
 LW x12, 4(x0)
 LW x13, 5(x0)
 LOOP x30, 8
-BN.LID x11, 0(x20++)
-ADDI x5, x20, 0
-ADDI x6, x16, 0
-ADDI x7, x19, 0
-JAL x1, mma
-ADDI x20, x5, 0
-ADDI x16, x6, 0
-ADDI x19, x7, 0
+    BN.LID x11, 0(x20++)
+    ADDI x5, x20, 0
+    ADDI x6, x16, 0
+    ADDI x7, x19, 0
+    JAL x1, mma
+    ADDI x20, x5, 0
+    ADDI x16, x6, 0
+    ADDI x19, x7, 0
 ADDI x8, x0, 4
 ADDI x10, x0, 4
 LW x12, 4(x0)
@@ -281,32 +280,32 @@ ANDI x2, x2, 2
 BNE x2, x0, selOutOrC_invsel
 BN.ADDC w3, w3, w3 << 16B
 LOOP x30, 10
-BN.WSRRW w3, 2, w3
-BN.WSRRW w2, 2, w2
-BN.LID x9, 0(x21)
-BN.SID x11, 0(x21)
-BN.MOVR x11, x8++
-BN.WSRRW w0, 2, w0
-BN.MOV w0, w2
-BN.WSRRW w2, 2, w2
-BN.SEL w2, w0, w3, L
-BN.SID x11, 0(x21++)
+    BN.WSRRW w3, 2, w3
+    BN.WSRRW w2, 2, w2
+    BN.LID x9, 0(x21)
+    BN.SID x11, 0(x21)
+    BN.MOVR x11, x8++
+    BN.WSRRW w0, 2, w0
+    BN.MOV w0, w2
+    BN.WSRRW w2, 2, w2
+    BN.SEL w2, w0, w3, L
+    BN.SID x11, 0(x21++)
 JALR x0, x1, 0
 NOP
 
 selOutOrC_invsel:
 BN.ADDC w3, w3, w3 << 16B
 LOOP x30, 10
-BN.WSRRW w3, 2, w3
-BN.WSRRW w2, 2, w2
-BN.LID x9, 0(x21)
-BN.SID x11, 0(x21)
-BN.MOVR x11, x8++
-BN.WSRRW w0, 2, w0
-BN.MOV w0, w2
-BN.WSRRW w2, 2, w2
-BN.SEL w2, w3, w0, L
-BN.SID x11, 0(x21++)
+    BN.WSRRW w3, 2, w3
+    BN.WSRRW w2, 2, w2
+    BN.LID x9, 0(x21)
+    BN.SID x11, 0(x21)
+    BN.MOVR x11, x8++
+    BN.WSRRW w0, 2, w0
+    BN.MOV w0, w2
+    BN.WSRRW w2, 2, w2
+    BN.SEL w2, w3, w0, L
+    BN.SID x11, 0(x21++)
 JALR x0, x1, 0
 
 modexp:
@@ -385,12 +384,13 @@ LW x31, 7(x0)   ; n-1
 ADDI x8, x0, 28 ; x8 = 28
 ADDI x9, x0, 29 ; x9 = 29
 
-LW x10, 2(x0)
-LW x11, 3(x0)
-LW x12, 4(x0)
-LW x13, 5(x0)
-LW x14, 6(x0)
-LW x15, 7(x0)
+LW x10, 2(x0)   ; pRR
+LW x11, 3(x0)   ; pA
+LW x12, 4(x0)   ; pB
+LW x13, 5(x0)   ; pC
+LW x14, 6(x0)   ; n
+LW x15, 7(x0)   ; n-1
+
 BN.LID x8, 0(x16)   ; x8 -> w28, 
 JAL x1, d0inv       ; computes m0'
 BN.SID x9, 0(x17)   ; x9 -> w29, m0' is written back
