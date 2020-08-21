@@ -15,7 +15,7 @@ import opened example_lemmas
 
 #endverbatim
 
-ghost procedure lemma_nonsense(ghost x:int)
+ghost procedure lemma_xor_clear(ghost x:int)
     ensures false;
     extern;
 
@@ -44,7 +44,7 @@ procedure d0inv()
     modifies
         w0; w29; flags;
 {
-    lemma_nonsense(w0);
+    lemma_xor_clear(w0);
     Xor256(w0, w0, w0, false, 0);
 
     assert(w0 == 0);
