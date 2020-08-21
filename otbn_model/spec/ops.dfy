@@ -270,12 +270,12 @@ include "types.dfy"
 				ensures  RotateRight(BitwiseXor(BitwiseXor(x, RotateRight(x, amt_1-amt_0)), RotateRight(x, amt_2-amt_0)), amt_0)
 					== BitwiseXor(BitwiseXor(RotateRight(x, amt_0), RotateRight(x, amt_1)),
 					RotateRight(x, amt_2));
-					// TODO: Waiting on Dafny to support RotateRight
-					//{
-					//    reveal_BitXor();
-					//    reveal_RotateRight();
-					//    lemma_BitsAndWordConversions();
-	//}
+				// TODO: Waiting on Dafny to support RotateRight
+				//{
+				//    reveal_BitXor();
+				//    reveal_RotateRight();
+				//    lemma_BitsAndWordConversions();
+				//}
 
 	lemma {:axiom} lemma_BitShiftsSum(x: bv32, a: nat, b: nat)
 		requires 0 <= a + b < 32

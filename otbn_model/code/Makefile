@@ -1,4 +1,4 @@
-verify:
+verify: examples.dfy
 	dafny /compile:0 examples.dfy
 
 examples.dfy: examples.vad decls.dfy
