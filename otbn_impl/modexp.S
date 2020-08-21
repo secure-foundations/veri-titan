@@ -90,7 +90,7 @@ ADDI x10, x0, 4
 ADDI x12, x0, 30
 ADDI x13, x0, 24
 JAL x1, mma_sub_cx
-ADDI x0, x0, 0
+NOP
 JALR x0, x1, 0
 
 setupPtrs:
@@ -155,9 +155,9 @@ BN.MOVR x11, x8++
 BN.SUBB w3, w2, w3
 BN.SEL w2, w3, w2, FG1.L
 BN.SID x11, 0(x21++)
-ADDI x0, x0, 0
+NOP
 JALR x0, x1, 0
-ADDI x0, x0, 0
+NOP
 
 mm1_invsel:
 BN.ADDC w3, w3, w3 << 16B, FG1
@@ -167,7 +167,7 @@ BN.MOVR x11, x8++
 BN.SUBB w3, w2, w3
 BN.SEL w2, w2, w3, FG1.L
 BN.SID x11, 0(x21++)
-ADDI x0, x0, 0
+NOP
 JALR x0, x1, 0
 
 mul1_exp:
@@ -292,7 +292,7 @@ BN.WSRRW w2, 2, w2
 BN.SEL w2, w0, w3, L
 BN.SID x11, 0(x21++)
 JALR x0, x1, 0
-ADDI x0, x0, 0
+NOP
 
 selOutOrC_invsel:
 BN.ADDC w3, w3, w3 << 16B
@@ -321,32 +321,32 @@ LW x22, 30(x0)
 LW x23, 31(x0)
 BN.SUB w2, w2, w2
 LOOP x30, 4
-ADDI x0, x0, 0
-BN.LID x11, 0(x16++)
-BN.SUBB w2, w31, w2
-BN.SID x11, 0(x21++)
-ADDI x0, x0, 0
+    NOP
+    BN.LID x11, 0(x16++)
+    BN.SUBB w2, w31, w2
+    BN.SID x11, 0(x21++)
+NOP
 SLLI x24, x22, 8
 LOOP x24, 19
-JAL x1, sqrx_exp
-JAL x1, mulx_exp
-LW x16, 24(x0)
-LW x17, 25(x0)
-LW x18, 26(x0)
-LW x19, 27(x0)
-LW x20, 28(x0)
-LW x21, 29(x0)
-LW x22, 30(x0)
-LW x23, 31(x0)
-BN.WSRRW w2, 2, w2
-BN.ADD w2, w2, w2
-LOOP x30, 4
-BN.WSRRW w2, 2, w2
-BN.LID x11, 0(x20)
-BN.ADDC w2, w2, w2
-BN.SID x11, 0(x20++)
-JAL x1, selOutOrC
-ADDI x0, x0, 0
+    JAL x1, sqrx_exp
+    JAL x1, mulx_exp
+    LW x16, 24(x0)
+    LW x17, 25(x0)
+    LW x18, 26(x0)
+    LW x19, 27(x0)
+    LW x20, 28(x0)
+    LW x21, 29(x0)
+    LW x22, 30(x0)
+    LW x23, 31(x0)
+    BN.WSRRW w2, 2, w2
+    BN.ADD w2, w2, w2
+    LOOP x30, 4
+    BN.WSRRW w2, 2, w2
+    BN.LID x11, 0(x20)
+    BN.ADDC w2, w2, w2
+    BN.SID x11, 0(x20++)
+    JAL x1, selOutOrC
+    NOP
 ADDI x3, x0, 0
 BN.LID x3, 96(x0)
 LW x16, 24(x0)
@@ -399,8 +399,8 @@ JALR x0, x1, 0
 
 computeRR:
 BN.XOR w31, w31, w31    ; w31 = 0
-ADDI x3, x0, 0
-BN.LID x3, 0(x0)
+ADDI x3, x0, 0          ; x3 = 0
+BN.LID x3, 0(x0)        ; w0 contains 8 pointers (?)
 LW x16, 0(x0)
 LW x17, 1(x0)
 LW x18, 2(x0)
@@ -416,7 +416,7 @@ ADDI x10, x0, 3         ; x10 = 3
 BN.XOR w3, w3, w3       ; w3 = 0
 ; x8 -> w5, x10 -> w3, x30 = n
 LOOP x30, 1
-    BN.MOVR x8++, x10
+    BN.MOVR x8++, x10   ; w5..w21 = w3 ?
 BN.SUB w3, w31, w0, FG1
 JAL x1, selcxSub
 LOOP x24, 16
@@ -435,7 +435,7 @@ LOOP x24, 16
         BN.MOVR x11, x8++
         BN.CMPB w3, w2, FG1
     JAL x1, selcxSub
-    ADDI x0, x0, 0
+    NOP
 ADDI x8, x0, 5
 LOOP x30, 2
     BN.SID x8, 0(x18++)
