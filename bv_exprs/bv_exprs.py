@@ -1,10 +1,11 @@
 from z3 import *
 import sys
+import click
 
-if len(sys.argv) < 2:
+try:
+	full_bits = int(sys.argv[2])
+except:
 	full_bits = 32
-else:
-	full_bits = int(sys.argv[1])
 
 half_bits = int(full_bits / 2)
 BASE = 2 ** full_bits
@@ -135,5 +136,8 @@ def d0inv_2():
 	)
 	prove(query)
 
-# mul_reasm()
-# d0inv_2()
+try:
+	a = sys.argv[1] + "()"
+	eval(a)
+except:
+	print("usage:\npython bv_exprs.py [function_name] [bit_number]")
