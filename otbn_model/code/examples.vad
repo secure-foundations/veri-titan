@@ -3,25 +3,15 @@ include "decls.vad"
 #verbatim
 include "vale.dfy"
 include "../spec/def.dfy"
-include "../spec/types.dfy"
 include "decls.dfy"
+include "example.s.dfy"
 
 module examples {
 
 import opened bignum_vale
 import opened bignum_def
 import opened bignum_decls
-import opened types
-
-// lemma xor256_self_zero(va_s0: va_state, x: Reg256)
-//   requires va_is_src_reg256(x, va_s0);
-//   ensures xor256(va_eval_reg256(va_s0, x), va_eval_reg256(va_s0, x), false, 0) == 0;
-
-lemma lemma_nonsense(x: uint256)
-    ensures xor256(x, x, false, 0) == 0;
-{
-    assume false;
-}
+import opened example_lemmas
 
 #endverbatim
 
