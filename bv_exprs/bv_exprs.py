@@ -11,7 +11,14 @@ half_bits = int(full_bits / 2)
 BASE = 2 ** full_bits
 HALF_BASE = int(2 ** half_bits)
 
-# works well at least upto 256 bits
+# scales well (256 bits+)
+
+def bvand():
+	x = BitVec("x", full_bits)
+	y = BitVec("y", full_bits)
+	query = x & y == y & x
+	prove(query)
+
 def shift():
 	amt = BitVec("amt", full_bits)
 	query = Implies(
@@ -35,10 +42,16 @@ def xor():
 	)
 	prove(query)
 
+def andorxor_135():
+	x = BitVec("x", full_bits)
+	c1 = BitVec("c1", full_bits)
+	c2 = BitVec("c2", full_bits)
+	query = (x & c2) ^ (c1 & c2) == (x ^ c1) & c2
+	prove(query)
+
 def addsub_1043():
 	x = BitVec("x", full_bits)
 	y = BitVec("y", full_bits)
-
 	query = 0 == ((x & y) ^ y) + 1 + (x | ~y)
 	prove(query)
 
@@ -47,7 +60,7 @@ def addsub_1156():
 	query = (x + x == (x << 1))
 	prove(query)
 
-# doesn't work so well
+# doesn't scale so well
 def mul():
 	m = BitVec("m", full_bits)
 	x = BitVec("x", full_bits)
