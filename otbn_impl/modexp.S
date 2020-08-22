@@ -1,5 +1,5 @@
 /*
-* The following source is retrieved from:
+* The following source is retrieved from
 * 
 * https://github.com/lowRISC/opentitan/blob/46b815ffb1f68de1fbf421fa64c221355446abd9/hw/ip/otbn/code-snippets/modexp.S
 *
