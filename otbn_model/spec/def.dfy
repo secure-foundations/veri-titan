@@ -18,6 +18,7 @@ datatype Reg256 =
 | Wdr(w:int)
 | WMod // Wide modulo register
 | WRnd // Wide random number
+| WAcc // Wide accumulator
 
 datatype ins32 =
 | ADD32(xrd:Reg32, xrs1:Reg32, xrs2:Reg32)
@@ -47,7 +48,7 @@ datatype ins256 =
 | ADDC256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
 | ADDI256(wrd:Reg256, wrs1:Reg256, imm:Bignum, flg:bool)
 | ADDM256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256)
-| MULQACC
+| MULQACC256(zero:bool, wrs1:Reg256, qwsel1:uint32, wrs2:Reg256, qwsel2:uint32, shift:uint32)
 | MULH256(wrd:Reg256, wrs1:Reg256, hw1:bool, wrs2:Reg256, hw2:bool)
 | SUB256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
 | SUBB256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
@@ -63,17 +64,21 @@ datatype ins256 =
 | CMPB256(wrs1:Reg256, wrs2:Reg256, flg:bool)
 | LID256 // TODO
 | SID256 // TODO
-| MOV256(wrd:Reg256, wrs:Bignum)
+| MOV256(wrd:Reg256, wrs:Reg256)
 | MOVR256 // TODO
 | WSRRS256 // TODO
 | WSRRW256 // TODO
 
 datatype codes = CNil | va_CCons(hd:code, tl:codes)
 
+datatype cmp = Eq | Ne | Gt | Ge | Lt | Le
+datatype whileCond = WhileCond(cmp:cmp, r1:Reg32, r2:Reg32)
+
 datatype code =
 | Ins32(ins:ins32)
 | Ins256(bn_ins:ins256)
 | Block(block:codes)
+| While(whileCond:whileCond, whileBody:code)
 
 type Frame = map<int, uint32>
 type Stack = seq<Frame>
@@ -190,6 +195,47 @@ predicate evalBlock(block:codes, s:state, r:state)
         exists r':state :: evalCode(block.hd, s, r') && evalBlock(block.tl, r', r)
 }
 
+function evalCmp(c:cmp, i1:uint32, i2:uint32):bool
+{
+	match c
+		case Eq => i1 == i2
+		case Ne => i1 != i2
+		case Gt => i1 > i2
+		case Ge => i1 >= i2
+		case Lt => i1 < i2
+		case Le => i1 <= i2
+}
+
+function evalWhileCond(s:state, wc:whileCond):bool
+	requires ValidSourceRegister32(s, wc.r1);
+	requires ValidSourceRegister32(s, wc.r2);
+{
+	evalCmp(wc.cmp, eval_reg32(s, wc.r1), eval_reg32(s, wc.r2))
+}
+
+// TODO
+function {:axiom} updateFlagsUsingCondition(flags:Flags, cond:bool) : Flags
+
+predicate branchRelation(s:state, s':state, cond:bool)
+{
+	s' == s.(flags := updateFlagsUsingCondition(s.flags, cond))
+}
+
+predicate evalWhile(wc:whileCond, c:code, n:nat, s:state, r:state)
+	decreases c, n
+{
+	if s.ok && ValidSourceRegister32(s, wc.r1) && ValidSourceRegister32(s, wc.r2) then
+		if n == 0 then
+		!evalWhileCond(s, wc) && branchRelation(s, r, false)
+		else
+			exists loop_start:state, loop_end:state :: evalWhileCond(s, wc)
+			&& branchRelation(s, loop_start, true)
+			&& evalCode(c, loop_start, loop_end)
+			&& evalWhile(wc, c, n - 1, loop_end, r)
+		else
+			!r.ok
+}
+
 predicate evalCode(c:code, s:state, r:state)
     decreases c, 0
 {
@@ -198,7 +244,7 @@ predicate evalCode(c:code, s:state, r:state)
         case Ins256(ins) => evalIns256(ins, s, r)
         case Block(block) => evalBlock(block, s, r)
         //case IfElse(cond, ifT, ifF) => evalIfElse(cond, ifT, ifF, s, r)
-        //case While(cond, body) => exists n:nat :: evalWhile(cond, body, n, s, r)
+        case While(cond, body) => exists n:nat :: evalWhile(cond, body, n, s, r)
 }
 
 function get_flags_group(fg:bool, flags:Flags) : FlagsGroup { if fg then flags.fg1 else flags.fg0 }
@@ -254,10 +300,18 @@ function sub256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) 
 	requires sb < 32;
 { var (sum, new_carry) := BignumAddCarry(x, -y, st, sb, cf(flags_group)); (sum, flags_group.(cf := new_carry))  }
 
-function mulqacc256(x:Bignum, qx:int, y:Bignum, qy:int, shift:int, macc:Bignum) : Bignum
-	requires shift <= 3; 0 <= qx <= 3; 0 <= qy <= 3;
-{ var result := LeftShift256(GetQuarterWord(x, qx) * GetQuarterWord(y, qy), shift * 64); if zero then result else macc + result }
+function mulqacc256(x:Bignum, qx:int, y:Bignum, qy:int, shift:int, zero:bool, wacc:Bignum) : Bignum
+	requires 0 <= shift <= 3;
+	requires 0 <= qx <= 3;
+	requires 0 <= qy <= 3;
+{ var result := LeftShift256(GetQuarterWord(x, qx) * GetQuarterWord(y, qy), shift * 64); if zero then result else wacc + result }
 	
+function mulqacc256_so(x:Bignum, qx:int, y:Bignum, qy:int, shift:int, zero:bool, wacc:Bignum) : Bignum
+	requires 0 <= shift <= 3;
+	requires 0 <= qx <= 3;
+	requires 0 <= qy <= 3;
+{ RightShift256(mulqacc256(x, qx, y, qy, shift, zero, wacc), 16) }
+
 function xor256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;
 		{ BignumXor(x, y, st, sb) }
