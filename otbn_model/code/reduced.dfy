@@ -11,37 +11,40 @@ module example_lemmas {
 	}
 
 	function BignumShift(b:Bignum, st:bool, sb:uint32) : Bignum
-	// 	requires sb < 32;
-	// {
-	// 	if st == false then RightShift256(b, sb) else LeftShift256(b, sb)
-	// }
+		requires sb < 32;
+	{
+		if st == false then RightShift256(b, sb) else LeftShift256(b, sb)
+	}
 
-	// function RightShift256(x:Bignum, amount:uint32) : Bignum
-	// 	requires amount < 32;
-	// {
-	// 	BitsToBignum(BitShiftRight256(BignumToBits(x), amount))
-	// }
+	function RightShift256(x:Bignum, amount:uint32) : Bignum
+		requires amount < 32;
+	{
+		BitsToBignum(BitShiftRight256(BignumToBits(x), amount))
+	}
 
-	// function LeftShift256(x:uint256, amount:uint32) : Bignum
-	// 	requires amount < 32;
-	// {
-	// 	BitsToBignum(BitShiftLeft256(BignumToBits(x), amount))
-	// }
+	function LeftShift256(x:uint256, amount:uint32) : Bignum
+		requires amount < 32;
+	{
+		BitsToBignum(BitShiftLeft256(BignumToBits(x), amount))
+	}
 
-	// function method {:opaque} BitShiftLeft256(x:bv256, num_bytes:int): bv256
-	// 	requires 0 <= num_bytes < 32;
-	// {
-	// 	x << num_bytes * 8
-	// }
+	function method {:opaque} BitShiftLeft256(x:bv256, num_bytes:int): bv256
+		requires 0 <= num_bytes < 32;
+	{
+		x << num_bytes * 8
+	}
 
-	// function method {:opaque} BitShiftRight256(x:bv256, num_bytes:int): bv256
-	// 	requires 0 <= num_bytes < 32;
-	// {
-	// 	x >> num_bytes * 8
-	// }
+	function method {:opaque} BitShiftRight256(x:bv256, num_bytes:int): bv256
+		requires 0 <= num_bytes < 32;
+	{
+		x >> num_bytes * 8
+	}
 
 	function method {:opaque} BitsToBignum(b:bv256) : uint256 { b as uint256 }
+	// function method BitsToBignum(b:bv256) : uint256 { b as uint256 }
+
 	function method {:opaque} BignumToBits(bn:uint256) : bv256 { bn as bv256 }
+	// function method BignumToBits(bn:uint256) : bv256 { bn as bv256 }
 
 	lemma lemma_xor_clear(x: uint256, y: uint256)
 		// requires x == y;
@@ -50,9 +53,16 @@ module example_lemmas {
 		calc == {
 			BignumXor(x, y, false, 0);
 			{
-				// this step is diverging
+				// this does not go through
+				// unless BitsToBignum and BignumToBits are not opaque
+				// revealing doesn't help
 			}
 			BitsToBignum(BignumToBits(x) ^ BignumToBits(BignumShift(y, false, 0)));
+			// {
+				// if BitsToBignum and BignumToBits are not opaque
+				// this step doesn't go through
+			// }
+			// BitsToBignum(BignumToBits(x) ^ BignumToBits(RightShift256(y, 0)));
 		}
 		// assume false;
 	}
