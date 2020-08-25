@@ -320,7 +320,9 @@ function xor256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 
 function or256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;
-		{ BignumOr(x, y, st, sb) }
+{
+	uint256_or(x, BignumShift(y, st, sb))
+}
 		
 function and256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;

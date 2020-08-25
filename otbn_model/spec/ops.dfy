@@ -216,14 +216,14 @@ module ops {
 		BitsToBignum(BitShiftLeft256(BignumToBits(x), amount))
 	}
 	
-	function {:opaque} uint256_xor(x: uint256, y: uint256): uint256 {
+	function {:opaque} uint256_xor(x: uint256, y: uint256): uint256
+	{
 		(x as bv256 ^ y as bv256) as uint256
 	}
 
-	function BignumOr(a:Bignum, b:Bignum, st:bool, sb:uint32) : Bignum
-		requires sb < 32;
+	function {:opaque} uint256_or(x: uint256, y: uint256): uint256
 	{
-		BitsToBignum(BignumToBits(a) | BignumToBits(BignumShift(b, st, sb)))
+		(x as bv256 | y as bv256) as uint256
 	}
 	
 	function BignumAnd(a:Bignum, b:Bignum, st:bool, sb:uint32) : Bignum
