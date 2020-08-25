@@ -314,7 +314,9 @@ function mulqacc256_so(x:Bignum, qx:int, y:Bignum, qy:int, shift:int, zero:bool,
 
 function xor256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;
-		{ BignumXor(x, y, st, sb) }
+{
+	uint256_xor(x, BignumShift(y, st, sb))
+}
 
 function or256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;
