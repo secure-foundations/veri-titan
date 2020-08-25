@@ -8,6 +8,19 @@ module bignum_def {
 import opened types
 import opened ops	
 
+////////////////////////////////////////////////////////////////////////
+//
+//  Invariants over the state
+//
+////////////////////////////////////////////////////////////////////////
+
+predicate valid_state(s:state)
+{
+    |s.stack| >= 0
+ && (forall r :: r in s.xregs)
+ && (forall t :: t in s.wregs)
+}
+
 type reg_index = i:int | 0 <= i <= 32
 
 // General purpose and control registers, 32b
@@ -149,7 +162,10 @@ function eval_reg32(s:state, r:Reg32) : uint32
 
 predicate evalIns32(xins:ins32, s:state, r:state)
 {
-	true
+	if !s.ok then
+		!r.ok
+	else
+		r.ok && (valid_state(s) ==> valid_state(r))
 }
 
 predicate ValidSourceRegister256(s:state, r:Reg256)
@@ -175,7 +191,7 @@ predicate evalIns256(wins:ins256, s:state, r:state)
 	if !s.ok then
 		!r.ok
 	else
-		r.ok
+		r.ok && (valid_state(s) ==> valid_state(r))
 }
 
 predicate evalBlock(block:codes, s:state, r:state)
@@ -217,14 +233,14 @@ predicate evalWhile(wc:whileCond, c:code, n:nat, s:state, r:state)
 {
 	if s.ok && ValidSourceRegister32(s, wc.r) && IsUInt32(wc.c) then
 		if n == 0 then
-		!evalWhileCond(s, wc) && branchRelation(s, r, false)
+			!evalWhileCond(s, wc) && branchRelation(s, r, false)
 		else
 			exists loop_start:state, loop_end:state :: evalWhileCond(s, wc)
 			&& branchRelation(s, loop_start, true)
 			&& evalCode(c, loop_start, loop_end)
 			&& evalWhile(wc, c, n - 1, loop_end, r)
-		else
-			!r.ok
+	else
+		!r.ok
 }
 
 predicate evalCode(c:code, s:state, r:state)

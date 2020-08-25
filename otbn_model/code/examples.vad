@@ -40,6 +40,24 @@ procedure DoubleRegExample32()
     Add32(x2, x2, x2);
 }
 
+procedure half_mul()
+// procedure half_mul(in src1:reg256, in src2:reg256)
+    reads w28; w29;
+    modifies wacc;
+{
+    Mulqacc256(false, w28, 0, w29, 0, 0);
+    // BN.MULQACC.Z w28.0, w29.0, 0
+    // BN.MULQACC w28.1, w29.0, 64
+    // BN.MULQACC.SO w1.L, w28.0, w29.1, 64
+    // BN.MULQACC w28.2, w29.0, 0
+    // BN.MULQACC w28.1, w29.1, 0
+    // BN.MULQACC w28.0, w29.2, 0
+    // BN.MULQACC w28.3, w29.0, 64
+    // BN.MULQACC w28.2, w29.1, 64
+    // BN.MULQACC w28.1, w29.2, 64
+    // BN.MULQACC.SO w1.U, w28.0, w29.3, 64
+}
+
 procedure Increment(inout dst:reg32)
     ensures
         dst == old(dst) + 1;
@@ -66,18 +84,17 @@ procedure d0inv()
         w0; w29; flags;
 {
     lemma_xor_clear(w0);
-    Xor256(w0, w0, w0, false, 0);
-    assert(w0 == 0);
-    Addi256(w0, w0, 1, false);
-    assert(w0 == 1);
-    Mov256(w29, w0);
 
-//while (i >= 0)
-//    {
-//    Mulqacc256(w28, 1, w29, 0, 1);
-//    ...
-//    }
-    
+    Xor256(w0, w0, w0, false, 0);
+    Addi256(w0, w0, 1, false);
+    Mov256(w29, w0);
+    assert(w29 == 1);
+
+    // while (true)
+    //     decreases *;
+    // {
+    //     Mulqacc256(false, w28, 1, w29, 0, 1);
+    // }
 }
 
 #verbatim

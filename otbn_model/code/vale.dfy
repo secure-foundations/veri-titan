@@ -113,8 +113,8 @@ predicate cTailIs(b:codes, t:codes) { b.va_CCons? && b.tl == t }
 predicate va_require(b0:codes, c1:code, s0:va_state, sN:va_state)
 {
     cHeadIs(b0, c1)
- && eval_code(Block(b0), s0, sN)
- && BN_ValidState(s0)
+&& eval_code(Block(b0), s0, sN)
+&& BN_ValidState(s0)
 }
 
 // Weaker form of eval_code that we can actually ensure generically in instructions
@@ -166,12 +166,24 @@ lemma lemma_FailurePreservedByBlock(block:codes, s:state, r:state)
     }
 }
 
+
 lemma lemma_FailurePreservedByCode(c:code, s:state, r:state)
     requires evalCode(c, s, r);
-    ensures  !s.ok ==> !r.ok;
+    ensures !s.ok ==> !r.ok;
 {
-    if c.Block? {
-        lemma_FailurePreservedByBlock(c.block, s, r);
+    match c {
+        case Block(b) => {
+            lemma_FailurePreservedByBlock(b, s, r);
+        }
+        case While(c, b) => {
+            var n :| evalWhile(c, b, n, s, r);
+        }
+        case Ins256(i) => {
+            var r' :| evalCode(c, s, r');
+        }
+        case Ins32(i) => {
+            var r' :| evalCode(c, s, r');
+        }
     }
 }
 
@@ -190,9 +202,8 @@ lemma block_state_validity(block:codes, s:state, r:state)
 		var r':state :| evalCode(block.hd, s, r') && evalBlock(block.tl, r', r);
 		code_state_validity(block.hd, s, r');
 		if r'.ok {
-			block_state_validity(block.tl, r', s);
-		}
-		else {
+			block_state_validity(block.tl, r', r);
+		} else {
 			lemma_FailurePreservedByBlock(block.tl, r', r);
 		}
 	}
@@ -206,17 +217,17 @@ lemma code_state_validity(c:code, s:state, r:state)
 {
     if r.ok {
         if c.Ins32? {
-            assert valid_state(r);
+            assert true;
+        } else if c.Ins256? {
+            assert true;
         } else if c.Block? {
             block_state_validity(c.block, s, r);
-				} else {
-					assume false;
-				}
-		} else if c.While? {
+        } else if c.While? {
             var n:nat :| evalWhile(c.whileCond, c.whileBody, n, s, r);
             evalWhile_validity(c.whileCond, c.whileBody, n, s, r);
             assert valid_state(r);
         }
+    } 
 }
 
 lemma va_lemma_empty(s:va_state, r:va_state) returns(r':va_state)
@@ -354,18 +365,6 @@ lemma va_lemma_whileFalse(w:whileCond, c:code, s:va_state, r:va_state) returns(r
     r' := r;
 }
 
-////////////////////////////////////////////////////////////////////////
-//
-//  Invariants over the state
-//
-////////////////////////////////////////////////////////////////////////
-
-predicate valid_state(s:state)
-{
-    |s.stack| >= 0
- && (forall r :: r in s.xregs)
- && (forall t :: t in s.wregs)
-}
 
 predicate {:opaque} BN_ValidState(s:state)
     ensures BN_ValidState(s) ==> valid_state(s);
