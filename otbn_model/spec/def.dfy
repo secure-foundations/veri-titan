@@ -8,6 +8,19 @@ module bignum_def {
 import opened types
 import opened ops	
 
+////////////////////////////////////////////////////////////////////////
+//
+//  Invariants over the state
+//
+////////////////////////////////////////////////////////////////////////
+
+predicate valid_state(s:state)
+{
+    |s.stack| >= 0
+ && (forall r :: r in s.xregs)
+ && (forall t :: t in s.wregs)
+}
+
 type reg_index = i:int | 0 <= i <= 32
 
 // General purpose and control registers, 32b
@@ -152,7 +165,7 @@ predicate evalIns32(xins:ins32, s:state, r:state)
 	if !s.ok then
 		!r.ok
 	else
-		r.ok
+		r.ok && (valid_state(s) ==> valid_state(r))
 }
 
 predicate ValidSourceRegister256(s:state, r:Reg256)
@@ -178,7 +191,7 @@ predicate evalIns256(wins:ins256, s:state, r:state)
 	if !s.ok then
 		!r.ok
 	else
-		r.ok
+		r.ok && (valid_state(s) ==> valid_state(r))
 }
 
 predicate evalBlock(block:codes, s:state, r:state)

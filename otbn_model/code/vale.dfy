@@ -217,17 +217,17 @@ lemma code_state_validity(c:code, s:state, r:state)
 {
     if r.ok {
         if c.Ins32? {
-            assert valid_state(r);
+            assert true;
+        } else if c.Ins256? {
+            assert true;
         } else if c.Block? {
             block_state_validity(c.block, s, r);
-        } else {
-            assume false;
+        } else if c.While? {
+            var n:nat :| evalWhile(c.whileCond, c.whileBody, n, s, r);
+            evalWhile_validity(c.whileCond, c.whileBody, n, s, r);
+            assert valid_state(r);
         }
-    } else if c.While? {
-        var n:nat :| evalWhile(c.whileCond, c.whileBody, n, s, r);
-        evalWhile_validity(c.whileCond, c.whileBody, n, s, r);
-        assert valid_state(r);
-    }
+    } 
 }
 
 lemma va_lemma_empty(s:va_state, r:va_state) returns(r':va_state)
@@ -365,18 +365,6 @@ lemma va_lemma_whileFalse(w:whileCond, c:code, s:va_state, r:va_state) returns(r
     r' := r;
 }
 
-////////////////////////////////////////////////////////////////////////
-//
-//  Invariants over the state
-//
-////////////////////////////////////////////////////////////////////////
-
-predicate valid_state(s:state)
-{
-    |s.stack| >= 0
- && (forall r :: r in s.xregs)
- && (forall t :: t in s.wregs)
-}
 
 predicate {:opaque} BN_ValidState(s:state)
     ensures BN_ValidState(s) ==> valid_state(s);
