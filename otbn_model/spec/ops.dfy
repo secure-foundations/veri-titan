@@ -207,13 +207,13 @@ module ops {
 	function method {:opaque} uint256_ls(x: uint256, num_bytes:int): uint256
 		requires 0 <= num_bytes < 32;
 	{
-		(x as bv256 << num_bytes * 8) as uint256
+		(x as bv256 << (num_bytes * 8)) as uint256
 	}
 
 	function method {:opaque} uint256_rs(x:uint256, num_bytes:int): uint256
 		requires 0 <= num_bytes < 32;
 	{
-		(x as bv256 >> num_bytes * 8) as uint256
+		(x as bv256 >> (num_bytes * 8)) as uint256
 	}
 
 	function {:opaque} uint256_quater(x:uint256, qw:int) : (r: uint64)
@@ -225,7 +225,9 @@ module ops {
 
 	function uint256_shift(b:Bignum, st:bool, sb:uint32) : Bignum
 		requires sb < 32;
-	{
-		if st then uint256_ls(b, sb) else uint256_rs(b, sb)
+	{	
+		if sb == 0 then b
+		else if st then uint256_ls(b, sb)
+		else uint256_rs(b, sb)
 	}
 } // end module ops

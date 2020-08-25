@@ -16,10 +16,6 @@ module example_lemmas {
 	{
 		calc == {
 			xor256(x, x, false, 0);
-			uint256_xor(x, uint256_rs(x, 0));
-			{
-				assume uint256_rs(x, 0) == x;
-			}
 			uint256_xor(x, x);
 			{
 				reveal uint256_xor();
