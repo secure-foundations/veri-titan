@@ -40,8 +40,8 @@ procedure DoubleRegExample32()
     Add32(x2, x2, x2);
 }
 
-// procedure half_mul(in src1:reg256, in src2:reg256)
 procedure half_mul()
+// procedure half_mul(in src1:reg256, in src2:reg256)
     reads w28; w29;
     modifies wacc;
 {
@@ -56,6 +56,27 @@ procedure half_mul()
     // BN.MULQACC w28.2, w29.1, 64
     // BN.MULQACC w28.1, w29.2, 64
     // BN.MULQACC.SO w1.U, w28.0, w29.3, 64
+}
+
+procedure Increment(inout dst:reg32)
+    ensures
+        dst == old(dst) + 1;
+{
+    Addi32(dst, dst, 1);
+}
+
+procedure LoopExample(inout dst:reg32)
+    requires
+        dst == 0;
+    ensures
+        dst == 3;
+{
+    while (dst < 3)
+        invariant 0 <= dst <= 3;
+        decreases 3 - dst;
+        {
+            Increment(dst);
+        }
 }
 
 procedure d0inv()

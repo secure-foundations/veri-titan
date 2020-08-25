@@ -172,7 +172,8 @@ procedure Addi32(inout dst:reg32, in src1:reg32, in src2:imm32)
     requires
         src2 < 0x1000;
     ensures
-        dst = old(src1) + sext32(old(src2), 12);
+        //dst = old(src1) + sext32(old(src2), 12);
+        dst = old(src1) + old(src2);
 {
 assume false;
 }
