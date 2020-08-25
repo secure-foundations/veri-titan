@@ -1,4 +1,4 @@
-DAFNY_VERIFY := $(DAFNY) \
+DAFNY_VERIFY := dafny \
 	/compile:0 \
 	/allocated:3 \
 	/nologo \
