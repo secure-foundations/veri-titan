@@ -202,9 +202,8 @@ lemma block_state_validity(block:codes, s:state, r:state)
 		var r':state :| evalCode(block.hd, s, r') && evalBlock(block.tl, r', r);
 		code_state_validity(block.hd, s, r');
 		if r'.ok {
-			block_state_validity(block.tl, r', s);
-		}
-		else {
+			block_state_validity(block.tl, r', r);
+		} else {
 			lemma_FailurePreservedByBlock(block.tl, r', r);
 		}
 	}
