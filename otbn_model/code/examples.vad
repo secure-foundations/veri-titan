@@ -40,6 +40,13 @@ procedure DoubleRegExample32()
     Add32(x2, x2, x2);
 }
 
+procedure Increment(inout dst:reg32)
+    ensures
+        dst == old(dst) + 1;
+{
+    Addi32(dst, dst, 1);
+}
+
 procedure LoopExample(inout dst:reg32)
     requires
         dst == 0;
@@ -50,7 +57,7 @@ procedure LoopExample(inout dst:reg32)
         invariant 0 <= dst <= 3;
         decreases 3 - dst;
         {
-            Addi32(dst, dst, 1);
+            Increment(dst);
         }
 }
 

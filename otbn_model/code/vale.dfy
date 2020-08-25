@@ -384,7 +384,7 @@ lemma evalWhile_validity(w:whileCond, c:code, n:nat, s:state, r:state)
 	decreases c, 1, n;
 	ensures valid_state(s) && r.ok ==> valid_state(r);
 {
-	if valid_state(s) && r.ok && ValidRegister32(s.xregs, w.r) && ValidRegister32(s.xregs, w.c) && n > 0 {
+	if valid_state(s) && r.ok && ValidRegister32(s.xregs, w.r) && n > 0 {
 		var s', r' :| evalWhileCond(s, w) && branchRelation(s, s', true) && evalCode(c, s', r') && evalWhile(w, c, n - 1, r', r);
 		code_state_validity(c, s', r');
 		evalWhile_validity(w, c, n - 1, r', r);
