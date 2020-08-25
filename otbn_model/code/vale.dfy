@@ -65,7 +65,6 @@ function va_eval_reg32(s:va_state, r:Reg32):uint32
 
 function va_update_operand_reg32(r:Reg32, sM:va_state, sK:va_state):va_state
     requires r in sM.xregs;
-    requires r.Gpr? ==> ValidRegisterIndex(r.x);
 {
     va_update_reg32(r, sM, sK)
 }
@@ -84,7 +83,6 @@ function va_eval_reg256(s:va_state, r:Reg256):uint256
 
 function va_update_operand_reg256(r:Reg256, sM:va_state, sK:va_state):va_state
     requires r in sM.wregs;
-    requires r.Wdr? ==> ValidRegisterIndex(r.w);
 {
     va_update_reg256(r, sM, sK)
 }
