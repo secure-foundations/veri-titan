@@ -220,14 +220,14 @@ predicate evalWhile(wc:whileCond, c:code, n:nat, s:state, r:state)
 {
 	if s.ok && ValidSourceRegister32(s, wc.r) && IsUInt32(wc.c) then
 		if n == 0 then
-		!evalWhileCond(s, wc) && branchRelation(s, r, false)
+			!evalWhileCond(s, wc) && branchRelation(s, r, false)
 		else
 			exists loop_start:state, loop_end:state :: evalWhileCond(s, wc)
 			&& branchRelation(s, loop_start, true)
 			&& evalCode(c, loop_start, loop_end)
 			&& evalWhile(wc, c, n - 1, loop_end, r)
-		else
-			!r.ok
+	else
+		!r.ok
 }
 
 predicate evalCode(c:code, s:state, r:state)
