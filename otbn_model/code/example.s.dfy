@@ -16,20 +16,16 @@ module example_lemmas {
 	{
 		calc == {
 			xor256(x, x, false, 0);
-			BignumXor(x, x, false, 0);
+			uint256_xor(x, uint256_rs(x, 0));
 			{
-				assume false; // why does this calc not hold?
+				reveal uint256_rs();
+				assume uint256_rs(x, 0) == x;
 			}
-		    BitsToBignum(BignumToBits(x) ^ BignumToBits(BignumShift(x, false, 0)));
+			uint256_xor(x, x);
 			{
-				reveal BignumToBits();
+				reveal uint256_xor();
 			}
-			BitsToBignum(x as bv256 ^ BignumShift(x, false, 0) as bv256);
+			0;
 		}
-
-		// reveal BignumToBits();
-		// reveal BitShiftRight256();
-		assume false;
-		// assert x as bv256 ^ x as bv256 == 0;
 	}
 }

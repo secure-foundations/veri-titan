@@ -216,7 +216,7 @@ module ops {
 		(x as bv256 >> num_bytes * 8) as uint256
 	}
 
-	function GetQuarterWord(x:Bignum, qw:int) : Bignum
+	function GetQuarterWord(x:Bignum, qw:int) : (r: Bignum)
 		requires 0 <= qw <= 3;
 	{
 		x / pow2(5) * qw % pow2(5)
