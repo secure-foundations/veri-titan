@@ -14,13 +14,6 @@ module example_lemmas {
 	lemma lemma_xor_clear(x: uint256)
 	    ensures xor256(x, x, false, 0) == 0;
 	{
-		calc == {
-			xor256(x, x, false, 0);
-			uint256_xor(x, x);
-			{
-				reveal uint256_xor();
-			}
-			0;
-		}
+		reveal uint256_xor();
 	}
 }
