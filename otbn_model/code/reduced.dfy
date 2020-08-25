@@ -50,7 +50,7 @@ module example_lemmas {
 	// function method BignumToBits(bn:uint256) : bv256 { bn as bv256 }
 
 	lemma lemma_xor_clear(x: uint256, y: uint256)
-		// requires x == y;
+		requires x == y;
 	    // ensures xor256(x, y, false, 0) == 0;
 	{
 		calc == {
@@ -62,7 +62,20 @@ module example_lemmas {
 				assume bv256_lshift(BignumToBits(y), 0) == BignumToBits(y);
 			}
 			BitsToBignum(bv256_xor(BignumToBits(x), BignumToBits(BitsToBignum(BignumToBits(y)))));
+			{
+				assume BitsToBignum(BignumToBits(y)) == y;
+			}
+			BitsToBignum(bv256_xor(BignumToBits(x), BignumToBits(y)));
+			{
+				assume bv256_xor(BignumToBits(x), BignumToBits(x)) == 0;
+			}
+			BitsToBignum(0);
+			{
+				reveal BitsToBignum();
+			}
+			0;
 		}
+
 		// assume false;
 	}
 }
