@@ -216,22 +216,16 @@ module ops {
 		(x as bv256 >> num_bytes * 8) as uint256
 	}
 
-	function GetQuarterWord(x:Bignum, qw:int) : (r: Bignum)
+	function {:opaque} uint256_quater(x:uint256, qw:int) : (r: uint64)
 		requires 0 <= qw <= 3;
-	{
-		x / pow2(5) * qw % pow2(5)
-	}
+	// this doesn't seem quite right
+	// {
+	// 	x / pow2(5) * qw % pow2(5)
+	// }
 
-	function BignumShift(b:Bignum, st:bool, sb:uint32) : Bignum
+	function uint256_shift(b:Bignum, st:bool, sb:uint32) : Bignum
 		requires sb < 32;
 	{
 		if st then uint256_ls(b, sb) else uint256_rs(b, sb)
-	}
-
-	function BignumAddCarry(a:Bignum, b:Bignum, st:bool, sb:uint32, cf:bool) : (Bignum, bool)
-		requires sb < 32;
-	{
-		var sum :int := a + BignumShift(b, st, sb) + BoolToInt(cf);
-		(sum % BignumSize, sum >= BignumSize)
 	}
 } // end module ops

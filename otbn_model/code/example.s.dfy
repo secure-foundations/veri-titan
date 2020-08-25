@@ -18,7 +18,6 @@ module example_lemmas {
 			xor256(x, x, false, 0);
 			uint256_xor(x, uint256_rs(x, 0));
 			{
-				reveal uint256_rs();
 				assume uint256_rs(x, 0) == x;
 			}
 			uint256_xor(x, x);

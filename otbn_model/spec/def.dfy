@@ -267,19 +267,19 @@ function rol32(x:uint32, amount:uint32) : uint32
 
 function ror32(x:uint32, amount:uint32) : uint32
     requires 0 <= amount < 32;
-    { RotateRight(x, amount) }
+{ RotateRight(x, amount) }
 
 function shl32(x:uint32, amount:uint32) : uint32
     requires 0 <= amount < 32;
-    { LeftShift(x, amount) }
+{ LeftShift(x, amount) }
 
 function shr32(x:uint32, amount:uint32) : uint32
     requires 0 <= amount < 32;
-    { RightShift(x, amount) }
+{ RightShift(x, amount) }
 
 function sext32(x:uint32, sz:int) : uint32
   requires 0 < sz < 32;
-    { BitwiseSignExtend(x, sz) }
+{ BitwiseSignExtend(x, sz) }
 
 function add256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
 	requires sb < 32;
@@ -303,15 +303,24 @@ function sub256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) 
 	(sum, flags_group.(cf := new_carry))
 }
 
+function BignumAddCarry(a:Bignum, b:Bignum, st:bool, sb:uint32, cf:bool) : (Bignum, bool)
+	requires sb < 32;
+{
+	var sum :int := a + uint256_shift(b, st, sb) + BoolToInt(cf);
+	(sum % BignumSize, sum >= BignumSize)
+}
+
 function mulqacc256(x:Bignum, qx:int, y:Bignum, qy:int, shift:int, zero:bool, wacc:Bignum) : Bignum
 	requires 0 <= shift <= 3;
 	requires 0 <= qx <= 3;
 	requires 0 <= qy <= 3;
 {
-	var result := uint256_ls(GetQuarterWord(x, qx) * GetQuarterWord(y, qy), shift * 64);
+	var product := uint256_quater(x, qx) * uint256_quater(y, qy);
+	assume false;
+	var result := uint256_ls(product, shift * 64);
 	if zero then result else wacc + result
 }
-	
+
 function mulqacc256_so(x:Bignum, qx:int, y:Bignum, qy:int, shift:int, zero:bool, wacc:Bignum) : Bignum
 	requires 0 <= shift <= 3;
 	requires 0 <= qx <= 3;
@@ -323,18 +332,19 @@ function mulqacc256_so(x:Bignum, qx:int, y:Bignum, qy:int, shift:int, zero:bool,
 function xor256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;
 {
-	uint256_xor(x, BignumShift(y, st, sb))
+	uint256_xor(x, uint256_shift(y, st, sb))
 }
 
 function or256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;
 {
-	uint256_or(x, BignumShift(y, st, sb))
+	uint256_or(x, uint256_shift(y, st, sb))
 }
 		
 function and256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;
 {
-	uint256_and(x, BignumShift(y, st, sb))
+	uint256_and(x, uint256_shift(y, st, sb))
 }
+
 }
