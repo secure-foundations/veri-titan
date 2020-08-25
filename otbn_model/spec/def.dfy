@@ -298,19 +298,27 @@ function addm256(x:Bignum, y:Bignum, mod:Bignum) : Bignum
 
 function sub256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
 	requires sb < 32;
-{ var (sum, new_carry) := BignumAddCarry(x, -y, st, sb, cf(flags_group)); (sum, flags_group.(cf := new_carry))  }
+{
+	var (sum, new_carry) := BignumAddCarry(x, -y, st, sb, cf(flags_group));
+	(sum, flags_group.(cf := new_carry))
+}
 
 function mulqacc256(x:Bignum, qx:int, y:Bignum, qy:int, shift:int, zero:bool, wacc:Bignum) : Bignum
 	requires 0 <= shift <= 3;
 	requires 0 <= qx <= 3;
 	requires 0 <= qy <= 3;
-{ var result := uint256_ls(GetQuarterWord(x, qx) * GetQuarterWord(y, qy), shift * 64); if zero then result else wacc + result }
+{
+	var result := uint256_ls(GetQuarterWord(x, qx) * GetQuarterWord(y, qy), shift * 64);
+	if zero then result else wacc + result
+}
 	
 function mulqacc256_so(x:Bignum, qx:int, y:Bignum, qy:int, shift:int, zero:bool, wacc:Bignum) : Bignum
 	requires 0 <= shift <= 3;
 	requires 0 <= qx <= 3;
 	requires 0 <= qy <= 3;
-{ uint256_rs(mulqacc256(x, qx, y, qy, shift, zero, wacc), 16) }
+{
+	uint256_rs(mulqacc256(x, qx, y, qy, shift, zero, wacc), 16)
+}
 
 function xor256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;
@@ -329,5 +337,4 @@ function and256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 {
 	uint256_and(x, BignumShift(y, st, sb))
 }
-
 }
