@@ -168,10 +168,21 @@ lemma lemma_FailurePreservedByBlock(block:codes, s:state, r:state)
 
 lemma lemma_FailurePreservedByCode(c:code, s:state, r:state)
     requires evalCode(c, s, r);
-    ensures  !s.ok ==> !r.ok;
+    ensures !s.ok ==> !r.ok;
 {
-    if c.Block? {
-        lemma_FailurePreservedByBlock(c.block, s, r);
+    match c {
+        case Block(b) => {
+            lemma_FailurePreservedByBlock(b, s, r);
+        }
+        case While(h, w) => {
+            assume false;
+        }
+        case Ins256(i) => {
+            var r' :| evalCode(c, s, r');
+        }
+        case Ins32(i) => {
+            var r' :| evalCode(c, s, r');
+        }
     }
 }
 

@@ -149,7 +149,10 @@ function eval_reg32(s:state, r:Reg32) : uint32
 
 predicate evalIns32(xins:ins32, s:state, r:state)
 {
-	true
+	if !s.ok then
+		!r.ok
+	else
+		r.ok
 }
 
 predicate ValidSourceRegister256(s:state, r:Reg256)
