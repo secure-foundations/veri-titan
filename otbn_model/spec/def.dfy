@@ -8,14 +8,16 @@ module bignum_def {
 import opened types
 import opened ops	
 
+type reg_index = i:int | 0 <= i <= 32
+
 // General purpose and control registers, 32b
 datatype Reg32 =
-| Gpr(x:int)
+| Gpr(x:reg_index)
 | Rnd // Random number
 
 // Wide data and special registers, 256b
 datatype Reg256 =
-| Wdr(w:int)
+| Wdr(w:reg_index)
 | WMod // Wide modulo register
 | WRnd // Wide random number
 | WAcc // Wide accumulator
@@ -127,22 +129,14 @@ function eval_wreg(wregs:map<Reg256, uint256>, r:Reg256) : uint256
 	else wregs[r]
 }
 
-predicate ValidRegisterIndex(index:int)
-{
-	0 <= index < 32
-}
-
 predicate ValidSourceRegister32(s:state, r:Reg32)
 {
-	if r.Rnd? then
-		ValidRegister32(s.xregs, r)
-	else
-		ValidRegister32(s.xregs, r) && ValidRegisterIndex(r.x)
+	ValidRegister32(s.xregs, r)
 }
 
 predicate ValidDestinationRegister32(s:state, r:Reg32)
 {
-		!r.Rnd? && ValidRegister32(s.xregs, r) && ValidRegisterIndex(r.x)
+		!r.Rnd? && ValidRegister32(s.xregs, r)
 }
 
 function eval_reg32(s:state, r:Reg32) : uint32
@@ -160,15 +154,12 @@ predicate evalIns32(xins:ins32, s:state, r:state)
 
 predicate ValidSourceRegister256(s:state, r:Reg256)
 {
-	if r.WRnd? || r.WMod? then
-		ValidRegister256(s.wregs, r)
-	else
-		ValidRegister256(s.wregs, r) && ValidRegisterIndex(r.w)
+	ValidRegister256(s.wregs, r)
 }
 
 predicate ValidDestinationRegister256(s:state, r:Reg256)
 {
-		!r.WRnd? && ValidRegister256(s.wregs, r) && ValidRegisterIndex(r.w)
+	!r.WRnd? && ValidRegister256(s.wregs, r)
 }
 
 function eval_reg256(s:state, r:Reg256) : uint256
@@ -316,7 +307,7 @@ function mulqacc256(x:Bignum, qx:int, y:Bignum, qy:int, shift:int, zero:bool, wa
 	requires 0 <= qy <= 3;
 {
 	var product := uint256_quater(x, qx) * uint256_quater(y, qy);
-	assume false;
+	assume false; // TODO: write a lemma for uint64 product
 	var result := uint256_ls(product, shift * 64);
 	if zero then result else wacc + result
 }
