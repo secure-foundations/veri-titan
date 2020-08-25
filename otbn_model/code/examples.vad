@@ -40,6 +40,20 @@ procedure DoubleRegExample32()
     Add32(x2, x2, x2);
 }
 
+procedure LoopExample(inout dst:reg32)
+    requires
+        dst == 0;
+    ensures
+        dst == 3;
+{
+    while (dst < 3)
+        invariant 0 <= dst <= 3;
+        decreases 3 - dst;
+        {
+            Addi32(dst, dst, 1);
+        }
+}
+
 procedure d0inv()
     modifies
         w0; w29; flags;
@@ -54,6 +68,7 @@ procedure d0inv()
 //while (i >= 0)
 //    {
 //    Mulqacc256(w28, 1, w29, 0, 1);
+//    ...
 //    }
     
 }

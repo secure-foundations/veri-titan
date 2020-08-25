@@ -72,7 +72,7 @@ datatype ins256 =
 datatype codes = CNil | va_CCons(hd:code, tl:codes)
 
 datatype cmp = Eq | Ne | Gt | Ge | Lt | Le
-datatype whileCond = WhileCond(cmp:cmp, r1:Reg32, r2:Reg32)
+datatype whileCond = WhileCond(cmp:cmp, r:Reg32, c:uint32)
 
 datatype code =
 | Ins32(ins:ins32)
@@ -207,10 +207,10 @@ function evalCmp(c:cmp, i1:uint32, i2:uint32):bool
 }
 
 function evalWhileCond(s:state, wc:whileCond):bool
-	requires ValidSourceRegister32(s, wc.r1);
-	requires ValidSourceRegister32(s, wc.r2);
+	requires ValidSourceRegister32(s, wc.r);
+	requires IsUInt32(wc.c);
 {
-	evalCmp(wc.cmp, eval_reg32(s, wc.r1), eval_reg32(s, wc.r2))
+	evalCmp(wc.cmp, eval_reg32(s, wc.r), wc.c)
 }
 
 // TODO
@@ -224,7 +224,7 @@ predicate branchRelation(s:state, s':state, cond:bool)
 predicate evalWhile(wc:whileCond, c:code, n:nat, s:state, r:state)
 	decreases c, n
 {
-	if s.ok && ValidSourceRegister32(s, wc.r1) && ValidSourceRegister32(s, wc.r2) then
+	if s.ok && ValidSourceRegister32(s, wc.r) && IsUInt32(wc.c) then
 		if n == 0 then
 		!evalWhileCond(s, wc) && branchRelation(s, r, false)
 		else
