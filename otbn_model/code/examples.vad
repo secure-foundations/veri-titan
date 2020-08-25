@@ -60,9 +60,9 @@ procedure d0inv()
 {
     lemma_xor_clear(w0);
     Xor256(w0, w0, w0, false, 0);
-
     assert(w0 == 0);
     Addi256(w0, w0, 1, false);
+    assert(w0 == 1);
     Mov256(w29, w0);
 
 //while (i >= 0)
