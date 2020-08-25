@@ -42,20 +42,20 @@ procedure DoubleRegExample32()
 
 procedure d0inv()
     modifies
-        w0; w29; flags;
+        w0; w29; flags; wacc; w28;
 {
     lemma_xor_clear(w0);
-    Xor256(w0, w0, w0, false, 0);
 
-    assert(w0 == 0);
+    Xor256(w0, w0, w0, false, 0);
     Addi256(w0, w0, 1, false);
     Mov256(w29, w0);
+    assert(w29 == 1);
 
-//while (i >= 0)
-//    {
-//    Mulqacc256(w28, 1, w29, 0, 1);
-//    }
-    
+    while (true)
+        decreases *;
+    {
+        Mulqacc256(false, w28, 1, w29, 0, 1);
+    }
 }
 
 #verbatim

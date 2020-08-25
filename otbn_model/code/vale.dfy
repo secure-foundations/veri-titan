@@ -115,8 +115,8 @@ predicate cTailIs(b:codes, t:codes) { b.va_CCons? && b.tl == t }
 predicate va_require(b0:codes, c1:code, s0:va_state, sN:va_state)
 {
     cHeadIs(b0, c1)
- && eval_code(Block(b0), s0, sN)
- && BN_ValidState(s0)
+&& eval_code(Block(b0), s0, sN)
+&& BN_ValidState(s0)
 }
 
 // Weaker form of eval_code that we can actually ensure generically in instructions
@@ -203,14 +203,14 @@ lemma code_state_validity(c:code, s:state, r:state)
             assert valid_state(r);
         } else if c.Block? {
             block_state_validity(c.block, s, r);
-				} else {
-					assume false;
-				}
-		} else if c.While? {
-            var n:nat :| evalWhile(c.whileCond, c.whileBody, n, s, r);
-            evalWhile_validity(c.whileCond, c.whileBody, n, s, r);
-            assert valid_state(r);
+        } else {
+            assume false;
         }
+    } else if c.While? {
+        var n:nat :| evalWhile(c.whileCond, c.whileBody, n, s, r);
+        evalWhile_validity(c.whileCond, c.whileBody, n, s, r);
+        assert valid_state(r);
+    }
 }
 
 lemma va_lemma_empty(s:va_state, r:va_state) returns(r':va_state)
