@@ -68,6 +68,7 @@ procedure Increment(inout dst:reg32)
 procedure LoopExample(inout dst:reg32)
     requires
         dst == 0;
+    modifies flags;
     ensures
         dst == 3;
 {
