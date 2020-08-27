@@ -11,9 +11,12 @@ import opened bignum_def
 #endverbatim
 
 type state:Type(0) {:primitive} extern;
-type uint32:Type(0) := int_range(0, 0xffff_ffff);
+
 type uint2:Type(0) := int_range(0, 3);
+type uint32:Type(0) := int_range(0, 0xffff_ffff);
+// type uint128:Type(0) := int_range(0, 0xffffffffffffffffffffffffffffffff);
 type uint256:Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff);
+
 type seq(a:Type(0)):Type(0) {:primitive} extern;
 type map(a:Type(0), b:Type(0)):Type(0) extern;
 type Bignum:Type(0) := uint256;
@@ -388,11 +391,7 @@ procedure Mulqacc256_so(
         wacc;
     ensures
         let result := mulqacc256(false, src1, qwsel1, src2, qwsel2, shift, old(wacc));
-        wacc == uint256_lh(result);
-        // if lower then
-        //     dst == uint256_half(result, 1)
-        // else
-        //     dst == uint256_half(result, 1);
+        wacc == uint256_uh(result);
 {
     assume false;
 }

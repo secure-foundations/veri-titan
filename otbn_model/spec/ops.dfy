@@ -216,9 +216,17 @@ module ops {
 		(x as bv256 >> (num_bytes * 8)) as uint256
 	}
 
-	function method {:opaque} uint256_lh(x: uint256): uint256
+	function method {:opaque} uint256_lh(x: uint256): uint128
 
-	function method {:opaque} uint256_uh(x: uint256): uint256
+	function method {:opaque} uint256_uh(x: uint256): uint128
+
+	function method {:opaque} uint256_lh_wb(x: uint256, v: uint128): (x': uint256)
+		// overwrites the lower half, keeps the higher half
+		ensures uint256_lh(x') == v && uint256_uh(x') == uint256_uh(x);
+
+	function method {:opaque} uint256_uh_wb(x: uint256, v: uint128): (x': uint256)
+		// overwrites the higher half, keeps the lower half
+		ensures uint256_uh(x) == v && uint256_lh(x') == uint256_lh(x);
 
 	function method {:opaque} uint256_quater(x:uint256, qw:uint2): uint64
 	// this doesn't seem quite right
