@@ -367,17 +367,27 @@ procedure And256(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:boo
 assume false;
 }
 
-procedure Mulqacc256(inline zero: bool, in src1:reg256, in qwsel1:imm2, in src2:reg256, in qwsel2:imm2, in shift:imm2)
-    {:instruction Ins256(MULQACC256(zero, src1, qwsel1, src2, qwsel2, shift))}
+procedure BN_MULQACC_Z(in src1:reg256, in qwsel1:imm2, in src2:reg256, in qwsel2:imm2, in shift:imm2)
+    {:instruction Ins256(MULQACC256(true, src1, qwsel1, src2, qwsel2, shift))}
     modifies
         wacc;
     ensures
-        wacc == mulqacc256(zero, src1, qwsel1, src2, qwsel2, shift, old(wacc));
+        wacc == mulqacc256(true, src1, qwsel1, src2, qwsel2, shift, old(wacc));
 {
     assume false;
 }
-    
-procedure Mulqacc256_so( 
+
+procedure BN_MULQACC(in src1:reg256, in qwsel1:imm2, in src2:reg256, in qwsel2:imm2, in shift:imm2)
+    {:instruction Ins256(MULQACC256(false, src1, qwsel1, src2, qwsel2, shift))}
+    modifies
+        wacc;
+    ensures
+        wacc == mulqacc256(false, src1, qwsel1, src2, qwsel2, shift, old(wacc));
+{
+    assume false;
+}
+
+procedure BN_MULQACC_SO( 
     inout dst: reg256,
     inline lower: bool,
     in src1: reg256,
