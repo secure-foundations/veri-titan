@@ -44,12 +44,14 @@ function va_update_flags(sM:va_state, sK:va_state):va_state
 function va_update_stack(sM:va_state, sK:va_state):va_state { sK.(stack := sM.stack) }
 
 type va_operand_imm32 = uint32
-predicate va_is_src_imm32(v:uint32, s:va_state) { IsUInt32(v) }
-function va_eval_imm32(s:va_state, v:uint32):uint32
-	requires va_is_src_imm32(v, s);
-{
-	v
-}
+predicate va_is_src_imm32(v:uint32, s:va_state) { true }
+function va_eval_imm32(s:va_state, v:uint32):uint32 { v }
+function method va_const_imm32(n:uint32):uint32 { n }
+
+type va_operand_imm2 = uint2
+predicate va_is_src_imm2(v:uint2, s:va_state) {true}
+function va_eval_imm2(s:va_state, v:uint2):uint2 {v}
+function method va_const_imm2(v:uint32):uint32 {v}
 
 type va_value_reg32 = uint32
 type va_operand_reg32 = Reg32
@@ -147,8 +149,6 @@ function method va_op_reg32_reg32(r:Reg32):Reg32 { r }
 function method va_op_reg256_reg256(r:Reg256):Reg256 { r }
 function method va_Block(block:codes):code { Block(block) }
 function method va_While(wcond:whileCond, wcode:code):code { While(wcond, wcode) }
-
-function method va_const_imm32(n:uint32):uint32 { n }
 
 function method va_get_block(c:code):codes requires c.Block? { c.block }
 function method va_get_whileCond(c:code):whileCond requires c.While? {c.whileCond }
