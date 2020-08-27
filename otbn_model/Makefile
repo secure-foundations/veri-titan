@@ -13,7 +13,7 @@ code/example.s.dfy.ver: code/example.s.dfy
 code/examples.dfy: code/examples.vad code/decls.dfy
 	vale.exe -dafnyText -in code/examples.vad -out code/examples.dfy
 
-code/decls.dfy:
+code/decls.dfy: code/decls.vad
 	vale.exe -dafnyText -in code/decls.vad -out code/decls.dfy
 
 clean:
