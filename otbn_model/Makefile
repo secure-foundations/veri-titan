@@ -15,7 +15,7 @@ VALE=vale.exe
 code/examples.dfy: code/examples.vad code/decls.dfy
 	$(VALE) -dafnyText -in code/examples.vad -out code/examples.dfy
 
-code/decls.dfy:
+code/decls.dfy: code/decls.vad
 	$(VALE) -dafnyText -in code/decls.vad -out code/decls.dfy
 
 clean:
