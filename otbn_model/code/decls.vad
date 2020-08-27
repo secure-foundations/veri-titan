@@ -14,7 +14,7 @@ type state:Type(0) {:primitive} extern;
 
 type uint2:Type(0) := int_range(0, 3);
 type uint32:Type(0) := int_range(0, 0xffff_ffff);
-// type uint128:Type(0) := int_range(0, 0xffffffffffffffffffffffffffffffff);
+type uint128:Type(0) := int_range(0, 0xffffffffffffffffffffffffffffffff);
 type uint256:Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff);
 
 type seq(a:Type(0)):Type(0) {:primitive} extern;
@@ -50,10 +50,10 @@ function addi256(a:Bignum, b:uint32, flags_group:FlagsGroup):tuple(Bignum, Flags
 function addm256(a:Bignum, b:Bignum, mod:Bignum):Bignum extern;
 function sub256(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
 function mulqacc256(zero: bool, a:Bignum, qa:uint32, b:Bignum, qb:uint32, shift:uint32, macc:Bignum):Bignum extern;
-function mulqacc256_so(a:Bignum, qa:uint32, b:Bignum, qb:uint32, shift:uint32, zero:bool, macc:Bignum):Bignum extern;
+function uint256_hwb(x: Bignum, v: uint128, lower: bool):Bignum extern;
 
-function uint256_lh(a: Bignum): Bignum extern;
-function uint256_uh(a: Bignum): Bignum extern;
+function uint256_lh(a: Bignum): uint128 extern;
+function uint256_uh(a: Bignum): uint128 extern;
 
 function get_flags_group(fg:bool, flags:Flags):FlagsGroup extern;
 function update_fg(b:bool, f:Flags, fg:FlagsGroup):Flags extern;
@@ -391,7 +391,10 @@ procedure Mulqacc256_so(
         wacc;
     ensures
         let result := mulqacc256(false, src1, qwsel1, src2, qwsel2, shift, old(wacc));
-        wacc == uint256_uh(result);
+        // the upper half stay in wacc
+        wacc == uint256_uh(result)
+        // the lower half gets written back into dst
+        && dst == uint256_hwb(dst, uint256_lh(result), lower);
 {
     assume false;
 }
