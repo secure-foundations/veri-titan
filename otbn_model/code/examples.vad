@@ -45,10 +45,12 @@ procedure half_mul()
     reads w28; w29;
     modifies wacc;
 {
-    Mulqacc256(false, w28, 0, w29, 0, 0);
     // BN.MULQACC.Z w28.0, w29.0, 0
+    Mulqacc256(true, w28, 0, w29, 0, 0);
     // BN.MULQACC w28.1, w29.0, 64
+    Mulqacc256(false, w28, 1, w29, 0, 0);
     // BN.MULQACC.SO w1.L, w28.0, w29.1, 64
+    Mulqacc256_so(false, w28, 1, w29, 0, 0);
     // BN.MULQACC w28.2, w29.0, 0
     // BN.MULQACC w28.1, w29.1, 0
     // BN.MULQACC w28.0, w29.2, 0

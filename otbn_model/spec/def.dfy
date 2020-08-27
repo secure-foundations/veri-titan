@@ -317,15 +317,37 @@ function BignumAddCarry(a:Bignum, b:Bignum, st:bool, sb:uint32, cf:bool) : (Bign
 	(sum % BignumSize, sum >= BignumSize)
 }
 
+datatype uint256_qsel = uint256_qsel(
+	full: uint256,
+	sel: uint2
+)
+
+datatype mulqacc_wb = 
+	| SOL(wrd: uint256)
+	| SOU(wrd: uint256)
+	| WO(wrd: uint256)
+	| NA
+
+function mulqacc_internal(
+	qy: uint256_qsel,
+	qx: uint256_qsel,
+	shift: uint2,
+	wb: mulqacc_wb,
+	acc: uint256)
+	: (acc': uint256)
+{
+	var product := uint256_quater(qx.full, qx.sel) * uint256_quater(qy.full, qy.sel);
+	assume false; // TODO: write a lemma for uint64 product
+	var shift := uint256_ls(product, shift * 64);
+	acc + shift
+}
+
 function mulqacc256(x:Bignum, qx:int, y:Bignum, qy:int, shift:int, zero:bool, wacc:Bignum) : Bignum
 	requires 0 <= shift <= 3;
 	requires 0 <= qx <= 3;
 	requires 0 <= qy <= 3;
 {
-	var product := uint256_quater(x, qx) * uint256_quater(y, qy);
-	assume false; // TODO: write a lemma for uint64 product
-	var result := uint256_ls(product, shift * 64);
-	if zero then result else wacc + result
+	0
 }
 
 function mulqacc256_so(x:Bignum, qx:int, y:Bignum, qy:int, shift:int, zero:bool, wacc:Bignum) : Bignum
@@ -333,7 +355,8 @@ function mulqacc256_so(x:Bignum, qx:int, y:Bignum, qy:int, shift:int, zero:bool,
 	requires 0 <= qx <= 3;
 	requires 0 <= qy <= 3;
 {
-	uint256_rs(mulqacc256(x, qx, y, qy, shift, zero, wacc), 16)
+	0
+	// uint256_rs(mulqacc256(x, qx, y, qy, shift, zero, wacc), 16)
 }
 
 function xor256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
