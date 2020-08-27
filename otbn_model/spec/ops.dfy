@@ -216,8 +216,11 @@ module ops {
 		(x as bv256 >> (num_bytes * 8)) as uint256
 	}
 
-	function {:opaque} uint256_quater(x:uint256, qw:int) : (r: uint64)
-		requires 0 <= qw <= 3;
+	function method {:opaque} uint256_lh(x: uint256): uint256
+
+	function method {:opaque} uint256_uh(x: uint256): uint256
+
+	function method {:opaque} uint256_quater(x:uint256, qw:uint2): uint64
 	// this doesn't seem quite right
 	// {
 	// 	x / pow2(5) * qw % pow2(5)

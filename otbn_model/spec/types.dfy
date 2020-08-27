@@ -25,6 +25,7 @@ const BignumSize : int := 115792089237316195423570985008687907853269984665640564
 // BitsOfByte
 /////////////////
 
+type uint1 = i:int | 0 <= i < 2
 type uint2 = i:int | 0 <= i < 4
 datatype BitsOfByte = BitsOfByte(lo:uint2,
                                  mid_lo:uint2,

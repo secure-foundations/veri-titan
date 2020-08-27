@@ -330,15 +330,6 @@ function mulqacc256(
 	if zero then shift else acc + shift
 }
 
-function mulqacc256_so(x:Bignum, qx:int, y:Bignum, qy:int, shift:int, zero:bool, wacc:Bignum) : Bignum
-	requires 0 <= shift <= 3;
-	requires 0 <= qx <= 3;
-	requires 0 <= qy <= 3;
-{
-	0
-	// uint256_rs(mulqacc256(x, qx, y, qy, shift, zero, wacc), 16)
-}
-
 function xor256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;
 {
