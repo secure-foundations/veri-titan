@@ -10,11 +10,13 @@ verify: code/examples.dfy code/example.s.dfy.ver
 code/example.s.dfy.ver: code/example.s.dfy
 	$(DAFNY_VERIFY) code/example.s.dfy
 
+VALE=vale.exe
+
 code/examples.dfy: code/examples.vad code/decls.dfy
-	vale.exe -dafnyText -in code/examples.vad -out code/examples.dfy
+	$(VALE) -dafnyText -in code/examples.vad -out code/examples.dfy
 
 code/decls.dfy: code/decls.vad
-	vale.exe -dafnyText -in code/decls.vad -out code/decls.dfy
+	$(VALE) -dafnyText -in code/decls.vad -out code/decls.dfy
 
 clean:
 	rm code/examples.dfy code/decls.dfy
