@@ -25,11 +25,11 @@ const BignumSize : int := 115792089237316195423570985008687907853269984665640564
 // BitsOfByte
 /////////////////
 
-newtype twobits = i:int | 0 <= i < 4
-datatype BitsOfByte = BitsOfByte(lo:twobits,
-                                 mid_lo:twobits,
-                                 mid_hi:twobits,
-                                 hi:twobits)
+type uint2 = i:int | 0 <= i < 4
+datatype BitsOfByte = BitsOfByte(lo:uint2,
+                                 mid_lo:uint2,
+                                 mid_hi:uint2,
+                                 hi:uint2)
 
 function bits_to_byte(bits:BitsOfByte) : uint8
 {
@@ -38,7 +38,7 @@ function bits_to_byte(bits:BitsOfByte) : uint8
 
 function byte_to_bits(b:uint8) : BitsOfByte
 {
-    BitsOfByte((b % 4) as twobits, ((b / 4) % 4) as twobits, ((b / 16) % 4) as twobits, ((b / 64) % 4) as twobits)
+    BitsOfByte((b % 4) as uint2, ((b / 4) % 4) as uint2, ((b / 16) % 4) as uint2, ((b / 64) % 4) as uint2)
 }
 
 /////////////////
