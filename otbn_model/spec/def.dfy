@@ -314,7 +314,7 @@ function BignumAddCarry(a:Bignum, b:Bignum, st:bool, sb:uint32, cf:bool) : (Bign
 	requires sb < 32;
 {
 	var sum :int := a + uint256_shift(b, st, sb) + BoolToInt(cf);
-	(sum % BignumSize, sum >= BignumSize)
+	(sum % BASE, sum >= BASE)
 }
 
 function mulqacc256(
@@ -327,7 +327,7 @@ function mulqacc256(
 	var product := uint256_quater(x, qx) * uint256_quater(y, qy);
 	assume false; // TODO: write a lemma for uint64 product
 	var shift := uint256_ls(product, shift * 64);
-	if zero then shift else acc + shift
+	if zero then shift else (acc + shift) % BASE
 }
 
 function xor256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum

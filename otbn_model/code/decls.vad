@@ -395,8 +395,8 @@ procedure BN_MULQACC_SO(
     in src2:reg256,
     in qwsel2:imm2,
     in shift:imm2)
-
     {:instruction Ins256(MULQACC256(false, src1, qwsel1, src2, qwsel2, shift))}
+
     modifies
         wacc;
     ensures
