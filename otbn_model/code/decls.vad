@@ -1,4 +1,4 @@
-include{:verbatim} "vale.dfy"
+include{:verbatim} "../code/vale.dfy"
 include{:verbatim} "../spec/def.dfy"
 include{:verbatim} "../spec/ops.dfy"
 

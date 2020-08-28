@@ -2,7 +2,7 @@ include "../spec/types.dfy"
 include "../spec/ops.dfy"
 include "../spec/def.dfy"
 include "vale.dfy"
-include "decls.dfy"
+include "../gen/decls.dfy"
 
 module example_lemmas {
 	import opened types
