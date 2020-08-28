@@ -2,23 +2,28 @@ include "decls.vad"
 
 #verbatim
 include "../code/vale.dfy"
-include "../spec/def.dfy"
-include "../gen/decls.dfy"
 include "../code/example_lemmas.dfy"
+
+include "../spec/def.dfy"
+include "../spec/ops.dfy"
+
+include "../gen/decls.dfy"
 
 module examples {
 
 import opened bignum_vale
-import opened bignum_def
-import opened bignum_decls
 import opened example_lemmas
+
+import opened bignum_def
+import opened ops
+
+import opened bignum_decls
 
 #endverbatim
 
 ghost procedure lemma_xor_clear(ghost x:int)
     ensures false;
     extern;
-
 
 procedure DoubleExample32(inout dst:reg32, in src:reg32)
     requires
@@ -47,7 +52,7 @@ procedure half_mul()
 {
     // BN.MULQACC.Z w28.0, w29.0, 0
     BN_MULQACC_Z(w28, 0, w29, 0, 0);
-    assert(wacc == mulqacc256(true, w28, 0, w29, 0, 0, old(wacc)));
+    assert(wacc == uint256_ls(uint256_qmul(w28, 0, w29, 0), 0));
 
     // BN.MULQACC w28.1, w29.0, 1
     BN_MULQACC(w28, 1, w29, 0, 1);
