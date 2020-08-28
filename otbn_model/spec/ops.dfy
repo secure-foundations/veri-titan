@@ -216,6 +216,14 @@ module ops {
 		(x as bv256 >> (num_bytes * 8)) as uint256
 	}
 
+	function uint256_sb(b:uint256, st:bool, sb:uint32) : uint256
+		requires sb < 32;
+	{	
+		if sb == 0 then b
+		else if st then uint256_ls(b, sb)
+		else uint256_rs(b, sb)
+	}
+
 	function method {:opaque} uint256_lh(x: uint256): uint128
 
 	function method {:opaque} uint256_uh(x: uint256): uint128
@@ -226,17 +234,5 @@ module ops {
 		// overwrites the higher half, keeps the lower half
 		ensures !lower ==> (uint256_uh(x) == v && uint256_lh(x') == uint256_lh(x));
 
-	function method {:opaque} uint256_quater(x:uint256, qw:uint2): uint64
-	// this doesn't seem quite right
-	// {
-	// 	x / pow2(5) * qw % pow2(5)
-	// }
-
-	function uint256_shift(b:Bignum, st:bool, sb:uint32) : Bignum
-		requires sb < 32;
-	{	
-		if sb == 0 then b
-		else if st then uint256_ls(b, sb)
-		else uint256_rs(b, sb)
-	}
+	function method {:opaque} uint256_qmul(x: uint256, qx: uint2, y: uint256, qy:uint2): uint128
 } // end module ops

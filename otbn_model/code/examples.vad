@@ -47,10 +47,11 @@ procedure half_mul()
 {
     // BN.MULQACC.Z w28.0, w29.0, 0
     BN_MULQACC_Z(w28, 0, w29, 0, 0);
-    // assert(wacc == w28 * w29);
+    assert(wacc == mulqacc256(true, w28, 0, w29, 0, 0, old(wacc)));
 
     // BN.MULQACC w28.1, w29.0, 1
     BN_MULQACC(w28, 1, w29, 0, 1);
+    // assert(wacc == mulqacc256(true, w28, 0, w29, 0, 0, old(wacc)));
 
     // BN.MULQACC.SO w1.L, w28.0, w29.1, 1
     BN_MULQACC_SO(w1, true, w28, 1, w29, 0, 1);
