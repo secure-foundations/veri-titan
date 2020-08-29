@@ -30,5 +30,13 @@ gen/examples.dfy: code/examples.vad gen/decls.dfy
 gen/decls.dfy: code/decls.vad
 	$(VALE) -dafnyText -in $< -out $@
 
+DFYs:=$(shell find -type f -name '*.dfy')
+
+proc-%:
+	@for i in $(shell grep -e "\(method\|function\|lemma\|predicate\).*$*" -l $(DFYs)); do \
+		echo $(BOLD)"[+] Verifying $* within $$i"$(RESET); \
+		time -p $(DAFNY_VERIFY) /proc:*$(subst _,__,$*) $$i | grep -v anon; \
+	done
+
 clean:
 	rm -r gen
