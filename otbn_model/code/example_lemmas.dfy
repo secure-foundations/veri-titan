@@ -16,4 +16,13 @@ module example_lemmas {
 	{
 		reveal uint256_xor();
 	}
+
+	lemma lemma_sb_nop(x: uint256)
+		ensures uint256_ls(x, 0) == x;
+		ensures uint256_rs(x, 0) == x;
+	{
+		assume false;
+		reveal uint256_ls();
+		reveal uint256_rs();
+	}
 }

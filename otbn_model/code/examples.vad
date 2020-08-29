@@ -22,7 +22,12 @@ import opened bignum_decls
 #endverbatim
 
 ghost procedure lemma_xor_clear(ghost x:int)
-    ensures false;
+    ensures xor256(x, x, false, 0) == 0;
+    extern;
+
+ghost procedure lemma_sb_nop(ghost x:int)
+    ensures uint256_ls(x, 0) == x;
+    ensures uint256_rs(x, 0) == x;
     extern;
 
 procedure DoubleExample32(inout dst:reg32, in src:reg32)
@@ -52,7 +57,11 @@ procedure half_mul()
 {
     // BN.MULQACC.Z w28.0, w29.0, 0
     BN_MULQACC_Z(w28, 0, w29, 0, 0);
-    assert(wacc == uint256_ls(uint256_qmul(w28, 0, w29, 0), 0));
+
+    assert(wacc == uint256_qmul(w28, 0, w29, 0)) by {
+        lemma_sb_nop(uint256_qmul(w28, 0, w29, 0));
+        assert(wacc == uint256_ls(uint256_qmul(w28, 0, w29, 0), 0));
+    }
 
     // BN.MULQACC w28.1, w29.0, 1
     BN_MULQACC(w28, 1, w29, 0, 1);
