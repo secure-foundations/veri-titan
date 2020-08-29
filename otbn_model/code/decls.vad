@@ -408,7 +408,7 @@ procedure BN_MULQACC_SO(
         // the upper half stay in wacc
         wacc == uint256_uh(result)
         // the lower half gets written back into dst
-        && dst == uint256_hwb(dst, uint256_lh(result), lower);
+        && dst == uint256_hwb(old(dst), uint256_lh(result), lower);
 {
     assume false;
 }
