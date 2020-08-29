@@ -44,19 +44,28 @@ module example_lemmas {
 		w29: uint256
 	)
 
-    requires wacc_g1 == mulqacc256(true, w28, 0, w29, 0, 0, 0);
-    requires wacc_g2 == mulqacc256(false, w28, 1, w29, 0, 1, wacc_g1);
-    requires wacc_g3 == uint256_uh(result_g1)
+    requires p1: wacc_g1 == mulqacc256(true, w28, 0, w29, 0, 0, 0);
+    requires p2: wacc_g2 == mulqacc256(false, w28, 1, w29, 0, 1, wacc_g1);
+    requires p3: result_g1 == mulqacc256(false, w28, 1, w29, 0, 1, wacc_g2)
+		&& wacc_g3 == uint256_uh(result_g1)
         && w1_g1 == uint256_hwb(0, uint256_lh(result_g1), true);
-    requires wacc_g4 == mulqacc256(false, w28, 2, w29, 0, 0, wacc_g3);
-    requires wacc_g5 == mulqacc256(false, w28, 1, w29, 1, 0, wacc_g4);
-    requires wacc_g6 == mulqacc256(false, w28, 0, w29, 2, 0, wacc_g5);
-    requires wacc_g7 == mulqacc256(false, w28, 3, w29, 0, 1, wacc_g6);
-    requires wacc_g8 == mulqacc256(false, w28, 2, w29, 1, 1, wacc_g7);
-    requires wacc_g9 == mulqacc256(false, w28, 1, w29, 2, 1, wacc_g8);
-    requires w1 == uint256_hwb(w1_g1, uint256_lh(result_g2), false);
+    requires p4: wacc_g4 == mulqacc256(false, w28, 2, w29, 0, 0, wacc_g3);
+    requires p5: wacc_g5 == mulqacc256(false, w28, 1, w29, 1, 0, wacc_g4);
+    requires p6: wacc_g6 == mulqacc256(false, w28, 0, w29, 2, 0, wacc_g5);
+    requires p7: wacc_g7 == mulqacc256(false, w28, 3, w29, 0, 1, wacc_g6);
+    requires p8: wacc_g8 == mulqacc256(false, w28, 2, w29, 1, 1, wacc_g7);
+    requires p9: wacc_g9 == mulqacc256(false, w28, 1, w29, 2, 1, wacc_g8);
+    requires p10: result_g2 == mulqacc256(false, w28, 0, w29, 3, 1, wacc_g9)
+		&& w1 == uint256_hwb(w1_g1, uint256_lh(result_g2), false);
+	{
+		assert wacc_g1 == uint256_qmul(w28, 0, w29, 0) by {
+			reveal p1;
+			lemma_sb_nop(uint256_qmul(w28, 0, w29, 0));
+		}
 
-
-
+		assert wacc_g2 == mulqacc256(false, w28, 1, w29, 0, 1, wacc_g1) by {
+			reveal p2;
+		}
+	}
 
 }
