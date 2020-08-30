@@ -230,12 +230,12 @@ module ops {
 
 	function {:opaque} uint256_lh(x: uint256): uint128
 	{
-		x % HALF_BASE
+		x % BASE_128
 	}
 
 	function {:opaque} uint256_uh(x: uint256): uint128
 	{
-		x / HALF_BASE
+		x / BASE_128
 	}
 
 	function {:opaque} uint256_hwb(x: uint256, v: uint128, lower: bool): (x': uint256)
@@ -249,12 +249,12 @@ module ops {
 	function {:opaque} uint256_qsel(x: uint256, qx: uint2): uint64
 	{
 		if qx == 0 then
-			x % QUARTER_BASE
+			x % BASE_64
 		else if qx == 1 then
-			(x / QUARTER_BASE) % QUARTER_BASE
+			(x / BASE_64) % BASE_64
 		else if qx == 1 then
-			(x / HALF_BASE) % QUARTER_BASE
+			(x / BASE_128) % BASE_64
 		else
-			(x / QUARTER_BASE / HALF_BASE) % QUARTER_BASE
+			(x / BASE_64 / BASE_128) % BASE_64
 	}
 } // end module ops

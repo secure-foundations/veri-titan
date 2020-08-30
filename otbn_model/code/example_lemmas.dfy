@@ -22,8 +22,8 @@ module example_lemmas {
 	// 	ensures uint256_rs(x, 0) == x;
 
 	lemma lemma_ls_mul(x: uint256)
-		requires x < HALF_BASE;
-		ensures uint256_ls(x, 8) == x * QUARTER_BASE;
+		requires x < BASE_128;
+		ensures uint256_ls(x, 8) == x * BASE_64;
 
 	lemma lemma_bn_half_mul(
 		wacc_g1: uint256,
@@ -73,16 +73,16 @@ module example_lemmas {
 			// lemma_sb_nop(p1);
 		}
 
-		assert wacc_g2 == wacc_g1 + p2 * QUARTER_BASE by {
+		assert wacc_g2 == wacc_g1 + p2 * BASE_64 by {
 			reveal pc2;
 			lemma_ls_mul(p2);
 		}
 
-		assert wacc_g3 == uint256_uh(wacc_g2 + p3 * QUARTER_BASE) 
-			&& w1_g1 == uint256_hwb(0, uint256_lh(wacc_g2 + p3 * QUARTER_BASE), true)
+		assert wacc_g3 == uint256_uh(wacc_g2 + p3 * BASE_64) 
+			&& w1_g1 == uint256_hwb(0, uint256_lh(wacc_g2 + p3 * BASE_64), true)
 		by {
 			reveal pc3;
-			assert result_g1 == wacc_g2 + p3 * QUARTER_BASE by {
+			assert result_g1 == wacc_g2 + p3 * BASE_64 by {
 				lemma_ls_mul(p3);
 			}
 		}
@@ -99,32 +99,32 @@ module example_lemmas {
 			reveal pc6;
 		}
 
-		assert wacc_g7 == wacc_g6 + p7 * QUARTER_BASE by {
+		assert wacc_g7 == wacc_g6 + p7 * BASE_64 by {
 			reveal pc7;
 			lemma_ls_mul(p7);
 		}
 
-		assert wacc_g8 == wacc_g7 + p8 * QUARTER_BASE by {
+		assert wacc_g8 == wacc_g7 + p8 * BASE_64 by {
 			reveal pc8;
 			lemma_ls_mul(p8);
 		}
 
-		assert wacc_g9 == wacc_g8 + p9 * QUARTER_BASE by {
+		assert wacc_g9 == wacc_g8 + p9 * BASE_64 by {
 			reveal pc9;
 			lemma_ls_mul(p9);
 		}
 
-		assert w1 == uint256_hwb(w1_g1, uint256_lh(wacc_g9 + p10 * QUARTER_BASE), false) by {
+		assert w1 == uint256_hwb(w1_g1, uint256_lh(wacc_g9 + p10 * BASE_64), false) by {
 			reveal pc10;
-			assert result_g2 == wacc_g9 + p10 * QUARTER_BASE by {
+			assert result_g2 == wacc_g9 + p10 * BASE_64 by {
 				lemma_ls_mul(p10);
 			}
 		}
 
-		var lo := uint256_lh(wacc_g2 + p3 * QUARTER_BASE);
-		var hi := uint256_lh(wacc_g9 + p10 * QUARTER_BASE);
+		var lo := uint256_lh(wacc_g2 + p3 * BASE_64);
+		var hi := uint256_lh(wacc_g9 + p10 * BASE_64);
 
-		assert w1 == lo + hi * HALF_BASE by {
+		assert w1 == lo + hi * BASE_128 by {
 			lemma_uint256_hwb(0, w1_g1, w1, lo, hi);
 		}
 	}
@@ -137,27 +137,27 @@ module example_lemmas {
 	lemma lemma_uint256_hwb(x1: uint256, x2: uint256, x3: uint256, lo: uint128, hi: uint128)
 		requires x2 == uint256_hwb(x1, lo, true);
 		requires x3 == uint256_hwb(x2, hi, false);
-		ensures x3 == lo + hi * HALF_BASE;
+		ensures x3 == lo + hi * BASE_128;
 	{
 		calc == {
 			x3;
 			{
 				lemma_uint256_half_split(x3);
 			}
-			uint256_lh(x3) + uint256_uh(x3) * HALF_BASE;
+			uint256_lh(x3) + uint256_uh(x3) * BASE_128;
 			{
 				assert uint256_uh(x3) == hi && uint256_lh(x3) == uint256_lh(x2);
 			}
-			uint256_lh(x2) + hi * HALF_BASE;
+			uint256_lh(x2) + hi * BASE_128;
 			{
 				assert uint256_lh(x2) == lo;
 			}
-			lo + hi * HALF_BASE;
+			lo + hi * BASE_128;
 		}
 	}
 
 	lemma lemma_uint256_half_split(x: uint256)
-		ensures x == uint256_lh(x) + uint256_uh(x) * HALF_BASE;
+		ensures x == uint256_lh(x) + uint256_uh(x) * BASE_128;
 	{
 		reveal uint256_lh();
 		reveal uint256_uh();
@@ -165,9 +165,9 @@ module example_lemmas {
 
 	lemma lemma_uint256_quarter_split(x: uint256)
 		ensures x == uint256_qsel(x, 0) +
-			uint256_qsel(x, 1) * QUARTER_BASE + 
-			uint256_qsel(x, 2) * HALF_BASE + 
-			uint256_qsel(x, 3) * HALF_BASE * QUARTER_BASE;
+			uint256_qsel(x, 1) * BASE_64 + 
+			uint256_qsel(x, 2) * BASE_128 + 
+			uint256_qsel(x, 3) * BASE_128 * BASE_64;
 	{
 		// reveal uint256_qsel(); // revaling is not sufficient
 		assume false;
