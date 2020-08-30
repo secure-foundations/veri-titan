@@ -17,9 +17,9 @@ module example_lemmas {
 		reveal uint256_xor();
 	}
 
-	lemma lemma_sb_nop(x: uint256)
-		ensures uint256_ls(x, 0) == x;
-		ensures uint256_rs(x, 0) == x;
+	// lemma lemma_sb_nop(x: uint256)
+	// 	ensures uint256_ls(x, 0) == x;
+	// 	ensures uint256_rs(x, 0) == x;
 
 	lemma lemma_ls_mul(x: uint256)
 		requires x < HALF_BASE;
@@ -70,7 +70,7 @@ module example_lemmas {
 
 		assert wacc_g1 == p1 by {
 			reveal pc1;
-			lemma_sb_nop(p1);
+			// lemma_sb_nop(p1);
 		}
 
 		assert wacc_g2 == wacc_g1 + p2 * QUARTER_BASE by {
@@ -89,7 +89,9 @@ module example_lemmas {
 			}
 		}
 
-		assert wacc_g3 == wacc_g1 + p2 * QUARTER_BASE by {
+		assert wacc_g3 == uint256_uh(wacc_g2 + p3 * QUARTER_BASE) 
+			&& w1_g1 == uint256_hwb(0, uint256_lh(wacc_g2 + p3 * QUARTER_BASE), true)
+		by {
 			var result_g1 := mulqacc256(false, w28, 0, w29, 1, 1, wacc_g2);
 
 			assert wacc_g3 == uint256_uh(result_g1) 
@@ -107,11 +109,20 @@ module example_lemmas {
 				(wacc_g2 + p3 * QUARTER_BASE) % BASE;
 				wacc_g2 + p3 * QUARTER_BASE;
 			}
+		}
+
+		assert false by {
+			calc == {
+				wacc_g4;
+				{
+					reveal pc4;
+				}
+    			mulqacc256(false, w28, 2, w29, 0, 0, wacc_g3);
+				wacc_g3 + p4;
+			}
 
 			assume false;
 		}
-
-
 	}
 
 }

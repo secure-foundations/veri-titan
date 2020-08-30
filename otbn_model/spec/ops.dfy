@@ -206,12 +206,14 @@ module ops {
 
 	function method {:opaque} uint256_ls(x: uint256, num_bytes:int): uint256
 		requires 0 <= num_bytes < 32;
+		ensures uint256_ls(x, 0) == x;
 	{
 		(x as bv256 << (num_bytes * 8)) as uint256
 	}
 
 	function method {:opaque} uint256_rs(x:uint256, num_bytes:int): uint256
 		requires 0 <= num_bytes < 32;
+		ensures uint256_rs(x, 0) == x;
 	{
 		(x as bv256 >> (num_bytes * 8)) as uint256
 	}
