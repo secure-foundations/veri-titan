@@ -134,22 +134,9 @@ procedure half_mul()
     assert wacc == uint256_uh(result_g2)
         && w1 == uint256_hwb(w1_g1, uint256_lh(result_g2), false);
 
-    lemma_bn_half_mul(
-        wacc_g1,
-        wacc_g2,
-        wacc_g3,
-        wacc_g4,
-        wacc_g5,
-        wacc_g6,
-        wacc_g7,
-        wacc_g8,
-        wacc_g9,
-        w1_g1,
-        result_g1,
-        result_g2,
-        w1,
-        w28,
-        w29);
+    lemma_bn_half_mul(wacc_g1, wacc_g2, wacc_g3, wacc_g4, wacc_g5, wacc_g6, wacc_g7, wacc_g8, wacc_g9,
+        w1_g1, result_g1, result_g2,
+        w1, w28, w29);
 }
 
 procedure Increment(inout dst:reg32)

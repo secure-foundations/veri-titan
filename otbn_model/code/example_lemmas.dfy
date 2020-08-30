@@ -45,7 +45,7 @@ module example_lemmas {
 
     requires pc1: wacc_g1 == mulqacc256(true, w28, 0, w29, 0, 0, 0);
     requires pc2: wacc_g2 == mulqacc256(false, w28, 1, w29, 0, 1, wacc_g1);
-    requires pc3: result_g1 == mulqacc256(false, w28, 1, w29, 0, 1, wacc_g2)
+    requires pc3: result_g1 == mulqacc256(false, w28, 0, w29, 1, 1, wacc_g2)
 		&& wacc_g3 == uint256_uh(result_g1)
         && w1_g1 == uint256_hwb(0, uint256_lh(result_g1), true);
     requires pc4: wacc_g4 == mulqacc256(false, w28, 2, w29, 0, 0, wacc_g3);
@@ -73,24 +73,45 @@ module example_lemmas {
 			lemma_sb_nop(p1);
 		}
 
-		assert wacc_g2 == mulqacc256(false, w28, 1, w29, 0, 1, wacc_g1) by {
-			var shift := uint256_ls(p2, 8);
-
+		assert wacc_g2 == wacc_g1 + p2 * QUARTER_BASE by {
 			calc == {
 				wacc_g2;
 				{
 					reveal pc2;
 				}
 				mulqacc256(false, w28, 1, w29, 0, 1, wacc_g1);
-				(wacc_g1 + shift) % BASE;
+				(wacc_g1 + uint256_ls(p2, 8)) % BASE;
 				{
 					lemma_ls_mul(p2);
-					assert shift == p2 * QUARTER_BASE;
 				}
 				(wacc_g1 + p2 * QUARTER_BASE) % BASE;
+				wacc_g1 + p2 * QUARTER_BASE;
 			}
+		}
+
+		assert wacc_g3 == wacc_g1 + p2 * QUARTER_BASE by {
+			var result_g1 := mulqacc256(false, w28, 0, w29, 1, 1, wacc_g2);
+
+			assert wacc_g3 == uint256_uh(result_g1) 
+				&& w1_g1 == uint256_hwb(0, uint256_lh(result_g1), true) by {
+					reveal pc3;
+			}
+
+			calc == {
+				result_g1;
+				mulqacc256(false, w28, 0, w29, 1, 1, wacc_g2);
+				(wacc_g2 + uint256_ls(p3, 8)) % BASE;
+				{
+					lemma_ls_mul(p3);
+				}
+				(wacc_g2 + p3 * QUARTER_BASE) % BASE;
+				wacc_g2 + p3 * QUARTER_BASE;
+			}
+
 			assume false;
 		}
+
+
 	}
 
 }
