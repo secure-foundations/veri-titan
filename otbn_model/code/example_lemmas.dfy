@@ -111,17 +111,16 @@ module example_lemmas {
 			}
 		}
 
-		assert false by {
-			calc == {
-				wacc_g4;
-				{
-					reveal pc4;
-				}
-    			mulqacc256(false, w28, 2, w29, 0, 0, wacc_g3);
-				wacc_g3 + p4;
-			}
+		assert wacc_g4 == wacc_g3 + p4 by {
+			reveal pc4;
+		}
 
-			assume false;
+		assert wacc_g5 == wacc_g4 + p5 by {
+			reveal pc5;
+		}
+
+		assert wacc_g6 == wacc_g5 + p6 by {
+			reveal pc6;
 		}
 	}
 
