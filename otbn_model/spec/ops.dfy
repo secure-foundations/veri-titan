@@ -229,8 +229,14 @@ module ops {
 	}
 
 	function method {:opaque} uint256_lh(x: uint256): uint128
+	{
+		x % HALF_BASE
+	}
 
 	function method {:opaque} uint256_uh(x: uint256): uint128
+	{
+		x / HALF_BASE
+	}
 
 	function method uint256_hwb(x: uint256, v: uint128, lower: bool): (x': uint256)
 		// overwrites the lower half, keeps the higher half
