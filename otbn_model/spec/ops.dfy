@@ -255,6 +255,6 @@ module ops {
 		else if qx == 1 then
 			(x / BASE_128) % BASE_64
 		else
-			(x / BASE_64 / BASE_128) % BASE_64
+			(x / BASE_192) % BASE_64
 	}
 } // end module ops

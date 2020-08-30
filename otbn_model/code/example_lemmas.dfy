@@ -167,7 +167,7 @@ module example_lemmas {
 		ensures x == uint256_qsel(x, 0) +
 			uint256_qsel(x, 1) * BASE_64 + 
 			uint256_qsel(x, 2) * BASE_128 + 
-			uint256_qsel(x, 3) * BASE_128 * BASE_64;
+			uint256_qsel(x, 3) * BASE_192;
 	{
 		// reveal uint256_qsel(); // revaling is not sufficient
 		assume false;
