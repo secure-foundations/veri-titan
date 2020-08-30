@@ -121,8 +121,18 @@ module example_lemmas {
 			}
 		}
 
-		lemma_uint256_hwb(0, w1_g1, w1, uint256_lh(wacc_g2 + p3 * QUARTER_BASE), uint256_lh(wacc_g9 + p10 * QUARTER_BASE));
+		var lo := uint256_lh(wacc_g2 + p3 * QUARTER_BASE);
+		var hi := uint256_lh(wacc_g9 + p10 * QUARTER_BASE);
+
+		assert w1 == lo + hi * HALF_BASE by {
+			lemma_uint256_hwb(0, w1_g1, w1, lo, hi);
+		}
 	}
+
+	// lemma lemma_half_mul(x: uint256, y: uint256)
+	// {
+
+	// }
 
 	lemma lemma_uint256_hwb(x1: uint256, x2: uint256, x3: uint256, lo: uint128, hi: uint128)
 		requires x2 == uint256_hwb(x1, lo, true);
@@ -132,7 +142,7 @@ module example_lemmas {
 		calc == {
 			x3;
 			{
-				lemma_uint256_split(x3);
+				lemma_uint256_half_split(x3);
 			}
 			uint256_lh(x3) + uint256_uh(x3) * HALF_BASE;
 			{
@@ -146,10 +156,20 @@ module example_lemmas {
 		}
 	}
 
-	lemma lemma_uint256_split(x: uint256)
+	lemma lemma_uint256_half_split(x: uint256)
 		ensures x == uint256_lh(x) + uint256_uh(x) * HALF_BASE;
 	{
 		reveal uint256_lh();
 		reveal uint256_uh();
+	}
+
+	lemma lemma_uint256_quarter_split(x: uint256)
+		ensures x == uint256_qsel(x, 0) +
+			uint256_qsel(x, 1) * QUARTER_BASE + 
+			uint256_qsel(x, 2) * HALF_BASE + 
+			uint256_qsel(x, 3) * HALF_BASE * QUARTER_BASE;
+	{
+		// reveal uint256_qsel(); // revaling is not sufficient
+		assume false;
 	}
 }
