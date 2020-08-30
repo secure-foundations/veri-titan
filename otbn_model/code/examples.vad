@@ -83,11 +83,11 @@ procedure half_mul()
     assert wacc_g2 == mulqacc256(false, w28, 1, w29, 0, 1, wacc_g1);
 
     // BN.MULQACC.SO w1.L, w28.0, w29.1, 1
-    BN_MULQACC_SO(w1, true, w28, 1, w29, 0, 1);
+    BN_MULQACC_SO(w1, true, w28, 0, w29, 1, 1);
 
     let wacc_g3 := wacc;
     let w1_g1 := w1;
-    let result_g1 := mulqacc256(false, w28, 1, w29, 0, 1, wacc_g2);
+    let result_g1 := mulqacc256(false, w28, 0, w29, 1, 1, wacc_g2);
     assert wacc_g3 == uint256_uh(result_g1)
         && w1_g1 == uint256_hwb(0, uint256_lh(result_g1), true);
 
