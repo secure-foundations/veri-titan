@@ -20,11 +20,10 @@ module example_lemmas {
 	lemma lemma_sb_nop(x: uint256)
 		ensures uint256_ls(x, 0) == x;
 		ensures uint256_rs(x, 0) == x;
-	{
-		assume false;
-		reveal uint256_ls();
-		reveal uint256_rs();
-	}
+
+	lemma lemma_ls_mul(x: uint256)
+		requires x < HALF_BASE;
+		ensures uint256_ls(x, 8) == x * QUARTER_BASE;
 
 	lemma lemma_bn_half_mul(
 		wacc_g1: uint256,
@@ -64,7 +63,26 @@ module example_lemmas {
 		}
 
 		assert wacc_g2 == mulqacc256(false, w28, 1, w29, 0, 1, wacc_g1) by {
-			reveal p2;
+			var product := uint256_qmul(w28, 1, w29, 0);
+			var shift := uint256_ls(product, 8);
+
+			calc == {
+				wacc_g2;
+				{
+					reveal p2;
+				}
+				mulqacc256(false, w28, 1, w29, 0, 1, wacc_g1);
+				(wacc_g1 + shift) % BASE;
+				{
+					lemma_ls_mul(product);
+					assert shift == product * QUARTER_BASE;
+				}
+				(wacc_g1 + product * QUARTER_BASE) % BASE;
+			}
+			// var shift := uint256_ls(uint256_qmul(x, qx, y, qy), shift * 8);
+			// (acc + shift) % BASE
+			
+			assume false;
 		}
 	}
 
