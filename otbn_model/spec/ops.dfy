@@ -208,6 +208,7 @@ module ops {
 		requires 0 <= num_bytes < 32;
 		ensures uint256_ls(x, 0) == x;
 	{
+		assume false;
 		(x as bv256 << (num_bytes * 8)) as uint256
 	}
 
@@ -215,6 +216,7 @@ module ops {
 		requires 0 <= num_bytes < 32;
 		ensures uint256_rs(x, 0) == x;
 	{
+		assume false;
 		(x as bv256 >> (num_bytes * 8)) as uint256
 	}
 
@@ -234,7 +236,7 @@ module ops {
 		// overwrites the lower half, keeps the higher half
 		ensures lower ==> (uint256_lh(x') == v && uint256_uh(x') == uint256_uh(x));
 		// overwrites the higher half, keeps the lower half
-		ensures !lower ==> (uint256_uh(x) == v && uint256_lh(x') == uint256_lh(x));
+		ensures !lower ==> (uint256_uh(x') == v && uint256_lh(x') == uint256_lh(x));
 
 	function method {:opaque} uint256_qmul(x: uint256, qx: uint2, y: uint256, qy:uint2): uint128
 } // end module ops

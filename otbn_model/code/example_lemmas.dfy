@@ -120,6 +120,35 @@ module example_lemmas {
 				lemma_ls_mul(p10);
 			}
 		}
+
+		// calc == {
+		// 	w1;
+		// 	uint256_hwb(w1_g1, uint256_lh(wacc_g9 + p10 * QUARTER_BASE), false);
+		// }
 	}
 
+	lemma lemma_uint256_split(x: uint256)
+		ensures x == uint256_lh(x) + uint256_uh(x) * HALF_BASE;
+
+	lemma lemma_uint256_hwb(x1: uint256, x2: uint256, x3: uint256, a: uint128, b: uint128)
+		requires x2 == uint256_hwb(x1, a, true);
+		requires x3 == uint256_hwb(x2, b, false);
+		ensures x3 == a + b * HALF_BASE;
+	{
+		calc == {
+			x3;
+			{
+				lemma_uint256_split(x3);
+			}
+			uint256_lh(x3) + uint256_uh(x3) * HALF_BASE;
+			{
+				assert uint256_uh(x3) == b && uint256_lh(x3) == uint256_lh(x2);
+			}
+			uint256_lh(x2) + b * HALF_BASE;
+			{
+				assert uint256_lh(x2) == a;
+			}
+			a + b * HALF_BASE;
+		}
+	}
 }
