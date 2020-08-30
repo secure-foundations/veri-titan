@@ -11,15 +11,18 @@ newtype{:nativeType "ulong"} ulong = i:int | 0 <= i < 0x1_0000_0000_0000_0000
 /////////////////
 // Subset types
 /////////////////
+
+const QUARTER_BASE : int := 0x1_0000_0000_0000_0000;
+const HALF_BASE: int := 0x1_00000000_00000000_00000000_00000000;
+const BASE : int := 0x1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+
 type uint8   = i:int | 0 <= i < 0x100
 type uint16  = i:int | 0 <= i < 0x10000
 type uint32  = i:int | 0 <= i < 0x1_0000_0000
-type uint64  = i:int | 0 <= i < 0x1_0000_0000_0000_0000
-type uint128 = i:int | 0 <= i < 0x1_00000000_00000000_00000000_00000000
-	
-type uint256 = i:int | 0 <= i < 0x1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+type uint64  = i:int | 0 <= i < QUARTER_BASE
+type uint128 = i:int | 0 <= i < HALF_BASE
+type uint256 = i:int | 0 <= i < BASE
 type Bignum = uint256
-const BASE : int := 115792089237316195423570985008687907853269984665640564039457584007913129639936
 
 /////////////////
 // BitsOfByte
