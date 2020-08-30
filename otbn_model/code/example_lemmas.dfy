@@ -74,40 +74,16 @@ module example_lemmas {
 		}
 
 		assert wacc_g2 == wacc_g1 + p2 * QUARTER_BASE by {
-			calc == {
-				wacc_g2;
-				{
-					reveal pc2;
-				}
-				mulqacc256(false, w28, 1, w29, 0, 1, wacc_g1);
-				(wacc_g1 + uint256_ls(p2, 8)) % BASE;
-				{
-					lemma_ls_mul(p2);
-				}
-				(wacc_g1 + p2 * QUARTER_BASE) % BASE;
-				wacc_g1 + p2 * QUARTER_BASE;
-			}
+			reveal pc2;
+			lemma_ls_mul(p2);
 		}
 
 		assert wacc_g3 == uint256_uh(wacc_g2 + p3 * QUARTER_BASE) 
 			&& w1_g1 == uint256_hwb(0, uint256_lh(wacc_g2 + p3 * QUARTER_BASE), true)
 		by {
-			var result_g1 := mulqacc256(false, w28, 0, w29, 1, 1, wacc_g2);
-
-			assert wacc_g3 == uint256_uh(result_g1) 
-				&& w1_g1 == uint256_hwb(0, uint256_lh(result_g1), true) by {
-					reveal pc3;
-			}
-
-			calc == {
-				result_g1;
-				mulqacc256(false, w28, 0, w29, 1, 1, wacc_g2);
-				(wacc_g2 + uint256_ls(p3, 8)) % BASE;
-				{
-					lemma_ls_mul(p3);
-				}
-				(wacc_g2 + p3 * QUARTER_BASE) % BASE;
-				wacc_g2 + p3 * QUARTER_BASE;
+			reveal pc3;
+			assert result_g1 == wacc_g2 + p3 * QUARTER_BASE by {
+				lemma_ls_mul(p3);
 			}
 		}
 
@@ -121,6 +97,28 @@ module example_lemmas {
 
 		assert wacc_g6 == wacc_g5 + p6 by {
 			reveal pc6;
+		}
+
+		assert wacc_g7 == wacc_g6 + p7 * QUARTER_BASE by {
+			reveal pc7;
+			lemma_ls_mul(p7);
+		}
+
+		assert wacc_g8 == wacc_g7 + p8 * QUARTER_BASE by {
+			reveal pc8;
+			lemma_ls_mul(p8);
+		}
+
+		assert wacc_g9 == wacc_g8 + p9 * QUARTER_BASE by {
+			reveal pc9;
+			lemma_ls_mul(p9);
+		}
+
+		assert w1 == uint256_hwb(w1_g1, uint256_lh(wacc_g9 + p10 * QUARTER_BASE), false) by {
+			reveal pc10;
+			assert result_g2 == wacc_g9 + p10 * QUARTER_BASE by {
+				lemma_ls_mul(p10);
+			}
 		}
 	}
 
