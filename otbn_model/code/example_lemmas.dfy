@@ -115,7 +115,8 @@ module example_lemmas {
 			lemma_ls_mul(p9);
 		}
 
-		assert w1 == uint256_hwb(w1_g1, uint256_lh(wacc_g9 + p10 * BASE_64), false) by {
+		assert result_g2 == wacc_g9 + p10 * BASE_64
+			&& w1 == uint256_hwb(w1_g1, uint256_lh(wacc_g9 + p10 * BASE_64), false) by {
 			reveal pc10;
 			assert result_g2 == wacc_g9 + p10 * BASE_64 by {
 				lemma_ls_mul(p10);
@@ -123,7 +124,7 @@ module example_lemmas {
 		}
 
 		var lo := uint256_lh(result_g1);
-		var hi := uint256_lh(wacc_g9 + p10 * BASE_64);
+		var hi := uint256_lh(result_g2);
 
 		calc == {
 			w1;
@@ -135,12 +136,24 @@ module example_lemmas {
 			}
 			(lo + hi * BASE_128) % BASE_256;
 			{
-				assume false;
+				calc == {
+					(lo + result_g2 * BASE_128) % BASE_256;
+					{
+						lemma_uint256_half_split(result_g2);
+					}
+					(lo + uint256_lh(result_g2) * BASE_128 + uint256_uh(result_g2) * BASE_256) % BASE_256;
+					{
+						// TODO: same lemma needed
+						assume false;
+					}
+					(lo + uint256_lh(result_g2) * BASE_128) % BASE_256;
+					(lo + hi * BASE_128) % BASE_256;
+				}
 			}
-			(lo + (wacc_g9 + p10 * BASE_64) * BASE_128) % BASE_256;
+			(lo + result_g2 * BASE_128) % BASE_256;
 			{
 				calc == {
-					lo + (wacc_g9 + p10 * BASE_64) * BASE_128;
+					lo + result_g2 * BASE_128;
 					lo + wacc_g9 * BASE_128 + p10 * BASE_192;
 					{
 						assert wacc_g9 == 
@@ -173,6 +186,10 @@ module example_lemmas {
 			uint256_qmul(x, 1, y, 0) * BASE_64 + uint256_qmul(x, 0, y, 1) * BASE_64 +
 			uint256_qmul(x, 2, y, 0) * BASE_128 + uint256_qmul(x, 1, y, 1) * BASE_128 + uint256_qmul(x, 0, y, 2) * BASE_128 +
 			uint256_qmul(x, 3, y, 0) * BASE_192 + uint256_qmul(x, 2, y, 1) * BASE_192 + uint256_qmul(x, 1, y, 2) * BASE_192 + uint256_qmul(x, 0, y, 3) * BASE_192) % BASE_256;
+	{
+		assume false;
+		// TODO: call lemma_quater_full_mul
+	}
 
 	lemma lemma_quater_full_mul(x: uint256, y: uint256)
 		ensures x * y ==
