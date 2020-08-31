@@ -9,9 +9,9 @@
 
 [Decrypto spec](https://docs.google.com/document/d/1k953gdDgJFX4m2ij66Pojjz_Nk18F5vXXaknaFwJem4/)
 
-[OTBN implementation](https://github.com/lowRISC/opentitan/blob/master/sw/otbn/code-snippets/modexp.S)
+[OTBN implementation](https://github.com/lowRISC/opentitan/tree/master/sw/otbn/code-snippets)
 
-[OTBN pec](https://docs.opentitan.org/hw/ip/otbn/doc/)
+[OTBN spec](https://docs.opentitan.org/hw/ip/otbn/doc/)
 
 [Calling Convention](https://docs.google.com/document/d/1aXaWaXGvGPB9rdF4x1r6weH69l0ghYDevhTZqEtJ8DU)
 
