@@ -306,6 +306,7 @@ function addm256(x:Bignum, y:Bignum, mod:Bignum) : Bignum
 function sub256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
 	requires sb < 32;
 {
+	assume false;
 	var (sum, new_carry) := BignumAddCarry(x, -y, st, sb, cf(flags_group));
 	(sum, flags_group.(cf := new_carry))
 }
@@ -313,8 +314,8 @@ function sub256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) 
 function BignumAddCarry(a:Bignum, b:Bignum, st:bool, sb:uint32, cf:bool) : (Bignum, bool)
 	requires sb < 32;
 {
-	var sum :int := a + uint256_shift(b, st, sb) + BoolToInt(cf);
-	(sum % BignumSize, sum >= BignumSize)
+	var sum :int := a + uint256_sb(b, st, sb) + BoolToInt(cf);
+	(sum % BASE_256, sum >= BASE_256)
 }
 
 function mulqacc256(
@@ -324,28 +325,27 @@ function mulqacc256(
 	shift: uint2,
 	acc: uint256) : uint256
 {
-	var product := uint256_quater(x, qx) * uint256_quater(y, qy);
-	assume false; // TODO: write a lemma for uint64 product
-	var shift := uint256_ls(product, shift * 64);
-	if zero then shift else acc + shift
+	var product := uint256_qmul(x, qx, y, qy);
+	var shift := uint256_ls(product, shift * 8);
+	if zero then shift else (acc + shift) % BASE_256
 }
 
 function xor256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;
 {
-	uint256_xor(x, uint256_shift(y, st, sb))
+	uint256_xor(x, uint256_sb(y, st, sb))
 }
 
 function or256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;
 {
-	uint256_or(x, uint256_shift(y, st, sb))
+	uint256_or(x, uint256_sb(y, st, sb))
 }
 		
 function and256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;
 {
-	uint256_and(x, uint256_shift(y, st, sb))
+	uint256_and(x, uint256_sb(y, st, sb))
 }
 
 }
