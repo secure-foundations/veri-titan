@@ -44,6 +44,8 @@ ghost procedure lemma_bn_half_mul(
         ghost w29: uint256
     ) extern;
 
+function half_product(p: int, x:int, y:int): bool extern;
+
 procedure DoubleExample32(inout dst:reg32, in src:reg32)
     requires
         src + src < 0x1_0000_0000;
@@ -69,6 +71,7 @@ procedure half_mul()
     requires w1 == 0;
     reads w28; w29;
     modifies wacc; w1;
+    ensures half_product(w1, w28, w29);
 {
     // BN.MULQACC.Z w28.0, w29.0, 0
     BN_MULQACC_Z(w28, 0, w29, 0, 0);

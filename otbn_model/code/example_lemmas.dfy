@@ -11,6 +11,11 @@ module example_lemmas {
 	import opened bignum_def
 	import opened bignum_decls
 
+	function half_product(w1: uint256, w28: uint256, w29: uint256): bool
+	{
+		w1 == (w28 * w29) % BASE_256
+	}
+
 	lemma lemma_bn_half_mul(
 		wacc_g1: uint256,
 		wacc_g2: uint256,
@@ -41,7 +46,7 @@ module example_lemmas {
     requires pc9: wacc_g9 == mulqacc256(false, w28, 1, w29, 2, 1, wacc_g8);
     requires pc10: result_g2 == mulqacc256(false, w28, 0, w29, 3, 1, wacc_g9)
 		&& w1 == uint256_hwb(w1_g1, uint256_lh(result_g2), false);
-	ensures w1 == (w28 * w29) % BASE_256;
+	ensures half_product(w1, w28, w29);
 	{
 		var p1 := uint256_qmul(w28, 0, w29, 0);
 		var p2 := uint256_qmul(w28, 1, w29, 0);
@@ -285,7 +290,7 @@ module example_lemmas {
 			uint256_qsel(x, 2) * BASE_128 + 
 			uint256_qsel(x, 3) * BASE_192;
 	{
-		// reveal uint256_qsel(); // revaling is not sufficient
+		// reveal uint256_qsel(); // TODO: revaling is not sufficient
 		assume false;
 	}
 }
