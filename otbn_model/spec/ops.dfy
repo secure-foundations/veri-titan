@@ -245,6 +245,10 @@ module ops {
 		ensures !lower ==> (uint256_uh(x') == v && uint256_lh(x') == uint256_lh(x));
 
 	function {:opaque} uint256_qmul(x: uint256, qx: uint2, y: uint256, qy:uint2): uint128
+	{
+		assume false; // TODO: add a bound proof
+		uint256_qsel(x, qx) * uint256_qsel(y, qy)
+	}
 
 	function {:opaque} uint256_qsel(x: uint256, qx: uint2): uint64
 	{
