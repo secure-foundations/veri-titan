@@ -11,20 +11,6 @@ module example_lemmas {
 	import opened bignum_def
 	import opened bignum_decls
 
-	lemma lemma_xor_clear(x: uint256)
-	    ensures xor256(x, x, false, 0) == 0;
-	{
-		reveal uint256_xor();
-	}
-
-	// lemma lemma_sb_nop(x: uint256)
-	// 	ensures uint256_ls(x, 0) == x;
-	// 	ensures uint256_rs(x, 0) == x;
-
-	lemma lemma_ls_mul(x: uint256)
-		requires x < BASE_128;
-		ensures uint256_ls(x, 8) == x * BASE_64;
-
 	lemma lemma_bn_half_mul(
 		wacc_g1: uint256,
 		wacc_g2: uint256,
@@ -143,8 +129,7 @@ module example_lemmas {
 					}
 					(lo + uint256_lh(result_g2) * BASE_128 + uint256_uh(result_g2) * BASE_256) % BASE_256;
 					{
-						// TODO: same lemma needed
-						assume false;
+						lemma_mod_multiple_cancel(lo + uint256_lh(result_g2) * BASE_128, uint256_uh(result_g2) * BASE_256, BASE_256);
 					}
 					(lo + uint256_lh(result_g2) * BASE_128) % BASE_256;
 					(lo + hi * BASE_128) % BASE_256;
@@ -187,8 +172,22 @@ module example_lemmas {
 			uint256_qmul(x, 2, y, 0) * BASE_128 + uint256_qmul(x, 1, y, 1) * BASE_128 + uint256_qmul(x, 0, y, 2) * BASE_128 +
 			uint256_qmul(x, 3, y, 0) * BASE_192 + uint256_qmul(x, 2, y, 1) * BASE_192 + uint256_qmul(x, 1, y, 2) * BASE_192 + uint256_qmul(x, 0, y, 3) * BASE_192) % BASE_256;
 	{
-		assume false;
-		// TODO: call lemma_quater_full_mul
+		var left := uint256_qmul(x, 0, y, 0) +
+			uint256_qmul(x, 1, y, 0) * BASE_64 + uint256_qmul(x, 0, y, 1) * BASE_64 +
+			uint256_qmul(x, 2, y, 0) * BASE_128 + uint256_qmul(x, 1, y, 1) * BASE_128 + uint256_qmul(x, 0, y, 2) * BASE_128 +
+			uint256_qmul(x, 3, y, 0) * BASE_192 + uint256_qmul(x, 2, y, 1) * BASE_192 + uint256_qmul(x, 1, y, 2) * BASE_192 + uint256_qmul(x, 0, y, 3) * BASE_192;
+			
+		var right := uint256_qmul(x, 3, y, 1) * BASE_256 + uint256_qmul(x, 2, y, 2) * BASE_256 + uint256_qmul(x, 1, y, 3) * BASE_256 + 
+			uint256_qmul(x, 3, y, 2) * BASE_256 * BASE_64 + uint256_qmul(x, 2, y, 3) * BASE_256 * BASE_64 + 
+			uint256_qmul(x, 3, y, 3) * BASE_256 * BASE_128;
+
+		assert x * y == left + right by {
+			lemma_quater_full_mul(x, y);
+		}
+
+		assert (x * y) % BASE_256 == left % BASE_256 by {
+			lemma_mod_multiple_cancel(left, right, BASE_256);
+		}
 	}
 
 	lemma lemma_quater_full_mul(x: uint256, y: uint256)
@@ -230,6 +229,26 @@ module example_lemmas {
 			reveal uint256_qmul();
 		}
 	}
+
+	lemma lemma_mod_multiple_cancel(x: int, y: int, m: nat)
+		requires m !=0 && y % m == 0;
+		ensures (x + y) % m == x % m;
+
+	// bv lemmas/axioms
+
+	lemma lemma_xor_clear(x: uint256)
+	    ensures xor256(x, x, false, 0) == 0;
+	{
+		reveal uint256_xor();
+	}
+
+	// lemma lemma_sb_nop(x: uint256)
+	// 	ensures uint256_ls(x, 0) == x;
+	// 	ensures uint256_rs(x, 0) == x;
+
+	lemma lemma_ls_mul(x: uint256)
+		requires x < BASE_128;
+		ensures uint256_ls(x, 8) == x * BASE_64;
 
 	lemma lemma_uint256_hwb(x1: uint256, x2: uint256, x3: uint256, lo: uint128, hi: uint128)
 		requires x2 == uint256_hwb(x1, lo, true);
