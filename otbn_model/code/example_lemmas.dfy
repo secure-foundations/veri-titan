@@ -129,10 +129,58 @@ module example_lemmas {
 		}
 	}
 
-	// lemma lemma_half_mul(x: uint256, y: uint256)
-	// {
+	lemma lemma_half_mul(x: uint256, y: uint256)
+	{
+		var a0 := uint256_qsel(x, 0);
+		var a1 := uint256_qsel(x, 1);
+		var a2 := uint256_qsel(x, 2);
+		var a3 := uint256_qsel(x, 3);
 
-	// }
+		var b0 := uint256_qsel(y, 0);
+		var b1 := uint256_qsel(y, 1);
+		var b2 := uint256_qsel(y, 2);
+		var b3 := uint256_qsel(y, 3);
+
+		var p1 := uint256_qmul(x, 0, y, 0);
+		var p2 := uint256_qmul(x, 1, y, 0);
+		var p3 := uint256_qmul(x, 0, y, 1);
+		var p4 := uint256_qmul(x, 2, y, 0);
+		var p5 := uint256_qmul(x, 1, y, 1);
+		var p6 := uint256_qmul(x, 0, y, 2);
+		var p7 := uint256_qmul(x, 3, y, 0);
+		var p8 := uint256_qmul(x, 2, y, 1);
+		var p9 := uint256_qmul(x, 1, y, 2);
+		var p10 := uint256_qmul(x, 0, y, 3);
+
+		var p11 := uint256_qmul(x, 3, y, 1);
+		var p12 := uint256_qmul(x, 2, y, 2);
+		var p13 := uint256_qmul(x, 1, y, 3);
+		var p14 := uint256_qmul(x, 3, y, 2);
+		var p15 := uint256_qmul(x, 2, y, 3);
+		var p16 := uint256_qmul(x, 3, y, 3);
+
+		assert x == a0 + a1 * BASE_64 + a2 * BASE_128 + a3 * BASE_192 by {
+			lemma_uint256_quarter_split(x);
+		}
+
+		assert y == b0 + b1 * BASE_64 + b2 * BASE_128 + b3 * BASE_192 by {
+			lemma_uint256_quarter_split(y);
+		}
+
+		calc == {
+			x * y;
+			{
+				reveal uint256_qmul();
+			}
+			p1 +
+			p2 * BASE_64 + p3 * BASE_64 +
+			p4 * BASE_128 + p5 * BASE_128 + p6 * BASE_128 +
+			p7 * BASE_192 + p8 * BASE_192 + p9 * BASE_192 + p10 * BASE_192 +
+			p11 * BASE_256 + p12 * BASE_256 + p13 * BASE_256 + 
+			p14 * BASE_256 * BASE_64 + p15 * BASE_256 * BASE_64 + 
+			p16 * BASE_256 * BASE_128;
+		}
+	}
 
 	lemma lemma_uint256_hwb(x1: uint256, x2: uint256, x3: uint256, lo: uint128, hi: uint128)
 		requires x2 == uint256_hwb(x1, lo, true);
