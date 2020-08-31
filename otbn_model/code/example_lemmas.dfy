@@ -42,7 +42,6 @@ module example_lemmas {
 		w28: uint256,
 		w29: uint256
 	)
-
     requires pc1: wacc_g1 == mulqacc256(true, w28, 0, w29, 0, 0, 0);
     requires pc2: wacc_g2 == mulqacc256(false, w28, 1, w29, 0, 1, wacc_g1);
     requires pc3: result_g1 == mulqacc256(false, w28, 0, w29, 1, 1, wacc_g2)
@@ -78,8 +77,9 @@ module example_lemmas {
 			lemma_ls_mul(p2);
 		}
 
-		assert wacc_g3 == uint256_uh(wacc_g2 + p3 * BASE_64) 
-			&& w1_g1 == uint256_hwb(0, uint256_lh(wacc_g2 + p3 * BASE_64), true)
+		assert result_g1 == wacc_g2 + p3 * BASE_64
+			&& wacc_g3 == uint256_uh(result_g1) 
+			&& w1_g1 == uint256_hwb(0, uint256_lh(result_g1), true)
 		by {
 			reveal pc3;
 			assert result_g1 == wacc_g2 + p3 * BASE_64 by {
@@ -121,11 +121,38 @@ module example_lemmas {
 			}
 		}
 
-		var lo := uint256_lh(wacc_g2 + p3 * BASE_64);
+		var lo := uint256_lh(result_g1);
 		var hi := uint256_lh(wacc_g9 + p10 * BASE_64);
 
 		assert w1 == lo + hi * BASE_128 by {
 			lemma_uint256_hwb(0, w1_g1, w1, lo, hi);
+		}
+
+		assert result_g1 == p1 + p2 * BASE_64 + p3 * BASE_64;
+
+		calc == {
+			lo + wacc_g9 * BASE_128 + p10 * BASE_192;
+			{
+				assert wacc_g9 == 
+					uint256_uh(result_g1) + p4 + p5 + p6 + p7 * BASE_64 + p8 * BASE_64 + p9 * BASE_64;
+			}
+			lo + uint256_uh(result_g1) * BASE_128 +
+				p4 * BASE_128 + p5 * BASE_128 + p6 * BASE_128 + p7 * BASE_192 + p8 * BASE_192 + p9 * BASE_192 + p10 * BASE_192;
+			{
+				lemma_uint256_half_split(result_g1);
+			}
+			result_g1 + p4 * BASE_128 + p5 * BASE_128 + p6 * BASE_128 + p7 * BASE_192 + p8 * BASE_192 + p9 * BASE_192 + p10 * BASE_192;
+			p1 + p2 * BASE_64 + p3 * BASE_64 + p4 * BASE_128 + p5 * BASE_128 + p6 * BASE_128 + p7 * BASE_192 + p8 * BASE_192 + p9 * BASE_192 + p10 * BASE_192;
+		}
+
+		calc == {
+			w1 % BASE_256;
+			(lo + hi * BASE_128) % BASE_256;
+			{
+				assume false;
+			}
+			(lo + (wacc_g9 + p10 * BASE_64) * BASE_128) % BASE_256;
+
 		}
 	}
 
