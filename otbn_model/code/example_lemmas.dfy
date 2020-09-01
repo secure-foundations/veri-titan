@@ -27,6 +27,7 @@ module example_lemmas {
 		wacc_g8: uint256,
 		wacc_g9: uint256,
 		w1_g1: uint256,
+		w1_g2: uint256,
 		result_g1: uint256,
 		result_g2: uint256,
 		w1: uint256,
@@ -37,7 +38,7 @@ module example_lemmas {
     requires pc2: wacc_g2 == mulqacc256(false, w28, 1, w29, 0, 1, wacc_g1);
     requires pc3: result_g1 == mulqacc256(false, w28, 0, w29, 1, 1, wacc_g2)
 		&& wacc_g3 == uint256_uh(result_g1)
-        && w1_g1 == uint256_hwb(0, uint256_lh(result_g1), true);
+        && w1_g2 == uint256_hwb(w1_g1, uint256_lh(result_g1), true);
     requires pc4: wacc_g4 == mulqacc256(false, w28, 2, w29, 0, 0, wacc_g3);
     requires pc5: wacc_g5 == mulqacc256(false, w28, 1, w29, 1, 0, wacc_g4);
     requires pc6: wacc_g6 == mulqacc256(false, w28, 0, w29, 2, 0, wacc_g5);
@@ -45,7 +46,7 @@ module example_lemmas {
     requires pc8: wacc_g8 == mulqacc256(false, w28, 2, w29, 1, 1, wacc_g7);
     requires pc9: wacc_g9 == mulqacc256(false, w28, 1, w29, 2, 1, wacc_g8);
     requires pc10: result_g2 == mulqacc256(false, w28, 0, w29, 3, 1, wacc_g9)
-		&& w1 == uint256_hwb(w1_g1, uint256_lh(result_g2), false);
+		&& w1 == uint256_hwb(w1_g2, uint256_lh(result_g2), false);
 	ensures half_product(w1, w28, w29);
 	{
 		var p1 := uint256_qmul(w28, 0, w29, 0);
@@ -71,7 +72,7 @@ module example_lemmas {
 
 		assert result_g1 == wacc_g2 + p3 * BASE_64
 			&& wacc_g3 == uint256_uh(result_g1) 
-			&& w1_g1 == uint256_hwb(0, uint256_lh(result_g1), true)
+			&& w1_g2 == uint256_hwb(w1_g1, uint256_lh(result_g1), true)
 		by {
 			reveal pc3;
 			assert result_g1 == wacc_g2 + p3 * BASE_64 by {
@@ -107,7 +108,7 @@ module example_lemmas {
 		}
 
 		assert result_g2 == wacc_g9 + p10 * BASE_64
-			&& w1 == uint256_hwb(w1_g1, uint256_lh(wacc_g9 + p10 * BASE_64), false) by {
+			&& w1 == uint256_hwb(w1_g2, uint256_lh(wacc_g9 + p10 * BASE_64), false) by {
 			reveal pc10;
 			assert result_g2 == wacc_g9 + p10 * BASE_64 by {
 				lemma_ls_mul(p10);
@@ -122,7 +123,7 @@ module example_lemmas {
 			w1 % BASE_256;
 			{
 				assert w1 == lo + hi * BASE_128 by {
-					lemma_uint256_hwb(0, w1_g1, w1, lo, hi);
+					lemma_uint256_hwb(w1_g1, w1_g2, w1, lo, hi);
 				}
 			}
 			(lo + hi * BASE_128) % BASE_256;
