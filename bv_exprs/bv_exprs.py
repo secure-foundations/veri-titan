@@ -1,6 +1,5 @@
 from z3 import *
 import sys
-import click
 
 try:
 	full_bits = int(sys.argv[2])
