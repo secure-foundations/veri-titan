@@ -44,12 +44,14 @@ function va_update_flags(sM:va_state, sK:va_state):va_state
 function va_update_stack(sM:va_state, sK:va_state):va_state { sK.(stack := sM.stack) }
 
 type va_operand_imm32 = uint32
-predicate va_is_src_imm32(v:uint32, s:va_state) { IsUInt32(v) }
-function va_eval_imm32(s:va_state, v:uint32):uint32
-	requires va_is_src_imm32(v, s);
-{
-	v
-}
+predicate va_is_src_imm32(v:uint32, s:va_state) { true }
+function va_eval_imm32(s:va_state, v:uint32):uint32 { v }
+function method va_const_imm32(n:uint32):uint32 { n }
+
+type va_operand_imm2 = uint2
+predicate va_is_src_imm2(v:uint2, s:va_state) {true}
+function va_eval_imm2(s:va_state, v:uint2):uint2 {v}
+function method va_const_imm2(v:uint32):uint32 {v}
 
 type va_value_reg32 = uint32
 type va_operand_reg32 = Reg32
@@ -65,7 +67,6 @@ function va_eval_reg32(s:va_state, r:Reg32):uint32
 
 function va_update_operand_reg32(r:Reg32, sM:va_state, sK:va_state):va_state
     requires r in sM.xregs;
-    requires r.Gpr? ==> ValidRegisterIndex(r.x);
 {
     va_update_reg32(r, sM, sK)
 }
@@ -84,7 +85,6 @@ function va_eval_reg256(s:va_state, r:Reg256):uint256
 
 function va_update_operand_reg256(r:Reg256, sM:va_state, sK:va_state):va_state
     requires r in sM.wregs;
-    requires r.Wdr? ==> ValidRegisterIndex(r.w);
 {
     va_update_reg256(r, sM, sK)
 }
@@ -115,8 +115,8 @@ predicate cTailIs(b:codes, t:codes) { b.va_CCons? && b.tl == t }
 predicate va_require(b0:codes, c1:code, s0:va_state, sN:va_state)
 {
     cHeadIs(b0, c1)
- && eval_code(Block(b0), s0, sN)
- && BN_ValidState(s0)
+&& eval_code(Block(b0), s0, sN)
+&& BN_ValidState(s0)
 }
 
 // Weaker form of eval_code that we can actually ensure generically in instructions
@@ -137,12 +137,18 @@ lemma va_ins_lemma(b0:code, s0:va_state)
 {
 }
 
+function method va_const_cmp(n:uint32):uint32 { n }
+function method va_coerce_reg32_to_cmp(r:Reg32):Reg32 { r }
+
+function method va_cmp_ge(r:Reg32, c:uint32):whileCond { WhileCond(Ge, r, c) }
+function method va_cmp_gt(r:Reg32, c:uint32):whileCond { WhileCond(Gt, r, c) }
+function method va_cmp_le(r:Reg32, c:uint32):whileCond { WhileCond(Le, r, c) }
+function method va_cmp_lt(r:Reg32, c:uint32):whileCond { WhileCond(Lt, r, c) }
+
 function method va_op_reg32_reg32(r:Reg32):Reg32 { r }
 function method va_op_reg256_reg256(r:Reg256):Reg256 { r }
 function method va_Block(block:codes):code { Block(block) }
 function method va_While(wcond:whileCond, wcode:code):code { While(wcond, wcode) }
-
-function method va_const_imm32(n:uint32):uint32 { n }
 
 function method va_get_block(c:code):codes requires c.Block? { c.block }
 function method va_get_whileCond(c:code):whileCond requires c.While? {c.whileCond }
@@ -160,12 +166,24 @@ lemma lemma_FailurePreservedByBlock(block:codes, s:state, r:state)
     }
 }
 
+
 lemma lemma_FailurePreservedByCode(c:code, s:state, r:state)
     requires evalCode(c, s, r);
-    ensures  !s.ok ==> !r.ok;
+    ensures !s.ok ==> !r.ok;
 {
-    if c.Block? {
-        lemma_FailurePreservedByBlock(c.block, s, r);
+    match c {
+        case Block(b) => {
+            lemma_FailurePreservedByBlock(b, s, r);
+        }
+        case While(c, b) => {
+            var n :| evalWhile(c, b, n, s, r);
+        }
+        case Ins256(i) => {
+            var r' :| evalCode(c, s, r');
+        }
+        case Ins32(i) => {
+            var r' :| evalCode(c, s, r');
+        }
     }
 }
 
@@ -184,9 +202,8 @@ lemma block_state_validity(block:codes, s:state, r:state)
 		var r':state :| evalCode(block.hd, s, r') && evalBlock(block.tl, r', r);
 		code_state_validity(block.hd, s, r');
 		if r'.ok {
-			block_state_validity(block.tl, r', s);
-		}
-		else {
+			block_state_validity(block.tl, r', r);
+		} else {
 			lemma_FailurePreservedByBlock(block.tl, r', r);
 		}
 	}
@@ -200,17 +217,17 @@ lemma code_state_validity(c:code, s:state, r:state)
 {
     if r.ok {
         if c.Ins32? {
-            assert valid_state(r);
+            assert true;
+        } else if c.Ins256? {
+            assert true;
         } else if c.Block? {
             block_state_validity(c.block, s, r);
-				} else {
-					assume false;
-				}
-		} else if c.While? {
+        } else if c.While? {
             var n:nat :| evalWhile(c.whileCond, c.whileBody, n, s, r);
             evalWhile_validity(c.whileCond, c.whileBody, n, s, r);
             assert valid_state(r);
         }
+    } 
 }
 
 lemma va_lemma_empty(s:va_state, r:va_state) returns(r':va_state)
@@ -261,8 +278,8 @@ predicate va_whileInv(w:whileCond, c:code, n:int, r1:va_state, r2:va_state)
 }
 
 lemma va_lemma_while(w:whileCond, c:code, s:va_state, r:va_state) returns(n:nat, r':va_state)
-    requires va_is_src_reg32(w.r1, s);
-    requires va_is_src_reg32(w.r2, s);
+    requires va_is_src_reg32(w.r, s);
+    requires va_is_src_imm32(w.c, s);
     requires BN_ValidState(s);
     requires eval_code(While(w, c), s, r)
     ensures  evalWhileLax(w, c, n, s, r)
@@ -283,8 +300,8 @@ lemma va_lemma_while(w:whileCond, c:code, s:va_state, r:va_state) returns(n:nat,
 }
 
 lemma va_lemma_whileTrue(w:whileCond, c:code, n:nat, s:va_state, r:va_state) returns(s':va_state, r':va_state)
-    requires va_is_src_reg32(w.r1, s) && ValidSourceRegister32(s, w.r1);
-    requires va_is_src_reg32(w.r2, s) && ValidSourceRegister32(s, w.r2);
+    requires va_is_src_reg32(w.r, s) && ValidSourceRegister32(s, w.r);
+    requires va_is_src_imm32(w.c, s);
     requires n > 0
     requires evalWhileLax(w, c, n, s, r)
     ensures  BN_ValidState(s) ==> BN_ValidState(s');
@@ -293,7 +310,7 @@ lemma va_lemma_whileTrue(w:whileCond, c:code, n:nat, s:va_state, r:va_state) ret
     ensures  BN_ValidState(s) ==> if s.ok then BN_branchRelation(s, s', true) else s' == s;
     ensures  if s.ok && BN_ValidState(s) then
                     s'.ok
-                 && va_is_src_reg32(w.r1, s)
+                 && va_is_src_reg32(w.r, s)
                  && evalWhileCond(s, w)
              else
                  true; //!r.ok;
@@ -322,8 +339,8 @@ lemma va_lemma_whileTrue(w:whileCond, c:code, n:nat, s:va_state, r:va_state) ret
 }
 
 lemma va_lemma_whileFalse(w:whileCond, c:code, s:va_state, r:va_state) returns(r':va_state)
-    requires va_is_src_reg32(w.r1, s) && ValidSourceRegister32(s, w.r1);
-    requires va_is_src_reg32(w.r2, s) && ValidSourceRegister32(s, w.r2);
+    requires va_is_src_reg32(w.r, s) && ValidSourceRegister32(s, w.r);
+    requires va_is_src_imm32(w.c, s);
     requires evalWhileLax(w, c, 0, s, r)
     ensures  if s.ok then
                 (if BN_ValidState(s) then
@@ -348,18 +365,6 @@ lemma va_lemma_whileFalse(w:whileCond, c:code, s:va_state, r:va_state) returns(r
     r' := r;
 }
 
-////////////////////////////////////////////////////////////////////////
-//
-//  Invariants over the state
-//
-////////////////////////////////////////////////////////////////////////
-
-predicate valid_state(s:state)
-{
-    |s.stack| >= 0
- && (forall r :: r in s.xregs)
- && (forall t :: t in s.wregs)
-}
 
 predicate {:opaque} BN_ValidState(s:state)
     ensures BN_ValidState(s) ==> valid_state(s);
@@ -378,7 +383,7 @@ lemma evalWhile_validity(w:whileCond, c:code, n:nat, s:state, r:state)
 	decreases c, 1, n;
 	ensures valid_state(s) && r.ok ==> valid_state(r);
 {
-	if valid_state(s) && r.ok && ValidRegister32(s.xregs, w.r1) && ValidRegister32(s.xregs, w.r2) && n > 0 {
+	if valid_state(s) && r.ok && ValidRegister32(s.xregs, w.r) && n > 0 {
 		var s', r' :| evalWhileCond(s, w) && branchRelation(s, s', true) && evalCode(c, s', r') && evalWhile(w, c, n - 1, r', r);
 		code_state_validity(c, s', r');
 		evalWhile_validity(w, c, n - 1, r', r);

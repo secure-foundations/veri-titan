@@ -8,14 +8,29 @@ module bignum_def {
 import opened types
 import opened ops	
 
+////////////////////////////////////////////////////////////////////////
+//
+//  Invariants over the state
+//
+////////////////////////////////////////////////////////////////////////
+
+predicate valid_state(s:state)
+{
+    |s.stack| >= 0
+ && (forall r :: r in s.xregs)
+ && (forall t :: t in s.wregs)
+}
+
+type reg_index = i:int | 0 <= i <= 32
+
 // General purpose and control registers, 32b
 datatype Reg32 =
-| Gpr(x:int)
+| Gpr(x:reg_index)
 | Rnd // Random number
 
 // Wide data and special registers, 256b
 datatype Reg256 =
-| Wdr(w:int)
+| Wdr(w:reg_index)
 | WMod // Wide modulo register
 | WRnd // Wide random number
 | WAcc // Wide accumulator
@@ -72,7 +87,7 @@ datatype ins256 =
 datatype codes = CNil | va_CCons(hd:code, tl:codes)
 
 datatype cmp = Eq | Ne | Gt | Ge | Lt | Le
-datatype whileCond = WhileCond(cmp:cmp, r1:Reg32, r2:Reg32)
+datatype whileCond = WhileCond(cmp:cmp, r:Reg32, c:uint32)
 
 datatype code =
 | Ins32(ins:ins32)
@@ -127,22 +142,14 @@ function eval_wreg(wregs:map<Reg256, uint256>, r:Reg256) : uint256
 	else wregs[r]
 }
 
-predicate ValidRegisterIndex(index:int)
-{
-	0 <= index < 32
-}
-
 predicate ValidSourceRegister32(s:state, r:Reg32)
 {
-	if r.Rnd? then
-		ValidRegister32(s.xregs, r)
-	else
-		ValidRegister32(s.xregs, r) && ValidRegisterIndex(r.x)
+	ValidRegister32(s.xregs, r)
 }
 
 predicate ValidDestinationRegister32(s:state, r:Reg32)
 {
-		!r.Rnd? && ValidRegister32(s.xregs, r) && ValidRegisterIndex(r.x)
+		!r.Rnd? && ValidRegister32(s.xregs, r)
 }
 
 function eval_reg32(s:state, r:Reg32) : uint32
@@ -155,20 +162,20 @@ function eval_reg32(s:state, r:Reg32) : uint32
 
 predicate evalIns32(xins:ins32, s:state, r:state)
 {
-	true
+	if !s.ok then
+		!r.ok
+	else
+		r.ok && (valid_state(s) ==> valid_state(r))
 }
 
 predicate ValidSourceRegister256(s:state, r:Reg256)
 {
-	if r.WRnd? || r.WMod? then
-		ValidRegister256(s.wregs, r)
-	else
-		ValidRegister256(s.wregs, r) && ValidRegisterIndex(r.w)
+	ValidRegister256(s.wregs, r)
 }
 
 predicate ValidDestinationRegister256(s:state, r:Reg256)
 {
-		!r.WRnd? && ValidRegister256(s.wregs, r) && ValidRegisterIndex(r.w)
+	!r.WRnd? && ValidRegister256(s.wregs, r)
 }
 
 function eval_reg256(s:state, r:Reg256) : uint256
@@ -184,7 +191,7 @@ predicate evalIns256(wins:ins256, s:state, r:state)
 	if !s.ok then
 		!r.ok
 	else
-		r.ok
+		r.ok && (valid_state(s) ==> valid_state(r))
 }
 
 predicate evalBlock(block:codes, s:state, r:state)
@@ -207,10 +214,10 @@ function evalCmp(c:cmp, i1:uint32, i2:uint32):bool
 }
 
 function evalWhileCond(s:state, wc:whileCond):bool
-	requires ValidSourceRegister32(s, wc.r1);
-	requires ValidSourceRegister32(s, wc.r2);
+	requires ValidSourceRegister32(s, wc.r);
+	requires IsUInt32(wc.c);
 {
-	evalCmp(wc.cmp, eval_reg32(s, wc.r1), eval_reg32(s, wc.r2))
+	evalCmp(wc.cmp, eval_reg32(s, wc.r), wc.c)
 }
 
 // TODO
@@ -224,16 +231,16 @@ predicate branchRelation(s:state, s':state, cond:bool)
 predicate evalWhile(wc:whileCond, c:code, n:nat, s:state, r:state)
 	decreases c, n
 {
-	if s.ok && ValidSourceRegister32(s, wc.r1) && ValidSourceRegister32(s, wc.r2) then
+	if s.ok && ValidSourceRegister32(s, wc.r) && IsUInt32(wc.c) then
 		if n == 0 then
-		!evalWhileCond(s, wc) && branchRelation(s, r, false)
+			!evalWhileCond(s, wc) && branchRelation(s, r, false)
 		else
 			exists loop_start:state, loop_end:state :: evalWhileCond(s, wc)
 			&& branchRelation(s, loop_start, true)
 			&& evalCode(c, loop_start, loop_end)
 			&& evalWhile(wc, c, n - 1, loop_end, r)
-		else
-			!r.ok
+	else
+		!r.ok
 }
 
 predicate evalCode(c:code, s:state, r:state)
@@ -267,19 +274,19 @@ function rol32(x:uint32, amount:uint32) : uint32
 
 function ror32(x:uint32, amount:uint32) : uint32
     requires 0 <= amount < 32;
-    { RotateRight(x, amount) }
+{ RotateRight(x, amount) }
 
 function shl32(x:uint32, amount:uint32) : uint32
     requires 0 <= amount < 32;
-    { LeftShift(x, amount) }
+{ LeftShift(x, amount) }
 
 function shr32(x:uint32, amount:uint32) : uint32
     requires 0 <= amount < 32;
-    { RightShift(x, amount) }
+{ RightShift(x, amount) }
 
 function sext32(x:uint32, sz:int) : uint32
   requires 0 < sz < 32;
-    { BitwiseSignExtend(x, sz) }
+{ BitwiseSignExtend(x, sz) }
 
 function add256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
 	requires sb < 32;
@@ -298,29 +305,47 @@ function addm256(x:Bignum, y:Bignum, mod:Bignum) : Bignum
 
 function sub256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
 	requires sb < 32;
-{ var (sum, new_carry) := BignumAddCarry(x, -y, st, sb, cf(flags_group)); (sum, flags_group.(cf := new_carry))  }
+{
+	var (sum, new_carry) := BignumAddCarry(x, -y, st, sb, cf(flags_group));
+	(sum, flags_group.(cf := new_carry))
+}
 
-function mulqacc256(x:Bignum, qx:int, y:Bignum, qy:int, shift:int, zero:bool, wacc:Bignum) : Bignum
-	requires 0 <= shift <= 3;
-	requires 0 <= qx <= 3;
-	requires 0 <= qy <= 3;
-{ var result := LeftShift256(GetQuarterWord(x, qx) * GetQuarterWord(y, qy), shift * 64); if zero then result else wacc + result }
-	
-function mulqacc256_so(x:Bignum, qx:int, y:Bignum, qy:int, shift:int, zero:bool, wacc:Bignum) : Bignum
-	requires 0 <= shift <= 3;
-	requires 0 <= qx <= 3;
-	requires 0 <= qy <= 3;
-{ RightShift256(mulqacc256(x, qx, y, qy, shift, zero, wacc), 16) }
+function BignumAddCarry(a:Bignum, b:Bignum, st:bool, sb:uint32, cf:bool) : (Bignum, bool)
+	requires sb < 32;
+{
+	var sum :int := a + uint256_shift(b, st, sb) + BoolToInt(cf);
+	(sum % BignumSize, sum >= BignumSize)
+}
+
+function mulqacc256(
+	zero: bool,
+	x:uint256, qx: uint2,
+	y:uint256, qy: uint2,
+	shift: uint2,
+	acc: uint256) : uint256
+{
+	var product := uint256_quater(x, qx) * uint256_quater(y, qy);
+	assume false; // TODO: write a lemma for uint64 product
+	var shift := uint256_ls(product, shift * 64);
+	if zero then shift else acc + shift
+}
 
 function xor256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;
-		{ BignumXor(x, y, st, sb) }
+{
+	uint256_xor(x, uint256_shift(y, st, sb))
+}
 
 function or256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;
-		{ BignumOr(x, y, st, sb) }
+{
+	uint256_or(x, uint256_shift(y, st, sb))
+}
 		
 function and256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;
-		{ BignumAnd(x, y, st, sb) }
+{
+	uint256_and(x, uint256_shift(y, st, sb))
+}
+
 }

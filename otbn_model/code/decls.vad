@@ -1,4 +1,4 @@
-include{:verbatim} "vale.dfy"
+include{:verbatim} "../code/vale.dfy"
 include{:verbatim} "../spec/def.dfy"
 include{:verbatim} "../spec/ops.dfy"
 
@@ -11,8 +11,12 @@ import opened bignum_def
 #endverbatim
 
 type state:Type(0) {:primitive} extern;
+
+type uint2:Type(0) := int_range(0, 3);
 type uint32:Type(0) := int_range(0, 0xffff_ffff);
+type uint128:Type(0) := int_range(0, 0xffffffffffffffffffffffffffffffff);
 type uint256:Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff);
+
 type seq(a:Type(0)):Type(0) {:primitive} extern;
 type map(a:Type(0), b:Type(0)):Type(0) extern;
 type Bignum:Type(0) := uint256;
@@ -45,8 +49,11 @@ function addc256(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup)
 function addi256(a:Bignum, b:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
 function addm256(a:Bignum, b:Bignum, mod:Bignum):Bignum extern;
 function sub256(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
-function mulqacc256(a:Bignum, qa:uint32, b:Bignum, qb:uint32, shift:uint32, zero:bool, macc:Bignum):Bignum extern;
-function mulqacc256_so(a:Bignum, qa:uint32, b:Bignum, qb:uint32, shift:uint32, zero:bool, macc:Bignum):Bignum extern;
+function mulqacc256(zero: bool, a:Bignum, qa:uint32, b:Bignum, qb:uint32, shift:uint32, macc:Bignum):Bignum extern;
+function uint256_hwb(x: Bignum, v: uint128, lower: bool):Bignum extern;
+
+function uint256_lh(a: Bignum): uint128 extern;
+function uint256_uh(a: Bignum): uint128 extern;
 
 function get_flags_group(fg:bool, flags:Flags):FlagsGroup extern;
 function update_fg(b:bool, f:Flags, fg:FlagsGroup):Flags extern;
@@ -156,7 +163,7 @@ operand_type reg256:Bignum :=
 ;
 
 operand_type imm32:uint32 := const;
-operand_type imm32:uint32 := const;
+operand_type imm2:uint2 := const;
 
 procedure Add32(inout dst:reg32, in src1:reg32, in src2:reg32)
     {:instruction Ins32(ADD32(dst, src1, src2))}
@@ -172,7 +179,8 @@ procedure Addi32(inout dst:reg32, in src1:reg32, in src2:imm32)
     requires
         src2 < 0x1000;
     ensures
-        dst = old(src1) + sext32(old(src2), 12);
+        //dst = old(src1) + sext32(old(src2), 12);
+        dst = old(src1) + old(src2);
 {
 assume false;
 }
@@ -359,30 +367,44 @@ procedure And256(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:boo
 assume false;
 }
 
-procedure Mulqacc256(inline zero: bool, in src1:reg256, in qwsel1:imm32, in src2:reg256, in qwsel2:imm32, in shift:imm32)
-    {:instruction Ins256(MULQACC256(zero, src1, qwsel1, src2, qwsel2, shift))}
-    requires
-        qwsel1 <= 3;
-        qwsel2 <= 3;
-        shift <= 3;
+procedure BN_MULQACC_Z(in src1:reg256, in qwsel1:imm2, in src2:reg256, in qwsel2:imm2, in shift:imm2)
+    {:instruction Ins256(MULQACC256(true, src1, qwsel1, src2, qwsel2, shift))}
     modifies
         wacc;
     ensures
-        wacc == mulqacc256(src1, qwsel1, src2, qwsel2, shift, zero, old(wacc));
+        wacc == mulqacc256(true, src1, qwsel1, src2, qwsel2, shift, old(wacc));
 {
     assume false;
 }
-    
-procedure Mulqacc256_so(inline zero: bool, in src1:reg256, in qwsel1:imm32, in src2:reg256, in qwsel2:imm32, in shift:imm32)
-    {:instruction Ins256(MULQACC256(zero, src1, qwsel1, src2, qwsel2, shift))}
-    requires
-        qwsel1 <= 3;
-        qwsel2 <= 3;
-        shift <= 3;
+
+procedure BN_MULQACC(in src1:reg256, in qwsel1:imm2, in src2:reg256, in qwsel2:imm2, in shift:imm2)
+    {:instruction Ins256(MULQACC256(false, src1, qwsel1, src2, qwsel2, shift))}
     modifies
         wacc;
     ensures
-        wacc == mulqacc256_so(src1, qwsel1, src2, qwsel2, shift, zero, old(wacc));
+        wacc == mulqacc256(false, src1, qwsel1, src2, qwsel2, shift, old(wacc));
+{
+    assume false;
+}
+
+procedure BN_MULQACC_SO( 
+    inout dst: reg256,
+    inline lower: bool,
+    in src1: reg256,
+    in qwsel1:imm2,
+    in src2:reg256,
+    in qwsel2:imm2,
+    in shift:imm2)
+
+    {:instruction Ins256(MULQACC256(false, src1, qwsel1, src2, qwsel2, shift))}
+    modifies
+        wacc;
+    ensures
+        let result := mulqacc256(false, src1, qwsel1, src2, qwsel2, shift, old(wacc));
+        // the upper half stay in wacc
+        wacc == uint256_uh(result)
+        // the lower half gets written back into dst
+        && dst == uint256_hwb(dst, uint256_lh(result), lower);
 {
     assume false;
 }

@@ -1,17 +1,24 @@
 include "decls.vad"
 
 #verbatim
-include "vale.dfy"
+include "../code/vale.dfy"
 include "../spec/def.dfy"
-include "decls.dfy"
+include "../gen/decls.dfy"
+include "../code/example_lemmas.dfy"
 
 module examples {
 
 import opened bignum_vale
 import opened bignum_def
 import opened bignum_decls
+import opened example_lemmas
 
 #endverbatim
+
+ghost procedure lemma_xor_clear(ghost x:int)
+    ensures false;
+    extern;
+
 
 procedure DoubleExample32(inout dst:reg32, in src:reg32)
     requires
@@ -33,20 +40,82 @@ procedure DoubleRegExample32()
     Add32(x2, x2, x2);
 }
 
+procedure half_mul()
+// procedure half_mul(in src1:reg256, in src2:reg256)
+    reads w28; w29;
+    modifies wacc; w1;
+{
+    // BN.MULQACC.Z w28.0, w29.0, 0
+    BN_MULQACC_Z(w28, 0, w29, 0, 0);
+    // assert(wacc == w28 * w29);
+
+    // BN.MULQACC w28.1, w29.0, 1
+    BN_MULQACC(w28, 1, w29, 0, 1);
+
+    // BN.MULQACC.SO w1.L, w28.0, w29.1, 1
+    BN_MULQACC_SO(w1, true, w28, 1, w29, 0, 1);
+    
+    // BN.MULQACC w28.2, w29.0, 0
+    BN_MULQACC(w28, 2, w29, 0, 0);
+    
+    // BN.MULQACC w28.1, w29.1, 0
+    BN_MULQACC(w28, 1, w29, 1, 0);
+
+    // BN.MULQACC w28.0, w29.2, 0
+    BN_MULQACC(w28, 0, w29, 2, 0);
+
+    // BN.MULQACC w28.3, w29.0, 1
+    BN_MULQACC(w28, 3, w29, 0, 1);
+
+    // BN.MULQACC w28.2, w29.1, 1
+    BN_MULQACC(w28, 2, w29, 1, 1);
+
+    // BN.MULQACC w28.1, w29.2, 1
+    BN_MULQACC(w28, 1, w29, 2, 1);
+
+    // BN.MULQACC.SO w1.U, w28.0, w29.3, 1
+    BN_MULQACC_SO(w1, false, w28, 0, w29, 3, 1);
+}
+
+procedure Increment(inout dst:reg32)
+    ensures
+        dst == old(dst) + 1;
+{
+    Addi32(dst, dst, 1);
+}
+
+procedure LoopExample(inout dst:reg32)
+    requires
+        dst == 0;
+    ensures
+        dst == 3;
+    modifies
+        flags;
+{
+    while (dst < 3)
+        invariant 0 <= dst <= 3;
+        decreases 3 - dst;
+    {
+        Increment(dst);
+    }
+}
+
 procedure d0inv()
     modifies
         w0; w29; flags;
 {
+    lemma_xor_clear(w0);
+
     Xor256(w0, w0, w0, false, 0);
-    assert(w0 == 0);
     Addi256(w0, w0, 1, false);
     Mov256(w29, w0);
+    assert(w29 == 1);
 
-//while (i >= 0)
-//    {
-//    Mulqacc256(w28, 1, w29, 0, 1);
-//    }
-    
+    // while (true)
+    //     decreases *;
+    // {
+    //     Mulqacc256(false, w28, 1, w29, 0, 1);
+    // }
 }
 
 #verbatim
