@@ -24,6 +24,7 @@ type Frame:Type(0) := map(int, uint32);
 type Stack:Type(0) := seq(Frame);
 type FlagsGroup:Type(0) extern;
 type Flags:Type(0) extern;
+type Reg256:Type(0) extern;
 
 function operator(.ok) (s:state):bool extern;
 function operator(.ok :=) (s:state, b:bool):state extern;
@@ -151,10 +152,9 @@ operand_type reg32:uint32 :=
 | inout x20 | inout x21 | inout x22 | inout x23
 | inout x24 | inout x25 | inout x26 | inout x27
 | inout x28 | inout x29 | inout x30 | inout x31
-| inout xrnd
-;
+| inout xrnd;
 
-operand_type reg256:Bignum :=
+operand_type reg256:Bignum @ Reg256 := 
 | inout w0 | inout w1 | inout w2 | inout w3
 | inout w4 | inout w5 | inout w6 | inout w7
 | inout w9 | inout w9 | inout w10 | inout w11
@@ -163,8 +163,7 @@ operand_type reg256:Bignum :=
 | inout w20 | inout w21 | inout w22 | inout w23
 | inout w24 | inout w25 | inout w26 | inout w27
 | inout w28 | inout w29 | inout w30 | inout w31
-| inout wmod | inout wrnd | inout wacc
-;
+| inout wmod | inout wrnd | inout wacc;
 
 operand_type imm32:uint32 := const;
 operand_type imm2:uint2 := const;
