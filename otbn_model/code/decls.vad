@@ -143,6 +143,8 @@ var wmod:Bignum {:state reg256(WMod)};
 var wrnd:Bignum {:state reg256(WRnd)};
 var wacc:Bignum {:state reg256(WAcc)};
 
+const WAcc: Reg256 extern;
+
 operand_type reg32:uint32 :=
 | inout x0 | inout x1 | inout x2 | inout x3
 | inout x4 | inout x5 | inout x6 | inout x7
