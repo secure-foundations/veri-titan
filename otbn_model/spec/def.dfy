@@ -21,7 +21,7 @@ predicate valid_state(s:state)
  && (forall t :: t in s.wregs)
 }
 
-type reg_index = i:int | 0 <= i <= 32
+type reg_index = i:int | 0 <= i < 32
 
 // General purpose and control registers, 32b
 datatype Reg32 =
