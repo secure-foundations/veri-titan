@@ -2,23 +2,49 @@ include "decls.vad"
 
 #verbatim
 include "../code/vale.dfy"
-include "../spec/def.dfy"
-include "../gen/decls.dfy"
 include "../code/example_lemmas.dfy"
+
+include "../spec/def.dfy"
+include "../spec/ops.dfy"
+include "../spec/types.dfy"
+
+include "../gen/decls.dfy"
 
 module examples {
 
 import opened bignum_vale
-import opened bignum_def
-import opened bignum_decls
 import opened example_lemmas
+
+import opened bignum_def
+import opened ops
+import opened types
+
+import opened bignum_decls
 
 #endverbatim
 
 ghost procedure lemma_xor_clear(ghost x:int)
-    ensures false;
     extern;
 
+ghost procedure lemma_bn_half_mul(
+        ghost wacc_g1: uint256,
+        ghost wacc_g2: uint256,
+        ghost wacc_g3: uint256,
+        ghost wacc_g4: uint256,
+        ghost wacc_g5: uint256,
+        ghost wacc_g6: uint256,
+        ghost wacc_g7: uint256,
+        ghost wacc_g8: uint256,
+        ghost wacc_g9: uint256,
+        ghost w1_g1: uint256,
+        ghost result_g1: uint256,
+        ghost result_g2: uint256,
+        ghost w1: uint256,
+        ghost w28: uint256,
+        ghost w29: uint256
+    ) extern;
+
+function half_product(p: int, x:int, y:int): bool extern;
 
 procedure DoubleExample32(inout dst:reg32, in src:reg32)
     requires
@@ -42,39 +68,78 @@ procedure DoubleRegExample32()
 
 procedure half_mul()
 // procedure half_mul(in src1:reg256, in src2:reg256)
+    requires w1 == 0;
     reads w28; w29;
     modifies wacc; w1;
+    ensures half_product(w1, w28, w29);
 {
     // BN.MULQACC.Z w28.0, w29.0, 0
     BN_MULQACC_Z(w28, 0, w29, 0, 0);
-    // assert(wacc == w28 * w29);
+
+    let wacc_g1 := wacc;
+    assert wacc_g1 == mulqacc256(true, w28, 0, w29, 0, 0, 0);
 
     // BN.MULQACC w28.1, w29.0, 1
     BN_MULQACC(w28, 1, w29, 0, 1);
 
+    let wacc_g2 := wacc;
+    assert wacc_g2 == mulqacc256(false, w28, 1, w29, 0, 1, wacc_g1);
+
     // BN.MULQACC.SO w1.L, w28.0, w29.1, 1
-    BN_MULQACC_SO(w1, true, w28, 1, w29, 0, 1);
-    
+    BN_MULQACC_SO(w1, true, w28, 0, w29, 1, 1);
+
+    let wacc_g3 := wacc;
+    let w1_g1 := w1;
+    let result_g1 := mulqacc256(false, w28, 0, w29, 1, 1, wacc_g2);
+    assert wacc_g3 == uint256_uh(result_g1)
+        && w1_g1 == uint256_hwb(0, uint256_lh(result_g1), true);
+
     // BN.MULQACC w28.2, w29.0, 0
     BN_MULQACC(w28, 2, w29, 0, 0);
-    
+
+    let wacc_g4 := wacc;
+    assert wacc_g4 == mulqacc256(false, w28, 2, w29, 0, 0, wacc_g3);
+
     // BN.MULQACC w28.1, w29.1, 0
     BN_MULQACC(w28, 1, w29, 1, 0);
+
+    let wacc_g5 := wacc;
+    assert wacc_g5 == mulqacc256(false, w28, 1, w29, 1, 0, wacc_g4);
 
     // BN.MULQACC w28.0, w29.2, 0
     BN_MULQACC(w28, 0, w29, 2, 0);
 
+    let wacc_g6 := wacc;
+    assert wacc_g6 == mulqacc256(false, w28, 0, w29, 2, 0, wacc_g5);
+
     // BN.MULQACC w28.3, w29.0, 1
     BN_MULQACC(w28, 3, w29, 0, 1);
+
+    let wacc_g7 := wacc;
+    assert wacc_g7 == mulqacc256(false, w28, 3, w29, 0, 1, wacc_g6);
 
     // BN.MULQACC w28.2, w29.1, 1
     BN_MULQACC(w28, 2, w29, 1, 1);
 
+    let wacc_g8 := wacc;
+    assert wacc_g8 == mulqacc256(false, w28, 2, w29, 1, 1, wacc_g7);
+
     // BN.MULQACC w28.1, w29.2, 1
     BN_MULQACC(w28, 1, w29, 2, 1);
 
+    let wacc_g9 := wacc;
+    assert wacc_g9 == mulqacc256(false, w28, 1, w29, 2, 1, wacc_g8);
+
     // BN.MULQACC.SO w1.U, w28.0, w29.3, 1
     BN_MULQACC_SO(w1, false, w28, 0, w29, 3, 1);
+
+    let result_g2 := mulqacc256(false, w28, 0, w29, 3, 1, wacc_g9);
+    assert wacc == uint256_uh(result_g2)
+        && w1 == uint256_hwb(w1_g1, uint256_lh(result_g2), false);
+
+    lemma_bn_half_mul(wacc_g1, wacc_g2, wacc_g3, wacc_g4, wacc_g5, wacc_g6, wacc_g7, wacc_g8, wacc_g9,
+        w1_g1, result_g1, result_g2,
+        w1, w28, w29);
 }
 
 procedure Increment(inout dst:reg32)

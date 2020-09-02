@@ -51,6 +51,10 @@ function addm256(a:Bignum, b:Bignum, mod:Bignum):Bignum extern;
 function sub256(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
 function mulqacc256(zero: bool, a:Bignum, qa:uint32, b:Bignum, qb:uint32, shift:uint32, macc:Bignum):Bignum extern;
 function uint256_hwb(x: Bignum, v: uint128, lower: bool):Bignum extern;
+function uint256_qmul(x: uint256, qx: uint2, y: uint256, qy:uint2): uint128 extern;
+
+function uint256_ls(x: uint256, num_bytes:int): uint256 extern;
+function uint256_rs(x:uint256, num_bytes:int): uint256 extern;
 
 function uint256_lh(a: Bignum): uint128 extern;
 function uint256_uh(a: Bignum): uint128 extern;
@@ -395,8 +399,8 @@ procedure BN_MULQACC_SO(
     in src2:reg256,
     in qwsel2:imm2,
     in shift:imm2)
-
     {:instruction Ins256(MULQACC256(false, src1, qwsel1, src2, qwsel2, shift))}
+
     modifies
         wacc;
     ensures
@@ -404,7 +408,7 @@ procedure BN_MULQACC_SO(
         // the upper half stay in wacc
         wacc == uint256_uh(result)
         // the lower half gets written back into dst
-        && dst == uint256_hwb(dst, uint256_lh(result), lower);
+        && dst == uint256_hwb(old(dst), uint256_lh(result), lower);
 {
     assume false;
 }
