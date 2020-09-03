@@ -236,7 +236,6 @@ module example_lemmas {
 		}
 	}
 
-
 	lemma lemma_mod_multiple_cancel(x: int, y: int, m: nat)
 		requires m !=0 && y % m == 0;
 		ensures (x + y) % m == x % m;

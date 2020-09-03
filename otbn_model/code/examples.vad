@@ -166,21 +166,24 @@ procedure LoopExample(inout dst:reg32)
     }
 }
 
-// TODO: loop doesn't actually use a register
+// TODO: loop doesn't actually use a register, add loop counter to model maybe
 procedure d0inv(inout dst:reg32)
     requires
         dst == 0;
+    reads
+        w28;
     modifies
-        w0; w29; flags;
+        w1; w0; w29; flags; wacc;
 {
-    Xor256(w0, w0, w0, false, 0);
-    Addi256(w0, w0, 1, false);
-    Mov256(w29, w0);
+    BN_XOR(w0, w0, w0, false, 0);
+    BN_ADDI(w0, w0, 1, false);
+    BN_MOV(w29, w0);
 
     while (dst < 256)
         invariant 0 <= dst <= 256;
         decreases 256 - dst;
     {
+        half_mul(w1, w28, w29);
         Increment(dst);
     }
 }
