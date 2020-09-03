@@ -286,7 +286,7 @@ procedure BN_XOR(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:boo
 assume false;
 }
 
-procedure Add256(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:bool, in sb:imm32, inline fg:bool)
+procedure BN_ADD(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:bool, in sb:imm32, inline fg:bool)
     {:instruction Ins256(ADD256(dst, src1, src2, st, sb, fg))}
     requires
         sb < 32;
@@ -335,7 +335,7 @@ procedure Addm256(inout dst:reg256, in src1:reg256, in src2:reg256)
     assume false;
 }
 
-procedure Sub256(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:bool, in sb:imm32, inline fg:bool)
+procedure BN_SUB(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:bool, in sb:imm32, inline fg:bool)
     {:instruction Ins256(SUB256(dst, src1, src2, st, sb, fg))}
     requires
         sb < 32;
@@ -349,7 +349,7 @@ assume false;
 }
     
 procedure Or256(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:bool, in sb:imm32, inline fg:bool)
-    {:instruction Ins256(SUB256(dst, src1, src2, st, sb, fg))}
+    {:instruction Ins256(OR256(dst, src1, src2, st, sb, fg))}
     requires
         sb < 32;
     modifies
@@ -360,8 +360,8 @@ procedure Or256(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:bool
 assume false;
 }
 
-procedure And256(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:bool, in sb:imm32, inline fg:bool)
-    {:instruction Ins256(SUB256(dst, src1, src2, st, sb, fg))}
+procedure BN_AND(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:bool, in sb:imm32, inline fg:bool)
+    {:instruction Ins256(AND256(dst, src1, src2, st, sb, fg))}
     requires
         sb < 32;
     modifies

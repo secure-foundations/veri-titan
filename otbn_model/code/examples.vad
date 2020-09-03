@@ -184,8 +184,21 @@ procedure d0inv(inout dst:reg32)
         decreases 256 - dst;
     {
         half_mul(w1, w28, w29);
+
+        // BN.AND w1, w1, w0
+        BN_AND(w1, w1, w0, false, 0, false);
+
+        // BN.OR w29, w29, w1
+        BN_OR(w29, w29, w1, false, 0, false);
+
+        // BN.ADD w0, w0, w0
+        BN_ADD(w0, w0, w0, false, 0, false);
+
         Increment(dst);
     }
+
+    // BN.SUB w29, w31, w29
+    BN_SUB(w29, w31, w29, false, 0, false);
 }
 
 #verbatim
