@@ -6,7 +6,7 @@ from pyboolector import BTOR_OPT_PRINT_DIMACS, BTOR_OPT_MODEL_GEN
 import sys
 
 try:
-	full_bits = int(sys.argv[2])
+	full_bits = int(sys.argv[1])
 except:
 	full_bits = 3
 
