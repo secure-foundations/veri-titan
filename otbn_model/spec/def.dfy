@@ -311,6 +311,26 @@ function sub256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) 
 	(sum, flags_group.(cf := new_carry))
 }
 
+function subb256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
+	requires sb < 32;
+{
+	assume false;
+	var (sum, new_carry) := BignumAddCarry(x, -y, st, sb, cf(flags_group));
+	(sum, flags_group.(cf := new_carry))
+}
+
+function subi256(x:Bignum, imm:Bignum, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
+	requires imm < 1024;
+	requires imm < x; //TODO: Is this true?
+{
+	assume false;
+	var (sum, new_carry) := BignumAddCarry(x, -imm, false, 0, cf(flags_group));
+	(sum, flags_group.(cf := new_carry))
+}
+
+function subm256(x:Bignum, y:Bignum, wmod:Bignum)  : Bignum
+{ var result := (x as bv256 - y as bv256) as Bignum; if result >= wmod then (result as bv256 - wmod as bv256) as Bignum else result }
+
 function BignumAddCarry(a:Bignum, b:Bignum, st:bool, sb:uint32, cf:bool) : (Bignum, bool)
 	requires sb < 32;
 {
