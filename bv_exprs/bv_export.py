@@ -2,26 +2,39 @@ import os
 import pyboolector
 from pyboolector import Boolector, BoolectorException, BTOR_OPT_PRINT_DIMACS, BTOR_OPT_MODEL_GEN
 
+import sys
+
+try:
+	full_bits = int(sys.argv[2])
+except:
+	full_bits = 3
+
+def prove(x):
+	btor.Assert(btor.Not(x))
+	return btor.Sat()
+
+half_bits = int(full_bits / 2)
+BASE = 2 ** full_bits
+HALF_BASE = int(2 ** half_bits)
+
 btor = Boolector()
-# btor.Set_opt(BTOR_OPT_PRINT_DIMACS, 1)
-btor.Set_opt(BTOR_OPT_MODEL_GEN, 1)
 
-bv8 = btor.BitVecSort(8)
+full_sort = btor.BitVecSort(full_bits)
+half_sort = btor.BitVecSort(half_bits)
 
-x = btor.Var(bv8, "x")
-y = btor.Var(bv8, "y")
+# btor.Set_opt(BTOR_OPT_MODEL_GEN, 1)
+btor.Set_opt(BTOR_OPT_PRINT_DIMACS, 1)
 
-btor.Assert(0 < x)
-btor.Assert(x <= 100)
-btor.Assert(0 < y)
-btor.Assert(y <= 100)
-btor.Assert(x * y < 100)
+x = btor.Var(full_sort, "x")
+y = btor.Var(full_sort, "y")
+z = btor.Var(full_sort, "z")
 
-umulo = btor.Umulo(x, y)  # overflow bit of x * y
-btor.Assert(~umulo)       # do not allow overflows
+q = btor.Implies(
+	x * z == y * z,
+	x == y)
 
-result = btor.Sat()
-print(x.assignment)  # prints: 00000100
-print(y.assignment)  # prints: 00010101
-print("{} {}".format(x.symbol, x.assignment))  # prints: x 00000100
-print("{} {}".format(y.symbol, y.assignment))  # prints: y 00010101
+print(prove(q))
+# print(x.assignment)
+# print(y.assignment)
+# print("{} {}".format(x.symbol, x.assignment))  # prints: x 00000100
+# print("{} {}".format(y.symbol, y.assignment))  # prints: y 00010101
