@@ -35,14 +35,17 @@ full_sort = btor.BitVecSort(full_bits)
 half_sort = btor.BitVecSort(half_bits)
 
 # btor.Set_opt(BTOR_OPT_EXIT_CODES, 1)
-btor.Set_opt(BTOR_OPT_MODEL_GEN, 1)
-# btor.Set_opt(BTOR_OPT_PRINT_DIMACS, 1)
+# btor.Set_opt(BTOR_OPT_MODEL_GEN, 1)
+btor.Set_opt(BTOR_OPT_PRINT_DIMACS, 1) # enabling this causes Sat() to return UNKNOWN
 
 x = btor.Var(full_sort, "x")
 y = btor.Var(full_sort, "y")
 z = btor.Var(full_sort, "z")
 
-q = x & y == y & x
-prove(btor, q)
+q = btor.Implies(
+	x ^ z == y ^ z,
+	x == y,
+)
 
+prove(btor, q)
 # print(check(btor, q))
