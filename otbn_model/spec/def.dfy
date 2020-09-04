@@ -315,10 +315,10 @@ function addm256(x:Bignum, y:Bignum, mod:Bignum) : Bignum
 function sub256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
 	requires sb < 32;
 {
-	AddWithCarry(x, y, false)
-	// assume false;
-	// var (sum, new_carry) := BignumAddCarry(x, -y, st, sb, cf(flags_group));
-	// (sum, flags_group.(cf := new_carry))
+	var diff :int := x - uint256_sb(y, st, sb);
+	// FIXME: figure out the flags
+	var fg := FlagsGroup(false, false, false, diff == 0);
+	(diff % BASE_256, fg)
 }
 
 function AddWithCarry(a: Bignum, b: Bignum, carry_in: bool) : (Bignum, FlagsGroup)
