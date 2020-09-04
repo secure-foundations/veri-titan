@@ -5,8 +5,6 @@ try:
 except:
 	full_bits = 2
 
-picosat = "/home/yizhou7/Desktop/research/open_titan/picosat-965/picosat"
-
 print("using %d bit width" % full_bits)
 
 if not os.path.exists("gen"):
@@ -19,7 +17,7 @@ dot_file = name + ".dot"
 png_file = name + ".png"
 
 os.system("python bv_export.py %d | tail -n +4 | head -n -1 > %s" % (full_bits, cnf_file))
-os.system("%s %s -t %s" % (picosat, cnf_file, trace_file))
+os.system("picosat %s -t %s" % (cnf_file, trace_file))
 
 f = open(trace_file)
 content = "digraph D {\n"
