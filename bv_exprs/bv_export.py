@@ -36,8 +36,11 @@ y = btor.Var(full_sort, "y")
 z = btor.Var(full_sort, "z")
 
 q = btor.Implies(
-	x & z == y & z,
-	x == y)
-# q = x != x
+		btor.And(
+			x * z == y * z,
+			z != 0),
+		x == y
+	)
+
 print(prove(btor, q))
 # print(check(btor, q))

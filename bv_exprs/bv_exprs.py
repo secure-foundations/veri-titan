@@ -28,6 +28,20 @@ def shift():
 	)
 	prove(query)
 
+def mul():
+	x = BitVec("x", full_bits)
+	y = BitVec("y", full_bits)
+	z = BitVec("z", full_bits)
+
+	query = (
+		Implies(
+			And(x * z == y * z,
+			z != 0),
+			x == y,
+		)
+	)
+	prove(query)
+
 def xor():
 	x = BitVec("x", full_bits)
 	y = BitVec("y", full_bits)
