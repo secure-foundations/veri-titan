@@ -290,32 +290,43 @@ function sext32(x:uint32, sz:int) : uint32
 
 function add256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
 	requires sb < 32;
-{ var (sum, new_carry) := BignumAddCarry(x, y, st, sb, false); (sum, flags_group.(cf := new_carry))  }
+{
+	AddWithCarry(x, uint256_sb(y, st, sb), false)
+}
 
 function addc256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
 	requires sb < 32;
-{ var (sum, new_carry) := BignumAddCarry(x, y, st, sb, cf(flags_group)); (sum, flags_group.(cf := new_carry))  }
+{
+	AddWithCarry(x, uint256_sb(y, st, sb), cf(flags_group))
+}
 
 function addi256(x:Bignum, imm:Bignum, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
 	requires imm < 1024;
-{ var (sum, new_carry) := BignumAddCarry(x, imm, false, 0, false); (sum, flags_group.(cf := new_carry))  }
+{
+	AddWithCarry(x, imm, false)
+}
 
 function addm256(x:Bignum, y:Bignum, mod:Bignum) : Bignum
-{ var (sum, new_carry) := BignumAddCarry(x, y, false, 0, false); if sum >= mod then sum - mod else sum }
+{
+	var (sum, _) := AddWithCarry(x, y, false);
+	if sum >= mod then sum - mod else sum
+}
 
 function sub256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
 	requires sb < 32;
 {
-	assume false;
-	var (sum, new_carry) := BignumAddCarry(x, -y, st, sb, cf(flags_group));
-	(sum, flags_group.(cf := new_carry))
+	AddWithCarry(x, y, false)
+	// assume false;
+	// var (sum, new_carry) := BignumAddCarry(x, -y, st, sb, cf(flags_group));
+	// (sum, flags_group.(cf := new_carry))
 }
 
-function BignumAddCarry(a:Bignum, b:Bignum, st:bool, sb:uint32, cf:bool) : (Bignum, bool)
-	requires sb < 32;
+function AddWithCarry(a: Bignum, b: Bignum, carry_in: bool) : (Bignum, FlagsGroup)
 {
-	var sum :int := a + uint256_sb(b, st, sb) + BoolToInt(cf);
-	(sum % BASE_256, sum >= BASE_256)
+	var sum :int := a + b + BoolToInt(carry_in);
+	// FIXME: get MSB and LSM
+	var fg := FlagsGroup(sum >= BASE_256, false, false, sum == 0);
+	(sum % BASE_256, fg)
 }
 
 function mulqacc256(
