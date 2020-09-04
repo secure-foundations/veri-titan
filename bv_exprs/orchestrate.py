@@ -3,6 +3,7 @@ import sys, os
 try:
 	full_bits = int(sys.argv[1])
 except:
+	print("usage: python orchestrate.py [bit_number]")
 	full_bits = 2
 
 print("using %d bit width" % full_bits)
