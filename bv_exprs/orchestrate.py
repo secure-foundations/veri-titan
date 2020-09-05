@@ -17,34 +17,39 @@ trace_file = name + ".trace"
 dot_file = name + ".dot"
 png_file = name + ".png"
 
-os.system("python boolector.py %d | tail -n +4 | head -n -1 > %s" % (full_bits, cnf_file))
+print("\nrunning boolector")
+os.system("python boolector.py %d | python filter.py > %s" % (full_bits, cnf_file))
+
+print("\nrunning picosat")
 os.system("picosat %s -t %s" % (cnf_file, trace_file))
 
 l = open(cnf_file).readline().strip()
 l = l.split()
-print("variables: %s" % l[2])
-print("clauses: %s" % l[3])
 
-# os.system("head -n 1 %s" % cnf_file)
-
+print("\nreading trace")
 f = open(trace_file)
+cg_out = open(dot_file, "w+")
 resolution_steps = 0
 
-content = "digraph D {\n"
+cg_out.write("digraph D {\n")
 for line in f:
 	if "*" not in line:
 		continue
 	line = line.strip().split()[:-1]
 	start = line[0]
 	for end in line[2:]:
-		content += "\t{} -> {}\n".format(start, end)
+		cg_out.write("\t{} -> {}\n".format(start, end))
 	resolution_steps += 1
-content += "}\n"
+cg_out.write("}\n")
 
-cg_out = open(dot_file, "w+")
-cg_out.write(content)
 cg_out.close()
 
-os.system("dot -Tpng %s -o %s" % (dot_file, png_file))
+if resolution_steps < 200:
+	os.system("dot -Tpng %s -o %s" % (dot_file, png_file))
+else:
+	print("too many steps skipping graph generation")
 
+print("\ndumping stats")
+print("variables: %s" % l[2])
+print("clauses: %s" % l[3])
 print("proof steps: %d" % resolution_steps)

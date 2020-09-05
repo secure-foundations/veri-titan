@@ -1,7 +1,7 @@
 import os
 import pyboolector
 from pyboolector import Boolector, BoolectorException
-from pyboolector import BTOR_OPT_PRINT_DIMACS, BTOR_OPT_MODEL_GEN
+from pyboolector import BTOR_OPT_PRINT_DIMACS, BTOR_OPT_MODEL_GEN, BTOR_OPT_EXIT_CODES
 
 import sys
 
@@ -34,17 +34,28 @@ btor = Boolector()
 full_sort = btor.BitVecSort(full_bits)
 half_sort = btor.BitVecSort(half_bits)
 
-# btor.Set_opt(BTOR_OPT_EXIT_CODES, 1)
+btor.Set_opt(BTOR_OPT_EXIT_CODES, 1)
 # btor.Set_opt(BTOR_OPT_MODEL_GEN, 1)
 btor.Set_opt(BTOR_OPT_PRINT_DIMACS, 1) # enabling this causes Sat() to return UNKNOWN
 
 x = btor.Var(full_sort, "x")
 y = btor.Var(full_sort, "y")
-z = btor.Var(full_sort, "z")
+m = btor.Var(full_sort, "z")
+
+# q = btor.Implies(
+# 	x ^ m == y ^ m,
+# 	x == y,
+# )
 
 q = btor.Implies(
-	x ^ z == y ^ z,
-	x == y,
+		(0 <= x) 
+		& (x < HALF_BASE)
+		& (0 <= y)
+		& (y < HALF_BASE)
+		& (0 < m)
+		& (m < HALF_BASE)
+		& (x * m == y * m),
+		x == y,
 )
 
 prove(btor, q)
