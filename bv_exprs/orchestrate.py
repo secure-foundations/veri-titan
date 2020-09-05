@@ -17,7 +17,7 @@ trace_file = name + ".trace"
 dot_file = name + ".dot"
 png_file = name + ".png"
 
-os.system("python bv_export.py %d | tail -n +4 | head -n -1 > %s" % (full_bits, cnf_file))
+os.system("python boolector.py %d | tail -n +4 | head -n -1 > %s" % (full_bits, cnf_file))
 os.system("picosat %s -t %s" % (cnf_file, trace_file))
 
 f = open(trace_file)
