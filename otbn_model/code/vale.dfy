@@ -43,6 +43,11 @@ function va_update_flags(sM:va_state, sK:va_state):va_state
 
 function va_update_stack(sM:va_state, sK:va_state):va_state { sK.(stack := sM.stack) }
 
+type va_operand_imm128 = uint128
+predicate va_is_src_imm128(v:uint128, s:va_state) { true }
+function va_eval_imm128(s:va_state, v:uint128):uint128 { v }
+function method va_const_imm128(n:uint128):uint128 { n }
+
 type va_operand_imm32 = uint32
 predicate va_is_src_imm32(v:uint32, s:va_state) { true }
 function va_eval_imm32(s:va_state, v:uint32):uint32 { v }

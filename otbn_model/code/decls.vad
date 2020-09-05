@@ -49,6 +49,9 @@ function addc256(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup)
 function addi256(a:Bignum, b:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
 function addm256(a:Bignum, b:Bignum, mod:Bignum):Bignum extern;
 function sub256(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
+function subb256(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
+function subi256(a:Bignum, b:Bignum, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
+function subm256(a:Bignum, b:Bignum, mod:Bignum):Bignum extern;
 function mulqacc256(zero: bool, a:Bignum, qa:uint32, b:Bignum, qb:uint32, shift:uint32, macc:Bignum):Bignum extern;
 function uint256_hwb(x: Bignum, v: uint128, lower: bool):Bignum extern;
 function uint256_qmul(x: uint256, qx: uint2, y: uint256, qy:uint2): uint128 extern;
@@ -166,6 +169,7 @@ operand_type reg256:Bignum :=
 | inout wmod | inout wrnd | inout wacc
 ;
 
+operand_type imm128:uint128 := const;
 operand_type imm32:uint32 := const;
 operand_type imm2:uint2 := const;
 
@@ -341,12 +345,46 @@ procedure Sub256(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:boo
     modifies
         flags;
     ensures
-        let result := sub256(old(src1), old(src2), st, sb, get_flags_group(fg, old(flags)));
+        let result := subb256(old(src1), old(src2), st, sb, get_flags_group(fg, old(flags)));
+        dst == fst(result) && flags == update_fg(fg, old(flags), snd(result));
+{
+assume false;
+}
+
+procedure BN_SUBB(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:bool, in sb:imm32, inline fg:bool)
+    {:instruction Ins256(SUBB256(dst, src1, src2, st, sb, fg))}
+    requires
+        sb < 32;
+    modifies
+        flags;
+    ensures
+        let result := subb256(old(src1), old(src2), st, sb, get_flags_group(fg, old(flags)));
         dst == fst(result) && flags == update_fg(fg, old(flags), snd(result));
 {
 assume false;
 }
     
+procedure BN_SUBI(inout dst:reg256, in src1:reg256, in src2:imm128, inline fg:bool)
+    {:instruction Ins256(SUBI256(dst, src1, src2, fg))}
+    modifies
+        flags;
+    ensures
+        let result := subi256(old(src1), src2, get_flags_group(fg, old(flags)));
+        dst == fst(result) && flags == update_fg(fg, old(flags), snd(result));
+{
+assume false;
+}
+
+procedure BN_SUBM(inout dst:reg256, in src1:reg256, in src2:reg256)
+    {:instruction Ins256(SUBM256(dst, src1, src2))}
+    reads
+        wmod;
+    ensures
+        dst == subm256(old(src1), old(src2), wmod);
+{
+assume false;
+}
+
 procedure Or256(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:bool, in sb:imm32, inline fg:bool)
     {:instruction Ins256(SUB256(dst, src1, src2, st, sb, fg))}
     requires
@@ -370,6 +408,8 @@ procedure And256(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:boo
 {
 assume false;
 }
+
+
 
 procedure BN_MULQACC_Z(in src1:reg256, in qwsel1:imm2, in src2:reg256, in qwsel2:imm2, in shift:imm2)
     {:instruction Ins256(MULQACC256(true, src1, qwsel1, src2, qwsel2, shift))}
