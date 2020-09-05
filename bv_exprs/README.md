@@ -23,4 +23,4 @@ after building, update `PYTHONPATH` variable, this is for my laptop:
 
 ## running example:
 
-`python rchestrate.py 2` will run a 2 bits version of the example in `boolector.py`, create a cnf file, a trace file, and a png representing the resolution proof in a `gen` directory. 
+`python orchestrate.py 2` will run a 2 bits version of the example in `boolector.py`, create a cnf file, a trace file, and a png representing the resolution proof in a `gen` directory. 
