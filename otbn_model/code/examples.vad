@@ -173,14 +173,15 @@ procedure d0inv(inout i:reg32)
     reads
         w28;
     modifies
-        w1; w0; w29; flags; wacc;
+        w1; w0; w29; w31; flags; wacc;
 {
-    let w0_g1 := w0;
+    let w0_g0 := w0;
 
     // BN.XOR w0, w0, w0
     BN_XOR(w0, w0, w0, false, 0);
 
     let w0_g1 := w0;
+    assert w0_g1 == xor256(w0_g0, w0_g0, false, 0);
 
     // BN.ADDI w0, w0, 1
     BN_ADDI(w0, w0, 1, false);
@@ -200,10 +201,10 @@ procedure d0inv(inout i:reg32)
         half_mul(w1, w28, w29);
 
         // BN.AND w1, w1, w0
-        BN_AND(w1, w1, w0, false, 0, false);
+        BN_AND(w1, w1, w0, false, 0);
 
         // BN.OR w29, w29, w1
-        BN_OR(w29, w29, w1, false, 0, false);
+        BN_OR(w29, w29, w1, false, 0);
 
         // BN.ADD w0, w0, w0
         BN_ADD(w0, w0, w0, false, 0, false);
