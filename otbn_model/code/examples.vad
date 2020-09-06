@@ -187,11 +187,12 @@ procedure d0inv(inout i:reg32)
     BN_ADDI(w0, w0, 1, false);
 
     let w0_g2 := w0;
+    assert w0_g2 == fst(addi256(w0_g1, 1));
 
     // BN.MOV w29, w0
     BN_MOV(w29, w0);
-
-    let w29_g1 := w29;
+    let w29_g0 := w29;
+    assert w0_g2 == w0_g2;
 
     while (i < 256)
         // invariant 0 <= i <= 256;
