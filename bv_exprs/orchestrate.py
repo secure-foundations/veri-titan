@@ -44,7 +44,7 @@ cg_out.write("}\n")
 
 cg_out.close()
 
-if resolution_steps < 200:
+if resolution_steps < 100:
 	os.system("dot -Tpng %s -o %s" % (dot_file, png_file))
 else:
 	print("too many steps skipping graph generation")
