@@ -300,7 +300,7 @@ function addc256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup)
 	AddWithCarry(x, uint256_sb(y, st, sb), cf(flags_group))
 }
 
-function addi256(x:Bignum, imm:Bignum, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
+function addi256(x:Bignum, imm:Bignum) : (Bignum, FlagsGroup)
 	requires imm < 1024;
 {
 	AddWithCarry(x, imm, false)

@@ -47,7 +47,7 @@ function or256(a:Bignum, b:Bignum, st:bool, sb:uint32):Bignum extern;
 function and256(a:Bignum, b:Bignum, st:bool, sb:uint32):Bignum extern;
 function add256(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
 function addc256(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
-function addi256(a:Bignum, b:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
+function addi256(a:Bignum, imm:uint32):tuple(Bignum, FlagsGroup) extern;
 function addm256(a:Bignum, b:Bignum, mod:Bignum):Bignum extern;
 function sub256(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
 function mulqacc256(zero: bool, a:Bignum, qa:uint32, b:Bignum, qb:uint32, shift:uint32, macc:Bignum):Bignum extern;
@@ -319,7 +319,7 @@ procedure BN_ADDI(inout dst:reg256, in src:reg256, in imm:imm32, inline fg:bool)
     modifies
         flags;
     ensures
-        let result := addi256(old(src), imm, get_flags_group(fg, old(flags)));
+        let result := addi256(old(src), imm);
         dst == fst(result) && flags == update_fg(fg, old(flags), snd(result));
 {
     assume false;
