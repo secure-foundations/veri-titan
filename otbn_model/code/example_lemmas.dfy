@@ -266,6 +266,25 @@ module example_lemmas {
         && (i < 256) ==> w0 == power(2, i)
 	}
 
+	lemma lemma_d0inv_mid_loop(
+		i_0: uint32,
+		w0: uint256,
+		w0_g1: uint256,
+		w1_g1: uint256,
+		w1_g2: uint256,
+		w28: uint256,
+		w29: uint256,
+		w29_g1: uint256
+	)
+        requires invariant_d0inv(i_0, w28, w29_g1, w0_g1);
+        requires half_product(w1_g1, w28, w29_g1);
+        requires w1_g2 == and256(w1_g1, w0_g1, false, 0);
+        requires w29 == or256(w29_g1, w1_g2, false, 0);
+        requires w0 == fst(add256(w0_g1, w0_g1, false, 0));
+	{
+		
+	}
+		
 	lemma lemma_mod_multiple_cancel(x: int, y: int, m: nat)
 		requires m !=0 && y % m == 0;
 		ensures (x + y) % m == x % m;

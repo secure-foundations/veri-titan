@@ -23,31 +23,6 @@ import opened bignum_decls
 
 #endverbatim
 
-ghost procedure lemma_bn_half_mul(
-    ghost wacc_g1: uint256,
-    ghost wacc_g2: uint256,
-    ghost wacc_g3: uint256,
-    ghost wacc_g4: uint256,
-    ghost wacc_g5: uint256,
-    ghost wacc_g6: uint256,
-    ghost wacc_g7: uint256,
-    ghost wacc_g8: uint256,
-    ghost wacc_g9: uint256,
-    ghost w1_g1: uint256,
-    ghost w1_g2: uint256,
-    ghost result_g1: uint256,
-    ghost result_g2: uint256,
-    ghost w1: uint256,
-    ghost w28: uint256,
-    ghost w29: uint256
-) extern;
-
-function half_product(p: int, x:int, y:int): bool extern;
-
-function invariant_d0inv(i: uint32, w28: uint256, w29: uint256, w0: uint256) : bool extern;
-
-ghost procedure lemma_d0inv_pre_loop(ghost w0_g0: uint256, ghost w0_g1: uint256, ghost w0: uint256, ghost w29: uint256) extern;
-
 procedure DoubleExample32(inout dst:reg32, in src:reg32)
     requires
         src + src < 0x1_0000_0000;
@@ -90,6 +65,27 @@ procedure LoopExample(inout dst:reg32)
         Increment(dst);
     }
 }
+
+ghost procedure lemma_bn_half_mul(
+    ghost wacc_g1: uint256,
+    ghost wacc_g2: uint256,
+    ghost wacc_g3: uint256,
+    ghost wacc_g4: uint256,
+    ghost wacc_g5: uint256,
+    ghost wacc_g6: uint256,
+    ghost wacc_g7: uint256,
+    ghost wacc_g8: uint256,
+    ghost wacc_g9: uint256,
+    ghost w1_g1: uint256,
+    ghost w1_g2: uint256,
+    ghost result_g1: uint256,
+    ghost result_g2: uint256,
+    ghost w1: uint256,
+    ghost w28: uint256,
+    ghost w29: uint256
+) extern;
+
+function half_product(p: int, x:int, y:int): bool extern;
 
 procedure half_mul(inout dst: reg256, in src1: reg256, in src2: reg256)
     requires
@@ -160,6 +156,24 @@ procedure half_mul(inout dst: reg256, in src1: reg256, in src2: reg256)
         dst, src1, src2);
 }
 
+function invariant_d0inv(i: uint32, w28: uint256, w29: uint256, w0: uint256) : bool extern;
+
+ghost procedure lemma_d0inv_pre_loop(
+    ghost w0_g0: uint256,
+    ghost w0_g1: uint256,
+    ghost w0: uint256,
+    ghost w29: uint256) extern;
+
+ghost procedure lemma_d0inv_mid_loop(
+    ghost i_0: uint32,
+    ghost w0: uint256,
+    ghost w0_g1: uint256,
+    ghost w1_g1: uint256,
+    ghost w1_g2: uint256,
+    ghost w28: uint256,
+    ghost w29: uint256,
+    ghost w29_g1: uint256) extern;
+
 // TODO: loop doesn't actually use a register, add loop counter to model maybe
 procedure d0inv(inout i:reg32)
     requires
@@ -195,16 +209,18 @@ procedure d0inv(inout i:reg32)
         invariant invariant_d0inv(i, w28, w29, w0);
         decreases 256 - i;
     {
+        let w0_g1 := w0;
+        let w29_g1 := w29;
+
         half_mul(w1, w28, w29);
 
         let w1_g1 := w1;
-        let w0_g1 := w0;
-        let w29_g1 := w29;
-    
+        assert half_product(w1_g1, w28, w29_g1);
+
         BN_AND(w1, w1, w0, false, 0);
         // BN.AND w1, w1, w0
         let w1_g2 := w1;
-        assert w1_g2 == and256(w1_g1, w0, false, 0);
+        assert w1_g2 == and256(w1_g1, w0_g1, false, 0);
 
         BN_OR(w29, w29, w1, false, 0);
         // BN.OR w29, w29, w1
@@ -214,8 +230,12 @@ procedure d0inv(inout i:reg32)
         // BN.ADD w0, w0, w0
         assert w0 == fst(add256(w0_g1, w0_g1, false, 0));
 
-        assume false;
+        let i_0 := i;
         Increment(i);
+
+        lemma_d0inv_mid_loop(i_0, w0, w0_g1, w1_g1, w1_g2, w28, w29, w29_g1);
+
+        assume false;
     }
 
     // BN.SUB w29, w31, w29
