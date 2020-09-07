@@ -1,27 +1,37 @@
 import sys, os
 
 try:
-	full_bits = int(sys.argv[1])
+	func_name = sys.argv[1]
+	full_bits = int(sys.argv[2])
 except:
-	print("usage: python orchestrate.py [bit_number]")
-	full_bits = 2
+	print("usage: python orchestrate.py [function_name] [bit_number]")
+	sys.exit()
 
 print("using %d bit width" % full_bits)
 
 if not os.path.exists("gen"):
 	os.makedirs("gen")
 
-name = "gen/%d_bits" % full_bits
+name = "gen/%s_%d" % (func_name, full_bits)
+smt_file = name + ".smt2"
 cnf_file = name + ".cnf"
 trace_file = name + ".trace"
 dot_file = name + ".dot"
 png_file = name + ".png"
 
-print("\nrunning boolector")
-os.system("python boolector.py %d | python filter.py > %s" % (full_bits, cnf_file))
+print("\nexporting smt query")
+if os.system("python bv_exprs.py %s %d | tail -n +2 > %s" % (func_name, full_bits, smt_file)) != 0:
+	print("smt export failed")
+	sys.exit(1)
 
-print("\nrunning picosat")
-os.system("picosat %s -t %s" % (cnf_file, trace_file))
+print("running boolector")
+
+if os.system("boolector %s -dd | python filter.py > %s" % (smt_file, cnf_file)) != 0:
+	print("cnf export failed")
+	sys.exit(1)
+
+print("running picosat")
+r = os.system("picosat %s -t %s" % (cnf_file, trace_file))
 
 l = open(cnf_file).readline().strip()
 l = l.split()
