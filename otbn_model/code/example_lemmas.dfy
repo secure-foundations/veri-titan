@@ -276,24 +276,31 @@ module example_lemmas {
 		w29: uint256,
 		w29_g1: uint256
 	)
+        requires w28 % 2 == 1;
         requires invariant_d0inv(i, w28, w29_g1, w0_g1);
         requires half_product(w1_g1, w28, w29_g1);
         requires w1_g2 == and256(w1_g1, w0_g1, false, 0);
         requires w29 == or256(w29_g1, w1_g2, false, 0);
         requires w0 == fst(add256(w0_g1, w0_g1, false, 0));
-	{
-        // assert invariant_d0inv(i, w28, w29_g1, w0_g1);
-		assert (i == 0) ==> (w29_g1 == 1);
 
+		ensures invariant_d0inv(i + 1, w28, w29, w0);
+	{
 		if i == 0 {
-			// assert w29_g1 == 1;
 			assert w1_g1 == (w28 * w29_g1) % BASE_256;
-			// odd_and_one_lemma(w1_g1);
-			// assert w29 == uint256_or(1, 1);
-			// assert w29 == 1 by {
-			// 	reveal uint256_or();
-			// }
+			assert w0_g1 == 1 by {
+				reveal power();
+			}
+			odd_and_one_lemma(w1_g1);
+			// assert w1_g2 == uint256_and(w1_g1, w0_g1);
+			assert w29 == uint256_or(1, 1);
+			assert w29 == 1 by {
+				reveal uint256_or();
+			}
+			assert w0 == power(2, i + 1) by {
+				reveal power();
+			}
 		} else {
+			assume false;
 			// and_single_bit_lemma(w1, w1_old, w0, i);
 
 			// if w1 == 0 {
@@ -307,7 +314,6 @@ module example_lemmas {
 			// 	d0inv_bv_lemma_2(w28 * w29_old, w28, w0, i);
 			// }
 		}
-
 	}
 
 	lemma lemma_mod_multiple_cancel(x: int, y: int, m: nat)
