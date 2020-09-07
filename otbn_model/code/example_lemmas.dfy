@@ -237,11 +237,17 @@ module example_lemmas {
 	}
 
 	lemma lemma_d0inv_pre_loop(w0_g0: uint256, w0_g1: uint256, w0: uint256, w29: uint256)
-    	requires w0_g1 == xor256(w0_g0, w0_g0, false, 0);
-	    requires w0 == fst(addi256(w0_g1, 1));
+		requires w0_g1 == xor256(w0_g0, w0_g0, false, 0);
+		requires w0 == fst(addi256(w0_g1, 1));
 		requires w29 == w0;
+		ensures w0 == 1 && w29 == 1;
 	{
-		
+		assert w0_g1 == 0 by {
+			lemma_xor_clear(w0_g0);
+		}
+
+		assert w0 == 1;
+		assert w29 == 1;
 	}
 
 	lemma lemma_mod_multiple_cancel(x: int, y: int, m: nat)
