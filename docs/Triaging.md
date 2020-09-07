@@ -78,6 +78,6 @@ Reasoning around `Power()` is a bit awkward.
 * lemmas related to `Power()` needs to be proved
 * these lemmas then need to be invoked explicitly
 
-[this file](https://github.com/secure-foundations/veri-titan/blob/dafny-model-dev/dfy_model/Powers.dfy) is all about proving some trivial lemmas about `Power()`. 
+[this file](https://github.com/secure-foundations/veri-titan/blob/dafny-model-dev/dfy_model/powers.dfy) is all about proving some trivial lemmas about `Power()`. 
 
 [this calc](https://github.com/secure-foundations/veri-titan/blob/2fd39315020e3c094b0cc1c1a0ccd315803128cb/dfy_model/RSALemmas.dfy#L280) is an example where the lemmas are being invoked. 

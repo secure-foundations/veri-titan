@@ -1,11 +1,11 @@
 include "NativeTypes.dfy"
-include "Powers.dfy"
-include "Congruences.dfy"
+include "powers.dfy"
+include "congruences.dfy"
 
 module d0inv {
     import opened NativeTypes
-    import opened Powers
-    import opened Congruences
+    import opened powers
+    import opened congruences
 
  	const BASE256 :int := power(2, 256);
 

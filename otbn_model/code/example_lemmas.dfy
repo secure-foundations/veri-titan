@@ -3,6 +3,7 @@ include "../spec/ops.dfy"
 include "../spec/def.dfy"
 include "vale.dfy"
 include "../gen/decls.dfy"
+include "../../dfy_model/powers.dfy"
 
 module example_lemmas {
 	import opened types
@@ -10,6 +11,8 @@ module example_lemmas {
 	import opened bignum_vale
 	import opened bignum_def
 	import opened bignum_decls
+	// import opened congruences
+	import opened powers
 
 	function half_product(w1: uint256, w28: uint256, w29: uint256): bool
 	{
@@ -248,6 +251,10 @@ module example_lemmas {
 
 		assert w0 == 1;
 		assert w29 == 1;
+
+		assert w0 == power(2, 0) by {
+			reveal power();
+		}
 	}
 
 	lemma lemma_mod_multiple_cancel(x: int, y: int, m: nat)
