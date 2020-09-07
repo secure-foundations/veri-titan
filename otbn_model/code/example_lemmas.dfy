@@ -239,14 +239,14 @@ module example_lemmas {
 		}
 	}
 
-	lemma lemma_d0inv_pre_loop(w0_g0: uint256, w0_g1: uint256, w0: uint256, w29: uint256)
-		requires w0_g1 == xor256(w0_g0, w0_g0, false, 0);
-		requires w0 == fst(addi256(w0_g1, 1));
+	lemma lemma_d0inv_pre_loop(w0_g1: uint256, w0_g2: uint256, w0: uint256, w29: uint256)
+		requires w0_g2 == xor256(w0_g1, w0_g1, false, 0);
+		requires w0 == fst(addi256(w0_g2, 1));
 		requires w29 == w0;
 		ensures w0 == power(2, 0) && w29 == 1;
 	{
-		assert w0_g1 == 0 by {
-			lemma_xor_clear(w0_g0);
+		assert w0_g2 == 0 by {
+			lemma_xor_clear(w0_g1);
 		}
 
 		assert w0 == 1;
@@ -255,6 +255,15 @@ module example_lemmas {
 		assert w0 == power(2, 0) by {
 			reveal power();
 		}
+	}
+
+	predicate invariant_d0inv(i: uint32, w28: uint256, w29: uint256, w0: uint256)
+	{
+		&& 0 <= i <= 256
+		&& (i == 0) ==> w29 == 1
+        && (i > 0) ==> ((w29 * w28) % power(2, i) == 1)
+		&& (i > 0) ==> (w29 < power(2, i))
+        && (i < 256) ==> w0 == power(2, i)
 	}
 
 	lemma lemma_mod_multiple_cancel(x: int, y: int, m: nat)
