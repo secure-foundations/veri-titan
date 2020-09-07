@@ -46,7 +46,7 @@ function sext32(x:uint32, size:int):uint32 extern;
 function xor256(a:Bignum, b:Bignum, st:bool, sb:uint32):Bignum extern;
 function or256(a:Bignum, b:Bignum, st:bool, sb:uint32):Bignum extern;
 function and256(a:Bignum, b:Bignum, st:bool, sb:uint32):Bignum extern;
-function add256(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
+function add256(a:Bignum, b:Bignum, st:bool, sb:uint32):tuple(Bignum, FlagsGroup) extern;
 function addc256(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
 function addi256(a:Bignum, imm:uint32):tuple(Bignum, FlagsGroup) extern;
 function addm256(a:Bignum, b:Bignum, mod:Bignum):Bignum extern;
@@ -294,7 +294,7 @@ procedure BN_ADD(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:boo
     modifies
         flags;
     ensures
-        let result := add256(old(src1), old(src2), st, sb, get_flags_group(fg, old(flags)));
+        let result := add256(old(src1), old(src2), st, sb);
         dst == fst(result) && flags == update_fg(fg, old(flags), snd(result));
 {
 assume false;

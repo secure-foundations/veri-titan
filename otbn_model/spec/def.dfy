@@ -288,7 +288,7 @@ function sext32(x:uint32, sz:int) : uint32
   requires 0 < sz < 32;
 { BitwiseSignExtend(x, sz) }
 
-function add256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
+function add256(x:Bignum, y:Bignum, st:bool, sb:uint32) : (Bignum, FlagsGroup)
 	requires sb < 32;
 {
 	AddWithCarry(x, uint256_sb(y, st, sb), false)
