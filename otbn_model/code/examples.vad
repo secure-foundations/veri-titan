@@ -24,25 +24,27 @@ import opened bignum_decls
 #endverbatim
 
 ghost procedure lemma_bn_half_mul(
-        ghost wacc_g1: uint256,
-        ghost wacc_g2: uint256,
-        ghost wacc_g3: uint256,
-        ghost wacc_g4: uint256,
-        ghost wacc_g5: uint256,
-        ghost wacc_g6: uint256,
-        ghost wacc_g7: uint256,
-        ghost wacc_g8: uint256,
-        ghost wacc_g9: uint256,
-        ghost w1_g1: uint256,
-        ghost w1_g2: uint256,
-        ghost result_g1: uint256,
-        ghost result_g2: uint256,
-        ghost w1: uint256,
-        ghost w28: uint256,
-        ghost w29: uint256
-    ) extern;
+    ghost wacc_g1: uint256,
+    ghost wacc_g2: uint256,
+    ghost wacc_g3: uint256,
+    ghost wacc_g4: uint256,
+    ghost wacc_g5: uint256,
+    ghost wacc_g6: uint256,
+    ghost wacc_g7: uint256,
+    ghost wacc_g8: uint256,
+    ghost wacc_g9: uint256,
+    ghost w1_g1: uint256,
+    ghost w1_g2: uint256,
+    ghost result_g1: uint256,
+    ghost result_g2: uint256,
+    ghost w1: uint256,
+    ghost w28: uint256,
+    ghost w29: uint256
+) extern;
 
 function half_product(p: int, x:int, y:int): bool extern;
+
+ghost procedure lemma_d0inv_pre_loop(ghost w0_g0: uint256, ghost w0_g1: uint256, ghost w0: uint256, ghost w29: uint256) extern;
 
 procedure DoubleExample32(inout dst:reg32, in src:reg32)
     requires
@@ -186,13 +188,14 @@ procedure d0inv(inout i:reg32)
     // BN.ADDI w0, w0, 1
     BN_ADDI(w0, w0, 1, false);
 
-    let w0_g2 := w0;
-    assert w0_g2 == fst(addi256(w0_g1, 1));
+    assert w0 == fst(addi256(w0_g1, 1));
 
     // BN.MOV w29, w0
     BN_MOV(w29, w0);
-    let w29_g0 := w29;
-    assert w0_g2 == w0_g2;
+
+    assert w29 == w0;
+
+    lemma_d0inv_pre_loop(w0_g0, w0_g1, w0, w29);
 
     while (i < 256)
         // invariant 0 <= i <= 256;

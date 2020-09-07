@@ -236,6 +236,14 @@ module example_lemmas {
 		}
 	}
 
+	lemma lemma_d0inv_pre_loop(w0_g0: uint256, w0_g1: uint256, w0: uint256, w29: uint256)
+    	requires w0_g1 == xor256(w0_g0, w0_g0, false, 0);
+	    requires w0 == fst(addi256(w0_g1, 1));
+		requires w29 == w0;
+	{
+		
+	}
+
 	lemma lemma_mod_multiple_cancel(x: int, y: int, m: nat)
 		requires m !=0 && y % m == 0;
 		ensures (x + y) % m == x % m;
