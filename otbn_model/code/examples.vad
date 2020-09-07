@@ -46,6 +46,8 @@ function half_product(p: int, x:int, y:int): bool extern;
 
 ghost procedure lemma_d0inv_pre_loop(ghost w0_g0: uint256, ghost w0_g1: uint256, ghost w0: uint256, ghost w29: uint256) extern;
 
+// function power(b:int, e:nat): int extern;
+
 procedure DoubleExample32(inout dst:reg32, in src:reg32)
     requires
         src + src < 0x1_0000_0000;
@@ -76,66 +78,56 @@ procedure half_mul(inout dst: reg256, in src1: reg256, in src2: reg256)
 {
     let w1_g1 := dst;
 
-    // BN.MULQACC.Z w28.0, w29.0, 0
     BN_MULQACC_Z(src1, 0, src2, 0, 0);
-
+    // BN.MULQACC.Z w28.0, w29.0, 0
     let wacc_g1 := wacc;
     assert wacc_g1 == mulqacc256(true, src1, 0, src2, 0, 0, 0);
 
-    // BN.MULQACC w28.1, w29.0, 1
     BN_MULQACC(src1, 1, src2, 0, 1);
-
+    // BN.MULQACC w28.1, w29.0, 1
     let wacc_g2 := wacc;
     assert wacc_g2 == mulqacc256(false, src1, 1, src2, 0, 1, wacc_g1);
 
-    // BN.MULQACC.SO w1.L, w28.0, w29.1, 1
     BN_MULQACC_SO(dst, true, src1, 0, src2, 1, 1);
-
+    // BN.MULQACC.SO w1.L, w28.0, w29.1, 1
     let wacc_g3 := wacc;
     let w1_g2 := dst;
     let result_g1 := mulqacc256(false, src1, 0, src2, 1, 1, wacc_g2);
     assert wacc_g3 == uint256_uh(result_g1)
         && w1_g2 == uint256_hwb(w1_g1, uint256_lh(result_g1), true);
 
-    // BN.MULQACC w28.2, w29.0, 0
     BN_MULQACC(src1, 2, src2, 0, 0);
-
+    // BN.MULQACC w28.2, w29.0, 0
     let wacc_g4 := wacc;
     assert wacc_g4 == mulqacc256(false, src1, 2, src2, 0, 0, wacc_g3);
 
-    // BN.MULQACC w28.1, w29.1, 0
     BN_MULQACC(src1, 1, src2, 1, 0);
-
+    // BN.MULQACC w28.1, w29.1, 0
     let wacc_g5 := wacc;
     assert wacc_g5 == mulqacc256(false, src1, 1, src2, 1, 0, wacc_g4);
 
-    // BN.MULQACC w28.0, w29.2, 0
     BN_MULQACC(src1, 0, src2, 2, 0);
-
+    // BN.MULQACC w28.0, w29.2, 0
     let wacc_g6 := wacc;
     assert wacc_g6 == mulqacc256(false, src1, 0, src2, 2, 0, wacc_g5);
 
-    // BN.MULQACC w28.3, w29.0, 1
     BN_MULQACC(src1, 3, src2, 0, 1);
-
+    // BN.MULQACC w28.3, w29.0, 1
     let wacc_g7 := wacc;
     assert wacc_g7 == mulqacc256(false, src1, 3, src2, 0, 1, wacc_g6);
 
-    // BN.MULQACC w28.2, w29.1, 1
     BN_MULQACC(src1, 2, src2, 1, 1);
-
+    // BN.MULQACC w28.2, w29.1, 1
     let wacc_g8 := wacc;
     assert wacc_g8 == mulqacc256(false, src1, 2, src2, 1, 1, wacc_g7);
 
-    // BN.MULQACC w28.1, w29.2, 1
     BN_MULQACC(src1, 1, src2, 2, 1);
-
+    // BN.MULQACC w28.1, w29.2, 1
     let wacc_g9 := wacc;
     assert wacc_g9 == mulqacc256(false, src1, 1, src2, 2, 1, wacc_g8);
 
-    // BN.MULQACC.SO w1.U, w28.0, w29.3, 1
     BN_MULQACC_SO(dst, false, src1, 0, src2, 3, 1);
-
+    // BN.MULQACC.SO w1.U, w28.0, w29.3, 1
     let result_g2 := mulqacc256(false, src1, 0, src2, 3, 1, wacc_g9);
     assert wacc == uint256_uh(result_g2)
         && dst == uint256_hwb(w1_g2, uint256_lh(result_g2), false);
@@ -179,20 +171,17 @@ procedure d0inv(inout i:reg32)
 {
     let w0_g0 := w0;
 
-    // BN.XOR w0, w0, w0
     BN_XOR(w0, w0, w0, false, 0);
-
+    // BN.XOR w0, w0, w0
     let w0_g1 := w0;
     assert w0_g1 == xor256(w0_g0, w0_g0, false, 0);
 
-    // BN.ADDI w0, w0, 1
     BN_ADDI(w0, w0, 1, false);
-
+    // BN.ADDI w0, w0, 1
     assert w0 == fst(addi256(w0_g1, 1));
 
-    // BN.MOV w29, w0
     BN_MOV(w29, w0);
-
+    // BN.MOV w29, w0
     assert w29 == w0;
 
     lemma_d0inv_pre_loop(w0_g0, w0_g1, w0, w29);
@@ -200,6 +189,9 @@ procedure d0inv(inout i:reg32)
     while (i < 256)
         // invariant 0 <= i <= 256;
         // invariant (i == 0) ==> w29 == 1;
+        // invariant (i > 0) ==> ((w29 * w28) % power(2, i) == 1);
+        // invariant (i > 0) ==> (w29 < power(2, i));
+        // invariant (i < 256) ==> w0 == power(2, i);
         decreases 256 - i;
     {
         half_mul(w1, w28, w29);
@@ -213,6 +205,7 @@ procedure d0inv(inout i:reg32)
         // BN.ADD w0, w0, w0
         BN_ADD(w0, w0, w0, false, 0, false);
 
+        assume false;
         Increment(i);
     }
 

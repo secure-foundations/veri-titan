@@ -243,7 +243,7 @@ module example_lemmas {
 		requires w0_g1 == xor256(w0_g0, w0_g0, false, 0);
 		requires w0 == fst(addi256(w0_g1, 1));
 		requires w29 == w0;
-		ensures w0 == 1 && w29 == 1;
+		ensures w0 == power(2, 0) && w29 == 1;
 	{
 		assert w0_g1 == 0 by {
 			lemma_xor_clear(w0_g0);
