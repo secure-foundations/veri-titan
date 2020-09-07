@@ -197,16 +197,22 @@ procedure d0inv(inout i:reg32)
     {
         half_mul(w1, w28, w29);
 
-        let w1_g := w1;
-
+        let w1_g1 := w1;
+        let w0_g1 := w0;
+        let w29_g1 := w29;
+    
         BN_AND(w1, w1, w0, false, 0);
         // BN.AND w1, w1, w0
+        let w1_g2 := w1;
+        assert w1_g2 == and256(w1_g1, w0, false, 0);
 
         BN_OR(w29, w29, w1, false, 0);
         // BN.OR w29, w29, w1
+        assert w29 == or256(w29_g1, w1_g2, false, 0);
 
         BN_ADD(w0, w0, w0, false, 0, false);
         // BN.ADD w0, w0, w0
+        assert w0 == fst(add256(w0_g1, w0_g1, false, 0));
 
         assume false;
         Increment(i);
