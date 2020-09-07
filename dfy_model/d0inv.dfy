@@ -7,12 +7,12 @@ module d0inv {
     import opened powers
     import opened congruences
 
- 	const BASE256 :int := power(2, 256);
+ 	const BASE_256 :int := UINT256_MAX + 1;
 
     method d0inv(w28: uint256) returns (w29 : uint256)
         requires w28 % 2 == 1;
-        requires w28 < UINT256_MAX;
-        ensures cong(w29 * w28, -1, BASE256);
+        requires w28 < BASE_256;
+        ensures cong(w29 * w28, -1, BASE_256);
     {
         var w0: uint256 := 1;
         w29 := 1;
@@ -30,7 +30,7 @@ module d0inv {
             invariant (i < 256) ==> w0 == power(2, i);
             decreases 256 - i;
         {
-            var w1 :uint256 := (w28 * w29) % UINT256_MAX;
+            var w1 :uint256 := (w28 as int * w29 as int) % BASE_256;
 
             ghost var w1_old := w1;
             ghost var w29_old := w29;
@@ -76,42 +76,43 @@ module d0inv {
 
         ghost var w29_old := w29;
         w29 := sub_from_zero(w29);
+        assume BASE_256 == power(2, 256);
         mod_inv_lemma(w29, w29_old, w28);
     }
 
     lemma mod_inv_lemma(w29: int, w29_old: int, w28: int)
-        requires (w29_old * w28) % BASE256 == 1;
-        requires w29_old + w29 == BASE256;
-        ensures cong(w29 * w28, -1, BASE256);
+        requires (w29_old * w28) % BASE_256 == 1;
+        requires w29_old + w29 == BASE_256;
+        ensures cong(w29 * w28, -1, BASE_256);
     {
         calc ==> {
-            (w29_old * w28) % BASE256 == 1;
+            (w29_old * w28) % BASE_256 == 1;
             {
                 reveal cong();
             }
-            cong(w29_old * w28, 1, BASE256);
+            cong(w29_old * w28, 1, BASE_256);
             {
-                assert w29_old == BASE256 - w29;
+                assert w29_old == BASE_256 - w29;
             }
-            cong((BASE256 - w29) * w28, 1, BASE256);
-            cong(BASE256 * w28 - w29 * w28, 1, BASE256);
+            cong((BASE_256 - w29) * w28, 1, BASE_256);
+            cong(BASE_256 * w28 - w29 * w28, 1, BASE_256);
             {
-                assert cong(-BASE256 * w28, 0, BASE256) by {
-                    mod_mul_lemma(w28, -BASE256, BASE256);
+                assert cong(-BASE_256 * w28, 0, BASE_256) by {
+                    mod_mul_lemma(w28, -BASE_256, BASE_256);
                     reveal cong();
                 }
-                cong_add_lemma_2(BASE256 * w28 - w29 * w28, 1, -BASE256 * w28, 0, BASE256);
+                cong_add_lemma_2(BASE_256 * w28 - w29 * w28, 1, -BASE_256 * w28, 0, BASE_256);
             }
-            cong(-w29 * w28, 1, BASE256);
+            cong(-w29 * w28, 1, BASE_256);
             {
-                cong_mul_lemma_1(-w29 * w28, 1, -1, BASE256);
+                cong_mul_lemma_1(-w29 * w28, 1, -1, BASE_256);
             }
-            cong(w29 * w28, -1, BASE256);
+            cong(w29 * w28, -1, BASE_256);
         }
     }
 
     method {:opaque} sub_from_zero(x: uint256) returns (y: uint256)
-        ensures x + y == BASE256;
+        ensures x + y == BASE_256;
 
     function method {:opaque} and_256(a:uint256, b:uint256) : uint256
     {
@@ -148,18 +149,18 @@ module d0inv {
 
     lemma power_2_bounded_lemma(i: int)
         requires 0 <= i < 256;
-        ensures power(2, i) <= UINT256_MAX;
+        ensures power(2, i) < BASE_256;
 
     lemma {:axiom} d0inv_bv_lemma_1(x: int, w0: uint256, i: nat)
         requires w0 == power(2, i);
         requires x % w0 == 1;
-        requires and_256(x % UINT256_MAX, w0) == 0;
+        requires and_256(x % BASE_256, w0) == 0;
         ensures x % power(2, i + 1) == 1;
 
     lemma {:axiom} d0inv_bv_lemma_2(x: int, w28: uint256, w0: uint256, i: nat)
         requires w0 == power(2, i);
         requires x % w0 == 1;
-        requires and_256(x % UINT256_MAX, w0) == w0;
+        requires and_256(x % BASE_256, w0) == w0;
         requires w28 % 2 == 1;
         ensures (x + w28 * w0) % power(2, i + 1) == 1;
 }
