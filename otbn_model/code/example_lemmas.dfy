@@ -259,15 +259,15 @@ module example_lemmas {
 
 	predicate invariant_d0inv(i: uint32, w28: uint256, w29: uint256, w0: uint256)
 	{
-		&& 0 <= i <= 256
-		&& (i == 0) ==> w29 == 1
-        && (i > 0) ==> ((w29 * w28) % power(2, i) == 1)
-		&& (i > 0) ==> (w29 < power(2, i))
-        && (i < 256) ==> w0 == power(2, i)
+		&& (0 <= i <= 256)
+		&& ((i == 0) ==> (w29 == 1))
+        && ((i > 0) ==> ((w29 * w28) % power(2, i) == 1))
+		&& ((i > 0) ==> (w29 < power(2, i)))
+        && ((i < 256) ==> (w0 == power(2, i)))
 	}
 
 	lemma lemma_d0inv_mid_loop(
-		i_0: uint32,
+		i: uint32,
 		w0: uint256,
 		w0_g1: uint256,
 		w1_g1: uint256,
@@ -276,20 +276,49 @@ module example_lemmas {
 		w29: uint256,
 		w29_g1: uint256
 	)
-        requires invariant_d0inv(i_0, w28, w29_g1, w0_g1);
+        requires invariant_d0inv(i, w28, w29_g1, w0_g1);
         requires half_product(w1_g1, w28, w29_g1);
         requires w1_g2 == and256(w1_g1, w0_g1, false, 0);
         requires w29 == or256(w29_g1, w1_g2, false, 0);
         requires w0 == fst(add256(w0_g1, w0_g1, false, 0));
 	{
-		
+        // assert invariant_d0inv(i, w28, w29_g1, w0_g1);
+		assert (i == 0) ==> (w29_g1 == 1);
+
+		if i == 0 {
+			// assert w29_g1 == 1;
+			assert w1_g1 == (w28 * w29_g1) % BASE_256;
+			// odd_and_one_lemma(w1_g1);
+			// assert w29 == uint256_or(1, 1);
+			// assert w29 == 1 by {
+			// 	reveal uint256_or();
+			// }
+		} else {
+			// and_single_bit_lemma(w1, w1_old, w0, i);
+
+			// if w1 == 0 {
+			// 	or_zero_nop_lemma(w29_old, w1);
+			// 	d0inv_bv_lemma_1(w28 * w29, w0, i);
+			// 	assert w29 < power(2, i + 1) by {
+			// 		reveal power();
+			// 	}
+			// } else {
+			// 	or_single_bit_add_lemma(w29, w29_old, w0, i);
+			// 	d0inv_bv_lemma_2(w28 * w29_old, w28, w0, i);
+			// }
+		}
+
 	}
-		
+
 	lemma lemma_mod_multiple_cancel(x: int, y: int, m: nat)
 		requires m !=0 && y % m == 0;
 		ensures (x + y) % m == x % m;
 
 	// bv lemmas/axioms
+
+    lemma {:axiom} odd_and_one_lemma(x: uint256) 
+        requires x % 2 == 1;
+        ensures uint256_and(x, 1) == 1;
 
 	lemma lemma_xor_clear(x: uint256)
 	    ensures xor256(x, x, false, 0) == 0;
