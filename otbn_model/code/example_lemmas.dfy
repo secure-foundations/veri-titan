@@ -311,9 +311,8 @@ module example_lemmas {
 					reveal power();
 				}
 			} else {
-			// 	or_single_bit_add_lemma(w29, w29_old, w0, i);
-			// 	d0inv_bv_lemma_2(w28 * w29_old, w28, w0, i);
-				assume false;
+				or_single_bit_add_lemma(w29, w29_g1, w0_g1, i);
+				d0inv_bv_lemma_2(w28 * w29_g1, w28, w0_g1, i);
 			}
 		}
 	}
@@ -349,6 +348,13 @@ module example_lemmas {
     lemma {:axiom} or_zero_nop_lemma(x: uint256, z: uint256)
         requires z == 0;
         ensures uint256_or(x, z) == x;
+
+    lemma {:axiom} or_single_bit_add_lemma(x': uint256, x: uint256, w0: uint256, i: nat)
+        requires w0 == power(2, i);
+        requires x < power(2, i);
+        requires x' == uint256_or(x, w0);
+        ensures x' == x + w0;
+        ensures x' < power(2, i + 1);
 
     lemma {:axiom} odd_and_one_lemma(x: uint256) 
         requires x % 2 == 1;
