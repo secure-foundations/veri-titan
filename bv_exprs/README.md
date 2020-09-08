@@ -22,6 +22,7 @@ after building, update `PYTHONPATH` variable, this is for my laptop:
 `export PYTHONPATH="~/Desktop/research/open_titan/boolector/build/lib:$PYTHONPATH"`
 
 also update the`PATH` variable to include where `boolector` is located, this is for my laptop:
+
 `export PATH="~/Desktop/research/open_titan/boolector/build/bin/:$PATH"`
 
 ## running example:
