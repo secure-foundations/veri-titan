@@ -145,5 +145,5 @@ try:
 	print("(check-sat)")
 
 except:
-	print("usage:\npython bv_exprs.py [function_name] [bit_number]")
+	print("usage:\npython bv_exprs.py [query_name] [bit_number]")
 	sys.exit(1)

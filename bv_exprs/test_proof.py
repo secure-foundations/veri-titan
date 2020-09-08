@@ -4,7 +4,7 @@ try:
 	func_name = sys.argv[1]
 	full_bits = int(sys.argv[2])
 except:
-	print("usage: python test_proof.py [function_name] [bit_number]")
+	print("usage: python test_proof.py [query_name] [bit_number]")
 	sys.exit()
 
 print("using %d bit width" % full_bits)
