@@ -178,6 +178,7 @@ ghost procedure lemma_d0inv_mid_loop(
 procedure d0inv(inout i:reg32)
     requires
         i == 0;
+        w28 % 2 == 1;
     reads
         w28;
     modifies
@@ -201,7 +202,7 @@ procedure d0inv(inout i:reg32)
     lemma_d0inv_pre_loop(w0_g1, w0_g2, w0, w29);
 
     while (i < 256)
-        // invariant 0 <= i <= 256;
+        invariant 0 <= i <= 256;
         // invariant (i == 0) ==> w29 == 1;
         // invariant (i > 0) ==> ((w29 * w28) % power(2, i) == 1);
         // invariant (i > 0) ==> (w29 < power(2, i));
@@ -231,6 +232,7 @@ procedure d0inv(inout i:reg32)
         assert w0 == fst(add256(w0_g1, w0_g1, false, 0));
 
         let i_0 := i;
+
         Increment(i);
 
         lemma_d0inv_mid_loop(i_0, w0, w0_g1, w1_g1, w1_g2, w28, w29, w29_g1);
