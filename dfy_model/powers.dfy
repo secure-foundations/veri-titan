@@ -1,8 +1,8 @@
-include "Congruences.dfy"
+include "congruences.dfy"
 
-module Powers
+module powers
 {
-    import opened Congruences
+    import opened congruences
 
     function method {:opaque} power(b:int, e:nat) : int
         decreases e;

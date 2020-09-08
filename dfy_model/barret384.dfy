@@ -1,11 +1,11 @@
 include "NativeTypes.dfy"
-include "Powers.dfy"
-include "Congruences.dfy"
+include "powers.dfy"
+include "congruences.dfy"
 
 module barret384 {
     import opened NativeTypes
-    import opened Powers
-    import opened Congruences
+    import opened powers
+    import opened congruences
 
  	const BASE :int := power(2, 256);
 

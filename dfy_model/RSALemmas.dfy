@@ -1,13 +1,13 @@
 include "NativeTypes.dfy"
 include "SeqInt.dfy"
-include "Powers.dfy"
-include "Congruences.dfy"
+include "powers.dfy"
+include "congruences.dfy"
 
 module RSALemmas
 {
-    import opened Congruences
+    import opened congruences
     import opened SeqInt
-    import opened Powers
+    import opened powers
     import opened NativeTypes
 
     predicate {:opaque} coprime(a: nat, b: nat)
