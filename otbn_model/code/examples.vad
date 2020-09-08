@@ -158,6 +158,8 @@ procedure half_mul(inout dst: reg256, in src1: reg256, in src2: reg256)
 
 function invariant_d0inv(i: uint32, w28: uint256, w29: uint256, w0: uint256) : bool extern;
 
+function d0inv_256(w29: uint256, w28: uint256): bool extern;
+
 ghost procedure lemma_d0inv_pre_loop(
     ghost w0_g0: uint256,
     ghost w0_g1: uint256,
@@ -183,13 +185,13 @@ ghost procedure lemma_d0inv_post_loop(
 // TODO: loop doesn't actually use a register, add loop counter to model maybe
 procedure d0inv(inout i:reg32)
     requires
-        i == 0;
-        w31 == 0;
-        w28 % 2 == 1;
+        i == 0; w31 == 0; w28 % 2 == 1;
     reads
         w28;
     modifies
         w1; w0; w29; w31; flags; wacc;
+    ensures
+        d0inv_256(w29, w28);
 {
     let w0_g1 := w0;
 

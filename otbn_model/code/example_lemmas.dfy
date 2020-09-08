@@ -15,7 +15,7 @@ module example_lemmas {
 	import opened congruences
 	import opened powers
 
-	function half_product(w1: uint256, w28: uint256, w29: uint256): bool
+	predicate half_product(w1: uint256, w28: uint256, w29: uint256)
 	{
 		w1 == (w28 * w29) % BASE_256
 	}
@@ -318,6 +318,11 @@ module example_lemmas {
 		}
 	}
 
+	predicate d0inv_256(w29: uint256, w28: uint256)
+	{
+		cong(w29 * w28, -1, BASE_256)
+	}
+
 	lemma lemma_d0inv_post_loop(
 		w28: uint256,
 		w29: uint256,
@@ -327,7 +332,7 @@ module example_lemmas {
 		requires w31 == 0;
 		requires w29 == fst(sub256(w31, w29_g2, false, 0));
 		requires (w29_g2 * w28) % power(2, 256) == 1;
-		ensures cong(w29 * w28, -1, BASE_256);
+		ensures d0inv_256(w29, w28);
 	{
 		assume BASE_256 == power(2, 256);
 		assert w29 == (w31 - w29_g2) % BASE_256;
