@@ -278,6 +278,7 @@ module example_lemmas {
 	)
         requires w28 % 2 == 1;
         requires invariant_d0inv(i, w28, w29_g1, w0_g1);
+		requires i < 256;
         requires half_product(w1_g1, w28, w29_g1);
         requires w1_g2 == and256(w1_g1, w0_g1, false, 0);
         requires w29 == or256(w29_g1, w1_g2, false, 0);
@@ -300,27 +301,54 @@ module example_lemmas {
 				reveal power();
 			}
 		} else {
-			assume false;
-			// and_single_bit_lemma(w1, w1_old, w0, i);
+        	assume w0 == power(2, i + 1); 
 
-			// if w1 == 0 {
-			// 	or_zero_nop_lemma(w29_old, w1);
-			// 	d0inv_bv_lemma_1(w28 * w29, w0, i);
-			// 	assert w29 < power(2, i + 1) by {
-			// 		reveal power();
-			// 	}
-			// } else {
+			and_single_bit_lemma(w1_g2, w1_g1, w0_g1, i);
+			if w1_g2 == 0 {
+				or_zero_nop_lemma(w29_g1, w1_g2);
+				d0inv_bv_lemma_1(w28 * w29, w0_g1, i);
+				assert w29 < power(2, i + 1) by {
+					reveal power();
+				}
+			} else {
 			// 	or_single_bit_add_lemma(w29, w29_old, w0, i);
 			// 	d0inv_bv_lemma_2(w28 * w29_old, w28, w0, i);
-			// }
+				assume false;
+			}
 		}
 	}
+
+    lemma power_2_bounded_lemma(i: int)
+        requires 0 <= i < 256;
+        ensures power(2, i) < BASE_256;
+
+    lemma {:axiom} d0inv_bv_lemma_1(x: int, w0: uint256, i: nat)
+        requires w0 == power(2, i);
+        requires x % w0 == 1;
+        requires uint256_and(x % BASE_256, w0) == 0;
+        ensures x % power(2, i + 1) == 1;
+
+    lemma {:axiom} d0inv_bv_lemma_2(x: int, w28: uint256, w0: uint256, i: nat)
+        requires w0 == power(2, i);
+        requires x % w0 == 1;
+        requires uint256_and(x % BASE_256, w0) == w0;
+        requires w28 % 2 == 1;
+        ensures (x + w28 * w0) % power(2, i + 1) == 1;
 
 	lemma lemma_mod_multiple_cancel(x: int, y: int, m: nat)
 		requires m !=0 && y % m == 0;
 		ensures (x + y) % m == x % m;
 
 	// bv lemmas/axioms
+
+    lemma {:axiom} and_single_bit_lemma(x': uint256, x: uint256, w0: uint256, i: nat)
+        requires w0 == power(2, i);
+        requires x' == uint256_and(x, w0);
+        ensures x' == power(2, i) || x' == 0;
+
+    lemma {:axiom} or_zero_nop_lemma(x: uint256, z: uint256)
+        requires z == 0;
+        ensures uint256_or(x, z) == x;
 
     lemma {:axiom} odd_and_one_lemma(x: uint256) 
         requires x % 2 == 1;

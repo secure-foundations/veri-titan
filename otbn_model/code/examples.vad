@@ -202,11 +202,6 @@ procedure d0inv(inout i:reg32)
     lemma_d0inv_pre_loop(w0_g1, w0_g2, w0, w29);
 
     while (i < 256)
-        invariant 0 <= i <= 256;
-        // invariant (i == 0) ==> w29 == 1;
-        // invariant (i > 0) ==> ((w29 * w28) % power(2, i) == 1);
-        // invariant (i > 0) ==> (w29 < power(2, i));
-        // invariant (i < 256) ==> w0 == power(2, i);
         invariant invariant_d0inv(i, w28, w29, w0);
         decreases 256 - i;
     {
