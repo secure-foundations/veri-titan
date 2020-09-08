@@ -178,6 +178,7 @@ ghost procedure lemma_d0inv_mid_loop(
 procedure d0inv(inout i:reg32)
     requires
         i == 0;
+        w31 == 0;
         w28 % 2 == 1;
     reads
         w28;
@@ -233,8 +234,13 @@ procedure d0inv(inout i:reg32)
         lemma_d0inv_mid_loop(i_0, w0, w0_g1, w1_g1, w1_g2, w28, w29, w29_g1);
     }
 
+    let w29_g2 := w29;
+
     BN_SUB(w29, w31, w29, false, 0, false);
     // BN.SUB w29, w31, w29
+    assert w29 == fst(sub256(w31, w29_g2, false, 0));
+
+    lemma_d0inv_post_loop(w28, w29, w29_g2, w31);
 }
 
 #verbatim

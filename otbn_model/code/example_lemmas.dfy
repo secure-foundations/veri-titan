@@ -4,6 +4,7 @@ include "../spec/def.dfy"
 include "vale.dfy"
 include "../gen/decls.dfy"
 include "../../dfy_model/powers.dfy"
+include "../../dfy_model/congruences.dfy"
 
 module example_lemmas {
 	import opened types
@@ -11,7 +12,7 @@ module example_lemmas {
 	import opened bignum_vale
 	import opened bignum_def
 	import opened bignum_decls
-	// import opened congruences
+	import opened congruences
 	import opened powers
 
 	function half_product(w1: uint256, w28: uint256, w29: uint256): bool
@@ -301,7 +302,7 @@ module example_lemmas {
 				reveal power();
 			}
 		} else {
-        	assume w0 == power(2, i + 1); 
+            assume w0 == if i != 255 then power(2, i + 1) else 0;
 
 			and_single_bit_lemma(w1_g2, w1_g1, w0_g1, i);
 			if w1_g2 == 0 {
@@ -316,6 +317,52 @@ module example_lemmas {
 			}
 		}
 	}
+
+	lemma lemma_d0inv_post_loop(
+		w28: uint256,
+		w29: uint256,
+		w29_g2: uint256,
+		w31: uint256
+	)
+		requires w31 == 0;
+		requires w29 == fst(sub256(w31, w29_g2, false, 0));
+		requires (w29_g2 * w28) % BASE_256 == 1;
+		ensures cong(w29 * w28, -1, BASE_256);
+	{
+		assert w29 == (w31 - w29_g2) % BASE_256;
+		mod_inv_lemma(w29, w29_g2, w28);
+	}
+
+    lemma mod_inv_lemma(w29: int, w29_old: int, w28: int)
+        requires (w29_old * w28) % BASE_256 == 1;
+        requires w29_old + w29 == BASE_256;
+        ensures cong(w29 * w28, -1, BASE_256);
+    {
+        calc ==> {
+            (w29_old * w28) % BASE_256 == 1;
+            {
+                reveal cong();
+            }
+            cong(w29_old * w28, 1, BASE_256);
+            {
+                assert w29_old == BASE_256 - w29;
+            }
+            cong((BASE_256 - w29) * w28, 1, BASE_256);
+            cong(BASE_256 * w28 - w29 * w28, 1, BASE_256);
+            {
+                assert cong(-BASE_256 * w28, 0, BASE_256) by {
+                    mod_mul_lemma(w28, -BASE_256, BASE_256);
+                    reveal cong();
+                }
+                cong_add_lemma_2(BASE_256 * w28 - w29 * w28, 1, -BASE_256 * w28, 0, BASE_256);
+            }
+            cong(-w29 * w28, 1, BASE_256);
+            {
+                cong_mul_lemma_1(-w29 * w28, 1, -1, BASE_256);
+            }
+            cong(w29 * w28, -1, BASE_256);
+        }
+    }
 
     lemma power_2_bounded_lemma(i: int)
         requires 0 <= i < 256;
