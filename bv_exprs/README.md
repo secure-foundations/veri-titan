@@ -21,6 +21,11 @@ I am using the one with python binding (`./configure.sh --python`)
 after building, update `PYTHONPATH` variable, this is for my laptop:  
 `export PYTHONPATH="~/Desktop/research/open_titan/boolector/build/lib:$PYTHONPATH"`
 
+also update the`PATH` variable to include where `boolector` is located, this is for my laptop
+`export PATH="~/Desktop/research/open_titan/boolector/build/bin/:$PATH"`
+
 ## running example:
 
-`python orchestrate.py 2` will run a 2 bits version of the example in `boolector.py`, create a cnf file, a trace file, and a png representing the resolution proof in a `gen` directory. 
+`python test_proof.py xor 10` will run a 10 bits version of the `xor` test in `bv_exprs.py`.
+It will create a smt2 file, a cnf file, a trace file, and a png representing the resolution proof in a `gen` directory. 
+The png will be skipped if the graph is too large.
