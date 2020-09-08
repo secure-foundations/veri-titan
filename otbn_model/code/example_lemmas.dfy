@@ -326,9 +326,10 @@ module example_lemmas {
 	)
 		requires w31 == 0;
 		requires w29 == fst(sub256(w31, w29_g2, false, 0));
-		requires (w29_g2 * w28) % BASE_256 == 1;
+		requires (w29_g2 * w28) % power(2, 256) == 1;
 		ensures cong(w29 * w28, -1, BASE_256);
 	{
+		assume BASE_256 == power(2, 256);
 		assert w29 == (w31 - w29_g2) % BASE_256;
 		mod_inv_lemma(w29, w29_g2, w28);
 	}
