@@ -312,7 +312,7 @@ function addm256(x:Bignum, y:Bignum, mod:Bignum) : Bignum
 	if sum >= mod then sum - mod else sum
 }
 
-function sub256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
+function sub256(x:Bignum, y:Bignum, st:bool, sb:uint32) : (Bignum, FlagsGroup)
 	requires sb < 32;
 {
 	var diff :int := x - uint256_sb(y, st, sb);

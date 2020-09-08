@@ -50,7 +50,7 @@ function add256(a:Bignum, b:Bignum, st:bool, sb:uint32):tuple(Bignum, FlagsGroup
 function addc256(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
 function addi256(a:Bignum, imm:uint32):tuple(Bignum, FlagsGroup) extern;
 function addm256(a:Bignum, b:Bignum, mod:Bignum):Bignum extern;
-function sub256(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
+function sub256(a:Bignum, b:Bignum, st:bool, sb:uint32):tuple(Bignum, FlagsGroup) extern;
 function mulqacc256(zero: bool, a:Bignum, qa:uint32, b:Bignum, qb:uint32, shift:uint32, macc:Bignum):Bignum extern;
 function uint256_hwb(x: Bignum, v: uint128, lower: bool):Bignum extern;
 function uint256_qmul(x: uint256, qx: uint2, y: uint256, qy:uint2): uint128 extern;
@@ -343,7 +343,7 @@ procedure BN_SUB(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:boo
     modifies
         flags;
     ensures
-        let result := sub256(old(src1), old(src2), st, sb, get_flags_group(fg, old(flags)));
+        let result := sub256(old(src1), old(src2), st, sb);
         dst == fst(result) && flags == update_fg(fg, old(flags), snd(result));
 {
 assume false;
