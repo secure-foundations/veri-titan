@@ -11,22 +11,27 @@ module param {
     lemma dword_split_lemma(x: dword)
         ensures dword_lh(x) + dword_uh(x) * B() == x;
     {
+        reveal dword_lh();
+        reveal dword_uh();
         assert true;
     }
 
-    function method dword_lh(x: dword) : word 
+    function method {:opaque} dword_lh(x: dword) : word 
     {
         x % B()
     }
 
-    function method dword_uh(x: dword) : word
+    function method {:opaque} dword_uh(x: dword) : word
     {
         x / B()
     }
 
     lemma dword_mul_lemma(a: dword, b: dword)
-        ensures 
-        
+        ensures var a0 := dword_lh(a);
+            var a1 := dword_uh(a);
+            var b0 := dword_lh(b);
+            var b1 := dword_uh(b);
+         a0 * b0 + a1 * b0 * B() + a0 * b1 * B() + a1 * b1 * B() * B() == a * b;
     {
         var a0 := dword_lh(a);
         var a1 := dword_uh(a);
