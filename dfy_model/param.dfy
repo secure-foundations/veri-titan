@@ -26,22 +26,15 @@ module param {
         x / B()
     }
 
-    lemma dword_mul_lemma(a: dword, b: dword)
-        ensures var a0 := dword_lh(a);
-            var a1 := dword_uh(a);
-            var b0 := dword_lh(b);
-            var b1 := dword_uh(b);
-         a0 * b0 + a1 * b0 * B() + a0 * b1 * B() + a1 * b1 * B() * B() == a * b;
+    lemma dword_mul_lemma(a: dword, a0: word, a1: word, b: dword, b0: word, b1: word)
+        requires a0 == dword_lh(a);
+        requires a1 == dword_uh(a);
+        requires b0 == dword_lh(b);
+        requires b1 == dword_uh(b);
+        ensures a0 * b0 + a1 * b0 * B() + a0 * b1 * B() + a1 * b1 * B() * B() == a * b;
     {
-        var a0 := dword_lh(a);
-        var a1 := dword_uh(a);
-
-        var b0 := dword_lh(b);
-        var b1 := dword_uh(b);
-
         dword_split_lemma(a);
         dword_split_lemma(b);
-
-        assert a0 * b0 + a1 * b0 * B() + a0 * b1 * B() + a1 * b1 * B() * B() == a * b;
+        // assert a0 * b0 + a1 * b0 * B() + a0 * b1 * B() + a1 * b1 * B() * B() == a * b;
     }
 }
