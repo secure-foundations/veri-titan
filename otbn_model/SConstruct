@@ -1,2 +1,13 @@
-Program('hello.c')
+# print("Calling Program('hello.c')")
+# Program('hello.c')
+# print("Calling Program('goodbye.c')")
+# Program('goodbye.c')
+# print("Finished calling Program()")
+import os
 
+os.environ['PATH'] = os.environ['PATH'] + ":/home/yizhou7/Programs/dafny/Binaries/"
+
+bld = Builder(action = 'dafny /compile:0 $SOURCE && touch $TARGET')
+env = Environment(ENV = os.environ, BUILDERS = {'Dafny' : bld})
+
+env.Dafny('empty.dfy.ver', 'empty.dfy')
