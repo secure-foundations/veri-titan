@@ -303,21 +303,25 @@ module example_lemmas {
 			}
 		} else {
 
-			calc == {
-				w0;
-				(w0_g1 + w0_g1) % BASE_256;
-				(w0_g1 * 2) % BASE_256;
-				{
-					assert w0_g1 == power(2, i);
+            assert w0 == if i != 255 then power(2, i + 1) else 0 by {
+				calc == {
+					w0;
+					(w0_g1 + w0_g1) % BASE_256;
+					(w0_g1 * 2) % BASE_256;
+					{
+						assert w0_g1 == power(2, i);
+					}
+					(power(2, i) * 2) % BASE_256;
+					{
+						power_add_one_lemma(2, i);
+					}
+					power(2, i + 1) % BASE_256;
+					{
+						power_2_bounded_lemma(i + 1);
+					}
+					if i != 255 then power(2, i + 1) else 0;
 				}
-				(power(2, i) * 2) % BASE_256;
-				{
-					power_add_one_lemma(2, i);
-				}
-				power(2, i + 1) % BASE_256;
 			}
-
-            assume w0 == if i != 255 then power(2, i + 1) else 0;
 
 			and_single_bit_lemma(w1_g2, w1_g1, w0_g1, i);
 			if w1_g2 == 0 {
