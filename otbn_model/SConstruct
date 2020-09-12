@@ -1,0 +1,2 @@
+Program('hello.c')
+
