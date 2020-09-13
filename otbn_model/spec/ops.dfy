@@ -1,5 +1,5 @@
 include "types.dfy"
-include "../../dfy_model/powers.dfy"
+include "../lib/powers.dfy"
 
 module ops {
 	import opened types

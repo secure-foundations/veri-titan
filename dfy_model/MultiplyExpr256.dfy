@@ -1,5 +1,5 @@
 include "NativeTypes.dfy"
-include "powers.dfy"
+include "../otbn_model/lib/powers.dfy"
 
 module MultiplyExpr256 {
     import opened NativeTypes

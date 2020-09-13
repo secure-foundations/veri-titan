@@ -1,6 +1,6 @@
 include "NativeTypes.dfy"
-include "powers.dfy"
-include "congruences.dfy"
+include "../otbn_model/lib/powers.dfy"
+include "../otbn_model/lib/congruences.dfy"
 include "SeqInt.dfy"
 include "RSALemmas.dfy"
 
