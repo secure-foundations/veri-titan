@@ -9,8 +9,23 @@ def get_dfy_includes(dfy_file):
     includes = includes.split(";")
     return includes
 
-dfy_bld = Builder(action = "dfy /compile:0 $SOURCE && touch $TARGET")
-vad_bld = Builder(action = "vale.exe -dfyText -in $SOURCE -out $TARGET")
+def get_ver_path(dfy_path):
+    # assuming there aren't duplicated names
+    return "./gen/" + dfy_path.split("/")[-1] + ".ver"
+
+def verify_rec(dfy_file):
+    includes = get_dfy_includes(dfy_file)
+    for path in includes:
+        ver_path = get_ver_path(path)
+        # print(ver_path)
+        env.Dafny(ver_path, path)
+    # print("")
+    ver_path = get_ver_path(dfy_file)
+    # print(ver_path)
+    env.Dafny(dfy_file, dfy_file)
+
+dfy_bld = Builder(action = "dafny /compile:0 $SOURCE && touch $TARGET")
+vad_bld = Builder(action = "vale.exe -dafnyText -in $SOURCE -out $TARGET")
 
 env = Environment(ENV = os.environ, BUILDERS = {'Dafny' : dfy_bld, "Vale" : vad_bld})
 
@@ -18,7 +33,7 @@ env = Environment(ENV = os.environ, BUILDERS = {'Dafny' : dfy_bld, "Vale" : vad_
 for file in os.listdir("./code"):
     if file.endswith(".vad"):
         vad_file = os.path.join("./code", file)
-        file.replace(".vad", ".dfy")
+        file = file.replace(".vad", ".dfy")
         dfy_file = os.path.join("./gen", file)
         env.Vale(dfy_file, vad_file)
 
@@ -27,8 +42,6 @@ for file in os.listdir("./code"):
 for root, dirs, files in os.walk("."):
     for file in files:
         if file.endswith(".dfy"):
-            # os.system("ls")
             dfy_file = os.path.join(root, file)
-            get_dfy_includes(dfy_file)
+            verify_rec(dfy_file)
             break
-
