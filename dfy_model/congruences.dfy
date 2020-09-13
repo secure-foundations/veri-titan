@@ -1,4 +1,4 @@
-module Congruences {
+module congruences {
     predicate {:opaque} cong(a: int, b: int, n: int)
         requires n != 0;
     {

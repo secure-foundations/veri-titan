@@ -1,14 +1,14 @@
 include "NativeTypes.dfy"
-include "Powers.dfy"
-include "Congruences.dfy"
+include "powers.dfy"
+include "congruences.dfy"
 include "SeqInt.dfy"
 include "RSALemmas.dfy"
 include "MMLemmas.dfy"
 
 module RSAE3 {
     import opened NativeTypes
-    import opened Powers
-    import opened Congruences
+    import opened powers
+    import opened congruences
     import opened SeqInt
     import opened RSALemmas
     import opened MMLemmas
