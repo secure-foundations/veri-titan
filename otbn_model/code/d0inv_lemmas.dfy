@@ -6,7 +6,7 @@ include "../gen/decls.dfy"
 include "../../dfy_model/powers.dfy"
 include "../../dfy_model/congruences.dfy"
 
-module example_lemmas {
+module d0inv_lemmas {
 	import opened types
 	import opened ops
 	import opened bignum_vale
