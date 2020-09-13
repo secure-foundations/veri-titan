@@ -1,14 +1,24 @@
-import os
+import os, subprocess
+from subprocess import PIPE
 
-dafny_bld = Builder(action = "dafny /compile:0 $SOURCE && touch $TARGET")
-vale_bld = Builder(action = "vale.exe -dafnyText -in $SOURCE -out $TARGET")
+def get_dfy_includes(dfy_file):
+    command = "dafny /printIncludes:Immediate %s" % dfy_file
+    outputs = subprocess.run(command, shell=True, stdout=PIPE).stdout
+    outputs = outputs.decode("utf-8")
+    includes = outputs.splitlines()[0]
+    includes = includes.split(";")
+    return includes
 
-env = Environment(ENV = os.environ, BUILDERS = {'Dafny' : dafny_bld, "Vale" : vale_bld})
+dfy_bld = Builder(action = "dfy /compile:0 $SOURCE && touch $TARGET")
+vad_bld = Builder(action = "vale.exe -dfyText -in $SOURCE -out $TARGET")
 
-# env.Dafny("gen/d0inv.dfy.ver", "code/d0inv.dfy")
+env = Environment(ENV = os.environ, BUILDERS = {'Dafny' : dfy_bld, "Vale" : vad_bld})
+
+# env.dfy("gen/d0inv.dfy.ver", "code/d0inv.dfy")
 for file in os.listdir("./code"):
     if file.endswith(".vad"):
         vad_file = os.path.join("./code", file)
+        file.replace(".vad", ".dfy")
         dfy_file = os.path.join("./gen", file)
         env.Vale(dfy_file, vad_file)
 
@@ -18,5 +28,7 @@ for root, dirs, files in os.walk("."):
     for file in files:
         if file.endswith(".dfy"):
             # os.system("ls")
-            print(os.path.join(root, file))
+            dfy_file = os.path.join(root, file)
+            get_dfy_includes(dfy_file)
+            break
 
