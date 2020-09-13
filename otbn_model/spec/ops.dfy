@@ -280,7 +280,7 @@ module ops {
         ensures uint256_and(x, 1) == 1;
 
 	lemma lemma_xor_clear(x: uint256)
-	    ensures xor256(x, x, false, 0) == 0;
+	    ensures uint256_xor(x, x) == 0;
 	{
 		reveal uint256_xor();
 	}
