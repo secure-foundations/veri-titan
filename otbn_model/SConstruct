@@ -1,13 +1,22 @@
-# print("Calling Program('hello.c')")
-# Program('hello.c')
-# print("Calling Program('goodbye.c')")
-# Program('goodbye.c')
-# print("Finished calling Program()")
 import os
 
-os.environ['PATH'] = os.environ['PATH'] + ":/home/yizhou7/Programs/dafny/Binaries/"
+dafny_bld = Builder(action = "dafny /compile:0 $SOURCE && touch $TARGET")
+vale_bld = Builder(action = "vale.exe -dafnyText -in $SOURCE -out $TARGET")
 
-bld = Builder(action = 'dafny /compile:0 $SOURCE && touch $TARGET')
-env = Environment(ENV = os.environ, BUILDERS = {'Dafny' : bld})
+env = Environment(ENV = os.environ, BUILDERS = {'Dafny' : dafny_bld, "Vale" : vale_bld})
 
-env.Dafny('empty.dfy.ver', 'empty.dfy')
+# env.Dafny("gen/d0inv.dfy.ver", "code/d0inv.dfy")
+for file in os.listdir("./code"):
+    if file.endswith(".vad"):
+        vad_file = os.path.join("./code", file)
+        dfy_file = os.path.join("./gen", file)
+        env.Vale(dfy_file, vad_file)
+
+# env.Dependency(target = 'output1', dependency = 'input_1 input_2')
+
+for root, dirs, files in os.walk("."):
+    for file in files:
+        if file.endswith(".dfy"):
+            # os.system("ls")
+            print(os.path.join(root, file))
+
