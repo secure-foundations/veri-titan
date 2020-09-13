@@ -1,6 +1,10 @@
 import os, subprocess
 from subprocess import PIPE
 
+def get_ver_path(dfy_path):
+    # assuming there aren't duplicated names
+    return "./gen/" + dfy_path.split("/")[-1] + ".ver"
+
 def get_dfy_includes(dfy_file):
     command = "dafny /printIncludes:Immediate %s" % dfy_file
     outputs = subprocess.run(command, shell=True, stdout=PIPE).stdout
@@ -11,19 +15,18 @@ def get_dfy_includes(dfy_file):
     includes = includes.split(";")
     return includes
 
-def get_ver_path(dfy_path):
-    # assuming there aren't duplicated names
-    return "./gen/" + dfy_path.split("/")[-1] + ".ver"
-
 def verify_rec(dfy_file):
     includes = get_dfy_includes(dfy_file)
-    for path in includes:
-        ver_path = get_ver_path(path)
-        # print(ver_path)
-        env.Dafny(ver_path, path)
-    # print("")
     ver_path = get_ver_path(dfy_file)
-    # print(ver_path)
+
+    for path in includes:
+        dep_ver_path = get_ver_path(path)
+        if dep_ver_path == ver_path:
+            continue
+        env.Dafny(dep_ver_path, path)
+        Depends(ver_path, dep_ver_path)
+
+    Depends(ver_path, dfy_file)
     env.Dafny(ver_path, dfy_file)
 
 dfy_bld = Builder(action = "dafny /compile:0 $SOURCE && touch $TARGET")
