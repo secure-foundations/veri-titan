@@ -22,7 +22,7 @@ def verify_rec(dfy_file):
     # print("")
     ver_path = get_ver_path(dfy_file)
     # print(ver_path)
-    env.Dafny(dfy_file, dfy_file)
+    env.Dafny(ver_path, dfy_file)
 
 dfy_bld = Builder(action = "dafny /compile:0 $SOURCE && touch $TARGET")
 vad_bld = Builder(action = "vale.exe -dafnyText -in $SOURCE -out $TARGET")
