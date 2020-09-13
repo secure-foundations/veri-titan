@@ -33,7 +33,7 @@ gen/decls.dfy: code/decls.vad
 DFYs:=$(shell find -type f -name '*.dfy')
 
 proc-%:
-	@for i in $(shell grep -e "\(method\|function\|lemma\|predicate\).*$*" -l $(DFYs)); do \
+	for i in $(shell grep -e "\(method\|function\|lemma\|predicate\).*$*" -l $(DFYs)); do \
 		echo $(BOLD)"[+] Verifying $* within $$i"$(RESET); \
 		time -p $(DAFNY_VERIFY) /proc:*$(subst _,__,$*) $$i | grep -v anon; \
 	done
