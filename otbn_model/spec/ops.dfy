@@ -1,8 +1,9 @@
 include "types.dfy"
+include "../../dfy_model/powers.dfy"
 
 module ops {
-
 	import opened types
+	import opened powers
 
 	function pow2(n:nat) : nat {
 		if n == 0 then 1 else 2 * pow2(n-1)
@@ -182,10 +183,6 @@ module ops {
 	}
 
 	////////////////////////
-	// Operations on Bignums
-	////////////////////////
-
-	////////////////////////
 	// Operations on bv256s
 	////////////////////////
 
@@ -260,5 +257,74 @@ module ops {
 			(x / BASE_128) % BASE_64
 		else
 			(x / BASE_192) % BASE_64
+	}
+
+    lemma {:axiom} and_single_bit_lemma(x': uint256, x: uint256, w0: uint256, i: nat)
+        requires w0 == power(2, i);
+        requires x' == uint256_and(x, w0);
+        ensures x' == power(2, i) || x' == 0;
+
+    lemma {:axiom} or_zero_nop_lemma(x: uint256, z: uint256)
+        requires z == 0;
+        ensures uint256_or(x, z) == x;
+
+    lemma {:axiom} or_single_bit_add_lemma(x': uint256, x: uint256, w0: uint256, i: nat)
+        requires w0 == power(2, i);
+        requires x < power(2, i);
+        requires x' == uint256_or(x, w0);
+        ensures x' == x + w0;
+        ensures x' < power(2, i + 1);
+
+    lemma {:axiom} odd_and_one_lemma(x: uint256) 
+        requires x % 2 == 1;
+        ensures uint256_and(x, 1) == 1;
+
+	lemma lemma_xor_clear(x: uint256)
+	    ensures xor256(x, x, false, 0) == 0;
+	{
+		reveal uint256_xor();
+	}
+
+	lemma lemma_ls_mul(x: uint256)
+		requires x < BASE_128;
+		ensures uint256_ls(x, 8) == x * BASE_64;
+
+	lemma lemma_uint256_hwb(x1: uint256, x2: uint256, x3: uint256, lo: uint128, hi: uint128)
+		requires x2 == uint256_hwb(x1, lo, true);
+		requires x3 == uint256_hwb(x2, hi, false);
+		ensures x3 == lo + hi * BASE_128;
+	{
+		calc == {
+			x3;
+			{
+				lemma_uint256_half_split(x3);
+			}
+			uint256_lh(x3) + uint256_uh(x3) * BASE_128;
+			{
+				assert uint256_uh(x3) == hi && uint256_lh(x3) == uint256_lh(x2);
+			}
+			uint256_lh(x2) + hi * BASE_128;
+			{
+				assert uint256_lh(x2) == lo;
+			}
+			lo + hi * BASE_128;
+		}
+	}
+
+	lemma lemma_uint256_half_split(x: uint256)
+		ensures x == uint256_lh(x) + uint256_uh(x) * BASE_128;
+	{
+		reveal uint256_lh();
+		reveal uint256_uh();
+	}
+
+	lemma lemma_uint256_quarter_split(x: uint256)
+		ensures x == uint256_qsel(x, 0) +
+			uint256_qsel(x, 1) * BASE_64 + 
+			uint256_qsel(x, 2) * BASE_128 + 
+			uint256_qsel(x, 3) * BASE_192;
+	{
+		// reveal uint256_qsel(); // TODO: revaling is not sufficient
+		assume false;
 	}
 } // end module ops
