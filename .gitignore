@@ -3,3 +3,4 @@ dfy_model/.depend
 otbn_impl/cg.dot
 otbn_impl/cg.png
 gen/
+.sconsign.dblite

@@ -302,7 +302,26 @@ module example_lemmas {
 				reveal power();
 			}
 		} else {
-            assume w0 == if i != 255 then power(2, i + 1) else 0;
+
+            assert w0 == if i != 255 then power(2, i + 1) else 0 by {
+				calc == {
+					w0;
+					(w0_g1 + w0_g1) % BASE_256;
+					(w0_g1 * 2) % BASE_256;
+					{
+						assert w0_g1 == power(2, i);
+					}
+					(power(2, i) * 2) % BASE_256;
+					{
+						power_add_one_lemma(2, i);
+					}
+					power(2, i + 1) % BASE_256;
+					{
+						power_2_bounded_lemma(i + 1);
+					}
+					if i != 255 then power(2, i + 1) else 0;
+				}
+			}
 
 			and_single_bit_lemma(w1_g2, w1_g1, w0_g1, i);
 			if w1_g2 == 0 {
@@ -334,7 +353,7 @@ module example_lemmas {
 		requires (w29_g2 * w28) % power(2, 256) == 1;
 		ensures d0inv_256(w29, w28);
 	{
-		assume BASE_256 == power(2, 256);
+		power_2_bounded_lemma(256);
 		assert w29 == (w31 - w29_g2) % BASE_256;
 		mod_inv_lemma(w29, w29_g2, w28);
 	}
@@ -371,8 +390,9 @@ module example_lemmas {
     }
 
     lemma power_2_bounded_lemma(i: int)
-        requires 0 <= i < 256;
-        ensures power(2, i) < BASE_256;
+        ensures (0 <= i < 256) ==> (power(2, i) < BASE_256);
+        ensures (i == 256) ==> (power(2, i) == BASE_256);
+		// ensures (i > 256) ==> (power(2, i) > BASE_256);
 
     lemma {:axiom} d0inv_bv_lemma_1(x: int, w0: uint256, i: nat)
         requires w0 == power(2, i);
