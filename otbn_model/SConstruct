@@ -34,6 +34,9 @@ vad_bld = Builder(action = "vale.exe -dafnyText -in $SOURCE -out $TARGET")
 
 env = Environment(ENV = os.environ, BUILDERS = {'Dafny' : dfy_bld, "Vale" : vad_bld})
 
+if not os.path.exists("./gen"):
+    os.makedirs("./gen")
+
 for file in os.listdir("./code"):
     if file.endswith(".vad"):
         vad_file = os.path.join("./code", file)
@@ -46,3 +49,4 @@ for root, dirs, files in os.walk("."):
         if file.endswith(".dfy"):
             dfy_file = os.path.join(root, file)
             verify_rec(dfy_file)
+
