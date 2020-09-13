@@ -3,8 +3,8 @@ include "../spec/ops.dfy"
 include "../spec/def.dfy"
 include "vale.dfy"
 include "../gen/decls.dfy"
-include "../../dfy_model/powers.dfy"
-include "../../dfy_model/congruences.dfy"
+include "../lib/powers.dfy"
+include "../lib/congruences.dfy"
 
 module d0inv_lemmas {
 	import opened types
