@@ -332,7 +332,7 @@ function subb256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup)
 
 function subi256(x:Bignum, imm:Bignum) : (Bignum, FlagsGroup)
 	requires imm < 1024;
-	requires imm < x; //TODO: Is this true?
+	// requires imm < x; //TODO: Is this true?
 {
 	// FIXME: double check this
 	var diff :int := x - imm;
