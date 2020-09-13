@@ -55,15 +55,16 @@ def verify_rec(dfy_file):
     env.Dafny(ver_path, dfy_file)
 
 def verify_proc(proc, dfy_files):
-    command = 'grep -e "\(method\|function\|lemma\|predicate\).half_product" -l ' + " ".join(dfy_files)
+    command = 'grep -e "\(method\|function\|lemma\|predicate\).%s" -l ' % proc + " ".join(dfy_files)
     outputs = subprocess.run(command, shell=True, stdout=PIPE).stdout
     outputs = outputs.decode("utf-8")
+    proc = proc.replace("_", "__")
+
     for dfy_file in outputs.splitlines():
-        print(dfy_file)
-        # command = dfy_verify_cmd + "/proc:/*%s " % proc + dfy_file
-        # print(command)
-        # r = subprocess.check_output(command, shell=True)
-        # print(r)
+        print("verify %s in %s" % (proc, dfy_file))
+        command = dfy_verify_cmd + "/proc:*%s " % proc + dfy_file
+        r = subprocess.check_output(command, shell=True).decode("utf-8")
+        print(r)
  
 proc = GetOption('proc')
 
