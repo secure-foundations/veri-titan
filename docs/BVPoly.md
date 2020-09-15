@@ -1,21 +1,38 @@
+## Setup:
+
+assume `x'`	and `y'` are `n` bits BVs, extended from `x` and `y`, then we can write the definition inductively:
+
 	x' - pow2(n) * b0 - x == 0
 	y' - pow2(n) * b1 - y == 0
+
+make sure b0, b1 are single bit:
 
 	b0 * (1 - b0) == 0
 	b1 * (1 - b1) == 0
 
-### encoding of and:
+## Polynomial Encoding of And:
 
     bv_and(x', y', n) == pow2(n) * bv_and(b0, b1, 1) + bv_and(x, y, n - 1)
 
-introduce a single bit variable `t`:
+introduce a single bit variable `t == b0 & b1`:
 
 	bv_and(x', y', n) - pow2(n) * t - bv_and(x, y, n - 1) == 0
 
-	t - b0 * b1 == 0
 	t * (1 - t) == 0
+	t - b0 * b1 == 0
 
-### encoding of add:
+## Polynomial Encoding of Or:
+
+    bv_or(x', y', n) == pow2(n) * bv_or(b0, b1, 1) + bv_or(x, y, n - 1)
+
+introduce a single bit variable `t == b0 | b1`:
+
+    bv_or(x', y', n) - pow2(n) * t + bv_or(x, y, n - 1)
+
+	t * (1 - t) == 0
+	(1 - t) - (1 + b0 * b1 - b0 - b1) == 0
+
+## Polynomial Encoding of Add:
 
     bv_add(x', y', n) == (x' + y') % pow2(n + 1)
 
@@ -23,7 +40,7 @@ there exists `k` such that the following holds:
 
     bv_add(x', y', n) - x' - y' - k * pow2(n + 1) == 0
 
-### encoding of mul:
+## Polynomial Encoding of Mul:
 
     bv_mul(x', y', n) == (x' * y') % pow2(n + 1)
 
@@ -31,7 +48,7 @@ there exists `k` such that the following holds:
 
     bv_mul(x', y', n) - x' * y' - k * pow2(n + 1) == 0
 
-## trivial lemma:
+## lemma1:
 
 	x' & y' == y' & x'
 
@@ -48,11 +65,6 @@ show:
     bv_and(x', y', n) == bv_and(y', x', n)
 
 we derive the following equations:
-
-make sure b0, b1 are single binary:
-
-	b0 * (1 - b0) == 0
-	b1 * (1 - b1) == 0
 
 make sure t1 is binary, and `t1 == b0 & b1`:
 
