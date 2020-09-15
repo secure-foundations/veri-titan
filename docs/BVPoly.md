@@ -7,7 +7,7 @@ assume `x'`	and `y'` are `n` bits BVs, extended from `x` and `y`, then we can wr
 	x' - pow2(n) * b0 - x == 0
 	y' - pow2(n) * b1 - y == 0
 
-make sure b0, b1 are single bit:
+make sure `b0`, `b1` are single bit:
 
 	b0 * (1 - b0) == 0
 	b1 * (1 - b1) == 0
