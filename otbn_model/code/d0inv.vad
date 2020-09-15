@@ -2,7 +2,7 @@ include "decls.vad"
 
 #verbatim
 include "../code/vale.dfy"
-include "../code/example_lemmas.dfy"
+include "../code/d0inv_lemmas.dfy"
 
 include "../spec/def.dfy"
 include "../spec/ops.dfy"
@@ -10,10 +10,10 @@ include "../spec/types.dfy"
 
 include "../gen/decls.dfy"
 
-module examples {
+module d0inv {
 
 import opened bignum_vale
-import opened example_lemmas
+import opened d0inv_lemmas
 
 import opened bignum_def
 import opened ops

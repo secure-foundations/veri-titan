@@ -62,7 +62,7 @@ def verify_proc(proc, dfy_files):
 
     for dfy_file in outputs.splitlines():
         print("verify %s in %s" % (proc, dfy_file))
-        command = dfy_verify_cmd + "/proc:*%s " % proc + dfy_file
+        command = "time -p " + dfy_verify_cmd + "/proc:*%s " % proc + dfy_file
         r = subprocess.check_output(command, shell=True).decode("utf-8")
         print(r)
  
