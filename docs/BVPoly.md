@@ -1,3 +1,6 @@
+The overall idea is to encode the bit-vector operations using polynomials, then try to automate the proofs using algebra solvers.
+We are dealing with variable number of bits (bit width independent), but we can't unfold the recursive definitions infinite number of times (or can we just unfold it 256 times while still being scalable?). Instead we attempt to automate the inductive proof, since the single bit (and/or/xor) gates can be represented using polynomials.
+
 In the following `*`, `+` are used as mathematical multiplication and addition with no wrapping. `bv_add(x, y, n)` is used as `n bits` bit vector add with wrapping.
 
 ## Polynomial Encoding Of BV (Inductive):
@@ -16,7 +19,7 @@ make sure `b0`, `b1` are single bit:
 
 		bv_and(x', y', n) == pow2(n) * bv_and(b0, b1, 1) + bv_and(x, y, n - 1)
 
-introduce a single bit variable `t == b0 & b1`:
+introduce a single bit variable so that `t == b0 & b1`:
 
 		bv_and(x', y', n) - pow2(n) * t - bv_and(x, y, n - 1) == 0
 
@@ -27,7 +30,7 @@ introduce a single bit variable `t == b0 & b1`:
 
 		bv_or(x', y', n) == pow2(n) * bv_or(b0, b1, 1) + bv_or(x, y, n - 1)
 
-introduce a single bit variable `t == b0 | b1`:
+introduce a single bit variable so that `t == b0 | b1`:
 
 		bv_or(x', y', n) - pow2(n) * t + bv_or(x, y, n - 1)
 
@@ -120,11 +123,4 @@ now we have finished the polynomial encoding.
 We then ask is `g` is included in the ring ideal constructed by `P`? If so, then `g` can be written as a linear combination of the polynomials in `P`. Since all the polynomials in `P` are effectively 0, `g` must also be 0, 
 then we have a proof. If not then its very unfortunate. 
 
-## A Slightly More Complicated Lemma
-
-		0 <= i < full_bits,
-		x & ((1 << i) - 1) == 1,
-		x & (1 << i) == 0,
-	==>
-		x & ((1 << (i + 1)) - 1) == 1
-
+<!-- ## A Slightly More Complicated Lemma -->
