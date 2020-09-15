@@ -133,17 +133,18 @@ def d0inv_2():
 		# (x + (w28 << i)) & (1 << (i + 1)) - 1 == 1,
 	)
 
-try:
-	func = sys.argv[1] + "()"
-	query = eval(func)
-	prove(query)
+if __name__ == '__main__':
+	try:
+		func = sys.argv[1] + "()"
+		query = eval(func)
+		prove(query)
 
-	s = Solver()
-	s.push()
-	s.add(Not(query))
-	print(s.sexpr(), end="")
-	print("(check-sat)")
+		s = Solver()
+		s.push()
+		s.add(Not(query))
+		print(s.sexpr(), end="")
+		print("(check-sat)")
 
-except:
-	print("usage:\npython bv_exprs.py [query_name] [bit_number]")
-	sys.exit(1)
+	except:
+		print("usage:\npython bv_exprs.py [query_name] [bit_number]")
+		sys.exit(1)
