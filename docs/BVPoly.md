@@ -1,4 +1,4 @@
-## Setup:
+## Polynomial Encoding Of BV (Inductive):
 
 assume `x'`	and `y'` are `n` bits BVs, extended from `x` and `y`, then we can write the definition inductively:
 
@@ -10,7 +10,7 @@ make sure b0, b1 are single bit:
 	b0 * (1 - b0) == 0
 	b1 * (1 - b1) == 0
 
-## Polynomial Encoding of And:
+## Polynomial Encoding of And (Inductive):
 
     bv_and(x', y', n) == pow2(n) * bv_and(b0, b1, 1) + bv_and(x, y, n - 1)
 
@@ -21,7 +21,7 @@ introduce a single bit variable `t == b0 & b1`:
 	t * (1 - t) == 0
 	t - b0 * b1 == 0
 
-## Polynomial Encoding of Or:
+## Polynomial Encoding of Or (Inductive):
 
     bv_or(x', y', n) == pow2(n) * bv_or(b0, b1, 1) + bv_or(x, y, n - 1)
 
@@ -32,7 +32,7 @@ introduce a single bit variable `t == b0 | b1`:
 	t * (1 - t) == 0
 	(1 - t) - (1 + b0 * b1 - b0 - b1) == 0
 
-## Polynomial Encoding of Add:
+## Polynomial Encoding of Add (Non-Inductive):
 
     bv_add(x', y', n) == (x' + y') % pow2(n + 1)
 
@@ -40,7 +40,7 @@ there exists `k` such that the following holds:
 
     bv_add(x', y', n) - x' - y' - k * pow2(n + 1) == 0
 
-## Polynomial Encoding of Mul:
+## Polynomial Encoding of Mul (Non-Inductive):
 
     bv_mul(x', y', n) == (x' * y') % pow2(n + 1)
 
