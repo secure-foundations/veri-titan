@@ -36,19 +36,19 @@ introduce a single bit variable `t == b0 | b1`:
 
 ## Polynomial Encoding of Add (Non-Inductive):
 
-    bv_add(x', y', n) == (x' + y') % pow2(n + 1)
+    bv_add(x', y', n) == (x + y) % pow2(n + 1)
 
 there exists `k` such that the following holds:
 
-    bv_add(x', y', n) - x' - y' - k * pow2(n + 1) == 0
+    bv_add(x', y', n) - x - y - k * pow2(n + 1) == 0
 
 ## Polynomial Encoding of Mul (Non-Inductive):
 
-    bv_mul(x', y', n) == (x' * y') % pow2(n + 1)
+    bv_mul(x', y', n) == (x * y) % pow2(n + 1)
 
 there exists `k` such that the following holds:
 
-    bv_mul(x', y', n) - x' * y' - k * pow2(n + 1) == 0
+    bv_mul(x', y', n) - x * y - k * pow2(n + 1) == 0
 
 ## A Very Simple Lemma:
 
@@ -111,6 +111,5 @@ now we have finished the polynomial encoding.
 
 We then ask is `g` is included in the ring ideal constructed by `P`? If so, then `g` can be written as a linear combination of the polynomials in `P`. Since all the polynomials in `P` are effectively 0, `g` must also be 0, 
 then we have a proof. If not then its very unfortunate. 
-
 
 
