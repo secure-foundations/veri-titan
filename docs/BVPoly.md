@@ -1,5 +1,8 @@
-	x' == pow2(n) * b0 + x
-	y' == pow2(n) * b1 + y
+	x' - pow2(n) * b0 - x == 0
+	y' - pow2(n) * b1 - y == 0
+
+	b0 * (1 - b0) == 0
+	b1 * (1 - b1) == 0
 
 ### encoding of and:
 
@@ -11,20 +14,22 @@ introduce a single bit variable `t`:
 
 	t - b0 * b1 == 0
 	t * (1 - t) == 0
-	b0 * (1 - b0) == 0
-	b1 * (1 - b1) == 0
 
 ### encoding of add:
 
-    bv_add(x', y', n) == (pow2(n) * (b0 + b1) + x + y) % pow2(n + 1)
+    bv_add(x', y', n) == (x' + y') % pow2(n + 1)
 
-this requires some tweaks, since we are talking about mod pow2(n + 1), there exists `k` such that the following holds:
+there exists `k` such that the following holds:
 
-    bv_add(x', y', n) - pow2(n) * (b0 + b1) - x - y - k * pow2(n + 1) == 0
+    bv_add(x', y', n) - x' - y' - k * pow2(n + 1) == 0
 
-    pow2(n + 1) - pow2(n) * 2 == 0
-    b0 * (1 - b0) == 0
-	b1 * (1 - b1) == 0
+### encoding of mul:
+
+    bv_mul(x', y', n) == (x' * y') % pow2(n + 1)
+
+there exists `k` such that the following holds:
+
+    bv_mul(x', y', n) - x' * y' - k * pow2(n + 1) == 0
 
 ## trivial lemma:
 
