@@ -1,3 +1,5 @@
+In the following `*`, `+` are used as mathematical multiplication and addition with no wrapping. `bv_add(x, y, n)` is used as `n bits` bit vector add with wrapping.
+
 ## Polynomial Encoding Of BV (Inductive):
 
 assume `x'`	and `y'` are `n` bits BVs, extended from `x` and `y`, then we can write the definition inductively:
@@ -48,52 +50,67 @@ there exists `k` such that the following holds:
 
     bv_mul(x', y', n) - x' * y' - k * pow2(n + 1) == 0
 
-## lemma1:
+## A Very Simple Lemma:
 
 	x' & y' == y' & x'
 
-base case: can be exhaustively checked 
+### Base Case:
 
-inductive case:
+	TBD
 
-given:
+### Inductive Case:
 
-    bv_and(x, y, n - 1) == bv_and(y, x, n - 1)
+given: `bv_and(x, y, n - 1) == bv_and(y, x, n - 1)`
 
-show:
-
-    bv_and(x', y', n) == bv_and(y', x', n)
+show: `bv_and(x', y', n) == bv_and(y', x', n)`
 
 we derive the following equations:
 
-make sure t1 is binary, and `t1 == b0 & b1`:
+use our encoding above for `bv_and`, define the relationship between `bv_and(x', y', n)` and `bv_and(x, y, n)`:
 
+	bv_and(x', y', n) - pow2(n) * t1 - bv_and(x, y, n - 1) == 0
 	t1 * (1 - t1) == 0
 	t1 - b0 * b1 == 0
 
-define the relationship between `bv_and(x', y', n)` and `bv_and(x, y, n)`:
+use our encoding above for `bv_and`, define the relationship between `bv_and(y', x', n)` and `bv_and(y, x, n)`:
 
-	bv_and(x', y', n) - pow2(n) * t1 - bv_and(x, y, n - 1) == 0
-
-make sure t2 is binary, and `t2 == b1 & b0`:
+	bv_and(y', x', n) - pow2(n) * t2 - bv_and(y, x, n - 1) == 0
 
 	t2 * (1 - t2) == 0
 	t2 - b1 * b0 == 0
-
-define the relationship between `bv_and(y', x', n)` and `bv_and(y, x, n)`:
-
-	bv_and(y', x', n) - pow2(n) * t2 - bv_and(y, x, n - 1) == 0
 
 finally add the induction hypothesis:
 
 	bv_and(x, y, n - 1) - bv_and(y, x, n - 1) == 0
 
-the goal can be translated into:
+all together, we define this set of polynomials `P`:
+
+	x' - pow2(n) * b0 - x
+	y' - pow2(n) * b1 - y
+
+	b0 * (1 - b0)
+	b1 * (1 - b1)
+
+	bv_and(x', y', n) - pow2(n) * t1 - bv_and(x, y, n - 1)
+
+	t1 * (1 - t1)
+	t1 - b0 * b1
+
+	bv_and(y', x', n) - pow2(n) * t2 - bv_and(y, x, n - 1)
+
+	t2 * (1 - t2)
+	t2 - b1 * b0
+
+	bv_and(x, y, n - 1) - bv_and(y, x, n - 1)
+
+the goal can be translated into `g`:
 
 	bv_and(x', y', n) - bv_and(y', x', n) 
 
-now we have finished the polynomial encoding of the problem.
-we ask is this in the ring ideal constructed by the above equations include the goal? if so, then we have an inductive proof. if not, too bad.
+now we have finished the polynomial encoding. 
+
+We then ask is `g` is included in the ring ideal constructed by `P`? If so, then `g` can be written as a linear combination of the polynomials in `P`. Since all the polynomials in `P` are effectively 0, `g` must also be 0, 
+then we have a proof. If not then its very unfortunate. 
 
 
 
