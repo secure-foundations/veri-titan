@@ -22,7 +22,7 @@ def add_input_var(v):
     if v not in input_vars:
         b = get_fresh_bin()
         input_vars[v] = b
-        print(f"{v} - pow2(n) * {b} - {v}'")
+        print(f"{v}' - pow2_n * {b} - {v}")
 
 def get_assoc_bin(v):
     global input_vars
@@ -30,41 +30,46 @@ def get_assoc_bin(v):
         raise Exception("not an input var")
     return input_vars[v]
 
-def traverse_br(q):
+def traverse_br(q, goal):
     assert type(q) == z3.z3.BoolRef
     assert q.decl().name() == "="
     children = q.children()
-    l = traverse_bvr(children[0])
-    r = traverse_bvr(children[1])
+    l = traverse_bvr(children[0], goal)
+    r = traverse_bvr(children[1], goal)
     print(l + " - " + r)
 
-def encode_and(t, l, r):
-    print(f"{t} - and({l}, {r}, n)")
-    bl = get_assoc_bin(l)
-    br = get_assoc_bin(r)
+def encode_and(t, l, r, goal):
+    if goal:
+        print(f"{t} - bv_and({l}, {r}, n)")
+    else:
+        print(f"{t} - bv_and({l}, {r}, n - 1)")
 
-    b = get_fresh_bin()
-    print(f"{b} - {bl} * {br}")
+        bl = get_assoc_bin(l)
+        br = get_assoc_bin(r)
 
-    print(f"bv_and({l}, {r}, n) - pow2(n) * {b} - bv_and({l}', {r}', n - 1)")
+        b = get_fresh_bin()
+        print(f"{b} - {bl} * {br}")
+        print(f"bv_and({l}', {r}', n) - pow2_n * {b} - bv_and({l}, {r}, n - 1)")
 
-def traverse_bvr(e):
-
+def traverse_bvr(e, goal):
     if type(e) == z3.z3.BitVecRef:
-        children = [traverse_bvr(child) for child in e.children()]
+        children = [traverse_bvr(child, goal) for child in e.children()]
 
         num_children = len(children)
 
         if num_children == 0:
             v = str(e.decl())
-            add_input_var(v)
-            return v
+            if goal:
+                return v + "'"
+            else:
+                add_input_var(v)
+                return v
 
         op = str(e.decl())
         var = get_fresh_tmp()
 
         if op == "&":
-            encode_and(var, children[0], children[1])
+            encode_and(var, children[0], children[1], goal)
             return var
         else:
             raise Exception("not handled")
@@ -74,4 +79,6 @@ def traverse_bvr(e):
         raise Exception("not handled")
 
 q = bvand()
-traverse_br(q)
+traverse_br(q, False)
+print("")
+traverse_br(q, True)
