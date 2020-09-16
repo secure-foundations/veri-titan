@@ -33,13 +33,25 @@ def add_input_var(v):
     if v not in input_vars:
         b = get_fresh_bin()
         input_vars[v] = b
-        print(f"{v}' - pow2_n * {b} - {v}")
+        print(f"{v}' - pow2_n_1 * {b} - {v}")
 
 def get_assoc_bin(v):
     global input_vars
     if v not in input_vars:
         raise Exception("not an input var")
     return input_vars[v]
+
+def dump_vars():
+    vars = ["pow2_n_1", "pow2_n"]
+    for v in input_vars:
+        vars.append(f"{v}, {v}'")
+    for i in range(bin_count):
+        vars.append(f"b{i + 1}")
+    for i in range(tmp_count):
+        vars.append(f"t{i + 1}")
+    for o in opaque_vars.values():
+        vars.append(o)
+    print("ring r=integer,(" + ", ".join(vars) + "),lp;")
 
 def traverse_br(q, goal):
     assert type(q) == z3.z3.BoolRef
@@ -94,6 +106,10 @@ def traverse_bvr(e, goal):
         raise Exception("not handled")
 
 q = bvand()
+print("pow2_n_1 - 2 * pow2_n")
 traverse_br(q, False)
 print("")
 traverse_br(q, True)
+
+print("")
+dump_vars()
