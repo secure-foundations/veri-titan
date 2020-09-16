@@ -3,6 +3,7 @@ from bv_exprs import *
 tmp_count = 0
 bin_count = 0
 input_vars = dict()
+opaque_vars = dict()
 
 def get_fresh_tmp():
     global tmp_count
@@ -15,6 +16,16 @@ def get_fresh_bin():
     b = "b%d" % bin_count
     print(f"{b} * (1 - {b})")
     return b
+
+def get_fresh_opaque(actual):
+    global opaque_vars
+
+    if actual in opaque_vars:
+        return opaque_vars[actual]
+
+    o = "o%d" % (len(opaque_vars) + 1) 
+    opaque_vars[actual] = o
+    return o
 
 def add_input_var(v):
     global input_vars
@@ -40,16 +51,20 @@ def traverse_br(q, goal):
 
 def encode_and(t, l, r, goal):
     if goal:
-        print(f"{t} - bv_and({l}, {r}, n)")
+        o0 = get_fresh_opaque(f"bv_and({l}, {r}, n)")
+        print(f"{t} - {o0}")
     else:
-        print(f"{t} - bv_and({l}, {r}, n - 1)")
+        o0 = get_fresh_opaque(f"bv_and({l}, {r}, n - 1)")
+        print(f"{t} - {o0}")
 
         bl = get_assoc_bin(l)
         br = get_assoc_bin(r)
 
         b = get_fresh_bin()
         print(f"{b} - {bl} * {br}")
-        print(f"bv_and({l}', {r}', n) - pow2_n * {b} - bv_and({l}, {r}, n - 1)")
+
+        o1 = get_fresh_opaque(f"bv_and({l}', {r}', n)")
+        print(f"{o1} - pow2_n * {b} - {o0}")
 
 def traverse_bvr(e, goal):
     if type(e) == z3.z3.BitVecRef:
