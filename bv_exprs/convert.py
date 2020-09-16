@@ -1,17 +1,34 @@
 from bv_exprs import *
 
-var_count = 0
+tmp_count = 0
 bin_count = 0
+input_vars = dict()
 
-def get_fresh_var():
-    global var_count
-    var_count += 1
-    return "t%d" % var_count
+def get_fresh_tmp():
+    global tmp_count
+    tmp_count += 1
+    return "t%d" % tmp_count
 
 def get_fresh_bin():
     global bin_count
     bin_count += 1
-    return "b%d" % bin_count
+    b = "b%d" % bin_count
+    print(f"{b} * (1 - {b})")
+    return b
+
+def add_input_var(v):
+    global input_vars
+
+    if v not in input_vars:
+        b = get_fresh_bin()
+        input_vars[v] = b
+        print(f"{v} - pow2(n) * {b} - {v}'")
+
+def get_assoc_bin(v):
+    global input_vars
+    if v not in input_vars:
+        raise Exception("not an input var")
+    return input_vars[v]
 
 def traverse_br(q):
     assert type(q) == z3.z3.BoolRef
@@ -23,9 +40,16 @@ def traverse_br(q):
 
 def encode_and(t, l, r):
     print(f"{t} - and({l}, {r}, n)")
-    # bv_and(x', y', n) == pow2(n) * bv_and(b0, b1, 1) + bv_and(x, y, n - 1)
+    bl = get_assoc_bin(l)
+    br = get_assoc_bin(r)
+
+    b = get_fresh_bin()
+    print(f"{b} - {bl} * {br}")
+
+    print(f"bv_and({l}, {r}, n) - pow2(n) * {b} - bv_and({l}', {r}', n - 1)")
 
 def traverse_bvr(e):
+
     if type(e) == z3.z3.BitVecRef:
         children = [traverse_bvr(child) for child in e.children()]
 
@@ -33,12 +57,11 @@ def traverse_bvr(e):
 
         if num_children == 0:
             v = str(e.decl())
-            b = get_fresh_bin()
-            print(f"{v} - pow2(n) * {b} - {v}' == 0")
+            add_input_var(v)
             return v
 
         op = str(e.decl())
-        var = get_fresh_var()
+        var = get_fresh_tmp()
 
         if op == "&":
             encode_and(var, children[0], children[1])
