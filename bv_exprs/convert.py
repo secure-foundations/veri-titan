@@ -1,15 +1,15 @@
 from bv_exprs import *
 
 class BinOpEq:
-    def __init__(self, op, dst, src_1, src_2):
+    def __init__(self, op, dst, src1, src2):
         self.op = op
         self.dst = dst
-        self.src_1 = src_1
-        self.src_2 = src_2
+        self.src1 = src1
+        self.src2 = src2
     
     def __str__(self):
         if self.op == "&":
-            return f"{self.dst} = {self.src_1} & {self.src_2}"
+            return f"{self.dst} = {self.src1} & {self.src2}"
         raise Exception("NYI")
 
     # def encode():
@@ -26,22 +26,41 @@ class UniOpEq:
             return f"{self.dst} = {self.src}"
         raise Exception("NYI")
 
+
+# class Flattener:
+#     def __init__(self, q):
+#         self.tmp_count = 0
+
+class BaseVariable:
+    def __init__(self, v, b):
+        self.v = v
+        self.b = b
+    
+    def get_base(self):
+        return self.v
+
+    def get_ext(self):
+        return self.v + "'"
+
 class Encoder:
     def __init__(self, q):
         self.tmp_count = 0
         self.bin_count = 0
-        self.nbits_vars = set()
+        self.base_vars = set()
+
         # self.opaque_vars = dict()
         # self.gpass = False
         self.equations = set()
 
         self.flatten_br(q)
-        for eq in self.equations:
-            print(eq)
 
-        # for var in self.nbits_vars:
-        #     print(var)
-        #     print(var + "'")
+        base_vars = self.base_vars
+        self.base_vars = dict()
+        for var in base_vars:
+            b = self.get_fresh_bin()
+            self.base_vars[var] = BaseVariable(var, b)
+
+        # self.encode_equations()
 
     def flatten_br(self, q):
         assert type(q) == z3.z3.BoolRef
@@ -49,7 +68,8 @@ class Encoder:
         children = q.children()
         l = self.flatten_bvr(children[0])
         r = self.flatten_bvr(children[1])
-        return UniOpEq("", l, r)
+        # print("IH:")
+        print(UniOpEq("", l, r))
 
     def flatten_bvr(self, e):
         if type(e) == z3.z3.BitVecRef:
@@ -58,7 +78,7 @@ class Encoder:
 
             if num_children == 0:
                 var = str(e.decl())
-                self.nbits_vars.add(var)
+                self.base_vars.add(var)
                 return var
 
             op = str(e.decl())
@@ -79,7 +99,7 @@ class Encoder:
     def get_fresh_tmp(self):
         self.tmp_count += 1
         t = "t%d" % self.tmp_count
-        self.nbits_vars.add(t)
+        self.base_vars.add(t)
         return t
 
     def get_fresh_bin(self):
@@ -87,6 +107,25 @@ class Encoder:
         b = "b%d" % self.bin_count
         # eq = f"{b} * (1 - {b})"
         return b
+
+    # def get_assoc_bin(self, var):
+
+    def encode_equations(self):
+        for eq in self.equations:
+            self.encode_equation(eq)
+
+    def encode_equation(self, eq):
+        if eq.op == "&":
+            d, s1, s2 = eq.dst, eq.src1, eq.src2
+            # print(f"{d} == and_n({s1}, {s2})")
+
+            # bl = self.get_assoc_bin(l)
+            # br = self.get_assoc_bin(r)
+            # b = self.get_fresh_bin()
+            # eq = f"{b} - {bl} * {br}"
+            # print(f"{d}' == pow2_n * {b} + bv_and(x, y, n)")
+        else:
+            raise Exception("NYI")
 
     # def encode_br(self, q):
     #     children = q.children()
@@ -138,10 +177,7 @@ class Encoder:
     #         eq = f"{t} - {o0}"
     #         self.equations.add(eq)
 
-    #         bl = self.get_assoc_bin(l)
-    #         br = self.get_assoc_bin(r)
-    #         b = self.get_fresh_bin()
-    #         eq = f"{b} - {bl} * {br}"
+
     #         self.equations.add(eq)
 
     #         o1 = self.get_opaque(f"bv_and({l}', {r}', n)")
@@ -171,9 +207,9 @@ class Encoder:
     #         self.equations.add(eq)
 
     # def add_input_var(self, v):
-    #     if v not in self.nbits_vars:
+    #     if v not in self.base_vars:
     #         b = self.get_fresh_bin()
-    #         self.nbits_vars[v] = b
+    #         self.base_vars[v] = b
     #         eq = f"{v}' - pow2_n_1 * {b} - {v}"
     #         self.equations.add(eq)
 
@@ -186,13 +222,13 @@ class Encoder:
     #     return o
 
     # def get_assoc_bin(self, v):
-    #     if v not in self.nbits_vars:
+    #     if v not in self.base_vars:
     #         raise Exception("not an nbits var")
-    #     return self.nbits_vars[v]
+    #     return self.base_vars[v]
 
     # def dump_vars(self):
     #     vars = ["pow2_n_1", "pow2_n"]
-    #     for v in self.nbits_vars:
+    #     for v in self.base_vars:
     #         vars.append(f"{v}, {v}'")
     #     for i in range(self.bin_count):
     #         vars.append(f"b{i + 1}")
