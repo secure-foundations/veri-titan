@@ -17,6 +17,17 @@ def bvand():
 	y = BitVec("y", full_bits)
 	return x & y == y & x
 
+def bvand_nested():
+	x = BitVec("x", full_bits)
+	y = BitVec("y", full_bits)
+	z = BitVec("z", full_bits)
+	return (x & y) & z == x & (y & z)
+
+def bvxor():
+	x = BitVec("x", full_bits)
+	y = BitVec("y", full_bits)
+	return x ^ y == y ^ x
+
 def shift():
 	amt = BitVec("amt", full_bits)
 	query = Implies(
