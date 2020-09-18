@@ -8,9 +8,7 @@ class BinOpEq:
         self.src2 = src2
     
     def __str__(self):
-        if self.op == "&":
-            return f"{self.dst} = {self.src1} & {self.src2}"
-        raise Exception("NYI")
+        return f"{self.dst} = {self.src1} & {self.src2}"
 
 class UniOpEq:
     def __init__(self, op, dst, src):
@@ -19,9 +17,7 @@ class UniOpEq:
         self.src = src
 
     def __str__(self):
-        if self.op == "":
-            return f"{self.dst} = {self.src}"
-        raise Exception("NYI")
+        return f"{self.dst} = {self.op} {self.src}"
 
 class BaseVariable:
     def __init__(self, v, b):
@@ -50,9 +46,15 @@ class Encoder:
 
         # flatten expressions
         (p1, p2) = self.flatten_br(q)
+        print("")
 
         base_vars = self.base_vars
         self.base_vars = dict()
+
+        print("// flattened equations")
+        for eq in self.equations:
+            print("// " + str(eq))
+        print("")
 
         # create base variables
         defs = ["pow2_n"]
@@ -95,14 +97,16 @@ class Encoder:
             op = str(e.decl())
             v = self.get_fresh_tmp()
 
-            if op in {"&", "^"}:
-                [l, r] = children
-                eq = BinOpEq(op, v, l, r)
+            if op in {"&", "^", "+", "|"}:
+                eq = BinOpEq(op, v, children[0], children[1])
                 self.equations.add(eq)
-                # print(eq)
                 return v
-            else:
-                raise Exception(f"op {op} not handled")
+            if op in {"~"}:
+                eq = UniOpEq(op, v, children[0])
+                self.equations.add(eq)
+                return v
+
+            raise Exception(f"op {op} not handled")
         elif type(e) == z3.z3.BitVecNumRef:
             return str(e)
         raise Exception("not handled")
@@ -146,10 +150,12 @@ class Encoder:
             b = self.get_ext_bin(d)
             eq = f"\t{bl} + {br} - 2 * {bl} * {br} - {b},"
             print(eq)
+        # elif eq.op == "=":
+
         else:
             raise Exception("NYI")
 
-q = andorxor_135()
+q = addsub_1043()
 enc = Encoder(q)
 
 # print("")
