@@ -12,9 +12,6 @@ class BinOpEq:
             return f"{self.dst} = {self.src1} & {self.src2}"
         raise Exception("NYI")
 
-    # def encode():
-    #     print("bv_and(x', y', n) == pow2(n) * bv_and(b0, b1, 1) + bv_and(x, y, n - 1)")
-
 class UniOpEq:
     def __init__(self, op, dst, src):
         self.op = op
@@ -98,7 +95,7 @@ class Encoder:
             op = str(e.decl())
             v = self.get_fresh_tmp()
 
-            if op == "&":
+            if op in {"&", "^"}:
                 [l, r] = children
                 eq = BinOpEq(op, v, l, r)
                 self.equations.add(eq)
@@ -141,61 +138,18 @@ class Encoder:
             # print(f"\t{d}' - pow2_n * {b} - {d},")
             eq = f"\t{b} - {bl} * {br},"
             print(eq)
+        elif eq.op == "^":
+            d, s1, s2 = eq.dst, eq.src1, eq.src2
+            print(f"// encoding {d} == xor_n({s1}, {s2})")
+            bl = self.get_ext_bin(s1)
+            br = self.get_ext_bin(s2)
+            b = self.get_ext_bin(d)
+            eq = f"\t{bl} + {br} - 2 * {bl} * {br} - {b},"
+            print(eq)
         else:
             raise Exception("NYI")
 
-    # def encode_bvr(self, e):
-    #     if type(e) == z3.z3.BitVecRef:
-    #         children = [self.encode_bvr(child) for child in e.children()]
-    #         num_children = len(children)
-
-    #         if num_children == 0:
-    #             v = str(e.decl())
-    #             if self.gpass:
-    #                 return v + "'"
-    #             else:
-    #                 self.add_input_var(v)
-    #                 return v
-    #         op = str(e.decl())
-    #         var = self.get_fresh_tmp()
-
-    #         if op == "&":
-    #             self.encode_and(var, children[0], children[1])
-    #             return var
-    #         if op == "^":
-    #             self.encode_xor(var, children[0], children[1])
-    #             return var
-    #         else:
-    #             raise Exception(f"op {op} not handled")
-    #     elif type(e) == z3.z3.BitVecNumRef:
-    #         return str(e)
-    #     else:
-    #         raise Exception("not handled")
-
-    # def encode_xor(self, t, l, r):
-    #     if self.gpass:
-    #         o0 = self.get_opaque(f"bv_xor({l}, {r}, n)")
-    #         eq = f"{t} - {o0}"
-    #         self.equations.add(eq)
-    #     else:
-    #         # -b + bl + br - 2 * bl * br == 0
-    #         o0 = self.get_opaque(f"bv_xor({l}, {r}, n - 1)")
-    #         eq = f"{t} - {o0}"
-    #         self.equations.add(eq)
-
-    #         bl = self.get_assoc_bin(l)
-    #         br = self.get_assoc_bin(r)
-    #         b = self.get_fresh_bin()
-    #         eq = f"{bl} + {br} - 2 * {bl} * {br} - {b}"
-    #         self.equations.add(eq)
-
-    #         o1 = self.get_opaque(f"bv_xor({l}', {r}', n)")
-    #         eq = f"{o1} - pow2_n * {b} - {o0}"
-    #         self.equations.add(eq)
-
-
-
-q = bvand()
+q = andorxor_135()
 enc = Encoder(q)
 
 # print("")
