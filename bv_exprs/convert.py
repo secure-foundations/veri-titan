@@ -52,24 +52,30 @@ class Encoder:
         self.equations = set()
 
         # flatten expressions
-        self.flatten_br(q)
+        (p1, p2) = self.flatten_br(q)
 
         base_vars = self.base_vars
         self.base_vars = dict()
 
         # create base variables
-        defs = []
+        defs = ["pow2_n"]
         for v in base_vars:
             b = self.get_fresh_bin()
             var = BaseVariable(v, b)
             self.base_vars[v] = var
             defs.extend(var.get_defs())
-            print(var.get_base_equations())
 
         print("ring r=integer,(" + ", ".join(defs) + "),lp;")
-        print("// done encoding base vars\n")
+
+        print("ideal I =")
+        for var in self.base_vars.values():
+            print(f"// encoding base variable {var.get_base()}")
+            print(var.get_base_equations())
 
         self.encode_equations()
+        print("// encoding induction hypothesis")
+        print(f"\t{p1} - {p2};")
+        print(f"ideal G = groebner(I);\nreduce({p1}' - {p2}', G);")
 
     def flatten_br(self, q):
         assert type(q) == z3.z3.BoolRef
@@ -77,8 +83,7 @@ class Encoder:
         children = q.children()
         l = self.flatten_bvr(children[0])
         r = self.flatten_bvr(children[1])
-        # print("IH:")
-        print(UniOpEq("", l, r))
+        return (l, r)
 
     def flatten_bvr(self, e):
         if type(e) == z3.z3.BitVecRef:
@@ -129,14 +134,13 @@ class Encoder:
     def encode_equation(self, eq):
         if eq.op == "&":
             d, s1, s2 = eq.dst, eq.src1, eq.src2
-            print(f"// [original] {d} == and_n({s1}, {s2})")
+            print(f"// encoding {d} == and_n({s1}, {s2})")
             bl = self.get_ext_bin(s1)
             br = self.get_ext_bin(s2)
             b = self.get_ext_bin(d)
             # print(f"\t{d}' - pow2_n * {b} - {d},")
             eq = f"\t{b} - {bl} * {br},"
             print(eq)
-            # print("")
         else:
             raise Exception("NYI")
 
@@ -189,30 +193,9 @@ class Encoder:
     #         eq = f"{o1} - pow2_n * {b} - {o0}"
     #         self.equations.add(eq)
 
-    # def get_opaque(self, actual):
-    #     if actual in self.opaque_vars:
-    #         return self.opaque_vars[actual]
-    #     o = "o%d" % (len(self.opaque_vars) + 1) 
-    #     # print(f"[DEBUG] allocating {o} = {actual}")
-    #     self.opaque_vars[actual] = o
-    #     return o
 
-    # def get_assoc_bin(self, v):
-    #     if v not in self.base_vars:
-    #         raise Exception("not an nbits var")
-    #     return self.base_vars[v]
 
-    # def dump_vars(self):
-    #     vars = ["pow2_n_1", "pow2_n"]
-    #     for v in self.base_vars:
-    #         vars.append(f"{v}, {v}'")
-    #     for i in range(self.bin_count):
-    #         vars.append(f"b{i + 1}")
-    #     for o in self.opaque_vars.values():
-    #         vars.append(o)
-    #     print("ring r=integer,(" + ", ".join(vars) + "),lp;")
-
-q = bvand_nested()
+q = bvand()
 enc = Encoder(q)
 
 # print("")
