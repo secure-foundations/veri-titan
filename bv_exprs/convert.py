@@ -133,16 +133,16 @@ class Encoder:
             self.encode_equation(eq)
 
     def encode_equation(self, eq):
-        if eq.op == "&":
+        op = eq.op
+        if op == "&":
             d, s1, s2 = eq.dst, eq.src1, eq.src2
             print(f"// encoding {d} == and_n({s1}, {s2})")
             bl = self.get_ext_bin(s1)
             br = self.get_ext_bin(s2)
             b = self.get_ext_bin(d)
-            # print(f"\t{d}' - pow2_n * {b} - {d},")
             eq = f"\t{b} - {bl} * {br},"
             print(eq)
-        elif eq.op == "^":
+        elif op == "^":
             d, s1, s2 = eq.dst, eq.src1, eq.src2
             print(f"// encoding {d} == xor_n({s1}, {s2})")
             bl = self.get_ext_bin(s1)
@@ -150,10 +150,19 @@ class Encoder:
             b = self.get_ext_bin(d)
             eq = f"\t{bl} + {br} - 2 * {bl} * {br} - {b},"
             print(eq)
-        # elif eq.op == "=":
-
+        elif op == "|":
+            d, s1, s2 = eq.dst, eq.src1, eq.src2
+            print(f"// encoding {d} == or_n({s1}, {s2})")
+            bl = self.get_ext_bin(s1)
+            br = self.get_ext_bin(s2)
+            b = self.get_ext_bin(d)
+            eq = f"\t{bl} + {br} + * {bl} * {br} - {b},"
+            print(eq)
+        elif op == "~":
+            print(op)
+            raise Exception(f"{op} NYI")
         else:
-            raise Exception("NYI")
+            raise Exception(f"{op} NYI")
 
 q = addsub_1043()
 enc = Encoder(q)
