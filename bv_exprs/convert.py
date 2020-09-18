@@ -26,41 +26,50 @@ class UniOpEq:
             return f"{self.dst} = {self.src}"
         raise Exception("NYI")
 
-
-# class Flattener:
-#     def __init__(self, q):
-#         self.tmp_count = 0
-
 class BaseVariable:
     def __init__(self, v, b):
         self.v = v
+        self.ev = v + "'"
         self.b = b
     
     def get_base(self):
         return self.v
 
-    def get_ext(self):
-        return self.v + "'"
+    def get_ext_bin(self):
+        return self.b
+    
+    def get_defs(self):
+        return [self.v, self.ev, self.b]
+
+    def get_base_equations(self):
+        return f"\t{self.ev} - {self.b} * pow2_n - {self.v},\n\t{self.b} * (1 - {self.b})," 
 
 class Encoder:
     def __init__(self, q):
         self.tmp_count = 0
         self.bin_count = 0
         self.base_vars = set()
-
-        # self.opaque_vars = dict()
-        # self.gpass = False
         self.equations = set()
 
+        # flatten expressions
         self.flatten_br(q)
 
         base_vars = self.base_vars
         self.base_vars = dict()
-        for var in base_vars:
-            b = self.get_fresh_bin()
-            self.base_vars[var] = BaseVariable(var, b)
 
-        # self.encode_equations()
+        # create base variables
+        defs = []
+        for v in base_vars:
+            b = self.get_fresh_bin()
+            var = BaseVariable(v, b)
+            self.base_vars[v] = var
+            defs.extend(var.get_defs())
+            print(var.get_base_equations())
+
+        print("ring r=integer,(" + ", ".join(defs) + "),lp;")
+        print("// done encoding base vars\n")
+
+        self.encode_equations()
 
     def flatten_br(self, q):
         assert type(q) == z3.z3.BoolRef
@@ -108,7 +117,10 @@ class Encoder:
         # eq = f"{b} * (1 - {b})"
         return b
 
-    # def get_assoc_bin(self, var):
+    def get_ext_bin(self, var):
+        if var not in self.base_vars:
+            raise Exception("not a base var")
+        return self.base_vars[var].get_ext_bin()
 
     def encode_equations(self):
         for eq in self.equations:
@@ -117,25 +129,16 @@ class Encoder:
     def encode_equation(self, eq):
         if eq.op == "&":
             d, s1, s2 = eq.dst, eq.src1, eq.src2
-            # print(f"{d} == and_n({s1}, {s2})")
-
-            # bl = self.get_assoc_bin(l)
-            # br = self.get_assoc_bin(r)
-            # b = self.get_fresh_bin()
-            # eq = f"{b} - {bl} * {br}"
-            # print(f"{d}' == pow2_n * {b} + bv_and(x, y, n)")
+            print(f"// [original] {d} == and_n({s1}, {s2})")
+            bl = self.get_ext_bin(s1)
+            br = self.get_ext_bin(s2)
+            b = self.get_ext_bin(d)
+            # print(f"\t{d}' - pow2_n * {b} - {d},")
+            eq = f"\t{b} - {bl} * {br},"
+            print(eq)
+            # print("")
         else:
             raise Exception("NYI")
-
-    # def encode_br(self, q):
-    #     children = q.children()
-    #     l = self.encode_bvr(children[0])
-    #     r = self.encode_bvr(children[1])
-    #     eq = l + " - " + r
-    #     if self.gpass:
-    #         return eq
-    #     else:
-    #         self.equations.add(eq)
 
     # def encode_bvr(self, e):
     #     if type(e) == z3.z3.BitVecRef:
@@ -165,26 +168,6 @@ class Encoder:
     #     else:
     #         raise Exception("not handled")
 
-    # def encode_and(self, t, l, r):
-    #     if self.gpass:
-    #         o0 = self.get_opaque(f"bv_and({l}, {r}, n)")
-    #         eq = f"{t} - {o0}"
-    #         print(f"[DEBUG] adding {t} = bv_and({l}, {r}, n)")
-    #         self.equations.add(eq)
-    #     else:
-    #         o0 = self.get_opaque(f"bv_and({l}, {r}, n - 1)")
-    #         print(f"[DEBUG] adding {t} = bv_and({l}, {r}, n - 1)")
-    #         eq = f"{t} - {o0}"
-    #         self.equations.add(eq)
-
-
-    #         self.equations.add(eq)
-
-    #         o1 = self.get_opaque(f"bv_and({l}', {r}', n)")
-    #         eq = f"{o1} - pow2_n * {b} - {o0}"
-    #         print(f"[DEBUG] adding bv_and({l}', {r}', n) = pow2_n * {b} ＋ bv_and({l}, {r}, n)")
-    #         self.equations.add(eq)
-
     # def encode_xor(self, t, l, r):
     #     if self.gpass:
     #         o0 = self.get_opaque(f"bv_xor({l}, {r}, n)")
@@ -204,13 +187,6 @@ class Encoder:
 
     #         o1 = self.get_opaque(f"bv_xor({l}', {r}', n)")
     #         eq = f"{o1} - pow2_n * {b} - {o0}"
-    #         self.equations.add(eq)
-
-    # def add_input_var(self, v):
-    #     if v not in self.base_vars:
-    #         b = self.get_fresh_bin()
-    #         self.base_vars[v] = b
-    #         eq = f"{v}' - pow2_n_1 * {b} - {v}"
     #         self.equations.add(eq)
 
     # def get_opaque(self, actual):
