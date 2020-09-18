@@ -5,7 +5,7 @@ In the following `*`, `+` are used as mathematical multiplication and addition w
 
 ## Polynomial Encoding Of BV (Inductive):
 
-assume `x'`	and `y'` are `n` bits BVs, extended from `x` and `y`, then we can write the definition inductively:
+assume `x'`	and `y'` are `n + 1` bits BVs, extended from `x` and `y`, then we can write the definition inductively:
 
 		x' - pow2(n) * b0 - x == 0
 		y' - pow2(n) * b1 - y == 0
@@ -71,9 +71,9 @@ there exists `k` such that the following holds:
 
 ### Inductive Case:
 
-given: `bv_and(x, y, n - 1) == bv_and(y, x, n - 1)`
+given: `bv_and(x, y, n) == bv_and(y, x, n)`
 
-show: `bv_and(x', y', n) == bv_and(y', x', n)`
+show: `bv_and(x', y', n + 1) == bv_and(y', x', n + 1)`
 
 we derive the following equations:
 
