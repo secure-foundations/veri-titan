@@ -21,7 +21,7 @@ make sure `b0`, `b1` are single bit:
 
 introduce a single bit variable so that `t == b0 & b1`:
 
-		bv_and(x', y', n) - pow2(n) * t - bv_and(x, y, n - 1) == 0
+		bv_and(x', y', n + 1) - pow2(n) * t - bv_and(x, y, n) == 0
 
 		t * (1 - t) == 0
 		t - b0 * b1 == 0
@@ -79,20 +79,20 @@ we derive the following equations:
 
 use our encoding above for `bv_and`, define the relationship between `bv_and(x', y', n)` and `bv_and(x, y, n)`:
 
-		bv_and(x', y', n) - pow2(n) * t1 - bv_and(x, y, n - 1) == 0
+		bv_and(x', y', n + 1) - pow2(n) * t1 - bv_and(x, y, n) == 0
 		t1 * (1 - t1) == 0
 		t1 - b0 * b1 == 0
 
 use our encoding above for `bv_and`, define the relationship between `bv_and(y', x', n)` and `bv_and(y, x, n)`:
 
-		bv_and(y', x', n) - pow2(n) * t2 - bv_and(y, x, n - 1) == 0
+		bv_and(y', x', n + 1) - pow2(n) * t2 - bv_and(y, x, n) == 0
 
 		t2 * (1 - t2) == 0
 		t2 - b1 * b0 == 0
 
 finally add the induction hypothesis:
 
-		bv_and(x, y, n - 1) - bv_and(y, x, n - 1) == 0
+		bv_and(x, y, n) - bv_and(y, x, n) == 0
 
 all together, we define this set of polynomials `P`:
 
