@@ -12,6 +12,12 @@ HALF_BASE = int(2 ** half_bits)
 
 # scales well (256 bits+)
 
+def bvadd():
+	x = BitVec("x", full_bits)
+	y = BitVec("y", full_bits)
+	z = BitVec("z", full_bits)
+	return x + y + z == y + z + x
+
 def bvnot():
 	x = BitVec("x", full_bits)
 	return ~x == -x - 1
