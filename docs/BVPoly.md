@@ -5,7 +5,7 @@ In the following `*`, `+` are used as mathematical multiplication and addition w
 
 ## Polynomial Encoding Of BV (Inductive):
 
-assume `x'`	and `y'` are `n` bits BVs, extended from `x` and `y`, then we can write the definition inductively:
+assume `x'`	and `y'` are `n + 1` bits BVs, extended from `x` and `y`, then we can write the definition inductively:
 
 		x' - pow2(n) * b0 - x == 0
 		y' - pow2(n) * b1 - y == 0
@@ -17,33 +17,33 @@ make sure `b0`, `b1` are single bit:
 
 ## Polynomial Encoding of And (Inductive):
 
-		bv_and(x', y', n) == pow2(n) * bv_and(b0, b1, 1) + bv_and(x, y, n - 1)
+		bv_and(x', y', n + 1) == pow2(n) * bv_and(b0, b1, 1) + bv_and(x, y, n)
 
 introduce a single bit variable so that `t == b0 & b1`:
 
-		bv_and(x', y', n) - pow2(n) * t - bv_and(x, y, n - 1) == 0
+		bv_and(x', y', n + 1) - pow2(n) * t - bv_and(x, y, n) == 0
 
 		t * (1 - t) == 0
 		t - b0 * b1 == 0
 
 ## Polynomial Encoding of Or (Inductive):
 
-		bv_or(x', y', n) == pow2(n) * bv_or(b0, b1, 1) + bv_or(x, y, n - 1)
+		bv_or(x', y', n + 1) == pow2(n) * bv_or(b0, b1, 1) + bv_or(x, y, n)
 
 introduce a single bit variable so that `t == b0 | b1`:
 
-		bv_or(x', y', n) - pow2(n) * t + bv_or(x, y, n - 1)
+		bv_or(x', y', n + 1) - pow2(n) * t + bv_or(x, y, n)
 
 		t * (1 - t) == 0
 		(1 - t) - (1 + b0 * b1 - b0 - b1) == 0
 
 ## Polynomial Encoding of Add (Non-Inductive):
 
-		bv_add(x', y', n) == (x' + y') % pow2(n + 1)
+		bv_add(x', y', n + 1) == (x' + y') % pow2(n + 1)
 
 there exists `k` such that the following holds:
 
-		bv_add(x', y', n) - x' - y' - k * pow2(n + 1) == 0
+		bv_add(x', y', n + 1) - x' - y' - k * pow2(n + 1) == 0
 
 ## Polynomial Encoding of Add (Inductive):
 
@@ -51,11 +51,11 @@ there exists `k` such that the following holds:
 
 ## Polynomial Encoding of Mul (Non-Inductive):
 
-		bv_mul(x', y', n) == (x' * y') % pow2(n + 1)
+		bv_mul(x', y', n + 1) == (x' * y') % pow2(n + 1)
 
 there exists `k` such that the following holds:
 
-		bv_mul(x', y', n) - x' * y' - k * pow2(n + 1) == 0
+		bv_mul(x', y', n + 1) - x' * y' - k * pow2(n + 1) == 0
 
 ## Polynomial Encoding of Mul (Inductive):
 
@@ -71,28 +71,28 @@ there exists `k` such that the following holds:
 
 ### Inductive Case:
 
-given: `bv_and(x, y, n - 1) == bv_and(y, x, n - 1)`
+given: `bv_and(x, y, n) == bv_and(y, x, n)`
 
-show: `bv_and(x', y', n) == bv_and(y', x', n)`
+show: `bv_and(x', y', n + 1) == bv_and(y', x', n + 1)`
 
 we derive the following equations:
 
 use our encoding above for `bv_and`, define the relationship between `bv_and(x', y', n)` and `bv_and(x, y, n)`:
 
-		bv_and(x', y', n) - pow2(n) * t1 - bv_and(x, y, n - 1) == 0
+		bv_and(x', y', n + 1) - pow2(n) * t1 - bv_and(x, y, n) == 0
 		t1 * (1 - t1) == 0
 		t1 - b0 * b1 == 0
 
 use our encoding above for `bv_and`, define the relationship between `bv_and(y', x', n)` and `bv_and(y, x, n)`:
 
-		bv_and(y', x', n) - pow2(n) * t2 - bv_and(y, x, n - 1) == 0
+		bv_and(y', x', n + 1) - pow2(n) * t2 - bv_and(y, x, n) == 0
 
 		t2 * (1 - t2) == 0
 		t2 - b1 * b0 == 0
 
 finally add the induction hypothesis:
 
-		bv_and(x, y, n - 1) - bv_and(y, x, n - 1) == 0
+		bv_and(x, y, n) - bv_and(y, x, n) == 0
 
 all together, we define this set of polynomials `P`:
 
@@ -102,21 +102,21 @@ all together, we define this set of polynomials `P`:
 		b0 * (1 - b0)
 		b1 * (1 - b1)
 
-		bv_and(x', y', n) - pow2(n) * t1 - bv_and(x, y, n - 1)
+		bv_and(x', y', n + 1) - pow2(n) * t1 - bv_and(x, y, n)
 
 		t1 * (1 - t1)
 		t1 - b0 * b1
 
-		bv_and(y', x', n) - pow2(n) * t2 - bv_and(y, x, n - 1)
+		bv_and(y', x', n + 1) - pow2(n) * t2 - bv_and(y, x, n)
 
 		t2 * (1 - t2)
 		t2 - b1 * b0
 
-		bv_and(x, y, n - 1) - bv_and(y, x, n - 1)
+		bv_and(x, y, n) - bv_and(y, x, n)
 
 the goal can be translated into `g`:
 
-		bv_and(x', y', n) - bv_and(y', x', n) 
+		bv_and(x', y', n + 1) - bv_and(y', x', n + 1)
 
 now we have finished the polynomial encoding. 
 
