@@ -35,7 +35,7 @@ class BaseVariable:
         return [self.v, self.ev, self.b]
 
     def get_base_equations(self):
-        return f"\t{self.ev} - {self.b} * pow2_n - {self.v},\n\t{self.b} * (1 - {self.b})," 
+        return f"\t{self.ev} - {self.b} * pow2_n - {self.v},\n\t{self.b} * (1 - {self.b})" 
 
 class Encoder:
     def __init__(self, q):
@@ -45,6 +45,7 @@ class Encoder:
 
         self.base_vars = set()
         self.flat_eqs = set()
+        self.polys = list()
 
         # flatten expressions
         (p1, p2) = self.flatten_br(q)
@@ -59,26 +60,44 @@ class Encoder:
         print("")
 
         # create base variables
-        defs = ["pow2_n", "pow2_n_1"]
         for v in base_vars:
             b = self.get_fresh_bin()
             var = BaseVariable(v, b)
             self.base_vars[v] = var
-            defs.extend(var.get_defs())
 
+        for var in self.base_vars.values():
+            self.append_poly(f"// encoding base variable {var.get_base()}")
+            self.append_poly(var.get_base_equations())
+
+        self.encode_equations()
+
+        self.append_poly("// encoding induction hypothesis")
+        self.append_poly(f"\t{p1} - {p2}")
+        self.append_poly("// encoding pow")
+        self.append_poly(f"\tpow2_n_1 - 2 * pow2_n")
+        self.append_poly(f"\tpow2_n_1")
+
+        self.dump_encoding()
+
+        print(f"ideal G = groebner(I);\nreduce({p1}' - {p2}', G);")
+
+    def append_poly(self, p):
+        self.polys.append(p)
+
+    def dump_encoding(self):
+        defs = ["pow2_n", "pow2_n_1"]
+        for var in self.base_vars.values():
+            defs.extend(var.get_defs())
+        for i in range(self.k_count):
+            defs.append("k%d" % (i + 1))
         print("ring r=integer,(" + ", ".join(defs) + "),lp;")
 
         print("ideal I =")
-        for var in self.base_vars.values():
-            print(f"// encoding base variable {var.get_base()}")
-            print(var.get_base_equations())
-
-        self.encode_equations()
-        print("// encoding induction hypothesis")
-        print(f"\t{p1} - {p2};")
-        print(f"ideal G = groebner(I);\nreduce({p1}' - {p2}', G);")
-
-
+        for i, poly in enumerate(self.polys):
+            if i != len(self.polys) - 1:
+                print(poly + ",")
+            else:
+                print(poly + ";")
 
     def flatten_br(self, q):
         assert type(q) == z3.z3.BoolRef
@@ -150,22 +169,18 @@ class Encoder:
             b = self.get_ext_bin(d)
 
             if op == "&":
-                print(f"// encoding {d} == and_n({s1}, {s2})")
-                eq = f"\t{b} - {bl} * {br},"
-                print(eq)
+                self.append_poly(f"// encoding {d} == and_n({s1}, {s2})")
+                self.append_poly(f"\t{b} - {bl} * {br}")
             elif op == "^":
-                print(f"// encoding {d} == xor_n({s1}, {s2})")
-                eq = f"\t{bl} + {br} - 2 * {bl} * {br} - {b},"
-                print(eq)
+                self.append_poly(f"// encoding {d} == xor_n({s1}, {s2})")
+                self.append_poly(f"\t{bl} + {br} - 2 * {bl} * {br} - {b}")
             elif op == "|":
-                print(f"// encoding {d} == or_n({s1}, {s2})")
-                eq = f"\t{bl} + {br} + * {bl} * {br} - {b},"
-                print(eq)
+                self.append_poly(f"// encoding {d} == or_n({s1}, {s2})")
+                self.append_poly(f"\t{bl} + {br} + * {bl} * {br} - {b}")
             elif op == "+":
-                print(f"// encoding {d} == add_n({s1}, {s2})")
+                self.append_poly(f"// encoding {d} == add_n({s1}, {s2})")
                 k = self.get_fresh_k()
-                eq = f"\t{d}' - {s1}' - {s2}' - {k} * pow2_n_1,"
-                print(eq)
+                self.append_poly(f"\t{d}' - {s1}' - {s2}' - {k} * pow2_n_1")
         # elif op == "~":
         #     raise Exception(f"op {op} is NYI")
         else:
