@@ -46,6 +46,17 @@ class BaseVariable:
     def get_base_equations(self):
         return f"\t{self.ev} - {self.b} * pow2_n - {self.v},\n\t{self.b} * (1 - {self.b})"
 
+class Constant:
+    def __init__(self, v):
+        self.v = v
+
+    def get_ext_bin(self):
+        # TODO: is this right?
+        return "0"
+    
+    def __str__(self):
+        return self.v
+
 class Encoder:
     def __init__(self, q):
         self.tmp_count = 0
@@ -130,7 +141,9 @@ class Encoder:
             raise Exception(f"op {op} not handled")
 
         elif type(e) == z3.z3.BitVecNumRef:
-            return str(e)
+            return Constant(str(e))
+        else:
+            raise Exception(f"{type(e)} is NYI")
 
     def get_fresh_base(self, name):
         if name not in self.base_vars:
