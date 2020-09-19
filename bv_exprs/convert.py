@@ -104,8 +104,6 @@ class Encoder:
         print("// flattened equations")
         for eq in self.flat_eqs:
             print("//\t" + str(eq))
-        # print("")
-
         return (l, r)
 
     def flatten_bvr(self, e):
@@ -162,39 +160,50 @@ class Encoder:
             self.encode_equation(eq)
 
     def encode_equation(self, eq):
-        op = eq.op
         if type(eq) == BinOpEq:
-            d, s1, s2 = eq.dst, eq.src1, eq.src2
-            bl = s1.get_ext_bin()
-            br = s2.get_ext_bin()
-            b = d.get_ext_bin()
-
-            if op == "&":
-                self.append_poly(f"// encoding {d} == and_n({s1}, {s2})")
-                self.append_poly(f"\t{b} - {bl} * {br}")
-            elif op == "^":
-                self.append_poly(f"// encoding {d} == xor_n({s1}, {s2})")
-                self.append_poly(f"\t{bl} + {br} - 2 * {bl} * {br} - {b}")
-            elif op == "|":
-                self.append_poly(f"// encoding {d} == or_n({s1}, {s2})")
-                self.append_poly(f"\t{bl} + {br} + * {bl} * {br} - {b}")
-            elif op == "+":
-                self.append_poly(f"// encoding {d} == add_n({s1}, {s2})")
-                k1 = self.get_fresh_k()
-                self.append_poly(f"\t{d} - {s1} - {s2} - {k1} * pow2_n")
-                k2 = self.get_fresh_k()
-                self.append_poly(f"\t{d}' - {s1}' - {s2}' - {k2} * pow2_n_1")
+            self.encode_binop_equation(eq)
         elif type(eq) == UniOpEq:
-            print(eq)
-            d, s = eq.dst, eq.src
-            bs = s.get_ext_bin()
-            bd = d.get_ext_bin()
-
-            if op == "~":
-                self.append_poly(f"// encoding {d} == not_n({s})")
-                self.append_poly(f"\t{bs} + {bd} - 1")
+            self.encode_uniop_equation(eq)
         else:
-            raise Exception(f"op {op} is NYI")
+            raise Exception(f"{type(eq)} is NYI")
+    
+    def encode_binop_equation(self, eq):
+        op = eq.op
+        d, s1, s2 = eq.dst, eq.src1, eq.src2
+        bl = s1.get_ext_bin()
+        br = s2.get_ext_bin()
+        b = d.get_ext_bin()
+
+        if op == "&":
+            self.append_poly(f"// encoding {d} == and_n({s1}, {s2})")
+            self.append_poly(f"\t{b} - {bl} * {br}")
+        elif op == "^":
+            self.append_poly(f"// encoding {d} == xor_n({s1}, {s2})")
+            self.append_poly(f"\t{bl} + {br} - 2 * {bl} * {br} - {b}")
+        elif op == "|":
+            self.append_poly(f"// encoding {d} == or_n({s1}, {s2})")
+            self.append_poly(f"\t{bl} + {br} + {bl} * {br} - {b}")
+        elif op == "+":
+            self.append_poly(f"// encoding {d} == add_n({s1}, {s2})")
+            k1 = self.get_fresh_k()
+            self.append_poly(f"\t{d} - {s1} - {s2} - {k1} * pow2_n")
+            k2 = self.get_fresh_k()
+            self.append_poly(f"\t{d}' - {s1}' - {s2}' - {k2} * pow2_n_1")
+        else:
+            raise Exception(f"binop {op} is NYI")
+    
+    def encode_uniop_equation(self, eq):
+        op = eq.op
+        # print(eq)
+        d, s = eq.dst, eq.src
+        bs = s.get_ext_bin()
+        bd = d.get_ext_bin()
+
+        if op == "~":
+            self.append_poly(f"// encoding {d} == not_n({s})")
+            self.append_poly(f"\t{bs} + {bd} - 1")
+        else:
+            raise Exception(f"uniop {op} is NYI")
 
 q = bvnot()
 enc = Encoder(q)
