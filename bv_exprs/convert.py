@@ -31,14 +31,17 @@ class UniOpEq:
 class BaseVariable:
     def __init__(self, v, b):
         self.v = v
-        self.ev = v + "'"
+        self.ev = self.v + "'"
         self.b = b
     
     def __str__(self):
         return self.v
 
-    def get_ext_bin(self):
+    def bin(self):
         return self.b
+
+    def ext(self):
+        return self.ev
     
     def get_defs(self):
         return [self.v, self.ev, self.b]
@@ -50,10 +53,13 @@ class Constant:
     def __init__(self, v):
         self.v = v
 
-    def get_ext_bin(self):
+    def bin(self):
         # TODO: is this right?
         return "0"
-    
+
+    def ext(self):
+        return self.v
+
     def __str__(self):
         return self.v
 
@@ -183,9 +189,9 @@ class Encoder:
     def encode_binop_equation(self, eq):
         op = eq.op
         d, s1, s2 = eq.dst, eq.src1, eq.src2
-        bl = s1.get_ext_bin()
-        br = s2.get_ext_bin()
-        b = d.get_ext_bin()
+        bl = s1.bin()
+        br = s2.bin()
+        b = d.bin()
 
         if op == "&":
             self.append_poly(f"// encoding {d} == and_n({s1}, {s2})")
@@ -201,7 +207,7 @@ class Encoder:
             k1 = self.get_fresh_k()
             self.append_poly(f"\t{d} - {s1} - {s2} - {k1} * pow2_n")
             k2 = self.get_fresh_k()
-            self.append_poly(f"\t{d}' - {s1}' - {s2}' - {k2} * pow2_n_1")
+            self.append_poly(f"\t{d.ext()} - {s1.ext()} - {s2.ext()} - {k2} * pow2_n_1")
         else:
             raise Exception(f"binop {op} is NYI")
     
@@ -209,11 +215,14 @@ class Encoder:
         op = eq.op
         # print(eq)
         d, s = eq.dst, eq.src
-        bs = s.get_ext_bin()
-        bd = d.get_ext_bin()
+        bs = s.bin()
+        bd = d.bin()
 
         if op == "~":
             self.append_poly(f"// encoding {d} == not_n({s})")
+            self.append_poly(f"\t{bs} + {bd} - 1")
+        elif op == "-":
+            self.append_poly(f"// encoding {d} == sub_n({s})")
             self.append_poly(f"\t{bs} + {bd} - 1")
         else:
             raise Exception(f"uniop {op} is NYI")
