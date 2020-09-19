@@ -15,6 +15,11 @@ HALF_BASE = int(2 ** half_bits)
 def bvadd():
 	x = BitVec("x", full_bits)
 	y = BitVec("y", full_bits)
+	return x + y == y + x
+
+def bvadd_nested():
+	x = BitVec("x", full_bits)
+	y = BitVec("y", full_bits)
 	z = BitVec("z", full_bits)
 	return x + y + z == y + z + x
 

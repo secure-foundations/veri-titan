@@ -1,5 +1,13 @@
 from bv_exprs import *
 
+ops = {
+    "&" : "and",
+    "|" : "or",
+    "^" : "xor",
+    "+" : "add",
+    # "-" : "sub",
+}
+
 class BinOpEq:
     def __init__(self, op, dst, src1, src2):
         self.op = op
@@ -8,7 +16,7 @@ class BinOpEq:
         self.src2 = src2
     
     def __str__(self):
-        return f"{self.dst} = {self.src1} {self.op} {self.src2}"
+        return f"{self.dst} == {ops[self.op]}_n({self.src1}, {self.src2})"
 
 class UniOpEq:
     def __init__(self, op, dst, src):
@@ -17,7 +25,7 @@ class UniOpEq:
         self.src = src
 
     def __str__(self):
-        return f"{self.dst} = {self.op} {self.src}"
+        return f"{self.dst} == {ops[self.op]}_n({self.src})"
 
 class BaseVariable:
     def __init__(self, v, b):
@@ -179,8 +187,10 @@ class Encoder:
                 self.append_poly(f"\t{bl} + {br} + * {bl} * {br} - {b}")
             elif op == "+":
                 self.append_poly(f"// encoding {d} == add_n({s1}, {s2})")
-                k = self.get_fresh_k()
-                self.append_poly(f"\t{d}' - {s1}' - {s2}' - {k} * pow2_n_1")
+                k1 = self.get_fresh_k()
+                self.append_poly(f"\t{d} - {s1} - {s2} - {k1} * pow2_n")
+                k2 = self.get_fresh_k()
+                self.append_poly(f"\t{d}' - {s1}' - {s2}' - {k2} * pow2_n_1")
         # elif op == "~":
         #     raise Exception(f"op {op} is NYI")
         else:
