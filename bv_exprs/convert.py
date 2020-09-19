@@ -34,7 +34,7 @@ class BaseVariable:
         self.ev = v + "'"
         self.b = b
     
-    def get_base(self):
+    def __str__(self):
         return self.v
 
     def get_ext_bin(self):
@@ -44,7 +44,7 @@ class BaseVariable:
         return [self.v, self.ev, self.b]
 
     def get_base_equations(self):
-        return f"\t{self.ev} - {self.b} * pow2_n - {self.v},\n\t{self.b} * (1 - {self.b})" 
+        return f"\t{self.ev} - {self.b} * pow2_n - {self.v},\n\t{self.b} * (1 - {self.b})"
 
 class Encoder:
     def __init__(self, q):
@@ -52,7 +52,7 @@ class Encoder:
         self.bin_count = 0
         self.k_count = 0
 
-        self.base_vars = set()
+        self.base_vars = dict()
         self.flat_eqs = set()
         self.polys = list()
 
@@ -60,17 +60,8 @@ class Encoder:
         (p1, p2) = self.flatten_br(q)
         print("")
 
-        base_vars = self.base_vars
-        self.base_vars = dict()
-
-        # create base variables
-        for v in base_vars:
-            b = self.get_fresh_bin()
-            var = BaseVariable(v, b)
-            self.base_vars[v] = var
-
         for var in self.base_vars.values():
-            self.append_poly(f"// encoding base variable {var.get_base()}")
+            self.append_poly(f"// encoding base variable {var}")
             self.append_poly(var.get_base_equations())
 
         self.encode_equations()
@@ -124,8 +115,7 @@ class Encoder:
             op = str(e.decl())
 
             if num_children == 0:
-                self.base_vars.add(op)
-                return op
+                return self.get_fresh_base(op)
 
             v = self.get_fresh_tmp()
 
@@ -144,11 +134,17 @@ class Encoder:
         elif type(e) == z3.z3.BitVecNumRef:
             return str(e)
 
+    def get_fresh_base(self, name):
+        if name not in self.base_vars:
+            b = self.get_fresh_bin()
+            var = BaseVariable(name, b)
+            self.base_vars[name] = var
+        return self.base_vars[name]
+
     def get_fresh_tmp(self):
         self.tmp_count += 1
         t = "t%d" % self.tmp_count
-        self.base_vars.add(t)
-        return t
+        return self.get_fresh_base(t)
 
     def get_fresh_bin(self):
         self.bin_count += 1
@@ -161,11 +157,6 @@ class Encoder:
         t = "k%d" % self.k_count
         return t
 
-    def get_ext_bin(self, var):
-        if var not in self.base_vars:
-            raise Exception("not a base var")
-        return self.base_vars[var].get_ext_bin()
-
     def encode_equations(self):
         for eq in self.flat_eqs:
             self.encode_equation(eq)
@@ -174,9 +165,9 @@ class Encoder:
         op = eq.op
         if type(eq) == BinOpEq:
             d, s1, s2 = eq.dst, eq.src1, eq.src2
-            bl = self.get_ext_bin(s1)
-            br = self.get_ext_bin(s2)
-            b = self.get_ext_bin(d)
+            bl = s1.get_ext_bin()
+            br = s2.get_ext_bin()
+            b = d.get_ext_bin()
 
             if op == "&":
                 self.append_poly(f"// encoding {d} == and_n({s1}, {s2})")
@@ -198,7 +189,7 @@ class Encoder:
         else:
             raise Exception(f"op {op} is NYI")
 
-q = bvadd()
+q = bvxor()
 enc = Encoder(q)
 
 # print("")
