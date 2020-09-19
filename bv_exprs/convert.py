@@ -5,7 +5,8 @@ ops = {
     "|" : "or",
     "^" : "xor",
     "+" : "add",
-    # "-" : "sub",
+    "-" : "sub",
+    "~" : "not",
 }
 
 class BinOpEq:
@@ -62,11 +63,6 @@ class Encoder:
         base_vars = self.base_vars
         self.base_vars = dict()
 
-        print("// flattened equations")
-        for eq in self.flat_eqs:
-            print("//\t" + str(eq))
-        print("")
-
         # create base variables
         for v in base_vars:
             b = self.get_fresh_bin()
@@ -113,34 +109,40 @@ class Encoder:
         children = q.children()
         l = self.flatten_bvr(children[0])
         r = self.flatten_bvr(children[1])
+
+        print("// flattened equations")
+        for eq in self.flat_eqs:
+            print("//\t" + str(eq))
+        # print("")
+
         return (l, r)
 
     def flatten_bvr(self, e):
         if type(e) == z3.z3.BitVecRef:
             children = [self.flatten_bvr(child) for child in e.children()]
             num_children = len(children)
+            op = str(e.decl())
 
             if num_children == 0:
-                var = str(e.decl())
-                self.base_vars.add(var)
-                return var
+                self.base_vars.add(op)
+                return op
 
-            op = str(e.decl())
             v = self.get_fresh_tmp()
 
-            if op in {"&", "^", "+", "|"}:
-                eq = BinOpEq(op, v, children[0], children[1])
-                self.flat_eqs.add(eq)
-                return v
-            if op in {"~"}:
+            if num_children == 1:
                 eq = UniOpEq(op, v, children[0])
                 self.flat_eqs.add(eq)
                 return v
 
+            if num_children == 2:
+                eq = BinOpEq(op, v, children[0], children[1])
+                self.flat_eqs.add(eq)
+                return v
+
             raise Exception(f"op {op} not handled")
-        # elif type(e) == z3.z3.BitVecNumRef:
-        #     return str(e)
-        raise Exception("not handled")
+
+        elif type(e) == z3.z3.BitVecNumRef:
+            return str(e)
 
     def get_fresh_tmp(self):
         self.tmp_count += 1
