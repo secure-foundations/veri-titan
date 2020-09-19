@@ -184,12 +184,19 @@ class Encoder:
                 self.append_poly(f"\t{d} - {s1} - {s2} - {k1} * pow2_n")
                 k2 = self.get_fresh_k()
                 self.append_poly(f"\t{d}' - {s1}' - {s2}' - {k2} * pow2_n_1")
-        # elif op == "~":
-        #     raise Exception(f"op {op} is NYI")
+        elif type(eq) == UniOpEq:
+            print(eq)
+            d, s = eq.dst, eq.src
+            bs = s.get_ext_bin()
+            bd = d.get_ext_bin()
+
+            if op == "~":
+                self.append_poly(f"// encoding {d} == not_n({s})")
+                self.append_poly(f"\t{bs} + {bd} - 1")
         else:
             raise Exception(f"op {op} is NYI")
 
-q = bvxor()
+q = bvnot()
 enc = Encoder(q)
 
 # print("")
