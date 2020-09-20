@@ -91,7 +91,7 @@ class Encoder:
 
         self.dump_encoding()
 
-        print(f"ideal G = groebner(I);\nreduce({p1}' - {p2}', G);")
+        print(f"ideal G = groebner(I);\nreduce({p1.ext()} - {p2.ext()}, G);")
 
     def append_poly(self, p):
         self.polys.append(p)
@@ -221,13 +221,17 @@ class Encoder:
         if op == "~":
             self.append_poly(f"// encoding {d} == not_n({s})")
             self.append_poly(f"\t{bs} + {bd} - 1")
+            self.append_poly(f"\t{d} + {s} + 1")
+            self.append_poly(f"\t{d.ext()} + {s.ext()} + 1")
         elif op == "-":
             self.append_poly(f"// encoding {d} == sub_n({s})")
             self.append_poly(f"\t{bs} + {bd} - 1")
+            self.append_poly(f"\t{d} + {s}")
+            self.append_poly(f"\t{d.ext()} + {s.ext()}")
         else:
             raise Exception(f"uniop {op} is NYI")
 
-q = bvnot()
+q = andorxor_135()
 enc = Encoder(q)
 
 # print("")
