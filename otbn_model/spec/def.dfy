@@ -390,9 +390,9 @@ function and256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 function rshi256(x:Bignum, y:Bignum, shift_bit:int) : Bignum
 	requires imm < 256;
 {
-  var upper = (x as bv256 << (256)) as uint256;
-	var concat = upper + y;
-	((concat as bv256 >> shift_bit) as uint256) % BASE_256;
+  var upper := (x as bv256 << (256)) as uint256;
+	var concat := upper + y;
+	((concat as bv256 >> shift_bit) as uint256) % BASE_256
 }
 
 }
