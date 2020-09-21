@@ -25,7 +25,7 @@ def bvadd_nested():
 
 def bvnot():
 	x = BitVec("x", full_bits)
-	return -(~x) == x + 1
+	return 0 == x + 1 + ~x
 
 def bvand():
 	x = BitVec("x", full_bits)
