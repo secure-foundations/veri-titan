@@ -235,10 +235,12 @@ class Encoder:
             raise Exception(f"uniop {op} is NYI")
 
 if __name__ == '__main__':
-	try:
-		func = sys.argv[1] + "()"
-		query = eval(func)
-		Encoder(query)
-	except:
-		print("usage:\npython encode.py [query_name] [bit_number]")
-		sys.exit(1)
+    try:
+        func = sys.argv[1] + "()"
+        query = eval(func)
+        # prove(query)
+
+        Encoder(query)
+    except:
+        print("usage:\npython encode.py [query_name] [bit_number]")
+        sys.exit(1)
