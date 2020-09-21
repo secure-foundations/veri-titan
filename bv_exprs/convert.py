@@ -1,11 +1,15 @@
 from bv_exprs import *
 
-ops = {
+bin_ops = {
     "&" : "and",
     "|" : "or",
     "^" : "xor",
     "+" : "add",
     "-" : "sub",
+}
+
+uni_ops = {
+    "-" : "neg",
     "~" : "not",
 }
 
@@ -17,7 +21,7 @@ class BinOpEq:
         self.src2 = src2
     
     def __str__(self):
-        return f"{self.dst} == {ops[self.op]}_n({self.src1}, {self.src2})"
+        return f"{self.dst} == {bin_ops[self.op]}_n({self.src1}, {self.src2})"
 
 class UniOpEq:
     def __init__(self, op, dst, src):
@@ -26,7 +30,7 @@ class UniOpEq:
         self.src = src
 
     def __str__(self):
-        return f"{self.dst} == {ops[self.op]}_n({self.src})"
+        return f"{self.dst} == {uni_ops[self.op]}_n({self.src})"
 
 class BaseVariable:
     def __init__(self, v, b):
@@ -224,14 +228,13 @@ class Encoder:
             self.append_poly(f"\t{d} + {s} + 1")
             self.append_poly(f"\t{d.ext()} + {s.ext()} + 1")
         elif op == "-":
-            self.append_poly(f"// encoding {d} == sub_n({s})")
-            self.append_poly(f"\t{bs} + {bd} - 1")
+            self.append_poly(f"// encoding {d} == neg_n({s})")
             self.append_poly(f"\t{d} + {s}")
             self.append_poly(f"\t{d.ext()} + {s.ext()}")
         else:
             raise Exception(f"uniop {op} is NYI")
 
-q = andorxor_135()
+q = bvnot()
 enc = Encoder(q)
 
 # print("")
