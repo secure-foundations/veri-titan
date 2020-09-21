@@ -229,8 +229,8 @@ class Encoder:
             self.append_poly(f"\t{d.ext()} + {s.ext()} + 1 - pow2_n_1")
         elif op == "-":
             self.append_poly(f"// encoding {d} == neg_n({s})")
-            self.append_poly(f"\t{d} + {s}")
-            self.append_poly(f"\t{d.ext()} + {s.ext()}")
+            self.append_poly(f"\t{d} + {s} - pow2_n")
+            self.append_poly(f"\t{d.ext()} + {s.ext()} - pow2_n_1")
         else:
             raise Exception(f"uniop {op} is NYI")
 
