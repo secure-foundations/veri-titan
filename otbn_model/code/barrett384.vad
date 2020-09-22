@@ -29,7 +29,6 @@ procedure mul384()
     modifies
         wacc; w18; w17; w16; flags;
 {
-
     //  bn.mulqacc.z          w8.0, w10.0,   0
     BN_MULQACC_Z(w8, 0, w10, 0, 0);
 
