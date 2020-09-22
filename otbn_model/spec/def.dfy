@@ -98,7 +98,7 @@ datatype code =
 type Frame = map<int, uint32>
 type Stack = seq<Frame>
 
-datatype FlagsGroup = FlagsGroup(cf:bool, lsb:bool, msb:bool, zero:bool)
+datatype FlagsGroup = FlagsGroup(cf:bool, msb:bool, lsb:bool, zero:bool)
 datatype Flags = Flags(fg0:FlagsGroup, fg1:FlagsGroup)
 
 datatype state = state(
@@ -255,6 +255,14 @@ predicate evalCode(c:code, s:state, r:state)
 }
 
 function get_flags_group(fg:bool, flags:Flags) : FlagsGroup { if fg then flags.fg1 else flags.fg0 }
+
+function get_flag(fg:bool, flag:int, flags:Flags) : bool
+	requires 0 <= flag <= 4;
+{ if flag == 0 then get_flags_group(fg, flags).cf else
+    if flag == 1 then get_flags_group(fg, flags).msb else
+      if flag == 2 then get_flags_group(fg, flags).lsb else
+        get_flags_group(fg, flags).zero
+}
 
 function update_fg(b:bool, f:Flags, fg:FlagsGroup) : Flags { if b then f.(fg1 := fg) else f.(fg0 := fg) }
 
