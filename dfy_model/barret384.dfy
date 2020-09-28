@@ -7,12 +7,22 @@ module barret384 {
     import opened powers
     import opened congruences
 
- 	const BASE :int := power(2, 256);
+    method barrett_reduction(x: nat, m: int, u: nat, b: nat, k: nat)
+        requires b > 3;
+        requires m > 0;
+        requires k > 0;
+        requires u == power(b, 2 * k) / m;
+    {
+        ghost var Q := x / m;
+        ghost var P := x % m;
 
-    method mul384(w9: uint256, w8: uint256, w11: uint256, w10: uint256)
-        returns (w18: uint256, w17: uint256, w16: uint256)
-        ensures (w9 * BASE + w8) * (w11 * BASE + w10) == 
-            w18 * BASE * BASE + w17 * BASE + w16;
+        var q1 := x / power(b, k - 1);
+        var q2 := q1 * u;
+        var q3 := q2 / power(b, k + 1);
 
+        // if q3 > Q {
+            // assert q3 * power(b, k + 1) > 
+        // }
+    }
 
 }
