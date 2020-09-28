@@ -27,15 +27,15 @@ module barret384 {
         // }
     }
 
-    lemma floor_div_lemma(x: nat, y: nat)
+    lemma floor_div_lemma(x: nat, y: nat, q: nat, rq :real)
         requires 0 < x && 0 < y;
+        requires q == x / y;
+        requires rq == (x as real) / (y as real);
+        ensures rq - 1.0 < q as real <= rq;
     {
-        var q := x / y;
         var r := x % y;
         assert x == y * q + r;
         assert y * q == x - r;
-
-        var rq :real := (x as real) / (y as real);
 
         var f := r as real / y as real;
         assert f < 1.0;
