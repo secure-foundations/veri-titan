@@ -205,17 +205,17 @@ class Encoder:
             self.append_poly(f"\t{bl} + {br} - 2 * {bl} * {br} - {b}")
         elif op == "|":
             self.append_poly(f"// encoding {d} == or_n({s1}, {s2})")
-            self.append_poly(f"\t{bl} + {br} + {bl} * {br} - {b}")
+            self.append_poly(f"\t{bl} + {br} - {bl} * {br} - {b}")
         elif op == "+":
             self.append_poly(f"// encoding {d} == add_n({s1}, {s2})")
 
             k1 = self.get_fresh_k()
             self.append_poly(f"\t{k1} * (1 - {k1})")
-            self.append_poly(f"\t{d} - {s1} - {s2} - {k1} * pow2_n")
+            self.append_poly(f"\t{d} - {s1} - {s2} + {k1} * pow2_n")
 
             k2 = self.get_fresh_k()
             self.append_poly(f"\t{k2} * (1 - {k2})")
-            self.append_poly(f"\t{d.ext()} - {s1.ext()} - {s2.ext()} - {k2} * pow2_n_1")
+            self.append_poly(f"\t{d.ext()} - {s1.ext()} - {s2.ext()} + {k2} * pow2_n_1")
             # self.append_poly(f"\t{bl} + {br} + {k1} - {b} - 2 * {k2}")
         elif op == "-":
             self.append_poly(f"// encoding {d} == sub_n({s1}, {s2})")
