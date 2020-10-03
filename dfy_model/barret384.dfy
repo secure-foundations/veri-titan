@@ -7,24 +7,28 @@ module barret384 {
     import opened powers
     import opened congruences
 
-    method barrett_reduction(x: nat, m: int, u: nat, b: nat, k: nat)
-        requires b > 3;
-        requires k > 0;
-
-        requires power(b, k - 1) < m < power(b, k);
-        requires 0 < x < power(b, 2 * k);
-        requires u == power(b, 2 * k) / m;
+    function method pow2(n: nat) : nat
     {
-        // ghost var Q := x / m;
-        // ghost var P := x % m;
+        power(2, n)
+    }
 
-        // var q1 := x / power(b, k - 1);
-        // var q2 := q1 * u;
-        // var q3 := q2 / power(b, k + 1);
+    lemma barrett_reduction_lemma(
+        x: nat,
+        xr: real,
+        m: nat,
+        mr: real,
+        q: nat,
+        qr: real,
+        n: nat)
 
-        // if q3 > Q {
-            // assert q3 * power(b, k + 1) > 
-        // }
+        requires n > 0;
+        requires x as real == xr;
+        requires m as real == mr && m > 0;
+        requires qr == xr / mr;
+        requires pow2(n - 1) < m < pow2(n);
+        requires 0 < x < pow2(2 * n);
+    {
+        
     }
 
     lemma floor_div_lemma(x: nat, y: nat, q: nat, rq :real)
