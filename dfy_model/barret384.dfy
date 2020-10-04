@@ -25,7 +25,7 @@ module barret384 {
         requires x as real == xr;
         requires m as real == mr && m > 0;
         requires qr == xr / mr;
-        requires pow2(n - 1) < m < pow2(n);
+        requires pow2(n - 1) <= m < pow2(n);
         requires 0 < x < pow2(2 * n);
     {
         var c0 := pow2(n - 1);
@@ -56,19 +56,39 @@ module barret384 {
             ((x / c0) as real * (c2 / m) as real + (x / c0) as real + (c2 / m) as real + 1.0) / cr1;
             ((x / c0) as real * (c2 / m) as real) / cr1 + ((x / c0) as real + (c2 / m) as real + 1.0) / cr1;
             {
-                assume (x / c0) as real < cr0 - 1.0;
+                assume (x / c0) as real <= cr1 - 1.0;
+                assume false; // unstable
             }
-            ((x / c0) as real * (c2 / m) as real) / cr1 + (cr0 + (c2 / m) as real) / cr1;
+            ((x / c0) as real * (c2 / m) as real) / cr1 + (cr1 + (c2 / m) as real) / cr1;
+            {
+                assume (c2 / m) as real <= cr1;
+                assume false; // unstable
+            }
+            ((x / c0) as real * (c2 / m) as real) / cr1 + (cr1 + cr1) / cr1;
+            ((x / c0) as real * (c2 / m) as real) / cr1 + 2.0;
+            {
+                assert (x / c0) as real * (c2 / m) as real == ((x / c0) * (c2 / m)) as real;
+                assume false; // unstable
+            }
+            (((x / c0) * (c2 / m)) as real) / cr1 + 2.0;
         }
+
+        assume c1 != 0;
+        assume (x / c0) * (c2 / m) != 0;
+
+        floor_div_lemma((x / c0) * (c2 / m), c1);
+        // assert 
 
     }
 
-    lemma floor_div_lemma(x: nat, y: nat, q: nat, rq :real)
+    lemma floor_div_lemma(x: nat, y: nat)
         requires 0 < x && 0 < y;
-        requires q == x / y;
-        requires rq == (x as real) / (y as real);
-        ensures rq - 1.0 < q as real <= rq;
+        // requires rq == (x as real) / (y as real);
+        ensures (x as real) / (y as real) - 1.0 < (x / y) as real <= (x as real) / (y as real);
     {
+        var rq :real := (x as real) / (y as real);
+        var q := x / y;
+
         var r := x % y;
         assert x == y * q + r;
         assert y * q == x - r;
