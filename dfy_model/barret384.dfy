@@ -28,7 +28,19 @@ module barret384 {
         requires pow2(n - 1) < m < pow2(n);
         requires 0 < x < pow2(2 * n);
     {
-        
+        var c0 := pow2(n - 1);
+        var c1 := pow2(n + 1);
+        var c2 := pow2(2 * n);
+
+        var cr0 := pow2(n - 1) as real;
+        var cr1 := pow2(n + 1) as real;
+        var cr2 := pow2(2 * n) as real;
+
+        var alpha : real := xr / cr0 - (x / c0) as real;
+        var beta : real := cr2 / mr - (c2 / m) as real;
+
+        assume cr0 * cr1 == cr2;
+        assert qr == (xr / cr0) * (cr2 / mr) / cr1;
     }
 
     lemma floor_div_lemma(x: nat, y: nat, q: nat, rq :real)
