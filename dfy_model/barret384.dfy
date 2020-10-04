@@ -39,8 +39,28 @@ module barret384 {
         var alpha : real := xr / cr0 - (x / c0) as real;
         var beta : real := cr2 / mr - (c2 / m) as real;
 
-        assume cr0 * cr1 == cr2;
-        assert qr == (xr / cr0) * (cr2 / mr) / cr1;
+        calc <=
+        {
+            qr;
+            {
+                assume cr0 * cr1 == cr2;
+            }
+            (xr / cr0) * (cr2 / mr) / cr1;
+            ((x / c0) as real + alpha) * ((c2 / m) as real + beta) / cr1;
+            ((x / c0) as real * (c2 / m) as real + beta * (x / c0) as real + alpha * (c2 / m) as real + alpha * beta) / cr1;
+            {
+                assume 0.0 <= alpha <= 1.0;
+                assume 0.0 <= beta <= 1.0;
+                assume false; // unstable
+            }
+            ((x / c0) as real * (c2 / m) as real + (x / c0) as real + (c2 / m) as real + 1.0) / cr1;
+            ((x / c0) as real * (c2 / m) as real) / cr1 + ((x / c0) as real + (c2 / m) as real + 1.0) / cr1;
+            {
+                assume (x / c0) as real < cr0 - 1.0;
+            }
+            ((x / c0) as real * (c2 / m) as real) / cr1 + (cr0 + (c2 / m) as real) / cr1;
+        }
+
     }
 
     lemma floor_div_lemma(x: nat, y: nat, q: nat, rq :real)
