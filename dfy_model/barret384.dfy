@@ -144,17 +144,16 @@ module barret384 {
         }
 
         if r > 0 {
-            // calc == {
-            //     r;
-            //     {
-            //         remainder_unqiue_lemma(r, r, c1);
-            //     }
-            //     r % c1;
-            //     {
-  
-            //     }
-            //     ((q - q3) * m + x % m) % c1;
-            // }
+            calc == {
+                r;
+                {
+                    remainder_unqiue_lemma(r, c1);
+                }
+                r % c1;
+                (q - q3) * m + x % m;
+            }
+        } else {
+            r := r + c1;
         }
     }
 
