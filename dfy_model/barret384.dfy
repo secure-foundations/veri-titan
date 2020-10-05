@@ -121,47 +121,46 @@ module barret384 {
 
         assert 0 - c1 as int < r < c1 as int;
 
-        calc == {
-            r % c1;
-            ((x % c1) - (q3 * m) % c1) % c1;
-            {
-                assume false;
-            }
-            (x - q3 * m) % c1;
-            {
-                assert x == q * m + x % m;
-            }
-            ((q - q3) * m + x % m) % c1;
-        }
- 
-        assert ((q - q3) * m + x % m) % c1 == (q - q3) * m + x % m by {
-        assert 0 <= (q - q3) * m + x % m < c1 by {
-            assert 0 <= (q - q3) * m + x % m < 3 * m;
-            assert 3 * m < c1 by {
-                assume pow2(n + 2) == 4 * pow2(n);
-            }
-        }
-        }
-    
-        if r > 0 {
+        assert r % c1 == (q - q3) * m + x % m by {
             calc == {
-                r;
+                r % c1;
+                ((x % c1) - (q3 * m) % c1) % c1;
                 {
-                    assert 0 <= r < c1;
                     assume false;
                 }
-                r % c1;
-
+                (x - q3 * m) % c1;
+                {
+                    assert x == q * m + x % m;
+                }
+                ((q - q3) * m + x % m) % c1;
+                {
+                    var t := (q - q3) * m + x % m;
+                    assert 0 <= t < 3 * m;
+                    assume 3 * m < c1;
+                    remainder_unqiue_lemma(t, c1);
+                }
+                (q - q3) * m + x % m;
             }
-            // assert r % c1 == ((q - q3) * m + x % m) % c1;
-            // assert r == (q - q3) * m + x % m;
+        }
+
+        if r > 0 {
+            // calc == {
+            //     r;
+            //     {
+            //         remainder_unqiue_lemma(r, r, c1);
+            //     }
+            //     r % c1;
+            //     {
+  
+            //     }
+            //     ((q - q3) * m + x % m) % c1;
+            // }
         }
     }
 
-    lemma remainder_unqiue_lemma(x: nat, r: nat, m: nat)
+    lemma remainder_unqiue_lemma(r: nat, m: nat)
         requires 0 <= r < m;
-        requires r % m == x % m;
-        ensures x % m == r;
+        ensures r % m == r;
     {
 
     }
