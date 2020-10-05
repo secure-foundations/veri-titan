@@ -47,15 +47,53 @@ module barret384 {
             }
             (xr / mr).Floor;
             {
-                assume cr2 == cr0 * cr1;
-                assert ((xr / cr0) * (cr2 / mr)) / cr1 == xr / mr;
+                calc <= {
+                    xr / mr;
+                    {
+                        assume cr2 == cr0 * cr1;
+                    }
+                    ((xr / cr0) * (cr2 / mr)) / cr1;
+                    (((x / c0) as real + alpha) * (cr2 / mr)) / cr1;
+                    (((x / c0) as real + alpha) * ((c2 / m) as real + beta)) / cr1;
+                    ((x / c0) as real * (c2 / m) as real + beta * (x / c0) as real + alpha * (c2 / m) as real + alpha * beta) / cr1;
+                    {
+                        assume 0.0 <= alpha < 1.0;
+                        assume false; // should be true
+                    }
+                    ((x / c0) as real * (c2 / m) as real + beta * (x / c0) as real + (c2 / m) as real + beta) / cr1;
+                    {
+                        assume 0.0 <= beta < 1.0;
+                        assume false; // should be true
+                    }
+                    ((x / c0) as real * (c2 / m) as real + (x / c0) as real + (c2 / m) as real + 1.0) / cr1;
+                    {
+                        assume false;
+                    }
+                    (((x / c0) * (c2 / m)) as real) / cr1 + 2.0;
+                }
+                assert xr / mr <= (((x / c0) * (c2 / m)) as real) / cr1 + 2.0;
             }
-            (((xr / cr0) * (cr2 / mr)) / cr1).Floor;
+            ((((x / c0) * (c2 / m)) as real) / cr1 + 2.0).Floor;
+            ((((x / c0) * (c2 / m)) as real) / cr1).Floor + 2.0.Floor;
+            ((((x / c0) * (c2 / m)) as real) / cr1).Floor + 2;
+            {
+                assume (x / c0) * (c2 / m) != 0;
+                floor_div_lemma((x / c0) * (c2 / m), c1);
+            }
+            ((x / c0) * (c2 / m)) / c1 + 2;
         }
         // assert 
     }
 
     lemma floor_div_lemma(x: nat, y: nat)
+        requires 0 < x && 0 < y;
+        ensures  x / y == (x as real / y as real).Floor;
+    {
+        assume false;
+        assert x / y == (x as real / y as real).Floor;
+    }
+
+    lemma div_bound_lemma(x: nat, y: nat)
         requires 0 < x && 0 < y;
         // requires rq == (x as real) / (y as real);
         ensures (x as real) / (y as real) - 1.0 < (x / y) as real <= (x as real) / (y as real);
