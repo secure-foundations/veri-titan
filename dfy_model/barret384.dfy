@@ -99,7 +99,7 @@ module barret384 {
         assert q - 2 <= ((x / c0) * (c2 / m)) / c1;
     }
 
-    lemma test_barret(
+    lemma barrett_post_lemma(
         x: nat,
         m: nat,
         q: nat,
@@ -143,7 +143,7 @@ module barret384 {
             }
         }
 
-        if r > 0 {
+        if r >= 0 {
             calc == {
                 r;
                 {
@@ -153,8 +153,26 @@ module barret384 {
                 (q - q3) * m + x % m;
             }
         } else {
-            r := r + c1;
+            var r' := r + c1;
+            assert 0 <= r' < c1;
+
+            calc == {
+                r';
+                {
+                    remainder_unqiue_lemma(r', c1);
+                }
+                r' % c1;
+                {
+                    assume r' % c1 == r % c1;
+                }
+                r % c1;
+                (q - q3) * m + x % m;
+            }
+            
+            r := r';
         }
+
+        assert r == (q - q3) * m + x % m;
     }
 
     lemma remainder_unqiue_lemma(r: nat, m: nat)
