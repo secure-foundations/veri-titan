@@ -99,6 +99,42 @@ module barret384 {
         assert q - 2 <= ((x / c0) * (c2 / m)) / c1;
     }
 
+    lemma test_barret(
+        x: nat,
+        m: nat,
+        q: nat,
+        q3: nat,
+        n: nat)
+
+        requires n > 0;
+        requires pow2(n - 1) <= m < pow2(n);
+        requires 0 < x < pow2(2 * n);
+
+        requires q == x / m;
+        requires q - 2 <= q3 <= q;
+    {
+        var c1 := pow2(n + 2);
+
+        var r1 := x % c1;
+        var r2 := (q3 * m) % c1;
+        var r: int := r1 as int - r2 as int;
+
+        calc == {
+            r % c1;
+            ((x % c1) - (q3 * m) % c1) % c1;
+            {
+                assume false;
+            }
+            (x - q3 * m) % c1;
+            {
+                assert x == q * m + x % m;
+            }
+            ((q - q3) * m + x % m) % c1;
+        }
+
+        assert 0 <= (q - q3) * m + x % m < 3 * m;
+    }
+
     lemma floor_div_lemma(x: nat, y: nat)
         requires 0 < x && 0 < y;
         ensures  x / y == (x as real / y as real).Floor;
