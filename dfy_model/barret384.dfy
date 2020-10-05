@@ -18,13 +18,12 @@ module barret384 {
         m: nat,
         mr: real,
         q: nat,
-        qr: real,
         n: nat)
 
         requires n > 0;
         requires x as real == xr;
         requires m as real == mr && m > 0;
-        requires qr == xr / mr;
+        requires q == x / m;
         requires pow2(n - 1) <= m < pow2(n);
         requires 0 < x < pow2(2 * n);
     {
@@ -36,49 +35,24 @@ module barret384 {
         var cr1 := pow2(n + 1) as real;
         var cr2 := pow2(2 * n) as real;
 
+        // var qr : real := xr / mr;
         var alpha : real := xr / cr0 - (x / c0) as real;
         var beta : real := cr2 / mr - (c2 / m) as real;
 
-        calc <=
-        {
-            qr;
+        calc <= {
+            q;
+            x / m;
             {
-                assume cr0 * cr1 == cr2;
+                assume false;
             }
-            (xr / cr0) * (cr2 / mr) / cr1;
-            ((x / c0) as real + alpha) * ((c2 / m) as real + beta) / cr1;
-            ((x / c0) as real * (c2 / m) as real + beta * (x / c0) as real + alpha * (c2 / m) as real + alpha * beta) / cr1;
+            (xr / mr).Floor;
             {
-                assume 0.0 <= alpha <= 1.0;
-                assume 0.0 <= beta <= 1.0;
-                assume false; // unstable
+                assume cr2 == cr0 * cr1;
+                assert ((xr / cr0) * (cr2 / mr)) / cr1 == xr / mr;
             }
-            ((x / c0) as real * (c2 / m) as real + (x / c0) as real + (c2 / m) as real + 1.0) / cr1;
-            ((x / c0) as real * (c2 / m) as real) / cr1 + ((x / c0) as real + (c2 / m) as real + 1.0) / cr1;
-            {
-                assume (x / c0) as real <= cr1 - 1.0;
-                assume false; // unstable
-            }
-            ((x / c0) as real * (c2 / m) as real) / cr1 + (cr1 + (c2 / m) as real) / cr1;
-            {
-                assume (c2 / m) as real <= cr1;
-                assume false; // unstable
-            }
-            ((x / c0) as real * (c2 / m) as real) / cr1 + (cr1 + cr1) / cr1;
-            ((x / c0) as real * (c2 / m) as real) / cr1 + 2.0;
-            {
-                assert (x / c0) as real * (c2 / m) as real == ((x / c0) * (c2 / m)) as real;
-                assume false; // unstable
-            }
-            (((x / c0) * (c2 / m)) as real) / cr1 + 2.0;
+            (((xr / cr0) * (cr2 / mr)) / cr1).Floor;
         }
-
-        assume c1 != 0;
-        assume (x / c0) * (c2 / m) != 0;
-
-        floor_div_lemma((x / c0) * (c2 / m), c1);
         // assert 
-
     }
 
     lemma floor_div_lemma(x: nat, y: nat)
