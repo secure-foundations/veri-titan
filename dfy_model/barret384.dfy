@@ -26,6 +26,8 @@ module barret384 {
         requires q == x / m;
         requires pow2(n - 1) <= m < pow2(n);
         requires 0 < x < pow2(2 * n);
+
+        ensures q - 2 <= ((x / pow2(n - 1)) * (pow2(2 * n) / m)) / pow2(n + 1);
     {
         var c0 := pow2(n - 1);
         var c1 := pow2(n + 1);
@@ -35,7 +37,6 @@ module barret384 {
         var cr1 := pow2(n + 1) as real;
         var cr2 := pow2(2 * n) as real;
 
-        // var qr : real := xr / mr;
         var alpha : real := xr / cr0 - (x / c0) as real;
         var beta : real := cr2 / mr - (c2 / m) as real;
 
@@ -67,7 +68,19 @@ module barret384 {
                     }
                     ((x / c0) as real * (c2 / m) as real + (x / c0) as real + (c2 / m) as real + 1.0) / cr1;
                     {
-                        assume false;
+                        assume (x / c0) as real <= cr1 - 1.0;
+                        assume false; // unstable
+                    }
+                    ((x / c0) as real * (c2 / m) as real) / cr1 + (cr1 + (c2 / m) as real) / cr1;
+                    {
+                        assume (c2 / m) as real <= cr1;
+                        assume false; // unstable
+                    }
+                    ((x / c0) as real * (c2 / m) as real) / cr1 + (cr1 + cr1) / cr1;
+                    ((x / c0) as real * (c2 / m) as real) / cr1 + 2.0;
+                    {
+                        assert (x / c0) as real * (c2 / m) as real == ((x / c0) * (c2 / m)) as real;
+                        assume false; // unstable
                     }
                     (((x / c0) * (c2 / m)) as real) / cr1 + 2.0;
                 }
@@ -82,7 +95,8 @@ module barret384 {
             }
             ((x / c0) * (c2 / m)) / c1 + 2;
         }
-        // assert 
+
+        assert q - 2 <= ((x / c0) * (c2 / m)) / c1;
     }
 
     lemma floor_div_lemma(x: nat, y: nat)
@@ -90,7 +104,6 @@ module barret384 {
         ensures  x / y == (x as real / y as real).Floor;
     {
         assume false;
-        assert x / y == (x as real / y as real).Floor;
     }
 
     lemma div_bound_lemma(x: nat, y: nat)
