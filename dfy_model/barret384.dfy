@@ -119,6 +119,8 @@ module barret384 {
         var r2 := (q3 * m) % c1;
         var r: int := r1 as int - r2 as int;
 
+        assert 0 - c1 as int < r < c1 as int;
+
         calc == {
             r % c1;
             ((x % c1) - (q3 * m) % c1) % c1;
@@ -131,8 +133,37 @@ module barret384 {
             }
             ((q - q3) * m + x % m) % c1;
         }
+ 
+        assert ((q - q3) * m + x % m) % c1 == (q - q3) * m + x % m by {
+        assert 0 <= (q - q3) * m + x % m < c1 by {
+            assert 0 <= (q - q3) * m + x % m < 3 * m;
+            assert 3 * m < c1 by {
+                assume pow2(n + 2) == 4 * pow2(n);
+            }
+        }
+        }
+    
+        if r > 0 {
+            calc == {
+                r;
+                {
+                    assert 0 <= r < c1;
+                    assume false;
+                }
+                r % c1;
 
-        assert 0 <= (q - q3) * m + x % m < 3 * m;
+            }
+            // assert r % c1 == ((q - q3) * m + x % m) % c1;
+            // assert r == (q - q3) * m + x % m;
+        }
+    }
+
+    lemma remainder_unqiue_lemma(x: nat, r: nat, m: nat)
+        requires 0 <= r < m;
+        requires r % m == x % m;
+        ensures x % m == r;
+    {
+
     }
 
     lemma floor_div_lemma(x: nat, y: nat)
