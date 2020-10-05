@@ -99,12 +99,14 @@ module barret384 {
         assert q - 2 <= ((x / c0) * (c2 / m)) / c1;
     }
 
-    lemma barrett_post_lemma(
+    method barrett_post(
         x: nat,
         m: nat,
         q: nat,
         q3: nat,
         n: nat)
+
+        returns (r: int)
 
         requires n > 0;
         requires pow2(n - 1) <= m < pow2(n);
@@ -112,12 +114,14 @@ module barret384 {
 
         requires q == x / m;
         requires q - 2 <= q3 <= q;
+
+        ensures x % m <= r <= 2 * m + x % m;
     {
         var c1 := pow2(n + 2);
 
         var r1 := x % c1;
         var r2 := (q3 * m) % c1;
-        var r: int := r1 as int - r2 as int;
+        r := r1 as int - r2 as int;
 
         assert 0 - c1 as int < r < c1 as int;
 
@@ -173,6 +177,7 @@ module barret384 {
         }
 
         assert r == (q - q3) * m + x % m;
+        assert x % m <= r <= 2 * m + x % m;
     }
 
     lemma remainder_unqiue_lemma(r: nat, m: nat)
