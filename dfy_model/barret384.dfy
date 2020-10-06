@@ -102,7 +102,8 @@ module barret384 {
     method barrett_post(
         x: nat,
         m: nat,
-        q: nat,
+        Q: nat,
+        R: nat,
         q3: nat,
         n: nat)
 
@@ -112,10 +113,11 @@ module barret384 {
         requires pow2(n - 1) <= m < pow2(n);
         requires 0 < x < pow2(2 * n);
 
-        requires q == x / m;
-        requires q - 2 <= q3 <= q;
+        requires Q == x / m;
+        requires R == x % m;
+        requires Q - 2 <= q3 <= Q;
 
-        ensures x % m <= r <= 2 * m + x % m;
+        // ensures R <= r <= 2 * m + R;
     {
         var c1 := pow2(n + 2);
 
@@ -125,7 +127,7 @@ module barret384 {
 
         assert 0 - c1 as int < r < c1 as int;
 
-        assert r % c1 == (q - q3) * m + x % m by {
+        assert r % c1 == (Q - q3) * m + R by {
             calc == {
                 r % c1;
                 ((x % c1) - (q3 * m) % c1) % c1;
@@ -134,16 +136,16 @@ module barret384 {
                 }
                 (x - q3 * m) % c1;
                 {
-                    assert x == q * m + x % m;
+                    assert x == Q * m + R;
                 }
-                ((q - q3) * m + x % m) % c1;
+                ((Q - q3) * m + R) % c1;
                 {
-                    var t := (q - q3) * m + x % m;
+                    var t := (Q - q3) * m + R;
                     assert 0 <= t < 3 * m;
                     assume 3 * m < c1;
                     remainder_unqiue_lemma(t, c1);
                 }
-                (q - q3) * m + x % m;
+                (Q - q3) * m + R;
             }
         }
 
@@ -154,7 +156,7 @@ module barret384 {
                     remainder_unqiue_lemma(r, c1);
                 }
                 r % c1;
-                (q - q3) * m + x % m;
+                (Q - q3) * m + R;
             }
         } else {
             var r' := r + c1;
@@ -170,14 +172,34 @@ module barret384 {
                     assume r' % c1 == r % c1;
                 }
                 r % c1;
-                (q - q3) * m + x % m;
+                (Q - q3) * m + R;
             }
-            
             r := r';
         }
 
-        assert r == (q - q3) * m + x % m;
-        assert x % m <= r <= 2 * m + x % m;
+        assert r == (Q - q3) * m + R;
+
+        // assert q - 2 <= q3 <= q;
+
+        // calc ==> {
+        //     q - 2 <= q3 <= q;
+        //     0 <= q - q3 <= 2;
+        // }
+
+        // assert R <= r <= 2 * m + R by {
+        // }
+
+        // if r > m {
+        //     // assert m < r <= 2 * m + R;
+        //     r := r - m;
+        //     // assert 0 <= r <= m + R;
+        // }
+        
+        // if r > m {
+        //     r := r - m;
+        // }
+
+        // assert r < m;
     }
 
     lemma remainder_unqiue_lemma(r: nat, m: nat)
