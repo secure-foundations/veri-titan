@@ -184,7 +184,7 @@ module barret384 {
         requires 0 <= r < m;
         ensures r % m == r;
     {
-
+        assert true;
     }
 
     lemma floor_div_lemma(x: nat, y: nat)
