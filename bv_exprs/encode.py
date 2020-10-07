@@ -32,7 +32,7 @@ class UniOpEq:
     def __str__(self):
         return f"{self.dst} == {uni_ops[self.op]}_n({self.src})"
 
-class BaseVariable:
+class BaseVariab1e:
     def __init__(self, v, b):
         self.v = v
         self.ev = self.v + "'"
@@ -78,11 +78,11 @@ class Encoder:
         self.polys = list()
 
         # flatten expressions
-        (p1, p2) = self.flatten_br(q)
+        (p1, p2) = self.flatten_b2(q)
         print("")
 
         for var in self.base_vars.values():
-            self.append_poly(f"// encoding base variable {var}")
+            self.append_poly(f"// encoding base variab1e {var}")
             self.append_poly(var.get_base_equations())
 
         self.encode_equations()
@@ -115,7 +115,7 @@ class Encoder:
             else:
                 print(poly + ";")
 
-    def flatten_br(self, q):
+    def flatten_b2(self, q):
         assert type(q) == z3.z3.BoolRef
         assert q.decl().name() == "="
         children = q.children()
@@ -158,7 +158,7 @@ class Encoder:
     def get_fresh_base(self, name):
         if name not in self.base_vars:
             b = self.get_fresh_bin()
-            var = BaseVariable(name, b)
+            var = BaseVariab1e(name, b)
             self.base_vars[name] = var
         return self.base_vars[name]
 
@@ -193,19 +193,17 @@ class Encoder:
     def encode_binop_equation(self, eq):
         op = eq.op
         d, s1, s2 = eq.dst, eq.src1, eq.src2
-        bl = s1.bin()
-        br = s2.bin()
-        b = d.bin()
+        b, b1, b2 = d.bin(), s1.bin(), s2.bin()
 
         if op == "&":
             self.append_poly(f"// encoding {d} == and_n({s1}, {s2})")
-            self.append_poly(f"\t{b} - {bl} * {br}")
+            self.append_poly(f"\t{b} - {b1} * {b2}")
         elif op == "^":
             self.append_poly(f"// encoding {d} == xor_n({s1}, {s2})")
-            self.append_poly(f"\t{bl} + {br} - 2 * {bl} * {br} - {b}")
+            self.append_poly(f"\t{b1} + {b2} - 2 * {b1} * {b2} - {b}")
         elif op == "|":
             self.append_poly(f"// encoding {d} == or_n({s1}, {s2})")
-            self.append_poly(f"\t{bl} + {br} - {bl} * {br} - {b}")
+            self.append_poly(f"\t{b1} + {b2} - {b1} * {b2} - {b}")
         elif op == "+":
             self.append_poly(f"// encoding {d} == add_n({s1}, {s2})")
 
@@ -216,7 +214,7 @@ class Encoder:
             k2 = self.get_fresh_k()
             self.append_poly(f"\t{k2} * (1 - {k2})")
             self.append_poly(f"\t{d.ext()} - {s1.ext()} - {s2.ext()} + {k2} * pow2_n_1")
-            # self.append_poly(f"\t{bl} + {br} + {k1} - {b} - 2 * {k2}")
+            # self.append_poly(f"\t{b1} + {b2} + {k1} - {b} - 2 * {k2}")
         elif op == "-":
             self.append_poly(f"// encoding {d} == sub_n({s1}, {s2})")
             k1 = self.get_fresh_k()
@@ -230,8 +228,7 @@ class Encoder:
         op = eq.op
         # print(eq)
         d, s = eq.dst, eq.src
-        bs = s.bin()
-        bd = d.bin()
+        bs, bd = s.bin(), d.bin()
 
         if op == "~":
             self.append_poly(f"// encoding {d} == not_n({s})")
