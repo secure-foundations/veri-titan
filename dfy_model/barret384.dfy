@@ -141,7 +141,7 @@ module barret384 {
                 ((Q - q3) * m + R) % c1;
                 {
                     var t := (Q - q3) * m + R;
-                    assert 0 <= t < 3 * m;
+                    assume 0 <= t < 3 * m;
                     assume 3 * m < c1;
                     remainder_unqiue_lemma(t, c1);
                 }
@@ -179,27 +179,30 @@ module barret384 {
 
         assert r == (Q - q3) * m + R;
 
-        // assert q - 2 <= q3 <= q;
+        sanity_check(Q, R, q3, r, m);
 
-        // calc ==> {
-        //     q - 2 <= q3 <= q;
-        //     0 <= q - q3 <= 2;
-        // }
+        if r >= m {
+            assert r <= 2 * m + R;
+            r := r - m;
+            assert r <= m + R;
+        }
 
-        // assert R <= r <= 2 * m + R by {
-        // }
+        if r >= m {
+            assert r <= m + R;
+            r := r - m;
+            assert r <= R;
+            assert r < m;
+        }
 
-        // if r > m {
-        //     // assert m < r <= 2 * m + R;
-        //     r := r - m;
-        //     // assert 0 <= r <= m + R;
-        // }
-        
-        // if r > m {
-        //     r := r - m;
-        // }
+        assert 0 <= r < m;
+    }
 
-        // assert r < m;
+    lemma sanity_check(Q: nat, R: nat, q3: nat, r: nat, m: nat)
+        requires r == (Q - q3) * m + R;
+        requires Q - 2 <= q3 <= Q;
+        ensures R <= r <= 2 * m + R;
+    {
+        // assert 0 <= Q - q3 <= 2;
     }
 
     lemma remainder_unqiue_lemma(r: nat, m: nat)
