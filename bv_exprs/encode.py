@@ -34,22 +34,30 @@ class UniOpEq:
 
 class BaseVariab1e:
     def __init__(self, v, b):
+        # n bits vector
         self.v = v
+        # n + 1 bits vector
         self.ev = self.v + "'"
+        # 1 bit extension
         self.b = b
     
     def __str__(self):
         return self.v
 
+    # 1 bit extension
     def bin(self):
         return self.b
 
+    # n + 1 bit vector
     def ext(self):
         return self.ev
-    
+
     def get_defs(self):
         return [self.v, self.ev, self.b]
 
+    # two equations:
+    # ev == v + b * pow2_n
+    # b * (b - 1) == 0
     def get_base_equations(self):
         return f"\t{self.ev} - {self.b} * pow2_n - {self.v},\n\t{self.b} * (1 - {self.b})"
 
@@ -58,7 +66,7 @@ class Constant:
         self.v = v
 
     def bin(self):
-        # TODO: is this right?
+        # FIXME: assume for now that the constant is single bit
         return "0"
 
     def ext(self):
@@ -192,7 +200,9 @@ class Encoder:
     
     def encode_binop_equation(self, eq):
         op = eq.op
+        #  d is the destination, s1 the first source, s2 the second source
         d, s1, s2 = eq.dst, eq.src1, eq.src2
+        #  get the single extension bits
         b, b1, b2 = d.bin(), s1.bin(), s2.bin()
 
         if op == "&":
@@ -207,13 +217,16 @@ class Encoder:
         elif op == "+":
             self.append_poly(f"// encoding {d} == add_n({s1}, {s2})")
 
+            # k1 is the carray from s1 + s2
             k1 = self.get_fresh_k()
             self.append_poly(f"\t{k1} * (1 - {k1})")
             self.append_poly(f"\t{d} - {s1} - {s2} + {k1} * pow2_n")
 
+            # k2 is the carray from s1' + s2'
             k2 = self.get_fresh_k()
             self.append_poly(f"\t{k2} * (1 - {k2})")
             self.append_poly(f"\t{d.ext()} - {s1.ext()} - {s2.ext()} + {k2} * pow2_n_1")
+
             # self.append_poly(f"\t{b1} + {b2} + {k1} - {b} - 2 * {k2}")
         elif op == "-":
             self.append_poly(f"// encoding {d} == sub_n({s1}, {s2})")
