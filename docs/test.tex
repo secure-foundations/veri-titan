@@ -1,0 +1,41 @@
+%This is my super simple Real Analysis Homework template
+
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage[]{amsthm} %lets us use \begin{proof}
+\usepackage[]{amssymb} %gives us the character \varnothing
+\usepackage{amsmath}
+\usepackage{mathtools}
+\DeclarePairedDelimiter\ceil{\lceil}{\rceil}
+\DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
+
+\newcommand{\bins}[1]{{\{0, 1\}}^{#1}}
+\newcommand{\usample}{\xleftarrow{\$}}
+\newcommand{\range}[3]{{#1}_{#2},...,{#1}_{#3}}
+\newcommand{\ditem}{\item[--]}
+\newcommand{\esbone}[1]{\{ {#1}_{n}\}_{n}}
+\newcommand{\esbtwo}[2]{\{ {#1}_{{#2}}\}_{n}}
+
+\title{Bound}
+\date{}
+
+\begin{document}
+\begin{align*}
+    &\text{step 1 (unchanged): } \\ 
+    &q_1 \leftarrow \floor{x / b ^{k-1}}\\
+    &q_2 \leftarrow q_1 \cdot \floor{b^{2k} / m}\\
+    &q_3 \leftarrow \floor{q_2 / b ^{k+1}}\\
+    \\
+    &\text{step 2 (use $b ^{k+2}$): } \\ 
+    &r_1 \leftarrow x \text{ mod } b ^{k+2}\\
+    &r_2 \leftarrow q_3 \cdot m \text{ mod } b ^{k+2}\\
+    &r \leftarrow r_1 - r_2\\
+    \\
+    &\text{step 3 (also use $b ^{k+2}$): } \\ 
+    &\text{If } r < 0 \text{ then } r \leftarrow r + b ^{k+2}\\
+    \\
+    &\text{step 4 (unchanged): } \\ 
+    &\text{While } r \ge m \text{ do } r \leftarrow r - m\\
+\end{align*}
+\end{document}

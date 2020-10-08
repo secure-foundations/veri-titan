@@ -4,3 +4,9 @@ otbn_impl/cg.dot
 otbn_impl/cg.png
 gen/
 .sconsign.dblite
+docs/*.pdf
+docs/*.aux
+docs/*.fdb_latexmk
+docs/*.fls
+docs/*.log
+docs/*.synctex.gz
