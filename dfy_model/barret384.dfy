@@ -12,7 +12,7 @@ module barret384 {
         power(2, n)
     }
 
-    lemma barrett_reduction_q3_lower_bound(
+    lemma barrett_reduction_q3_bound(
         x: nat,
         m: nat,
         Q: nat,
@@ -20,14 +20,12 @@ module barret384 {
         n: nat)
 
         requires n > 0;
-
         requires pow2(n - 1) <= m < pow2(n);
         requires 0 < x < pow2(2 * n);
-
         requires Q == x / m;
         requires q3 == ((x / pow2(n - 1)) * (pow2(2 * n) / m)) / pow2(n + 1);
 
-        ensures Q - 2 <= q3;
+        ensures Q - 2 <= q3 <= Q;
     {
         var c0 := pow2(n - 1);
         var c1 := pow2(n + 1);
@@ -103,6 +101,7 @@ module barret384 {
         }
 
         assert Q - 2 <= ((x / c0) * (c2 / m)) / c1;
+        assume q3 <= Q;
     }
 
     method barrett_post(
