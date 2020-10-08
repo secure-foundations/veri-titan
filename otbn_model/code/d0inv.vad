@@ -211,6 +211,7 @@ procedure d0inv(inout i:reg32)
 
     BN_SUB(w29, w31, w29, false, 0, false);
     // BN.SUB w29, w31, w29
+
     assert w29 == fst(sub256(w31, w29_g2, false, 0));
 
     lemma_d0inv_post_loop(w28, w29, w29_g2, w31);
