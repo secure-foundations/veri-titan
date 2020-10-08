@@ -12,22 +12,22 @@ module barret384 {
         power(2, n)
     }
 
-    lemma barrett_reduction_lemma(
+    lemma barrett_reduction_q3_lower_bound(
         x: nat,
-        xr: real,
         m: nat,
-        mr: real,
-        q: nat,
+        Q: nat,
+        q3: nat,
         n: nat)
 
         requires n > 0;
-        requires x as real == xr;
-        requires m as real == mr && m > 0;
-        requires q == x / m;
+
         requires pow2(n - 1) <= m < pow2(n);
         requires 0 < x < pow2(2 * n);
 
-        ensures q - 2 <= ((x / pow2(n - 1)) * (pow2(2 * n) / m)) / pow2(n + 1);
+        requires Q == x / m;
+        requires q3 == ((x / pow2(n - 1)) * (pow2(2 * n) / m)) / pow2(n + 1);
+
+        ensures Q - 2 <= q3;
     {
         var c0 := pow2(n - 1);
         var c1 := pow2(n + 1);
@@ -37,11 +37,14 @@ module barret384 {
         var cr1 := pow2(n + 1) as real;
         var cr2 := pow2(2 * n) as real;
 
+        var xr := x as real;
+        var mr := m as real;
+
         var alpha : real := xr / cr0 - (x / c0) as real;
         var beta : real := cr2 / mr - (c2 / m) as real;
 
         calc <= {
-            q;
+            Q;
             x / m;
             {
                 assume false;
@@ -77,6 +80,9 @@ module barret384 {
                         assume false; // unstable
                     }
                     ((x / c0) as real * (c2 / m) as real) / cr1 + (cr1 + cr1) / cr1;
+                    {
+                        assume (cr1 + cr1) / cr1 == 2.0;
+                    }
                     ((x / c0) as real * (c2 / m) as real) / cr1 + 2.0;
                     {
                         assert (x / c0) as real * (c2 / m) as real == ((x / c0) * (c2 / m)) as real;
@@ -96,7 +102,7 @@ module barret384 {
             ((x / c0) * (c2 / m)) / c1 + 2;
         }
 
-        assert q - 2 <= ((x / c0) * (c2 / m)) / c1;
+        assert Q - 2 <= ((x / c0) * (c2 / m)) / c1;
     }
 
     method barrett_post(
