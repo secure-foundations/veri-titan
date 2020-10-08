@@ -104,11 +104,11 @@ module barret384 {
         assume q3 <= Q;
     }
 
-    method barrett_post(
+    method barrett_reduction(
         x: nat,
         m: nat,
-        Q: nat,
-        R: nat,
+        ghost Q: nat,
+        ghost R: nat,
         q3: nat,
         n: nat)
 
@@ -122,7 +122,7 @@ module barret384 {
         requires R == x % m;
         requires Q - 2 <= q3 <= Q;
 
-        // ensures R <= r <= 2 * m + R;
+        ensures r == R;
     {
         var c1 := pow2(n + 2);
 
@@ -154,16 +154,7 @@ module barret384 {
             }
         }
 
-        if r >= 0 {
-            calc == {
-                r;
-                {
-                    remainder_unqiue_lemma(r, c1);
-                }
-                r % c1;
-                (Q - q3) * m + R;
-            }
-        } else {
+        if r < 0 {
             var r' := r + c1;
             assert 0 <= r' < c1;
 
@@ -180,16 +171,31 @@ module barret384 {
                 (Q - q3) * m + R;
             }
             r := r';
+        } else {
+            calc == {
+                r;
+                {
+                    remainder_unqiue_lemma(r, c1);
+                }
+                r % c1;
+                (Q - q3) * m + R;
+            }
         }
 
         assert r == (Q - q3) * m + R;
-
+        assert r % m == R by {
+            mod_factor_lemma(r, Q - q3, R, m);
+        }
         sanity_check(Q, R, q3, r, m);
 
         if r >= m {
             assert r <= 2 * m + R;
             r := r - m;
             assert r <= m + R;
+
+            assert r % m == R by {
+                mod_factor_lemma(r, Q - q3 - 1, R, m);
+            }
         }
 
         if r >= m {
@@ -197,9 +203,16 @@ module barret384 {
             r := r - m;
             assert r <= R;
             assert r < m;
+            assume cong(r, R, m);
+
+            assert r % m == R by {
+                mod_factor_lemma(r, Q - q3 - 2, R, m);
+            }
         }
 
+        assert r % m == R;
         assert 0 <= r < m;
+        assert r == R;
     }
 
     lemma sanity_check(Q: nat, R: nat, q3: nat, r: nat, m: nat)
@@ -208,6 +221,14 @@ module barret384 {
         ensures R <= r <= 2 * m + R;
     {
         // assert 0 <= Q - q3 <= 2;
+    }
+
+    lemma mod_factor_lemma(r: nat, k: int, R: nat, m: nat)
+        requires r == k * m + R;
+        requires m != 0;
+        ensures r % m == R;
+    {
+        assume false;
     }
 
     lemma remainder_unqiue_lemma(r: nat, m: nat)
