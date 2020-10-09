@@ -53,8 +53,12 @@ def gen_ninja():
             f.write(line + "\n")
 
 if len(sys.argv) == 1:
+    version = subprocess.run("ninja --version", shell=True, stdout=PIPE).stdout
+    version = version.decode("utf-8").strip()
+    if version != "1.10.1":
+        print("[WARNING] ninja not found or uexpected version: " + version)
     gen_ninja()
-    os.system("./ninja -v")
+    os.system("ninja -v")
     sys.exit()
 
 option = sys.argv[1]
