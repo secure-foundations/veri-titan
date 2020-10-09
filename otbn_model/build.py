@@ -55,8 +55,10 @@ def gen_ninja():
 if len(sys.argv) == 1:
     gen_ninja()
     os.system("./ninja -v")
-else:
-    assert sys.argv[1] == "ddep"
+    sys.exit()
+
+option = sys.argv[1]
+if option == "ddep":
     dfy_file = sys.argv[2] 
     command = "dafny /printIncludes:Immediate %s" % dfy_file
     outputs = subprocess.run(command, shell=True, stdout=PIPE).stdout
@@ -70,3 +72,15 @@ else:
         assert includes[0] == dfy_file
         result += " | " + " ".join([get_ver_path(i) for i in includes[1:]])
     print(result)
+# elif option == "proc":
+#     proc = sys.argv[3] 
+#     command = 'grep -e "\(method\|function\|lemma\|predicate\).%s" -l ' % proc + " ".join(dfy_files)
+#     outputs = subprocess.run(command, shell=True, stdout=PIPE).stdout
+#     outputs = outputs.decode("utf-8")
+#     proc = proc.replace("_", "__")
+
+#     for dfy_file in outputs.splitlines():
+#         print("verify %s in %s" % (proc, dfy_file))
+#         command = "time -p " + dfy_verify_cmd + "/proc:*%s " % proc + dfy_file
+#         r = subprocess.check_output(command, shell=True).decode("utf-8")
+#         print(r)
