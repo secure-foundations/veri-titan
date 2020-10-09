@@ -8,7 +8,7 @@ rule vale
     command = vale.exe -dafnyText -in $in -out $out
 
 rule ddep
-    command = python dfy_dep.py $in >> $out
+    command = python dfy_dep.py $in > $out
 """
 
 if not os.path.exists("./gen"):
@@ -50,5 +50,5 @@ for dfy_file in dfy_files:
     dd_path = get_dd_path(dfy_file)
 
     print(f"build {dd_path}: ddep {dfy_file}\n")
-    print(f"build {ver_path}: dafny {dfy_file} | {dd_path}")
+    print(f"build {ver_path}: dafny {dfy_file} || {dd_path}")
     print(f"    dyndep = {dd_path}\n")
