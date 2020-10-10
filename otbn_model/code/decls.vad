@@ -56,6 +56,8 @@ function subb256(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup)
 function subi256(a:Bignum, b:Bignum):tuple(Bignum, FlagsGroup) extern;
 function subm256(a:Bignum, b:Bignum, mod:Bignum):Bignum extern;
 
+function rshi256(src1:Bignum, src2:Bignum, imm:uint32):Bignum extern;
+
 function mulqacc256(zero: bool, a:Bignum, qa:uint32, b:Bignum, qb:uint32, shift:uint32, macc:Bignum):Bignum extern;
 function uint256_hwb(x: Bignum, v: uint128, lower: bool):Bignum extern;
 function uint256_qmul(x: uint256, qx: uint2, y: uint256, qy:uint2): uint128 extern;
@@ -67,6 +69,7 @@ function uint256_lh(a: Bignum): uint128 extern;
 function uint256_uh(a: Bignum): uint128 extern;
 
 function get_flags_group(fg:bool, flags:Flags):FlagsGroup extern;
+function get_flag(fg:bool, flag:int, flags:Flags):bool extern;
 function update_fg(b:bool, f:Flags, fg:FlagsGroup):Flags extern;
 function cf(flags_group:FlagsGroup):bool extern;
 
@@ -154,7 +157,7 @@ const WAcc: Reg256 extern;
 operand_type reg32:uint32 :=
 | inout x0 | inout x1 | inout x2 | inout x3
 | inout x4 | inout x5 | inout x6 | inout x7
-| inout x9 | inout x9 | inout x10 | inout x11
+| inout x8 | inout x9 | inout x10 | inout x11
 | inout x12 | inout x13 | inout x14 | inout x15
 | inout x16 | inout x17 | inout x18 | inout x19
 | inout x20 | inout x21 | inout x22 | inout x23
@@ -165,7 +168,7 @@ operand_type reg32:uint32 :=
 operand_type reg256:Bignum @ Reg256 := 
 | inout w0 | inout w1 | inout w2 | inout w3
 | inout w4 | inout w5 | inout w6 | inout w7
-| inout w9 | inout w9 | inout w10 | inout w11
+| inout w8 | inout w9 | inout w10 | inout w11
 | inout w12 | inout w13 | inout w14 | inout w15
 | inout w16 | inout w17 | inout w18 | inout w19
 | inout w20 | inout w21 | inout w22 | inout w23
@@ -306,7 +309,7 @@ procedure BN_ADD(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:boo
 assume false;
 }
 
-procedure Addc256(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:bool, in sb:imm32, inline fg:bool)
+procedure BN_ADDC(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:bool, in sb:imm32, inline fg:bool)
     {:instruction Ins256(ADDC256(dst, src1, src2, st, sb, fg))}
     requires
         sb < 32;
@@ -332,7 +335,7 @@ procedure BN_ADDI(inout dst:reg256, in src:reg256, in imm:imm32, inline fg:bool)
     assume false;
 }
 
-procedure Addm256(inout dst:reg256, in src1:reg256, in src2:reg256)
+procedure ADDM_256(inout dst:reg256, in src1:reg256, in src2:reg256)
     {:instruction Ins256(ADDM256(dst, src1, src2))}
     reads
         wmod;
@@ -465,6 +468,26 @@ procedure BN_MOV(inout dst:reg256, in src:reg256)
     assume false;
 }
 
+procedure BN_RSHI(inout dst:reg256, in src1:reg256, in src2:reg256, in imm:imm32)
+    {:instruction Ins256(RSHI256(dst, src1, src2, imm))}
+    requires
+        imm < 256;
+    ensures
+        dst == rshi256(src1, src2, imm);
+{
+    assume false;
+}
+
+procedure BN_SEL(inout dst:reg256, in src1:reg256, in src2:reg256, inline fg:bool, in flag:imm2)
+    {:instruction Ins256(SEL256(dst, src1, src2, fg))} // TODO: sort out fg/flag
+    modifies
+        flags;
+    ensures
+        dst == (if get_flag(fg, flag, old(flags)) then src2 else src1);
+{
+    assume false;
+}
+    
 #verbatim
 } // end module bignum_decls
 #endverbatim

@@ -1,0 +1,310 @@
+include "decls.vad"
+
+#verbatim
+include "../code/vale.dfy"
+include "../code/d0inv_lemmas.dfy"
+
+include "../spec/def.dfy"
+include "../spec/ops.dfy"
+include "../spec/types.dfy"
+
+include "../gen/decls.dfy"
+
+module barrett384 {
+
+import opened bignum_vale
+import opened d0inv_lemmas
+
+import opened bignum_def
+import opened ops
+import opened types
+
+import opened bignum_decls
+
+#endverbatim
+
+procedure mul384()
+    reads
+        w8; w9; w10; w11; w31;
+    modifies
+        wacc; w18; w17; w16; flags;
+{
+    assume false; // fixme
+
+     //  bn.mulqacc.z             w8.0, w10.0,    0
+     BN_MULQACC_Z(w8, 0, w10, 0, 0);
+
+     //  bn.mulqacc                w8.0, w10.1,  64
+     BN_MULQACC(w8, 0, w10, 1, 1);
+     
+     //  bn.mulqacc.so w16.L,  w8.1, w10.0,  64
+     BN_MULQACC_SO(w16, true, w8, 1, w10, 0, 1);
+     
+     //  bn.mulqacc                w8.0, w10.2,    0
+     BN_MULQACC(w8, 0, w10, 2, 0);
+     
+     //  bn.mulqacc                w8.1, w10.1,    0
+     BN_MULQACC(w8, 1, w10, 1, 0);
+
+     //  bn.mulqacc                w8.2, w10.0,    0
+     BN_MULQACC(w8, 2, w10, 0, 0);
+     
+     //  bn.mulqacc                w8.0, w10.3,  64
+     BN_MULQACC(w8, 0, w10, 3, 1);
+     
+     //  bn.mulqacc                w8.1, w10.2,  64
+     BN_MULQACC(w8, 1, w10, 2, 1);
+     
+     //  bn.mulqacc                w8.2, w10.1,  64
+     BN_MULQACC(w8, 2, w10, 1, 1);
+     
+     //  bn.mulqacc.so w16.U,  w8.3, w10.0,  64
+     BN_MULQACC_SO(w16, false, w8, 3, w10, 0, 1);
+     
+     //  bn.mulqacc                w8.0, w11.0,    0
+     BN_MULQACC(w8, 0, w11, 0, 0);
+     
+     //  bn.mulqacc                w8.1, w10.3,    0
+     BN_MULQACC(w8, 1, w10, 3, 0);
+     
+     //  bn.mulqacc                w8.2, w10.2,    0
+     BN_MULQACC(w8, 2, w10, 2, 0);
+     
+     //  bn.mulqacc                w8.3, w10.1,    0
+     BN_MULQACC(w8, 3, w10, 1, 0);
+     
+     //  bn.mulqacc                w9.0, w10.0,    0
+     BN_MULQACC(w9, 0, w10, 0, 0);
+     
+     //  bn.mulqacc                w8.0, w11.1,  64
+     BN_MULQACC(w8, 0, w11, 1, 1);
+     
+     //  bn.mulqacc                w8.1, w11.0,  64
+     BN_MULQACC(w8, 1, w11, 0, 1);
+     
+     //  bn.mulqacc                w8.2, w10.3,  64
+     BN_MULQACC(w8, 2, w10, 3, 1);
+     
+     //  bn.mulqacc                w8.3, w10.2,  64
+     BN_MULQACC(w8, 3, w10, 2, 1);
+     
+     //  bn.mulqacc                w9.0, w10.1,  64
+     BN_MULQACC(w9, 0, w10, 1, 1);
+     
+     //  bn.mulqacc.so w17.L,  w9.1, w10.0,  64
+     BN_MULQACC_SO(w17, true, w9, 1, w10, 0, 1);
+     
+     //  bn.mulqacc                w8.1, w11.1,    0
+     BN_MULQACC(w8, 1, w11, 1, 0);
+     
+     //  bn.mulqacc                w8.2, w11.0,    0
+     BN_MULQACC(w8, 2, w11, 0, 0);
+     
+     //  bn.mulqacc                w8.3, w10.3,    0
+     BN_MULQACC(w8, 3, w10, 3, 0);
+     
+     //  bn.mulqacc                w9.0, w10.2,    0
+     BN_MULQACC(w9, 0, w10, 2, 0);
+     
+     //  bn.mulqacc                w9.1, w10.1,    0
+     BN_MULQACC(w9, 1, w10, 1, 0);
+          
+     //  bn.mulqacc                w8.2, w11.1,  64
+     BN_MULQACC(w8, 2, w11, 1, 1);
+
+     //  bn.mulqacc                w8.3, w11.0,  64
+     BN_MULQACC(w8, 3, w11, 0, 1);
+     
+     //  bn.mulqacc                w9.0, w10.3,  64
+     BN_MULQACC(w9, 0, w10, 3, 1);
+     
+     //  bn.mulqacc.so w17.U,  w9.1, w10.2,  64
+     BN_MULQACC_SO(w17, false, w9, 1, w10, 2, 1);
+     
+     //  bn.mulqacc                w8.3, w11.1,    0
+     BN_MULQACC(w8, 3, w11, 1, 0);
+     
+     //  bn.mulqacc                w9.0, w11.0,    0
+     BN_MULQACC(w9, 0, w11, 0, 0);
+     
+     //  bn.mulqacc                w9.1, w10.3,    0
+     BN_MULQACC(w9, 1, w10, 3, 0);
+     
+     //  bn.mulqacc                w9.0, w11.1,  64
+     BN_MULQACC(w9, 0, w11, 1, 1);
+     
+     //  bn.mulqacc.so w18.L,  w9.1, w11.0,  64
+     BN_MULQACC(w9, 0, w11, 1, 1);
+     
+     //  bn.mulqacc.so w18.U,  w9.1, w11.1,    0
+     BN_MULQACC_SO(w18, false, w9, 1, w11, 1, 0);
+
+     //  bn.add w18, w18, w31
+     BN_ADD(w18, w18, w31, false, 0, false);
+}
+     
+procedure barrett384()
+    reads
+        w12; w13; w14; w15; w31;
+    modifies
+        w8; w9; w10; w11; w16; w17; w18; w19; 
+        w20; w21; w22; w23; w24; w25; w29; w30; 
+        flags; wacc;
+{
+    assume false; // fixme
+
+    /* Compute 2^129-1 mask. Could be pre-calculated for the cost of a register.
+    Currently w30 is clobbered later in this subroutine. */
+    // bn.subi w30, w31, 1
+    BN_SUBI(w30, w31, 1, false);
+    // bn.rshi w30, w30, w31 >> 127
+    BN_RSHI(w30, w30, w31, 127);
+
+    /* Compute the integer product of the operands x = a * b
+    x = [w18, w17, w16] = a * b = [w9, w8] * [w11, w10]
+    => max. length x: 768 bit */
+    // jal x1, mul384
+    mul384();
+
+    /* Store correction factor to compensate for later neglected MSb of x.
+    x is 768 bit wide and therefore the 383 bit right shifted version q1
+    (below) contains 385 bit. Bit 384 of q1 is neglected to allow using a
+    384x384 multiplier. For the MSb of x being set we temporary store u
+    (or zero) here to be used in a later constant time correction of a
+    multiplication with u. Note that this requires the MSb flag being carried
+    over from the multiplication routine. */
+    // bn.sel w24, w14, w31, M
+    BN_SEL(w24, w14, w31, false, 2); 
+    // bn.sel w25, w15, w31, M
+    BN_SEL(w25, w16, w31, false, 2); 
+
+    /* Compute r1 = x % 2^385
+        r1 = [w22, w21] = x % 2^385 = x & (2^3851)
+            = ([w9, w8] * [w13,w12]) & [w30, w31]
+        => max length r1: 385 bits */
+    // bn.mov w21, w16
+    BN_MOV(w21, w16);
+    // bn.and w22, w17, w30
+    BN_AND(w22, w17, w30, false, 0);
+
+    /* Compute q1 = x >> 383
+        q1 = [w9, w8] = [w18, w17, w16] >> 383  = [w18, w17] >> 127
+        => max length q1: 385 bits */
+    // bn.rshi w9, w18, w31 >> 127
+    BN_RSHI(w9, w18, w31, 127);
+    // bn.rshi w8, w17, w18 >> 127
+    BN_RSHI(w8, w17, w18, 127);
+
+    /* Compute q2 = q1*u
+        Instead of full q2 (which would be up to 770 bits) we ignore the MSb of u
+        and the MSb of q1 and correct this later. This allows using a 384x384
+        multiplier. For special modili where the lower half of the second limb of
+        u is zero (e.g. p384) this can be further optimized by only considering
+        limb 0 of u and use a 384x256 multiplication.
+        => max. length q2': 768 bit
+        q2' = q1[383:0]*u[383:0] = [w18, w17, w16] = [w9, w8] * [w15, w14] */
+
+    // bn.mov w10, w14
+    BN_MOV(w10, w14);
+    // bn.mov w11, w15
+    BN_MOV(w11, w15);
+    // jal x1, mul384
+    mul384();
+
+  /* q3 = q2 >> 385
+      In this step, the compensation for the neglected MSbs of q1 and u is
+      carried out underway. To add them in the q2 domain, they would have to be
+      left shifted by 384 bit first. To directly add them we first shift q2' by
+      384 bit to the right, perform the additions, and shift the result another
+      bit to the right. The additions cannot overflow due to leading zeros
+      after shift.
+      q2'' = q2' >> 384 = [w20, w19] = [w18, w17, w16] >> 384
+                                                = [w18, w17] >> 128 */
+    // bn.rshi w20, w18, w31 >> 128
+    BN_RSHI(w20, w18, w31, 128);
+    // bn.rshi w19, w17, w18 >> 128
+    BN_RSHI(w19, w17, w18, 128);
+    /* Add q1. This is unconditional since MSb of u is always 1.
+        This cannot overflow due to leading zeros.
+        q2''' = q2'' + q1 = [w20, w19] = [w20, w19] + [w8, w9] */
+    // bn.add w19, w19, w8
+    BN_ADD(w19, w19, w8, false, 0, false);
+    // bn.addc w20, w20, w9
+    BN_ADDC(w20, w20, w9, false, 0, false);
+    /* Conditionally add u (without leading 1) in case of MSb of x being set.
+        This is the "real" q2 but shifted by 384 bits to the right. This cannot
+        overflow due to leading zeros
+        q2'''' = x[767]?q2'''+u[383:0]:q2'''
+                = [w20, w19] + [w25, w24] = q2 >> 384 */
+    // bn.add w19, w19, w24
+    BN_ADD(w19, w19, w24, false, 0, false);
+    // bn.addc w20, w20, w25
+    BN_ADDC(w20, w20, w25, false, 0, false);
+    /* finally this gives q3 by shifting the remain bit to the right
+        q3 = q2 >> 385 = q2'''' >> 1 = [w9, w8] = [w20, w19] >> 1 */
+
+    // bn.rshi w9, w20, w31 >> 1
+    BN_RSHI(w9, w20, w31, 1);
+    // bn.rshi w8, w19, w20 >> 1
+    BN_RSHI(w8, w19, w20, 1);
+
+    /* Compute r2 = q3 * m % 2^385.
+        => max. length r2: 385 bit
+        q3*m = [w18, w17, w16] = [w9, w8] * [w13,w12] */
+    // bn.mov w10, w12
+    BN_MOV(w10, w12);
+    // bn.mov w11, w13
+    BN_MOV(w11, w13);
+    // jal x1, mul384
+    mul384();
+    /* r2 = [w17, w16] = q3*m%2^385 = [w18, w17, w16] & (2^385-1)
+                                    = [w17&(2^129-1), w16] = [w17&w30, w16] */
+    // bn.and w17, w17, w30
+    BN_AND(w17, w17, w30, false, 0);
+
+    /* Compute r = r1 - r2.
+        => max. length r: 385 bit
+        [w22,w21] = [w22,w21] - [w17,w16] */
+    // bn.sub w21, w21, w16
+    BN_SUB(w21, w21, w16, false, 0, false);
+    // bn.subb w22, w22, w17
+    BN_SUBB(w22, w22, w17, false, 0, false);
+
+    /* Reuse old 129-bit mask to get single 1 at bit pos 129
+      2^129 = 2^129-1 +1 = w[30] <= [w30] + 1 */
+
+    // bn.addi w30, w30, 1
+    BN_ADDI(w30, w30, 1, false);
+
+    /* Conditionally add 2^385 to r if r is negative.
+        r = [w22, w21] <= (r < 0)?r + 2^385 = [w22, w21] + 2^385
+                                            = [w22 + 2^129, w21] */
+    // bn.add w30, w30, w22
+    BN_ADD(w30, w30, w22, false, 0, false);
+    // bn.sel w22, w30, w22, C
+    BN_SEL(w22, w30, w22, false, 3);
+
+    /* Barret algorithm requires subtraction of the modulus at most two times if
+        result is too large. */
+    // bn.sub w29, w21, w12
+    BN_SUB(w29, w21, w12, false, 0, false);
+    // bn.subb w30, w22, w13
+    BN_SUBB(w30, w22, w13, false, 0, false);
+    // bn.sel w21, w21, w29, C
+    BN_SEL(w21, w21, w29, false, 3);
+    // bn.sel w22, w22, w30, C
+    BN_SEL(w22, w22, w30, false, 3);
+    // bn.sub w29, w21, w12
+    BN_SUB(w29, w21, w12, false, 0, false);
+    // bn.subb w30, w22, w13
+    BN_SUBB(w30, w22, w13, false, 0, false);
+    // bn.sel w29, w21, w29, C
+    BN_SEL(w29, w21, w29, false, 3);
+    // bn.sel w30, w22, w30, C
+    BN_SEL(w30, w22, w30, false, 3);
+    /* return result: c =[w29, w30] =  a * b % m. */
+}
+
+#verbatim
+}
+#endverbatim

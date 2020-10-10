@@ -262,9 +262,9 @@ module d0inv_lemmas {
 	{
 		&& (0 <= i <= 256)
 		&& ((i == 0) ==> (w29 == 1))
-        && ((i > 0) ==> ((w29 * w28) % power(2, i) == 1))
+		&& ((i > 0) ==> ((w29 * w28) % power(2, i) == 1))
 		&& ((i > 0) ==> (w29 < power(2, i)))
-        && ((i < 256) ==> (w0 == power(2, i)))
+		&& ((i < 256) ==> (w0 == power(2, i)))
 	}
 
 	lemma lemma_d0inv_mid_loop(
@@ -277,13 +277,13 @@ module d0inv_lemmas {
 		w29: uint256,
 		w29_g1: uint256
 	)
-        requires w28 % 2 == 1;
-        requires invariant_d0inv(i, w28, w29_g1, w0_g1);
+		requires w28 % 2 == 1;
+		requires invariant_d0inv(i, w28, w29_g1, w0_g1);
 		requires i < 256;
-        requires half_product(w1_g1, w28, w29_g1);
-        requires w1_g2 == and256(w1_g1, w0_g1, false, 0);
-        requires w29 == or256(w29_g1, w1_g2, false, 0);
-        requires w0 == fst(add256(w0_g1, w0_g1, false, 0));
+		requires half_product(w1_g1, w28, w29_g1);
+		requires w1_g2 == and256(w1_g1, w0_g1, false, 0);
+		requires w29 == or256(w29_g1, w1_g2, false, 0);
+		requires w0 == fst(add256(w0_g1, w0_g1, false, 0));
 
 		ensures invariant_d0inv(i + 1, w28, w29, w0);
 	{
@@ -303,7 +303,7 @@ module d0inv_lemmas {
 			}
 		} else {
 
-            assert w0 == if i != 255 then power(2, i + 1) else 0 by {
+		assert w0 == if i != 255 then power(2, i + 1) else 0 by {
 				calc == {
 					w0;
 					(w0_g1 + w0_g1) % BASE_256;
@@ -358,54 +358,56 @@ module d0inv_lemmas {
 		mod_inv_lemma(w29, w29_g2, w28);
 	}
 
-    lemma mod_inv_lemma(w29: int, w29_old: int, w28: int)
-        requires (w29_old * w28) % BASE_256 == 1;
-        requires w29_old + w29 == BASE_256;
-        ensures cong(w29 * w28, -1, BASE_256);
-    {
-        calc ==> {
-            (w29_old * w28) % BASE_256 == 1;
-            {
-                reveal cong();
-            }
-            cong(w29_old * w28, 1, BASE_256);
-            {
-                assert w29_old == BASE_256 - w29;
-            }
-            cong((BASE_256 - w29) * w28, 1, BASE_256);
-            cong(BASE_256 * w28 - w29 * w28, 1, BASE_256);
-            {
-                assert cong(-BASE_256 * w28, 0, BASE_256) by {
-                    mod_mul_lemma(w28, -BASE_256, BASE_256);
-                    reveal cong();
-                }
-                cong_add_lemma_2(BASE_256 * w28 - w29 * w28, 1, -BASE_256 * w28, 0, BASE_256);
-            }
-            cong(-w29 * w28, 1, BASE_256);
-            {
-                cong_mul_lemma_1(-w29 * w28, 1, -1, BASE_256);
-            }
-            cong(w29 * w28, -1, BASE_256);
-        }
-    }
+	lemma mod_inv_lemma(w29: int, w29_old: int, w28: int)
+		requires (w29_old * w28) % BASE_256 == 1;
+		requires w29_old + w29 == BASE_256;
+		ensures cong(w29 * w28, -1, BASE_256);
+	{
+		calc ==> {
+			(w29_old * w28) % BASE_256 == 1;
+			{
+				reveal cong();
+			}
+			cong(w29_old * w28, 1, BASE_256);
+			{
+				assert w29_old == BASE_256 - w29;
+			}
+			cong((BASE_256 - w29) * w28, 1, BASE_256);
+			cong(BASE_256 * w28 - w29 * w28, 1, BASE_256);
+			{
+				assert cong(-BASE_256 * w28, 0, BASE_256) by {
+					mod_mul_lemma(w28, -BASE_256, BASE_256);
+					reveal cong();
+				}
+				cong_add_lemma_2(BASE_256 * w28 - w29 * w28, 1, -BASE_256 * w28, 0, BASE_256);
+			}
+			cong(-w29 * w28, 1, BASE_256);
+			{
+				cong_mul_lemma_1(-w29 * w28, 1, -1, BASE_256);
+			}
+			cong(w29 * w28, -1, BASE_256);
+		}
+	}
 
-    lemma power_2_bounded_lemma(i: int)
-        ensures (0 <= i < 256) ==> (power(2, i) < BASE_256);
-        ensures (i == 256) ==> (power(2, i) == BASE_256);
+	lemma power_2_bounded_lemma(i: int)
+		ensures (0 <= i < 256) ==> (power(2, i) < BASE_256);
+		ensures (i == 256) ==> (power(2, i) == BASE_256);
 		// ensures (i > 256) ==> (power(2, i) > BASE_256);
 
-    lemma {:axiom} d0inv_bv_lemma_1(x: int, w0: uint256, i: nat)
-        requires w0 == power(2, i);
-        requires x % w0 == 1;
-        requires uint256_and(x % BASE_256, w0) == 0;
-        ensures x % power(2, i + 1) == 1;
+	lemma {:axiom} d0inv_bv_lemma_1(x: int, w0: uint256, i: nat)
+		requires i < 256;
+		requires w0 == power(2, i);
+		requires x % w0 == 1;
+		requires uint256_and(x % BASE_256, w0) == 0;
+		ensures x % power(2, i + 1) == 1;
 
-    lemma {:axiom} d0inv_bv_lemma_2(x: int, w28: uint256, w0: uint256, i: nat)
-        requires w0 == power(2, i);
-        requires x % w0 == 1;
-        requires uint256_and(x % BASE_256, w0) == w0;
-        requires w28 % 2 == 1;
-        ensures (x + w28 * w0) % power(2, i + 1) == 1;
+	lemma {:axiom} d0inv_bv_lemma_2(x: int, w28: uint256, w0: uint256, i: nat)
+		requires i < 256;
+		requires w0 == power(2, i);
+		requires x % w0 == 1;
+		requires uint256_and(x % BASE_256, w0) == w0;
+		requires w28 % 2 == 1;
+		ensures (x + w28 * w0) % power(2, i + 1) == 1;
 
 	lemma lemma_mod_multiple_cancel(x: int, y: int, m: nat)
 		requires m !=0 && y % m == 0;
