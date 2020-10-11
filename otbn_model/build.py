@@ -63,7 +63,7 @@ if len(sys.argv) == 1:
     if version != "1.10.1":
         print("[WARNING] ninja not found or uexpected version: " + version)
     gen_ninja()
-    os.system("ninja -v")
+    os.system("ninja -v -j 4")
     sys.exit()
 
 option = sys.argv[1]
