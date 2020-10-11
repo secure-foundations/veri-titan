@@ -10,3 +10,5 @@ docs/*.fdb_latexmk
 docs/*.fls
 docs/*.log
 docs/*.synctex.gz
+.ninja_log
+build.ninja
