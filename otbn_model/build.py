@@ -22,14 +22,19 @@ def get_dd_path(dfy_path):
     # assuming there aren't duplicated names
     return "./gen/" + dfy_path.split("/")[-1] + ".dd"
 
-def gen_ninja():
+def get_dfy_files(exclude_gen):
     dfy_files = list()
     for root, dirs, files in os.walk("."):
-        if root == "./gen":
+        if root == "./gen" and exclude_gen:
             continue
         for file in files:
             if file.endswith(".dfy"):
                 dfy_files.append(os.path.join(root, file))
+                # print(os.path.join(root, file))
+    return dfy_files
+
+def gen_ninja():
+    dfy_files = get_dfy_files(True)
 
     for file in os.listdir("./code"):
         if file.endswith(".vad"):
@@ -37,6 +42,7 @@ def gen_ninja():
             vad_file = os.path.join("./code", file)
             file = file.replace(".vad", ".dfy")
             dfy_file = os.path.join("./gen", file)
+            # print(dfy_file)
             dfy_files.append(dfy_file)
             ninja_out.append(f"build {dfy_file}: vale {vad_file}\n")
 
@@ -58,7 +64,7 @@ if len(sys.argv) == 1:
     if version != "1.10.1":
         print("[WARNING] ninja not found or uexpected version: " + version)
     gen_ninja()
-    os.system("ninja -v")
+    os.system("ninja -v -j 4")
     sys.exit()
 
 option = sys.argv[1]
@@ -76,15 +82,16 @@ if option == "ddep":
         assert includes[0] == dfy_file
         result += " | " + " ".join([get_ver_path(i) for i in includes[1:]])
     print(result)
-# elif option == "proc":
-#     proc = sys.argv[3] 
-#     command = 'grep -e "\(method\|function\|lemma\|predicate\).%s" -l ' % proc + " ".join(dfy_files)
-#     outputs = subprocess.run(command, shell=True, stdout=PIPE).stdout
-#     outputs = outputs.decode("utf-8")
-#     proc = proc.replace("_", "__")
+elif option == "proc":
+    proc = sys.argv[2]
+    dfy_files = get_dfy_files(False)
+    command = 'grep -e "\(method\|function\|lemma\|predicate\).%s" -l ' % proc + " ".join(dfy_files)
+    outputs = subprocess.run(command, shell=True, stdout=PIPE).stdout
+    outputs = outputs.decode("utf-8")
+    proc = proc.replace("_", "__")
 
-#     for dfy_file in outputs.splitlines():
-#         print("verify %s in %s" % (proc, dfy_file))
-#         command = "time -p " + dfy_verify_cmd + "/proc:*%s " % proc + dfy_file
-#         r = subprocess.check_output(command, shell=True).decode("utf-8")
-#         print(r)
+    for dfy_file in outputs.splitlines():
+        print("verify %s in %s" % (proc, dfy_file))
+        command = "time -p dafny /compile:0 /nologo /proc:*%s " % proc + dfy_file
+        r = subprocess.check_output(command, shell=True).decode("utf-8")
+        print(r)
