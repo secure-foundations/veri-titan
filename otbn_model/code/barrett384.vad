@@ -1,25 +1,29 @@
 include "decls.vad"
+include "otbn_mul.vad"
 
 #verbatim
 include "../code/vale.dfy"
-include "../code/d0inv_lemmas.dfy"
+include "../code/otbn_mul_lemmas.dfy"
 
 include "../spec/def.dfy"
 include "../spec/ops.dfy"
 include "../spec/types.dfy"
 
 include "../gen/decls.dfy"
+include "../gen/otbn_mul.dfy"
 
 module barrett384 {
 
 import opened bignum_vale
-import opened d0inv_lemmas
 
 import opened bignum_def
 import opened ops
 import opened types
 
 import opened bignum_decls
+
+import opened otbn_mul_lemmas
+import opened otbn_mul
 
 #endverbatim
 
@@ -29,35 +33,7 @@ procedure mul384()
     modifies
         wacc; w18; w17; w16; flags;
 {
-    //  bn.mulqacc.z             w8.0, w10.0,    0
-    BN_MULQACC_Z(w8, 0, w10, 0, 0);
-
-    //  bn.mulqacc                w8.0, w10.1,  64
-    BN_MULQACC(w8, 0, w10, 1, 1);
-
-    //  bn.mulqacc.so w16.L,  w8.1, w10.0,  64
-    BN_MULQACC_SO(w16, true, w8, 1, w10, 0, 1);
-
-    //  bn.mulqacc                w8.0, w10.2,    0
-    BN_MULQACC(w8, 0, w10, 2, 0);
-
-    //  bn.mulqacc                w8.1, w10.1,    0
-    BN_MULQACC(w8, 1, w10, 1, 0);
-
-    //  bn.mulqacc                w8.2, w10.0,    0
-    BN_MULQACC(w8, 2, w10, 0, 0);
-
-    //  bn.mulqacc                w8.0, w10.3,  64
-    BN_MULQACC(w8, 0, w10, 3, 1);
-
-    //  bn.mulqacc                w8.1, w10.2,  64
-    BN_MULQACC(w8, 1, w10, 2, 1);
-
-    //  bn.mulqacc                w8.2, w10.1,  64
-    BN_MULQACC(w8, 2, w10, 1, 1);
-
-    //  bn.mulqacc.so w16.U,  w8.3, w10.0,  64
-    BN_MULQACC_SO(w16, false, w8, 3, w10, 0, 1);
+    half_mul(w16, w8, w10);
 
     //  bn.mulqacc                w8.0, w11.0,    0
     BN_MULQACC(w8, 0, w11, 0, 0);

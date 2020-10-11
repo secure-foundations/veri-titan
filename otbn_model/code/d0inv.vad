@@ -16,7 +16,6 @@ include "../gen/otbn_mul.dfy"
 module d0inv {
 
 import opened d0inv_lemmas
-import opened otbn_mul_lemmas
 
 import opened bignum_vale
 import opened bignum_def
@@ -24,6 +23,8 @@ import opened ops
 import opened types
 
 import opened bignum_decls
+
+import opened otbn_mul_lemmas
 import opened otbn_mul
 
 #endverbatim
