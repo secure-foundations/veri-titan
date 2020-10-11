@@ -25,12 +25,12 @@ def get_dd_path(dfy_path):
 def get_dfy_files(exclude_gen):
     dfy_files = list()
     for root, dirs, files in os.walk("."):
-        # print(dirs)
         if root == "./gen" and exclude_gen:
             continue
         for file in files:
             if file.endswith(".dfy"):
                 dfy_files.append(os.path.join(root, file))
+                # print(os.path.join(root, file))
     return dfy_files
 
 def gen_ninja():
@@ -42,6 +42,7 @@ def gen_ninja():
             vad_file = os.path.join("./code", file)
             file = file.replace(".vad", ".dfy")
             dfy_file = os.path.join("./gen", file)
+            # print(dfy_file)
             dfy_files.append(dfy_file)
             ninja_out.append(f"build {dfy_file}: vale {vad_file}\n")
 

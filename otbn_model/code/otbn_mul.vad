@@ -2,7 +2,7 @@ include "decls.vad"
 
 #verbatim
 include "../code/vale.dfy"
-include "../code/d0inv_lemmas.dfy"
+include "../code/otbn_mul_lemmas.dfy"
 
 include "../spec/def.dfy"
 include "../spec/ops.dfy"
@@ -13,7 +13,7 @@ include "../gen/decls.dfy"
 module otbn_mul {
 
 import opened bignum_vale
-import opened d0inv_lemmas
+import opened otbn_mul_lemmas
 
 import opened bignum_def
 import opened ops
