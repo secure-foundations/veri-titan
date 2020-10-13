@@ -352,7 +352,7 @@ function subi256(x:Bignum, imm:Bignum) : (Bignum, FlagsGroup)
 function subm256(x:Bignum, y:Bignum, wmod:Bignum) : Bignum
 {
 	// FIXME: some bound checking?
-	assume false;
+	//assume false;
 	var result := (x as bv256 - y as bv256) as Bignum;
 	if result >= wmod then (result as bv256 - wmod as bv256) as Bignum else result
 }

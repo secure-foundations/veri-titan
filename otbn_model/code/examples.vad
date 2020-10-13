@@ -39,6 +39,17 @@ procedure DoubleRegExample32()
     Add32(x2, x2, x2);
 }
 
+procedure DoubleRegExample256()
+    requires
+        w2 + w2 < 0x1_0000_0000;
+    ensures
+        w2 = old(w2) + old(w2);
+    modifies
+        w2; flags;
+{
+    BN_ADD(w2, w2, w2, false, 0, false);
+}
+
 procedure Increment(inout dst:reg32)
     ensures
         dst == old(dst) + 1;

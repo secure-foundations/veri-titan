@@ -205,7 +205,7 @@ module ops {
 		requires 0 <= num_bytes < 32;
 		ensures uint256_ls(x, 0) == x;
 	{
-		assume false;
+		// assume false;
 		(x as bv256 << (num_bytes * 8)) as uint256
 	}
 
@@ -213,7 +213,7 @@ module ops {
 		requires 0 <= num_bytes < 32;
 		ensures uint256_rs(x, 0) == x;
 	{
-		assume false;
+	  // assume false;
 		(x as bv256 >> (num_bytes * 8)) as uint256
 	}
 
@@ -240,10 +240,14 @@ module ops {
 		ensures lower ==> (uint256_lh(x') == v && uint256_uh(x') == uint256_uh(x));
 		// overwrites the higher half, keeps the lower half
 		ensures !lower ==> (uint256_uh(x') == v && uint256_lh(x') == uint256_lh(x));
+	{
+		// TODO: no clue if this is right
+		if lower then (uint256_uh(x) * BASE_128 + v) else (uint256_lh(x) +  v * BASE_128)
+	}
 
 	function {:opaque} uint256_qmul(x: uint256, qx: uint2, y: uint256, qy:uint2): uint128
 	{
-		assume false; // TODO: add a bound proof
+		//assume false; // TODO: add a bound proof
 		uint256_qsel(x, qx) * uint256_qsel(y, qy)
 	}
 
@@ -288,6 +292,9 @@ module ops {
 	lemma lemma_ls_mul(x: uint256)
 		requires x < BASE_128;
 		ensures uint256_ls(x, 8) == x * BASE_64;
+	{
+		reveal uint256_ls();
+	}
 
 	lemma lemma_uint256_hwb(x1: uint256, x2: uint256, x3: uint256, lo: uint128, hi: uint128)
 		requires x2 == uint256_hwb(x1, lo, true);
@@ -325,6 +332,6 @@ module ops {
 			uint256_qsel(x, 3) * BASE_192;
 	{
 		// reveal uint256_qsel(); // TODO: revaling is not sufficient
-		assume false;
+		//assume false;
 	}
 } // end module ops
