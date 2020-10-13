@@ -30,6 +30,7 @@ module otbn_mul_lemmas {
 		wacc_g7: uint256,
 		wacc_g8: uint256,
 		wacc_g9: uint256,
+        wacc: uint256,
 		w1_g1: uint256,
 		w1_g2: uint256,
 		result_g1: uint256,
@@ -50,6 +51,7 @@ module otbn_mul_lemmas {
 		requires pc8: wacc_g8 == mulqacc256(false, w28, 2, w29, 1, 1, wacc_g7);
 		requires pc9: wacc_g9 == mulqacc256(false, w28, 1, w29, 2, 1, wacc_g8);
 		requires pc10: result_g2 == mulqacc256(false, w28, 0, w29, 3, 1, wacc_g9)
+			&& wacc == uint256_uh(result_g2)
 			&& w1 == uint256_hwb(w1_g2, uint256_lh(result_g2), false);
 		ensures half_product(w1, w28, w29);
 	{

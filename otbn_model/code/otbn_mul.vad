@@ -33,6 +33,7 @@ ghost procedure lemma_bn_half_mul(
     ghost wacc_g7: uint256,
     ghost wacc_g8: uint256,
     ghost wacc_g9: uint256,
+    ghost wacc: uint256,
     ghost w1_g1: uint256,
     ghost w1_g2: uint256,
     ghost result_g1: uint256,
@@ -108,7 +109,7 @@ procedure half_mul(inout dst: reg256, in src1: reg256, in src2: reg256)
     assert wacc == uint256_uh(result_g2)
         && dst == uint256_hwb(w1_g2, uint256_lh(result_g2), false);
 
-    lemma_bn_half_mul(wacc_g1, wacc_g2, wacc_g3, wacc_g4, wacc_g5, wacc_g6, wacc_g7, wacc_g8, wacc_g9,
+    lemma_bn_half_mul(wacc_g1, wacc_g2, wacc_g3, wacc_g4, wacc_g5, wacc_g6, wacc_g7, wacc_g8, wacc_g9, wacc,
         w1_g1, w1_g2, result_g1, result_g2,
         dst, src1, src2);
 }
