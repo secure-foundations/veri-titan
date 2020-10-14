@@ -39,17 +39,37 @@
 %     &\text{While } r \ge m \text{ do } r \leftarrow r - m\\
 % \end{align*}
 
-% We have $0 \le x \le b^{2k}$, and $m = $.
-
-% Let 
-% \begin{align*}
-%     \floor{\frac{x}{b^{k-1}}} + \alpha &= \frac{x}{b^{k-1}}\\
-%     \floor{\frac{b^{2k}}{m}} + \beta &= \frac{b^{2k}}{m}\\
-% \end{align*}
-
+start with:
 \begin{align*}
+    b &= 2 \\
+    k &= 384 \\
+    m &= 2^{384} - 2^{128} - 2^{96} + 2^{32} - 1\\
+    q_3 &=  \floor{
+        \frac
+        {
+            \floor{\frac{x}{b^{k-1}}} \floor{\frac{b^{2k}}{m}}
+        }
+        {b ^{k+1}}
+        }\\
+    \alpha &= \frac{x}{b^{k-1}} - \floor{\frac{x}{b^{k-1}}}\\
+    \beta &= \frac{b^{2k}}{m} - \floor{\frac{b^{2k}}{m}} \approxeq 0
+\end{align*}
+
+bound for $x$:
+\begin{align*}
+0 \le x \le b^{2k}
+\end{align*}
+
+bound for $\alpha$:
+\begin{align*}
+0 \le  \alpha < 1
+\end{align*}
+
+calc for $Q$:
+
+\begin{align}
     Q = & \floor{\frac{x}{m}}\\ 
-    = & \floor{\frac{x}{b^{k-1}}\frac{b^{2k}}{m}\frac{1}{b^{k+1}}} \\
+    = & \floor{\frac{\frac{x}{b^{k-1}}\frac{b^{2k}}{m}} {b^{k+1}}} \\
     = & \floor{
         \frac
         {
@@ -143,7 +163,34 @@
             b^{k-1}
         }
         {m} + \beta
-    } \\ 
-\end{align*}
+    } \\
+    % \approxeq & \floor{
+    %     \frac
+    %     {
+    %         \floor{\frac{x}{b^{k-1}}} \floor{\frac{b^{2k}}{m}}
+    %     }
+    %     {b ^{k+1}}
+    %     +
+    %     0.5
+    % }\\
+    < & \floor{
+        \frac
+        {
+            \floor{\frac{x}{b^{k-1}}} \floor{\frac{b^{2k}}{m}}
+        }
+        {b ^{k+1}}
+        +
+        1
+    } \\
+    = & \floor{
+        \frac
+        {
+            \floor{\frac{x}{b^{k-1}}} \floor{\frac{b^{2k}}{m}}
+        }
+        {b ^{k+1}}
+        }
+        +
+        1
+\end{align}
 
 \end{document}
