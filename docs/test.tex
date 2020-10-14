@@ -21,21 +21,129 @@
 \date{}
 
 \begin{document}
+% \begin{align*}
+%     &\text{step 1 (unchanged): } \\ 
+%     &q_1 \leftarrow \floor{x / b ^{k-1}}\\
+%     &q_2 \leftarrow q_1 \cdot \floor{b^{2k} / m}\\
+%     &q_3 \leftarrow \floor{q_2 / b ^{k+1}}\\
+%     \\
+%     &\text{step 2 (use $b ^{k+2}$): } \\ 
+%     &r_1 \leftarrow x \text{ mod } b ^{k+2}\\
+%     &r_2 \leftarrow q_3 \cdot m \text{ mod } b ^{k+2}\\
+%     &r \leftarrow r_1 - r_2\\
+%     \\
+%     &\text{step 3 (also use $b ^{k+2}$): } \\ 
+%     &\text{If } r < 0 \text{ then } r \leftarrow r + b ^{k+2}\\
+%     \\
+%     &\text{step 4 (unchanged): } \\ 
+%     &\text{While } r \ge m \text{ do } r \leftarrow r - m\\
+% \end{align*}
+
+% We have $0 \le x \le b^{2k}$, and $m = $.
+
+% Let 
+% \begin{align*}
+%     \floor{\frac{x}{b^{k-1}}} + \alpha &= \frac{x}{b^{k-1}}\\
+%     \floor{\frac{b^{2k}}{m}} + \beta &= \frac{b^{2k}}{m}\\
+% \end{align*}
+
 \begin{align*}
-    &\text{step 1 (unchanged): } \\ 
-    &q_1 \leftarrow \floor{x / b ^{k-1}}\\
-    &q_2 \leftarrow q_1 \cdot \floor{b^{2k} / m}\\
-    &q_3 \leftarrow \floor{q_2 / b ^{k+1}}\\
-    \\
-    &\text{step 2 (use $b ^{k+2}$): } \\ 
-    &r_1 \leftarrow x \text{ mod } b ^{k+2}\\
-    &r_2 \leftarrow q_3 \cdot m \text{ mod } b ^{k+2}\\
-    &r \leftarrow r_1 - r_2\\
-    \\
-    &\text{step 3 (also use $b ^{k+2}$): } \\ 
-    &\text{If } r < 0 \text{ then } r \leftarrow r + b ^{k+2}\\
-    \\
-    &\text{step 4 (unchanged): } \\ 
-    &\text{While } r \ge m \text{ do } r \leftarrow r - m\\
+    Q = & \floor{\frac{x}{m}}\\ 
+    = & \floor{\frac{x}{b^{k-1}}\frac{b^{2k}}{m}\frac{1}{b^{k+1}}} \\
+    = & \floor{
+        \frac
+        {
+            (\floor{\frac{x}{b^{k-1}}} + \alpha
+            )
+            (
+            \floor{\frac{b^{2k}}{m}} + \beta
+            )
+        }
+        {b ^{k+1}}
+    } \\
+    \le & \floor{
+        \frac
+        {
+            (\floor{\frac{x}{b^{k-1}}} + 1
+            )
+            (
+            \floor{\frac{b^{2k}}{m}} + \beta
+            )
+        }
+        {b ^{k+1}}
+    } \\ 
+    = & \floor{
+        \frac
+        {
+            \floor{\frac{x}{b^{k-1}}} \floor{\frac{b^{2k}}{m}} + \floor{\frac{b^{2k}}{m}} + \beta + \beta \floor{\frac{x}{b^{k-1}}}
+        }
+        {b ^{k+1}}
+    } \\ 
+    = & \floor{
+        \frac
+        {
+            \floor{\frac{x}{b^{k-1}}} \floor{\frac{b^{2k}}{m}}
+        }
+        {b ^{k+1}}
+        +
+        \frac
+        {
+            \floor{\frac{b^{2k}}{m}} + \beta + \beta \floor{\frac{x}{b^{k-1}}}
+        }
+        {b ^{k+1}}
+    } \\
+    \le & \floor{
+        \frac
+        {
+            \floor{\frac{x}{b^{k-1}}} \floor{\frac{b^{2k}}{m}}
+        }
+        {b ^{k+1}}
+        +
+        \frac
+        {
+            \floor{\frac{b^{2k}}{m}} + \beta + \beta {b^{k+1}}
+        }
+        {b ^{k+1}}
+    } \\
+    = & \floor{
+        \frac
+        {
+            \floor{\frac{x}{b^{k-1}}} \floor{\frac{b^{2k}}{m}}
+        }
+        {b ^{k+1}}
+        +
+        \frac
+        {
+            \floor{\frac{b^{2k}}{m}} + \beta
+        }
+        {b ^{k+1}} + \beta
+    } \\
+    = & \floor{
+        \frac
+        {
+            \floor{\frac{x}{b^{k-1}}} \floor{\frac{b^{2k}}{m}}
+        }
+        {b ^{k+1}}
+        +
+        \frac
+        {
+            b^{2k}
+        }
+        {b ^{k+1}p} + \beta
+    } \\
+    = & \floor{
+        \frac
+        {
+            \floor{\frac{x}{b^{k-1}}} \floor{\frac{b^{2k}}{m}}
+        }
+        {b ^{k+1}}
+        +
+        \frac
+        {
+            b^{k-1}
+        }
+        {m} + \beta
+    } \\ 
 \end{align*}
+
 \end{document}
