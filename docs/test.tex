@@ -52,7 +52,7 @@ start with:
         {b ^{k+1}}
         }\\
     \alpha &= \frac{x}{b^{k-1}} - \floor{\frac{x}{b^{k-1}}}\\
-    \beta &= \frac{b^{2k}}{m} - \floor{\frac{b^{2k}}{m}} \approxeq 0
+    \beta &= \frac{b^{2k}}{m} - \floor{\frac{b^{2k}}{m}} \approx 0
 \end{align*}
 
 bound for $x$:
@@ -149,7 +149,7 @@ calc for $Q$:
         {
             b^{2k}
         }
-        {b ^{k+1}p} + \beta
+        {b ^{k+1}m} + \beta
     } \\
     = & \floor{
         \frac
@@ -173,7 +173,7 @@ calc for $Q$:
     %     +
     %     0.5
     % }\\
-    < & \floor{
+    \le & \floor{
         \frac
         {
             \floor{\frac{x}{b^{k-1}}} \floor{\frac{b^{2k}}{m}}
@@ -190,7 +190,12 @@ calc for $Q$:
         {b ^{k+1}}
         }
         +
+        1 \\
+    = & q_3
+        +
         1
 \end{align}
+
+(4) because $\alpha < 1$. (7) because $x < b^{2k}$. (11) because $\frac{b^{k-1}}{m} + \beta \approx 0.5$
 
 \end{document}
