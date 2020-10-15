@@ -1,76 +1,48 @@
 import random
 
-# print("B4 == B ^ 4")
+B = "B"
+B2 = "B^2"
+B3 = "B^3"
+B4 = "B^4"
 
-# def encode_qmul(x, ):
-	# function {:opaque} uint256_qsel(x: uint256, qx: uint2): uint64
-	# {
-	# 	if qx == 0 then
-	# 		x % BASE_64
-	# 	else if qx == 1 then
-	# 		(x / BASE_64) % BASE_64
-	# 	else if qx == 1 then
-	# 		(x / BASE_128) % BASE_64
-	# 	else
-	# 		(x / BASE_192) % BASE_64
-	# }
+class FullWord:
+    def __init__(self, name):
+        self.name = name
+    
+    def full(self):
+        return self.name
 
-# def encode_mulquacc(zero, x, qx, y, qy, shift, acc):
-	# var product := uint256_qmul(x, qx, y, qy);
-	# var shift := uint256_ls(product, shift * 8);
-	# if zero then shift else (acc + shift) % BASE_256
+    def quater(self, i):
+        assert i in {0, 1, 2, 3}
+        return f"{self.name}_q{i}"
 
-    # requires pc1: wacc_g1 == mulqacc256(true, w28, 0, w29, 0, 0, 0);
-    # requires pc2: wacc_g2 == mulqacc256(false, w28, 1, w29, 0, 1, wacc_g1);
-    # requires pc3: result_g1 == mulqacc256(false, w28, 0, w29, 1, 1, wacc_g2)
-    # 	&& wacc_g3 == uint256_uh(result_g1)
-    # 	&& w1_g2 == uint256_hwb(w1_g1, uint256_lh(result_g1), true);
-    # requires pc4: wacc_g4 == mulqacc256(false, w28, 2, w29, 0, 0, wacc_g3);
-    # requires pc5: wacc_g5 == mulqacc256(false, w28, 1, w29, 1, 0, wacc_g4);
-    # requires pc6: wacc_g6 == mulqacc256(false, w28, 0, w29, 2, 0, wacc_g5);
-    # requires pc7: wacc_g7 == mulqacc256(false, w28, 3, w29, 0, 1, wacc_g6);
-    # requires pc8: wacc_g8 == mulqacc256(false, w28, 2, w29, 1, 1, wacc_g7);
-    # requires pc9: wacc_g9 == mulqacc256(false, w28, 1, w29, 2, 1, wacc_g8);
-    # requires pc10: result_g2 == mulqacc256(false, w28, 0, w29, 3, 1, wacc_g9)
-    # 	&& w1 == uint256_hwb(w1_g2, uint256_lh(result_g2), false);
-    # ensures half_product(w1, w28, w29);
+    def half(self, i):
+        assert i in {0, 1}
+        return f"{self.name}_h{i}"
 
-B = 2 ** 10
-xlo = random.randint(0, B-1)
-xhi = random.randint(0, B-1)
+    def get_equation(self):
+        f = self.full()
 
-ylo = random.randint(0, B-1)
-yhi = random.randint(0, B-1)
+        h0 = self.half(0)
+        h1 = self.half(1)
 
-def mul_lh_b(a, b):
-	return (a * b) % B
+        q0 = self.quater(0)
+        q1 = self.quater(1)
+        q2 = self.quater(2)
+        q3 = self.quater(3)
 
-def mul_uh_b(a, b):
-	return (a * b) // B
+        eq0 = f"{f} - {h0} - {h1} * {B2}\n"
+        eq1 = f"{h0} - {q0} - {q1} * {B}\n"
+        eq2 = f"{h1} - {q2} - {q3} * {B}\n"
+        return eq0 + eq1 + eq2
 
-def mul_lh_bb(a, b):
-	return (a * b) % (B * B)
+class Encoder:
+    def __init__(self, q):
+        self.tmp_count = 0
+        self.bin_count = 0
+        self.k_count = 0
 
-assert mul_lh_bb(xhi * B + xlo, yhi * B + ylo) == (mul_lh_b(xlo, ylo) + \
-    mul_uh_b(xlo, ylo) * B + \
-    mul_lh_b(xhi, ylo) * B + \
-    mul_lh_b(xlo, yhi) * B) % (B * B)
-
-# assert mul_lh_bb(xhi * B + xlo, yhi * B + ylo) == (xlo * ylo + 
-#     mul_lh_b(xhi, ylo) * B + \
-#     mul_lh_b(xlo, yhi) * B) % (B * B)
-
-# assert ((xhi * B + xlo) * (yhi * B + ylo)) % (B * B) == (mul_lh_b(xlo, ylo) + \
-#     mul_uh_b(xlo, ylo) * B + \
-#     mul_lh_b(xhi, ylo) * B + \
-#     mul_lh_b(xlo, yhi) * B) % (B * B)
-
-assert ((xhi * B + xlo) * (yhi * B + ylo)) % (B * B) == ((xlo * ylo) % B + \
-    (xlo * ylo) // B * B + \
-    (xhi * ylo) % B * B + \
-    (xlo * yhi) % B * B) % (B * B)
-
-assert ((xhi * B + xlo) * (yhi * B + ylo)) % (B * B) == ((xlo * ylo) + (xhi * ylo) % B * B + (xlo * yhi) % B * B) % (B * B)
+    # def encode_mulqacc
 
 """
 ring r=integer,(xhi, xlo, yhi, ylo, k1, k2, k3, k4, k5, t1, t2, t3, t4, B),lp;
