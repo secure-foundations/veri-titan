@@ -64,6 +64,7 @@ datatype ins256 =
 | ADDI256(wrd:Reg256, wrs1:Reg256, imm:Bignum, flg:bool)
 | ADDM256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256)
 | MULQACC256(zero:bool, wrs1:Reg256, qwsel1:uint32, wrs2:Reg256, qwsel2:uint32, shift:uint32)
+| MULQACCSO256(zero:bool, wrd:Reg256, lower:bool, wrs1:Reg256, qwsel1:uint32, wrs2:Reg256, qwsel2:uint32, shift:uint32)
 | MULH256(wrd:Reg256, wrs1:Reg256, hw1:bool, wrs2:Reg256, hw2:bool)
 | SUB256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
 | SUBB256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
@@ -74,7 +75,7 @@ datatype ins256 =
 | NOT256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
 | XOR256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
 | RSHI256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, imm:Bignum)
-| SEL256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, flg:bool)
+| SEL256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, flg:bool, flag:uint32)
 | CMP256(wrs1:Reg256, wrs2:Reg256, flg:bool)
 | CMPB256(wrs1:Reg256, wrs2:Reg256, flg:bool)
 | LID256 // TODO
@@ -98,7 +99,7 @@ datatype code =
 type Frame = map<int, uint32>
 type Stack = seq<Frame>
 
-datatype FlagsGroup = FlagsGroup(cf:bool, msb:bool, lsb:bool, zero:bool)
+datatype FlagsGroup = FlagsGroup(zero:bool, lsb:bool, msb:bool, cf:bool)
 datatype Flags = Flags(fg0:FlagsGroup, fg1:FlagsGroup)
 
 datatype state = state(
@@ -352,7 +353,7 @@ function subi256(x:Bignum, imm:Bignum) : (Bignum, FlagsGroup)
 function subm256(x:Bignum, y:Bignum, wmod:Bignum) : Bignum
 {
 	// FIXME: some bound checking?
-	//assume false;
+	// assume false;
 	var result := (x as bv256 - y as bv256) as Bignum;
 	if result >= wmod then (result as bv256 - wmod as bv256) as Bignum else result
 }

@@ -45,9 +45,10 @@ procedure DoubleRegExample256()
     ensures
         w2 = old(w2) + old(w2);
     modifies
-        w2; flags;
+        w2; flags; wacc; w8; w11;
 {
     BN_ADD(w2, w2, w2, false, 0, false);
+    BN_MULQACC(w8, 0, w11, 0, 0);
 }
 
 procedure Increment(inout dst:reg32)
@@ -72,6 +73,51 @@ procedure LoopExample(inout dst:reg32)
         Increment(dst);
     }
 }
+
+procedure barrett384()
+    reads
+        w12; w13; w14; w15; w31;
+    modifies
+        w8; w9; w10; w11; w16; w17; w18; w19; 
+        w20; w21; w22; w23; w24; w25; w29; w30; 
+        flags; wacc;
+{
+
+    BN_SUBI(w30, w31, 1, false);
+    BN_RSHI(w30, w30, w31, 127);
+
+    BN_SEL(w24, w14, w31, false, 2); 
+    BN_SEL(w25, w16, w31, false, 2); 
+
+    BN_MOV(w21, w16);
+    BN_AND(w22, w17, w30, false, 0);
+
+    BN_RSHI(w9, w18, w31, 127);
+    BN_RSHI(w8, w17, w18, 127);
+
+    BN_MOV(w10, w14);
+    BN_MOV(w11, w15);
+
+    BN_RSHI(w20, w18, w31, 128);
+    BN_RSHI(w19, w17, w18, 128);
+    BN_ADD(w19, w19, w8, false, 0, false);
+    BN_ADDC(w20, w20, w9, false, 0, false);
+    BN_ADD(w19, w19, w24, false, 0, false);
+    BN_ADDC(w20, w20, w25, false, 0, false);
+    BN_RSHI(w9, w20, w31, 1);
+    BN_RSHI(w8, w19, w20, 1);
+
+    BN_MOV(w10, w12);
+    BN_MOV(w11, w13);
+    BN_AND(w17, w17, w30, false, 0);
+    BN_SUB(w21, w21, w16, false, 0, false);
+    BN_SUBB(w22, w22, w17, false, 0, false);
+
+    BN_ADDI(w30, w30, 1, false);
+    BN_ADD(w30, w30, w22, false, 0, false);
+    BN_SEL(w22, w30, w22, false, 3);
+}
+
 
 #verbatim
 }
