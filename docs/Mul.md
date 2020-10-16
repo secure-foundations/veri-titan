@@ -1,3 +1,5 @@
+## MULQACC examples
+
 We need to write a bunch of proofs on multiplication with `BN.MULQACC`, which is an instruction that takes in two registers, multiply selected quarter words from each register, shift the product by some amount, add the shifted result to the wacc accumulator register. For example:
 ```
 BN.MULQACC        w0.0, w1.3, 2
@@ -15,6 +17,8 @@ BN.MULQACC        w28.1, w29.0, 1
 BN.MULQACC        w28.0, w29.1, 1
 BN.MULQACC        w28.1, w29.1, 2
 ```
+
+## algebraic encoding and why it doesn't work directly
 
 What makes it tricky to use algebraic solver on that directly is the bit vector addition, which might or might not overflow. We can introduce some unconstrained boolean variables, which indicates the overflow bit. 
 
@@ -51,6 +55,5 @@ Not very surprisingly, `Singular` cannot reduce `wacc_g4 - w28_h0 * w29_h0` to `
 B^4*k_0+B^4*k_1+B^4*k_2
 ```
 We note that
-* `B` is not `0`. So if `k_i` are all `0`, the reduction would be be `0`. 
 * For some small `B`, for example `B = 1`, we can confirm the term is `0` by exhaustively checking, which means `k_i` are all `0`. Sadly the implication does not work the other way around, we can't tell if `k_i` are all `0` when `B!=1`.
-* However this does put the focus on the `k_i`. 
+* This makes the proof obligations more explicit. Since  `B != 0`, to show the term reduces `0`, we need to show that `k_i` are all `0`. 
