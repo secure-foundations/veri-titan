@@ -36,8 +36,8 @@ class FullWord:
         eq2 = f"{h1} - {q2} - {q3} * {B},\n"
         return eq0 + eq1 + eq2
 
-# x = FullWord("x")
-# print(x.get_equations())
+    def get_vars(self):
+        return [self.full(), self.half(0), self.half(1), self.quater(0), self.quater(1), self.quater(2), self.quater(3)]
 
 class Encoder:
     def __init__(self):
@@ -55,10 +55,8 @@ class Encoder:
         assert isinstance(y, FullWord)
 
         qx = x.quater(qx)
-        qy = x.quater(qy)
-        
-        # product = self.get_fresh("p")
-        # print(f"{product} - {qx} * {qy}")
+        qy = y.quater(qy)
+
         product = f"{qx} * {qy}"
         shifted = product
 
@@ -81,14 +79,20 @@ e = Encoder()
 w28 = FullWord("w28")
 w29 = FullWord("w29")
 
+vars = w28.get_vars() + w29.get_vars()
+print("ring r=integer,(", end="")
+print(", ".join(vars + ["wacc_g1", "wacc_g2", "wacc_g3", "wacc_g4"]), end="")
+print("),lp;")
+print("")
+
+print("ideal I =")
+print(w28.get_equations())
+print(w29.get_equations())
+
 e.encode_mulqacc(True,  w28, 0, w29, 0, 0, None, "wacc_g1")
 e.encode_mulqacc(False, w28, 1, w29, 0, 1, "wacc_g1", "wacc_g2")
 e.encode_mulqacc(False, w28, 0, w29, 1, 1, "wacc_g2", "wacc_g3")
 e.encode_mulqacc(False, w28, 1, w29, 1, 2, "wacc_g3", "wacc_g4")
-
-print("")
-print(w28.get_equations())
-print(w29.get_equations())
 
 """
 ring r=integer,(xhi, xlo, yhi, ylo, k1, k2, k3, k4, k5, t1, t2, t3, t4, B),lp;
