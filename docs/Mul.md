@@ -33,7 +33,7 @@ ideal I =
     w29_h1 - w29_q2 - w29_q3 * B,
 
     wacc_g1 - w28_q0 * w29_q0, // MULQACC.Z, which clears the initial wacc
-    wacc_g2 - wacc_g1 - w28_q1 * w29_q0 * B - k_0 * B^4, // since we don't know if overflow happened or not, 
+    wacc_g2 - wacc_g1 - w28_q1 * w29_q0 * B - k_0 * B^4, // since we don't know if overflow happened or not, we put k_0 here
     wacc_g3 - wacc_g2 - w28_q0 * w29_q1 * B - k_1 * B^4,
     wacc_g4 - wacc_g3 - w28_q1 * w29_q1 * B^2 - k_2 * B^4,
 
@@ -45,3 +45,12 @@ ideal G = groebner(I);
 reduce(wacc_g4 - w28_h0 * w29_h0, G);
 ```
 
+Not very surprisingly, `Singular` cannot reduce `wacc_g4 - w28_h0 * w29_h0` to `0`, instead it gives:
+
+```
+B^4*k_0+B^4*k_1+B^4*k_2
+```
+We note that
+* `B` is not `0`. So if `k_i` are all `0`, the reduction would be be `0`. 
+* For some small `B`, for example `B = 1`, we can confirm the term is `0` by exhaustively checking, which means `k_i` are all `0`. Sadly the implication does not work the other way around, we can't tell if `k_i` are all `0` when `B!=1`.
+* However this does put the focus on the `k_i`. 
