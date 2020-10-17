@@ -377,6 +377,7 @@ function mulqacc256(
 	if zero then shift else (acc + shift) % BASE_256
 }
 
+
 function xor256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;
 {
