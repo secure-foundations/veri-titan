@@ -379,8 +379,9 @@ function mulqacc256(
 
 predicate bn_mulqacc_is_safe(shift: uint2, acc: uint256)
 {
-    && (shift <= 2) // product is assumed to be 128 bits, 
-    //shifting by more than quarters would overflow
+    // make sure no overflow from shift (product is assumed to be 128 bits)
+    && (shift <= 2) 
+    // make sure no overflow from addtion
     && (acc + bn_qshift_safe(BASE_128 - 1, shift) < BASE_256)
 }
 
