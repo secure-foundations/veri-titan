@@ -377,16 +377,22 @@ function mulqacc256(
 	if zero then shift else (acc + shift) % BASE_256
 }
 
+predicate bn_mulqacc_is_safe(shift: uint2, acc: uint256)
+{
+    && (shift <= 2) // product is assumed to be 128 bits, 
+    //shifting by more than quarters would overflow
+    && (acc + bn_qshift_safe(BASE_128 - 1, shift) < BASE_256)
+}
+
 // mulquacc but no overflow
-// unless a tighter bound can be given for uint256_qmul
 function bn_mulqacc_safe(
     zero: bool,
 	x:uint256, qx: uint2,
 	y:uint256, qy: uint2,
 	shift: uint2,
 	acc: uint256) : uint256
-    requires shift <= 2;
-    requires acc + bn_qshift_safe(BASE_128 - 1, shift) < BASE_256;
+
+    requires bn_mulqacc_is_safe(shift, acc);
 {
 	var product := uint256_qmul(x, qx, y, qy);
 	var shift := bn_qshift_safe(product, shift);
