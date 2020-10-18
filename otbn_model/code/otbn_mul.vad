@@ -133,6 +133,48 @@ procedure safe_half_mul(inout dst: reg256, in src1: reg256, in src2: reg256)
     BN_MULQACC_SO_SAFE(dst, false, src1, 0, src2, 3, 1);
 }
 
+procedure safe_384_mul()
+    reads w8; w9; w10; w11;
+    modifies wacc; w16; w17; w18;
+{
+    BN_MULQACC_Z(w8, 0, w10, 0, 0);
+    BN_MULQACC_SAFE(w8, 0, w10, 1, 1);
+    BN_MULQACC_SO_SAFE(w16, true, w8, 1, w10, 0, 1);
+    BN_MULQACC_SAFE(w8, 0, w10, 2, 0);
+    BN_MULQACC_SAFE(w8, 1, w10, 1, 0);
+    BN_MULQACC_SAFE(w8, 2, w10, 0, 0);
+    BN_MULQACC_SAFE(w8, 0, w10, 3, 1);
+    BN_MULQACC_SAFE(w8, 1, w10, 2, 1);
+    BN_MULQACC_SAFE(w8, 2, w10, 1, 1);
+    BN_MULQACC_SO_SAFE(w16, false, w8, 3, w10, 0, 1);
+    BN_MULQACC_SAFE(w8, 0, w11, 0, 0);
+    BN_MULQACC_SAFE(w8, 1, w10, 3, 0);
+    BN_MULQACC_SAFE(w8, 2, w10, 2, 0);
+    BN_MULQACC_SAFE(w8, 3, w10, 1, 0);
+    BN_MULQACC_SAFE(w9, 0, w10, 0, 0);
+    BN_MULQACC_SAFE(w8, 0, w11, 1, 1);
+    BN_MULQACC_SAFE(w8, 1, w11, 0, 1);
+    BN_MULQACC_SAFE(w8, 2, w10, 3, 1);
+    BN_MULQACC_SAFE(w8, 3, w10, 2, 1);
+    BN_MULQACC_SAFE(w9, 0, w10, 1, 1);
+    BN_MULQACC_SO_SAFE(w17, true, w9, 1, w10, 0, 1);
+    BN_MULQACC_SAFE(w8, 1, w11, 1, 0);
+    BN_MULQACC_SAFE(w8, 2, w11, 0, 0);
+    BN_MULQACC_SAFE(w8, 3, w10, 3, 0);
+    BN_MULQACC_SAFE(w9, 0, w10, 2, 0);
+    BN_MULQACC_SAFE(w9, 1, w10, 1, 0);
+    BN_MULQACC_SAFE(w8, 2, w11, 1, 1);
+    BN_MULQACC_SAFE(w8, 3, w11, 0, 1);
+    BN_MULQACC_SAFE(w9, 0, w10, 3, 1);
+    BN_MULQACC_SO_SAFE(w17, false, w9, 1, w10, 2, 1);
+    BN_MULQACC_SAFE(w8, 3, w11, 1, 0);
+    BN_MULQACC_SAFE(w9, 0, w11, 0, 0);
+    BN_MULQACC_SAFE(w9, 1, w10, 3, 0);
+    BN_MULQACC_SAFE(w9, 0, w11, 1, 1);
+    BN_MULQACC_SO_SAFE(w18, true, w9, 1, w11, 0, 1);
+    BN_MULQACC_SO_SAFE(w18, false, w9, 1, w11, 1, 0);
+}
+
 #verbatim
 }
 #endverbatim
