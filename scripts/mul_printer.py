@@ -70,21 +70,24 @@ def get_fresh(var):
     return f"{var}_g{ghost_count[var]}"
 
 def get_last(var):
-    return f"{var}_g{ghost_count[var] - 1}"
+    if var not in ghost_count:
+        return None
+    return f"{var}_g{ghost_count[var]}"
 
 for ins in inss:
     ins = re.split("\s+", ins)
     op = ins[0]
-
-    wacc_g = get_fresh('wacc')
 
     if op == "bn.mulqacc.z":
         x, qx = get_qsel(ins[1])
         y, qy = get_qsel(ins[2])
         shift = get_shift(ins[3])
         print(f"BN_MULQACC_Z({x}, {qx}, {y}, {qy}, {shift});")
-        print(f"let {wacc_g} := wacc;")
-        print(f"assert {wacc_g} == bn_mulqacc_safe(true, {x}, {qx}, {y}, {qy}, {shift}, 0);")
+
+        c_wacc = get_fresh('wacc')
+
+        print(f"let {c_wacc} := wacc;")
+        print(f"assert {c_wacc} == bn_mulqacc_safe(true, {x}, {qx}, {y}, {qy}, {shift}, 0);")
 
         print("")
     elif op == "bn.mulqacc":
@@ -92,9 +95,13 @@ for ins in inss:
         y, qy = get_qsel(ins[2])
         shift = get_shift(ins[3])
         print(f"BN_MULQACC_SAFE({x}, {qx}, {y}, {qy}, {shift});")
-        print(f"let {wacc_g} := wacc;")
-        print(f"assert {wacc_g} == bn_mulqacc_safe(false, {x}, {qx}, {y}, {qy}, {shift}, {get_last('wacc')});")
-    
+
+        p_wacc = get_last('wacc')
+        c_wacc = get_fresh('wacc')
+
+        print(f"let {c_wacc} := wacc;")
+        print(f"assert {c_wacc} == bn_mulqacc_safe(false, {x}, {qx}, {y}, {qy}, {shift}, {p_wacc});")
+
         print("")
     else:
         assert op == "bn.mulqacc.so"
@@ -103,6 +110,25 @@ for ins in inss:
         x, qx = get_qsel(ins[2])
         y, qy = get_qsel(ins[3])
         shift = get_shift(ins[4])
-        print(f"BN_MULQACC_SO_SAFE({d}, {l}, {x}, {qx}, {y}, {qy}, {shift});")
-        print(f"let {wacc_g} := wacc;\n")
 
+
+        p_dest = get_last(d)
+        if p_dest is None:
+            p_dest = get_fresh(d)
+            print(f"let {p_dest} := {d};")
+
+        print(f"BN_MULQACC_SO_SAFE({d}, {l}, {x}, {qx}, {y}, {qy}, {shift});")
+
+        c_dest = get_fresh(d)
+        p_wacc = get_last('wacc');
+        c0_wacc = get_fresh('wacc')
+        c1_wacc = get_fresh('wacc')
+
+        print(f"let {c_dest} := {d};")
+
+        print(f"let {c0_wacc} := bn_mulqacc_safe(false, {x}, {qx}, {y}, {qy}, {shift}, {p_wacc});")
+        print(f"let {c1_wacc} := wacc;")
+
+        print(f"assert {c1_wacc} == uint256_uh({c0_wacc});")
+        print(f"assert {c_dest} == uint256_hwb({p_dest}, uint256_lh({c0_wacc}), {l});")
+        print("")
