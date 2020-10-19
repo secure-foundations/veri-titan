@@ -137,42 +137,146 @@ procedure safe_384_mul()
     reads w8; w9; w10; w11;
     modifies wacc; w16; w17; w18;
 {
-    BN_MULQACC_Z(w8, 0, w10, 0, 0);
-    BN_MULQACC_SAFE(w8, 0, w10, 1, 1);
-    BN_MULQACC_SO_SAFE(w16, true, w8, 1, w10, 0, 1);
-    BN_MULQACC_SAFE(w8, 0, w10, 2, 0);
-    BN_MULQACC_SAFE(w8, 1, w10, 1, 0);
-    BN_MULQACC_SAFE(w8, 2, w10, 0, 0);
-    BN_MULQACC_SAFE(w8, 0, w10, 3, 1);
-    BN_MULQACC_SAFE(w8, 1, w10, 2, 1);
-    BN_MULQACC_SAFE(w8, 2, w10, 1, 1);
-    BN_MULQACC_SO_SAFE(w16, false, w8, 3, w10, 0, 1);
-    BN_MULQACC_SAFE(w8, 0, w11, 0, 0);
-    BN_MULQACC_SAFE(w8, 1, w10, 3, 0);
-    BN_MULQACC_SAFE(w8, 2, w10, 2, 0);
-    BN_MULQACC_SAFE(w8, 3, w10, 1, 0);
-    BN_MULQACC_SAFE(w9, 0, w10, 0, 0);
-    BN_MULQACC_SAFE(w8, 0, w11, 1, 1);
-    BN_MULQACC_SAFE(w8, 1, w11, 0, 1);
-    BN_MULQACC_SAFE(w8, 2, w10, 3, 1);
-    BN_MULQACC_SAFE(w8, 3, w10, 2, 1);
-    BN_MULQACC_SAFE(w9, 0, w10, 1, 1);
-    BN_MULQACC_SO_SAFE(w17, true, w9, 1, w10, 0, 1);
-    BN_MULQACC_SAFE(w8, 1, w11, 1, 0);
-    BN_MULQACC_SAFE(w8, 2, w11, 0, 0);
-    BN_MULQACC_SAFE(w8, 3, w10, 3, 0);
-    BN_MULQACC_SAFE(w9, 0, w10, 2, 0);
-    BN_MULQACC_SAFE(w9, 1, w10, 1, 0);
-    BN_MULQACC_SAFE(w8, 2, w11, 1, 1);
-    BN_MULQACC_SAFE(w8, 3, w11, 0, 1);
-    BN_MULQACC_SAFE(w9, 0, w10, 3, 1);
-    BN_MULQACC_SO_SAFE(w17, false, w9, 1, w10, 2, 1);
-    BN_MULQACC_SAFE(w8, 3, w11, 1, 0);
-    BN_MULQACC_SAFE(w9, 0, w11, 0, 0);
-    BN_MULQACC_SAFE(w9, 1, w10, 3, 0);
-    BN_MULQACC_SAFE(w9, 0, w11, 1, 1);
-    BN_MULQACC_SO_SAFE(w18, true, w9, 1, w11, 0, 1);
-    BN_MULQACC_SO_SAFE(w18, false, w9, 1, w11, 1, 0);
+BN_MULQACC_Z(w8, 0, w10, 0, 0);
+let wacc_g0 := wacc;
+assert wacc_g0 == bn_mulqacc_safe(true, w8, 0, w10, 0, 0, 0);
+
+BN_MULQACC_SAFE(w8, 0, w10, 1, 1);
+let wacc_g1 := wacc;
+assert wacc_g1 == bn_mulqacc_safe(false, w8, 0, w10, 1, 1, wacc_g0);
+
+BN_MULQACC_SO_SAFE(w16, true, w8, 1, w10, 0, 1);
+let wacc_g2 := wacc;
+
+BN_MULQACC_SAFE(w8, 0, w10, 2, 0);
+let wacc_g3 := wacc;
+assert wacc_g3 == bn_mulqacc_safe(false, w8, 0, w10, 2, 0, wacc_g2);
+
+BN_MULQACC_SAFE(w8, 1, w10, 1, 0);
+let wacc_g4 := wacc;
+assert wacc_g4 == bn_mulqacc_safe(false, w8, 1, w10, 1, 0, wacc_g3);
+
+BN_MULQACC_SAFE(w8, 2, w10, 0, 0);
+let wacc_g5 := wacc;
+assert wacc_g5 == bn_mulqacc_safe(false, w8, 2, w10, 0, 0, wacc_g4);
+
+BN_MULQACC_SAFE(w8, 0, w10, 3, 1);
+let wacc_g6 := wacc;
+assert wacc_g6 == bn_mulqacc_safe(false, w8, 0, w10, 3, 1, wacc_g5);
+
+BN_MULQACC_SAFE(w8, 1, w10, 2, 1);
+let wacc_g7 := wacc;
+assert wacc_g7 == bn_mulqacc_safe(false, w8, 1, w10, 2, 1, wacc_g6);
+
+BN_MULQACC_SAFE(w8, 2, w10, 1, 1);
+let wacc_g8 := wacc;
+assert wacc_g8 == bn_mulqacc_safe(false, w8, 2, w10, 1, 1, wacc_g7);
+
+BN_MULQACC_SO_SAFE(w16, false, w8, 3, w10, 0, 1);
+let wacc_g9 := wacc;
+
+BN_MULQACC_SAFE(w8, 0, w11, 0, 0);
+let wacc_g10 := wacc;
+assert wacc_g10 == bn_mulqacc_safe(false, w8, 0, w11, 0, 0, wacc_g9);
+
+BN_MULQACC_SAFE(w8, 1, w10, 3, 0);
+let wacc_g11 := wacc;
+assert wacc_g11 == bn_mulqacc_safe(false, w8, 1, w10, 3, 0, wacc_g10);
+
+BN_MULQACC_SAFE(w8, 2, w10, 2, 0);
+let wacc_g12 := wacc;
+assert wacc_g12 == bn_mulqacc_safe(false, w8, 2, w10, 2, 0, wacc_g11);
+
+BN_MULQACC_SAFE(w8, 3, w10, 1, 0);
+let wacc_g13 := wacc;
+assert wacc_g13 == bn_mulqacc_safe(false, w8, 3, w10, 1, 0, wacc_g12);
+
+BN_MULQACC_SAFE(w9, 0, w10, 0, 0);
+let wacc_g14 := wacc;
+assert wacc_g14 == bn_mulqacc_safe(false, w9, 0, w10, 0, 0, wacc_g13);
+
+BN_MULQACC_SAFE(w8, 0, w11, 1, 1);
+let wacc_g15 := wacc;
+assert wacc_g15 == bn_mulqacc_safe(false, w8, 0, w11, 1, 1, wacc_g14);
+
+BN_MULQACC_SAFE(w8, 1, w11, 0, 1);
+let wacc_g16 := wacc;
+assert wacc_g16 == bn_mulqacc_safe(false, w8, 1, w11, 0, 1, wacc_g15);
+
+BN_MULQACC_SAFE(w8, 2, w10, 3, 1);
+let wacc_g17 := wacc;
+assert wacc_g17 == bn_mulqacc_safe(false, w8, 2, w10, 3, 1, wacc_g16);
+
+BN_MULQACC_SAFE(w8, 3, w10, 2, 1);
+let wacc_g18 := wacc;
+assert wacc_g18 == bn_mulqacc_safe(false, w8, 3, w10, 2, 1, wacc_g17);
+
+BN_MULQACC_SAFE(w9, 0, w10, 1, 1);
+let wacc_g19 := wacc;
+assert wacc_g19 == bn_mulqacc_safe(false, w9, 0, w10, 1, 1, wacc_g18);
+
+BN_MULQACC_SO_SAFE(w17, true, w9, 1, w10, 0, 1);
+let wacc_g20 := wacc;
+
+BN_MULQACC_SAFE(w8, 1, w11, 1, 0);
+let wacc_g21 := wacc;
+assert wacc_g21 == bn_mulqacc_safe(false, w8, 1, w11, 1, 0, wacc_g20);
+
+BN_MULQACC_SAFE(w8, 2, w11, 0, 0);
+let wacc_g22 := wacc;
+assert wacc_g22 == bn_mulqacc_safe(false, w8, 2, w11, 0, 0, wacc_g21);
+
+BN_MULQACC_SAFE(w8, 3, w10, 3, 0);
+let wacc_g23 := wacc;
+assert wacc_g23 == bn_mulqacc_safe(false, w8, 3, w10, 3, 0, wacc_g22);
+
+BN_MULQACC_SAFE(w9, 0, w10, 2, 0);
+let wacc_g24 := wacc;
+assert wacc_g24 == bn_mulqacc_safe(false, w9, 0, w10, 2, 0, wacc_g23);
+
+BN_MULQACC_SAFE(w9, 1, w10, 1, 0);
+let wacc_g25 := wacc;
+assert wacc_g25 == bn_mulqacc_safe(false, w9, 1, w10, 1, 0, wacc_g24);
+
+BN_MULQACC_SAFE(w8, 2, w11, 1, 1);
+let wacc_g26 := wacc;
+assert wacc_g26 == bn_mulqacc_safe(false, w8, 2, w11, 1, 1, wacc_g25);
+
+BN_MULQACC_SAFE(w8, 3, w11, 0, 1);
+let wacc_g27 := wacc;
+assert wacc_g27 == bn_mulqacc_safe(false, w8, 3, w11, 0, 1, wacc_g26);
+
+BN_MULQACC_SAFE(w9, 0, w10, 3, 1);
+let wacc_g28 := wacc;
+assert wacc_g28 == bn_mulqacc_safe(false, w9, 0, w10, 3, 1, wacc_g27);
+
+BN_MULQACC_SO_SAFE(w17, false, w9, 1, w10, 2, 1);
+let wacc_g29 := wacc;
+
+BN_MULQACC_SAFE(w8, 3, w11, 1, 0);
+let wacc_g30 := wacc;
+assert wacc_g30 == bn_mulqacc_safe(false, w8, 3, w11, 1, 0, wacc_g29);
+
+BN_MULQACC_SAFE(w9, 0, w11, 0, 0);
+let wacc_g31 := wacc;
+assert wacc_g31 == bn_mulqacc_safe(false, w9, 0, w11, 0, 0, wacc_g30);
+
+BN_MULQACC_SAFE(w9, 1, w10, 3, 0);
+let wacc_g32 := wacc;
+assert wacc_g32 == bn_mulqacc_safe(false, w9, 1, w10, 3, 0, wacc_g31);
+
+BN_MULQACC_SAFE(w9, 0, w11, 1, 1);
+let wacc_g33 := wacc;
+assert wacc_g33 == bn_mulqacc_safe(false, w9, 0, w11, 1, 1, wacc_g32);
+
+BN_MULQACC_SO_SAFE(w18, true, w9, 1, w11, 0, 1);
+let wacc_g34 := wacc;
+
+BN_MULQACC_SO_SAFE(w18, false, w9, 1, w11, 1, 0);
+let wacc_g35 := wacc;
+
+
+
 }
 
 #verbatim

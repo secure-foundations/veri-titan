@@ -60,19 +60,42 @@ def get_so(s):
         lower = "true"
     return (w, lower)
 
+ghost_count = dict()
+
+def get_fresh(var):
+    if var not in ghost_count:
+        ghost_count[var] = 0
+    else:
+        ghost_count[var] += 1
+    return f"{var}_g{ghost_count[var]}"
+
+def get_last(var):
+    return f"{var}_g{ghost_count[var] - 1}"
+
 for ins in inss:
     ins = re.split("\s+", ins)
     op = ins[0]
+
+    wacc_g = get_fresh('wacc')
+
     if op == "bn.mulqacc.z":
         x, qx = get_qsel(ins[1])
         y, qy = get_qsel(ins[2])
         shift = get_shift(ins[3])
         print(f"BN_MULQACC_Z({x}, {qx}, {y}, {qy}, {shift});")
+        print(f"let {wacc_g} := wacc;")
+        print(f"assert {wacc_g} == bn_mulqacc_safe(true, {x}, {qx}, {y}, {qy}, {shift}, 0);")
+
+        print("")
     elif op == "bn.mulqacc":
         x, qx = get_qsel(ins[1])
         y, qy = get_qsel(ins[2])
         shift = get_shift(ins[3])
         print(f"BN_MULQACC_SAFE({x}, {qx}, {y}, {qy}, {shift});")
+        print(f"let {wacc_g} := wacc;")
+        print(f"assert {wacc_g} == bn_mulqacc_safe(false, {x}, {qx}, {y}, {qy}, {shift}, {get_last('wacc')});")
+    
+        print("")
     else:
         assert op == "bn.mulqacc.so"
         d, l = get_so(ins[1])
@@ -80,5 +103,6 @@ for ins in inss:
         x, qx = get_qsel(ins[2])
         y, qy = get_qsel(ins[3])
         shift = get_shift(ins[4])
-
         print(f"BN_MULQACC_SO_SAFE({d}, {l}, {x}, {qx}, {y}, {qy}, {shift});")
+        print(f"let {wacc_g} := wacc;\n")
+
