@@ -74,7 +74,7 @@ def get_last(var):
         return None
     return f"{var}_g{ghost_count[var]}"
 
-class MulQaccAssert:
+class MulQaccCons:
     def __init__(self, zero, x, qx, y, qy, shift, n_wacc, o_wacc):
         self.zero = zero
         self.x = x
@@ -87,6 +87,27 @@ class MulQaccAssert:
 
     def __str__(self):
         return f"assert {self.n_wacc} == bn_mulqacc_safe({self.zero}, {self.x}, {self.qx}, {self.y}, {self.qy}, {self.shift}, {self.o_wacc});"
+
+class HalfCons:
+    def __init__(self, lower, src, dst):
+        self.lower = lower
+        self.src = src
+        self.dst= dst
+    
+    def __str__(self):
+        if self.lower:
+            return f"assert {self.dst} == uint256_lh({self.src});"
+        return f"assert {self.dst} == uint256_uh({self.src});"
+
+class WriteBackCons:
+    def __init__(self, lower, n_dest, o_dest, src):
+        self.lower = lower
+        self.n_dest = n_dest
+        self.o_dest = o_dest
+        self.src = src
+    
+    def __str__(self):
+        return f"assert {self.n_dest} == uint256_hwb({self.o_dest}, {self.src}, {self.lower}"
 
 assertions = list()
 
@@ -103,7 +124,7 @@ for ins in inss:
         c_wacc = get_fresh('wacc')
 
         print(f"let {c_wacc} := wacc;")
-        assertions.append(MulQaccAssert("true", x, qx, y, qy, shift, c_wacc, 0))
+        assertions.append(MulQaccCons("true", x, qx, y, qy, shift, c_wacc, 0))
 
         print("")
     elif op == "bn.mulqacc":
@@ -116,7 +137,7 @@ for ins in inss:
         c_wacc = get_fresh('wacc')
 
         print(f"let {c_wacc} := wacc;")
-        assertions.append(MulQaccAssert("false", x, qx, y, qy, shift, c_wacc, p_wacc))
+        assertions.append(MulQaccCons("false", x, qx, y, qy, shift, c_wacc, p_wacc))
 
         print("")
     else:
@@ -147,10 +168,10 @@ for ins in inss:
 
         print(f"let {c_wacc} := wacc;")
 
-        assertions.append(MulQaccAssert("false", x, qx, y, qy, shift, temp_0, p_wacc))
+        assertions.append(MulQaccCons("false", x, qx, y, qy, shift, temp_0, p_wacc))
 
-        assertions.append(f"assert {c_wacc} == uint256_uh({temp_0});")
-        assertions.append(f"assert {temp_1} == uint256_lh({temp_0});")
+        assertions.append(HalfCons(False, temp_0, c_wacc))
+        assertions.append(HalfCons(True, temp_0, temp_1))
         assertions.append(f"assert {c_dest} == uint256_hwb({p_dest}, {temp_1}, {l});")
         print("")
 
