@@ -74,6 +74,21 @@ def get_last(var):
         return None
     return f"{var}_g{ghost_count[var]}"
 
+class MulQaccAssert:
+    def __init__(self, x, qx, y, qy, shift, o_wacc, n_wacc):
+        self.x = x
+        self.qx = qx
+        self.y = y
+        self.qy = qy
+        self.shift = shift
+        self.o_wacc = o_wacc
+        self.n_wacc = n_wacc
+
+    def __str__(self):
+        return f"assert {self.n_wacc} == bn_mulqacc_safe(true, {self.x}, {self.qx}, {self.y}, {self.qy}, {self.shift}, {self.o_wacc});"
+
+assertions = list()
+
 for ins in inss:
     ins = re.split("\s+", ins)
     op = ins[0]
@@ -87,7 +102,9 @@ for ins in inss:
         c_wacc = get_fresh('wacc')
 
         print(f"let {c_wacc} := wacc;")
-        print(f"assert {c_wacc} == bn_mulqacc_safe(true, {x}, {qx}, {y}, {qy}, {shift}, 0);")
+        a = MulQaccAssert(x, qx, y, qy, shift, c_wacc, 0)
+        print(a)
+        assertions.append(a)
 
         print("")
     elif op == "bn.mulqacc":
@@ -100,7 +117,9 @@ for ins in inss:
         c_wacc = get_fresh('wacc')
 
         print(f"let {c_wacc} := wacc;")
-        print(f"assert {c_wacc} == bn_mulqacc_safe(false, {x}, {qx}, {y}, {qy}, {shift}, {p_wacc});")
+        a = f"assert {c_wacc} == bn_mulqacc_safe(false, {x}, {qx}, {y}, {qy}, {shift}, {p_wacc});"
+        print(a)
+        assertions.append(a)
 
         print("")
     else:
@@ -129,6 +148,13 @@ for ins in inss:
         print(f"let {c0_wacc} := bn_mulqacc_safe(false, {x}, {qx}, {y}, {qy}, {shift}, {p_wacc});")
         print(f"let {c1_wacc} := wacc;")
 
-        print(f"assert {c1_wacc} == uint256_uh({c0_wacc});")
+        a = f"assert {c0_wacc} == bn_mulqacc_safe(false, {x}, {qx}, {y}, {qy}, {shift}, {p_wacc});"
+        print(a)
+        assertions.append(a)
+
+        a = f"assert {c1_wacc} == uint256_uh({c0_wacc});"
+        print(a)
+        assertions.append(a)
+
         print(f"assert {c_dest} == uint256_hwb({p_dest}, uint256_lh({c0_wacc}), {l});")
         print("")
