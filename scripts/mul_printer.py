@@ -136,18 +136,22 @@ for ins in inss:
 
         c_dest = get_fresh(d)
         p_wacc = get_last('wacc');
-        c0_wacc = get_fresh('wacc')
-        c1_wacc = get_fresh('wacc')
+        c_wacc = get_fresh('wacc')
+
+        temp_0 = get_fresh('temp')
+        temp_1 = get_fresh('temp')
 
         print(f"let {c_dest} := {d};")
+        print(f"let {temp_0} := bn_mulqacc_safe(false, {x}, {qx}, {y}, {qy}, {shift}, {p_wacc});")
+        print(f"let {temp_1} := uint256_lh({temp_0});")
 
-        print(f"let {c0_wacc} := bn_mulqacc_safe(false, {x}, {qx}, {y}, {qy}, {shift}, {p_wacc});")
-        print(f"let {c1_wacc} := wacc;")
+        print(f"let {c_wacc} := wacc;")
 
-        assertions.append(MulQaccAssert("false", x, qx, y, qy, shift, c0_wacc, p_wacc))
+        assertions.append(MulQaccAssert("false", x, qx, y, qy, shift, temp_0, p_wacc))
 
-        assertions.append(f"assert {c1_wacc} == uint256_uh({c0_wacc});")
-        assertions.append(f"assert {c_dest} == uint256_hwb({p_dest}, uint256_lh({c0_wacc}), {l});")
+        assertions.append(f"assert {c_wacc} == uint256_uh({temp_0});")
+        assertions.append(f"assert {temp_1} == uint256_lh({temp_0});")
+        assertions.append(f"assert {c_dest} == uint256_hwb({p_dest}, {temp_1}, {l});")
         print("")
 
 for a in assertions:

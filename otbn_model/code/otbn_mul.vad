@@ -146,168 +146,182 @@ let wacc_g1 := wacc;
 let w16_g0 := w16;
 BN_MULQACC_SO_SAFE(w16, true, w8, 1, w10, 0, 1);
 let w16_g1 := w16;
-let wacc_g2 := bn_mulqacc_safe(false, w8, 1, w10, 0, 1, wacc_g1);
-let wacc_g3 := wacc;
+let temp_g0 := bn_mulqacc_safe(false, w8, 1, w10, 0, 1, wacc_g1);
+let temp_g1 := uint256_lh(temp_g0);
+let wacc_g2 := wacc;
 
 BN_MULQACC_SAFE(w8, 0, w10, 2, 0);
-let wacc_g4 := wacc;
+let wacc_g3 := wacc;
 
 BN_MULQACC_SAFE(w8, 1, w10, 1, 0);
-let wacc_g5 := wacc;
+let wacc_g4 := wacc;
 
 BN_MULQACC_SAFE(w8, 2, w10, 0, 0);
-let wacc_g6 := wacc;
+let wacc_g5 := wacc;
 
 BN_MULQACC_SAFE(w8, 0, w10, 3, 1);
-let wacc_g7 := wacc;
+let wacc_g6 := wacc;
 
 BN_MULQACC_SAFE(w8, 1, w10, 2, 1);
-let wacc_g8 := wacc;
+let wacc_g7 := wacc;
 
 BN_MULQACC_SAFE(w8, 2, w10, 1, 1);
-let wacc_g9 := wacc;
+let wacc_g8 := wacc;
 
 BN_MULQACC_SO_SAFE(w16, false, w8, 3, w10, 0, 1);
 let w16_g2 := w16;
-let wacc_g10 := bn_mulqacc_safe(false, w8, 3, w10, 0, 1, wacc_g9);
-let wacc_g11 := wacc;
+let temp_g2 := bn_mulqacc_safe(false, w8, 3, w10, 0, 1, wacc_g8);
+let temp_g3 := uint256_lh(temp_g2);
+let wacc_g9 := wacc;
 
 BN_MULQACC_SAFE(w8, 0, w11, 0, 0);
-let wacc_g12 := wacc;
+let wacc_g10 := wacc;
 
 BN_MULQACC_SAFE(w8, 1, w10, 3, 0);
-let wacc_g13 := wacc;
+let wacc_g11 := wacc;
 
 BN_MULQACC_SAFE(w8, 2, w10, 2, 0);
-let wacc_g14 := wacc;
+let wacc_g12 := wacc;
 
 BN_MULQACC_SAFE(w8, 3, w10, 1, 0);
-let wacc_g15 := wacc;
+let wacc_g13 := wacc;
 
 BN_MULQACC_SAFE(w9, 0, w10, 0, 0);
-let wacc_g16 := wacc;
+let wacc_g14 := wacc;
 
 BN_MULQACC_SAFE(w8, 0, w11, 1, 1);
-let wacc_g17 := wacc;
+let wacc_g15 := wacc;
 
 BN_MULQACC_SAFE(w8, 1, w11, 0, 1);
-let wacc_g18 := wacc;
+let wacc_g16 := wacc;
 
 BN_MULQACC_SAFE(w8, 2, w10, 3, 1);
-let wacc_g19 := wacc;
+let wacc_g17 := wacc;
 
 BN_MULQACC_SAFE(w8, 3, w10, 2, 1);
-let wacc_g20 := wacc;
+let wacc_g18 := wacc;
 
 BN_MULQACC_SAFE(w9, 0, w10, 1, 1);
-let wacc_g21 := wacc;
+let wacc_g19 := wacc;
 
 let w17_g0 := w17;
 BN_MULQACC_SO_SAFE(w17, true, w9, 1, w10, 0, 1);
 let w17_g1 := w17;
-let wacc_g22 := bn_mulqacc_safe(false, w9, 1, w10, 0, 1, wacc_g21);
-let wacc_g23 := wacc;
+let temp_g4 := bn_mulqacc_safe(false, w9, 1, w10, 0, 1, wacc_g19);
+let temp_g5 := uint256_lh(temp_g4);
+let wacc_g20 := wacc;
 
 BN_MULQACC_SAFE(w8, 1, w11, 1, 0);
-let wacc_g24 := wacc;
+let wacc_g21 := wacc;
 
 BN_MULQACC_SAFE(w8, 2, w11, 0, 0);
-let wacc_g25 := wacc;
+let wacc_g22 := wacc;
 
 BN_MULQACC_SAFE(w8, 3, w10, 3, 0);
-let wacc_g26 := wacc;
+let wacc_g23 := wacc;
 
 BN_MULQACC_SAFE(w9, 0, w10, 2, 0);
-let wacc_g27 := wacc;
+let wacc_g24 := wacc;
 
 BN_MULQACC_SAFE(w9, 1, w10, 1, 0);
-let wacc_g28 := wacc;
+let wacc_g25 := wacc;
 
 BN_MULQACC_SAFE(w8, 2, w11, 1, 1);
-let wacc_g29 := wacc;
+let wacc_g26 := wacc;
 
 BN_MULQACC_SAFE(w8, 3, w11, 0, 1);
-let wacc_g30 := wacc;
+let wacc_g27 := wacc;
 
 BN_MULQACC_SAFE(w9, 0, w10, 3, 1);
-let wacc_g31 := wacc;
+let wacc_g28 := wacc;
 
 BN_MULQACC_SO_SAFE(w17, false, w9, 1, w10, 2, 1);
 let w17_g2 := w17;
-let wacc_g32 := bn_mulqacc_safe(false, w9, 1, w10, 2, 1, wacc_g31);
-let wacc_g33 := wacc;
+let temp_g6 := bn_mulqacc_safe(false, w9, 1, w10, 2, 1, wacc_g28);
+let temp_g7 := uint256_lh(temp_g6);
+let wacc_g29 := wacc;
 
 BN_MULQACC_SAFE(w8, 3, w11, 1, 0);
-let wacc_g34 := wacc;
+let wacc_g30 := wacc;
 
 BN_MULQACC_SAFE(w9, 0, w11, 0, 0);
-let wacc_g35 := wacc;
+let wacc_g31 := wacc;
 
 BN_MULQACC_SAFE(w9, 1, w10, 3, 0);
-let wacc_g36 := wacc;
+let wacc_g32 := wacc;
 
 BN_MULQACC_SAFE(w9, 0, w11, 1, 1);
-let wacc_g37 := wacc;
+let wacc_g33 := wacc;
 
 let w18_g0 := w18;
 BN_MULQACC_SO_SAFE(w18, true, w9, 1, w11, 0, 1);
 let w18_g1 := w18;
-let wacc_g38 := bn_mulqacc_safe(false, w9, 1, w11, 0, 1, wacc_g37);
-let wacc_g39 := wacc;
+let temp_g8 := bn_mulqacc_safe(false, w9, 1, w11, 0, 1, wacc_g33);
+let temp_g9 := uint256_lh(temp_g8);
+let wacc_g34 := wacc;
 
 BN_MULQACC_SO_SAFE(w18, false, w9, 1, w11, 1, 0);
 let w18_g2 := w18;
-let wacc_g40 := bn_mulqacc_safe(false, w9, 1, w11, 1, 0, wacc_g39);
-let wacc_g41 := wacc;
+let temp_g10 := bn_mulqacc_safe(false, w9, 1, w11, 1, 0, wacc_g34);
+let temp_g11 := uint256_lh(temp_g10);
+let wacc_g35 := wacc;
 
 assert wacc_g0 == bn_mulqacc_safe(true, w8, 0, w10, 0, 0, 0);
 assert wacc_g1 == bn_mulqacc_safe(false, w8, 0, w10, 1, 1, wacc_g0);
-assert wacc_g2 == bn_mulqacc_safe(false, w8, 1, w10, 0, 1, wacc_g1);
-assert wacc_g3 == uint256_uh(wacc_g2);
-assert w16_g1 == uint256_hwb(w16_g0, uint256_lh(wacc_g2), true);
-assert wacc_g4 == bn_mulqacc_safe(false, w8, 0, w10, 2, 0, wacc_g3);
-assert wacc_g5 == bn_mulqacc_safe(false, w8, 1, w10, 1, 0, wacc_g4);
-assert wacc_g6 == bn_mulqacc_safe(false, w8, 2, w10, 0, 0, wacc_g5);
-assert wacc_g7 == bn_mulqacc_safe(false, w8, 0, w10, 3, 1, wacc_g6);
-assert wacc_g8 == bn_mulqacc_safe(false, w8, 1, w10, 2, 1, wacc_g7);
-assert wacc_g9 == bn_mulqacc_safe(false, w8, 2, w10, 1, 1, wacc_g8);
-assert wacc_g10 == bn_mulqacc_safe(false, w8, 3, w10, 0, 1, wacc_g9);
-assert wacc_g11 == uint256_uh(wacc_g10);
-assert w16_g2 == uint256_hwb(w16_g1, uint256_lh(wacc_g10), false);
-assert wacc_g12 == bn_mulqacc_safe(false, w8, 0, w11, 0, 0, wacc_g11);
-assert wacc_g13 == bn_mulqacc_safe(false, w8, 1, w10, 3, 0, wacc_g12);
-assert wacc_g14 == bn_mulqacc_safe(false, w8, 2, w10, 2, 0, wacc_g13);
-assert wacc_g15 == bn_mulqacc_safe(false, w8, 3, w10, 1, 0, wacc_g14);
-assert wacc_g16 == bn_mulqacc_safe(false, w9, 0, w10, 0, 0, wacc_g15);
-assert wacc_g17 == bn_mulqacc_safe(false, w8, 0, w11, 1, 1, wacc_g16);
-assert wacc_g18 == bn_mulqacc_safe(false, w8, 1, w11, 0, 1, wacc_g17);
-assert wacc_g19 == bn_mulqacc_safe(false, w8, 2, w10, 3, 1, wacc_g18);
-assert wacc_g20 == bn_mulqacc_safe(false, w8, 3, w10, 2, 1, wacc_g19);
-assert wacc_g21 == bn_mulqacc_safe(false, w9, 0, w10, 1, 1, wacc_g20);
-assert wacc_g22 == bn_mulqacc_safe(false, w9, 1, w10, 0, 1, wacc_g21);
-assert wacc_g23 == uint256_uh(wacc_g22);
-assert w17_g1 == uint256_hwb(w17_g0, uint256_lh(wacc_g22), true);
-assert wacc_g24 == bn_mulqacc_safe(false, w8, 1, w11, 1, 0, wacc_g23);
-assert wacc_g25 == bn_mulqacc_safe(false, w8, 2, w11, 0, 0, wacc_g24);
-assert wacc_g26 == bn_mulqacc_safe(false, w8, 3, w10, 3, 0, wacc_g25);
-assert wacc_g27 == bn_mulqacc_safe(false, w9, 0, w10, 2, 0, wacc_g26);
-assert wacc_g28 == bn_mulqacc_safe(false, w9, 1, w10, 1, 0, wacc_g27);
-assert wacc_g29 == bn_mulqacc_safe(false, w8, 2, w11, 1, 1, wacc_g28);
-assert wacc_g30 == bn_mulqacc_safe(false, w8, 3, w11, 0, 1, wacc_g29);
-assert wacc_g31 == bn_mulqacc_safe(false, w9, 0, w10, 3, 1, wacc_g30);
-assert wacc_g32 == bn_mulqacc_safe(false, w9, 1, w10, 2, 1, wacc_g31);
-assert wacc_g33 == uint256_uh(wacc_g32);
-assert w17_g2 == uint256_hwb(w17_g1, uint256_lh(wacc_g32), false);
-assert wacc_g34 == bn_mulqacc_safe(false, w8, 3, w11, 1, 0, wacc_g33);
-assert wacc_g35 == bn_mulqacc_safe(false, w9, 0, w11, 0, 0, wacc_g34);
-assert wacc_g36 == bn_mulqacc_safe(false, w9, 1, w10, 3, 0, wacc_g35);
-assert wacc_g37 == bn_mulqacc_safe(false, w9, 0, w11, 1, 1, wacc_g36);
-assert wacc_g38 == bn_mulqacc_safe(false, w9, 1, w11, 0, 1, wacc_g37);
-assert wacc_g39 == uint256_uh(wacc_g38);
-assert w18_g1 == uint256_hwb(w18_g0, uint256_lh(wacc_g38), true);
-assert wacc_g40 == bn_mulqacc_safe(false, w9, 1, w11, 1, 0, wacc_g39);
-assert wacc_g41 == uint256_uh(wacc_g40);
-assert w18_g2 == uint256_hwb(w18_g1, uint256_lh(wacc_g40), false);
+assert temp_g0 == bn_mulqacc_safe(false, w8, 1, w10, 0, 1, wacc_g1);
+assert wacc_g2 == uint256_uh(temp_g0);
+assert temp_g1 == uint256_lh(temp_g0);
+assert w16_g1 == uint256_hwb(w16_g0, temp_g1, true);
+assert wacc_g3 == bn_mulqacc_safe(false, w8, 0, w10, 2, 0, wacc_g2);
+assert wacc_g4 == bn_mulqacc_safe(false, w8, 1, w10, 1, 0, wacc_g3);
+assert wacc_g5 == bn_mulqacc_safe(false, w8, 2, w10, 0, 0, wacc_g4);
+assert wacc_g6 == bn_mulqacc_safe(false, w8, 0, w10, 3, 1, wacc_g5);
+assert wacc_g7 == bn_mulqacc_safe(false, w8, 1, w10, 2, 1, wacc_g6);
+assert wacc_g8 == bn_mulqacc_safe(false, w8, 2, w10, 1, 1, wacc_g7);
+assert temp_g2 == bn_mulqacc_safe(false, w8, 3, w10, 0, 1, wacc_g8);
+assert wacc_g9 == uint256_uh(temp_g2);
+assert temp_g3 == uint256_lh(temp_g2);
+assert w16_g2 == uint256_hwb(w16_g1, temp_g3, false);
+assert wacc_g10 == bn_mulqacc_safe(false, w8, 0, w11, 0, 0, wacc_g9);
+assert wacc_g11 == bn_mulqacc_safe(false, w8, 1, w10, 3, 0, wacc_g10);
+assert wacc_g12 == bn_mulqacc_safe(false, w8, 2, w10, 2, 0, wacc_g11);
+assert wacc_g13 == bn_mulqacc_safe(false, w8, 3, w10, 1, 0, wacc_g12);
+assert wacc_g14 == bn_mulqacc_safe(false, w9, 0, w10, 0, 0, wacc_g13);
+assert wacc_g15 == bn_mulqacc_safe(false, w8, 0, w11, 1, 1, wacc_g14);
+assert wacc_g16 == bn_mulqacc_safe(false, w8, 1, w11, 0, 1, wacc_g15);
+assert wacc_g17 == bn_mulqacc_safe(false, w8, 2, w10, 3, 1, wacc_g16);
+assert wacc_g18 == bn_mulqacc_safe(false, w8, 3, w10, 2, 1, wacc_g17);
+assert wacc_g19 == bn_mulqacc_safe(false, w9, 0, w10, 1, 1, wacc_g18);
+assert temp_g4 == bn_mulqacc_safe(false, w9, 1, w10, 0, 1, wacc_g19);
+assert wacc_g20 == uint256_uh(temp_g4);
+assert temp_g5 == uint256_lh(temp_g4);
+assert w17_g1 == uint256_hwb(w17_g0, temp_g5, true);
+assert wacc_g21 == bn_mulqacc_safe(false, w8, 1, w11, 1, 0, wacc_g20);
+assert wacc_g22 == bn_mulqacc_safe(false, w8, 2, w11, 0, 0, wacc_g21);
+assert wacc_g23 == bn_mulqacc_safe(false, w8, 3, w10, 3, 0, wacc_g22);
+assert wacc_g24 == bn_mulqacc_safe(false, w9, 0, w10, 2, 0, wacc_g23);
+assert wacc_g25 == bn_mulqacc_safe(false, w9, 1, w10, 1, 0, wacc_g24);
+assert wacc_g26 == bn_mulqacc_safe(false, w8, 2, w11, 1, 1, wacc_g25);
+assert wacc_g27 == bn_mulqacc_safe(false, w8, 3, w11, 0, 1, wacc_g26);
+assert wacc_g28 == bn_mulqacc_safe(false, w9, 0, w10, 3, 1, wacc_g27);
+assert temp_g6 == bn_mulqacc_safe(false, w9, 1, w10, 2, 1, wacc_g28);
+assert wacc_g29 == uint256_uh(temp_g6);
+assert temp_g7 == uint256_lh(temp_g6);
+assert w17_g2 == uint256_hwb(w17_g1, temp_g7, false);
+assert wacc_g30 == bn_mulqacc_safe(false, w8, 3, w11, 1, 0, wacc_g29);
+assert wacc_g31 == bn_mulqacc_safe(false, w9, 0, w11, 0, 0, wacc_g30);
+assert wacc_g32 == bn_mulqacc_safe(false, w9, 1, w10, 3, 0, wacc_g31);
+assert wacc_g33 == bn_mulqacc_safe(false, w9, 0, w11, 1, 1, wacc_g32);
+assert temp_g8 == bn_mulqacc_safe(false, w9, 1, w11, 0, 1, wacc_g33);
+assert wacc_g34 == uint256_uh(temp_g8);
+assert temp_g9 == uint256_lh(temp_g8);
+assert w18_g1 == uint256_hwb(w18_g0, temp_g9, true);
+assert temp_g10 == bn_mulqacc_safe(false, w9, 1, w11, 1, 0, wacc_g34);
+assert wacc_g35 == uint256_uh(temp_g10);
+assert temp_g11 == uint256_lh(temp_g10);
+assert w18_g2 == uint256_hwb(w18_g1, temp_g11, false);
+
+
 
 }
 
