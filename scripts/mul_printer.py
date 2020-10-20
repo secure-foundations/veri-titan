@@ -75,7 +75,8 @@ def get_last(var):
     return f"{var}_g{ghost_count[var]}"
 
 class MulQaccAssert:
-    def __init__(self, x, qx, y, qy, shift, o_wacc, n_wacc):
+    def __init__(self, zero, x, qx, y, qy, shift, n_wacc, o_wacc):
+        self.zero = zero
         self.x = x
         self.qx = qx
         self.y = y
@@ -85,7 +86,7 @@ class MulQaccAssert:
         self.n_wacc = n_wacc
 
     def __str__(self):
-        return f"assert {self.n_wacc} == bn_mulqacc_safe(true, {self.x}, {self.qx}, {self.y}, {self.qy}, {self.shift}, {self.o_wacc});"
+        return f"assert {self.n_wacc} == bn_mulqacc_safe({self.zero}, {self.x}, {self.qx}, {self.y}, {self.qy}, {self.shift}, {self.o_wacc});"
 
 assertions = list()
 
@@ -102,9 +103,7 @@ for ins in inss:
         c_wacc = get_fresh('wacc')
 
         print(f"let {c_wacc} := wacc;")
-        a = MulQaccAssert(x, qx, y, qy, shift, c_wacc, 0)
-        print(a)
-        assertions.append(a)
+        assertions.append(MulQaccAssert("true", x, qx, y, qy, shift, c_wacc, 0))
 
         print("")
     elif op == "bn.mulqacc":
@@ -117,9 +116,7 @@ for ins in inss:
         c_wacc = get_fresh('wacc')
 
         print(f"let {c_wacc} := wacc;")
-        a = f"assert {c_wacc} == bn_mulqacc_safe(false, {x}, {qx}, {y}, {qy}, {shift}, {p_wacc});"
-        print(a)
-        assertions.append(a)
+        assertions.append(MulQaccAssert("false", x, qx, y, qy, shift, c_wacc, p_wacc))
 
         print("")
     else:
@@ -129,7 +126,6 @@ for ins in inss:
         x, qx = get_qsel(ins[2])
         y, qy = get_qsel(ins[3])
         shift = get_shift(ins[4])
-
 
         p_dest = get_last(d)
         if p_dest is None:
@@ -148,13 +144,11 @@ for ins in inss:
         print(f"let {c0_wacc} := bn_mulqacc_safe(false, {x}, {qx}, {y}, {qy}, {shift}, {p_wacc});")
         print(f"let {c1_wacc} := wacc;")
 
-        a = f"assert {c0_wacc} == bn_mulqacc_safe(false, {x}, {qx}, {y}, {qy}, {shift}, {p_wacc});"
-        print(a)
-        assertions.append(a)
+        assertions.append(MulQaccAssert("false", x, qx, y, qy, shift, c0_wacc, p_wacc))
 
-        a = f"assert {c1_wacc} == uint256_uh({c0_wacc});"
-        print(a)
-        assertions.append(a)
-
-        print(f"assert {c_dest} == uint256_hwb({p_dest}, uint256_lh({c0_wacc}), {l});")
+        assertions.append(f"assert {c1_wacc} == uint256_uh({c0_wacc});")
+        assertions.append(f"assert {c_dest} == uint256_hwb({p_dest}, uint256_lh({c0_wacc}), {l});")
         print("")
+
+for a in assertions:
+    print(a)
