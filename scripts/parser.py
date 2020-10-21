@@ -54,9 +54,9 @@ def get_shift(s):
 def get_so(s):
     m = re.match(so, s)
     w, h = m.groups(0)
-    lower = "false"
+    lower = False
     if h == "L":
-        lower = "true"
+        lower = True
     return (w, lower)
 
 class MulQuacc:
@@ -67,19 +67,22 @@ class MulQuacc:
         self.y = y
         self.qy = qy
         self.shift = shift
-        # self.lst_wacc = lst_wacc
-        # self.new_wacc = new_wacc
 
-    def print_ins(self):
+    def __str__(self):
         if self.zero:
-            print(f"BN_MULQACC_Z({self.x}, {self.qx}, {self.y}, {self.qy}, {self.shift});")
+            return f"BN_MULQACC_Z({self.x}, {self.qx}, {self.y}, {self.qy}, {self.shift});"
         else:
-            print(f"BN_MULQACC_SAFE({self.x}, {self.qx}, {self.y}, {self.qy}, {self.shift});")
+            return f"BN_MULQACC_SAFE({self.x}, {self.qx}, {self.y}, {self.qy}, {self.shift});"
 
 class MulQuaccSo(MulQuacc):
-    def __init__(self, zero, x, qx, y, qy, shift):
+    def __init__(self, d, lower, zero, x, qx, y, qy, shift):
         MulQuacc.__init__(self, zero, x, qx, y, qy, shift)
+        self.d = d
+        self.lower = lower
 
+    def __str__(self):
+        l = "true" if self.lower else "false" 
+        return f"BN_MULQACC_SO_SAFE({self.d}, {l}, {self.x}, {self.qx}, {self.y}, {self.qy}, {self.shift});"
 
 class Parser:
     def __init__(self, inss):
@@ -87,18 +90,6 @@ class Parser:
         for ins in inss:
             self.parse_ins(ins)
         
-    # def get_fresh(self, var):
-    #     if var not in self.ghost_count:
-    #         self.ghost_count[var] = 0
-    #     else:
-    #         self.ghost_count[var] += 1
-    #     return f"{var}_g{self.ghost_count[var]}"
-
-    # def get_last(self, var):
-    #     if var not in self.ghost_count:
-    #         return None
-    #     return f"{var}_g{self.ghost_count[var]}"
-
     def parse_ins(self, ins):
         ins = re.split("\s+", ins)
         op = ins[0]
@@ -109,14 +100,16 @@ class Parser:
             y, qy = get_qsel(ins[2])
             shift = get_shift(ins[3])
 
-            # lst_wacc = self.get_last('wacc')
-            # new_wacc = self.get_fresh('wacc')
             ins = MulQuacc(zero, x, qx, y, qy, shift)
-            ins.print_ins()
+            print(ins)
         else:
             assert op == "bn.mulqacc.so"
+            d, l = get_so(ins[1])
+            x, qx = get_qsel(ins[2])
+            y, qy = get_qsel(ins[3])
+            shift = get_shift(ins[4])
 
-
-
+            ins = MulQuaccSo(d, l, False, x, qx, y, qy, shift)
+            print(ins)
 
 p = Parser(inss)
