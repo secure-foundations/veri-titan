@@ -1,6 +1,6 @@
 import re
 
-inss_384 = ["bn.mulqacc.z          w8.0, w10.0,   0",
+inss = ["bn.mulqacc.z          w8.0, w10.0,   0",
   "bn.mulqacc            w8.0, w10.1,  64",
   "bn.mulqacc.so w16.L,  w8.1, w10.0,  64",
   "bn.mulqacc            w8.0, w10.2,   0",
@@ -37,12 +37,6 @@ inss_384 = ["bn.mulqacc.z          w8.0, w10.0,   0",
   "bn.mulqacc.so w18.L,  w9.1, w11.0,  64",
   "bn.mulqacc.so w18.U,  w9.1, w11.1,   0"]
 
-inss_mulh = [
-    "bn.mulqacc.z      w28.0, w29.0, 0",
-    "bn.mulqacc        w28.1, w29.0, 64",
-    "bn.mulqacc        w28.0, w29.1, 64",
-    "bn.mulqacc        w28.1, w29.1, 128",]
-
 qsel = re.compile("(w[0-9]+).([0-3])")
 
 def get_qsel(s):
@@ -51,21 +45,19 @@ def get_qsel(s):
 
 def get_shift(s):
     if s == "0":
-        return 0
+        return "0"
     if s == "64":
-        return 1
-    if s == "128":
-        return 2
-    raise Exception("unhandled")
+        return "1"
+    assert False
     
 so = re.compile("(w[0-9]+).(L|U)")
 
 def get_so(s):
     m = re.match(so, s)
     w, h = m.groups(0)
-    lower = False
+    lower = "false"
     if h == "L":
-        lower = True
+        lower = "true"
     return (w, lower)
 
 ghost_count = dict()
@@ -96,23 +88,6 @@ class MulQaccCons:
     def __str__(self):
         return f"assert {self.n_wacc} == bn_mulqacc_safe({self.zero}, {self.x}, {self.qx}, {self.y}, {self.qy}, {self.shift}, {self.o_wacc});"
 
-    def get_equations(self):
-        product = f"{self.x}_{self.qx} * {self.y}_{self.qy}"
-
-        if self.shift == 0:
-            shift = product
-        elif self.shift == 1:
-            shift = product + " * B"
-        elif self.shift == 2:
-            shift = product + " * B * B"
-        else:
-            raise Exception("unhandled")
-
-        if self.zero == "true":
-            print(f"{self.n_wacc} - {shift}")
-        else:
-            print(f"{self.n_wacc} - {shift} - {self.o_wacc}")
-
 class HalfCons:
     def __init__(self, lower, src, dst):
         self.lower = lower
@@ -124,35 +99,19 @@ class HalfCons:
             return f"assert {self.dst} == uint256_lh({self.src});"
         return f"assert {self.dst} == uint256_uh({self.src});"
 
-    def get_equations(self):
-        if self.lower:
-            print(f"{self.dst} - {self.src}_1 * B - {self.src}_0")
-        else:
-            print(f"{self.dst} - {self.src}_3 * B - {self.src}_2")
-
 class WriteBackCons:
     def __init__(self, lower, n_dest, o_dest, src):
         self.lower = lower
         self.n_dest = n_dest
         self.o_dest = o_dest
         self.src = src
-
+    
     def __str__(self):
-        if self.lower:
-            lower = "true"
-        else:
-            lower = "false"
-        return f"assert {self.n_dest} == uint256_hwb({self.o_dest}, {self.src}, {lower}"
-
-    def get_equations(self):
-        if self.lower:
-            print(f"{self.n_dest} - {self.o_dest}_3 * B^3 - {self.o_dest}_2 * B^2 - {self.src}_1 * B - {self.src}_0")
-        else:
-            print(f"{self.n_dest} - {self.src}_1 * B^3 - {self.src}_0 * B^2 - {self.o_dest}_1 * B - {self.o_dest}_0")
+        return f"assert {self.n_dest} == uint256_hwb({self.o_dest}, {self.src}, {self.lower}"
 
 assertions = list()
 
-for ins in inss_384:
+for ins in inss:
     ins = re.split("\s+", ins)
     op = ins[0]
 
@@ -213,12 +172,8 @@ for ins in inss_384:
 
         assertions.append(HalfCons(False, temp_0, c_wacc))
         assertions.append(HalfCons(True, temp_0, temp_1))
-        assertions.append(WriteBackCons(l, c_dest, p_dest, temp_1))
-
+        assertions.append(f"assert {c_dest} == uint256_hwb({p_dest}, {temp_1}, {l});")
         print("")
 
 for a in assertions:
     print(a)
-
-for a in assertions:
-    a.get_equations()
