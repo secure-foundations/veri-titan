@@ -38,10 +38,10 @@ inss_384 = ["bn.mulqacc.z          w8.0, w10.0,   0",
   "bn.mulqacc.so w18.U,  w9.1, w11.1,   0"]
 
 inss_mulh = [
-"bn.mulqacc.z      w28.0, w29.0, 0",
-"bn.mulqacc        w28.1, w29.0, 64",
-"bn.mulqacc        w28.0, w29.1, 64",
-"bn.mulqacc        w28.1, w29.1, 128",]
+    "bn.mulqacc.z      w28.0, w29.0, 0",
+    "bn.mulqacc        w28.1, w29.0, 64",
+    "bn.mulqacc        w28.0, w29.1, 64",
+    "bn.mulqacc        w28.1, w29.1, 128",]
 
 qsel = re.compile("(w[0-9]+).([0-3])")
 
@@ -63,9 +63,9 @@ so = re.compile("(w[0-9]+).(L|U)")
 def get_so(s):
     m = re.match(so, s)
     w, h = m.groups(0)
-    lower = "false"
+    lower = False
     if h == "L":
-        lower = "true"
+        lower = True
     return (w, lower)
 
 ghost_count = dict()
@@ -102,9 +102,9 @@ class MulQaccCons:
         if self.shift == 0:
             shift = product
         elif self.shift == 1:
-            shift = product + "* B"
+            shift = product + " * B"
         elif self.shift == 2:
-            shift = product + "* B * B"
+            shift = product + " * B * B"
         else:
             raise Exception("unhandled")
 
@@ -124,19 +124,35 @@ class HalfCons:
             return f"assert {self.dst} == uint256_lh({self.src});"
         return f"assert {self.dst} == uint256_uh({self.src});"
 
+    def get_equations(self):
+        if self.lower:
+            print(f"{self.dst} - {self.src}_1 * B - {self.src}_0")
+        else:
+            print(f"{self.dst} - {self.src}_3 * B - {self.src}_2")
+
 class WriteBackCons:
     def __init__(self, lower, n_dest, o_dest, src):
         self.lower = lower
         self.n_dest = n_dest
         self.o_dest = o_dest
         self.src = src
-    
+
     def __str__(self):
-        return f"assert {self.n_dest} == uint256_hwb({self.o_dest}, {self.src}, {self.lower}"
+        if self.lower:
+            lower = "true"
+        else:
+            lower = "false"
+        return f"assert {self.n_dest} == uint256_hwb({self.o_dest}, {self.src}, {lower}"
+
+    def get_equations(self):
+        if self.lower:
+            print(f"{self.n_dest} - {self.o_dest}_3 * B^3 - {self.o_dest}_2 * B^2 - {self.src}_1 * B - {self.src}_0")
+        else:
+            print(f"{self.n_dest} - {self.src}_1 * B^3 - {self.src}_0 * B^2 - {self.o_dest}_1 * B - {self.o_dest}_0")
 
 assertions = list()
 
-for ins in inss_mulh:
+for ins in inss_384:
     ins = re.split("\s+", ins)
     op = ins[0]
 
@@ -197,7 +213,8 @@ for ins in inss_mulh:
 
         assertions.append(HalfCons(False, temp_0, c_wacc))
         assertions.append(HalfCons(True, temp_0, temp_1))
-        assertions.append(f"assert {c_dest} == uint256_hwb({p_dest}, {temp_1}, {l});")
+        assertions.append(WriteBackCons(l, c_dest, p_dest, temp_1))
+
         print("")
 
 for a in assertions:
