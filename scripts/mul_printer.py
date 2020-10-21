@@ -1,6 +1,6 @@
 import re
 
-inss = ["bn.mulqacc.z          w8.0, w10.0,   0",
+inss_384 = ["bn.mulqacc.z          w8.0, w10.0,   0",
   "bn.mulqacc            w8.0, w10.1,  64",
   "bn.mulqacc.so w16.L,  w8.1, w10.0,  64",
   "bn.mulqacc            w8.0, w10.2,   0",
@@ -37,6 +37,12 @@ inss = ["bn.mulqacc.z          w8.0, w10.0,   0",
   "bn.mulqacc.so w18.L,  w9.1, w11.0,  64",
   "bn.mulqacc.so w18.U,  w9.1, w11.1,   0"]
 
+inss_mulh = [
+"bn.mulqacc.z      w28.0, w29.0, 0",
+"bn.mulqacc        w28.1, w29.0, 64",
+"bn.mulqacc        w28.0, w29.1, 64",
+"bn.mulqacc        w28.1, w29.1, 128",]
+
 qsel = re.compile("(w[0-9]+).([0-3])")
 
 def get_qsel(s):
@@ -45,10 +51,12 @@ def get_qsel(s):
 
 def get_shift(s):
     if s == "0":
-        return "0"
+        return 0
     if s == "64":
-        return "1"
-    assert False
+        return 1
+    if s == "128":
+        return 2
+    raise Exception("unhandled")
     
 so = re.compile("(w[0-9]+).(L|U)")
 
@@ -88,6 +96,23 @@ class MulQaccCons:
     def __str__(self):
         return f"assert {self.n_wacc} == bn_mulqacc_safe({self.zero}, {self.x}, {self.qx}, {self.y}, {self.qy}, {self.shift}, {self.o_wacc});"
 
+    def get_equations(self):
+        product = f"{self.x}_{self.qx} * {self.y}_{self.qy}"
+
+        if self.shift == 0:
+            shift = product
+        elif self.shift == 1:
+            shift = product + "* B"
+        elif self.shift == 2:
+            shift = product + "* B * B"
+        else:
+            raise Exception("unhandled")
+
+        if self.zero == "true":
+            print(f"{self.n_wacc} - {shift}")
+        else:
+            print(f"{self.n_wacc} - {shift} - {self.o_wacc}")
+
 class HalfCons:
     def __init__(self, lower, src, dst):
         self.lower = lower
@@ -111,7 +136,7 @@ class WriteBackCons:
 
 assertions = list()
 
-for ins in inss:
+for ins in inss_mulh:
     ins = re.split("\s+", ins)
     op = ins[0]
 
@@ -177,3 +202,6 @@ for ins in inss:
 
 for a in assertions:
     print(a)
+
+for a in assertions:
+    a.get_equations()
