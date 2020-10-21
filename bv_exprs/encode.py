@@ -43,7 +43,9 @@ class BinOpExpr:
             if i == 0:
                 return "(" + self.src1.get_bit(i) + ") ^ (" + self.src2.get_bit(i) + ")"
             else:
-                return self.src1.get_bit(i) + " ^ " + self.src2.get_bit(i) + f" ^ carry(%s, %s)" % (self.src1.get_bit(i-1), self.src2.get_bit(i-1)) 
+                return self.src1.get_bit(i) + " ^ " + self.src2.get_bit(i) + \
+                        " ^ carry(%s[%d], %s[%d])" % (self.src1, i-1, self.src2, i-1) 
+                #return self.src1.get_bit(i) + " ^ " + self.src2.get_bit(i) + f" ^ carry(%s, %s)" % (self.src1.get_bit(i-1), self.src2.get_bit(i-1)) 
                 #return "(" + self.src1.get_bit(i) + ") ^ (" + self.src2.get_bit(i) + ") ^ (" + self.get_carry_bit(i-1) + ")"
         elif self.op == "-":
             raise Exception("Subtraction should have been converted during construction")
@@ -71,7 +73,7 @@ class UniOpExpr:
             raise Exception("Unexpected uni_op: %s" % self.op)
 
     def __str__(self):
-        return f"({uni_ops[self.op]}{self.src})"
+        return f"({uni_ops[self.op]} {self.src})"
 
 class InputVariable:
     names = set()

@@ -1,0 +1,23 @@
+Formula: ((x add x) add (x add x))
+
+Bit[1] == x[1] ^ x[1] ^ carry(x[0], x[0]) ^ x[1] ^ x[1] ^ carry(x[0], x[0]) ^ carry((x add x)[0], (x add x)[0])
+       ==           0 ^ carry(x[0], x[0]) ^      0      ^ carry(x[0], x[0]) ^ carry((x add x)[0], (x add x)[0])
+       ==           0 ^        x[0]       ^      0      ^        x[0]       ^ carry((x add x)[0], (x add x)[0])
+       == carry((x add x)[0], (x add x)[0])
+       == carry(0[0], 0[0])
+       == 0
+
+Bit[2] == x[2] ^ x[2] ^ carry(x[1], x[1]) ^ x[2] ^ x[2] ^ carry(x[1], x[1]) ^ carry((x add x)[1], (x add x)[1])
+       ==      0      ^ carry(x[1], x[1]) ^      0      ^ carry(x[1], x[1]) ^ carry((x add x)[1], (x add x)[1])
+       ==      0      ^        x[1]       ^      0      ^         x[1]      ^ carry((x add x)[1], (x add x)[1])
+       ==      carry((x add x)[1], (x add x)[1])
+               
+       ==      carry((x add x)[1], (x add x)[1])
+        
+
+Bit[2] == (x[2]) ^ (x[2]) ^ ((((x[0]) & (x[0])) | (((x[0] & x[0])) & ((x[0]) ^ (x[0])))))
+       ==        0        ^ ((((x[0]) & (x[0])) | (((x[0] & x[0])) & ((x[0]) ^ (x[0])))))
+       ==        0        ^ ((    x[0]          | (     x[0]       &       0          )))
+       ==        0        ^ ((    x[0]          |                  0                   ))
+       ==        0        ^       x[0]
+       ==        x[0]
