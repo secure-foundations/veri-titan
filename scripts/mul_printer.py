@@ -78,6 +78,7 @@ def get_last(var):
 
 class MulQaccCons:
     def __init__(self, zero, x, qx, y, qy, shift, n_wacc, o_wacc):
+        assert isinstance(zero, bool)
         self.zero = zero
         self.x = x
         self.qx = qx
@@ -88,18 +89,33 @@ class MulQaccCons:
         self.n_wacc = n_wacc
 
     def __str__(self):
-        return f"assert {self.n_wacc} == bn_mulqacc_safe({self.zero}, {self.x}, {self.qx}, {self.y}, {self.qy}, {self.shift}, {self.o_wacc});"
+        zero = "true" if self.zero else "false"
+        return f"assert {self.n_wacc} == bn_mulqacc_safe({zero}, {self.x}, {self.qx}, {self.y}, {self.qy}, {self.shift}, {self.o_wacc});"
+
+    def print_eq(self):
+        product = f"{self.x}_{self.qx} * {self.y}_{self.qy}"
+        if self.shift == 0:
+            shift = product
+        else:
+            assert self.shift == 1
+            shift = product + " * B"
+
+        if self.zero:
+            print(f"{self.n_wacc} - {shift}")
+        else:
+            print(f"{self.n_wacc} - {shift} - {self.o_wacc}")
 
 class HalfCons:
-    def __init__(self, lower, src, dst):
-        self.lower = lower
+    def __init__(self, src, ldst, hdst):
         self.src = src
-        self.dst= dst
+        self.ldst = ldst
+        self.hdst = hdst
     
     def __str__(self):
-        if self.lower:
-            return f"assert {self.dst} == uint256_lh({self.src});"
-        return f"assert {self.dst} == uint256_uh({self.src});"
+        return f"assert {self.ldst} == uint256_lh({self.src});\nassert {self.hdst} == uint256_uh({self.src});"
+
+    def print_eq(self):
+        raise Exception("NYI")
 
 class WriteBackCons:
     def __init__(self, lower, n_dest, o_dest, src):
@@ -112,6 +128,9 @@ class WriteBackCons:
     def __str__(self):
         l = "true" if self.lower else "false"
         return f"assert {self.n_dest} == uint256_hwb({self.o_dest}, {self.src}, {l});"
+
+    def print_eq(self):
+        raise Exception("NYI")
 
 assertions = list()
 
@@ -128,7 +147,7 @@ for ins in inss:
         c_wacc = get_fresh('wacc')
 
         print(f"let {c_wacc} := wacc;")
-        assertions.append(MulQaccCons("true", x, qx, y, qy, shift, c_wacc, 0))
+        assertions.append(MulQaccCons(True, x, qx, y, qy, shift, c_wacc, 0))
 
         print("")
     elif op == "bn.mulqacc":
@@ -141,7 +160,7 @@ for ins in inss:
         c_wacc = get_fresh('wacc')
 
         print(f"let {c_wacc} := wacc;")
-        assertions.append(MulQaccCons("false", x, qx, y, qy, shift, c_wacc, p_wacc))
+        assertions.append(MulQaccCons(False, x, qx, y, qy, shift, c_wacc, p_wacc))
 
         print("")
     else:
@@ -172,15 +191,17 @@ for ins in inss:
 
         print(f"let {c_wacc} := wacc;")
 
-        assertions.append(MulQaccCons("false", x, qx, y, qy, shift, temp_0, p_wacc))
+        assertions.append(MulQaccCons(False, x, qx, y, qy, shift, temp_0, p_wacc))
 
-        assertions.append(HalfCons(False, temp_0, c_wacc))
-        assertions.append(HalfCons(True, temp_0, temp_1))
+        assertions.append(HalfCons(temp_0, temp_1, c_wacc))
         assertions.append(WriteBackCons(l, c_dest, p_dest, temp_1))
         print("")
 
 for a in assertions:
     print(a)
 
-# for a in assertions:
-#     print(a)
+print("")
+
+for a in assertions:
+    print(a)
+    a.print_eq()
