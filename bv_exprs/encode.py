@@ -43,10 +43,10 @@ class BinOpExpr:
             if i == 0:
                 return "(" + self.src1.get_bit(i) + ") ^ (" + self.src2.get_bit(i) + ")"
             else:
-                #return self.src1.get_bit(i) + " ^ " + self.src2.get_bit(i) + f" ^ carry(%s, %s)" % (self.src1.get_bit(i-1), self.src2.get_bit(i-1)) 
-                return "(" + self.src1.get_bit(i) + ") ^ (" + self.src2.get_bit(i) + ") ^ (" + self.get_carry_bit(i-1) + ")"
+                return self.src1.get_bit(i) + " ^ " + self.src2.get_bit(i) + f" ^ carry(%s, %s)" % (self.src1.get_bit(i-1), self.src2.get_bit(i-1)) 
+                #return "(" + self.src1.get_bit(i) + ") ^ (" + self.src2.get_bit(i) + ") ^ (" + self.get_carry_bit(i-1) + ")"
         elif self.op == "-":
-            raise Exception("Subtraction is not yet supported")
+            raise Exception("Subtraction should have been converted during construction")
         else:
             raise Exception("Unexpected bin_op: %s" % self.op)
 
@@ -106,11 +106,15 @@ class Constant:
     def __str__(self):
         return "%d" % self.value
 
+def identity(bits):
+    x = InputVariable(bits, "x")
+    return BinOpExpr("-", x, x)
+
+
 def add_commutes(bits):
     x = InputVariable(bits, "x")
     y = InputVariable(bits, "y")
     return BinOpExpr("-", BinOpExpr("+", x, y), BinOpExpr("+", y, x))
-
 
 def add_self2(bits):
     x = InputVariable(bits, "x")
@@ -120,21 +124,19 @@ def add_self4(bits):
     x = InputVariable(bits, "x")
     return BinOpExpr("+", BinOpExpr("+", x, x), BinOpExpr("+", x, x))
 
+def print_formula(bits, form):
+    print("Formula: %s" % form(bits))
+    for i in range(bits):
+        print("  Bit[%d] == %s" % (i, form(bits).get_bit(i)))
+    print()
+
+
 def main():
-    print("Formula: %s" % add_commutes(4))
-    print("  Bit[0] == %s" % add_commutes(4).get_bit(0))
-    print("  Bit[1] == %s" % add_commutes(4).get_bit(1))
-    print("  Bit[2] == %s" % add_commutes(4).get_bit(2))
-
-    print("Formula: %s" % add_self2(4))
-    print("  Bit[0] == %s" % add_self2(4).get_bit(0))
-    print("  Bit[1] == %s" % add_self2(4).get_bit(1))
-    print("  Bit[2] == %s" % add_self2(4).get_bit(2))
-
-    print("Formula: %s" % add_self4(4))
-    print("  Bit[0] == %s" % add_self4(4).get_bit(0))
-    print("  Bit[1] == %s" % add_self4(4).get_bit(1))
-    print("  Bit[2] == %s" % add_self4(4).get_bit(2))
+    bits = 4
+    print_formula(bits, add_commutes)
+    print_formula(bits, identity)
+    print_formula(bits, add_self2)
+    print_formula(bits, add_self4)
 
 if (__name__=="__main__"):
   main()
