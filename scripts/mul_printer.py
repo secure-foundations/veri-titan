@@ -45,9 +45,9 @@ def get_qsel(s):
 
 def get_shift(s):
     if s == "0":
-        return "0"
+        return 0
     if s == "64":
-        return "1"
+        return 1
     assert False
     
 so = re.compile("(w[0-9]+).(L|U)")
@@ -58,6 +58,8 @@ def get_so(s):
     lower = "false"
     if h == "L":
         lower = "true"
+    else:
+        assert h == "U"
     return (w, lower)
 
 ghost_count = dict()
@@ -101,13 +103,15 @@ class HalfCons:
 
 class WriteBackCons:
     def __init__(self, lower, n_dest, o_dest, src):
-        self.lower = lower
+        assert lower in {"true", "false"}
+        self.lower = True if lower == "true" else False
         self.n_dest = n_dest
         self.o_dest = o_dest
         self.src = src
-    
+
     def __str__(self):
-        return f"assert {self.n_dest} == uint256_hwb({self.o_dest}, {self.src}, {self.lower}"
+        l = "true" if self.lower else "false"
+        return f"assert {self.n_dest} == uint256_hwb({self.o_dest}, {self.src}, {l});"
 
 assertions = list()
 
@@ -172,8 +176,11 @@ for ins in inss:
 
         assertions.append(HalfCons(False, temp_0, c_wacc))
         assertions.append(HalfCons(True, temp_0, temp_1))
-        assertions.append(f"assert {c_dest} == uint256_hwb({p_dest}, {temp_1}, {l});")
+        assertions.append(WriteBackCons(l, c_dest, p_dest, temp_1))
         print("")
 
 for a in assertions:
     print(a)
+
+# for a in assertions:
+#     print(a)
