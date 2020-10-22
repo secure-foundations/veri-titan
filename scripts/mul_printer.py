@@ -37,6 +37,17 @@ inss = ["bn.mulqacc.z          w8.0, w10.0,   0",
   "bn.mulqacc.so w18.L,  w9.1, w11.0,  64",
   "bn.mulqacc.so w18.U,  w9.1, w11.1,   0"]
 
+half_mul = ["bn.mulqacc.z          w28.0, w29.0,  0",
+    "bn.mulqacc            w28.1, w29.0, 64",
+    "bn.mulqacc.so   w1.L, w28.0, w29.1, 64",
+    "bn.mulqacc            w28.2, w29.0,  0",
+    "bn.mulqacc            w28.1, w29.1,  0",
+    "bn.mulqacc            w28.0, w29.2,  0",
+    "bn.mulqacc            w28.3, w29.0, 64",
+    "bn.mulqacc            w28.2, w29.1, 64",
+    "bn.mulqacc            w28.1, w29.2, 64",
+    "bn.mulqacc.so   w1.U, w28.0, w29.3, 64",]
+
 qsel = re.compile("(w[0-9]+).([0-3])")
 
 def get_qsel(s):
@@ -94,6 +105,9 @@ def lookup_256(name):
 def quarter_expansion(f, qs):
     return (f"{f} - {qs[0]} * B^3 - {qs[1]} * B^2 - {qs[2]} * B - {qs[3]}")
 
+def stand_quarter_expansion(f):
+    return (f"{f} - {f}_3 * B^3 - {f}_2 * B^2 - {f}_1 * B - {f}_0")
+
 class MulQaccCons:
     def __init__(self, zero, x, qx, y, qy, shift, n_wacc, o_wacc):
         assert isinstance(zero, bool)
@@ -119,9 +133,9 @@ class MulQaccCons:
             shift = product + " * B"
 
         if self.zero:
-            print(f"{self.n_wacc} - {shift}")
+            print(f"{self.n_wacc} - {shift},")
         else:
-            print(f"{self.n_wacc} - {shift} - {self.o_wacc}")
+            print(f"{self.n_wacc} - {shift} - {self.o_wacc},")
 
 class HalfCons:
     def __init__(self, src, ldst, hdst):
@@ -134,9 +148,9 @@ class HalfCons:
 
     def print_eq(self):
         s = self.src
-        print(f"{s} - {s}_3 * B^3 - {s}_2 * B^2 * - {s}_1 * B - {s}_0")
+        print(f"{s} - {s}_3 * B^3 - {s}_2 * B^2 - {s}_1 * B - {s}_0,")
         map_128[self.ldst] = [f"{s}_1", f"{s}_0"]
-        print(f"{self.hdst} - {s}_1 * B^3 - {s}_0 * B^2")
+        print(f"{self.hdst} - {s}_1 * B^3 - {s}_0 * B^2,")
 
 class WriteBackCons:
     def __init__(self, lower, n_dest, o_dest, src):
@@ -161,11 +175,11 @@ class WriteBackCons:
             new_exp = src_exp + old_exp[2:]
 
         map_256[self.n_dest] = new_exp
-        print(quarter_expansion(self.n_dest, new_exp))
+        print(quarter_expansion(self.n_dest, new_exp) + ",")
 
 assertions = list()
 
-for ins in inss:
+for ins in half_mul:
     ins = re.split("\s+", ins)
     op = ins[0]
 
@@ -234,5 +248,32 @@ for a in assertions:
 print("")
 
 for a in assertions:
-    print(a)
+    # print(a)
     a.print_eq()
+print(stand_quarter_expansion("w28"))
+print(stand_quarter_expansion("w29"))
+
+l = """wacc_g0 - w28_0 * w29_0
+wacc_g1 - w28_1 * w29_0 * B - wacc_g0
+temp_g0 - w28_0 * w29_1 * B - wacc_g1
+temp_g0 - temp_g0_3 * B^3 - temp_g0_2 * B^2 * - temp_g0_1 * B - temp_g0_0
+wacc_g2 - temp_g0_1 * B^3 - temp_g0_0 * B^2
+w1_g1 - w1_g0_3 * B^3 - w1_g0_2 * B^2 - temp_g0_1 * B - temp_g0_0
+wacc_g3 - w28_2 * w29_0 - wacc_g2
+wacc_g4 - w28_1 * w29_1 - wacc_g3
+wacc_g5 - w28_0 * w29_2 - wacc_g4
+wacc_g6 - w28_3 * w29_0 * B - wacc_g5
+wacc_g7 - w28_2 * w29_1 * B - wacc_g6
+wacc_g8 - w28_1 * w29_2 * B - wacc_g7
+temp_g2 - w28_0 * w29_3 * B - wacc_g8
+temp_g2 - temp_g2_3 * B^3 - temp_g2_2 * B^2 * - temp_g2_1 * B - temp_g2_0
+wacc_g9 - temp_g2_1 * B^3 - temp_g2_0 * B^2
+w1_g2 - temp_g2_1 * B^3 - temp_g2_0 * B^2 - temp_g0_1 * B - temp_g0_0
+w28 - w28_3 * B^3 - w28_2 * B^2 - w28_1 * B - w28_0
+w29 - w29_3 * B^3 - w29_2 * B^2 - w29_1 * B - w29_0
+"""
+
+l = re.split("\n|\s", l)
+l = [i for i in l if i not  in {"-", "*", "", "B^2", "B^3"}]
+l = list(set(l))
+print(",".join(l))
