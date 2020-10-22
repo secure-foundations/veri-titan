@@ -133,9 +133,9 @@ class MulQaccCons:
             shift = product + " * B"
 
         if self.zero:
-            print(f"{self.n_wacc} - {shift},")
+            return [f"{self.n_wacc} - {shift}"]
         else:
-            print(f"{self.n_wacc} - {shift} - {self.o_wacc},")
+            return [f"{self.n_wacc} - {shift} - {self.o_wacc}"]
 
 class HalfCons:
     def __init__(self, src, ldst, hdst):
@@ -148,9 +148,8 @@ class HalfCons:
 
     def print_eq(self):
         s = self.src
-        print(f"{s} - {s}_3 * B^3 - {s}_2 * B^2 - {s}_1 * B - {s}_0,")
         map_128[self.ldst] = [f"{s}_1", f"{s}_0"]
-        print(f"{self.hdst} - {s}_1 * B^3 - {s}_0 * B^2,")
+        return [stand_quarter_expansion(s), f"{self.hdst} - {s}_1 * B^3 - {s}_0 * B^2"]
 
 class WriteBackCons:
     def __init__(self, lower, n_dest, o_dest, src):
@@ -175,7 +174,7 @@ class WriteBackCons:
             new_exp = src_exp + old_exp[2:]
 
         map_256[self.n_dest] = new_exp
-        print(quarter_expansion(self.n_dest, new_exp) + ",")
+        return [quarter_expansion(self.n_dest, new_exp)]
 
 assertions = list()
 
@@ -247,33 +246,16 @@ for a in assertions:
 
 print("")
 
+eqs = [stand_quarter_expansion("w28"), stand_quarter_expansion("w29")]
 for a in assertions:
     # print(a)
-    a.print_eq()
-print(stand_quarter_expansion("w28"))
-print(stand_quarter_expansion("w29"))
+    eqs += a.print_eq()
+# print(eqs)
+eqs = ",\n".join(eqs)
 
-l = """wacc_g0 - w28_0 * w29_0
-wacc_g1 - w28_1 * w29_0 * B - wacc_g0
-temp_g0 - w28_0 * w29_1 * B - wacc_g1
-temp_g0 - temp_g0_3 * B^3 - temp_g0_2 * B^2 * - temp_g0_1 * B - temp_g0_0
-wacc_g2 - temp_g0_1 * B^3 - temp_g0_0 * B^2
-w1_g1 - w1_g0_3 * B^3 - w1_g0_2 * B^2 - temp_g0_1 * B - temp_g0_0
-wacc_g3 - w28_2 * w29_0 - wacc_g2
-wacc_g4 - w28_1 * w29_1 - wacc_g3
-wacc_g5 - w28_0 * w29_2 - wacc_g4
-wacc_g6 - w28_3 * w29_0 * B - wacc_g5
-wacc_g7 - w28_2 * w29_1 * B - wacc_g6
-wacc_g8 - w28_1 * w29_2 * B - wacc_g7
-temp_g2 - w28_0 * w29_3 * B - wacc_g8
-temp_g2 - temp_g2_3 * B^3 - temp_g2_2 * B^2 * - temp_g2_1 * B - temp_g2_0
-wacc_g9 - temp_g2_1 * B^3 - temp_g2_0 * B^2
-w1_g2 - temp_g2_1 * B^3 - temp_g2_0 * B^2 - temp_g0_1 * B - temp_g0_0
-w28 - w28_3 * B^3 - w28_2 * B^2 - w28_1 * B - w28_0
-w29 - w29_3 * B^3 - w29_2 * B^2 - w29_1 * B - w29_0
-"""
-
-l = re.split("\n|\s", l)
+l = re.split(",\n|\s", eqs)
 l = [i for i in l if i not  in {"-", "*", "", "B^2", "B^3"}]
 l = list(set(l))
-print(",".join(l))
+
+print("ring r=integer,(" + ",".join(l) + "),lp;")
+print("ideal I = " + eqs + ";")
