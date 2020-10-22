@@ -167,7 +167,7 @@ class HalfCons:
     def print_eq(self):
         s = self.src
         map_128[self.ldst] = [f"{s}_1", f"{s}_0"]
-        return [stand_quarter_expansion(s), f"{self.hdst} - {s}_1 * B^3 - {s}_0 * B^2"]
+        return [stand_quarter_expansion(s), f"{self.hdst} - {s}_3 * B - {s}_2"]
 
 class WriteBackCons:
     def __init__(self, lower, n_dest, o_dest, src):
@@ -196,7 +196,7 @@ class WriteBackCons:
 
 assertions = list()
 
-for ins in full_mul:
+for ins in half_mul:
     ins = re.split("\s+", ins)
     op = ins[0]
 
@@ -254,7 +254,6 @@ for ins in full_mul:
         print(f"let {c_wacc} := wacc;")
 
         assertions.append(MulQaccCons(False, x, qx, y, qy, shift, temp_0, p_wacc))
-
         assertions.append(HalfCons(temp_0, temp_1, c_wacc))
         assertions.append(WriteBackCons(l, c_dest, p_dest, temp_1))
         print("")
@@ -264,12 +263,15 @@ for a in assertions:
 
 print("")
 
-eqs = [stand_quarter_expansion("w0"), stand_quarter_expansion("w1")]
+eqs = [stand_quarter_expansion("w29"), stand_quarter_expansion("w28")]
 for a in assertions:
     # print(a)
+    # for i in a.print_eq():
+    #     print(i)
+    # print("")
     eqs += a.print_eq()
-# print(eqs)
 eqs = ",\n".join(eqs)
+# print(eqs)
 
 l = re.split(",\n|\s", eqs)
 l = [i for i in l if i not  in {"-", "*", "", "B^2", "B^3"}]
