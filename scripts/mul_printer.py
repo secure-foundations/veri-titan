@@ -48,6 +48,24 @@ half_mul = ["bn.mulqacc.z          w28.0, w29.0,  0",
     "bn.mulqacc            w28.1, w29.2, 64",
     "bn.mulqacc.so   w1.U, w28.0, w29.3, 64",]
 
+full_mul = [
+    "bn.mulqacc.z        w0.0, w1.0, 0",
+    "bn.mulqacc          w0.1, w1.0, 64",
+    "bn.mulqacc.so w2.L, w0.0, w1.1, 64",
+    "bn.mulqacc          w0.2, w1.0, 0",
+    "bn.mulqacc          w0.1, w1.1, 0",
+    "bn.mulqacc          w0.0, w1.2, 0",
+    "bn.mulqacc          w0.3, w1.0, 64",
+    "bn.mulqacc          w0.2, w1.1, 64",
+    "bn.mulqacc          w0.1, w1.2, 64",
+    "bn.mulqacc.so w2.U, w0.0, w1.3, 64",
+    "bn.mulqacc          w0.3, w1.1, 0",
+    "bn.mulqacc          w0.2, w1.2, 0",
+    "bn.mulqacc          w0.1, w1.3, 0",
+    "bn.mulqacc          w0.3, w1.2, 64",
+    "bn.mulqacc.so w3.L, w0.2, w1.3, 64",
+    "bn.mulqacc.so w3.U, w0.3, w1.3, 0",]
+
 qsel = re.compile("(w[0-9]+).([0-3])")
 
 def get_qsel(s):
@@ -178,7 +196,7 @@ class WriteBackCons:
 
 assertions = list()
 
-for ins in half_mul:
+for ins in full_mul:
     ins = re.split("\s+", ins)
     op = ins[0]
 
@@ -246,7 +264,7 @@ for a in assertions:
 
 print("")
 
-eqs = [stand_quarter_expansion("w28"), stand_quarter_expansion("w29")]
+eqs = [stand_quarter_expansion("w0"), stand_quarter_expansion("w1")]
 for a in assertions:
     # print(a)
     eqs += a.print_eq()
