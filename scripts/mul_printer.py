@@ -89,7 +89,10 @@ def lookup_256(name):
         l = [name + f"_{i}" for i in range(4)]
         l.reverse()
         return l
-    raise Exception
+    return map_256[name]
+
+def quarter_expansion(f, qs):
+    return (f"{f} - {qs[0]} * B^3 - {qs[1]} * B^2 - {qs[2]} * B - {qs[3]}")
 
 class MulQaccCons:
     def __init__(self, zero, x, qx, y, qy, shift, n_wacc, o_wacc):
@@ -153,11 +156,12 @@ class WriteBackCons:
         old_exp = lookup_256(self.o_dest)
         # print(old_exp)
         if self.lower:
-            print(old_exp[:2] + src_exp)
+            new_exp = old_exp[:2] + src_exp
         else:
-            print(src_exp + old_exp[2:])
+            new_exp = src_exp + old_exp[2:]
 
-        raise Exception("NYI")
+        map_256[self.n_dest] = new_exp
+        print(quarter_expansion(self.n_dest, new_exp))
 
 assertions = list()
 
