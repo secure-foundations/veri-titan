@@ -76,6 +76,21 @@ def get_last(var):
         return None
     return f"{var}_g{ghost_count[var]}"
 
+map_128 = dict()
+
+def lookup_128(name):
+    return map_128[name]
+
+map_256 = dict()
+
+def lookup_256(name):
+    if name not in map_256:
+        assert name.endswith("_g0")
+        l = [name + f"_{i}" for i in range(4)]
+        l.reverse()
+        return l
+    raise Exception
+
 class MulQaccCons:
     def __init__(self, zero, x, qx, y, qy, shift, n_wacc, o_wacc):
         assert isinstance(zero, bool)
@@ -115,7 +130,10 @@ class HalfCons:
         return f"assert {self.ldst} == uint256_lh({self.src});\nassert {self.hdst} == uint256_uh({self.src});"
 
     def print_eq(self):
-        raise Exception("NYI")
+        s = self.src
+        print(f"{s} - {s}_3 * B^3 - {s}_2 * B^2 * - {s}_1 * B - {s}_0")
+        map_128[self.ldst] = [f"{s}_1", f"{s}_0"]
+        print(f"{self.hdst} - {s}_1 * B^3 - {s}_0 * B^2")
 
 class WriteBackCons:
     def __init__(self, lower, n_dest, o_dest, src):
@@ -130,6 +148,15 @@ class WriteBackCons:
         return f"assert {self.n_dest} == uint256_hwb({self.o_dest}, {self.src}, {l});"
 
     def print_eq(self):
+        src_exp = lookup_128(self.src)
+        # print(src_exp)
+        old_exp = lookup_256(self.o_dest)
+        # print(old_exp)
+        if self.lower:
+            print(old_exp[:2] + src_exp)
+        else:
+            print(src_exp + old_exp[2:])
+
         raise Exception("NYI")
 
 assertions = list()
