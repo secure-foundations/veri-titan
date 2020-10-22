@@ -201,9 +201,10 @@ module ops {
 		(x as bv256 | y as bv256) as uint256
 	}
 
-	function {:opaque} uint256_ls(x: uint256, num_bytes:int): uint256
+	function {:opaque} uint256_ls(x: uint256, num_bytes:int): (r: uint256)
 		requires 0 <= num_bytes < 32;
-		ensures uint256_ls(x, 0) == x;
+		ensures (num_bytes == 0) ==> r == x;
+		ensures (num_bytes == 8 && x < BASE_192) ==> (r == x * BASE_64);
 	{
 		assume false;
 		(x as bv256 << (num_bytes * 8)) as uint256
@@ -285,9 +286,9 @@ module ops {
 		reveal uint256_xor();
 	}
 
-	lemma lemma_ls_mul(x: uint256)
-		requires x < BASE_128;
-		ensures uint256_ls(x, 8) == x * BASE_64;
+	// lemma lemma_ls_mul(x: uint256)
+	// 	requires x < BASE_128;
+	// 	ensures uint256_ls(x, 8) == x * BASE_64;
 
 	lemma lemma_uint256_hwb(x1: uint256, x2: uint256, x3: uint256, lo: uint128, hi: uint128)
 		requires x2 == uint256_hwb(x1, lo, true);
