@@ -1,43 +1,45 @@
 import re
 
-inss = ["bn.mulqacc.z          w8.0, w10.0,   0",
-  "bn.mulqacc            w8.0, w10.1,  64",
-  "bn.mulqacc.so w16.L,  w8.1, w10.0,  64",
-  "bn.mulqacc            w8.0, w10.2,   0",
-  "bn.mulqacc            w8.1, w10.1,   0",
-  "bn.mulqacc            w8.2, w10.0,   0",
-  "bn.mulqacc            w8.0, w10.3,  64",
-  "bn.mulqacc            w8.1, w10.2,  64",
-  "bn.mulqacc            w8.2, w10.1,  64",
-  "bn.mulqacc.so w16.U,  w8.3, w10.0,  64",
-  "bn.mulqacc            w8.0, w11.0,   0",
-  "bn.mulqacc            w8.1, w10.3,   0",
-  "bn.mulqacc            w8.2, w10.2,   0",
-  "bn.mulqacc            w8.3, w10.1,   0",
-  "bn.mulqacc            w9.0, w10.0,   0",
-  "bn.mulqacc            w8.0, w11.1,  64",
-  "bn.mulqacc            w8.1, w11.0,  64",
-  "bn.mulqacc            w8.2, w10.3,  64",
-  "bn.mulqacc            w8.3, w10.2,  64",
-  "bn.mulqacc            w9.0, w10.1,  64",
-  "bn.mulqacc.so w17.L,  w9.1, w10.0,  64",
-  "bn.mulqacc            w8.1, w11.1,   0",
-  "bn.mulqacc            w8.2, w11.0,   0",
-  "bn.mulqacc            w8.3, w10.3,   0",
-  "bn.mulqacc            w9.0, w10.2,   0",
-  "bn.mulqacc            w9.1, w10.1,   0",
-  "bn.mulqacc            w8.2, w11.1,  64",
-  "bn.mulqacc            w8.3, w11.0,  64",
-  "bn.mulqacc            w9.0, w10.3,  64",
-  "bn.mulqacc.so w17.U,  w9.1, w10.2,  64",
-  "bn.mulqacc            w8.3, w11.1,   0",
-  "bn.mulqacc            w9.0, w11.0,   0",
-  "bn.mulqacc            w9.1, w10.3,   0",
-  "bn.mulqacc            w9.0, w11.1,  64",
-  "bn.mulqacc.so w18.L,  w9.1, w11.0,  64",
-  "bn.mulqacc.so w18.U,  w9.1, w11.1,   0"]
+mul_384 = [
+    "bn.mulqacc.z          w8.0, w10.0,   0",
+    "bn.mulqacc            w8.0, w10.1,  64",
+    "bn.mulqacc.so w16.L,  w8.1, w10.0,  64",
+    "bn.mulqacc            w8.0, w10.2,   0",
+    "bn.mulqacc            w8.1, w10.1,   0",
+    "bn.mulqacc            w8.2, w10.0,   0",
+    "bn.mulqacc            w8.0, w10.3,  64",
+    "bn.mulqacc            w8.1, w10.2,  64",
+    "bn.mulqacc            w8.2, w10.1,  64",
+    "bn.mulqacc.so w16.U,  w8.3, w10.0,  64",
+    "bn.mulqacc            w8.0, w11.0,   0",
+    "bn.mulqacc            w8.1, w10.3,   0",
+    "bn.mulqacc            w8.2, w10.2,   0",
+    "bn.mulqacc            w8.3, w10.1,   0",
+    "bn.mulqacc            w9.0, w10.0,   0",
+    "bn.mulqacc            w8.0, w11.1,  64",
+    "bn.mulqacc            w8.1, w11.0,  64",
+    "bn.mulqacc            w8.2, w10.3,  64",
+    "bn.mulqacc            w8.3, w10.2,  64",
+    "bn.mulqacc            w9.0, w10.1,  64",
+    "bn.mulqacc.so w17.L,  w9.1, w10.0,  64",
+    "bn.mulqacc            w8.1, w11.1,   0",
+    "bn.mulqacc            w8.2, w11.0,   0",
+    "bn.mulqacc            w8.3, w10.3,   0",
+    "bn.mulqacc            w9.0, w10.2,   0",
+    "bn.mulqacc            w9.1, w10.1,   0",
+    "bn.mulqacc            w8.2, w11.1,  64",
+    "bn.mulqacc            w8.3, w11.0,  64",
+    "bn.mulqacc            w9.0, w10.3,  64",
+    "bn.mulqacc.so w17.U,  w9.1, w10.2,  64",
+    "bn.mulqacc            w8.3, w11.1,   0",
+    "bn.mulqacc            w9.0, w11.0,   0",
+    "bn.mulqacc            w9.1, w10.3,   0",
+    "bn.mulqacc            w9.0, w11.1,  64",
+    "bn.mulqacc.so w18.L,  w9.1, w11.0,  64",
+    "bn.mulqacc.so w18.U,  w9.1, w11.1,   0"]
 
-half_mul = ["bn.mulqacc.z          w28.0, w29.0,  0",
+mul_256_half = [
+    "bn.mulqacc.z          w28.0, w29.0,  0",
     "bn.mulqacc            w28.1, w29.0, 64",
     "bn.mulqacc.so   w1.L, w28.0, w29.1, 64",
     "bn.mulqacc            w28.2, w29.0,  0",
@@ -48,7 +50,7 @@ half_mul = ["bn.mulqacc.z          w28.0, w29.0,  0",
     "bn.mulqacc            w28.1, w29.2, 64",
     "bn.mulqacc.so   w1.U, w28.0, w29.3, 64",]
 
-full_mul = [
+mul_256 = [
     "bn.mulqacc.z        w28.0, w29.0, 0",
     "bn.mulqacc          w28.1, w29.0, 64",
     "bn.mulqacc.so w2.L, w28.0, w29.1, 64",
@@ -67,9 +69,13 @@ full_mul = [
     "bn.mulqacc.so w3.U, w28.3, w29.3, 0",]
 
 qsel = re.compile("(w[0-9]+).([0-3])")
+so = re.compile("(w[0-9]+).(L|U)")
+
+inputs = set()
 
 def get_qsel(s):
     m = re.match(qsel, s)
+    inputs.add(m.group(1))
     return m.groups(0)
 
 def get_shift(s):
@@ -79,8 +85,6 @@ def get_shift(s):
         return 1
     assert False
     
-so = re.compile("(w[0-9]+).(L|U)")
-
 def get_so(s):
     m = re.match(so, s)
     w, h = m.groups(0)
@@ -107,10 +111,10 @@ def get_last(var):
 
 map_128 = dict()
 
+map_256 = dict()
+
 def lookup_128(name):
     return map_128[name]
-
-map_256 = dict()
 
 def lookup_256(name):
     if name not in map_256:
@@ -196,7 +200,11 @@ class WriteBackCons:
 
 assertions = list()
 
-for ins in full_mul:
+import sys
+
+target = eval(sys.argv[1])
+
+for ins in target:
     ins = re.split("\s+", ins)
     op = ins[0]
 
@@ -263,7 +271,7 @@ for a in assertions:
 
 print("")
 
-eqs = [stand_quarter_expansion("w29"), stand_quarter_expansion("w28")]
+eqs = [stand_quarter_expansion(input) for input in inputs]
 for a in assertions:
     # print(a)
     # for i in a.print_eq():
