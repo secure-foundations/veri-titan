@@ -47,7 +47,6 @@ import opened otbn_mul
  *
  * Clobbered flag groups: FG0
  */
-
 procedure full_mul_384()
     reads
         w8; w9; w10; w11; w31;
@@ -176,6 +175,35 @@ procedure half_mul_512()
     // bn.mulqacc.so w17.U,  w9.1, w12.2,  64
 }
 
+procedure compute_r1()
+    reads
+        w16; w17;
+    modifies
+        w21; w22;
+{
+    // /* Save lower 512 bits of x: r1 = [w22, w21] = x % 2^512 = [w16, w17]
+    //     => max length r1: 512 bits */
+    // bn.mov w21, w16
+    BN_MOV(w21, w16);
+    // bn.mov w22, w17
+    BN_MOV(w22, w17);
+}
+
+procedure compute_q1()
+    reads
+        w17; w18; w31;
+    modifies
+        w8; w9;
+{
+    // /* Compute q1 = x >> 383
+    //     q1 = [w9, w8] = [w18, w17, w16] >> 383  = [w18, w17] >> 127
+    //     => max length q1: 385 bits */
+    // bn.rshi w9, w18, w31 >> 127
+    BN_RSHI(w9, w18, w31, 127);
+    // bn.rshi w8, w17, w18 >> 127
+    BN_RSHI(w8, w17, w18, 127);
+}
+
 /**
  * 384-bit modular multiplication based on Barrett reduction algorithm.
  *
@@ -238,20 +266,9 @@ procedure barrett384()
     // bn.sel w25, w15, w31, M
     BN_SEL(w25, w15, w31, false, 2);
 
-    // /* Save lower 512 bits of x: r1 = [w22, w21] = x % 2^512 = [w16, w17]
-    //     => max length r1: 512 bits */
-    // bn.mov w21, w16
-    BN_MOV(w21, w16);
-    // bn.mov w22, w17
-    BN_MOV(w22, w17);
+    compute_r1();
 
-    // /* Compute q1 = x >> 383
-    //     q1 = [w9, w8] = [w18, w17, w16] >> 383  = [w18, w17] >> 127
-    //     => max length q1: 385 bits */
-    // bn.rshi w9, w18, w31 >> 127
-    BN_RSHI(w9, w18, w31, 127);
-    // bn.rshi w8, w17, w18 >> 127
-    BN_RSHI(w8, w17, w18, 127);
+    compute_q1();
 
     // /* Compute q2 = q1*u
     //     Instead of full q2 (which would be up to 770 bits) we ignore the MSb of u
