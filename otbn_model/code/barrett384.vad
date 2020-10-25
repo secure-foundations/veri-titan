@@ -204,6 +204,104 @@ procedure compute_q1()
     BN_RSHI(w8, w17, w18, 127);
 }
 
+procedure compute_q2'()
+    reads
+        w31; w14; w15; w24; w25;
+    modifies
+        wacc; w8; w9; w19; w20; w10; w11; w18; w17; w16; flags;
+{
+    // /* Compute q2 = q1*u
+    //     Instead of full q2 (which would be up to 770 bits) we ignore the MSb of u
+    //     and the MSb of q1 and correct this later. This allows using a 384x384
+    //     multiplier. For special modili where the lower half of the second limb of
+    //     u is zero (e.g. p384) this can be further optimized by only considering
+    //     limb 0 of u and use a 384x256 multiplication.
+    //     => max. length q2': 768 bit
+    //     q2' = q1[383:0]*u[383:0] = [w18, w17, w16] = [w9, w8] * [w15, w14] */
+
+    // bn.mov w10, w14
+    BN_MOV(w10, w14);
+    // bn.mov w11, w15
+    BN_MOV(w11, w15);
+    // jal x1, mul384
+    full_mul_384();
+
+    // /* q3 = q2 >> 385
+    //     In this step, the compensation for the neglected MSbs of q1 and u is
+    //     carried out underway. To add them in the q2 domain, they would have to be
+    //     left shifted by 384 bit first. To directly add them we first shift q2' by
+    //     384 bit to the right, perform the additions, and shift the result another
+    //     bit to the right. The additions cannot overflow due to leading zeros
+    //     after shift.
+    //     q2'' = q2' >> 384 = [w20, w19] = [w18, w17, w16] >> 384
+    //                                 = [w18, w17] >> 128 */
+    // bn.rshi w20, w18, w31 >> 128
+    BN_RSHI(w20, w18, w31, 128);
+    // bn.rshi w19, w17, w18 >> 128
+    BN_RSHI(w19, w17, w18, 128);
+
+    // /* Add q1. This is unconditional since MSb of u is always 1.
+    //     This cannot overflow due to leading zeros.
+    //     q2''' = q2'' + q1 = [w20, w19] = [w20, w19] + [w8, w9] */
+    // bn.add w19, w19, w8
+    BN_ADD(w19, w19, w8, false, 0, false);
+    // bn.addc w20, w20, w9
+    BN_ADDC(w20, w20, w9, false, 0, false);
+
+    // /* Conditionally add u (without leading 1) in case of MSb of x being set.
+    //     This is the "real" q2 but shifted by 384 bits to the right. This cannot
+    //     overflow due to leading zeros
+    //     q2'''' = x[767]?q2'''+u[383:0]:q2'''
+    //         = [w20, w19] + [w25, w24] = q2 >> 384 */
+    // bn.add w19, w19, w24
+    BN_ADD(w19, w19, w24, false, 0, false);
+    // bn.addc w20, w20, w25
+    BN_ADDC(w20, w20, w25, false, 0, false);
+
+    // /* finally this gives q3 by shifting the remain bit to the right
+    //     q3 = q2 >> 385 = q2'''' >> 1 = [w9, w8] = [w20, w19] >> 1 */
+    // bn.rshi w9, w20, w31 >> 1
+    BN_RSHI(w9, w20, w31, 1);
+    // bn.rshi w8, w19, w20 >> 1
+    BN_RSHI(w8, w19, w20, 1);
+}
+
+procedure adjust_r()
+    reads
+        w12; w13; w31; w16; w17;
+    modifies
+        w21; w22; w29; w30; flags;
+{
+    // /* Compute the estimate for the remainder. This estimate can never be smaller
+    //     but at least 2*m greater than the exact value. Therefore it is sufficient
+    //     to consider the lower 2 limbs only.
+    //     r = [w22, w21] = x-q3*m = r - (q3*m % 2^512) = [w22, w21] - [w17, w16] */
+    // bn.sub w21, w21, w16
+    BN_SUB(w21, w21, w16, false, 0, false);
+    // bn.subb w22, w22, w17
+    BN_SUBB(w22, w22, w17, false, 0, false);
+
+    // /* Barrett algorithm requires subtraction of the modulus at most two times if
+    //     result is too large. */
+    // bn.sub w29, w21, w12
+    BN_SUB(w29, w21, w12, false, 0, false);
+    // bn.subb w30, w22, w13
+    BN_SUBB(w30, w22, w13, false, 0, false);
+    // bn.sel w21, w21, w29, C
+    BN_SEL(w21, w21, w29, false, 3);
+    // bn.sel w22, w22, w30, C
+    BN_SEL(w22, w22, w30, false, 3);
+    // bn.sub w29, w21, w12
+    BN_SUB(w29, w21, w12, false, 0, false);
+    // bn.subb w30, w22, w13
+    BN_SUBB(w30, w22, w13, false, 0, false);
+    // bn.sel w29, w21, w29, C
+    BN_SEL(w29, w21, w29, false, 3);
+    // bn.sel w30, w22, w30, C
+    BN_SEL(w30, w22, w30, false, 3);
+    // /* return result: c =[w29, w30] =  a * b % m. */
+}
+
 /**
  * 384-bit modular multiplication based on Barrett reduction algorithm.
  *
@@ -270,92 +368,12 @@ procedure barrett384()
 
     compute_q1();
 
-    // /* Compute q2 = q1*u
-    //     Instead of full q2 (which would be up to 770 bits) we ignore the MSb of u
-    //     and the MSb of q1 and correct this later. This allows using a 384x384
-    //     multiplier. For special modili where the lower half of the second limb of
-    //     u is zero (e.g. p384) this can be further optimized by only considering
-    //     limb 0 of u and use a 384x256 multiplication.
-    //     => max. length q2': 768 bit
-    //     q2' = q1[383:0]*u[383:0] = [w18, w17, w16] = [w9, w8] * [w15, w14] */
-
-    // bn.mov w10, w14
-    BN_MOV(w10, w14);
-    // bn.mov w11, w15
-    BN_MOV(w11, w15);
-    // jal x1, mul384
-    full_mul_384();
-
-    // /* q3 = q2 >> 385
-    //     In this step, the compensation for the neglected MSbs of q1 and u is
-    //     carried out underway. To add them in the q2 domain, they would have to be
-    //     left shifted by 384 bit first. To directly add them we first shift q2' by
-    //     384 bit to the right, perform the additions, and shift the result another
-    //     bit to the right. The additions cannot overflow due to leading zeros
-    //     after shift.
-    //     q2'' = q2' >> 384 = [w20, w19] = [w18, w17, w16] >> 384
-    //                                 = [w18, w17] >> 128 */
-    // bn.rshi w20, w18, w31 >> 128
-    BN_RSHI(w20, w18, w31, 128);
-    // bn.rshi w19, w17, w18 >> 128
-    BN_RSHI(w19, w17, w18, 128);
-
-    // /* Add q1. This is unconditional since MSb of u is always 1.
-    //     This cannot overflow due to leading zeros.
-    //     q2''' = q2'' + q1 = [w20, w19] = [w20, w19] + [w8, w9] */
-    // bn.add w19, w19, w8
-    BN_ADD(w19, w19, w8, false, 0, false);
-    // bn.addc w20, w20, w9
-    BN_ADDC(w20, w20, w9, false, 0, false);
-
-    // /* Conditionally add u (without leading 1) in case of MSb of x being set.
-    //     This is the "real" q2 but shifted by 384 bits to the right. This cannot
-    //     overflow due to leading zeros
-    //     q2'''' = x[767]?q2'''+u[383:0]:q2'''
-    //         = [w20, w19] + [w25, w24] = q2 >> 384 */
-    // bn.add w19, w19, w24
-    BN_ADD(w19, w19, w24, false, 0, false);
-    // bn.addc w20, w20, w25
-    BN_ADDC(w20, w20, w25, false, 0, false);
-
-    // /* finally this gives q3 by shifting the remain bit to the right
-    //     q3 = q2 >> 385 = q2'''' >> 1 = [w9, w8] = [w20, w19] >> 1 */
-    // bn.rshi w9, w20, w31 >> 1
-    BN_RSHI(w9, w20, w31, 1);
-    // bn.rshi w8, w19, w20 >> 1
-    BN_RSHI(w8, w19, w20, 1);
+    compute_q2'();
 
     // /* Compute r2 = (q3 * m) % 2^512 = [_, w17, w16] = [w9, w8] * [w13, w12] */
     half_mul_512();
 
-    // /* Compute the estimate for the remainder. This estimate can never be smaller
-    //     but at least 2*m greater than the exact value. Therefore it is sufficient
-    //     to consider the lower 2 limbs only.
-    //     r = [w22, w21] = x-q3*m = r - (q3*m % 2^512) = [w22, w21] - [w17, w16] */
-    // bn.sub w21, w21, w16
-    BN_SUB(w21, w21, w16, false, 0, false);
-    // bn.subb w22, w22, w17
-    BN_SUBB(w22, w22, w17, false, 0, false);
-
-    // /* Barrett algorithm requires subtraction of the modulus at most two times if
-    //     result is too large. */
-    // bn.sub w29, w21, w12
-    BN_SUB(w29, w21, w12, false, 0, false);
-    // bn.subb w30, w22, w13
-    BN_SUBB(w30, w22, w13, false, 0, false);
-    // bn.sel w21, w21, w29, C
-    BN_SEL(w21, w21, w29, false, 3);
-    // bn.sel w22, w22, w30, C
-    BN_SEL(w22, w22, w30, false, 3);
-    // bn.sub w29, w21, w12
-    BN_SUB(w29, w21, w12, false, 0, false);
-    // bn.subb w30, w22, w13
-    BN_SUBB(w30, w22, w13, false, 0, false);
-    // bn.sel w29, w21, w29, C
-    BN_SEL(w29, w21, w29, false, 3);
-    // bn.sel w30, w22, w30, C
-    BN_SEL(w30, w22, w30, false, 3);
-
+    adjust_r();
     // /* return result: c =[w29, w30] =  a * b % m. */
 }
 
