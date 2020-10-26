@@ -1,27 +1,34 @@
+// Formula: x + e == 0, where e = !x + 1
+
+
 function xor(x:bool, y:bool) : bool {
   (x || y) && (!x || !y)
 }
 
 function x(i:nat) : bool
 
+// Carry bit that emerges from x + e
 function c(i:nat) : bool
 {
   if i == 0 then x(0) && e(0)
   else ((x(i) && e(i)) || (c(i-1) && (x(i) || e(i))))
 }
 
+// Carry bit that emerges from !x + 1
 function c'(i:nat) : bool
 {
   if i == 0 then !x(0) && true
   else (c'(i-1) && !x(i))
 }
 
+// e == !x + 1
 function e(i:nat) : bool
 {
   if i == 0 then xor(!x(0), true)
   else xor(!x(i), c'(i-1))
 }
 
+// b == x + e
 function b(i:nat) : bool
 {
   if i == 0 then xor(x(0), e(0))
@@ -29,10 +36,14 @@ function b(i:nat) : bool
 }
 
 lemma function_test(i:nat) 
+  // Sanity check base case
   ensures b(0) == false
   ensures xor(c(0), !c'(0)) == false
+  // Induction
   ensures i > 0 ==> b(i) == xor(!c'(i-1), c(i-1))
   ensures i > 0 ==> xor(!c'(i), c(i)) == xor(!c'(i-1), c(i-1))
+  // Conclusion
+  ensures b(i) == false
 {
 
 }
