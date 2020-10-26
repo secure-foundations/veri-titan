@@ -11,7 +11,7 @@ begin
 end
 
 
-lemma test2 (decideable x) : (¬¬x) ↔ x :=
+lemma test2 (decideable x:Prop) : (¬¬x) ↔ x :=
     by apply not_not
 
 lemma test1 (x:bool) : (¬¬x) ↔ x :=
@@ -23,8 +23,10 @@ lemma x_minus_x (b_i  x_i x_i_minus_1 c_i_minus_1 c_i_minus_2 e_i e_i_minus_1 cp
                 (hc : c_i_minus_1  = or (and x_i_minus_1 e_i_minus_1) (and c_i_minus_2 (or x_i_minus_1 e_i_minus_1)))
                 (hcp: cp_i_minus_1 = or (and (not x_i_minus_1) false) (and cp_i_minus_2 (or (not x_i_minus_1) false)))
 : b_i = xor (not cp_i_minus_1) c_i_minus_1  :=
-begin
-    simp, 
+begin        
+    simp [xor],
+    -- simp [xor, hb, he, hc],
+    tauto, 
     -- try { tauto },  --closer := not_not,
     sorry
 end
