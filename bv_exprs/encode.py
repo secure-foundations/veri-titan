@@ -12,6 +12,19 @@ uni_ops = {
     "~" : "not",
 }
 
+class Namer:
+    count = 0
+
+    @classmethod
+    def new_name(cls, s):
+        cls.count = cls.count + 1
+        return f"{s}_{count}"
+
+    @classmethod
+    def reset(cls):
+        cls.count = 0
+
+
 class BinOpExpr:
     def __init__(self, op, src1, src2):
         assert src1.bits == src2.bits
@@ -26,12 +39,14 @@ class BinOpExpr:
 
     def get_carry_bit(self, i):
         assert 0 <= i < self.bits
-        s1 = self.src1.get_bit(0)
-        s2 = self.src2.get_bit(0)
         if i == 0:
+            s1 = self.src1.get_bit(i)
+            s2 = self.src2.get_bit(i)
             return "(%s & %s)" % (s1, s2)
         else:
-            return "(((%s) & (%s)) | ((%s) & ((%s) ^ (%s))))" % (s1, s2, self.get_carry_bit(i-1), s1, s2)
+            s1 = self.src1.get_bit(i)
+            s2 = self.src2.get_bit(i)
+            return "(((%s) & (%s)) | ((%s) & ((%s) | (%s))))" % (s1, s2, self.get_carry_bit(i-1), s1, s2)
 
     def get_bit(self, i):
         assert 0 <= i < self.bits
@@ -78,14 +93,18 @@ class UniOpExpr:
 class InputVariable:
     names = set()
 
+    @classmethod
+    def reset(cls):
+        cls.names = set()
+
     def __init__(self, bits, name):
         self.bits = bits
         self.name = name
 
-#        if name in self.names:
-#            raise Exception("Duplicate input variable name: %s" % name)
-#        else:
-#            self.names.add(name)
+        if name in self.names:
+            raise Exception("Duplicate input variable name: %s" % name)
+        else:
+            self.names.add(name)
 
     def get_bit(self, i):
         assert 0 <= i < self.bits
@@ -108,6 +127,11 @@ class Constant:
     def __str__(self):
         return "%d" % self.value
 
+# Clear out formula state
+def reset():
+    InputVariable.reset()
+    Namer.reset()
+
 def identity(bits):
     x = InputVariable(bits, "x")
     return BinOpExpr("-", x, x)
@@ -127,10 +151,12 @@ def add_self4(bits):
     return BinOpExpr("+", BinOpExpr("+", x, x), BinOpExpr("+", x, x))
 
 def print_formula(bits, form):
-    print("Formula: %s" % form(bits))
+    f = form(bits)
+    print("Formula: %s" % f)
     for i in range(bits):
-        print("  Bit[%d] == %s" % (i, form(bits).get_bit(i)))
+        print("  Bit[%d] == %s" % (i, f.get_bit(i)))
     print()
+    reset()
 
 
 def main():
