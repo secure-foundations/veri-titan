@@ -80,7 +80,7 @@ end
   Some test lemmas
 -/
 
-lemma x_minus_x_easy (b_i  x_i x_i_minus_1 c_i_minus_1 c_i_minus_2 e_i e_i_minus_1 cp_i cp_i_minus_1 cp_i_minus_2 : bool) 
+lemma x_minus_x_easy (b_i  x_i x_i_minus_1 c_i_minus_1 c_i_minus_2 e_i e_i_minus_1 cp_i cp_i_minus_1 cp_i_minus_2 : Prop) 
                 (hb : b_i = xor (xor x_i e_i) c_i_minus_1)
                 (he : e_i = xor (not x_i) cp_i_minus_1)
                 (hc : c_i_minus_1  = or (and x_i_minus_1 e_i_minus_1) (and c_i_minus_2 (or x_i_minus_1 e_i_minus_1)))
@@ -95,7 +95,7 @@ begin
     blast
 end
 
-lemma x_minus_x_hard (b_i  x_i x_i_minus_1 c_i c_i_minus_1 c_i_minus_2 e_i e_i_minus_1 cp_i cp_i_minus_1 cp_i_minus_2 : bool)                             
+lemma x_minus_x_hard (b_i  x_i x_i_minus_1 c_i c_i_minus_1 c_i_minus_2 e_i e_i_minus_1 cp_i cp_i_minus_1 cp_i_minus_2 : Prop)                             
                 (he0 : e_i         = xor (not x_i) cp_i_minus_1)            
                 (hc0 : c_i          = or (and x_i       e_i)   (and c_i_minus_1  (or x_i       e_i        )))             
                 (hcp0: cp_i         = or (and (not x_i) false) (and cp_i_minus_1 (or (not x_i) false)))             
@@ -105,7 +105,7 @@ begin
     -- simp [xor, hb, he, hc],
     -- tauto, 
     -- try { tauto },  --closer := not_not,
-    sorry
+    blast
 end
 
 end BV
