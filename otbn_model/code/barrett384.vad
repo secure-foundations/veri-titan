@@ -47,7 +47,7 @@ import opened otbn_mul
  *
  * Clobbered flag groups: FG0
  */
-procedure full_mul_384()
+procedure mul_384_384_768()
     reads
         w8; w9; w10; w11; w31;
     modifies
@@ -137,7 +137,7 @@ procedure full_mul_384()
     BN_ADD(w18, w18, w31, false, 0, false);
 }
 
-procedure half_mul_512()
+procedure mul_384_384_512()
     reads
         w8; w9; w12; w13;
     modifies
@@ -224,7 +224,7 @@ procedure compute_q2'()
     // bn.mov w11, w15
     BN_MOV(w11, w15);
     // jal x1, mul384
-    full_mul_384();
+    mul_384_384_768();
 
     // /* q3 = q2 >> 385
     //     In this step, the compensation for the neglected MSbs of q1 and u is
@@ -349,7 +349,7 @@ procedure barrett384()
         x = [w18, w17, w16] = a * b = [w9, w8] * [w11, w10]
         => max. length x: 768 bit */
     // jal x1, mul384
-    full_mul_384();
+    mul_384_384_768();
 
     // /* Store correction factor to compensate for later neglected MSb of x.
     //     x is 768 bit wide and therefore the 383 bit right shifted version q1
@@ -371,7 +371,7 @@ procedure barrett384()
     compute_q2'();
 
     // /* Compute r2 = (q3 * m) % 2^512 = [_, w17, w16] = [w9, w8] * [w13, w12] */
-    half_mul_512();
+    mul_384_384_512();
 
     adjust_r();
     // /* return result: c =[w29, w30] =  a * b % m. */
