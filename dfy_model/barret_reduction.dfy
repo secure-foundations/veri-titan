@@ -12,7 +12,27 @@ module barret384 {
         power(2, n)
     }
 
-    method barret384()
+    /*
+    * @param[in] [w9, w8]: a, first operand, max. length 384 bit.
+    * @param[in] [w11, w10]: b, second operand, max. length 384 bit.
+    * @param[in] [w13, w12]: m, modulus, max. length 384 bit, 2^384 > m > 2^383.
+    * @param[in] [w15, w14]: u, pre-computed Barrett constant (without u[384]/MSb
+    *                           of u which is always 1 for the allowed range but
+    *                           has to be set to 0 here).
+    * @param[in] w31: all-zero.
+    */
+    method barret384(
+        w8: uint256,
+        w9: uint256,
+        w10: uint256,
+        w11: uint256,
+        w12: uint256,
+        w13: uint256,
+        w14: uint256,
+        w15: uint256,
+        w31: uint256        
+    )
+    requires w31 == 0;
     {
         
     }
