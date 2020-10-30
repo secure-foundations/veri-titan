@@ -1,4 +1,5 @@
 include "NativeTypes.dfy"
+include "BitVector.dfy"
 include "../otbn_model/lib/powers.dfy"
 include "../otbn_model/lib/congruences.dfy"
 
@@ -6,10 +7,17 @@ module barret384 {
     import opened NativeTypes
     import opened powers
     import opened congruences
+    import opened CutomBitVector
 
     function method pow2(n: nat) : nat
     {
         power(2, n)
+    }
+
+
+    method mul_384_384_768(a: cbv384, b: cbv384) returns (c: cbv768)
+    {
+        assume false;
     }
 
     /*
@@ -22,19 +30,26 @@ module barret384 {
     * @param[in] w31: all-zero.
     */
     method barret384(
-        w8: uint256,
-        w9: uint256,
-        w10: uint256,
-        w11: uint256,
-        w12: uint256,
-        w13: uint256,
-        w14: uint256,
-        w15: uint256,
-        w31: uint256        
+        a: cbv384,
+        b: cbv384,
+        m: cbv384,
+        u: cbv384
     )
-    requires w31 == 0;
+
     {
-        
+        // x: bv768 := mul_384_384_768(a, b);
+        // t: bv384 := 0;
+        // r1: bv512 := x[511:0];
+        // if x[767] == 1:
+        // 	t := u;
+        // q1: bv385 := x >> 383;
+        // q2': bv768 := mul_384_384_768(q1[383:0], u);
+        // q2'': bv384 := q2' >> 384;
+        // q2''': bv385 := zero_ext(q2'', 385) + q1;
+        // q2'''': bv385 := q2''' + zero_ext(t, 385);
+        // q3: bv384 := q2'''' >> 1;
+        // r2: bv512 := mul_384_384_512(q3, m);
+        // r: bv512 := r1 - r2;
     }
 
     // lemma barrett_reduction_q3_bound(
