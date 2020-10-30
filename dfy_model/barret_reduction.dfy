@@ -14,7 +14,6 @@ module barret384 {
         power(2, n)
     }
 
-
     method mul_384_384_768(a: cbv384, b: cbv384) returns (c: cbv768)
     {
         assume false;
