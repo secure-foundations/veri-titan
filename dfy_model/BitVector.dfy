@@ -5,43 +5,38 @@ module CutomBitVector {
     import opened NativeTypes
     import opened powers
 
-    datatype cbv_raw = cbv_raw(
-        vals: seq<uint2>,
-        len: uint32
-    )
+    type cbv = t: seq<uint2> | |t| != 0
 
-    type cbv = t: cbv_raw |
-        |t.vals| == t.len && t.len >= 1
-        witness cbv_raw([0], 1)
+    type cbv384 = t: cbv | |t| == 384
 
-    type cbv384 = t: cbv | 
-        t.len == 384
+    type cbv768 = t: cbv | |t| == 768
 
-    type cbv768 = t: cbv | 
-        t.len == 768
+    // method zero(l: uint32) returns (v: cbv)
+    //     ensures 
+    // {
+
+    // }
 
     method concat(v1: cbv, v2: cbv) returns (v3: cbv)
-        requires 0 < v1.len + v2.len <= UINT32_MAX;
-        ensures v3.vals == v1.vals + v2.vals;
     {
-        return cbv_raw(v1.vals + v2.vals, v1.len + v2.len);
+        return v1 + v2; 
     }
 
     method lsb(v: cbv) returns (b: uint2)
     {
-        b := v.vals[0];
+        b := v[0];
     }
 
     method msb(v: cbv) returns (b: uint2)
     {
-        b := v.vals[|v.vals| - 1];
+        b := v[|v| - 1];
     }
 
     method slice(v: cbv, lo: uint32, hi: uint32) returns (v': cbv)
-        requires 0 <= lo < hi <= v.len;
-        ensures v'.vals == v.vals[lo..hi];
+        requires 0 <= lo < hi <= |v|;
+        ensures v' == v[lo..hi];
     {
-        v' := cbv_raw(v.vals[lo..hi], hi - lo);
+        v' := v[lo..hi];
     }
 
     function method to_nat(v: cbv) : nat 
@@ -57,11 +52,11 @@ module CutomBitVector {
 
     method cbv_test()
     {
-        var a: cbv := cbv_raw([1, 1, 1, 0, 1], 5);
+        var a: cbv := [1, 1, 1, 0, 1];
         assert to_nat(a) == 23;
 
         var a': cbv := slice(a, 1, 5);
-        assert a'.vals == [1, 1, 0, 1];
+        assert a' == [1, 1, 0, 1];
         assert to_nat(a') == 11;
     }
 }
