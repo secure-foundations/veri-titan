@@ -52,21 +52,24 @@ module CutomBitVector {
         to_nat_aux(v, |v|)
     }
 
-    function to_nat_aux(v: cbv, i: uint32) : nat
+    function {:fuel 10} to_nat_aux(v: cbv, i: uint32) : nat
         decreases i;
         requires 0 <= i <= |v|;
     {
-        if i == 0 then v[i]
-        else pow2(i) * v[i - 1] + to_nat_aux(v, i - 1)
+        if i == 0 then 0
+        else pow2(i - 1) * v[i - 1] + to_nat_aux(v, i - 1)
     }
 
     method cbv_test()
     {
         var a: cbv := [1, 1, 1, 0, 1];
-        // assert to_nat(a) == 23;
 
-        var a': cbv := slice(a, 1, 5);
-        assert a' == [1, 1, 0, 1];
+        assert to_nat(a) == 23 by {
+            reveal power();
+        }
+
+        // var a': cbv := slice(a, 1, 5);
+        // assert a' == [1, 1, 0, 1];
         // assert to_nat(a') == 11;
     }
 }
