@@ -39,15 +39,11 @@ module CutomBitVector {
         v' := v[lo..hi];
     }
 
-    function method to_nat(v: cbv) : nat 
+    function method to_nat(v: cbv) : nat
+        decreases v;
     {
-        to_nat_aux(v.vals)
-    }
-
-    function method to_nat_aux(vals: seq<uint2>) : nat
-    {
-        if |vals| == 0 then 0
-        else vals[0] + 2 * to_nat_aux(vals[1..])
+        if |v| == 0 then 0
+        else v[0] + 2 * to_nat(v[1..])
     }
 
     method cbv_test()
