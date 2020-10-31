@@ -9,11 +9,6 @@ module barret384 {
     import opened congruences
     import opened CutomBitVector
 
-    function method pow2(n: nat) : nat
-    {
-        power(2, n)
-    }
-
     method mul_384_384_768(a: cbv384, b: cbv384) returns (c: cbv768)
     {
         assume false;
@@ -36,9 +31,10 @@ module barret384 {
     )
 
     {
-        // x: bv768 := mul_384_384_768(a, b);
-        // t: bv384 := 0;
-        // r1: bv512 := x[511:0];
+        var x: cbv768 := mul_384_384_768(a, b);
+        // var t: cbv384 := 0;
+        var r1: cbv := slice(x, 0, 512);
+        
         // if x[767] == 1:
         // 	t := u;
         // q1: bv385 := x >> 383;
