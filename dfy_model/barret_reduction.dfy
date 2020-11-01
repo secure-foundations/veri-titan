@@ -10,6 +10,7 @@ module barret384 {
     import opened CutomBitVector
 
     method mul_384_384_768(a: cbv384, b: cbv384) returns (c: cbv768)
+        ensures to_nat(c) == to_nat(a) * to_nat(b);
     {
         assume false;
     }
@@ -27,16 +28,18 @@ module barret384 {
         a: cbv384,
         b: cbv384,
         m: cbv384,
-        u: cbv384
-    )
-
+        u: cbv384)
     {
         var x: cbv768 := mul_384_384_768(a, b);
-        // var t: cbv384 := 0;
+        var t: cbv384 := zero(384);
         var r1: cbv := slice(x, 0, 512);
-        
-        // if x[767] == 1:
-        // 	t := u;
+
+        var msb := msb(x);
+
+        if msb == 1 {
+        	t := u;            
+        }
+
         // q1: bv385 := x >> 383;
         // q2': bv768 := mul_384_384_768(q1[383:0], u);
         // q2'': bv384 := q2' >> 384;

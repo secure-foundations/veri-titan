@@ -18,19 +18,25 @@ module CutomBitVector {
         assume false;
     }
 
+    function method lsb(v: cbv) : uint2
+    {
+        v[0]
+    }
+
+    function method msb(v: cbv) : uint2
+    {
+        v[|v| - 1]
+    }
+
+    function method rshift(v: cbv, amt: uint32) : cbv
+        requires amt < |v|;
+    {
+        v[amt..]
+    }
+
     method concat(v1: cbv, v2: cbv) returns (v3: cbv)
     {
         return v1 + v2; 
-    }
-
-    method lsb(v: cbv) returns (b: uint2)
-    {
-        b := v[0];
-    }
-
-    method msb(v: cbv) returns (b: uint2)
-    {
-        b := v[|v| - 1];
     }
 
     method slice(v: cbv, lo: uint32, hi: uint32) returns (v': cbv)
@@ -52,7 +58,7 @@ module CutomBitVector {
         to_nat_aux(v, |v|)
     }
 
-    function {:fuel 10} to_nat_aux(v: cbv, i: uint32) : nat
+    function {:fuel 20} to_nat_aux(v: cbv, i: uint32) : nat
         decreases i;
         requires 0 <= i <= |v|;
     {
@@ -68,8 +74,13 @@ module CutomBitVector {
             reveal power();
         }
 
-        // var a': cbv := slice(a, 1, 5);
-        // assert a' == [1, 1, 0, 1];
-        // assert to_nat(a') == 11;
+        a := slice(a, 1, 5);
+        assert a == [1, 1, 0, 1];
+        assert to_nat(a) == 11 by {
+            reveal power();
+        }
+
+        a := rshift(a, 2);
+        assert a == [0, 1];
     }
 }
