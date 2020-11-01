@@ -25,6 +25,19 @@ module CutomBitVector {
         else to_nat_aux(v, i - 1) + pow2(i - 1) * v[i - 1]
     }
 
+    function to_nat_alt(v: cbv) : nat
+    {
+        to_nat_alt_aux(v, 0)
+    }
+
+    function to_nat_alt_aux(v: cbv, i: uint32) : nat
+        decreases |v| - i;
+        requires 0 <= i <= |v|;
+    {
+        if i == |v| then 0
+        else pow2(i) * v[i] + 2 * to_nat_alt_aux(v, i + 1)
+    }
+
     function method lsb(v: cbv) : uint2
     {
         v[0]
@@ -51,18 +64,18 @@ module CutomBitVector {
     //     to_nat_prefix_lemma(v, v);
     // }
 
-    lemma to_nat_msb_lemma(v: cbv)
-        ensures to_nat(v) == to_nat(v[..|v|-1]) + pow2(|v| - 1) * msb(v);
+    lemma to_nat_msb_lemma(v: cbv, l: uint32)
+        requires l == |v|;
+        ensures to_nat(v) == to_nat(v[..l-1]) + pow2(l-1) * msb(v);
     {
-        var len := |v|;
-        if len != 1 {
+        if l != 1 {
             calc == {
                 to_nat(v);
-                to_nat_aux(v, len - 1) + pow2(len - 1) * v[len - 1];
+                to_nat_aux(v, l-1) + pow2(l-1) * v[l-1];
                 {
-                    to_nat_prefix_lemma(v, v[..len-1], len - 1);
+                    to_nat_prefix_lemma(v, v[..l-1], l-1);
                 }
-                to_nat_aux(v[..len-1], len - 1) + pow2(len - 1) * msb(v);
+                to_nat_aux(v[..l-1], l-1) + pow2(l-1) * msb(v);
             }
         }
     }
@@ -101,7 +114,7 @@ module CutomBitVector {
             // calc == {
             //     to_nat(v');
             //     to_nat_aux(v', l);
-            //     pow2(l - 1) * v'[l - 1] + to_nat_aux(v', l - 1);
+            //     pow2(l-1) * v'[l-1] + to_nat_aux(v', l-1);
             // }
 
 
