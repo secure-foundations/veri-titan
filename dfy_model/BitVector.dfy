@@ -45,23 +45,10 @@ module CutomBitVector {
         }
     }
 
-    lemma to_nat_aux_lemma(v: cbv)
-        ensures to_nat_aux(v, |v|-1) == to_nat_aux(v[..|v|-1], |v|-1);
+    // lemma to_nat_aux_lemma(v: cbv)
+    //     ensures to_nat_aux(v, |v|-1) == to_nat_aux(v[..|v|-1], |v|-1);
     // {
-    //     var len := |v|;
-    //     if len != 1 {
-    //         var v1 := v[..len-1];
-    //         calc == {
-    //             to_nat_aux(v[..|v|-1], |v|-1);
-
-    //         }
-
-    //         to_nat_aux_lemma(v1);
-    //         assert to_nat_aux(v1, len-2) == to_nat_aux(v1[..len-2], len-2);
-            
-
-    //         assume false;
-    //     }
+    //     to_nat_prefix_lemma(v, v);
     // }
 
     lemma to_nat_msb_lemma(v: cbv)
@@ -73,7 +60,7 @@ module CutomBitVector {
                 to_nat(v);
                 to_nat_aux(v, len - 1) + pow2(len - 1) * v[len - 1];
                 {
-                    to_nat_aux_lemma(v);
+                    to_nat_prefix_lemma(v, v[..len-1], len - 1);
                 }
                 to_nat_aux(v[..len-1], len - 1) + pow2(len - 1) * msb(v);
             }
