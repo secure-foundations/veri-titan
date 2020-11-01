@@ -11,11 +11,18 @@ module CutomBitVector {
 
     type cbv768 = t: cbv | |t| == 768
 
-    method zero(l: uint32) returns (v: cbv)
-        ensures |v| == l;
-        ensures to_nat(v) == 0; 
+
+    function to_nat(v: cbv) : nat
     {
-        assume false;
+        to_nat_aux(v, |v|)
+    }
+
+    function {:fuel 20} to_nat_aux(v: cbv, i: uint32) : nat
+        decreases i;
+        requires 0 <= i <= |v|;
+    {
+        if i == 0 then 0
+        else to_nat_aux(v, i - 1) + pow2(i - 1) * v[i - 1]
     }
 
     function method lsb(v: cbv) : uint2
@@ -28,10 +35,75 @@ module CutomBitVector {
         v[|v| - 1]
     }
 
+    lemma to_nat_aux_lemma(v: cbv)
+        ensures to_nat_aux(v, |v|-1) == to_nat_aux(v[..|v|-1], |v|-1);
+    {
+        assume false;
+    }
+
+    lemma to_nat_msb_lemma(v: cbv)
+        ensures to_nat(v) == to_nat(v[..|v|-1]) + pow2(|v| - 1) * msb(v);
+    {
+        var len := |v|;
+        if len == 1 {
+            assert true;
+        } else {
+            calc == {
+                to_nat(v);
+                to_nat_aux(v, len - 1) + pow2(len - 1) * v[len - 1];
+                {
+                    to_nat_aux_lemma(v);
+                }
+                to_nat_aux(v[..len-1], len - 1) + pow2(len - 1) * msb(v);
+            }
+        }
+    }
+
+    method zero(l: uint32) returns (v: cbv)
+        ensures |v| == l;
+        ensures to_nat(v) == 0; 
+    {
+        assume false;
+    }
+
     function method rshift(v: cbv, amt: uint32) : cbv
         requires amt < |v|;
     {
         v[amt..]
+    }
+
+    lemma {:induction amt} rshift_is_div(v: cbv, v1: cbv, amt: uint32)
+        decreases amt;
+        requires amt < |v|;
+        requires v1 == rshift(v, amt);
+        ensures to_nat(v1) == to_nat(v) / pow2(amt);
+    {
+        if amt == 0 {
+            reveal power();
+        } else {
+            assert v1 == v[amt..];
+            var l := |v| - amt;
+            assert |v1| == l;
+
+            var v2 := v[amt..];
+
+            // rshift_is_div(v, v'', amt-1);
+            // assert to_nat(v'') == to_nat(v) / pow2(amt-1);
+
+            // calc == {
+            //     to_nat(v');
+            //     to_nat_aux(v', l);
+            //     pow2(l - 1) * v'[l - 1] + to_nat_aux(v', l - 1);
+            // }
+
+
+            // calc == {
+            //     to_nat(v'');
+            //     to_nat_aux(v'', l + 1);
+            //     pow2(l) * v''[l] + to_nat_aux(v'', l);
+            // }
+            assume false;
+        }
     }
 
     method concat(v1: cbv, v2: cbv) returns (v3: cbv)
@@ -52,19 +124,6 @@ module CutomBitVector {
     //     if |v| == 0 then 0
     //     else v[0] + 2 * to_nat(v[1..])
     // }
-
-    function to_nat(v: cbv) : nat
-    {
-        to_nat_aux(v, |v|)
-    }
-
-    function {:fuel 20} to_nat_aux(v: cbv, i: uint32) : nat
-        decreases i;
-        requires 0 <= i <= |v|;
-    {
-        if i == 0 then 0
-        else pow2(i - 1) * v[i - 1] + to_nat_aux(v, i - 1)
-    }
 
     method cbv_test()
     {
