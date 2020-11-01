@@ -35,19 +35,40 @@ module CutomBitVector {
         v[|v| - 1]
     }
 
+    lemma {:induction i} to_nat_prefix_lemma(v: cbv, v': cbv, i: nat)
+        requires 0 <= i <= |v| && 0 <= i <= |v'|;
+        requires v[..i] == v'[..i];
+        ensures to_nat_aux(v, i) == to_nat_aux(v', i);
+    {
+        if i != 0 {
+            assert to_nat_aux(v, i - 1) == to_nat_aux(v', i - 1);
+        }
+    }
+
     lemma to_nat_aux_lemma(v: cbv)
         ensures to_nat_aux(v, |v|-1) == to_nat_aux(v[..|v|-1], |v|-1);
-    {
-        assume false;
-    }
+    // {
+    //     var len := |v|;
+    //     if len != 1 {
+    //         var v1 := v[..len-1];
+    //         calc == {
+    //             to_nat_aux(v[..|v|-1], |v|-1);
+
+    //         }
+
+    //         to_nat_aux_lemma(v1);
+    //         assert to_nat_aux(v1, len-2) == to_nat_aux(v1[..len-2], len-2);
+            
+
+    //         assume false;
+    //     }
+    // }
 
     lemma to_nat_msb_lemma(v: cbv)
         ensures to_nat(v) == to_nat(v[..|v|-1]) + pow2(|v| - 1) * msb(v);
     {
         var len := |v|;
-        if len == 1 {
-            assert true;
-        } else {
+        if len != 1 {
             calc == {
                 to_nat(v);
                 to_nat_aux(v, len - 1) + pow2(len - 1) * v[len - 1];
