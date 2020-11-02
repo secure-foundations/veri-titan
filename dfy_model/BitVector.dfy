@@ -130,7 +130,9 @@ module CutomBitVector {
                 }
                 v[0] + 2 * to_nat(v[1..l-1]) + pow2(l - 1) * v[l - 1];
                 {
-                    assume false;
+                    assert 2 * pow2(l - 2) == pow2(l - 1) by {
+                        reveal power();
+                    }
                 }
                 v[0] + 2 * (to_nat(v[1..l-1]) + pow2(l - 2) * v[l - 1]);
                 v[0] + 2 * (to_nat_aux(v[1..l-1], l -2) + pow2(l - 2) * v[l - 1]);
