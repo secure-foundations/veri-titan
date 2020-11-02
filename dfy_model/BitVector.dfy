@@ -166,30 +166,44 @@ module CutomBitVector {
         if amt == 0 {
             reveal power();
         } else {
-            assert v1 == v[amt..];
-            var l := |v| - amt;
-            assert |v1| == l;
+            var v2 := v[amt-1..];
 
-            var v2 := v[amt..];
+            calc ==> {
+                true;
+                {
+                    rshift_is_div(v, v2, amt-1);
+                }
+                to_nat(v2) == to_nat(v) / pow2(amt-1);
+                {
+                    assert to_nat(v2) == v2[0] + 2 * to_nat(v2[1..]) by {
+                        to_nat_lsb_lemma(v2);
+                    }
+                }
+                to_nat(v) / pow2(amt-1) == v2[0] + 2 * to_nat(v2[1..]);
+                {
+                    assert to_nat(v1) == to_nat(v2[1..]);
+                }
+                to_nat(v) / pow2(amt-1) == v2[0] + 2 * to_nat(v1);
+                to_nat(v) / pow2(amt-1) / 2 == to_nat(v1);
+                {
+                    assume to_nat(v) / pow2(amt-1) / 2 == to_nat(v) / (pow2(amt-1) * 2); 
+                }
+                to_nat(v) / (pow2(amt-1) * 2) == to_nat(v1);
+                {
+                    assert pow2(amt-1) * 2 == pow2(amt) by {
+                        reveal power();
+                    }
+                }
+                to_nat(v) / pow2(amt) == to_nat(v1);
+            }
 
-            rshift_is_div(v, v2, amt-1);
-            assert to_nat(v2) == to_nat(v) / pow2(amt-1);
-
-            // calc == {
-            //     to_nat(v');
-            //     to_nat_aux(v', l);
-            //     pow2(l-1) * v'[l-1] + to_nat_aux(v', l-1);
-            // }
-
-
-            // calc == {
-            //     to_nat(v'');
-            //     to_nat_aux(v'', l + 1);
-            //     pow2(l) * v''[l] + to_nat_aux(v'', l);
-            // }
-            assume false;
+            assert to_nat(v) / pow2(amt) == to_nat(v1);
         }
     }
+
+    // lemma {:axiom} nested_div_lemma(x: nat, m: nat, n: nat) 
+    //     requires m != 0 && n != 0;
+    //     ensures x / m / n == x / (m * n);
 
     method concat(v1: cbv, v2: cbv) returns (v3: cbv)
     {
