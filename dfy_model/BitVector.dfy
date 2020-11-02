@@ -58,32 +58,30 @@ module CutomBitVector {
             }
         } else {
             var l := |v|;
-            var v' := v[..l-1];
-            // calc == {
-            //     to_nat(v);
-            //     to_nat_aux(v, l - 1) + pow2(l - 1) * v[l - 1];
-            //     {
-            //         to_nat_prefix_lemma(v, v', l- 1);
-            //     }
-            //     to_nat_aux(v', l - 1) + pow2(l - 1) * v[l - 1];
-            //     to_nat(v') + pow2(l - 1) * v[l - 1];
-            // }
 
             calc == {
                 to_nat_alt(v);
                 to_nat_alt_aux(v, 0);
                 pow2(0) * v[0] + 2 * to_nat_alt_aux(v, 1);
                 {
+                    reveal power();
+                }
+                v[0] + 2 * to_nat_alt_aux(v, 1);
+                {
                     assume false;
                 }
-                pow2(0) * v[0] + 2 * to_nat_alt_aux(v[1..], 0);
-                pow2(0) * v[0] + 2 * to_nat_alt(v[1..]);
+                v[0] + 2 * to_nat_alt_aux(v[1..], 0);
+                v[0] + 2 * to_nat_alt(v[1..]);
                 {
                     to_nat_equivalent_lemma(v[1..]);
                 }
-                pow2(0) * v[0] + 2 * to_nat(v[1..]);
+                v[0] + 2 * to_nat(v[1..]);
+                {
+                    to_nat_lsb_lemma(v);
+                }
+                to_nat(v);
             }
-            assume false;
+            assert to_nat_alt(v) == to_nat(v);
         }
     } 
 
@@ -174,8 +172,8 @@ module CutomBitVector {
 
             var v2 := v[amt..];
 
-            // rshift_is_div(v, v'', amt-1);
-            // assert to_nat(v'') == to_nat(v) / pow2(amt-1);
+            rshift_is_div(v, v2, amt-1);
+            assert to_nat(v2) == to_nat(v) / pow2(amt-1);
 
             // calc == {
             //     to_nat(v');
