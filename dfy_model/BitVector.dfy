@@ -59,21 +59,29 @@ module CutomBitVector {
         } else {
             var l := |v|;
             var v' := v[..l-1];
-            calc == {
-                to_nat(v);
-                to_nat_aux(v, l - 1) + pow2(l - 1) * v[l - 1];
-                {
-                    to_nat_prefix_lemma(v, v', l- 1);
-                }
-                to_nat_aux(v', l - 1) + pow2(l - 1) * v[l - 1];
-                to_nat(v') + pow2(l - 1) * v[l - 1];
-            }
+            // calc == {
+            //     to_nat(v);
+            //     to_nat_aux(v, l - 1) + pow2(l - 1) * v[l - 1];
+            //     {
+            //         to_nat_prefix_lemma(v, v', l- 1);
+            //     }
+            //     to_nat_aux(v', l - 1) + pow2(l - 1) * v[l - 1];
+            //     to_nat(v') + pow2(l - 1) * v[l - 1];
+            // }
 
             calc == {
                 to_nat_alt(v);
                 to_nat_alt_aux(v, 0);
                 pow2(0) * v[0] + 2 * to_nat_alt_aux(v, 1);
-
+                {
+                    assume false;
+                }
+                pow2(0) * v[0] + 2 * to_nat_alt_aux(v[1..], 0);
+                pow2(0) * v[0] + 2 * to_nat_alt(v[1..]);
+                {
+                    to_nat_equivalent_lemma(v[1..]);
+                }
+                pow2(0) * v[0] + 2 * to_nat(v[1..]);
             }
             assume false;
         }
@@ -89,12 +97,6 @@ module CutomBitVector {
         v[|v| - 1]
     }
 
-    // lemma to_nat_aux_lemma(v: cbv)
-    //     ensures to_nat_aux(v, |v|-1) == to_nat_aux(v[..|v|-1], |v|-1);
-    // {
-    //     to_nat_prefix_lemma(v, v);
-    // }
-
     lemma to_nat_msb_lemma(v: cbv, l: uint32)
         requires l == |v|;
         ensures to_nat(v) == to_nat(v[..l-1]) + pow2(l-1) * msb(v);
@@ -108,6 +110,37 @@ module CutomBitVector {
                 }
                 to_nat_aux(v[..l-1], l-1) + pow2(l-1) * msb(v);
             }
+        }
+    }
+
+    lemma to_nat_lsb_lemma(v: cbv)
+        ensures to_nat(v) == v[0] + 2 * to_nat(v[1..]);
+    {
+        var l := |v|;
+        if l != 1 {
+            calc == {
+                to_nat(v);
+                to_nat_aux(v, l - 1) + pow2(l - 1) * v[l - 1];
+                {
+                    to_nat_prefix_lemma(v, v[..l-1], l-1);
+                }
+                to_nat_aux(v[..l-1], l-1) + pow2(l - 1) * v[l - 1];
+                {
+                    to_nat_lsb_lemma(v[..l-1]);
+                }
+                v[0] + 2 * to_nat(v[1..l-1]) + pow2(l - 1) * v[l - 1];
+                {
+                    assume false;
+                }
+                v[0] + 2 * (to_nat(v[1..l-1]) + pow2(l - 2) * v[l - 1]);
+                v[0] + 2 * (to_nat_aux(v[1..l-1], l -2) + pow2(l - 2) * v[l - 1]);
+                {
+                    to_nat_prefix_lemma(v[1..l-1], v[1..], l-2);
+                }
+                v[0] + 2 * (to_nat_aux(v[1..], l - 2) + pow2(l - 2) * v[l - 1]);
+                v[0] + 2 * to_nat(v[1..]);
+            }
+            assert to_nat(v) == v[0] + 2 * to_nat(v[1..]);
         }
     }
 
