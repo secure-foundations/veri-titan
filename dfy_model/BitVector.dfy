@@ -11,7 +11,6 @@ module CutomBitVector {
 
     type cbv768 = t: cbv | |t| == 768
 
-
     function to_nat(v: cbv) : nat
     {
         to_nat_aux(v, |v|)
@@ -23,6 +22,16 @@ module CutomBitVector {
     {
         if i == 0 then 0
         else to_nat_aux(v, i - 1) + pow2(i - 1) * v[i - 1]
+    }
+
+    lemma {:induction i} to_nat_prefix_lemma(v: cbv, v': cbv, i: nat)
+        requires 0 <= i <= |v| && 0 <= i <= |v'|;
+        requires v[..i] == v'[..i];
+        ensures to_nat_aux(v, i) == to_nat_aux(v', i);
+    {
+        if i != 0 {
+            assert to_nat_aux(v, i - 1) == to_nat_aux(v', i - 1);
+        }
     }
 
     function to_nat_alt(v: cbv) : nat
@@ -38,6 +47,38 @@ module CutomBitVector {
         else pow2(i) * v[i] + 2 * to_nat_alt_aux(v, i + 1)
     }
 
+    lemma to_nat_equivalent_lemma(v: cbv)
+        ensures to_nat(v) == to_nat_alt(v);
+    {
+        if |v| == 1 {
+            calc == {
+                to_nat(v);
+                pow2(0) * v[0];
+                to_nat_alt_aux(v, 0);
+            }
+        } else {
+            var l := |v|;
+            var v' := v[..l-1];
+            calc == {
+                to_nat(v);
+                to_nat_aux(v, l - 1) + pow2(l - 1) * v[l - 1];
+                {
+                    to_nat_prefix_lemma(v, v', l- 1);
+                }
+                to_nat_aux(v', l - 1) + pow2(l - 1) * v[l - 1];
+                to_nat(v') + pow2(l - 1) * v[l - 1];
+            }
+
+            calc == {
+                to_nat_alt(v);
+                to_nat_alt_aux(v, 0);
+                pow2(0) * v[0] + 2 * to_nat_alt_aux(v, 1);
+
+            }
+            assume false;
+        }
+    } 
+
     function method lsb(v: cbv) : uint2
     {
         v[0]
@@ -46,16 +87,6 @@ module CutomBitVector {
     function method msb(v: cbv) : uint2
     {
         v[|v| - 1]
-    }
-
-    lemma {:induction i} to_nat_prefix_lemma(v: cbv, v': cbv, i: nat)
-        requires 0 <= i <= |v| && 0 <= i <= |v'|;
-        requires v[..i] == v'[..i];
-        ensures to_nat_aux(v, i) == to_nat_aux(v', i);
-    {
-        if i != 0 {
-            assert to_nat_aux(v, i - 1) == to_nat_aux(v', i - 1);
-        }
     }
 
     // lemma to_nat_aux_lemma(v: cbv)
@@ -138,13 +169,6 @@ module CutomBitVector {
     {
         v' := v[lo..hi];
     }
-
-    // function method to_nat(v: cbv) : nat
-    //     decreases v;
-    // {
-    //     if |v| == 0 then 0
-    //     else v[0] + 2 * to_nat(v[1..])
-    // }
 
     method cbv_test()
     {
