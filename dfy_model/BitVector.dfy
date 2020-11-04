@@ -322,11 +322,29 @@ module CutomBitVector {
         }
     }
 
-    // function method lshift(v: cbv, amt: uint32) : cbv
+    function method lshift(v: cbv, amt: uint32) : cbv
+    {
+        if amt == 0 then v
+        else var z := zero(amt);
+        z + v 
+    }
+
+    // lemma lshift_is_mul_lemma(v: cbv, v1: cbv, amt: uint32)
+    //     decreases amt;
+    //     requires amt < |v|;
+    //     requires v1 == lshift(v, amt);
+    //     ensures to_nat(v1) == to_nat(v) * pow2(amt);
     // {
-    //     // var l := |v|;
-    //     var z := zero(amt);
-    //     z + v 
+    //     if amt == 0 {
+    //         reveal power();
+    //     } else {
+    //         var v2 := lshift(v, amt-1);
+    //         assume v2 == [0] + v1;
+    //         lshift_is_mul_lemma(v, v2, amt-1);
+    //         assert to_nat(v2) == to_nat(v) * pow2(amt-1);
+
+    //         assume false;
+    //     }
     // }
 
     // lemma {:axiom} nested_div_lemma(x: nat, m: nat, n: nat) 
