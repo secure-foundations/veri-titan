@@ -218,31 +218,39 @@ module CutomBitVector {
         assert to_nat(v[..i-1]) + to_nat( v[i-1..]) * pow2(i-1) == to_nat(v[..i]) + to_nat(v[i..]) * pow2(i);
     }
 
-    method zero(l: uint32) returns (v: cbv)
-        ensures |v| == l != 0;
-        ensures to_nat(v) == 0; 
+    // method zero(l: uint32) returns (v: cbv)
+    //     ensures |v| == l != 0;
+    //     ensures to_nat(v) == 0; 
+    // {
+    //     var a := new uint32[l];
+    //     var i := 0;
+    //     while i < l
+    //         decreases l - i;
+    //         invariant i <= l;
+    //         invariant forall j :: 0 <= j < i ==> a[j] == 0;
+    //     {
+    //         a[i] := 0;
+    //         i := i + 1;
+    //     }
+    //     v := a[..];
+    //     assert forall j :: 0 <= j < l ==> v[j] == 0;
+    //     zero_lemma(v);
+    // }
+
+    function method zero(l: uint32) : (v: cbv)
+        requires l != 0;
+        decreases l;
+        ensures |v| == l;
     {
-        var a := new uint32[l];
-        var i := 0;
-        while i < l
-            decreases l - i;
-            invariant i <= l;
-            invariant forall j :: 0 <= j < i ==> a[j] == 0;
-        {
-            a[i] := 0;
-            i := i + 1;
-        }
-        v := a[..];
-        assert forall j :: 0 <= j < l ==> v[j] == 0;
-        zero_lemma(v);
+        if l == 1 then [0]
+        else zero(l - 1) + [0]
     }
 
-    lemma {:induction v} zero_lemma(v: cbv) 
-        decreases v;
-        requires forall j :: 0 <= j < |v| ==> v[j] == 0;
+    lemma {:induction l} zero_lemma(v: cbv, l: uint32)
+        requires l != 0;
+        requires v == zero(l);
         ensures to_nat(v) == 0;
     {
-        var l := |v|;
         if l == 1 {
            calc == {
                 to_nat(v);
@@ -257,11 +265,10 @@ module CutomBitVector {
                 }
                 to_nat(v[..l-1]) + pow2(l-1) * msb(v);
                 {
-                    zero_lemma(v[..l-1]);
+                    zero_lemma(zero(l - 1), l-1);
                 }
                 0;
             }
-            assert to_nat(v) == 0;
         }
     }
 
@@ -315,6 +322,13 @@ module CutomBitVector {
         }
     }
 
+    // function method lshift(v: cbv, amt: uint32) : cbv
+    // {
+    //     // var l := |v|;
+    //     var z := zero(amt);
+    //     z + v 
+    // }
+
     // lemma {:axiom} nested_div_lemma(x: nat, m: nat, n: nat) 
     //     requires m != 0 && n != 0;
     //     ensures x / m / n == x / (m * n);
@@ -350,6 +364,10 @@ module CutomBitVector {
                 assert z == v'[l..];
             }
             to_nat(v'[..l]) + to_nat(z) * pow2(l);
+            {
+                assert z == zero(l' - l);
+                zero_lemma(z , l' - l);
+            }
             to_nat(v'[..l]);
             to_nat(v);
         }
