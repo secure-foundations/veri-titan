@@ -7,8 +7,6 @@ module d0inv {
     import opened powers
     import opened congruences
 
- 	const BASE_256 :int := UINT256_MAX + 1;
-
     method d0inv(w28: uint256) returns (w29 : uint256)
         requires w28 % 2 == 1;
         requires w28 < BASE_256;
