@@ -146,6 +146,21 @@ module CutomBitVector {
         }
     }
 
+    lemma to_nat_split_lemma(v: cbv, i: uint32)
+        requires 0 < i < |v|;
+        requires |v| > 1;
+        ensures to_nat(v) == to_nat(v[..i]) + to_nat(v[i..]) * pow2(i);
+    {
+        if i == 1 {
+            assert to_nat(v) == v[0] + 2 * to_nat(v[1..]) by {
+                to_nat_lsb_lemma(v);
+            }
+            reveal power();
+        } else {
+            assume false;
+        }
+    }
+
     method zero(l: uint32) returns (v: cbv)
         ensures |v| == l != 0;
         ensures to_nat(v) == 0; 
@@ -186,7 +201,6 @@ module CutomBitVector {
             assert to_nat(v) == 0;
         }
     }
-
 
     function method rshift(v: cbv, amt: uint32) : cbv
         requires amt < |v|;
@@ -253,6 +267,12 @@ module CutomBitVector {
     {
         v' := v[lo..hi];
     }
+
+    // method zero_extend(v: cbv, l: uint32) returns (v': cbv)
+    //     // ensures |v'| == l;
+    // {
+    //     v' := 
+    // }
 
     method cbv_test()
     {
