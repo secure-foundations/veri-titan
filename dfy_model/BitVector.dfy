@@ -158,50 +158,24 @@ module CutomBitVector {
             }
             reveal power();
         } else {
-            var v1 := v[..i-1];
-            var v2 := v[i-1..];
-            var v3 := v[i..];
-            var v4 := v[..i];
-
             calc == {
                 to_nat(v);
                 {
                     to_nat_split_lemma(v, i - 1);
                 }
-                to_nat(v1) + to_nat(v2) * pow2(i-1);
+                to_nat(v[..i-1]) + to_nat( v[i-1..]) * pow2(i-1);
                 {
-                    assert to_nat(v2) == v[i-1] + to_nat(v3) * 2 by 
-                    {
-                        to_nat_lsb_lemma(v2);
-                    }
+                    to_nat_split_aux_lemma(v, i);
                 }
-                to_nat(v1) + (v[i-1] + to_nat(v3) * 2) * pow2(i-1);
-                to_nat(v1) + v[i-1] * pow2(i-1) + to_nat(v3) * 2 * pow2(i-1);
-                {
-                    assert 2 * pow2(i-1) == pow2(i) by {
-                        reveal power();
-                    }
-                }
-                to_nat(v1) + v[i-1] * pow2(i-1) + to_nat(v3) * pow2(i);
-                {
-                    assume false;
-                    assume to_nat(v4) == to_nat(v1) + v[i-1] * pow2(i-1);
-                    //  by {
-                    //     to_nat_msb_lemma(v4, i);
-                    //     assume v4[..i-1] == v[..i-1];
-                    // }
-                }
-                to_nat(v4) + to_nat(v3) * pow2(i);
+                to_nat(v[..i]) + to_nat(v[i..]) * pow2(i);
             }
-            assert to_nat(v) == to_nat(v4) + to_nat(v3) * pow2(i);
-            assume false;
         }
     }
 
     lemma to_nat_split_aux_lemma(v: cbv, i: uint32)
         requires 1 < i < |v|;
         requires |v| > 1;
-        ensures to_nat(v) == to_nat(v[..i]) + to_nat(v[i..]) * pow2(i);
+        ensures to_nat(v[..i-1]) + to_nat( v[i-1..]) * pow2(i-1) == to_nat(v[..i]) + to_nat(v[i..]) * pow2(i);
     {
         var v1 := v[..i-1];
         var v2 := v[i-1..];
@@ -209,10 +183,6 @@ module CutomBitVector {
         var v4 := v[..i];
 
         calc == {
-            to_nat(v);
-            {
-                to_nat_split_lemma(v, i - 1);
-            }
             to_nat(v1) + to_nat(v2) * pow2(i-1);
             {
                 assert to_nat(v2) == v[i-1] + to_nat(v3) * 2 by 
@@ -238,8 +208,8 @@ module CutomBitVector {
             to_nat(v4) + to_nat(v3) * pow2(i);
         }
 
-        assert to_nat(v) == to_nat(v4) + to_nat(v3) * pow2(i);
-        assert to_nat(v) == to_nat(v[..i]) + to_nat(v[i..]) * pow2(i);
+        assert to_nat(v1) + to_nat(v2) * pow2(i-1) == to_nat(v4) + to_nat(v3) * pow2(i);
+        assert to_nat(v[..i-1]) + to_nat( v[i-1..]) * pow2(i-1) == to_nat(v[..i]) + to_nat(v[i..]) * pow2(i);
     }
 
     method zero(l: uint32) returns (v: cbv)
