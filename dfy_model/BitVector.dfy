@@ -97,10 +97,10 @@ module CutomBitVector {
         v[|v| - 1]
     }
 
-    lemma to_nat_msb_lemma(v: cbv, l: uint32)
-        requires l == |v|;
-        ensures to_nat(v) == to_nat(v[..l-1]) + pow2(l-1) * msb(v);
+    lemma to_nat_msb_lemma(v: cbv)
+        ensures to_nat(v) == to_nat(v[..|v|-1]) + pow2(|v|-1) * msb(v);
     {
+        var l := |v|;
         if l != 1 {
             calc == {
                 to_nat(v);
@@ -147,11 +147,46 @@ module CutomBitVector {
     }
 
     method zero(l: uint32) returns (v: cbv)
-        ensures |v| == l;
+        ensures |v| == l != 0;
         ensures to_nat(v) == 0; 
     {
-        assume false;
+        var a := new uint32[l];
+        var i := 0;
+        while i < l
+            decreases l - i;
+            invariant i <= l;
+            invariant forall j :: 0 <= j < i ==> a[j] == 0;
+        {
+            a[i] := 0;
+            i := i + 1;
+        }
+        v := a[..];
+        assert forall j :: 0 <= j < l ==> v[j] == 0;
+        zero_lemma(v);
     }
+
+    lemma {:induction v} zero_lemma(v: cbv) 
+        decreases v;
+        requires forall j :: 0 <= j < |v| ==> v[j] == 0;
+        ensures to_nat(v) == 0;
+    {
+        var l := |v|;
+        if l != 1 {
+            calc == {
+                to_nat(v);
+                {
+                    to_nat_msb_lemma(v);
+                }
+                to_nat(v[..l-1]) + pow2(l-1) * msb(v);
+                {
+                    zero_lemma(v[..l-1]);
+                }
+                0;
+            }
+            assert to_nat(v) == 0;
+        }
+    }
+
 
     function method rshift(v: cbv, amt: uint32) : cbv
         requires amt < |v|;
@@ -159,7 +194,7 @@ module CutomBitVector {
         v[amt..]
     }
 
-    lemma {:induction amt} rshift_is_div(v: cbv, v1: cbv, amt: uint32)
+    lemma {:induction amt} rshift_is_div_lemma(v: cbv, v1: cbv, amt: uint32)
         decreases amt;
         requires amt < |v|;
         requires v1 == rshift(v, amt);
@@ -173,7 +208,7 @@ module CutomBitVector {
             calc ==> {
                 true;
                 {
-                    rshift_is_div(v, v2, amt-1);
+                    rshift_is_div_lemma(v, v2, amt-1);
                 }
                 to_nat(v2) == to_nat(v) / pow2(amt-1);
                 {
