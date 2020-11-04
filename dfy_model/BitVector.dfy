@@ -102,7 +102,13 @@ module CutomBitVector {
         requires l == |v|;
         ensures to_nat(v) == to_nat(v[..l-1]) + pow2(l-1) * msb(v);
     {
-        if l != 1 {
+        if l == 1 {
+            calc == {
+                to_nat(v);
+                to_nat_aux(v, 0) + pow2(0) * v[0];
+                pow2(0) * v[0];
+            }
+        } else {
             calc == {
                 to_nat(v);
                 to_nat_aux(v, l-1) + pow2(l-1) * v[l-1];
