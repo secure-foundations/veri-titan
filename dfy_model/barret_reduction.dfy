@@ -37,12 +37,19 @@ module barret384 {
         var msb := msb(x);
 
         if msb == 1 {
-        	t := u;            
+        	t := u;
         }
 
         // q1: bv385 := x >> 383;
-        // q2': bv768 := mul_384_384_768(q1[383:0], u);
-        // q2'': bv384 := q2' >> 384;
+        var q1: cbv385 := rshift(x, 383);
+
+        // q2': bv768 := mul_384_384_768(q1[384:0], u);
+        var q1': cbv384 := slice(q1, 0, 384);
+        var q2': cbv768 := mul_384_384_768(q1', u);
+
+        // q2'': cbv384 := q2' >> 384;
+        var q2'': cbv384 := rshift(q2', 384);
+ 
         // q2''': bv385 := zero_ext(q2'', 385) + q1;
         // q2'''': bv385 := q2''' + zero_ext(t, 385);
         // q3: bv384 := q2'''' >> 1;

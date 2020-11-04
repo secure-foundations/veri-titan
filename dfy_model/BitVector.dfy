@@ -9,6 +9,8 @@ module CutomBitVector {
 
     type cbv384 = t: cbv | |t| == 384
 
+    type cbv385 = t: cbv | |t| == 385
+
     type cbv768 = t: cbv | |t| == 768
 
     function to_nat(v: cbv) : nat
