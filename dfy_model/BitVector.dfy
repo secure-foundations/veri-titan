@@ -331,11 +331,30 @@ module CutomBitVector {
         v' := v[lo..hi];
     }
 
-    // method zero_extend(v: cbv, l: uint32) returns (v': cbv)
-    //     // ensures |v'| == l;
-    // {
-    //     v' := 
-    // }
+    method bvzero_extend(v: cbv, l': uint32) returns (v': cbv)
+        requires l' > |v|;
+        ensures |v'| == l';
+        ensures to_nat(v') == to_nat(v);
+    {
+        var l := |v|;
+        var z := zero(l' - l);
+        v' := v + z;
+
+        calc == {
+            to_nat(v');
+            {
+                to_nat_split_lemma(v', l);
+            }
+            to_nat(v'[..l]) + to_nat(v'[l..]) * pow2(l);
+            {
+                assert z == v'[l..];
+            }
+            to_nat(v'[..l]) + to_nat(z) * pow2(l);
+            to_nat(v'[..l]);
+            to_nat(v);
+        }
+        assert to_nat(v') == to_nat(v);
+    }
 
     method cbv_test()
     {
