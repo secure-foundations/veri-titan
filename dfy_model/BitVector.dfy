@@ -5,6 +5,7 @@ module CutomBitVector {
     import opened NativeTypes
     import opened powers
 
+    // lsb: t[0], msb: t[|t| - 1]
     type cbv = t: seq<uint2> | 0 < |t| <= UINT32_MAX witness [1]
 
     type cbv384 = t: cbv | |t| == 384
@@ -237,18 +238,18 @@ module CutomBitVector {
     //     zero_lemma(v);
     // }
 
-    function method zero(l: uint32) : (v: cbv)
+    function method cbv_zero(l: uint32) : (v: cbv)
         requires l != 0;
         decreases l;
         ensures |v| == l;
     {
         if l == 1 then [0]
-        else zero(l - 1) + [0]
+        else cbv_zero(l - 1) + [0]
     }
 
     lemma {:induction l} zero_lemma(v: cbv, l: uint32)
         requires l != 0;
-        requires v == zero(l);
+        requires v == cbv_zero(l);
         ensures to_nat(v) == 0;
     {
         if l == 1 {
@@ -265,23 +266,23 @@ module CutomBitVector {
                 }
                 to_nat(v[..l-1]) + pow2(l-1) * msb(v);
                 {
-                    zero_lemma(zero(l - 1), l-1);
+                    zero_lemma(cbv_zero(l - 1), l-1);
                 }
                 0;
             }
         }
     }
 
-    function method rshift(v: cbv, amt: uint32) : cbv
+    function method cbv_lsr(v: cbv, amt: uint32) : cbv
         requires amt < |v|;
     {
         v[amt..]
     }
 
-    lemma {:induction amt} rshift_is_div_lemma(v: cbv, v1: cbv, amt: uint32)
+    lemma {:induction amt} cbv_lsr_is_div_lemma(v: cbv, v1: cbv, amt: uint32)
         decreases amt;
         requires amt < |v|;
-        requires v1 == rshift(v, amt);
+        requires v1 == cbv_lsr(v, amt);
         ensures to_nat(v1) == to_nat(v) / pow2(amt);
     {
         if amt == 0 {
@@ -292,7 +293,7 @@ module CutomBitVector {
             calc ==> {
                 true;
                 {
-                    rshift_is_div_lemma(v, v2, amt-1);
+                    cbv_lsr_is_div_lemma(v, v2, amt-1);
                 }
                 to_nat(v2) == to_nat(v) / pow2(amt-1);
                 {
@@ -322,10 +323,10 @@ module CutomBitVector {
         }
     }
 
-    function method lshift(v: cbv, amt: uint32) : cbv
+    function method cbv_sl(v: cbv, amt: uint32) : cbv
     {
         if amt == 0 then v
-        else var z := zero(amt);
+        else var z := cbv_zero(amt);
         z + v 
     }
 
@@ -351,25 +352,25 @@ module CutomBitVector {
     //     requires m != 0 && n != 0;
     //     ensures x / m / n == x / (m * n);
 
-    method concat(v1: cbv, v2: cbv) returns (v3: cbv)
+    method cbv_concat(v1: cbv, v2: cbv) returns (v3: cbv)
     {
         return v1 + v2; 
     }
 
-    method slice(v: cbv, lo: uint32, hi: uint32) returns (v': cbv)
+    method cbv_slice(v: cbv, lo: uint32, hi: uint32) returns (v': cbv)
         requires 0 <= lo < hi <= |v|;
         ensures v' == v[lo..hi];
     {
         v' := v[lo..hi];
     }
 
-    method bvzero_extend(v: cbv, l': uint32) returns (v': cbv)
+    method cbv_zext(v: cbv, l': uint32) returns (v': cbv)
         requires l' > |v|;
         ensures |v'| == l';
         ensures to_nat(v') == to_nat(v);
     {
         var l := |v|;
-        var z := zero(l' - l);
+        var z := cbv_zero(l' - l);
         v' := v + z;
 
         calc == {
@@ -383,7 +384,7 @@ module CutomBitVector {
             }
             to_nat(v'[..l]) + to_nat(z) * pow2(l);
             {
-                assert z == zero(l' - l);
+                assert z == cbv_zero(l' - l);
                 zero_lemma(z , l' - l);
             }
             to_nat(v'[..l]);
