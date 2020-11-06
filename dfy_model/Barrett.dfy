@@ -9,6 +9,14 @@ module barret384 {
     import opened congruences
     import opened CutomBitVector
 
+    type cbv384 = t: cbv | |t| == 384
+
+    type cbv385 = t: cbv | |t| == 385
+
+    type cbv386 = t: cbv | |t| == 386
+
+    type cbv768 = t: cbv | |t| == 768
+
     method mul_384_384_768(a: cbv384, b: cbv384) returns (c: cbv768)
         ensures to_nat(c) == to_nat(a) * to_nat(b);
     {
@@ -42,7 +50,6 @@ module barret384 {
         }
 
         var r1: cbv385 := cbv_slice(x, 0, 385);
-
         var q1: cbv385 := cbv_lsr(x, 383);
 
         var q1': cbv384 := cbv_slice(q1, 0, 384);

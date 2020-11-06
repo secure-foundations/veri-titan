@@ -1,33 +1,46 @@
-include "NativeTypes.dfy"
 include "../otbn_model/lib/powers.dfy"
 
 module CutomBitVector {
-    import opened NativeTypes
     import opened powers
 
+ 	type uint1 = i: int | 0 <= i < 2
+ 	type uint32 = i:int | 0 <= i < 0x100000000
+
     // lsb: t[0], msb: t[|t| - 1]
-    type cbv = t: seq<uint1> | 0 < |t| <= UINT32_MAX witness [1]
+    type cbv = t: seq<uint1> | 0 < |t| < 0x100000000 witness [1]
 
-    type cbv384 = t: cbv | |t| == 384
-
-    type cbv385 = t: cbv | |t| == 385
-
-    type cbv386 = t: cbv | |t| == 386
-
-    type cbv768 = t: cbv | |t| == 768
-
-    function to_nat(v: cbv) : nat
+    function method to_nat(v: cbv) : nat
     {
         to_nat_aux(v, |v|)
     }
+    
+    method cbv_print(v: cbv)
+    {
+        var i := 0;
+        while i < |v|
+            decreases |v| - i;
+        {
+            print(v[i]);
+            i := i + 1;    
+        }
+        print("\n");
+    }
 
     // function {:fuel 20} to_nat_aux(v: cbv, i: uint32) : nat
-    function to_nat_aux(v: cbv, i: uint32) : nat
+    function method to_nat_aux(v: cbv, i: uint32) : nat
         decreases i;
         requires 0 <= i <= |v|;
     {
         if i == 0 then 0
         else to_nat_aux(v, i - 1) + pow2(i - 1) * v[i - 1]
+    }
+
+    function method from_nat(n: nat) : cbv
+        decreases n;
+    {
+        if n == 0 then []
+        else if n % 2 == 1 then [1] + from_nat(n / 2) 
+        else [0] + from_nat(n / 2)
     }
 
     lemma {:induction i} to_nat_prefix_lemma(v: cbv, v': cbv, i: nat)
@@ -395,9 +408,9 @@ module CutomBitVector {
         assert to_nat(v') == to_nat(v);
     }
 
-    method cbv_add(v1: cbv, v2: cbv) returns (v3: cbv)
-        // ensures |v3| == |v1| + 1;
-        ensures to_nat(v3) == to_nat(v1) + to_nat(v2);
+    // method cbv_add(v1: cbv, v2: cbv) returns (v3: cbv)
+    //     // ensures |v3| == |v1| + 1;
+    //     ensures to_nat(v3) == to_nat(v1) + to_nat(v2);
 
     method cbv_test()
     {
