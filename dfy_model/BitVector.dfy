@@ -6,11 +6,13 @@ module CutomBitVector {
     import opened powers
 
     // lsb: t[0], msb: t[|t| - 1]
-    type cbv = t: seq<uint2> | 0 < |t| <= UINT32_MAX witness [1]
+    type cbv = t: seq<uint1> | 0 < |t| <= UINT32_MAX witness [1]
 
     type cbv384 = t: cbv | |t| == 384
 
     type cbv385 = t: cbv | |t| == 385
+
+    type cbv386 = t: cbv | |t| == 386
 
     type cbv768 = t: cbv | |t| == 768
 
@@ -89,12 +91,12 @@ module CutomBitVector {
         }
     } 
 
-    function method lsb(v: cbv) : uint2
+    function method lsb(v: cbv) : uint1
     {
         v[0]
     }
 
-    function method msb(v: cbv) : uint2
+    function method msb(v: cbv) : uint1
     {
         v[|v| - 1]
     }
@@ -392,6 +394,10 @@ module CutomBitVector {
         }
         assert to_nat(v') == to_nat(v);
     }
+
+    method cbv_add(v1: cbv, v2: cbv) returns (v3: cbv)
+        // ensures |v3| == |v1| + 1;
+        ensures to_nat(v3) == to_nat(v1) + to_nat(v2);
 
     method cbv_test()
     {

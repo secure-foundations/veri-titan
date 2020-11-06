@@ -31,30 +31,29 @@ module barret384 {
         u: cbv384)
     {
         var x: cbv768 := mul_384_384_768(a, b);
-        var t: cbv384 := zero(384);
-        var r1: cbv := slice(x, 0, 512);
 
         var msb := msb(x);
 
+        var t: cbv384;
         if msb == 1 {
         	t := u;
+        } else {
+            t := cbv_zero(384);
         }
 
-        // q1: bv385 := x >> 383;
-        var q1: cbv385 := rshift(x, 383);
+        var r1: cbv385 := cbv_slice(x, 0, 385);
 
-        // q2': bv768 := mul_384_384_768(q1[384:0], u);
-        var q1': cbv384 := slice(q1, 0, 384);
+        var q1: cbv385 := cbv_lsr(x, 383);
+
+        var q1': cbv384 := cbv_slice(q1, 0, 384);
         var q2': cbv768 := mul_384_384_768(q1', u);
 
-        // q2'': cbv384 := q2' >> 384;
-        var q2'': cbv384 := rshift(q2', 384);
- 
-        // q2''': bv385 := zero_ext(q2'', 385) + q1;
-        // q2'''': bv385 := q2''' + zero_ext(t, 385);
-        // q3: bv384 := q2'''' >> 1;
-        // r2: bv512 := mul_384_384_512(q3, m);
-        // r: bv512 := r1 - r2;
+        var q2'': cbv384 := cbv_lsr(q2', 384);
+        
+        var q2''': cbv := cbv_add(q2'', q1);
+
+        var q2'''' := cbv_add(q2''', t);
+        var q3 := cbv_lsr(x, 383);
     }
 
     // lemma barrett_reduction_q3_bound(
