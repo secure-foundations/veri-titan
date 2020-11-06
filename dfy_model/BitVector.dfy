@@ -21,7 +21,7 @@ module CutomBitVector {
             decreases |v| - i;
         {
             print(v[i]);
-            i := i + 1;    
+            i := i + 1;
         }
         print("\n");
     }
@@ -411,22 +411,4 @@ module CutomBitVector {
     // method cbv_add(v1: cbv, v2: cbv) returns (v3: cbv)
     //     // ensures |v3| == |v1| + 1;
     //     ensures to_nat(v3) == to_nat(v1) + to_nat(v2);
-
-    method cbv_test()
-    {
-        // var a: cbv := [1, 1, 1, 0, 1];
-
-        // assert to_nat(a) == 23 by {
-        //     reveal power();
-        // }
-
-        // a := slice(a, 1, 5);
-        // assert a == [1, 1, 0, 1];
-        // assert to_nat(a) == 11 by {
-        //     reveal power();
-        // }
-
-        // a := rshift(a, 2);
-        // assert a == [0, 1];
-    }
 }
