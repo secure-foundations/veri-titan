@@ -33,32 +33,32 @@ public partial class FileStream
         }
     }
 
-    public void Close(out bool ok)
+    public bool Close()
     {
         try
         {
             fstream.Close();
-            ok = true;
+            return true;
         }
         catch (Exception e)
         {
             System.Console.Error.WriteLine(e);
-            ok = false;
+            return false;
         }
     }
 
-    public void Read(int fileOffset, byte[] buffer, int start, int end, out bool ok)
+    public bool Read(int fileOffset, byte[] buffer, int start, int end)
     {
         try
         {
             fstream.Seek(fileOffset, System.IO.SeekOrigin.Begin);
             fstream.Read(buffer, start, end - start);
-            ok = true;
+            return true;
         }
         catch (Exception e)
         {
             System.Console.Error.WriteLine(e);
-            ok = false;
+            return false;
         }
     }
 

@@ -21,11 +21,19 @@ method {:main} Main(ghost env: HostEnvironment)
     // Try commenting out the following line to see that you are forced to handle errors!
     if !ok { print "open failed\n"; return; }
 
-    // This is "hello world!" in ascii.
-    // The library requires the data to be an array of bytes, but Dafny has no char->byte conversions :(
-    var data: array<byte> := ArrayFromSeq([104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33, 10]);
+    var buffer:array<byte> := new byte[20];
+    ok := f.Read(0, buffer, 0, 20);
 
-    ok := f.Write(0, data, 0, data.Length as int32);
+    // print buffer[0], buffer[1];
+
+    if !ok { print "read failed\n"; return; }
+
+    ok := f.Close();
+    // // This is "hello world!" in ascii.
+    // // The library requires the data to be an array of bytes, but Dafny has no char->byte conversions :(
+    // var data: array<byte> := ArrayFromSeq([104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33, 10]);
+
+    // ok := f.Write(0, data, 0, data.Length as int32);
 
     print "done!\n";
 }
