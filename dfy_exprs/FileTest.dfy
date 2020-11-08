@@ -1,6 +1,6 @@
 // https://github.com/wilcoxjay/notes
 
-include "fileio.dfy"
+include "Fileio.dfy"
 
 // Useful to convert Dafny strings into arrays of characters.
 method ArrayFromSeq<A>(s: seq<A>) returns (a: array<A>)

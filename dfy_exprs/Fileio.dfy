@@ -1,6 +1,6 @@
 // https://github.com/wilcoxjay/notes
 
-newtype{:nativeType "byte"} byte = i:int | 0 <= i < 0x100
+newtype{:nativeType "byte"} byte = i:int | 0 <= i < 8
 newtype{:nativeType "int"} int32 = i:int | -0x80000000 <= i < 0x80000000
 newtype{:nativeType "int"} nat32 = i:int | 0 <= i < 0x80000000
 

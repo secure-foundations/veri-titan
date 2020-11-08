@@ -90,14 +90,6 @@ public partial class FileStream
             ok = false;
         }
     }
-
-    // static void Main()
-    // {
-    //     // FileStream _43_f = default(FileStream);
-    //     bool _out1;
-    //     FileStream _out2;
-    //     FileStream.Open("foo.txt".ToCharArray(), out _out1, out _out2);
-    // }
 }
 
 
