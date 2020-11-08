@@ -8,11 +8,12 @@ module CutomBitVector {
     // lsb: t[0], msb: t[|t| - 1]
     type cbv = t: seq<uint1> | 0 < |t| < 0x100000000 witness [1]
 
-    function method to_nat(v: cbv) : nat
+    method log_input(n: string, v: cbv)
     {
-        to_nat_aux(v, |v|)
+        print "[INPUT]", n, ":", |v|, ":";
+        cbv_print(v);
     }
-    
+
     method cbv_print(v: cbv)
     {
         var i := 0;
@@ -23,6 +24,11 @@ module CutomBitVector {
             i := i + 1;
         }
         print("\n");
+    }
+
+    function method to_nat(v: cbv) : nat
+    {
+        to_nat_aux(v, |v|)
     }
 
     // function {:fuel 20} to_nat_aux(v: cbv, i: uint32) : nat
@@ -136,6 +142,7 @@ module CutomBitVector {
     }
 
     lemma to_nat_lsb_lemma(v: cbv)
+        decreases v;
         ensures to_nat(v) == v[0] + 2 * to_nat(v[1..]);
     {
         var l := |v|;
@@ -165,6 +172,15 @@ module CutomBitVector {
                 v[0] + 2 * to_nat(v[1..]);
             }
             assert to_nat(v) == v[0] + 2 * to_nat(v[1..]);
+        } else {
+            calc == {
+                to_nat(v);
+                to_nat_aux(v, 0) + pow2(0) * v[0];
+                {
+                    reveal power();
+                }
+                v[0];
+            }
         }
     }
 
