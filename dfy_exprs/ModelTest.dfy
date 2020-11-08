@@ -1,4 +1,4 @@
-include "Fileio.dfy"
+include "SystemFFI.dfy"
 include "BitVector.dfy"
 include "../otbn_model/lib/powers.dfy"
 include "../otbn_model/lib/congruences.dfy"
@@ -18,12 +18,9 @@ method simple_test(x: cbv)
     var q1: cbv := cbv_lsr(x, 383);
 }
 
-method {:main} Main(ghost env: HostEnvironment)
-  requires env.ok.ok()
-  modifies env.ok
+method {:main} Main()
 {
-    var f: FileStream;
-    var arr := FileStream.GetRandomBV(2);
+    var arr := SystemFFI.GetRandomBV(200);
 
     print "done!\n";
 }

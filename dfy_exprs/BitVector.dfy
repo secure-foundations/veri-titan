@@ -1,10 +1,9 @@
 include "../otbn_model/lib/powers.dfy"
+include "NativeTypes.dfy"
 
 module CutomBitVector {
     import opened powers
-
- 	type uint1 = i: int | 0 <= i < 2
- 	type uint32 = i:int | 0 <= i < 0x100000000
+    import opened NativeTypes
 
     // lsb: t[0], msb: t[|t| - 1]
     type cbv = t: seq<uint1> | 0 < |t| < 0x100000000 witness [1]
