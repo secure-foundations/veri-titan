@@ -35,12 +35,12 @@ module CutomBitVector {
         else to_nat_aux(v, i - 1) + pow2(i - 1) * v[i - 1]
     }
 
-    function method from_nat(n: nat) : cbv
-        decreases n;
+    function method from_nat(n: nat, l: nat) : cbv
+        decreases l;
     {
-        if n == 0 then []
-        else if n % 2 == 1 then [1] + from_nat(n / 2) 
-        else [0] + from_nat(n / 2)
+        if l == 0 then []
+        else if n % 2 == 1 then [1] + from_nat(n / 2, l - 1) 
+        else [0] + from_nat(n / 2, l -1)
     }
 
     lemma {:induction i} to_nat_prefix_lemma(v: cbv, v': cbv, i: nat)

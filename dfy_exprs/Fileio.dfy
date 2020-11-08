@@ -22,6 +22,8 @@ class FileStream
   function{:axiom} IsOpen():bool reads this
   constructor{:axiom} () requires false
 
+  static method{:axiom} GetRandomBV(length: int32) returns (buffer: array<byte>)
+
   static method{:axiom} Open(name:array<char>, ghost env:HostEnvironment)
     returns(ok:bool, f:FileStream)
     requires env.ok.ok()

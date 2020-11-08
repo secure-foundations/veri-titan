@@ -18,6 +18,11 @@ public partial class FileStream
     internal FStream fstream;
     internal FileStream(FStream fstream) { this.fstream = fstream; }
 
+    public static byte[]  GetRandomBV(int length)
+    {
+        return new byte[] { 1, 3, 5, 7, 9 };
+    }
+
     public static void Open(char[] name, out bool ok, out FileStream f)
     {
         try
