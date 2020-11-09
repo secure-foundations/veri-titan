@@ -15,6 +15,7 @@ import opened NativeTypes
 // }
 
 method get_random_bv(l: uint32) returns (v: cbv)
+    ensures |v| == l;
 {
     var a := new uint1[l];
     var i := 0;
@@ -35,11 +36,14 @@ method simple_test(x: cbv)
     requires |x| == 768;
 {
     var r1: cbv := cbv_slice(x, 0, 385);
+    cbv_print("r1", r1);
     var q1: cbv := cbv_lsr(x, 383);
+    cbv_print("q1", q1);
 }
 
 method {:main} Main()
 {
-    var v := get_random_bv(20);
-    log_input("x", v);
+    var x := get_random_bv(768);
+    cbv_print("x", x);
+    simple_test(x);
 }

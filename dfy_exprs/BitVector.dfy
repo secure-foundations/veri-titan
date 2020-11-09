@@ -8,14 +8,9 @@ module CutomBitVector {
     // lsb: t[0], msb: t[|t| - 1]
     type cbv = t: seq<uint1> | 0 < |t| < 0x100000000 witness [1]
 
-    method log_input(n: string, v: cbv)
+    method cbv_print(n: string, v: cbv)
     {
         print "[INPUT]", n, ":", |v|, ":";
-        cbv_print(v);
-    }
-
-    method cbv_print(v: cbv)
-    {
         var i := 0;
         while i < |v|
             decreases |v| - i;
