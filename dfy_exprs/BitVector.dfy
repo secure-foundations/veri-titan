@@ -10,7 +10,7 @@ module CutomBitVector {
 
     method cbv_print(n: string, v: cbv)
     {
-        print "[INPUT]", n, ":", |v|, ":";
+        print n, ":", |v|, ":";
         var i := 0;
         while i < |v|
             decreases |v| - i;
