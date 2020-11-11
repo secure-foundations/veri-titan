@@ -1,13 +1,13 @@
 // https://github.com/wilcoxjay/notes
+include "NativeTypes.dfy"
 
-newtype{:nativeType "byte"} byte = i:int | 0 <= i < 2
-newtype{:nativeType "int"} int32 = i:int | -0x80000000 <= i < 0x80000000
+import opened NativeTypes
 
 class SystemFFI
 {
-    static method{:axiom} GetRandomBV(length: int32) returns (buffer: array<byte>)
-        requires length > 0;
-        ensures buffer.Length != 0;
-    
-    static method{:axiom} GetRandomBit() returns (b: byte)
+    // static method{:axiom} GetRandomBV(length: uint32) returns (buffer: array<byte>)
+    //     requires length > 0;
+    //     ensures buffer.Length != 0;
+
+    static method{:axiom} GetRandomBit() returns (b: bit)
 }
