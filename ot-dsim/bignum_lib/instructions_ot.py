@@ -595,6 +595,8 @@ class GInsBn(GIns):
         else:
             return m.get_flag('XC')
 
+    def dump_rd(self, m):
+        return m.print_reg(self.rd)
 
 class GInsBnShift(GInsBn):
     """Standard Bignum format with immediate shift
@@ -1187,8 +1189,7 @@ class IBnAnd(GInsBnShift):
         res = (m.get_reg(self.rs1) & rs2op) & m.xlen_mask
         self.exec_set_zml_flags(res, m)
         m.set_reg(self.rd, res)
-        # trace_str = self.get_asm_str()[1]
-        trace_str = self.get_asm_str()[1] + "\n" + m.print_reg(self.rd)
+        trace_str = self.get_asm_str()[1] + "\n" + self.dump_rd(m)
         return trace_str, None
 
 
@@ -1308,7 +1309,7 @@ class IBnRshi(GInsBn):
         conc = (m.get_reg(self.rs2) << m.XLEN) + m.get_reg(self.rs1)
         res = (conc >> self.shift_bits) & m.xlen_mask
         m.set_reg(self.rd, res)
-        trace_str = self.get_asm_str()[1]
+        trace_str = self.get_asm_str()[1] + "\n" + self.dump_rd(m)
         return trace_str, None
 
 
