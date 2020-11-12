@@ -43,7 +43,8 @@ method simple_test(x: cbv)
 
 method {:main} Main()
 {
-    var x := get_random_bv(768);
+    // var x := get_random_bv(768);
+    var x  := from_nat(0x778f467950ba8aecb6dd8f7b865757e7a510c901b9d50297727b7c284d640eb9135cadc39237aa29ae0813517b58a83731875308a2cd045f1a6a4fb59a4d026bcd8164c3de1b71062e90b431439988a2cef26b707ce224ba84e1b431bf90e3fa, 768);
     cbv_print("x", x);
     simple_test(x);
 }

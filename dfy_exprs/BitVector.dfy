@@ -11,14 +11,15 @@ module CutomBitVector {
     method cbv_print(n: string, v: cbv)
     {
         print n, ":", |v|, ":";
-        var i := 0;
-        while i < |v|
-            decreases |v| - i;
-        {
-            print(v[i]);
-            i := i + 1;
-        }
-        print("\n");
+        // var i := 0;
+        // while i < |v|
+        //     decreases |v| - i;
+        // {
+        //     print(v[i]);
+        //     i := i + 1;
+        // }
+        var v := to_nat(v);
+        print v, "\n";
     }
 
     function method to_nat(v: cbv) : nat
@@ -35,8 +36,9 @@ module CutomBitVector {
         else to_nat_aux(v, i - 1) + pow2(i - 1) * v[i - 1]
     }
 
-    function method from_nat(n: nat, l: nat) : cbv
+    function method from_nat(n: nat, l: nat) : (v: cbv)
         decreases l;
+        ensures |v| == l;
     {
         if l == 0 then []
         else if n % 2 == 1 then [1] + from_nat(n / 2, l - 1) 
