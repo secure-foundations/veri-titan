@@ -599,9 +599,9 @@ class GInsBn(GIns):
         return m.print_reg(self.rd)
 
     def convert(self, cv):
-        self.rd = cv.get_rd(self.rd)
         self.rs1 = cv.get_rs(self.rs1)
         self.rs2 = cv.get_rs(self.rs2)
+        self.rd = cv.get_rd(self.rd)
 
 class GInsBnShift(GInsBn):
     """Standard Bignum format with immediate shift
@@ -1380,8 +1380,8 @@ class IBnMov(GIns):
         return trace_str, None
 
     def convert(self, cv):
-        self.rd = cv.get_rd(self.rd)
         self.rs = cv.get_rs(self.rs)
+        self.rd = cv.get_rd(self.rd)
 
 class IBnMovr(GInsIndReg):
     """Indirect move instruction"""

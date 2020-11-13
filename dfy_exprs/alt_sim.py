@@ -22,8 +22,6 @@ class Converter:
     def get_rs(self, r):
         if r is None:
             return None
-        if r not in self.ssa_vars:
-            return self.get_rd(r)
         return (r, self.ssa_vars[r])
 
 c = Converter([16, 17, 18, 31])
@@ -32,9 +30,17 @@ addr = ins_ctx.get_label_addr_from_name("barrett384")
 # print(addr)
 
 for ins in ins_objects[addr:]:
-#     print(ins.get_asm_str()[1])
-    ins.convert(c)
+    print(ins.get_asm_str()[1])
+
+print("")
+
+for ins in ins_objects[addr:]:
     # print(ins.get_asm_str()[1])
+    ins.convert(c)
+    print(ins.get_asm_str()[1])
+    # print("")
+
+print("")
 
 machine = Machine([], ins_objects, addr, None, ins_ctx)
 

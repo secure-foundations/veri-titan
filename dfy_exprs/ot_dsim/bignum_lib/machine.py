@@ -279,7 +279,8 @@ class Machine(object):
 
     def get_reg(self, ridx):
         """Get register value for register index"""
-        if isinstance(ridx, int):
+        if isinstance(ridx, tuple):
+            (ridx, _) = ridx
             self.__check_reg_idx(ridx)
             return self.r[ridx]
         if isinstance(ridx, str):
@@ -305,7 +306,8 @@ class Machine(object):
     def set_reg(self, ridx, value, valid_limb=None, valid_half_limb=None):
         """Set register value at register index"""
         self.__check_reg_val(value)
-        if isinstance(ridx, int):
+        if isinstance(ridx, tuple):
+            (ridx, _) = ridx
             if valid_limb:
                 self.r_valid_half_limbs[ridx][valid_limb*2] = True
                 self.r_valid_half_limbs[ridx][valid_limb*2+1] = True
@@ -1008,11 +1010,14 @@ class Machine(object):
             else:
                 cont = True
                 self.inc_pc()
-
+        
         if halt:
-            return False, trace_str, cycles
-        else:
-            return cont, trace_str, cycles
+            cont = False
+
+        if len(self.call_stack) != 0:
+            return cont, "", cycles
+
+        return cont, trace_str, cycles
 
 
 if __name__ == "__main__":
