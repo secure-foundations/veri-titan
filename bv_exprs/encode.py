@@ -24,6 +24,15 @@ class Namer:
     def reset(cls):
         cls.count = 0
 
+class BinBoolExpr:
+    def __init__(self, op, src1, src2):
+        assert op == "&" or op == "|" or op == "^"
+        self.op = op
+        self.src1 = src1
+        self.src2 = src2
+
+    def __str__(self):
+        return f"({self.src1} {self.op} {self.src2})"
 
 class BinOpExpr:
     def __init__(self, op, src1, src2):
@@ -59,20 +68,17 @@ class BinOpExpr:
     def get_generic_bit(self):
         lhs = self.output
         if self.op == "&":
-            rhs = self.src1.output + " & " + self.src2.output
+            rhs = BinBoolExpr("&", self.src1.output, self.src2.output)
         elif self.op == "^":
-            rhs = self.src1.output + " ^ " + self.src2.output
+            rhs = BinBoolExpr("^", self.src1.output, self.src2.output)
         elif self.op == "+":
-            rhs = self.src1.output + " ^ " + self.src2.output + " ^ " + self.carry
+            rhs = BinBoolExpr("^", self.src1.output, BinBoolExpr("^", self.src2.output, self.carry))
         else:
             raise Exception("Unexpected bin_op: %s" % self.op)
-        print(f"<< {lhs} == {rhs} >>")
-        #print("Getting src1...")
-        self.src1.get_generic_bit()
-        #print("Done getting src1")
-        #print("Getting src2...")
-        self.src2.get_generic_bit()
-        #print("Done getting src2")
+        me = { lhs : rhs }
+        me.update(self.src1.get_generic_bit())
+        me.update(self.src2.get_generic_bit())
+        return me
 
     def get_bit(self, i):
         assert 0 <= i < self.bits
@@ -97,6 +103,15 @@ class BinOpExpr:
     def __str__(self):
         return f"({self.src1} {bin_ops[self.op]} {self.src2})"
 
+class UniBoolExpr:
+    def __init__(self, op, src):
+        assert op in uni_ops.keys()
+        self.op = op
+        self.src = src
+
+    def __str__(self):
+        return f"({self.op} {self.src})"
+
 class UniOpExpr:
     def __init__(self, op, src):
         assert op in uni_ops.keys()
@@ -106,15 +121,16 @@ class UniOpExpr:
         self.output = Namer.new_name("uexpr")
 
     def get_generic_bit(self):
+        lhs = self.output
         if self.op == "-":
             raise Exception("Negation is not yet supported")
         elif self.op == "~":
-            print(self.output + " == !(" + self.src.output + ")")
+            rhs = UniBoolExpr("~", self.src.output)
         else:
             raise Exception("Unexpected uni_op: %s" % self.op)
-        #print("Getting src...")
-        self.src.get_generic_bit()
-        #print("Done getting src")
+        me = { lhs : rhs }
+        me.update(self.src.get_generic_bit())
+        return me
 
     def get_bit(self, i):
         assert 0 <= i < self.bits
@@ -127,6 +143,14 @@ class UniOpExpr:
 
     def __str__(self):
         return f"({uni_ops[self.op]} {self.src})"
+
+class Variable:
+    def __init__(self, name):
+        self.name = name
+        #self.output = name
+
+    def __str__(self):
+        return self.name
 
 class InputVariable:
     names = set()
@@ -146,7 +170,8 @@ class InputVariable:
             self.names.add(name)
 
     def get_generic_bit(self):
-        pass #print(self.name)
+        #return { self.name : Variable(self.name) }
+        return {}
 
     def get_bit(self, i):
         assert 0 <= i < self.bits
@@ -155,17 +180,24 @@ class InputVariable:
     def __str__(self):
         return self.name
 
+class BoolConst:
+    def __init__(self, b):
+        self.b = b
+
+    def __str__(self):
+        return "True" if self.b else "False"
+
 class Constant:
     def __init__(self, bits, value):
         assert(value == 0 or value == 1)
         self.bits = bits
         self.value = value
-        self.output = "0"
+        self.output = BoolConst(False)
 
         assert 0 <= value < 2**bits
 
     def get_generic_bit(self):
-        pass #print("0")
+        return {}
 
     def get_bit(self, i):
         assert 0 <= i < self.bits
@@ -215,7 +247,10 @@ def main():
 #    print_formula(bits, add_self4)
     f = add_commutes(bits)
     print("Formula: %s" % f)
-    f.get_generic_bit()
+    exprs = f.get_generic_bit()
+    for v, e in exprs.items():
+        print(f"{v} == {e}")
+        
     print("Output is: " + f.output)
 
 if (__name__=="__main__"):
