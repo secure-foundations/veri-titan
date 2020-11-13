@@ -31,6 +31,9 @@ class BinBoolExpr:
         self.src1 = src1
         self.src2 = src2
 
+    def flatten(self):
+        return BinBoolExpr(self.op, self.src1.flatten(), self.src2.flatten())
+
     def __str__(self):
         return f"({self.src1} {self.op} {self.src2})"
 
@@ -45,8 +48,8 @@ class BinOpExpr:
         self.src1 = src1
         self.src2 = src2
         self.bits = src1.bits
-        self.output = Namer.new_name("bexpr")
-        self.carry = Namer.new_name("carry") if self.op == "+" else None
+        self.output = Variable(Namer.new_name("bexpr"))
+        self.carry = Variable(Namer.new_name("carry")) if self.op == "+" else None
 
     def get_carry_bit(self, i):
         assert 0 <= i < self.bits
@@ -65,9 +68,20 @@ class BinOpExpr:
             s2 = self.src2.output
             return { self.carry : \
                      BinBoolExpr("|", BinBoolExpr("&", s1, s2), \
-                                      BinBoolExpr("&", Variable(self.carry, old=True), BinBoolExpr("|", s1, s2))) }
+                                      BinBoolExpr("&", Variable(self.carry.name, old=True), BinBoolExpr("|", s1, s2))) }
         else:
             return {}
+
+    def flatten(self):
+        if self.op == "&":
+            rhs = BinBoolExpr("&", self.src1.flatten(), self.src2.flatten())
+        elif self.op == "^":
+            rhs = BinBoolExpr("^", self.src1.flatten(), self.src2.flatten())
+        elif self.op == "+":
+            rhs = BinBoolExpr("^", self.src1.flatten(), BinBoolExpr("^", self.src2.flatten(), self.carry))
+        else:
+            raise Exception("Unexpected bin_op: %s" % self.op)
+        return rhs
 
     def get_generic_bit(self):
         lhs = self.output
@@ -125,7 +139,10 @@ class UniOpExpr:
         self.op = op
         self.src = src
         self.bits = src.bits
-        self.output = Namer.new_name("uexpr")
+        self.output = Variable(Namer.new_name("uexpr"))
+
+    def flatten(self):
+        return UniBoolExpr("~", self.src.flatten())
 
     def get_generic_bit(self):
         lhs = self.output
@@ -156,6 +173,9 @@ class Variable:
         self.name = name
         self.old = old
 
+    def flatten(self):
+        return self
+
     def __str__(self):
         return self.name if not self.old else f"old({self.name})"
 
@@ -169,12 +189,15 @@ class InputVariable:
     def __init__(self, bits, name):
         self.bits = bits
         self.name = name
-        self.output = name
+        self.output = Variable(name)
 
         if name in self.names:
             raise Exception("Duplicate input variable name: %s" % name)
         else:
             self.names.add(name)
+
+    def flatten(self):
+        return Variable(self.name)
 
     def get_generic_bit(self):
         #return { self.name : Variable(self.name) }
@@ -191,6 +214,9 @@ class BoolConst:
     def __init__(self, b):
         self.b = b
 
+    def flatten(self):
+        return self
+
     def __str__(self):
         return "True" if self.b else "False"
 
@@ -202,6 +228,9 @@ class Constant:
         self.output = BoolConst(False)
 
         assert 0 <= value < 2**bits
+
+    def flatten(self):
+        return self.output
 
     def get_generic_bit(self):
         return {}
@@ -258,7 +287,14 @@ def main():
     for v, e in exprs.items():
         print(f"{v} == {e}")
         
-    print("Output is: " + f.output)
+    print("Output is: %s" % f.output)
+
+    print("Flattened: %s " % f.flatten())
+
+    for v, e in exprs.items():
+        if "carry" in v.name:
+            print(f"Flattened {v} == {e.flatten()}")
+    
 
 if (__name__=="__main__"):
   main()
