@@ -31,8 +31,85 @@ class BinBoolExpr:
         self.src1 = src1
         self.src2 = src2
 
+    def __eq__(self, other):
+        return isinstance(other, BinBoolExpr) and \
+               other.op == self.op and \
+               other.src1 == self.src1 and \
+               other.src2 == self.src2
+
     def flatten(self, varmap):
         return BinBoolExpr(self.op, self.src1.flatten(varmap), self.src2.flatten(varmap))
+
+    def simp(self):
+        s1 = self.src1.simp()
+        s2 = self.src2.simp()
+
+        if self.op == "&":
+            if isinstance(s1, BoolConst) and s1.b:
+                return s2
+            if isinstance(s2, BoolConst) and s2.b:
+                return s1
+
+            if isinstance(s1, BoolConst) and not s1.b:
+                return BoolConst(False)
+            if isinstance(s2, BoolConst) and not s2.b:
+                return BoolConst(False)
+            
+            if s1 == s2:
+                return s1
+
+            if isinstance(s1, UniBoolExpr) and s1.src == s2: # !s1 && s1
+                return BoolConst(False)
+            
+            if isinstance(s2, UniBoolExpr) and s2.src == s1: # !s2 && s2
+                return BoolConst(False)
+
+        elif self.op == "|":
+            if isinstance(s1, BoolConst) and s1.b:
+                return BoolConst(True)
+            if isinstance(s2, BoolConst) and s2.b:
+                return BoolConst(True)
+
+            if isinstance(s1, BoolConst) and not s1.b:
+                return s2
+            if isinstance(s2, BoolConst) and not s2.b:
+                return s1
+            
+            if s1 == s2:
+                return s1
+
+            if isinstance(s1, UniBoolExpr) and s1.src == s2: # !s1 || s1
+                return BoolConst(True)
+            
+            if isinstance(s2, UniBoolExpr) and s2.src == s1: # !s2 || s2
+                return BoolConst(True)
+
+        elif self.op == "^":
+            if isinstance(s1, BoolConst) and s1.b:
+                return UniBoolExpr('~', s2)
+            if isinstance(s2, BoolConst) and s2.b:
+                return UniBoolExpr('~', s1)
+
+            if isinstance(s1, BoolConst) and not s1.b:
+                return s2
+            if isinstance(s2, BoolConst) and not s2.b:
+                return s1
+            
+            if s1 == s2:
+                return BoolConst(False)
+
+            if isinstance(s1, UniBoolExpr) and s1.src == s2: # !s1 ^ s1
+                return BoolConst(True)
+            
+            if isinstance(s2, UniBoolExpr) and s2.src == s1: # !s2 ^ s2
+                return BoolConst(True)
+
+            return self
+
+        else:
+            raise Exception("Unexpected BinBoolOp: %s" % self.op)
+
+        return self
 
     def __str__(self):
         return f"({self.src1} {self.op} {self.src2})"
@@ -75,6 +152,8 @@ class BinOpExpr:
     def flatten(self, varmap):
         if self.op == "&":
             rhs = BinBoolExpr("&", self.src1.flatten(varmap), self.src2.flatten(varmap))
+        elif self.op == "|":
+            rhs = BinBoolExpr("|", self.src1.flatten(varmap), self.src2.flatten(varmap))
         elif self.op == "^":
             rhs = BinBoolExpr("^", self.src1.flatten(varmap), self.src2.flatten(varmap))
         elif self.op == "+":
@@ -87,6 +166,8 @@ class BinOpExpr:
         lhs = self.output
         if self.op == "&":
             rhs = BinBoolExpr("&", self.src1.output, self.src2.output)
+        elif self.op == "|":
+            rhs = BinBoolExpr("|", self.src1.output, self.src2.output)
         elif self.op == "^":
             rhs = BinBoolExpr("^", self.src1.output, self.src2.output)
         elif self.op == "+":
@@ -130,8 +211,21 @@ class UniBoolExpr:
         self.op = op
         self.src = src
 
+    def __eq__(self, other):
+        return isinstance(other, UniBoolExpr) and \
+               other.op == self.op and \
+               other.src == self.src
+
     def flatten(self, varmap):
         return UniBoolExpr(self.op, self.src.flatten(varmap))
+
+    def simp(self):
+        s = self.src.simp()
+        if self.op == '~' and isinstance(s, UniBoolExpr) and s.op == '~':
+            return s.src
+        if self.op == '~' and isinstance(s, BoolConst):
+            return BoolConst(not s.b)
+        return self
 
     def __str__(self):
         return f"({self.op} {self.src})"
@@ -176,6 +270,14 @@ class Variable:
         self.name = name
         self.old = old
 
+    def __eq__(self, other):
+        return isinstance(other, Variable) and \
+               other.name == self.name and \
+               other.old == self.old
+
+    def simp(self):
+        return self
+
     def flatten(self, varmap):
         if self in varmap:
             return varmap[self].flatten(varmap)
@@ -218,6 +320,13 @@ class InputVariable:
 class BoolConst:
     def __init__(self, b):
         self.b = b
+
+    def __eq__(self, other):
+        return isinstance(other, BoolConst) and \
+               other.b == self.b
+
+    def simp(self):
+        return self
 
     def flatten(self, varmap):
         return self
@@ -280,27 +389,56 @@ def print_formula(bits, form):
     reset()
 
 
+def simp_harder(e):
+    prev = e
+    s = prev.simp()
+    while not s == prev:
+        prev = s
+        s = s.simp()
+    return s       
+
+
+def simp_test():
+    es =  [BinBoolExpr('&', BoolConst(True), BoolConst(True))]
+    es += [BinBoolExpr('&', BoolConst(True), BoolConst(False))]
+    es += [BinBoolExpr('&', BoolConst(False), BoolConst(True))]
+    es += [BinBoolExpr('&', BoolConst(False), BoolConst(False))]
+    es += [BinBoolExpr('|', BoolConst(True), BoolConst(True))]
+    es += [BinBoolExpr('|', BoolConst(True), BoolConst(False))]
+    es += [BinBoolExpr('|', BoolConst(False), BoolConst(True))]
+    es += [BinBoolExpr('|', BoolConst(False), BoolConst(False))]
+    es += [BinBoolExpr('^', BoolConst(True), BoolConst(True))]
+    es += [BinBoolExpr('^', BoolConst(True), BoolConst(False))]
+    es += [BinBoolExpr('^', BoolConst(False), BoolConst(True))]
+    es += [BinBoolExpr('^', BoolConst(False), BoolConst(False))]
+    es += [BinBoolExpr('^', BinBoolExpr('&', BoolConst(True), BoolConst(True)),  BinBoolExpr('|', BoolConst(True), BoolConst(False)))]
+    for e in es:
+        print("Original: %s" % e)
+        print("Simplified: %s" % simp_harder(e))
+
 def main():
     bits = 4
 #    print_formula(bits, add_commutes)
 #    print_formula(bits, identity)
 #    print_formula(bits, add_self2)
 #    print_formula(bits, add_self4)
-    #f = add_commutes(bits)
-    f = identity(bits)
-    print("Formula: %s" % f)
-    exprs = f.get_generic_bit()
-    for v, e in exprs.items():
-        print(f"{v} == {e}")
-        
-    print("Output is: %s" % f.output)
 
-    print("Flattened: %s " % f.flatten(exprs))
-
-    for v, e in exprs.items():
-        if "carry" in v.name:
-            print(f"Flattened {v} == {e.flatten(exprs)}")
+#    #f = add_commutes(bits)
+#    f = identity(bits)
+#    print("Formula: %s" % f)
+#    exprs = f.get_generic_bit()
+#    for v, e in exprs.items():
+#        print(f"{v} == {e}")
+#        
+#    print("Output is: %s" % f.output)
+#
+#    print("Flattened: %s " % f.flatten(exprs))
+#
+#    for v, e in exprs.items():
+#        if "carry" in v.name:
+#            print(f"Flattened {v} == {e.flatten(exprs)}")
     
+    simp_test()
 
 if (__name__=="__main__"):
   main()
