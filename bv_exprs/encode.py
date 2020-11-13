@@ -18,7 +18,7 @@ class Namer:
     @classmethod
     def new_name(cls, s):
         cls.count = cls.count + 1
-        return f"{s}_{count}"
+        return f"{s}_{cls.count}"
 
     @classmethod
     def reset(cls):
@@ -36,6 +36,8 @@ class BinOpExpr:
         self.src1 = src1
         self.src2 = src2
         self.bits = src1.bits
+        self.output = Namer.new_name("bexpr")
+        self.carry = Namer.new_name("carry") if self.op == "+" else None
 
     def get_carry_bit(self, i):
         assert 0 <= i < self.bits
@@ -47,6 +49,30 @@ class BinOpExpr:
             s1 = self.src1.get_bit(i)
             s2 = self.src2.get_bit(i)
             return "(((%s) & (%s)) | ((%s) & ((%s) | (%s))))" % (s1, s2, self.get_carry_bit(i-1), s1, s2)
+
+    def get_generic_carry_bit(self):
+        assert (self.op == "+")
+        s1 = self.src1.output
+        s2 = self.src2.output
+        return  s1 + " & " + s2 + " | (" + self.carry + " & (" + s1 + " | " + s2 + "))"
+
+    def get_generic_bit(self):
+        lhs = self.output
+        if self.op == "&":
+            rhs = self.src1.output + " & " + self.src2.output
+        elif self.op == "^":
+            rhs = self.src1.output + " ^ " + self.src2.output
+        elif self.op == "+":
+            rhs = self.src1.output + " ^ " + self.src2.output + " ^ " + self.carry
+        else:
+            raise Exception("Unexpected bin_op: %s" % self.op)
+        print(f"<< {lhs} == {rhs} >>")
+        #print("Getting src1...")
+        self.src1.get_generic_bit()
+        #print("Done getting src1")
+        #print("Getting src2...")
+        self.src2.get_generic_bit()
+        #print("Done getting src2")
 
     def get_bit(self, i):
         assert 0 <= i < self.bits
@@ -77,6 +103,18 @@ class UniOpExpr:
         self.op = op
         self.src = src
         self.bits = src.bits
+        self.output = Namer.new_name("uexpr")
+
+    def get_generic_bit(self):
+        if self.op == "-":
+            raise Exception("Negation is not yet supported")
+        elif self.op == "~":
+            print(self.output + " == !(" + self.src.output + ")")
+        else:
+            raise Exception("Unexpected uni_op: %s" % self.op)
+        #print("Getting src...")
+        self.src.get_generic_bit()
+        #print("Done getting src")
 
     def get_bit(self, i):
         assert 0 <= i < self.bits
@@ -100,11 +138,15 @@ class InputVariable:
     def __init__(self, bits, name):
         self.bits = bits
         self.name = name
+        self.output = name
 
         if name in self.names:
             raise Exception("Duplicate input variable name: %s" % name)
         else:
             self.names.add(name)
+
+    def get_generic_bit(self):
+        pass #print(self.name)
 
     def get_bit(self, i):
         assert 0 <= i < self.bits
@@ -115,10 +157,15 @@ class InputVariable:
 
 class Constant:
     def __init__(self, bits, value):
+        assert(value == 0 or value == 1)
         self.bits = bits
         self.value = value
+        self.output = "0"
 
         assert 0 <= value < 2**bits
+
+    def get_generic_bit(self):
+        pass #print("0")
 
     def get_bit(self, i):
         assert 0 <= i < self.bits
@@ -126,6 +173,7 @@ class Constant:
 
     def __str__(self):
         return "%d" % self.value
+
 
 # Clear out formula state
 def reset():
@@ -161,10 +209,14 @@ def print_formula(bits, form):
 
 def main():
     bits = 4
-    print_formula(bits, add_commutes)
-    print_formula(bits, identity)
-    print_formula(bits, add_self2)
-    print_formula(bits, add_self4)
+#    print_formula(bits, add_commutes)
+#    print_formula(bits, identity)
+#    print_formula(bits, add_self2)
+#    print_formula(bits, add_self4)
+    f = add_commutes(bits)
+    print("Formula: %s" % f)
+    f.get_generic_bit()
+    print("Output is: " + f.output)
 
 if (__name__=="__main__"):
   main()
