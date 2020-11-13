@@ -598,6 +598,11 @@ class GInsBn(GIns):
     def dump_rd(self, m):
         return m.print_reg(self.rd)
 
+    def convert(self, cv):
+        self.rd = cv.get_rd(self.rd)
+        self.rs1 = cv.get_rs(self.rs1)
+        self.rs2 = cv.get_rs(self.rs2)
+
 class GInsBnShift(GInsBn):
     """Standard Bignum format with immediate shift
     BN.<ins> <wrd>, <wrs1>, <wrs2>, FG<flag_group> [, <shift_type> <shift_bytes>B]"""
@@ -1374,6 +1379,9 @@ class IBnMov(GIns):
         trace_str = self.get_asm_str()[1] + "\n" + m.print_reg(self.rd)
         return trace_str, None
 
+    def convert(self, cv):
+        self.rd = cv.get_rd(self.rd)
+        self.rs = cv.get_rs(self.rs)
 
 class IBnMovr(GInsIndReg):
     """Indirect move instruction"""
@@ -1792,6 +1800,8 @@ class IOtJal(GIns):
         trace_str = self.get_asm_str()[1]
         return trace_str, jump_target
 
+    def convert(self, cv):
+        pass
 
 class IOtJalr(IOtImm):
     """Jump and link register"""
@@ -1836,6 +1846,8 @@ class IOtEcall(GIns):
         trace_str = self.get_asm_str()[1]
         return trace_str, None
 
+    def convert(self, cv):
+        pass
 
 class IOtBne(IOtBranch):
     """Branch not equal"""

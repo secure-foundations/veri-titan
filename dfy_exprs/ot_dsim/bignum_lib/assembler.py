@@ -19,7 +19,7 @@ class Assembler:
         self.ins_objects = []
         self.breakpoints = []
         self.ins_fac = InstructionFactory()
-        self.ins_fac_ot = InstructionFactoryOt(to_lower=otbn_only)
+        self.ins_fac_ot = InstructionFactoryOt(to_lower=True)
         self.lines = lines
         self.ctx = self.__create_index(dmem_byte_addressing=dmem_byte_addressing)
         self.__check_fun_len()
@@ -60,6 +60,7 @@ class Assembler:
             tokens = line.strip().split()
             if not tokens:
                 continue
+            # tokens[0] = tokens[0].upper()
             if (not self.otbn_only) and self.ins_fac.is_valid_mnem(tokens[0]):
                 params = ''
                 if len(tokens) > 1:
