@@ -1,6 +1,0 @@
-BN.SUBI w30, w31, 1
-BN.RSHI w30, w30, w31 >> 127
-BN.MOV w21, w16
-BN.AND w22, w17, w30
-BN.RSHI w9, w18, w31 >> 127
-BN.RSHI w8, w17, w18 >> 127
