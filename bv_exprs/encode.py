@@ -104,12 +104,10 @@ class BinBoolExpr:
             if isinstance(s2, UniBoolExpr) and s2.src == s1: # !s2 ^ s2
                 return BoolConst(True)
 
-            return self
-
         else:
             raise Exception("Unexpected BinBoolOp: %s" % self.op)
 
-        return self
+        return BinBoolExpr(self.op, s1, s2)
 
     def __str__(self):
         return f"({self.src1} {self.op} {self.src2})"
@@ -225,7 +223,7 @@ class UniBoolExpr:
             return s.src
         if self.op == '~' and isinstance(s, BoolConst):
             return BoolConst(not s.b)
-        return self
+        return UniBoolExpr(self.op, s)
 
     def __str__(self):
         return f"({self.op} {self.src})"
@@ -274,6 +272,9 @@ class Variable:
         return isinstance(other, Variable) and \
                other.name == self.name and \
                other.old == self.old
+
+    def __hash__(self): 
+        return hash("%s" % self)
 
     def simp(self):
         return self
@@ -412,33 +413,42 @@ def simp_test():
     es += [BinBoolExpr('^', BoolConst(False), BoolConst(True))]
     es += [BinBoolExpr('^', BoolConst(False), BoolConst(False))]
     es += [BinBoolExpr('^', BinBoolExpr('&', BoolConst(True), BoolConst(True)),  BinBoolExpr('|', BoolConst(True), BoolConst(False)))]
+    es += [BinBoolExpr('^', Variable("blah"), BinBoolExpr('^', BoolConst(False), Variable("foo")))]
     for e in es:
         print("Original: %s" % e)
         print("Simplified: %s" % simp_harder(e))
 
-def main():
+
+def real_example():
     bits = 4
 #    print_formula(bits, add_commutes)
 #    print_formula(bits, identity)
 #    print_formula(bits, add_self2)
 #    print_formula(bits, add_self4)
 
-#    #f = add_commutes(bits)
-#    f = identity(bits)
-#    print("Formula: %s" % f)
-#    exprs = f.get_generic_bit()
-#    for v, e in exprs.items():
-#        print(f"{v} == {e}")
-#        
-#    print("Output is: %s" % f.output)
-#
-#    print("Flattened: %s " % f.flatten(exprs))
-#
-#    for v, e in exprs.items():
-#        if "carry" in v.name:
-#            print(f"Flattened {v} == {e.flatten(exprs)}")
+    #f = add_commutes(bits)
+    f = identity(bits)
+    print("Formula: %s" % f)
+    exprs = f.get_generic_bit()
+    for v, e in exprs.items():
+        print(f"{v} == {e}")
+        
+    print("Output is: %s" % f.output)
+
+    flat = f.flatten(exprs)
+    print("Flattened: %s " % flat)
+    print("Simplified: %s " % simp_harder(flat))
+
+    for v, e in exprs.items():
+        if "carry" in v.name:
+            flat = e.flatten(exprs)
+            print(f"Flattened  {v} == {flat}")
+            print(f"Simplified {v} == {simp_harder(flat)}")
     
-    simp_test()
+
+def main():
+    #simp_test()
+    real_example()
 
 if (__name__=="__main__"):
   main()
