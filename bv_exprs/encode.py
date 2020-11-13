@@ -60,10 +60,14 @@ class BinOpExpr:
             return "(((%s) & (%s)) | ((%s) & ((%s) | (%s))))" % (s1, s2, self.get_carry_bit(i-1), s1, s2)
 
     def get_generic_carry_bit(self):
-        assert (self.op == "+")
-        s1 = self.src1.output
-        s2 = self.src2.output
-        return  s1 + " & " + s2 + " | (" + self.carry + " & (" + s1 + " | " + s2 + "))"
+        if (self.op == "+"):
+            s1 = self.src1.output
+            s2 = self.src2.output
+            return { self.carry : \
+                     BinBoolExpr("|", BinBoolExpr("&", s1, s2), \
+                                      BinBoolExpr("&", Variable(self.carry, old=True), BinBoolExpr("|", s1, s2))) }
+        else:
+            return {}
 
     def get_generic_bit(self):
         lhs = self.output
@@ -78,6 +82,9 @@ class BinOpExpr:
         me = { lhs : rhs }
         me.update(self.src1.get_generic_bit())
         me.update(self.src2.get_generic_bit())
+
+        me.update(self.get_generic_carry_bit())
+
         return me
 
     def get_bit(self, i):
@@ -145,12 +152,12 @@ class UniOpExpr:
         return f"({uni_ops[self.op]} {self.src})"
 
 class Variable:
-    def __init__(self, name):
+    def __init__(self, name, old=False):
         self.name = name
-        #self.output = name
+        self.old = old
 
     def __str__(self):
-        return self.name
+        return self.name if not self.old else f"old({self.name})"
 
 class InputVariable:
     names = set()
