@@ -5,22 +5,29 @@
 * One OTBN implementation of some algorithm
 * One Dafny implementation of the same algorithm
 * Correctness proof for Dafny version
-
-## Requirements
-* The two implementations cannot diverge significantly (*further clarification needed). 
-* The Dafny program is written in a restricted set of Dafny. For now we are considering "large bitvector" model, where we operate and reason about large width bit vectors that don't typically fit in single machine register or memory cell.
-* The control flow is simple. 
-
- structured and 
+* Correlation between the inputs of the two
 
 ## Output
 * Correctness proof for OTBN code (presumably in Vale)
 
+## Assumptions
+* The two implementations cannot diverge significantly (*further clarification needed). 
+* The Dafny program is written in a restricted set of Dafny. For now we are considering "large bitvector" (LBV) model, where we operate and reason about large width bit vectors that don't typically fit in single machine register or memory cell.
+* The control flow is simple. For now we start experimenting with straight-line code.
+
 ## Workflow (Proposal):
 
-1. Parse OTBN code. 
-2. Convert the assembly into SSA form.
-3. Construct a DAG of instruction dependencies. 
+Pre-process:
+
+1. Parse OTBN/LBV code. 
+2. Convert the code into SSA form.
+3. Construct a DAG of use/def dependencies. Each node is an instruction/operation, associated with its output SSA variable(s). 
+
+Equivalence guess:
+
+1. Generate randomized inputs. Execute the two programs, label each graph node with concrete values.
+2. Identify potential equivalent nodes between two graphs, starting from the sources of the graph. In this step, one LBV node might correspond to multiple OTBN nodes. (Alternatively, if we pre-split the LBV nodes at register boundaries, we might be able to look for more direct correspondence.)
+
 
 <!-- To provide high assurance, cryptographic libraries are often formally verified for correctness. In some cases the verification is done on the high level source code, then a compiler is entrusted to emit the correct assembly. Alternatively, the verification can also be performed on the assembly code directly, since hand-written assembly can often achieve more optimized performance. 
 
