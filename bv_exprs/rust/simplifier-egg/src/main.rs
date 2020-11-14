@@ -1,7 +1,35 @@
 use egg::{*, rewrite as rw};
 
-fn main() {
-    println!("Hello, world!");
+enum BVBinOp { And, Or, Xor, Add, Sub }
+enum BVUniOp { Neg }
+
+enum BVexpr {
+    BinExpr { op:BVBinOp, src1:Box<BVexpr>, src2:Box<BVexpr> },
+    UniExpr { op:BVUniOp, src:Box<BVexpr> },
+    Var     { name:String },
+    Const   { val:i64 },
+}
+
+enum BoolBinOp { And, Or, Xor }
+enum BoolUniOp { Not }
+
+enum Boolexpr {
+    BinExpr { op:BoolBinOp, src1:Box<Boolexpr>, src2:Box<Boolexpr> },
+    UniExpr { op:BoolUniOp, src:Box<BVexpr> },
+    Var     { name:String },
+    Const   { val:i64 },
+}
+
+fn identity() {
+    let x:BVexpr = BVexpr::Var("x".to_owned());
+    BVExpr(BVBinOp::Sub, x, x)
+}
+
+fn simple_example() {
+    let f = identity();
+}
+
+fn egg_test() {
     let rules: &[Rewrite<SymbolLang, ()>] = &[
 //    rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
 //    rw!("commute-or";  "(| ?x ?y)" => "(| ?y ?x)"),
@@ -60,6 +88,14 @@ fn main() {
     println!("Starting from: {}", start);
     println!("Best expr: {}", best_expr);
     println!("Cost: {}", best_cost);
+
+}
+
+
+fn main() {
+    println!("Hello, world!");
+
+    //egg_test();
 
     println!("Done!");
 }
