@@ -12,6 +12,8 @@ uni_ops = {
     "~" : "not",
 }
 
+INFIX=False
+
 class Namer:
     count = 0
 
@@ -110,7 +112,10 @@ class BinBoolExpr:
         return BinBoolExpr(self.op, s1, s2)
 
     def __str__(self):
-        return f"({self.src1} {self.op} {self.src2})"
+        if INFIX:
+            return f"({self.op} {self.src1} {self.src2})"
+        else:
+            return f"({self.src1} {self.op} {self.src2})"
 
 class BinOpExpr:
     def __init__(self, op, src1, src2):
