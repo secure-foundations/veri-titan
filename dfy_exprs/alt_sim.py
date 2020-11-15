@@ -42,12 +42,34 @@ for ins in ins_objects[addr:]:
 
 print("")
 
+defs = dict()
+
 for ins in ins_objects[addr:]:
     ins.convert(c)
     print(ins.get_asm_str()[1])
-    # print("")
 
-print("")
+print("digraph G {")
+
+for i, ins in enumerate(ins_objects[addr:]):
+    rd = str(ins.rd)
+    assert rd not in defs
+    defs[rd] = i
+
+    rs1 = str(ins.rs1)
+    rs2 = str(ins.rs2)
+
+    print(f"{i} [label=\"{ins.MNEM}\"];")
+    if rs1 in defs:
+        print(f"{defs[rs1]} -> {i} [label=\"w{rs1}\"];")
+    else:
+        print(f"w{rs1} -> {i};")
+
+    if rs2 in defs:
+        print(f"{defs[rs2]} -> {i} [label=\"w{rs2}\"];")
+    else:
+        print(f"w{rs2} -> {i};")
+
+print("}")
 
 machine = Machine([], ins_objects, addr, None, ins_ctx)
 
