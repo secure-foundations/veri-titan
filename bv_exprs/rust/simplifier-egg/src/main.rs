@@ -22,15 +22,32 @@ enum Boolexpr {
 }
 
 
-fn get_bit_exprs(e:BVexpr) -> HashMap<Boolexpr,Boolexpr> {
+//fn get_bit_exprs(e:BVexpr) -> HashMap<Boolexpr,Boolexpr> {
+//    match e {
+//        Const(c) => 
+//        Var(v) =>
+//        UniExpr(op, boxed_src) => 
+//        BinExpr(op, boxed_src1, boxed_src1) => 
+//    }
+//}
+
+fn simpBV(e:BVexpr) -> BVexpr {
     match e {
-        Const(c) => 
-        Var(v) =>
-        UniExpr(op, boxed_src) => 
-        BinExpr(op, boxed_src1, boxed_src1) => 
+        BVexpr::Const(_) => e,
+        BVexpr::Var(_) => e,
+        BVexpr::UniExpr(op, boxed_src) => 
+            BVexpr::UniExpr(op, Box::new(simpBV(*boxed_src))),
+        BVexpr::BinExpr(op, boxed_src0, boxed_src1) => 
+            {
+            let s0 = Box::new(simpBV(*boxed_src0));
+            let s1 = Box::new(simpBV(*boxed_src1));
+            match op {
+                BVBinOp::Sub => BVexpr::BinExpr(BVBinOp::Add, s0, Box::new(BVexpr::UniExpr(BVUniOp::Neg, s1))),
+                _ => BVexpr::BinExpr(op, s0, s1)
+            }
+            }
     }
 }
-
 
 fn identity() -> BVexpr {
     let x1 = Box::new(BVexpr::Var("x".to_owned()));
