@@ -11,6 +11,16 @@ enum BVexpr {
     BinExpr ( BVBinOp, Box<BVexpr>, Box<BVexpr> ),
 }
 
+impl fmt::Display for BVexpr {
+    fn fmt(&self, f: &mut, fmt::Formatter) -> fmt::Result {
+        match *self {
+            BVexpr::Const(c) => write!(f, c),
+            BVexpr::Var(v) => write!(f, v),
+            BVexpr::UniExpr(op, boxed_src) => write!(f, "~" + fmt(boxed_src, f, fmt)),
+            BVexpr::BinExpr(op, boxed_src0, boxed_src1) => write!(f, "bin"),
+    }
+}
+
 enum BoolBinOp { And, Or, Xor }
 enum BoolUniOp { Not }
 
@@ -57,6 +67,8 @@ fn identity() -> BVexpr {
 
 fn simple_example() {
     let f = identity();
+    println!("{}", f);
+    let f = simpBV(f);
 }
 
 fn egg_test() {
