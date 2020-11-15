@@ -1,28 +1,41 @@
+use std::collections::HashMap;
 use egg::{*, rewrite as rw};
 
 enum BVBinOp { And, Or, Xor, Add, Sub }
 enum BVUniOp { Neg }
 
 enum BVexpr {
-    BinExpr { op:BVBinOp, src1:Box<BVexpr>, src2:Box<BVexpr> },
-    UniExpr { op:BVUniOp, src:Box<BVexpr> },
-    Var     { name:String },
-    Const   { val:i64 },
+    Const   ( i64 ),
+    Var     ( String ),
+    UniExpr ( BVUniOp, Box<BVexpr> ),
+    BinExpr ( BVBinOp, Box<BVexpr>, Box<BVexpr> ),
 }
 
 enum BoolBinOp { And, Or, Xor }
 enum BoolUniOp { Not }
 
 enum Boolexpr {
-    BinExpr { op:BoolBinOp, src1:Box<Boolexpr>, src2:Box<Boolexpr> },
-    UniExpr { op:BoolUniOp, src:Box<BVexpr> },
-    Var     { name:String },
-    Const   { val:i64 },
+    Const   ( i64 ),
+    Var     ( String ),
+    UniExpr ( BoolUniOp, Box<BVexpr> ),
+    BinExpr ( BoolBinOp, Box<Boolexpr>, Box<Boolexpr> ),
 }
 
-fn identity() {
-    let x:BVexpr = BVexpr::Var("x".to_owned());
-    BVExpr(BVBinOp::Sub, x, x)
+
+fn get_bit_exprs(e:BVexpr) -> HashMap<Boolexpr,Boolexpr> {
+    match e {
+        Const(c) => 
+        Var(v) =>
+        UniExpr(op, boxed_src) => 
+        BinExpr(op, boxed_src1, boxed_src1) => 
+    }
+}
+
+
+fn identity() -> BVexpr {
+    let x1 = Box::new(BVexpr::Var("x".to_owned()));
+    let x2 = Box::new(BVexpr::Var("x".to_owned()));
+    BVexpr::BinExpr(BVBinOp::Sub, x1, x2)
 }
 
 fn simple_example() {
@@ -96,6 +109,7 @@ fn main() {
     println!("Hello, world!");
 
     //egg_test();
+    simple_example();
 
     println!("Done!");
 }
