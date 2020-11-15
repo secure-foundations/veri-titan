@@ -58,14 +58,14 @@ for i, ins in enumerate(ins_objects[addr:]):
     rs1 = str(ins.rs1)
     rs2 = str(ins.rs2)
 
-    print(f"{i} [label=\"{ins.MNEM}\"];")
+    print(f"{i} [label=\"{ins.MNEM}\\nw{ins.rd}\"];")
     if rs1 in defs:
-        print(f"{defs[rs1]} -> {i} [label=\"w{rs1}\"];")
+        print(f"{defs[rs1]} -> {i};")
     else:
         print(f"w{rs1} -> {i};")
 
     if rs2 in defs:
-        print(f"{defs[rs2]} -> {i} [label=\"w{rs2}\"];")
+        print(f"{defs[rs2]} -> {i};")
     else:
         print(f"w{rs2} -> {i};")
 
