@@ -1,3 +1,4 @@
+use std::fmt;
 use std::collections::HashMap;
 use egg::{*, rewrite as rw};
 
@@ -12,12 +13,23 @@ enum BVexpr {
 }
 
 impl fmt::Display for BVexpr {
-    fn fmt(&self, f: &mut, fmt::Formatter) -> fmt::Result {
-        match *self {
-            BVexpr::Const(c) => write!(f, c),
-            BVexpr::Var(v) => write!(f, v),
-            BVexpr::UniExpr(op, boxed_src) => write!(f, "~" + fmt(boxed_src, f, fmt)),
-            BVexpr::BinExpr(op, boxed_src0, boxed_src1) => write!(f, "bin"),
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &*self {
+            BVexpr::Const(c) => write!(f, "{}", c),
+            BVexpr::Var(v) => write!(f, "{}", v),
+            BVexpr::UniExpr(op, boxed_src) => write!(f, "~{}", boxed_src),
+            BVexpr::BinExpr(op, boxed_src0, boxed_src1) => {
+                let op_str = 
+                    match op {
+                        BVBinOp::And => "&",
+                        BVBinOp::Or  => "|",
+                        BVBinOp::Xor => "^",
+                        BVBinOp::Add => "+",
+                        BVBinOp::Sub => "-",
+                    };
+                write!(f, "{} {} {}", boxed_src0, op_str, boxed_src1)
+            }
+        }
     }
 }
 
@@ -52,7 +64,7 @@ fn simpBV(e:BVexpr) -> BVexpr {
             let s0 = Box::new(simpBV(*boxed_src0));
             let s1 = Box::new(simpBV(*boxed_src1));
             match op {
-                BVBinOp::Sub => BVexpr::BinExpr(BVBinOp::Add, s0, Box::new(BVexpr::UniExpr(BVUniOp::Neg, s1))),
+                BVBinOp::Sub => BVexpr::BinExpr(BVBinOp::Add, s0, Box::new(BVexpr::BinExpr(BVBinOp::Add, Box::new(BVexpr::UniExpr(BVUniOp::Neg, s1)), Box::new(BVexpr::Const(1))))),
                 _ => BVexpr::BinExpr(op, s0, s1)
             }
             }
@@ -69,6 +81,7 @@ fn simple_example() {
     let f = identity();
     println!("{}", f);
     let f = simpBV(f);
+    println!("{}", f);
 }
 
 fn egg_test() {
