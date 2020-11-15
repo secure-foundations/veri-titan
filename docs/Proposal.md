@@ -2,18 +2,19 @@
 ----
 
 ## Inputs
-* One OTBN implementation of some algorithm
-* One Dafny implementation of the same algorithm
+* OTBN implementation of some algorithm
+* Dafny implementation of the same algorithm
 * Correctness proof for Dafny version
 * Correlation between the inputs of the two
-
-## Output
-* Correctness proof for OTBN code (presumably in Vale)
 
 ## Assumptions
 * The two implementations cannot diverge significantly (*further clarification needed). 
 * The Dafny program is written in a restricted set of Dafny. For now we are considering "large bitvector" (LBV) model, where we operate and reason about large width bit vectors that don't typically fit in single machine register or memory cell.
 * The control flow is simple. For now we start experimenting with straight-line code.
+
+## Output 
+* Correctness proof for OTBN code (presumably in Vale)
+* Alternatively, an equivalence proof of OTBN and LBV
 
 ## Workflow (Proposal):
 

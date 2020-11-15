@@ -279,10 +279,6 @@ class Machine(object):
 
     def get_reg(self, ridx):
         """Get register value for register index"""
-        if isinstance(ridx, tuple):
-            (ridx, _) = ridx
-            self.__check_reg_idx(ridx)
-            return self.r[ridx]
         if isinstance(ridx, str):
             if ridx == 'mod':
                 return self.mod
@@ -296,6 +292,10 @@ class Machine(object):
                 return self.rnd
             else:
                 raise Exception('Invalid special register')
+        else:
+            ridx = ridx.original
+            self.__check_reg_idx(ridx)
+            return self.r[ridx]
 
     def print_reg(self, ridx):
         return "w" + str(ridx) + ":" + hex(self.get_reg(ridx))
@@ -306,17 +306,7 @@ class Machine(object):
     def set_reg(self, ridx, value, valid_limb=None, valid_half_limb=None):
         """Set register value at register index"""
         self.__check_reg_val(value)
-        if isinstance(ridx, tuple):
-            (ridx, _) = ridx
-            if valid_limb:
-                self.r_valid_half_limbs[ridx][valid_limb*2] = True
-                self.r_valid_half_limbs[ridx][valid_limb*2+1] = True
-            elif valid_half_limb:
-                self.r_valid_half_limbs[ridx][valid_half_limb] = True
-            else:
-                self.r_valid_half_limbs[ridx] = [True]*self.LIMBS*2
-            self.__check_reg_idx(ridx)
-            self.r[ridx] = value
+
         if isinstance(ridx, str):
             if ridx == 'mod':
                 self.mod = value
@@ -330,6 +320,18 @@ class Machine(object):
                 self.rnd = value
             else:
                 raise Exception('Invalid special register')
+        else:
+            ridx = ridx.original
+            if valid_limb:
+                self.r_valid_half_limbs[ridx][valid_limb*2] = True
+                self.r_valid_half_limbs[ridx][valid_limb*2+1] = True
+            elif valid_half_limb:
+                self.r_valid_half_limbs[ridx][valid_half_limb] = True
+            else:
+                self.r_valid_half_limbs[ridx] = [True]*self.LIMBS*2
+            self.__check_reg_idx(ridx)
+            self.r[ridx] = value
+
 
     def get_reg_limb(self, ridx, lidx):
         """Get a single limb from a register"""

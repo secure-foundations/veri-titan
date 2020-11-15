@@ -1,18 +1,21 @@
 barrett384:
-  /* Compute 2^129-1 mask. Could be pre-calculated for the cost of a register.
-     Currently w30 is clobbered later in this subroutine. */
-  bn.subi w30, w31, 1
-  bn.rshi w30, w30, w31 >> 127
-
-  /* Compute r1 = x % 2^385
-     r1 = [w22, w21] = x % 2^385 = x & (2^3851)
-        = ([w9, w8] * [w13,w12]) & [w30, w31]
-     => max length r1: 385 bits */
-  bn.mov w21, w16
-  bn.and w22, w17, w30
-
-  /* Compute q1 = x >> 383
-     q1 = [w9, w8] = [w18, w17, w16] >> 383  = [w18, w17] >> 127
-     => max length q1: 385 bits */
-  bn.rshi w9, w18, w31 >> 127
-  bn.rshi w8, w17, w18 >> 127
+  /* q2'' = q2' >> 384 = [w20, w19] = [w18, w17, w16] >> 384
+                                    = [w18, w17] >> 128 */
+  bn.rshi w20, w18, w31 >> 128
+  bn.rshi w19, w17, w18 >> 128
+  /* Add q1. This is unconditional since MSb of u is always 1.
+     This cannot overflow due to leading zeros.
+     q2''' = q2'' + q1 = [w20, w19] = [w20, w19] + [w8, w9] */
+  bn.add w19, w19, w8
+  bn.addc w20, w20, w9
+  /* Conditionally add u (without leading 1) in case of MSb of x being set.
+     This is the "real" q2 but shifted by 384 bits to the right. This cannot
+     overflow due to leading zeros
+     q2'''' = x[767]?q2'''+u[383:0]:q2'''
+            = [w20, w19] + [w25, w24] = q2 >> 384 */
+  bn.add w19, w19, w24
+  bn.addc w20, w20, w25
+  /* finally this gives q3 by shifting the remain bit to the right
+     q3 = q2 >> 385 = q2'''' >> 1 = [w9, w8] = [w20, w19] >> 1 */
+  bn.rshi w9, w20, w31 >> 1
+  bn.rshi w8, w19, w20 >> 1
