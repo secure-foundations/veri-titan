@@ -84,8 +84,10 @@ fn get_bit_exprs(e:BVexpr) -> (Boolexpr, Option<HashMap<Boolexpr,Boolexpr>>) {
                     Some(m0) => match map1 {
                                     None => None,
                                     Some(m1) => {
-                                        m0.extend(m1.into_iter()); 
-                                        Some(m0)
+                                        let mut fresh_map = HashMap::new();
+                                        fresh_map.extend(m0.into_iter());
+                                        fresh_map.extend(m1.into_iter()); 
+                                        Some(fresh_map)
                                     }
                                 }
                 };
@@ -143,9 +145,17 @@ fn identity() -> BVexpr {
 
 fn simple_example() {
     let f = identity();
-    println!("{}", f);
+    println!("Original BV expr: {}", f);
     let f = simpBV(f);
-    println!("{}", f);
+    println!("Simplified BV expr: {}", f);
+
+    let (f_expr, carries) = get_bit_exprs(f);
+    println!("Main bool expr: {}", f_expr);
+    if let Some(m) = carries {
+        for (carry, carry_expr) in m.into_iter() {
+            println!("{} = {}", carry, carry_expr);
+        }
+    }
 }
 
 fn egg_test() {
