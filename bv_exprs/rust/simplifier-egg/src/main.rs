@@ -1,3 +1,5 @@
+#![allow ()]
+
 use std::fmt;
 use std::collections::HashMap;
 use egg::{*, rewrite as rw};
@@ -14,18 +16,20 @@ enum BVexpr {
 
 impl fmt::Display for BVexpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use BVexpr::*;
         match &*self {
-            BVexpr::Const(c) => write!(f, "{}", c),
-            BVexpr::Var(v) => write!(f, "{}", v),
-            BVexpr::UniExpr(_op, boxed_src) => write!(f, "~{}", boxed_src),
-            BVexpr::BinExpr(op, boxed_src0, boxed_src1) => {
+            Const(c) => write!(f, "{}", c),
+            Var(v) => write!(f, "{}", v),
+            UniExpr(_op, boxed_src) => write!(f, "~{}", boxed_src),
+            BinExpr(op, boxed_src0, boxed_src1) => {
+                use BVBinOp::*;
                 let op_str = 
                     match op {
-                        BVBinOp::And => "&",
-                        BVBinOp::Or  => "|",
-                        BVBinOp::Xor => "^",
-                        BVBinOp::Add => "+",
-                        BVBinOp::Sub => "-",
+                        And => "&",
+                        Or  => "|",
+                        Xor => "^",
+                        Add => "+",
+                        Sub => "-",
                     };
                 write!(f, "({} {} {})", boxed_src0, op_str, boxed_src1)
             }
@@ -33,13 +37,13 @@ impl fmt::Display for BVexpr {
     }
 }
 
-#[derive(PartialEq, Eq, Hash, Debug)]
+#[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
 enum BoolBinOp { And, Or, Xor }
 
-#[derive(PartialEq, Eq, Hash, Debug)]
+#[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
 enum BoolUniOp { Not }
 
-#[derive(PartialEq, Eq, Hash, Debug)]
+#[derive(PartialEq, Eq, Hash, Debug, Clone)]
 enum Boolexpr {
     Const   ( i64 ),
     Var     ( String ),
@@ -100,9 +104,9 @@ fn get_bit_exprs(e:BVexpr) -> (Boolexpr, Option<HashMap<Boolexpr,Boolexpr>>) {
                 BVBinOp::Add => {
                     let carry_var  = Box::new(Boolexpr::Var("carry".to_string()));      // TODO: Pick a unique name
                     let carry_expr = Boolexpr::BinExpr(BoolBinOp::Or, 
-                                                       Box::new(Boolexpr::BinExpr(BoolBinOp::And, src0, src1)),
-                                                       Box::new(Boolexpr::BinExpr(BoolBinOp::And, carry_var,
-                                                                                                  Box::new(Boolexpr::BinExpr(BoolBinOp::Or, src0, src1)))));
+                                                       Box::new(Boolexpr::BinExpr(BoolBinOp::And, src0.clone(), src1.clone())),
+                                                       Box::new(Boolexpr::BinExpr(BoolBinOp::And, carry_var.clone(),
+                                                                                                  Box::new(Boolexpr::BinExpr(BoolBinOp::Or, src0.clone(), src1.clone())))));
                     let maps = if let Some(m) = maps {
                         m.insert(*carry_var, carry_expr);
                         Some(m)
