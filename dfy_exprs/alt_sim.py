@@ -1,4 +1,5 @@
 import sys
+import os
 from ot_dsim.bignum_lib.instructions import *
 from ot_dsim.bignum_lib.sim_helpers import ins_objects_from_asm_file
 
@@ -48,7 +49,7 @@ for ins in ins_objects[addr:]:
     ins.convert(c)
     print(ins.get_asm_str()[1])
 
-print("digraph G {")
+dot_content = "digraph G {\n"
 
 for i, ins in enumerate(ins_objects[addr:]):
     rd = str(ins.rd)
@@ -58,19 +59,21 @@ for i, ins in enumerate(ins_objects[addr:]):
     rs1 = str(ins.rs1)
     rs2 = str(ins.rs2)
 
-    print(f"{i} [label=\"{ins.MNEM}\\nw{ins.rd}\"];")
+    dot_content += f"{i} [label=\"{ins.MNEM}\\nw{ins.rd}\"];\n"
     if rs1 in defs:
-        print(f"{defs[rs1]} -> {i};")
+        dot_content += f"{defs[rs1]} -> {i};\n"
     else:
-        print(f"w{rs1} -> {i};")
+        dot_content += f"w{rs1} -> {i};\n"
 
     if rs2 in defs:
-        print(f"{defs[rs2]} -> {i};")
+        dot_content += f"{defs[rs2]} -> {i};\n"
     else:
-        print(f"w{rs2} -> {i};")
+        dot_content += f"w{rs2} -> {i};\n"
+dot_content += "}"
 
-print("}")
-
+f = open("asm/test.dot", "w")
+f.write(dot_content)
+os.system("dot -Tpng asm/test.dot -o asm/d3.png")
 machine = Machine([], ins_objects, addr, None, ins_ctx)
 
 # cont = True
