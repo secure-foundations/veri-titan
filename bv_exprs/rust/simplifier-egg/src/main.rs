@@ -115,11 +115,11 @@ impl std::fmt::Display for BoolExpr_ {
 }
 
 impl BVExpr_ {
-    fn get_bit_exprs(&self) -> (BoolExpr, Option<HashMap<BoolExpr, BoolExpr>>) {
+    fn get_bit_exprs(&self) -> (BoolExpr, HashMap<BoolExpr, BoolExpr>) {
         use BVExpr_::*;
         match self {
-            Const(c) => (BoolExpr_::Const(*c).into(), None),
-            Var(v) => (BoolExpr_::Var(v.clone()).into(), None),
+            Const(c) => (BoolExpr_::Const(*c).into(), Default::default()),
+            Var(v) => (BoolExpr_::Var(v.clone()).into(), Default::default()),
             UniExpr(op, src) => {
                 let BVUniOp::Neg = *op; // will be optimized away
                                         // (since it is an irrefutable
@@ -138,16 +138,7 @@ impl BVExpr_ {
             BinExpr(op, src0, src1) => {
                 let (src0, map0) = src0.get_bit_exprs();
                 let (src1, map1) = src1.get_bit_exprs();
-                let maps = match map0 {
-                    None => map1,
-                    Some(m0) => match map1 {
-                        // JB: I left this `None` as is, but is this
-                        // _really_ what you mean, or is this a bug
-                        // and you meant to return `m0` here?
-                        None => None,
-                        Some(m1) => Some(m0.into_iter().chain(m1.into_iter()).collect()),
-                    },
-                };
+                let maps = map0.into_iter().chain(map1.into_iter()).collect();
                 match op {
                     BVBinOp::And => (BoolExpr_::BinExpr(BoolBinOp::And, src0, src1).into(), maps),
                     BVBinOp::Or => (BoolExpr_::BinExpr(BoolBinOp::Or, src0, src1).into(), maps),
@@ -166,10 +157,17 @@ impl BVExpr_ {
                             .into(),
                         )
                         .into();
-                        let maps = maps.and_then(|mut m| {
-                            m.insert(carry_var.clone(), carry_expr);
-                            Some(m)
-                        });
+                        let mut maps = maps;
+                        // This `let mut maps = maps;` lets us
+                        // restrict the scope of mutability to just
+                        // this `Add` branch (in comparison to the
+                        // alternative of making the whole BinExpr
+                        // branch have a mutable `maps`. We can
+                        // actually restrict it even further by going
+                        // into a temporary scope solely for the sake
+                        // of the `insert` but that seems like
+                        // overkill.
+                        maps.insert(carry_var.clone(), carry_expr);
                         let add_expr = BoolExpr_::BinExpr(
                             BoolBinOp::Xor,
                             src0,
@@ -229,10 +227,8 @@ fn simple_example() {
 
     let (f_expr, carries) = f.get_bit_exprs();
     println!("Main bool expr: {}", f_expr);
-    if let Some(m) = carries {
-        for (carry, carry_expr) in m.iter() {
-            println!("{} = {}", carry, carry_expr);
-        }
+    for (carry, carry_expr) in carries.iter() {
+        println!("{} = {}", carry, carry_expr);
     }
 }
 
