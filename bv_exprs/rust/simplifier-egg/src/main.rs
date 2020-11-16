@@ -17,7 +17,7 @@ impl fmt::Display for BVexpr {
         match &*self {
             BVexpr::Const(c) => write!(f, "{}", c),
             BVexpr::Var(v) => write!(f, "{}", v),
-            BVexpr::UniExpr(op, boxed_src) => write!(f, "~{}", boxed_src),
+            BVexpr::UniExpr(_op, boxed_src) => write!(f, "~{}", boxed_src),
             BVexpr::BinExpr(op, boxed_src0, boxed_src1) => {
                 let op_str = 
                     match op {
@@ -27,7 +27,7 @@ impl fmt::Display for BVexpr {
                         BVBinOp::Add => "+",
                         BVBinOp::Sub => "-",
                     };
-                write!(f, "{} {} {}", boxed_src0, op_str, boxed_src1)
+                write!(f, "({} {} {})", boxed_src0, op_str, boxed_src1)
             }
         }
     }
@@ -44,6 +44,24 @@ enum Boolexpr {
 }
 
 
+impl fmt::Display for Boolexpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &*self {
+            Boolexpr::Const(c) => write!(f, "{}", c),
+            Boolexpr::Var(v) => write!(f, "{}", v),
+            Boolexpr::UniExpr(_op, boxed_src) => write!(f, "~{}", boxed_src),
+            Boolexpr::BinExpr(op, boxed_src0, boxed_src1) => {
+                let op_str = 
+                    match op {
+                        BoolBinOp::And => "&",
+                        BoolBinOp::Or  => "|",
+                        BoolBinOp::Xor => "^",
+                    };
+                write!(f, "{} {} {}", boxed_src0, op_str, boxed_src1)
+            }
+        }
+    }
+}
 //fn get_bit_exprs(e:BVexpr) -> HashMap<Boolexpr,Boolexpr> {
 //    match e {
 //        Const(c) => 
