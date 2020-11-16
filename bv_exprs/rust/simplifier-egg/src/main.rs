@@ -33,9 +33,13 @@ impl fmt::Display for BVexpr {
     }
 }
 
+#[derive(PartialEq, Eq, Hash, Debug)]
 enum BoolBinOp { And, Or, Xor }
+
+#[derive(PartialEq, Eq, Hash, Debug)]
 enum BoolUniOp { Not }
 
+#[derive(PartialEq, Eq, Hash, Debug)]
 enum Boolexpr {
     Const   ( i64 ),
     Var     ( String ),
@@ -67,7 +71,7 @@ fn get_bit_exprs(e:BVexpr) -> (Boolexpr, Option<HashMap<Boolexpr,Boolexpr>>) {
     match e {
         BVexpr::Const(c) => (Boolexpr::Const(c), None),
         BVexpr::Var(v) => (Boolexpr::Var(v), None),
-        BVexpr::UniExpr(op, boxed_src) => {
+        BVexpr::UniExpr(_op, boxed_src) => {
             let (src, map) = get_bit_exprs(*boxed_src);
             (Boolexpr::UniExpr(BoolUniOp::Not, Box::new(src)), map)
         },
@@ -79,7 +83,10 @@ fn get_bit_exprs(e:BVexpr) -> (Boolexpr, Option<HashMap<Boolexpr,Boolexpr>>) {
                     None => map1,
                     Some(m0) => match map1 {
                                     None => None,
-                                    Some(m1) => m0.extend(m1.into_iter())
+                                    Some(m1) => {
+                                        m0.extend(m1.into_iter()); 
+                                        Some(m0)
+                                    }
                                 }
                 };
             let src0 = Box::new(src0);
@@ -94,7 +101,10 @@ fn get_bit_exprs(e:BVexpr) -> (Boolexpr, Option<HashMap<Boolexpr,Boolexpr>>) {
                                                        Box::new(Boolexpr::BinExpr(BoolBinOp::And, src0, src1)),
                                                        Box::new(Boolexpr::BinExpr(BoolBinOp::And, carry_var,
                                                                                                   Box::new(Boolexpr::BinExpr(BoolBinOp::Or, src0, src1)))));
-                    maps.insert(carry_var, carry_expr);
+                    let maps = if let Some(m) = maps {
+                        m.insert(*carry_var, carry_expr);
+                        Some(m)
+                    } else { None };
                     let add_expr = Boolexpr::BinExpr(BoolBinOp::Xor, 
                                                      src0, 
                                                      Box::new(Boolexpr::BinExpr(BoolBinOp::Xor, src1, carry_var)));
