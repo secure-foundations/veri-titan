@@ -76,23 +76,39 @@ impl fmt::Display for Boolexpr {
                     BoolBinOp::Or => "|",
                     BoolBinOp::Xor => "^",
                 };
-                write!(f, "{} {} {}", boxed_src0, op_str, boxed_src1)
+                write!(f, "({} {} {})", boxed_src0, op_str, boxed_src1)
             }
         }
     }
 }
 
-fn get_bit_exprs(e: BVexpr) -> (Boolexpr, Option<HashMap<Boolexpr, Boolexpr>>) {
+struct Namer {
+    ctr:u32,
+}
+
+impl Namer {
+    pub fn new() -> Namer {
+        Namer { ctr : 0 }
+    }
+
+    fn get_name(& mut self, s:&str) -> String {
+        self.ctr = self.ctr + 1;
+        format!("{}_{}", s, self.ctr)
+    }
+}
+
+
+fn get_bit_exprs(e: BVexpr, n:& mut Namer) -> (Boolexpr, Option<HashMap<Boolexpr, Boolexpr>>) {
     match e {
         BVexpr::Const(c) => (Boolexpr::Const(c), None),
         BVexpr::Var(v) => (Boolexpr::Var(v), None),
         BVexpr::UniExpr(_op, boxed_src) => {
-            let (src, map) = get_bit_exprs(*boxed_src);
+            let (src, map) = get_bit_exprs(*boxed_src, n);
             (Boolexpr::UniExpr(BoolUniOp::Not, Box::new(src)), map)
         }
         BVexpr::BinExpr(op, boxed_src0, boxed_src1) => {
-            let (src0, map0) = get_bit_exprs(*boxed_src0);
-            let (src1, map1) = get_bit_exprs(*boxed_src1);
+            let (src0, map0) = get_bit_exprs(*boxed_src0, n);
+            let (src1, map1) = get_bit_exprs(*boxed_src1, n);
             let maps = match map0 {
                 None => map1,
                 Some(m0) => match map1 {
@@ -112,7 +128,7 @@ fn get_bit_exprs(e: BVexpr) -> (Boolexpr, Option<HashMap<Boolexpr, Boolexpr>>) {
                 BVBinOp::Or => (Boolexpr::BinExpr(BoolBinOp::Or, src0, src1), maps),
                 BVBinOp::Xor => (Boolexpr::BinExpr(BoolBinOp::Xor, src0, src1), maps),
                 BVBinOp::Add => {
-                    let carry_var = Box::new(Boolexpr::Var("carry".to_string())); // TODO: Pick a unique name
+                    let carry_var = Box::new(Boolexpr::Var(n.get_name("carry"))); // TODO: Pick a unique name
                     let carry_expr = Boolexpr::BinExpr(
                         BoolBinOp::Or,
                         Box::new(Boolexpr::BinExpr(
@@ -145,14 +161,14 @@ fn get_bit_exprs(e: BVexpr) -> (Boolexpr, Option<HashMap<Boolexpr, Boolexpr>>) {
     }
 }
 
-fn simpBV(e: BVexpr) -> BVexpr {
+fn simp_bv(e: BVexpr) -> BVexpr {
     match e {
         BVexpr::Const(_) => e,
         BVexpr::Var(_) => e,
-        BVexpr::UniExpr(op, boxed_src) => BVexpr::UniExpr(op, Box::new(simpBV(*boxed_src))),
+        BVexpr::UniExpr(op, boxed_src) => BVexpr::UniExpr(op, Box::new(simp_bv(*boxed_src))),
         BVexpr::BinExpr(op, boxed_src0, boxed_src1) => {
-            let s0 = Box::new(simpBV(*boxed_src0));
-            let s1 = Box::new(simpBV(*boxed_src1));
+            let s0 = Box::new(simp_bv(*boxed_src0));
+            let s1 = Box::new(simp_bv(*boxed_src1));
             match op {
                 BVBinOp::Sub => BVexpr::BinExpr(
                     BVBinOp::Add,
@@ -178,10 +194,11 @@ fn identity() -> BVexpr {
 fn simple_example() {
     let f = identity();
     println!("Original BV expr: {}", f);
-    let f = simpBV(f);
+    let f = simp_bv(f);
     println!("Simplified BV expr: {}", f);
 
-    let (f_expr, carries) = get_bit_exprs(f);
+    let mut namer = Namer::new();
+    let (f_expr, carries) = get_bit_exprs(f, &mut namer);
     println!("Main bool expr: {}", f_expr);
     if let Some(m) = carries {
         for (carry, carry_expr) in m.into_iter() {
