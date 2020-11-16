@@ -58,7 +58,7 @@ enum BoolUniOp {
 
 #[derive(PartialEq, Eq, Hash, Debug, Clone)]
 enum Boolexpr {
-    Const(i64),
+    Const(bool),
     Var(String),
     UniExpr(BoolUniOp, Box<Boolexpr>),
     BinExpr(BoolBinOp, Box<Boolexpr>, Box<Boolexpr>),
@@ -100,7 +100,7 @@ impl Namer {
 
 fn get_bit_exprs(e: BVexpr, n:& mut Namer) -> (Boolexpr, Option<HashMap<Boolexpr, Boolexpr>>) {
     match e {
-        BVexpr::Const(c) => (Boolexpr::Const(c), None),
+        BVexpr::Const(_c) => (Boolexpr::Const(false), None),
         BVexpr::Var(v) => (Boolexpr::Var(v), None),
         BVexpr::UniExpr(_op, boxed_src) => {
             let (src, map) = get_bit_exprs(*boxed_src, n);
