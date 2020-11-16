@@ -1,17 +1,25 @@
-#![allow ()]
+#![allow()]
 
-use std::fmt;
+use egg::{rewrite as rw, *};
 use std::collections::HashMap;
-use egg::{*, rewrite as rw};
+use std::fmt;
 
-enum BVBinOp { And, Or, Xor, Add, Sub }
-enum BVUniOp { Neg }
+enum BVBinOp {
+    And,
+    Or,
+    Xor,
+    Add,
+    Sub,
+}
+enum BVUniOp {
+    Neg,
+}
 
 enum BVexpr {
-    Const   ( i64 ),
-    Var     ( String ),
-    UniExpr ( BVUniOp, Box<BVexpr> ),
-    BinExpr ( BVBinOp, Box<BVexpr>, Box<BVexpr> ),
+    Const(i64),
+    Var(String),
+    UniExpr(BVUniOp, Box<BVexpr>),
+    BinExpr(BVBinOp, Box<BVexpr>, Box<BVexpr>),
 }
 
 impl fmt::Display for BVexpr {
@@ -23,14 +31,13 @@ impl fmt::Display for BVexpr {
             UniExpr(_op, boxed_src) => write!(f, "~{}", boxed_src),
             BinExpr(op, boxed_src0, boxed_src1) => {
                 use BVBinOp::*;
-                let op_str = 
-                    match op {
-                        And => "&",
-                        Or  => "|",
-                        Xor => "^",
-                        Add => "+",
-                        Sub => "-",
-                    };
+                let op_str = match op {
+                    And => "&",
+                    Or => "|",
+                    Xor => "^",
+                    Add => "+",
+                    Sub => "-",
+                };
                 write!(f, "({} {} {})", boxed_src0, op_str, boxed_src1)
             }
         }
@@ -38,19 +45,24 @@ impl fmt::Display for BVexpr {
 }
 
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
-enum BoolBinOp { And, Or, Xor }
+enum BoolBinOp {
+    And,
+    Or,
+    Xor,
+}
 
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
-enum BoolUniOp { Not }
+enum BoolUniOp {
+    Not,
+}
 
 #[derive(PartialEq, Eq, Hash, Debug, Clone)]
 enum Boolexpr {
-    Const   ( i64 ),
-    Var     ( String ),
-    UniExpr ( BoolUniOp, Box<Boolexpr> ),
-    BinExpr ( BoolBinOp, Box<Boolexpr>, Box<Boolexpr> ),
+    Const(i64),
+    Var(String),
+    UniExpr(BoolUniOp, Box<Boolexpr>),
+    BinExpr(BoolBinOp, Box<Boolexpr>, Box<Boolexpr>),
 }
-
 
 impl fmt::Display for Boolexpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -59,85 +71,101 @@ impl fmt::Display for Boolexpr {
             Boolexpr::Var(v) => write!(f, "{}", v),
             Boolexpr::UniExpr(_op, boxed_src) => write!(f, "~{}", boxed_src),
             Boolexpr::BinExpr(op, boxed_src0, boxed_src1) => {
-                let op_str = 
-                    match op {
-                        BoolBinOp::And => "&",
-                        BoolBinOp::Or  => "|",
-                        BoolBinOp::Xor => "^",
-                    };
+                let op_str = match op {
+                    BoolBinOp::And => "&",
+                    BoolBinOp::Or => "|",
+                    BoolBinOp::Xor => "^",
+                };
                 write!(f, "{} {} {}", boxed_src0, op_str, boxed_src1)
             }
         }
     }
 }
 
-fn get_bit_exprs(e:BVexpr) -> (Boolexpr, Option<HashMap<Boolexpr,Boolexpr>>) {
+fn get_bit_exprs(e: BVexpr) -> (Boolexpr, Option<HashMap<Boolexpr, Boolexpr>>) {
     match e {
         BVexpr::Const(c) => (Boolexpr::Const(c), None),
         BVexpr::Var(v) => (Boolexpr::Var(v), None),
         BVexpr::UniExpr(_op, boxed_src) => {
             let (src, map) = get_bit_exprs(*boxed_src);
             (Boolexpr::UniExpr(BoolUniOp::Not, Box::new(src)), map)
-        },
+        }
         BVexpr::BinExpr(op, boxed_src0, boxed_src1) => {
             let (src0, map0) = get_bit_exprs(*boxed_src0);
             let (src1, map1) = get_bit_exprs(*boxed_src1);
-            let maps = 
-                match map0 {
-                    None => map1,
-                    Some(m0) => match map1 {
-                                    None => None,
-                                    Some(m1) => {
-                                        let mut fresh_map = HashMap::new();
-                                        fresh_map.extend(m0.into_iter());
-                                        fresh_map.extend(m1.into_iter()); 
-                                        Some(fresh_map)
-                                    }
-                                }
-                };
+            let maps = match map0 {
+                None => map1,
+                Some(m0) => match map1 {
+                    None => None,
+                    Some(m1) => {
+                        let mut fresh_map = HashMap::new();
+                        fresh_map.extend(m0.into_iter());
+                        fresh_map.extend(m1.into_iter());
+                        Some(fresh_map)
+                    }
+                },
+            };
             let src0 = Box::new(src0);
             let src1 = Box::new(src1);
             match op {
                 BVBinOp::And => (Boolexpr::BinExpr(BoolBinOp::And, src0, src1), maps),
-                BVBinOp::Or  => (Boolexpr::BinExpr(BoolBinOp::Or,  src0, src1), maps),
+                BVBinOp::Or => (Boolexpr::BinExpr(BoolBinOp::Or, src0, src1), maps),
                 BVBinOp::Xor => (Boolexpr::BinExpr(BoolBinOp::Xor, src0, src1), maps),
                 BVBinOp::Add => {
-                    let carry_var  = Box::new(Boolexpr::Var("carry".to_string()));      // TODO: Pick a unique name
-                    let carry_expr = Boolexpr::BinExpr(BoolBinOp::Or, 
-                                                       Box::new(Boolexpr::BinExpr(BoolBinOp::And, src0.clone(), src1.clone())),
-                                                       Box::new(Boolexpr::BinExpr(BoolBinOp::And, carry_var.clone(),
-                                                                                                  Box::new(Boolexpr::BinExpr(BoolBinOp::Or, src0.clone(), src1.clone())))));
+                    let carry_var = Box::new(Boolexpr::Var("carry".to_string())); // TODO: Pick a unique name
+                    let carry_expr = Boolexpr::BinExpr(
+                        BoolBinOp::Or,
+                        Box::new(Boolexpr::BinExpr(
+                            BoolBinOp::And,
+                            src0.clone(),
+                            src1.clone(),
+                        )),
+                        Box::new(Boolexpr::BinExpr(
+                            BoolBinOp::And,
+                            carry_var.clone(),
+                            Box::new(Boolexpr::BinExpr(BoolBinOp::Or, src0.clone(), src1.clone())),
+                        )),
+                    );
                     let maps = if let Some(m) = maps {
                         m.insert(*carry_var, carry_expr);
                         Some(m)
-                    } else { None };
-                    let add_expr = Boolexpr::BinExpr(BoolBinOp::Xor, 
-                                                     src0, 
-                                                     Box::new(Boolexpr::BinExpr(BoolBinOp::Xor, src1, carry_var)));
+                    } else {
+                        None
+                    };
+                    let add_expr = Boolexpr::BinExpr(
+                        BoolBinOp::Xor,
+                        src0,
+                        Box::new(Boolexpr::BinExpr(BoolBinOp::Xor, src1, carry_var)),
+                    );
                     (add_expr, maps)
-
-                },
+                }
                 BVBinOp::Sub => panic!("This should be gone by now!"),
             }
         }
     }
 }
 
-fn simpBV(e:BVexpr) -> BVexpr {
+fn simpBV(e: BVexpr) -> BVexpr {
     match e {
         BVexpr::Const(_) => e,
         BVexpr::Var(_) => e,
-        BVexpr::UniExpr(op, boxed_src) => 
-            BVexpr::UniExpr(op, Box::new(simpBV(*boxed_src))),
-        BVexpr::BinExpr(op, boxed_src0, boxed_src1) => 
-            {
+        BVexpr::UniExpr(op, boxed_src) => BVexpr::UniExpr(op, Box::new(simpBV(*boxed_src))),
+        BVexpr::BinExpr(op, boxed_src0, boxed_src1) => {
             let s0 = Box::new(simpBV(*boxed_src0));
             let s1 = Box::new(simpBV(*boxed_src1));
             match op {
-                BVBinOp::Sub => BVexpr::BinExpr(BVBinOp::Add, s0, Box::new(BVexpr::BinExpr(BVBinOp::Add, Box::new(BVexpr::UniExpr(BVUniOp::Neg, s1)), Box::new(BVexpr::Const(1))))),
-                _ => BVexpr::BinExpr(op, s0, s1)
+                BVBinOp::Sub => BVexpr::BinExpr(
+                    BVBinOp::Add,
+                    s0,
+                    Box::new(BVexpr::BinExpr(
+                        BVBinOp::Add,
+                        Box::new(BVexpr::UniExpr(BVUniOp::Neg, s1)),
+                        Box::new(BVexpr::Const(1)),
+                    )),
+                ),
+                _ => BVexpr::BinExpr(op, s0, s1),
             }
-            }
+        }
     }
 }
 
@@ -164,44 +192,43 @@ fn simple_example() {
 
 fn egg_test() {
     let rules: &[Rewrite<SymbolLang, ()>] = &[
-//    rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
-//    rw!("commute-or";  "(| ?x ?y)" => "(| ?y ?x)"),
-    rw!("commute-xor"; "(^ ?x ?y)" => "(^ ?y ?x)"),
-//    rw!("xor";         "(^ ?x ?y)" => "(& (| ?x ?y) (| (~ x) (~ y)))"),
+        //    rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
+        //    rw!("commute-or";  "(| ?x ?y)" => "(| ?y ?x)"),
+        rw!("commute-xor"; "(^ ?x ?y)" => "(^ ?y ?x)"),
+        //    rw!("xor";         "(^ ?x ?y)" => "(& (| ?x ?y) (| (~ x) (~ y)))"),
 
-//    rw!("dist-or-and"; "(| ?x (& ?y ?z))" => "(& (| ?x ?y) (| ?x ?z))"),
-//    rw!("dist-and-or"; "(& ?x (| ?y ?z))" => "(| (& ?x ?y) (& ?x ?z))"),
-//    rw!("dist-xor-or"; "(^ ?x (| ?y ?z))" => "(| (& (~ ?x) (| ?y ?z)) (& ?x (& (~ y) (~ z))))"),
-//    rw!("dist-and-xor"; "(& ?x (^ ?y ?z))"=> "(^ (& ?x ?y) (& ?x ?z))"),
-
-    rw!("assoc-xor"; "(^ ?x (^ ?y ?z))"=> "(^ (^ ?x ?y) ?z)"),
-//
-//
-//    rw!("demorgan"; "(~ (^ ?x ?y))" => "(| (~ ?y) (~ ?x))"),
-//
-//    rw!("and-False"; "(& ?x False)" => "False"),
-//    rw!("and-True"; "(& ?x True)" => "?x"),
-//    rw!("and-self"; "(& ?x ?x)" => "?x"),
-//    rw!("and-self-neg"; "(& ?x (~ ?x))" => "False"),
-//
-//    rw!("or-False";  "(| ?x False)" => "?x"),
-//    rw!("or-True";  "(| ?x True)" => "True"),
-//    rw!("or-self";  "(| ?x ?x)" => "?x"),
-//    rw!("or-self-neg";  "(| ?x (~ ?x))" => "True"),
-
-    rw!("xor-False"; "(^ ?x False)" => "?x"),
-    rw!("xor-True"; "(^ ?x True)" => "(~ ?x)"),
-    rw!("xor-self";   "(^ ?x ?x)" => "False"),
-    rw!("xor-self-neg"; "(^ ?x (~ ?x))" => "True"),
-
-    rw!("neg-dbl"; "(~ (~ ?x))" => "?x"),
+        //    rw!("dist-or-and"; "(| ?x (& ?y ?z))" => "(& (| ?x ?y) (| ?x ?z))"),
+        //    rw!("dist-and-or"; "(& ?x (| ?y ?z))" => "(| (& ?x ?y) (& ?x ?z))"),
+        //    rw!("dist-xor-or"; "(^ ?x (| ?y ?z))" => "(| (& (~ ?x) (| ?y ?z)) (& ?x (& (~ y) (~ z))))"),
+        //    rw!("dist-and-xor"; "(& ?x (^ ?y ?z))"=> "(^ (& ?x ?y) (& ?x ?z))"),
+        rw!("assoc-xor"; "(^ ?x (^ ?y ?z))"=> "(^ (^ ?x ?y) ?z)"),
+        //
+        //
+        //    rw!("demorgan"; "(~ (^ ?x ?y))" => "(| (~ ?y) (~ ?x))"),
+        //
+        //    rw!("and-False"; "(& ?x False)" => "False"),
+        //    rw!("and-True"; "(& ?x True)" => "?x"),
+        //    rw!("and-self"; "(& ?x ?x)" => "?x"),
+        //    rw!("and-self-neg"; "(& ?x (~ ?x))" => "False"),
+        //
+        //    rw!("or-False";  "(| ?x False)" => "?x"),
+        //    rw!("or-True";  "(| ?x True)" => "True"),
+        //    rw!("or-self";  "(| ?x ?x)" => "?x"),
+        //    rw!("or-self-neg";  "(| ?x (~ ?x))" => "True"),
+        rw!("xor-False"; "(^ ?x False)" => "?x"),
+        rw!("xor-True"; "(^ ?x True)" => "(~ ?x)"),
+        rw!("xor-self";   "(^ ?x ?x)" => "False"),
+        rw!("xor-self-neg"; "(^ ?x (~ ?x))" => "True"),
+        rw!("neg-dbl"; "(~ (~ ?x))" => "?x"),
     ];
 
     // While it may look like we are working with numbers,
     // SymbolLang stores everything as strings.
     // We can make our own Language later to work with other types.
     //let start = "(| True (& True True))".parse().unwrap();
-    let start = "(^ x (^ (^ (~ x) (^ False carry_3)) carry_5))".parse().unwrap();
+    let start = "(^ x (^ (^ (~ x) (^ False carry_3)) carry_5))"
+        .parse()
+        .unwrap();
 
     // That's it! We can run equality saturation now.
     let runner = Runner::default().with_expr(&start).run(rules);
@@ -216,14 +243,12 @@ fn egg_test() {
     let (best_cost, best_expr) = extractor.find_best(runner.roots[0]);
 
     // we found the best thing, which is just "a" in this case
-//    assert_eq!(best_expr, "a".parse().unwrap());
-//    assert_eq!(best_cost, 1);
+    //    assert_eq!(best_expr, "a".parse().unwrap());
+    //    assert_eq!(best_cost, 1);
     println!("Starting from: {}", start);
     println!("Best expr: {}", best_expr);
     println!("Cost: {}", best_cost);
-
 }
-
 
 fn main() {
     println!("Hello, world!");
