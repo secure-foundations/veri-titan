@@ -1,4 +1,4 @@
-#![allow()]
+#![allow(dead_code)]
 
 use egg::{rewrite as rw, *};
 use std::collections::HashMap;
@@ -126,8 +126,8 @@ fn get_bit_exprs(e: BVexpr) -> (Boolexpr, Option<HashMap<Boolexpr, Boolexpr>>) {
                             Box::new(Boolexpr::BinExpr(BoolBinOp::Or, src0.clone(), src1.clone())),
                         )),
                     );
-                    let maps = if let Some(m) = maps {
-                        m.insert(*carry_var, carry_expr);
+                    let maps = if let Some(mut m) = maps {
+                        m.insert(*carry_var.clone(), carry_expr);
                         Some(m)
                     } else {
                         None
