@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use egg::{rewrite as rw, *};
+use egg::{*, rewrite as rw};
 use std::collections::HashMap;
 use std::fmt;
 
@@ -25,12 +25,15 @@ enum BVexpr {
 impl fmt::Display for BVexpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use BVexpr::*;
+        use BVBinOp::*;
         match &*self {
             Const(c) => write!(f, "{}", c),
             Var(v) => write!(f, "{}", v),
-            UniExpr(_op, boxed_src) => write!(f, "~{}", boxed_src),
+            UniExpr(op, boxed_src) => { 
+                let BVUniOp::Neg = *op;
+                write!(f, "~{}", boxed_src)
+            },
             BinExpr(op, boxed_src0, boxed_src1) => {
-                use BVBinOp::*;
                 let op_str = match op {
                     And => "&",
                     Or => "|",
@@ -64,21 +67,37 @@ enum Boolexpr {
     BinExpr(BoolBinOp, Box<Boolexpr>, Box<Boolexpr>),
 }
 
-impl fmt::Display for Boolexpr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Boolexpr {
+    fn fmt(&self, f: &mut fmt::Formatter, inline:bool) -> fmt::Result {
+        use Boolexpr::*;
         match &*self {
-            Boolexpr::Const(c) => write!(f, "{}", c),
-            Boolexpr::Var(v) => write!(f, "{}", v),
-            Boolexpr::UniExpr(_op, boxed_src) => write!(f, "~{}", boxed_src),
-            Boolexpr::BinExpr(op, boxed_src0, boxed_src1) => {
+            Const(c) => write!(f, "{}", c),
+            Var(v) => write!(f, "{}", v),
+            UniExpr(op, boxed_src) => {
+                let BoolUniOp::Not = *op;
+                write!(f, "~{}", boxed_src)
+            },
+            BinExpr(op, boxed_src0, boxed_src1) => {
+                use BoolBinOp::*;
                 let op_str = match op {
-                    BoolBinOp::And => "&",
-                    BoolBinOp::Or => "|",
-                    BoolBinOp::Xor => "^",
+                    And => "&",
+                    Or => "|",
+                    Xor => "^",
                 };
-                write!(f, "({} {} {})", boxed_src0, op_str, boxed_src1)
+                if inline {
+                    write!(f, "({} {} {})", op_str, boxed_src0, boxed_src1)
+                } else {
+                    write!(f, "({} {} {})", boxed_src0, op_str, boxed_src1)
+                }
             }
         }
+    }
+
+}
+
+impl fmt::Display for Boolexpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.fmt(f, false)
     }
 }
 
@@ -99,12 +118,14 @@ impl Namer {
 
 
 fn get_bit_exprs(e: BVexpr, n:& mut Namer) -> (Boolexpr, Option<HashMap<Boolexpr, Boolexpr>>) {
+    use Boolexpr::*;
+    use BoolBinOp::*;
     match e {
-        BVexpr::Const(_c) => (Boolexpr::Const(false), None),
-        BVexpr::Var(v) => (Boolexpr::Var(v), None),
+        BVexpr::Const(_c) => (Const(false), None),
+        BVexpr::Var(v) => (Var(v), None),
         BVexpr::UniExpr(_op, boxed_src) => {
             let (src, map) = get_bit_exprs(*boxed_src, n);
-            (Boolexpr::UniExpr(BoolUniOp::Not, Box::new(src)), map)
+            (UniExpr(BoolUniOp::Not, Box::new(src)), map)
         }
         BVexpr::BinExpr(op, boxed_src0, boxed_src1) => {
             let (src0, map0) = get_bit_exprs(*boxed_src0, n);
@@ -124,22 +145,22 @@ fn get_bit_exprs(e: BVexpr, n:& mut Namer) -> (Boolexpr, Option<HashMap<Boolexpr
             let src0 = Box::new(src0);
             let src1 = Box::new(src1);
             match op {
-                BVBinOp::And => (Boolexpr::BinExpr(BoolBinOp::And, src0, src1), maps),
-                BVBinOp::Or => (Boolexpr::BinExpr(BoolBinOp::Or, src0, src1), maps),
-                BVBinOp::Xor => (Boolexpr::BinExpr(BoolBinOp::Xor, src0, src1), maps),
+                BVBinOp::And => (BinExpr(And, src0, src1), maps),
+                BVBinOp::Or => (BinExpr(Or, src0, src1), maps),
+                BVBinOp::Xor => (BinExpr(Xor, src0, src1), maps),
                 BVBinOp::Add => {
-                    let carry_var = Box::new(Boolexpr::Var(n.get_name("carry"))); // TODO: Pick a unique name
-                    let carry_expr = Boolexpr::BinExpr(
-                        BoolBinOp::Or,
-                        Box::new(Boolexpr::BinExpr(
-                            BoolBinOp::And,
+                    let carry_var = Box::new(Var(n.get_name("carry"))); // TODO: Pick a unique name
+                    let carry_expr = BinExpr(
+                        Or,
+                        Box::new(BinExpr(
+                            And,
                             src0.clone(),
                             src1.clone(),
                         )),
-                        Box::new(Boolexpr::BinExpr(
-                            BoolBinOp::And,
+                        Box::new(BinExpr(
+                            And,
                             carry_var.clone(),
-                            Box::new(Boolexpr::BinExpr(BoolBinOp::Or, src0.clone(), src1.clone())),
+                            Box::new(BinExpr(Or, src0.clone(), src1.clone())),
                         )),
                     );
                     let maps = if let Some(mut m) = maps {
@@ -150,10 +171,10 @@ fn get_bit_exprs(e: BVexpr, n:& mut Namer) -> (Boolexpr, Option<HashMap<Boolexpr
                         fresh_map.insert(*carry_var.clone(), carry_expr);
                         Some(fresh_map)
                     };
-                    let add_expr = Boolexpr::BinExpr(
-                        BoolBinOp::Xor,
+                    let add_expr = BinExpr(
+                        Xor,
                         src0,
-                        Box::new(Boolexpr::BinExpr(BoolBinOp::Xor, src1, carry_var)),
+                        Box::new(BinExpr(Xor, src1, carry_var)),
                     );
                     (add_expr, maps)
                 }
@@ -188,9 +209,11 @@ fn simp_bv(e: BVexpr) -> BVexpr {
 }
 
 fn identity() -> BVexpr {
-    let x1 = Box::new(BVexpr::Var("x".to_owned()));
-    let x2 = Box::new(BVexpr::Var("x".to_owned()));
-    BVexpr::BinExpr(BVBinOp::Sub, x1, x2)
+    use BVexpr::*;
+    use BVBinOp::*;
+    let x1 = Box::new(Var("x".to_owned()));
+    let x2 = Box::new(Var("x".to_owned()));
+    BinExpr(Sub, x1, x2)
 }
 
 fn simple_example() {
@@ -202,6 +225,7 @@ fn simple_example() {
     let mut namer = Namer::new();
     let (f_expr, carries) = get_bit_exprs(f, &mut namer);
     println!("Main bool expr: {}", f_expr);
+    //println!("Main bool expr inline: {}");
     if let Some(m) = carries {
         for (carry, carry_expr) in m.into_iter() {
             println!("{} = {}", carry, carry_expr);
@@ -227,27 +251,27 @@ fn egg_test() {
         //
         //    rw!("demorgan"; "(~ (^ ?x ?y))" => "(| (~ ?y) (~ ?x))"),
         //
-        //    rw!("and-False"; "(& ?x False)" => "False"),
-        //    rw!("and-True"; "(& ?x True)" => "?x"),
+        //    rw!("and-false"; "(& ?x false)" => "false"),
+        //    rw!("and-true"; "(& ?x true)" => "?x"),
         //    rw!("and-self"; "(& ?x ?x)" => "?x"),
-        //    rw!("and-self-neg"; "(& ?x (~ ?x))" => "False"),
+        //    rw!("and-self-neg"; "(& ?x (~ ?x))" => "false"),
         //
-        //    rw!("or-False";  "(| ?x False)" => "?x"),
-        //    rw!("or-True";  "(| ?x True)" => "True"),
+        //    rw!("or-false";  "(| ?x false)" => "?x"),
+        //    rw!("or-true";  "(| ?x true)" => "true"),
         //    rw!("or-self";  "(| ?x ?x)" => "?x"),
-        //    rw!("or-self-neg";  "(| ?x (~ ?x))" => "True"),
-        rw!("xor-False"; "(^ ?x False)" => "?x"),
-        rw!("xor-True"; "(^ ?x True)" => "(~ ?x)"),
-        rw!("xor-self";   "(^ ?x ?x)" => "False"),
-        rw!("xor-self-neg"; "(^ ?x (~ ?x))" => "True"),
+        //    rw!("or-self-neg";  "(| ?x (~ ?x))" => "true"),
+        rw!("xor-false"; "(^ ?x false)" => "?x"),
+        rw!("xor-true"; "(^ ?x true)" => "(~ ?x)"),
+        rw!("xor-self";   "(^ ?x ?x)" => "false"),
+        rw!("xor-self-neg"; "(^ ?x (~ ?x))" => "true"),
         rw!("neg-dbl"; "(~ (~ ?x))" => "?x"),
     ];
 
     // While it may look like we are working with numbers,
     // SymbolLang stores everything as strings.
     // We can make our own Language later to work with other types.
-    //let start = "(| True (& True True))".parse().unwrap();
-    let start = "(^ x (^ (^ (~ x) (^ False carry_3)) carry_5))"
+    //let start = "(| true (& true true))".parse().unwrap();
+    let start = "(^ x (^ (^ (~ x) (^ false carry_3)) carry_5))"
         .parse()
         .unwrap();
 
