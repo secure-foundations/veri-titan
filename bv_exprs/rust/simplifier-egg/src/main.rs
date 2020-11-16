@@ -68,14 +68,19 @@ enum Boolexpr {
 }
 
 impl Boolexpr {
-    fn fmt(&self, f: &mut fmt::Formatter, inline:bool) -> fmt::Result {
+    fn mk_string(&self, inline:bool) -> String {
         use Boolexpr::*;
         match &*self {
-            Const(c) => write!(f, "{}", c),
-            Var(v) => write!(f, "{}", v),
+            Const(c) => format!("{}", c),
+            Var(v) => format!("{}", v),
             UniExpr(op, boxed_src) => {
                 let BoolUniOp::Not = *op;
-                write!(f, "~{}", boxed_src)
+                let src = (*boxed_src).mk_string(inline);
+                if inline {
+                    format!("(~ {})", src)
+                } else {
+                    format!("~{}", src)
+                }
             },
             BinExpr(op, boxed_src0, boxed_src1) => {
                 use BoolBinOp::*;
@@ -84,20 +89,21 @@ impl Boolexpr {
                     Or => "|",
                     Xor => "^",
                 };
+                let s0 = boxed_src0.mk_string(inline);
+                let s1 = boxed_src1.mk_string(inline);
                 if inline {
-                    write!(f, "({} {} {})", op_str, boxed_src0, boxed_src1)
+                    format!("({} {} {})", op_str, s0, s1)
                 } else {
-                    write!(f, "({} {} {})", boxed_src0, op_str, boxed_src1)
+                    format!("({} {} {})", s0, op_str, s1)
                 }
             }
         }
     }
-
 }
 
 impl fmt::Display for Boolexpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.fmt(f, false)
+        write!(f, "{}", self.mk_string(false))
     }
 }
 
@@ -225,15 +231,57 @@ fn simple_example() {
     let mut namer = Namer::new();
     let (f_expr, carries) = get_bit_exprs(f, &mut namer);
     println!("Main bool expr: {}", f_expr);
-    //println!("Main bool expr inline: {}");
+    println!("Main bool expr inline: {}", f_expr.mk_string(true));
+    
+    let rules = egg_rules();
+    let f_egg = egg_simp(f_expr.mk_string(true), &rules);
+    println!("Main bool expr simplified: {}", f_egg);
+
+
     if let Some(m) = carries {
         for (carry, carry_expr) in m.into_iter() {
             println!("{} = {}", carry, carry_expr);
+            let carry_expr_egg = egg_simp(carry_expr.mk_string(true), &rules);
+            println!("Simplified {} = {}", carry, carry_expr_egg);
         }
     } else {
         println!("Got no carries");
     }
 }
+
+fn egg_rules() -> Vec<egg::Rewrite<egg::SymbolLang, ()>> {
+    let rules: Vec<Rewrite<SymbolLang, ()>> = vec![ 
+        rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
+        rw!("commute-or";  "(| ?x ?y)" => "(| ?y ?x)"),
+        rw!("commute-xor"; "(^ ?x ?y)" => "(^ ?y ?x)"),
+        //    rw!("xor";         "(^ ?x ?y)" => "(& (| ?x ?y) (| (~ x) (~ y)))"),
+
+        rw!("dist-or-and"; "(| ?x (& ?y ?z))" => "(& (| ?x ?y) (| ?x ?z))"),
+        rw!("dist-and-or"; "(& ?x (| ?y ?z))" => "(| (& ?x ?y) (& ?x ?z))"),
+        rw!("dist-xor-or"; "(^ ?x (| ?y ?z))" => "(| (& (~ ?x) (| ?y ?z)) (& ?x (& (~ y) (~ z))))"),
+        rw!("dist-and-xor"; "(& ?x (^ ?y ?z))"=> "(^ (& ?x ?y) (& ?x ?z))"),
+        rw!("assoc-xor"; "(^ ?x (^ ?y ?z))"=> "(^ (^ ?x ?y) ?z)"),
+
+        rw!("demorgan"; "(~ (^ ?x ?y))" => "(| (~ ?y) (~ ?x))"),
+        
+        rw!("and-false"; "(& ?x false)" => "false"),
+        rw!("and-true"; "(& ?x true)" => "?x"),
+        rw!("and-self"; "(& ?x ?x)" => "?x"),
+        rw!("and-self-neg"; "(& ?x (~ ?x))" => "false"),
+        
+        rw!("or-false";  "(| ?x false)" => "?x"),
+        rw!("or-true";  "(| ?x true)" => "true"),
+        rw!("or-self";  "(| ?x ?x)" => "?x"),
+        rw!("or-self-neg";  "(| ?x (~ ?x))" => "true"),
+        rw!("xor-false"; "(^ ?x false)" => "?x"),
+        rw!("xor-true"; "(^ ?x true)" => "(~ ?x)"),
+        rw!("xor-self";   "(^ ?x ?x)" => "false"),
+        rw!("xor-self-neg"; "(^ ?x (~ ?x))" => "true"),
+        rw!("neg-dbl"; "(~ (~ ?x))" => "?x"),
+    ];
+    rules
+}
+
 
 fn egg_test() {
     let rules: &[Rewrite<SymbolLang, ()>] = &[
@@ -294,6 +342,15 @@ fn egg_test() {
     println!("Best expr: {}", best_expr);
     println!("Cost: {}", best_cost);
 }
+
+fn egg_simp(s:String, rules: &[Rewrite<SymbolLang, ()>]) -> egg::RecExpr<egg::SymbolLang> {
+    let start = s.parse().unwrap();
+    let runner = Runner::default().with_expr(&start).run(rules);
+    let mut extractor = Extractor::new(&runner.egraph, AstSize);
+    let (_best_cost, best_expr) = extractor.find_best(runner.roots[0]);
+    best_expr
+}
+
 
 fn main() {
     println!("Hello, world!");
