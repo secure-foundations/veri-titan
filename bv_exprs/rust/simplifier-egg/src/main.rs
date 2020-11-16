@@ -112,7 +112,7 @@ fn get_bit_exprs(e: BVexpr, n:& mut Namer) -> (Boolexpr, Option<HashMap<Boolexpr
             let maps = match map0 {
                 None => map1,
                 Some(m0) => match map1 {
-                    None => None,
+                    None => Some(m0),
                     Some(m1) => {
                         let mut fresh_map = HashMap::new();
                         fresh_map.extend(m0.into_iter());
@@ -146,7 +146,9 @@ fn get_bit_exprs(e: BVexpr, n:& mut Namer) -> (Boolexpr, Option<HashMap<Boolexpr
                         m.insert(*carry_var.clone(), carry_expr);
                         Some(m)
                     } else {
-                        None
+                        let mut fresh_map = HashMap::new();
+                        fresh_map.insert(*carry_var.clone(), carry_expr);
+                        Some(fresh_map)
                     };
                     let add_expr = Boolexpr::BinExpr(
                         BoolBinOp::Xor,
@@ -204,6 +206,8 @@ fn simple_example() {
         for (carry, carry_expr) in m.into_iter() {
             println!("{} = {}", carry, carry_expr);
         }
+    } else {
+        println!("Got no carries");
     }
 }
 
