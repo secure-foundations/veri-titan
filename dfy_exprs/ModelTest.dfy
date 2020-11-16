@@ -35,42 +35,26 @@ method get_random_bv(l: uint32) returns (v: cbv)
 // t = [w25, w24]
 // q2' = [w18, w17]
 // q1 = [w8, w9]
-method simple_test(t: cbv, q1: cbv, q2': cbv)
-    requires |q2'| == 768;
+method simple_test(a: cbv, b: cbv)
+    requires |a| == 512;
+    requires |b| == 512;
 {
-//   /* q2'' = q2' >> 384 = [w20, w19] = [w18, w17, w16] >> 384
-//                                     = [w18, w17] >> 128 */
 //   bn.rshi w20, w18, w31 >> 128
 //   bn.rshi w19, w17, w18 >> 128
-    var q2'' := cbv_lsr(q2', 128);
-//   /* Add q1. This is unconditional since MSb of u is always 1.
-//      This cannot overflow due to leading zeros.
-//      q2''' = q2'' + q1 = [w20, w19] = [w20, w19] + [w8, w9] */
+    var t := cbv_lsr(a, 128);
 
 //   bn.add w19, w19, w8
 //   bn.addc w20, w20, w9
-    var q2''' := cbv_add(q2'', q1);
-
-//   /* Conditionally add u (without leading 1) in case of MSb of x being set.
-//      This is the "real" q2 but shifted by 384 bits to the right. This cannot
-//      overflow due to leading zeros
-//      q2'''' = x[767]?q2'''+u[383:0]:q2'''
-//             = [w20, w19] + [w25, w24] = q2 >> 384 */
-//   bn.add w19, w19, w24
-//   bn.addc w20, w20, w25
-    var q2'''' := cbv_add(q2''', t);
-
-//   /* finally this gives q3 by shifting the remain bit to the right
-//      q3 = q2 >> 385 = q2'''' >> 1 = [w9, w8] = [w20, w19] >> 1 */
-//   bn.rshi w9, w20, w31 >> 1
-//   bn.rshi w8, w19, w20 >> 1
-    var q3 := cbv_lsr(q2'''', 1);
+    var t2 := cbv_add(t, b);
 }
 
 method {:main} Main()
 {
     // var x := get_random_bv(768);
-    var x  := from_nat(0x778f467950ba8aecb6dd8f7b865757e7a510c901b9d50297727b7c284d640eb9135cadc39237aa29ae0813517b58a83731875308a2cd045f1a6a4fb59a4d026bcd8164c3de1b71062e90b431439988a2cef26b707ce224ba84e1b431bf90e3fa, 768);
+    var a := from_nat(0xf7ce980efe5b7c893b50a6dc801e033186d6169d9c82733527427cb872aea951091cd3f7207d94ffe99e1eed7acd4a30e59cd2ccf6bdde731cce04314b8e6148, 512);
+
+    var b := from_nat(0x4b4dc1dd7c9923cd49b5248c63b43c6f638b623f931693147ce65c14f4e87afa0a4600b6d088d4538f41a54ed81d496edd2a9b0a7c779b3af1f924313e20ada7, 512);
+
+    simple_test(a, b);
     // cbv_print("x", x);
-    // simple_test(x);
 }

@@ -300,16 +300,24 @@ module CutomBitVector {
         }
     }
 
-    function method cbv_lsr(v: cbv, amt: uint32) : cbv
+    function method cbv_lsr_truncate(v: cbv, amt: uint32) : cbv
         requires amt < |v|;
     {
         v[amt..]
     }
 
+    method cbv_lsr(v: cbv, amt: uint32) returns (x: cbv)
+        requires amt != 0;
+        requires amt < |v|;
+        ensures |x| == |v|;
+    {
+        x := cbv_zero(amt) + v[amt..];
+    }
+
     lemma {:induction amt} cbv_lsr_is_div_lemma(v: cbv, v1: cbv, amt: uint32)
         decreases amt;
         requires amt < |v|;
-        requires v1 == cbv_lsr(v, amt);
+        requires v1 == cbv_lsr_truncate(v, amt);
         ensures to_nat(v1) == to_nat(v) / pow2(amt);
     {
         if amt == 0 {
@@ -420,7 +428,25 @@ module CutomBitVector {
         assert to_nat(v') == to_nat(v);
     }
 
-    // method cbv_add(v1: cbv, v2: cbv) returns (v3: cbv)
-    //     // ensures |v3| == |v1| + 1;
+    method cbv_add(v1: cbv, v2: cbv) returns (v3: cbv)
+        requires |v1| == |v2|;
+        ensures |v3| == |v1|;
+    {
+        var l := |v1|;
+        var a := new uint1[l];
+        var c := 0;
+
+        var i := 0;
+        while i < l
+            decreases l - i;
+            invariant i <= l;
+        {
+            var sum :int := v1[i] as int + v2[i] as int + c;
+            a[i] := sum % 2;
+            c := sum / 2;
+            i := i + 1;
+        }
+        v3 := a[..];
+    }
     //     ensures to_nat(v3) == to_nat(v1) + to_nat(v2);
 }
