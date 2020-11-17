@@ -239,10 +239,18 @@ fn simple_example() {
 
 
     if let Some(m) = carries {
-        for (carry, carry_expr) in m.into_iter() {
+        for (carry, carry_expr) in &m {
             println!("{} = {}", carry, carry_expr);
             let carry_expr_egg = egg_simp(carry_expr.mk_string(true), &rules);
             println!("Simplified {} = {}", carry, carry_expr_egg);
+        }
+        use Boolexpr::*;
+        if let Some(c1) = m.get(&Var("carry_1".to_string())) {
+            if let Some(c2) = m.get(&Var("carry_2".to_string())) {
+                let carry_r = BinExpr(BoolBinOp::Xor, Box::new(c1.clone()), Box::new(UniExpr(BoolUniOp::Not, Box::new(c2.clone()))));
+                let carry_egg = egg_simp(carry_r.mk_string(true), &rules);
+                println!("Simplified carry recursion (i.e., {}) = {}", carry_r, carry_egg);
+            }
         }
     } else {
         println!("Got no carries");
@@ -258,11 +266,13 @@ fn egg_rules() -> Vec<egg::Rewrite<egg::SymbolLang, ()>> {
 
         rw!("dist-or-and"; "(| ?x (& ?y ?z))" => "(& (| ?x ?y) (| ?x ?z))"),
         rw!("dist-and-or"; "(& ?x (| ?y ?z))" => "(| (& ?x ?y) (& ?x ?z))"),
-        rw!("dist-xor-or"; "(^ ?x (| ?y ?z))" => "(| (& (~ ?x) (| ?y ?z)) (& ?x (& (~ y) (~ z))))"),
+        rw!("dist-xor-or"; "(^ ?x (| ?y ?z))" => "(| (& (~ ?x) (| ?y ?z)) (& ?x (& (~ ?y) (~ ?z))))"),
         rw!("dist-and-xor"; "(& ?x (^ ?y ?z))"=> "(^ (& ?x ?y) (& ?x ?z))"),
+
         rw!("assoc-xor"; "(^ ?x (^ ?y ?z))"=> "(^ (^ ?x ?y) ?z)"),
 
-        rw!("demorgan"; "(~ (^ ?x ?y))" => "(| (~ ?y) (~ ?x))"),
+        rw!("demorgan-and"; "(~ (& ?x ?y))" => "(| (~ ?y) (~ ?x))"),
+        rw!("demorgan-or";  "(~ (| ?x ?y))" => "(& (~ ?y) (~ ?x))"),
         
         rw!("and-false"; "(& ?x false)" => "false"),
         rw!("and-true"; "(& ?x true)" => "?x"),
