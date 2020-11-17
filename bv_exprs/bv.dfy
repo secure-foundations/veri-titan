@@ -68,7 +68,73 @@ lemma test(b_i:bool, x_i:bool, x_i_minus_1:bool, c_i_minus_1:bool, c_i_minus_2:b
 }
 */
 
-lemma carry_test(x:bool, old_carry_1:bool, old_carry_2:bool)
-  ensures xor(old_carry_1, !old_carry_2) == xor(((!x && false) || (old_carry_1 && (!x || false))), !((x && xor(!x, xor(false, ((!x && false) || (old_carry_1 && (!x || false)))))) || (old_carry_2 && (x || xor(!x, xor(false, ((!x && false) || (old_carry_1 && (!x || false)))))))))
+lemma carry_test_model(the_x:bool, old_carry_1:bool, old_carry_2:bool, py_c1:bool, py_c2:bool, py_c2_simp:bool, i:nat)
+  requires i > 0;
+//  requires py_c1 == c'(i) && old_carry_1 == c'(i-1)
+//  requires py_c2 == c(i) && old_carry_2 == c(i-1)
+  requires old_carry_1 == c'(i-1)
+  requires old_carry_2 == c(i-1)
+  requires the_x == x(i)
+  requires py_c1 == (((!the_x) && false) || (old_carry_1 && ((!the_x) || false)));
+  requires py_c2 == ((the_x && xor((!the_x), xor(false, (((!the_x) && false) || (old_carry_1 && ((!the_x) || false)))))) || (old_carry_2 && (the_x || xor((!the_x), xor(false, (((!the_x) && false) || (old_carry_1 && ((!the_x) || false))))))));
+  requires py_c2_simp == ((the_x && xor((!the_x), (old_carry_1 && (!the_x)))) || (old_carry_2 && (the_x || xor((!the_x), (old_carry_1 && (!the_x))))))
+  ensures py_c1 == c'(i) 
+  ensures py_c2 == py_c2_simp
+  ensures py_c2 == c(i) 
 {
 }
+
+// py_c2
+carry_5 == (x && bexpr_2) || (...)
+        == (x && xor(uexpr_1, xor(false, carry_3))) || (...)
+        == (x && xor(!x, xor(false, carry_3))) || (...)
+
+
+(the_x && xor(!the_x, (old_carry_1 && (!the_x)))) || (old_carry_2 && (the_x || xor(!the_x, old_carry_1 && !the_x))))
+// c(i)
+((x(i) && e(i)) || (c(i-1) && (x(i) || e(i))))
+((x(i) && xor(!x(i), c'(i-1)))                    || (c(i-1) && (x(i) || xor(!x(i), c'(i-1)))))
+(the_x && xor(!the_x, old_carry_1))               || (old_carry_2 && (the_x || xor(!the_x, old_carry_1)))
+
+
+
+((x && xor((!x), xor(false, (((!x) && false) || (old_carry_1 && ((!x) || false))))))
+
+
+ || (old_carry_2 && (x || xor((!x), xor(false, (((!x) && false) || (old_carry_1 && ((!x) || false))))))))
+
+//lemma carry_test(x:bool, old_carry_1:bool, old_carry_2:bool, py_c1:bool, py_c2:bool, r_c1:bool, r_c2:bool)
+//  requires py_c1 == (((!x) && false) || (old_carry_1 && ((!x) || false)));
+//  requires py_c2 == ((x && xor((!x), xor(false, (((!x) && false) || (old_carry_1 && ((!x) || false)))))) || (old_carry_2 && (x || xor((!x), xor(false, (((!x) && false) || (old_carry_1 && ((!x) || false))))))));
+//
+//  requires r_c1 == ((!x && false) || (old_carry_1 && (!x || false)));
+//  requires r_c2 == ((x && xor(!x, xor(false, ((!x && false) || (old_carry_1 && (!x || false)))))) || (old_carry_2 && (x || xor(!x, xor(false, ((!x && false) || (old_carry_1 && (!x || false))))))));
+//  
+//  ensures py_c1 == r_c1
+//  ensures py_c2 == r_c2
+//
+//  ensures  xor(old_carry_1, !old_carry_2) == xor(py_c1, !py_c2)
+//
+//  /*
+//
+//  ////// Python == Rust
+//  // Carry 1
+//  ensures (((!x) && false) || (old_carry_1 && ((!x) || false))) == 
+//          ((!x && false) || (old_carry_1 && (!x || false)))
+//  // Carry 2
+//  ensures ((x && xor((!x), xor(false, (((!x) && false) || (old_carry_1 && ((!x) || false)))))) || (old_carry_2 && (x || xor((!x), xor(false, (((!x) && false) || (old_carry_1 && ((!x) || false)))))))) ==
+//          ((x && xor(!x, xor(false, ((!x && false) || (old_carry_1 && (!x || false)))))) || (old_carry_2 && (x || xor(!x, xor(false, ((!x && false) || (old_carry_1 && (!x || false))))))))
+//
+//  ////// Rust simplification works
+//  // Carry 1
+//  ensures ((!x && false) || (old_carry_1 && (!x || false))) ==
+//          !x && old_carry_1;
+//
+//
+//  ensures xor(old_carry_1, !old_carry_2) ==
+//  xor(((!x && false) || (old_carry_1 && (!x || false))), !((x && xor(!x, xor(false, ((!x && false) || (old_carry_1 && (!x || false)))))) || (old_carry_2 && (x || xor(!x, xor(false, ((!x && false) || (old_carry_1 && (!x || false)))))))))
+//
+//  //ensures xor(old_carry_1, !old_carry_2) == xor(((!x && false) || (old_carry_1 && (!x || false))), !((x && xor(!x, xor(false, ((!x && false) || (old_carry_1 && (!x || false)))))) || (old_carry_2 && (x || xor(!x, xor(false, ((!x && false) || (old_carry_1 && (!x || false)))))))))
+//  */
+//{
+//}

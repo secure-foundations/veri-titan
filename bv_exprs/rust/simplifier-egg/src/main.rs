@@ -287,6 +287,7 @@ fn simple_example() {
             if let Some(c2) = m.get(&Var("carry_2".to_string(), false)) {
                 // rules.push(rw!("carry-subst"; "carry_1" => "(& (~ x) old_carry_1)"));
                 let carry2 = subst_vars((*c2).clone(), &m);
+                println!("After substitution: {}", carry2);
                 let carry_r = BinExpr(BoolBinOp::Xor, Box::new(c1.clone()), Box::new(UniExpr(BoolUniOp::Not, Box::new(carry2))));
                 let carry_egg = egg_simp(carry_r.mk_string(true, false), &rules);
                 println!("Simplified carry recursion from:\n\t{}\nTo:\n\t{}", carry_r, carry_egg);

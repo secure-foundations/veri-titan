@@ -13,6 +13,7 @@ uni_ops = {
 }
 
 INFIX=False
+DAFNY=True
 
 class Namer:
     count = 0
@@ -39,8 +40,8 @@ class BinBoolExpr:
                other.src1 == self.src1 and \
                other.src2 == self.src2
 
-    def flatten(self, varmap):
-        return BinBoolExpr(self.op, self.src1.flatten(varmap), self.src2.flatten(varmap))
+    def flatten(self, varmap, carry_calc):
+        return BinBoolExpr(self.op, self.src1.flatten(varmap, carry_calc), self.src2.flatten(varmap, carry_calc))
 
     def simp(self):
         s1 = self.src1.simp()
@@ -114,6 +115,13 @@ class BinBoolExpr:
     def __str__(self):
         if INFIX:
             return f"({self.op} {self.src1} {self.src2})"
+        elif DAFNY:
+            if self.op == '&':
+                return f"({self.src1} && {self.src2})"
+            elif self.op == '|':
+                return f"({self.src1} || {self.src2})"
+            elif self.op == '^':
+                return f"xor({self.src1}, {self.src2})"
         else:
             return f"({self.src1} {self.op} {self.src2})"
 
@@ -152,15 +160,15 @@ class BinOpExpr:
         else:
             return {}
 
-    def flatten(self, varmap):
+    def flatten(self, varmap, carry_calc):
         if self.op == "&":
-            rhs = BinBoolExpr("&", self.src1.flatten(varmap), self.src2.flatten(varmap))
+            rhs = BinBoolExpr("&", self.src1.flatten(varmap, carry_calc), self.src2.flatten(varmap, carry_calc))
         elif self.op == "|":
-            rhs = BinBoolExpr("|", self.src1.flatten(varmap), self.src2.flatten(varmap))
+            rhs = BinBoolExpr("|", self.src1.flatten(varmap, carry_calc), self.src2.flatten(varmap, carry_calc))
         elif self.op == "^":
-            rhs = BinBoolExpr("^", self.src1.flatten(varmap), self.src2.flatten(varmap))
+            rhs = BinBoolExpr("^", self.src1.flatten(varmap, carry_calc), self.src2.flatten(varmap, carry_calc))
         elif self.op == "+":
-            rhs = BinBoolExpr("^", self.src1.flatten(varmap), BinBoolExpr("^", self.src2.flatten(varmap), self.carry))
+            rhs = BinBoolExpr("^", self.src1.flatten(varmap, carry_calc), BinBoolExpr("^", self.src2.flatten(varmap, carry_calc), self.carry))
         else:
             raise Exception("Unexpected bin_op: %s" % self.op)
         return rhs
@@ -219,8 +227,8 @@ class UniBoolExpr:
                other.op == self.op and \
                other.src == self.src
 
-    def flatten(self, varmap):
-        return UniBoolExpr(self.op, self.src.flatten(varmap))
+    def flatten(self, varmap, carry_calc):
+        return UniBoolExpr(self.op, self.src.flatten(varmap, carry_calc))
 
     def simp(self):
         s = self.src.simp()
@@ -231,7 +239,10 @@ class UniBoolExpr:
         return UniBoolExpr(self.op, s)
 
     def __str__(self):
-        return f"({self.op} {self.src})"
+        if DAFNY:
+            return f"(!{self.src})"
+        else:
+            return f"({self.op} {self.src})"
 
 class UniOpExpr:
     def __init__(self, op, src):
@@ -241,8 +252,8 @@ class UniOpExpr:
         self.bits = src.bits
         self.output = Variable(Namer.new_name("uexpr"))
 
-    def flatten(self, varmap):
-        return UniBoolExpr("~", self.src.flatten(varmap))
+    def flatten(self, varmap, carry_calc):
+        return UniBoolExpr("~", self.src.flatten(varmap, carry_calc))
 
     def get_generic_bit(self):
         lhs = self.output
@@ -284,13 +295,20 @@ class Variable:
     def simp(self):
         return self
 
-    def flatten(self, varmap):
+    def flatten(self, varmap, carry_calc):
+        if carry_calc and "carry" in self.name and not self.old:
+            return Variable(self.name, old=True)
         if self in varmap:
-            return varmap[self].flatten(varmap)
+            return varmap[self].flatten(varmap, carry_calc)
         return self
 
     def __str__(self):
-        return self.name if not self.old else f"old({self.name})"
+        if not self.old:
+            return self.name
+        if DAFNY:
+            return f"old_{self.name}"
+        else:
+            return f"old({self.name})"
 
 class InputVariable:
     names = set()
@@ -309,7 +327,7 @@ class InputVariable:
         else:
             self.names.add(name)
 
-    def flatten(self, varmap):
+    def flatten(self, varmap, carry_calc):
         return Variable(self.name)
 
     def get_generic_bit(self):
@@ -334,11 +352,11 @@ class BoolConst:
     def simp(self):
         return self
 
-    def flatten(self, varmap):
+    def flatten(self, varmap, carry_calc):
         return self
 
     def __str__(self):
-        return "True" if self.b else "False"
+        return "true" if self.b else "false"
 
 class Constant:
     def __init__(self, bits, value):
@@ -349,7 +367,7 @@ class Constant:
 
         assert 0 <= value < 2**bits
 
-    def flatten(self, varmap):
+    def flatten(self, varmap, carry_calc):
         return self.output
 
     def get_generic_bit(self):
@@ -440,15 +458,21 @@ def real_example():
         
     print("Output is: %s" % f.output)
 
-    flat = f.flatten(exprs)
+    flat = f.flatten(exprs, False)
     print("Flattened: %s " % flat)
     print("Simplified: %s " % simp_harder(flat))
 
     for v, e in exprs.items():
         if "carry" in v.name:
-            flat = e.flatten(exprs)
-            print(f"Flattened  {v} == {flat}")
-            print(f"Simplified {v} == {simp_harder(flat)}")
+            flat = e.flatten(exprs, True)
+            flat_str = "%s" % flat
+            flat_str = flat_str.replace("carry_3", "carry_1")
+            flat_str = flat_str.replace("carry_5", "carry_2")
+            print(f"Flattened  {v} == {flat_str}")
+            simp_str = "%s" % simp_harder(flat)
+            simp_str = simp_str.replace("carry_3", "carry_1")
+            simp_str = simp_str.replace("carry_5", "carry_2")
+            print(f"Simplified {v} == {simp_str}")
     
 
 def main():
