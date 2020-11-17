@@ -67,3 +67,8 @@ lemma test(b_i:bool, x_i:bool, x_i_minus_1:bool, c_i_minus_1:bool, c_i_minus_2:b
   }
 }
 */
+
+lemma carry_test(x:bool, old_carry_1:bool, old_carry_2:bool)
+  ensures xor(old_carry_1, !old_carry_2) == xor(((!x && false) || (old_carry_1 && (!x || false))), !((x && xor(!x, xor(false, ((!x && false) || (old_carry_1 && (!x || false)))))) || (old_carry_2 && (x || xor(!x, xor(false, ((!x && false) || (old_carry_1 && (!x || false)))))))))
+{
+}

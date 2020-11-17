@@ -68,7 +68,7 @@ enum Boolexpr {
 }
 
 impl Boolexpr {
-    fn mk_string(&self, inline:bool) -> String {
+    fn mk_string(&self, inline:bool, dafny:bool) -> String {
         use Boolexpr::*;
         match &*self {
             Const(c) => format!("{}", c),
@@ -80,26 +80,36 @@ impl Boolexpr {
                 }
             UniExpr(op, boxed_src) => {
                 let BoolUniOp::Not = *op;
-                let src = (*boxed_src).mk_string(inline);
+                let src = (*boxed_src).mk_string(inline, dafny);
                 if inline {
                     format!("(~ {})", src)
+                } else if dafny {
+                    format!("!{}", src)
                 } else {
                     format!("~{}", src)
                 }
             },
             BinExpr(op, boxed_src0, boxed_src1) => {
                 use BoolBinOp::*;
-                let op_str = match op {
-                    And => "&",
-                    Or => "|",
-                    Xor => "^",
-                };
-                let s0 = boxed_src0.mk_string(inline);
-                let s1 = boxed_src1.mk_string(inline);
-                if inline {
-                    format!("({} {} {})", op_str, s0, s1)
+                let s0 = boxed_src0.mk_string(inline, dafny);
+                let s1 = boxed_src1.mk_string(inline, dafny);
+                if dafny {
+                    match op {
+                        And => format!("({} && {})", s0, s1),
+                        Or  => format!("({} || {})", s0, s1),
+                        Xor => format!("xor({}, {})", s0, s1),
+                    }
                 } else {
-                    format!("({} {} {})", s0, op_str, s1)
+                    let op_str = match op {
+                        And => "&",
+                        Or => "|",
+                        Xor => "^",
+                    };
+                    if inline {
+                        format!("({} {} {})", op_str, s0, s1)
+                    } else {
+                        format!("({} {} {})", s0, op_str, s1)
+                    }
                 }
             }
         }
@@ -108,7 +118,7 @@ impl Boolexpr {
 
 impl fmt::Display for Boolexpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.mk_string(false))
+        write!(f, "{}", self.mk_string(false, true))
     }
 }
 
@@ -220,6 +230,28 @@ fn simp_bv(e: BVexpr) -> BVexpr {
     }
 }
 
+fn subst_vars(e: Boolexpr, map:&HashMap<Boolexpr, Boolexpr>) -> Boolexpr {
+    use Boolexpr::*;
+    match &e {
+        Const(_) => e,
+        Var(_,old) => 
+            if !old {
+                match map.get(&e) {
+                    None => e,
+                    Some(rhs) => (*rhs).clone()
+                }
+            } else {
+                e
+            }
+        UniExpr(op, boxed_src) => UniExpr(*op, Box::new(subst_vars((**boxed_src).clone(), map))),
+        BinExpr(op, boxed_src0, boxed_src1) => {
+            let s0 = subst_vars((**boxed_src0).clone(), map);
+            let s1 = subst_vars((**boxed_src1).clone(), map);
+            BinExpr(*op, Box::new(s0), Box::new(s1))
+        }
+    }
+}
+
 fn identity() -> BVexpr {
     use BVexpr::*;
     use BVBinOp::*;
@@ -237,25 +269,26 @@ fn simple_example() {
     let mut namer = Namer::new();
     let (f_expr, carries) = get_bit_exprs(f, &mut namer);
     println!("Main bool expr: {}", f_expr);
-    println!("Main bool expr inline: {}", f_expr.mk_string(true));
+    println!("Main bool expr inline: {}", f_expr.mk_string(true, false));
     
-    let mut rules = egg_rules();
-    let f_egg = egg_simp(f_expr.mk_string(true), &rules);
+    let rules = egg_rules();
+    let f_egg = egg_simp(f_expr.mk_string(true, false), &rules);
     println!("Main bool expr simplified: {}", f_egg);
 
 
     if let Some(m) = carries {
         for (carry, carry_expr) in &m {
             println!("{} = {}", carry, carry_expr);
-            let carry_expr_egg = egg_simp(carry_expr.mk_string(true), &rules);
+            let carry_expr_egg = egg_simp(carry_expr.mk_string(true, false), &rules);
             println!("Simplified {} = {}", carry, carry_expr_egg);
         }
         use Boolexpr::*;
         if let Some(c1) = m.get(&Var("carry_1".to_string(), false)) {
             if let Some(c2) = m.get(&Var("carry_2".to_string(), false)) {
                 // rules.push(rw!("carry-subst"; "carry_1" => "(& (~ x) old_carry_1)"));
-                let carry_r = BinExpr(BoolBinOp::Xor, Box::new(c1.clone()), Box::new(UniExpr(BoolUniOp::Not, Box::new(c2.clone()))));
-                let carry_egg = egg_simp(carry_r.mk_string(true), &rules);
+                let carry2 = subst_vars((*c2).clone(), &m);
+                let carry_r = BinExpr(BoolBinOp::Xor, Box::new(c1.clone()), Box::new(UniExpr(BoolUniOp::Not, Box::new(carry2))));
+                let carry_egg = egg_simp(carry_r.mk_string(true, false), &rules);
                 println!("Simplified carry recursion from:\n\t{}\nTo:\n\t{}", carry_r, carry_egg);
             }
         }
