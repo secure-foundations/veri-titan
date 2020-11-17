@@ -62,7 +62,7 @@ enum BoolUniOp {
 #[derive(PartialEq, Eq, Hash, Debug, Clone)]
 enum Boolexpr {
     Const(bool),
-    Var(String),
+    Var(String,bool),
     UniExpr(BoolUniOp, Box<Boolexpr>),
     BinExpr(BoolBinOp, Box<Boolexpr>, Box<Boolexpr>),
 }
@@ -72,7 +72,12 @@ impl Boolexpr {
         use Boolexpr::*;
         match &*self {
             Const(c) => format!("{}", c),
-            Var(v) => format!("{}", v),
+            Var(v,old) => 
+                if *old {
+                    format!("old_{}", v)
+                } else {
+                    format!("{}", v)
+                }
             UniExpr(op, boxed_src) => {
                 let BoolUniOp::Not = *op;
                 let src = (*boxed_src).mk_string(inline);
@@ -128,7 +133,7 @@ fn get_bit_exprs(e: BVexpr, n:& mut Namer) -> (Boolexpr, Option<HashMap<Boolexpr
     use BoolBinOp::*;
     match e {
         BVexpr::Const(_c) => (Const(false), None),
-        BVexpr::Var(v) => (Var(v), None),
+        BVexpr::Var(v) => (Var(v, false), None),
         BVexpr::UniExpr(_op, boxed_src) => {
             let (src, map) = get_bit_exprs(*boxed_src, n);
             (UniExpr(BoolUniOp::Not, Box::new(src)), map)
@@ -155,7 +160,8 @@ fn get_bit_exprs(e: BVexpr, n:& mut Namer) -> (Boolexpr, Option<HashMap<Boolexpr
                 BVBinOp::Or => (BinExpr(Or, src0, src1), maps),
                 BVBinOp::Xor => (BinExpr(Xor, src0, src1), maps),
                 BVBinOp::Add => {
-                    let carry_var = Box::new(Var(n.get_name("carry"))); // TODO: Pick a unique name
+                    let carry_name = n.get_name("carry");
+                    let carry_var = Box::new(Var(carry_name.clone(), false));
                     let carry_expr = BinExpr(
                         Or,
                         Box::new(BinExpr(
@@ -165,7 +171,7 @@ fn get_bit_exprs(e: BVexpr, n:& mut Namer) -> (Boolexpr, Option<HashMap<Boolexpr
                         )),
                         Box::new(BinExpr(
                             And,
-                            carry_var.clone(),
+                            Box::new(Var(carry_name, true)),
                             Box::new(BinExpr(Or, src0.clone(), src1.clone())),
                         )),
                     );
@@ -233,7 +239,7 @@ fn simple_example() {
     println!("Main bool expr: {}", f_expr);
     println!("Main bool expr inline: {}", f_expr.mk_string(true));
     
-    let rules = egg_rules();
+    let mut rules = egg_rules();
     let f_egg = egg_simp(f_expr.mk_string(true), &rules);
     println!("Main bool expr simplified: {}", f_egg);
 
@@ -245,11 +251,12 @@ fn simple_example() {
             println!("Simplified {} = {}", carry, carry_expr_egg);
         }
         use Boolexpr::*;
-        if let Some(c1) = m.get(&Var("carry_1".to_string())) {
-            if let Some(c2) = m.get(&Var("carry_2".to_string())) {
+        if let Some(c1) = m.get(&Var("carry_1".to_string(), false)) {
+            if let Some(c2) = m.get(&Var("carry_2".to_string(), false)) {
+                // rules.push(rw!("carry-subst"; "carry_1" => "(& (~ x) old_carry_1)"));
                 let carry_r = BinExpr(BoolBinOp::Xor, Box::new(c1.clone()), Box::new(UniExpr(BoolUniOp::Not, Box::new(c2.clone()))));
                 let carry_egg = egg_simp(carry_r.mk_string(true), &rules);
-                println!("Simplified carry recursion (i.e., {}) = {}", carry_r, carry_egg);
+                println!("Simplified carry recursion from:\n\t{}\nTo:\n\t{}", carry_r, carry_egg);
             }
         }
     } else {
