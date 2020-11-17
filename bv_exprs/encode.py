@@ -160,15 +160,15 @@ class BinOpExpr:
         else:
             return {}
 
-    def flatten(self, varmap, carry_calc):
+    def flatten(self, varmap):
         if self.op == "&":
-            rhs = BinBoolExpr("&", self.src1.flatten(varmap, carry_calc), self.src2.flatten(varmap, carry_calc))
+            rhs = BinBoolExpr("&", self.src1.flatten(varmap), self.src2.flatten(varmap))
         elif self.op == "|":
-            rhs = BinBoolExpr("|", self.src1.flatten(varmap, carry_calc), self.src2.flatten(varmap, carry_calc))
+            rhs = BinBoolExpr("|", self.src1.flatten(varmap), self.src2.flatten(varmap))
         elif self.op == "^":
-            rhs = BinBoolExpr("^", self.src1.flatten(varmap, carry_calc), self.src2.flatten(varmap, carry_calc))
+            rhs = BinBoolExpr("^", self.src1.flatten(varmap), self.src2.flatten(varmap))
         elif self.op == "+":
-            rhs = BinBoolExpr("^", self.src1.flatten(varmap, carry_calc), BinBoolExpr("^", self.src2.flatten(varmap, carry_calc), self.carry))
+            rhs = BinBoolExpr("^", self.src1.flatten(varmap), BinBoolExpr("^", self.src2.flatten(varmap), self.carry))
         else:
             raise Exception("Unexpected bin_op: %s" % self.op)
         return rhs
@@ -252,8 +252,8 @@ class UniOpExpr:
         self.bits = src.bits
         self.output = Variable(Namer.new_name("uexpr"))
 
-    def flatten(self, varmap, carry_calc):
-        return UniBoolExpr("~", self.src.flatten(varmap, carry_calc))
+    def flatten(self, varmap):
+        return UniBoolExpr("~", self.src.flatten(varmap))
 
     def get_generic_bit(self):
         lhs = self.output
@@ -327,7 +327,7 @@ class InputVariable:
         else:
             self.names.add(name)
 
-    def flatten(self, varmap, carry_calc):
+    def flatten(self, varmap):
         return Variable(self.name)
 
     def get_generic_bit(self):
@@ -367,7 +367,7 @@ class Constant:
 
         assert 0 <= value < 2**bits
 
-    def flatten(self, varmap, carry_calc):
+    def flatten(self, varmap):
         return self.output
 
     def get_generic_bit(self):
@@ -458,7 +458,7 @@ def real_example():
         
     print("Output is: %s" % f.output)
 
-    flat = f.flatten(exprs, False)
+    flat = f.flatten(exprs)
     print("Flattened: %s " % flat)
     print("Simplified: %s " % simp_harder(flat))
 
