@@ -76,14 +76,16 @@ lemma carry_test_model(the_x:bool, old_carry_1:bool, old_carry_2:bool, py_c1:boo
   requires old_carry_2 == c(i-1)
   requires the_x == x(i)
   requires py_c1 == (((!the_x) && false) || (old_carry_1 && ((!the_x) || false)));
-  requires py_c2 == ((the_x && xor((!the_x), xor(false, (((!the_x) && false) || (old_carry_1 && ((!the_x) || false)))))) || (old_carry_2 && (the_x || xor((!the_x), xor(false, (((!the_x) && false) || (old_carry_1 && ((!the_x) || false))))))));
-  requires py_c2_simp == ((the_x && xor((!the_x), (old_carry_1 && (!the_x)))) || (old_carry_2 && (the_x || xor((!the_x), (old_carry_1 && (!the_x))))))
+  requires py_c2 == ((the_x && xor((!the_x), xor(false, old_carry_1))) || (old_carry_2 && (the_x || xor((!the_x), xor(false, old_carry_1)))))
+  requires py_c2_simp == ((the_x && xor((!the_x), old_carry_1)) || (old_carry_2 && (the_x || xor((!the_x), old_carry_1))))
   ensures py_c1 == c'(i) 
   ensures py_c2 == py_c2_simp
   ensures py_c2 == c(i) 
+  ensures  xor(old_carry_1, !old_carry_2) == xor(py_c1, !py_c2)
 {
 }
 
+/*
 // py_c2
 carry_5 == (x && bexpr_2) || (...)
         == (x && xor(uexpr_1, xor(false, carry_3))) || (...)
@@ -102,7 +104,7 @@ carry_5 == (x && bexpr_2) || (...)
 
 
  || (old_carry_2 && (x || xor((!x), xor(false, (((!x) && false) || (old_carry_1 && ((!x) || false))))))))
-
+*/
 //lemma carry_test(x:bool, old_carry_1:bool, old_carry_2:bool, py_c1:bool, py_c2:bool, r_c1:bool, r_c2:bool)
 //  requires py_c1 == (((!x) && false) || (old_carry_1 && ((!x) || false)));
 //  requires py_c2 == ((x && xor((!x), xor(false, (((!x) && false) || (old_carry_1 && ((!x) || false)))))) || (old_carry_2 && (x || xor((!x), xor(false, (((!x) && false) || (old_carry_1 && ((!x) || false))))))));
