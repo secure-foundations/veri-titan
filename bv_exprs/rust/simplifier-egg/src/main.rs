@@ -230,23 +230,45 @@ fn simp_bv(e: BVexpr) -> BVexpr {
     }
 }
 
-fn subst_vars(e: Boolexpr, map:&HashMap<Boolexpr, Boolexpr>) -> Boolexpr {
+//fn subst_vars(e: Boolexpr, map:&HashMap<Boolexpr, Boolexpr>) -> Boolexpr {
+//    use Boolexpr::*;
+//    match &e {
+//        Const(_) => e,
+//        Var(_,old) => 
+//            if !old {
+//                match map.get(&e) {
+//                    None => e,
+//                    Some(rhs) => (*rhs).clone()
+//                }
+//            } else {
+//                e
+//            }
+//        UniExpr(op, boxed_src) => UniExpr(*op, Box::new(subst_vars((**boxed_src).clone(), map))),
+//        BinExpr(op, boxed_src0, boxed_src1) => {
+//            let s0 = subst_vars((**boxed_src0).clone(), map);
+//            let s1 = subst_vars((**boxed_src1).clone(), map);
+//            BinExpr(*op, Box::new(s0), Box::new(s1))
+//        }
+//    }
+//}
+
+fn age_carries(e: Boolexpr) -> Boolexpr {
     use Boolexpr::*;
     match &e {
         Const(_) => e,
-        Var(_,old) => 
+        Var(name,old) => 
             if !old {
-                match map.get(&e) {
+                match &name.find("carry") {
                     None => e,
-                    Some(rhs) => (*rhs).clone()
+                    Some(_) => Var((*name).clone(), true)
                 }
             } else {
                 e
             }
-        UniExpr(op, boxed_src) => UniExpr(*op, Box::new(subst_vars((**boxed_src).clone(), map))),
+        UniExpr(op, boxed_src) => UniExpr(*op, Box::new(age_carries((**boxed_src).clone()))),
         BinExpr(op, boxed_src0, boxed_src1) => {
-            let s0 = subst_vars((**boxed_src0).clone(), map);
-            let s1 = subst_vars((**boxed_src1).clone(), map);
+            let s0 = age_carries((**boxed_src0).clone());
+            let s1 = age_carries((**boxed_src1).clone());
             BinExpr(*op, Box::new(s0), Box::new(s1))
         }
     }
@@ -286,8 +308,8 @@ fn simple_example() {
         if let Some(c1) = m.get(&Var("carry_1".to_string(), false)) {
             if let Some(c2) = m.get(&Var("carry_2".to_string(), false)) {
                 // rules.push(rw!("carry-subst"; "carry_1" => "(& (~ x) old_carry_1)"));
-                let carry2 = subst_vars((*c2).clone(), &m);
-                println!("After substitution: {}", carry2);
+                let carry2 = age_carries((*c2).clone());
+                println!("After aging, carry2 = {}", carry2);
                 let carry_r = BinExpr(BoolBinOp::Xor, Box::new(c1.clone()), Box::new(UniExpr(BoolUniOp::Not, Box::new(carry2))));
                 let carry_egg = egg_simp(carry_r.mk_string(true, false), &rules);
                 println!("Simplified carry recursion from:\n\t{}\nTo:\n\t{}", carry_r, carry_egg);

@@ -105,38 +105,27 @@ carry_5 == (x && bexpr_2) || (...)
 
  || (old_carry_2 && (x || xor((!x), xor(false, (((!x) && false) || (old_carry_1 && ((!x) || false))))))))
 */
-//lemma carry_test(x:bool, old_carry_1:bool, old_carry_2:bool, py_c1:bool, py_c2:bool, r_c1:bool, r_c2:bool)
-//  requires py_c1 == (((!x) && false) || (old_carry_1 && ((!x) || false)));
-//  requires py_c2 == ((x && xor((!x), xor(false, (((!x) && false) || (old_carry_1 && ((!x) || false)))))) || (old_carry_2 && (x || xor((!x), xor(false, (((!x) && false) || (old_carry_1 && ((!x) || false))))))));
-//
-//  requires r_c1 == ((!x && false) || (old_carry_1 && (!x || false)));
-//  requires r_c2 == ((x && xor(!x, xor(false, ((!x && false) || (old_carry_1 && (!x || false)))))) || (old_carry_2 && (x || xor(!x, xor(false, ((!x && false) || (old_carry_1 && (!x || false))))))));
-//  
-//  ensures py_c1 == r_c1
-//  ensures py_c2 == r_c2
-//
-//  ensures  xor(old_carry_1, !old_carry_2) == xor(py_c1, !py_c2)
-//
-//  /*
-//
-//  ////// Python == Rust
-//  // Carry 1
-//  ensures (((!x) && false) || (old_carry_1 && ((!x) || false))) == 
-//          ((!x && false) || (old_carry_1 && (!x || false)))
-//  // Carry 2
-//  ensures ((x && xor((!x), xor(false, (((!x) && false) || (old_carry_1 && ((!x) || false)))))) || (old_carry_2 && (x || xor((!x), xor(false, (((!x) && false) || (old_carry_1 && ((!x) || false)))))))) ==
-//          ((x && xor(!x, xor(false, ((!x && false) || (old_carry_1 && (!x || false)))))) || (old_carry_2 && (x || xor(!x, xor(false, ((!x && false) || (old_carry_1 && (!x || false))))))))
-//
-//  ////// Rust simplification works
-//  // Carry 1
-//  ensures ((!x && false) || (old_carry_1 && (!x || false))) ==
-//          !x && old_carry_1;
-//
-//
-//  ensures xor(old_carry_1, !old_carry_2) ==
-//  xor(((!x && false) || (old_carry_1 && (!x || false))), !((x && xor(!x, xor(false, ((!x && false) || (old_carry_1 && (!x || false)))))) || (old_carry_2 && (x || xor(!x, xor(false, ((!x && false) || (old_carry_1 && (!x || false)))))))))
-//
-//  //ensures xor(old_carry_1, !old_carry_2) == xor(((!x && false) || (old_carry_1 && (!x || false))), !((x && xor(!x, xor(false, ((!x && false) || (old_carry_1 && (!x || false)))))) || (old_carry_2 && (x || xor(!x, xor(false, ((!x && false) || (old_carry_1 && (!x || false)))))))))
-//  */
-//{
-//}
+lemma carry_test(x:bool, old_carry_1:bool, old_carry_2:bool, py_c1:bool, py_c2:bool, r_c1:bool, r_c2:bool)
+  requires py_c1 == (((!x) && false) || (old_carry_1 && ((!x) || false)));
+  requires py_c2 == ((x && xor((!x), xor(false, old_carry_1))) || (old_carry_2 && (x || xor((!x), xor(false, old_carry_1)))))
+
+  requires r_c1 == ((!x && false) || (old_carry_1 && (!x || false)));
+  requires r_c2 == ((x && xor(!x, xor(false, old_carry_1))) || (old_carry_2 && (x || xor(!x, xor(false, old_carry_1)))))
+  
+  // Python and Rust agree
+  ensures py_c1 == r_c1
+  ensures py_c2 == r_c2
+
+  // Recursion holds
+  ensures  xor(old_carry_1, !old_carry_2) == xor(py_c1, !py_c2)
+
+  // Rust's starting point for simplifying the recursion relation is on the right path
+  ensures xor(old_carry_1, !old_carry_2) == xor(((!x && false) || (old_carry_1 && (!x || false))), !((x && xor(!x, xor(false, old_carry_1))) || (old_carry_2 && (x || xor(!x, xor(false, old_carry_1))))))
+
+  // Rust's initial simplification of the recursion relation is on the right path
+  ensures xor(old_carry_1, !old_carry_2) == 
+          xor(! x && old_carry_1, (!((x && old_carry_1) || (old_carry_2 && (x || (xor(!x, old_carry_1)))))))
+  
+
+{
+}
