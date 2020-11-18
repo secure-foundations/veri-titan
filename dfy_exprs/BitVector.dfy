@@ -8,16 +8,14 @@ module CutomBitVector {
     // lsb: t[0], msb: t[|t| - 1]
     type cbv = t: seq<uint1> | 0 < |t| < 0x100000000 witness [1]
 
+    predicate is_conacat_two(wr1: uint256, wr2: uint256, v: cbv)
+    {
+        true
+    }
+
     method cbv_print(n: string, v: cbv)
     {
         print n, ":", |v|, ":";
-        // var i := 0;
-        // while i < |v|
-        //     decreases |v| - i;
-        // {
-        //     print(v[i]);
-        //     i := i + 1;
-        // }
         var v := to_nat(v);
         print v, "\n";
     }
@@ -306,12 +304,12 @@ module CutomBitVector {
         v[amt..]
     }
 
-    method cbv_lsr(v: cbv, amt: uint32) returns (x: cbv)
+    function method cbv_lsr(v: cbv, amt: uint32) : (x: cbv)
         requires amt != 0;
         requires amt < |v|;
         ensures |x| == |v|;
     {
-        x := cbv_zero(amt) + v[amt..];
+        cbv_zero(amt) + v[amt..]
     }
 
     lemma {:induction amt} cbv_lsr_is_div_lemma(v: cbv, v1: cbv, amt: uint32)
@@ -428,25 +426,21 @@ module CutomBitVector {
         assert to_nat(v') == to_nat(v);
     }
 
-    method cbv_add(v1: cbv, v2: cbv) returns (v3: cbv)
+    function method cbv_add(v1: cbv, v2: cbv) : (v3: cbv)
         requires |v1| == |v2|;
         ensures |v3| == |v1|;
     {
-        var l := |v1|;
-        var a := new uint1[l];
-        var c := 0;
+        cbv_add_aux(v1, v2, 0)
+    }
 
-        var i := 0;
-        while i < l
-            decreases l - i;
-            invariant i <= l;
-        {
-            var sum :int := v1[i] as int + v2[i] as int + c;
-            a[i] := sum % 2;
-            c := sum / 2;
-            i := i + 1;
-        }
-        v3 := a[..];
+    function method cbv_add_aux(v1: cbv, v2: cbv, c: uint1) : (v3: cbv)
+        requires |v1| == |v2|;
+        ensures |v3| == |v1|;
+    {
+        if |v1| == 0 then []
+        else 
+            var sum :int := v1[0] as int + v2[0] as int + c;
+            [sum % 2] + cbv_add_aux(v1[1..], v2[1..], sum / 2)
     }
     //     ensures to_nat(v3) == to_nat(v1) + to_nat(v2);
 }
