@@ -99,6 +99,9 @@ lemma x_minus_x_hard (b_i  x_i x_i_minus_1 c_i c_i_minus_1 c_i_minus_2 e_i e_i_m
                 (he0 : e_i         = xor (not x_i) cp_i_minus_1)            
                 (hc0 : c_i          = or (and x_i       e_i)   (and c_i_minus_1  (or x_i       e_i        )))             
                 (hcp0: cp_i         = or (and (not x_i) false) (and cp_i_minus_1 (or (not x_i) false)))             
+                (he1 : e_i_minus_1  = xor (not x_i_minus_1) cp_i_minus_2)            
+                (hc1 : c_i_minus_1  = or (and x_i_minus_1 e_i_minus_1)   (and c_i_minus_2  (or x_i_minus_1 e_i_minus_1)))             
+                (hcp1: cp_i_minus_1 = or (and (not x_i_minus_1) false) (and cp_i_minus_2 (or (not x_i_minus_1) false)))             
 : xor (not cp_i) c_i = xor (not cp_i_minus_1) c_i_minus_1 :=
 begin        
     -- simp [xor],

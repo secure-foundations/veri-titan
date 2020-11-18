@@ -334,8 +334,8 @@ fn egg_rules() -> Vec<egg::Rewrite<egg::SymbolLang, ()>> {
 
         rw!("assoc-xor"; "(^ ?x (^ ?y ?z))"=> "(^ (^ ?x ?y) ?z)"),
 
-        rw!("demorgan-and"; "(~ (& ?x ?y))" => "(| (~ ?y) (~ ?x))"),
-        rw!("demorgan-or";  "(~ (| ?x ?y))" => "(& (~ ?y) (~ ?x))"),
+        rw!("demorgan-and"; "(~ (& ?x ?y))" => "(| (~ ?x) (~ ?y))"),
+        rw!("demorgan-or";  "(~ (| ?x ?y))" => "(& (~ ?x) (~ ?y))"),
         
         rw!("and-false"; "(& ?x false)" => "false"),
         rw!("and-true"; "(& ?x true)" => "?x"),
