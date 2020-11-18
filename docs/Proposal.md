@@ -21,8 +21,8 @@
 Here is a piece of OTBN assembly:
 ```
 test:
-    bn.rshi w20, w18, w31 >> 128
-    bn.rshi w19, w17, w18 >> 128
+    bn.rshi w20, w31, w18 >> 128
+    bn.rshi w19, w18, w17 >> 128
 
     bn.add w19, w19, w8
     bn.addc w20, w20, w9
@@ -44,6 +44,7 @@ Additionally we need to correlate the input variables. Here is maybe what we can
 ```
 procedure test(ghost a: cbv, ghost b: cbv)
     requires
+        w31 == 0;
         conacat_two(w8, w9) == a;
         conacat_two(w17, w18) == b;
     reads
@@ -78,11 +79,17 @@ Pre-process:
 2. Convert the code into SSA form.
 3. Construct a DAG of use/def dependencies. Each node is an instruction/operation, associated with its output SSA variable(s).
 
-Equivalence guess:
+Equivalence Guess:
 
 1. Generate randomized inputs. Execute the two programs, label each graph node with concrete values.
 2. Identify potential equivalent nodes between two graphs, starting from the sources of the graph. In this step, one LBV node might correspond to multiple OTBN nodes. (Alternatively, if we pre-split the LBV nodes at register boundaries, we might be able to look for more direct correspondence.)
 
+Vale Code Generation:
+1. Print out a Vale version of the assembly program. For the input of the Vale procedure, we additionally pass in the inputs of the LBV model, as ghosts.
+2. In the procedure we also "execute" the ghost operations of the LBV model along along the Vale instructions.
+3. We also include the lemmas that were written for the LBV model, calling them at appropriate locations. 
+4. We create assertions of equivalence (correspondence) between the concrete registers and ghost variables, as identified from the previous stage.
+5. If the equivalence assertions all go through, we can also emit assertions on the register values using the high level predicates. So we end up proving high level properties about our low level program. 
 
 <!-- To provide high assurance, cryptographic libraries are often formally verified for correctness. In some cases the verification is done on the high level source code, then a compiler is entrusted to emit the correct assembly. Alternatively, the verification can also be performed on the assembly code directly, since hand-written assembly can often achieve more optimized performance. 
 
