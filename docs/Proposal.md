@@ -18,16 +18,19 @@
 
 ## Silly Example
 
-Here is a piece of OTBN assembly:
+Here is a piece of OTBN assembly. Lets assume that:
+*  `w31` is zero
+* `[w18, w17]` and `[w8, w9]` are the inputs, each containing a variable that spans two registers (512 bits).
+* `[w20, w19]` is the output
 ```
 test:
-    bn.rshi w20, w31, w18 >> 128
-    bn.rshi w19, w18, w17 >> 128
+    bn.rshi w20, w31, w18 >> 128 // right shift [w31, w18] into w20
+    bn.rshi w19, w18, w17 >> 128 // right shift [w18, w17] into w19
 
-    bn.add w19, w19, w8
-    bn.addc w20, w20, w9
+    bn.add w19, w19, w8 
+    bn.addc w20, w20, w9 // addition with carry from the previous step
 ```
-Here is a Dafny model:
+If we correlate `a` with `[w18, w17]`  and `b` with `[w8, w9]`, here is a Dafny model:
 ```
 method test(a: cbv, b: cbv)
     requires |a| == 512;
@@ -40,7 +43,7 @@ method test(a: cbv, b: cbv)
     assert important_predicate(t2);
 }
 ```
-Additionally we need to correlate the input variables. Here is maybe what we can generate:
+Given those two, here is maybe what we can generate:
 ```
 procedure test(ghost a: cbv, ghost b: cbv)
     requires
@@ -71,7 +74,9 @@ procedure test(ghost a: cbv, ghost b: cbv)
 }
 ```
 
-## Workflow (Proposal):
+We kind of "replay" the LBV model inside the OTBN code. `important_lemma` was written for the LBV model, which ensures some `important_predicate`.
+
+## Workflow Sketch:
 
 Pre-process:
 
