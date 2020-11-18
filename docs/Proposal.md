@@ -47,8 +47,8 @@ Given those two, here is maybe what we can generate:
 procedure test(ghost a: cbv, ghost b: cbv)
     requires
         w31 == 0;
-        concat_two(w9, w8) == a;
-        concat_two(w18, w17) == b;
+        concat_two(w18, w17) == a;
+        concat_two(w9, w8) == b;
     reads
         w31; w17; w18; w8; w9;
     modifies
