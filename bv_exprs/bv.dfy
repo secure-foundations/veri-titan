@@ -117,7 +117,9 @@ lemma {:induction false} carry_test_model1(the_x:bool, old_carry_1:bool, old_car
 //{
 //}
 
-lemma carry_test(x:bool, old_carry_1:bool, old_carry_2:bool, py_c1:bool, py_c2:bool, r_c1:bool, r_c2:bool)
+lemma carry_test(x:bool, x':bool, old_carry_1:bool, old_carry_2:bool, old_carry_1':bool, old_carry_2':bool, py_c1:bool, py_c2:bool, py_c1':bool, py_c2':bool, r_c1:bool, r_c2:bool)
+  requires old_carry_1 == (((!x') && false) || (old_carry_1' && ((!x') || false)));
+  requires old_carry_2 == ((x' && xor((!x'), xor(false, old_carry_1'))) || (old_carry_2' && (x' || xor((!x'), xor(false, old_carry_1')))))
   requires py_c1 == (((!x) && false) || (old_carry_1 && ((!x) || false)));
   requires py_c2 == ((x && xor((!x), xor(false, old_carry_1))) || (old_carry_2 && (x || xor((!x), xor(false, old_carry_1)))))
 
@@ -129,7 +131,7 @@ lemma carry_test(x:bool, old_carry_1:bool, old_carry_2:bool, py_c1:bool, py_c2:b
   ensures py_c2 == r_c2
 
   // Recursion holds
-//  ensures  xor(old_carry_1, !old_carry_2) == xor(py_c1, !py_c2)
+  ensures  xor(old_carry_1, !old_carry_2) == xor(py_c1, !py_c2)
 //
 //  // Rust's starting point for simplifying the recursion relation is on the right path
 //  ensures xor(old_carry_1, !old_carry_2) == xor(((!x && false) || (old_carry_1 && (!x || false))), !((x && xor(!x, xor(false, old_carry_1))) || (old_carry_2 && (x || xor(!x, xor(false, old_carry_1))))))
