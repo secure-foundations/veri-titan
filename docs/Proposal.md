@@ -16,13 +16,67 @@
 * Correctness proof for OTBN code (presumably in Vale)
 * Alternatively, an equivalence proof of OTBN and LBV
 
+## Silly Example
+
+Here is a piece of OTBN assembly:
+```
+test:
+    bn.rshi w20, w18, w31 >> 128
+    bn.rshi w19, w17, w18 >> 128
+
+    bn.add w19, w19, w8
+    bn.addc w20, w20, w9
+```
+Here is a Dafny model:
+```
+method test(a: cbv, b: cbv)
+    requires |a| == 512;
+    requires |b| == 512;
+{
+    var t1 := cbv_lsr(a, 128);
+    var t2 := cbv_add(t1, b);
+
+    important_lemma(t2, t1, a, b);
+    assert important_predicate(t2);
+}
+```
+Additionally we need to correlate the input variables. Here is maybe what we can generate:
+```
+procedure test(ghost a: cbv, ghost b: cbv)
+    requires
+        conacat_two(w8, w9) == a;
+        conacat_two(w17, w18) == b;
+    reads
+        w31; w17; w18; w8; w9;
+    modifies
+        w19; w20; flags;
+    ensures
+        important_predicate(conacat_two(w19, w20));
+{
+    BN_RSHI(w20, w18, w31, 128); // bn.rshi w20, w18, w31 >> 128
+    BN_RSHI(w19, w17, w18, 128); // bn.rshi w19, w17, w18 >> 128
+
+    ghost var t1 := cbv_lsr(a, 128);
+    assert conacat_two(w19, w20) == t1;
+
+    BN_ADD(w19, w19, w8, false, 0, false); // bn.add w19, w19, w8
+    BN_ADDC(w20, w20, w9, false, 0, false); // bn.addc w20, w20, w9
+
+    ghost var t2 := cbv_add(t1, b);
+    assert conacat_two(w19, w20) == t2;
+
+    important_lemma(t2, t1, a, b);
+    assert important_predicate(t2);
+}
+```
+
 ## Workflow (Proposal):
 
 Pre-process:
 
 1. Parse OTBN/LBV code. 
 2. Convert the code into SSA form.
-3. Construct a DAG of use/def dependencies. Each node is an instruction/operation, associated with its output SSA variable(s). 
+3. Construct a DAG of use/def dependencies. Each node is an instruction/operation, associated with its output SSA variable(s).
 
 Equivalence guess:
 
