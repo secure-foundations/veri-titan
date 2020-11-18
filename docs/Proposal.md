@@ -14,7 +14,6 @@
 
 ## Output 
 * Correctness proof for OTBN code (presumably in Vale)
-* Alternatively, an equivalence proof of OTBN and LBV
 
 ## Silly Example
 
