@@ -3,7 +3,9 @@
 use egg::{*, rewrite as rw};
 use std::collections::HashMap;
 use std::fmt;
+use std::rc::Rc;
 
+#[derive(Clone, Copy)]
 enum BVBinOp {
     And,
     Or,
@@ -11,38 +13,51 @@ enum BVBinOp {
     Add,
     Sub,
 }
+
+impl std::fmt::Display for BVBinOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        use BVBinOp::*;
+        match self {
+            And => write!(f, "&"),
+            Or => write!(f, "|"),
+            Xor => write!(f, "^"),
+            Add => write!(f, "+"),
+            Sub => write!(f, "-"),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
 enum BVUniOp {
     Neg,
 }
 
-enum BVexpr {
-    Const(i64),
-    Var(String),
-    UniExpr(BVUniOp, Box<BVexpr>),
-    BinExpr(BVBinOp, Box<BVexpr>, Box<BVexpr>),
+impl std::fmt::Display for BVUniOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        use BVUniOp::*;
+        match self {
+            Neg => write!(f, "~"),
+        }
+    }
 }
 
-impl fmt::Display for BVexpr {
+#[derive(Clone)]
+enum BVExpr_ {
+    Const(i64),
+    Var(String),
+    UniExpr(BVUniOp, BVExpr),
+    BinExpr(BVBinOp, BVExpr, BVExpr),
+}
+type BVExpr = Rc<BVExpr_>;
+
+impl fmt::Display for BVExpr_ {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use BVexpr::*;
-        use BVBinOp::*;
-        match &*self {
+        use BVExpr_::*;
+        match self {
             Const(c) => write!(f, "{}", c),
             Var(v) => write!(f, "{}", v),
-            UniExpr(op, boxed_src) => { 
-                let BVUniOp::Neg = *op;
-                write!(f, "~{}", boxed_src)
-            },
-            BinExpr(op, boxed_src0, boxed_src1) => {
-                let op_str = match op {
-                    And => "&",
-                    Or => "|",
-                    Xor => "^",
-                    Add => "+",
-                    Sub => "-",
-                };
-                write!(f, "({} {} {})", boxed_src0, op_str, boxed_src1)
-            }
+            UniExpr(op, src) => write!(f, "{}{}", op, src),
+            BinExpr(op, src0, src1) => write!(f, "({} {} {})", src0, op, src1), 
         }
     }
 }
@@ -60,16 +75,33 @@ enum BoolUniOp {
 }
 
 #[derive(PartialEq, Eq, Hash, Debug, Clone)]
-enum Boolexpr {
-    Const(bool),
+enum BoolExpr_ {
+    Const(i64),
     Var(String,bool),
-    UniExpr(BoolUniOp, Box<Boolexpr>),
-    BinExpr(BoolBinOp, Box<Boolexpr>, Box<Boolexpr>),
+    UniExpr(BoolUniOp, BoolExpr),
+    BinExpr(BoolBinOp, BoolExpr, BoolExpr),
+}
+type BoolExpr = Rc<BoolExpr_>;
+
+
+struct Namer {
+    ctr:u32,
 }
 
-impl Boolexpr {
+impl Namer {
+    pub fn new() -> Namer {
+        Namer { ctr : 0 }
+    }
+
+    fn get_name(& mut self, s:&str) -> String {
+        self.ctr = self.ctr + 1;
+        format!("{}_{}", s, self.ctr)
+    }
+}
+
+impl BoolExpr_ {
     fn mk_string(&self, inline:bool, dafny:bool) -> String {
-        use Boolexpr::*;
+        use BoolExpr_::*;
         match &*self {
             Const(c) => format!("{}", c),
             Var(v,old) => 
@@ -78,9 +110,9 @@ impl Boolexpr {
                 } else {
                     format!("{}", v)
                 }
-            UniExpr(op, boxed_src) => {
+            UniExpr(op, src) => {
                 let BoolUniOp::Not = *op;
-                let src = (*boxed_src).mk_string(inline, dafny);
+                let src = (*src).mk_string(inline, dafny);
                 if inline {
                     format!("(~ {})", src)
                 } else if dafny {
@@ -89,10 +121,10 @@ impl Boolexpr {
                     format!("~{}", src)
                 }
             },
-            BinExpr(op, boxed_src0, boxed_src1) => {
+            BinExpr(op, src0, src1) => {
                 use BoolBinOp::*;
-                let s0 = boxed_src0.mk_string(inline, dafny);
-                let s1 = boxed_src1.mk_string(inline, dafny);
+                let s0 = src0.mk_string(inline, dafny);
+                let s1 = src1.mk_string(inline, dafny);
                 if dafny {
                     match op {
                         And => format!("({} && {})", s0, s1),
@@ -116,95 +148,60 @@ impl Boolexpr {
     }
 }
 
-impl fmt::Display for Boolexpr {
+impl fmt::Display for BoolExpr_ {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.mk_string(false, true))
     }
 }
 
-struct Namer {
-    ctr:u32,
-}
-
-impl Namer {
-    pub fn new() -> Namer {
-        Namer { ctr : 0 }
-    }
-
-    fn get_name(& mut self, s:&str) -> String {
-        self.ctr = self.ctr + 1;
-        format!("{}_{}", s, self.ctr)
-    }
-}
-
-
-fn get_bit_exprs(e: BVexpr, n:& mut Namer) -> (Boolexpr, Option<HashMap<Boolexpr, Boolexpr>>) {
-    use Boolexpr::*;
-    use BoolBinOp::*;
-    match e {
-        BVexpr::Const(_c) => (Const(false), None),
-        BVexpr::Var(v) => (Var(v, false), None),
-        BVexpr::UniExpr(_op, boxed_src) => {
-            let (src, map) = get_bit_exprs(*boxed_src, n);
-            (UniExpr(BoolUniOp::Not, Box::new(src)), map)
-        }
-        BVexpr::BinExpr(op, boxed_src0, boxed_src1) => {
-            let (src0, map0) = get_bit_exprs(*boxed_src0, n);
-            let (src1, map1) = get_bit_exprs(*boxed_src1, n);
-            let maps = match map0 {
-                None => map1,
-                Some(m0) => match map1 {
-                    None => Some(m0),
-                    Some(m1) => {
-                        let mut fresh_map = HashMap::new();
-                        fresh_map.extend(m0.into_iter());
-                        fresh_map.extend(m1.into_iter());
-                        Some(fresh_map)
+impl BVExpr_ {
+    fn get_bit_exprs(&self, n:& mut Namer) -> (BoolExpr, HashMap<BoolExpr, BoolExpr>) {
+        use BoolExpr_::*;
+        use BoolBinOp::*;
+        match e {
+            BVExpr::Const(_c) => (Const(false), None),
+            BVExpr::Var(v) => (Var(v, false), None),
+            BVExpr::UniExpr(op, src) => {
+                let BVUniOp::Neg = *op;
+                let (src, map) = src.get_bit_exprs(n);
+                (UniExpr(BoolUniOp::Not, src).into(), map)
+            }
+            BVExpr::BinExpr(op, src0, src1) => {
+                let (src0, map0) = src0.get_bit_exprs(n);
+                let (src1, map1) = src1.get_bit_exprs(n);
+                let maps = map0.into_iter().chain(map1.into_iter()).collect();
+                match op {
+                    BVBinOp::And => (BinExpr(And, src0, src1).into(), maps),
+                    BVBinOp::Or => (BinExpr(Or, src0, src1).into(), maps),
+                    BVBinOp::Xor => (BinExpr(Xor, src0, src1).into(), maps),
+                    BVBinOp::Add => {
+                        let carry_name = n.get_name("carry");
+                        let carry_var = Var(carry_name.clone(), false).into();
+                        let carry_Expr = BinExpr(
+                            Or,
+                            BinExpr(And, src0.clone(), src1.clone()).into(),
+                            BinExpr(
+                                And,
+                                carry_var.clone(),
+                                BinExpr(Or, src0.clone(), src1.clone()).into()).into(),
+                        ).into();
+                        let mut maps = maps;
+                        maps.insert(carry_var.clone(), carry_expr);
+                        let add_Expr = BinExpr(
+                            Xor,
+                            src0,
+                            BinExpr(Xor, src1, carry_var).into()).into();
+                        (add_Expr, maps)
                     }
-                },
-            };
-            let src0 = Box::new(src0);
-            let src1 = Box::new(src1);
-            match op {
-                BVBinOp::And => (BinExpr(And, src0, src1), maps),
-                BVBinOp::Or => (BinExpr(Or, src0, src1), maps),
-                BVBinOp::Xor => (BinExpr(Xor, src0, src1), maps),
-                BVBinOp::Add => {
-                    let carry_name = n.get_name("carry");
-                    let carry_var = Box::new(Var(carry_name.clone(), false));
-                    let carry_expr = BinExpr(
-                        Or,
-                        Box::new(BinExpr(
-                            And,
-                            src0.clone(),
-                            src1.clone(),
-                        )),
-                        Box::new(BinExpr(
-                            And,
-                            Box::new(Var(carry_name, true)),
-                            Box::new(BinExpr(Or, src0.clone(), src1.clone())),
-                        )),
-                    );
-                    let maps = if let Some(mut m) = maps {
-                        m.insert(*carry_var.clone(), carry_expr);
-                        Some(m)
-                    } else {
-                        let mut fresh_map = HashMap::new();
-                        fresh_map.insert(*carry_var.clone(), carry_expr);
-                        Some(fresh_map)
-                    };
-                    let add_expr = BinExpr(
-                        Xor,
-                        src0,
-                        Box::new(BinExpr(Xor, src1, carry_var)),
-                    );
-                    (add_expr, maps)
+                    BVBinOp::Sub => unreachable(),
                 }
-                BVBinOp::Sub => panic!("This should be gone by now!"),
             }
         }
     }
 }
+
+/*
+
 
 fn simp_bv(e: BVexpr) -> BVexpr {
     match e {
@@ -433,3 +430,4 @@ fn main() {
 
     println!("Done!");
 }
+*/
