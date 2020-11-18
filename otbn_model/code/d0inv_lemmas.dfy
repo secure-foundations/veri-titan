@@ -132,6 +132,7 @@ module d0inv_lemmas {
 	{
 		power_2_bounded_lemma(256);
 		assert w29 == (w31 - w29_g2) % BASE_256;
+        assume false;
 		mod_inv_lemma(w29, w29_g2, w28);
 	}
 

@@ -1,0 +1,65 @@
+include "decls.vad"
+
+#verbatim
+include "../code/vale.dfy"
+
+include "../spec/def.dfy"
+include "../spec/ops.dfy"
+include "../spec/types.dfy"
+
+include "../../dfy_exprs/BitVector.dfy"
+
+include "../gen/decls.dfy"
+
+module test {
+
+import opened bignum_vale
+
+import opened bignum_def
+import opened ops
+import opened types
+
+import opened bignum_decls
+import opened CutomBitVector
+
+#endverbatim
+
+type cbv:Type(0) extern;
+
+function conacat_two(wr1: uint256, wr2: uint256): cbv extern;
+function cbv_lsr(v: cbv, amt: uint32) : cbv extern;
+function cbv_add(v1: cbv, v2: cbv) : cbv extern;
+function important_predicate(v1: cbv) : bool extern;
+
+ghost procedure important_lemma(ghost t2: cbv, ghost t1: cbv, ghost a: cbv, ghost b: cbv) extern;
+
+procedure test(ghost a: cbv, ghost b: cbv)
+    requires
+        conacat_two(w8, w9) == a;
+        conacat_two(w17, w18) == b;
+    reads
+        w31; w17; w18; w8; w9;
+    modifies
+        w19; w20; flags;
+    ensures
+        important_predicate(conacat_two(w19, w20));
+{
+    BN_RSHI(w20, w18, w31, 128); // bn.rshi w20, w18, w31 >> 128
+    BN_RSHI(w19, w17, w18, 128); // bn.rshi w19, w17, w18 >> 128
+
+    ghost var t1 := cbv_lsr(a, 128);
+    assert conacat_two(w19, w20) == t1;
+
+    BN_ADD(w19, w19, w8, false, 0, false); // bn.add w19, w19, w8
+    BN_ADDC(w20, w20, w9, false, 0, false); // bn.addc w20, w20, w9
+
+    ghost var t2 := cbv_add(t1, b);
+    assert conacat_two(w19, w20) == t2;
+
+    important_lemma(t2, t1, a, b);
+    assert important_predicate(t2);
+}
+
+#verbatim
+}
+#endverbatim

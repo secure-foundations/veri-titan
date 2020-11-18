@@ -8,12 +8,6 @@ include "../otbn_model/lib/congruences.dfy"
 import opened CutomBitVector
 import opened NativeTypes
 
-// method ArrayFromSeq<A>(s: seq<A>) returns (a: array<A>)
-//   ensures a[..] == s
-// {
-//     a := new A[|s|] ( i requires 0 <= i < |s| => s[i] );
-// }
-
 method get_random_bv(l: uint32) returns (v: cbv)
     ensures |v| == l;
 {
@@ -41,11 +35,13 @@ method simple_test(a: cbv, b: cbv)
 {
 //   bn.rshi w20, w18, w31 >> 128
 //   bn.rshi w19, w17, w18 >> 128
-    var t := cbv_lsr(a, 128);
+    var t1 := cbv_lsr(a, 128);
+    cbv_print("t1", t1);
 
 //   bn.add w19, w19, w8
 //   bn.addc w20, w20, w9
-    var t2 := cbv_add(t, b);
+    var t2 := cbv_add(t1, b);
+    cbv_print("t2", t2);
 }
 
 method {:main} Main()
@@ -56,5 +52,4 @@ method {:main} Main()
     var b := from_nat(0x4b4dc1dd7c9923cd49b5248c63b43c6f638b623f931693147ce65c14f4e87afa0a4600b6d088d4538f41a54ed81d496edd2a9b0a7c779b3af1f924313e20ada7, 512);
 
     simple_test(a, b);
-    // cbv_print("x", x);
 }

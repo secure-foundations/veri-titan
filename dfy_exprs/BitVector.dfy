@@ -8,9 +8,20 @@ module CutomBitVector {
     // lsb: t[0], msb: t[|t| - 1]
     type cbv = t: seq<uint1> | 0 < |t| < 0x100000000 witness [1]
 
-    predicate is_conacat_two(wr1: uint256, wr2: uint256, v: cbv)
+    function conacat_two(wr1: uint256, wr2: uint256) : (v: cbv)
+    {
+        [1]
+    }
+
+    predicate important_predicate(v: cbv)
     {
         true
+    }
+
+    lemma important_lemma(t2: cbv, t1: cbv, a: cbv, b: cbv)
+        ensures important_predicate(t2);
+    {
+
     }
 
     method cbv_print(n: string, v: cbv)
