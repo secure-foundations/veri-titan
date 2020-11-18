@@ -87,9 +87,9 @@ Equivalence Guess:
 Vale Code Generation:
 1. Print out a Vale version of the assembly program. For the input of the Vale procedure, we additionally pass in the inputs of the LBV model, as ghosts.
 2. In the procedure we also "execute" the ghost operations of the LBV model along along the Vale instructions.
-3. We also include the lemmas that were written for the LBV model, calling them at appropriate locations. 
+3. We include the lemmas that were written for the LBV model, calling them at appropriate locations. (I guess if we are emitting SSA version of both programs, where we put the assertions or invoke lemmas shouldn't really matter too much).
 4. We create assertions of equivalence (correspondence) between the concrete registers and ghost variables, as identified from the previous stage.
-5. If the equivalence assertions all go through, we can also emit assertions on the register values using the high level predicates. So we end up proving high level properties about our low level program. 
+5. If the equivalence assertions all magically go through (BIG IF), we can also emit assertions on the register values using the high level predicates. So we end up proving high level properties about our low level program. 
 
 <!-- To provide high assurance, cryptographic libraries are often formally verified for correctness. In some cases the verification is done on the high level source code, then a compiler is entrusted to emit the correct assembly. Alternatively, the verification can also be performed on the assembly code directly, since hand-written assembly can often achieve more optimized performance. 
 
