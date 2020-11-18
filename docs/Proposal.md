@@ -20,7 +20,7 @@
 
 Here is a piece of OTBN assembly. Lets assume that:
 *  `w31` is zero
-* `[w18, w17]` and `[w8, w9]` are the inputs, each containing a variable that spans two registers (512 bits).
+* `[w18, w17]` and `[w9, w8]` are the inputs, each containing a variable that spans two registers (512 bits).
 * `[w20, w19]` is the output
 ```
 test:
@@ -30,7 +30,7 @@ test:
     bn.add w19, w19, w8 
     bn.addc w20, w20, w9 // addition with carry from the previous step
 ```
-If we correlate `a` with `[w18, w17]`  and `b` with `[w8, w9]`, here is a Dafny model:
+If we correlate `a` with `[w18, w17]`  and `b` with `[w9, w8]`, here is a Dafny model:
 ```
 method test(a: cbv, b: cbv)
     requires |a| == 512;
@@ -48,33 +48,34 @@ Given those two, here is maybe what we can generate:
 procedure test(ghost a: cbv, ghost b: cbv)
     requires
         w31 == 0;
-        conacat_two(w8, w9) == a;
-        conacat_two(w17, w18) == b;
+        concat_two(w9, w8) == a;
+        concat_two(w18, w17) == b;
     reads
         w31; w17; w18; w8; w9;
     modifies
         w19; w20; flags;
     ensures
-        important_predicate(conacat_two(w19, w20));
+        important_predicate(concat_two(w20, w19));
 {
-    BN_RSHI(w20, w18, w31, 128); // bn.rshi w20, w18, w31 >> 128
-    BN_RSHI(w19, w17, w18, 128); // bn.rshi w19, w17, w18 >> 128
+    BN_RSHI(w20, w31, w18, 128); 
+    BN_RSHI(w19, w18, w17, 128);
 
     ghost var t1 := cbv_lsr(a, 128);
-    assert conacat_two(w19, w20) == t1;
+    assert concat_two(w20, w19) == t1;
 
-    BN_ADD(w19, w19, w8, false, 0, false); // bn.add w19, w19, w8
-    BN_ADDC(w20, w20, w9, false, 0, false); // bn.addc w20, w20, w9
+    BN_ADD(w19, w19, w8, false, 0, false);
+    BN_ADDC(w20, w20, w9, false, 0, false);
 
     ghost var t2 := cbv_add(t1, b);
-    assert conacat_two(w19, w20) == t2;
+    assert concat_two(w20, w19) == t2;
 
     important_lemma(t2, t1, a, b);
     assert important_predicate(t2);
+    assert important_predicate(concat_two(w20, w19));
 }
 ```
 
-We kind of "replay" the LBV model inside the OTBN code. `important_lemma` was written for the LBV model, which ensures some `important_predicate`.
+We kind of "replay" the LBV model inside the OTBN code. `important_lemma` was written for the LBV model, which ensures some `important_predicate`. Assuming that all our equivalence assertions hold, we should be able to invoke them and prove properties at the register level.
 
 ## Workflow Sketch:
 
