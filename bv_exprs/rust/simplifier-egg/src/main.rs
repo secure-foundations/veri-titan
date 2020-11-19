@@ -98,50 +98,64 @@ impl Namer {
     }
 }
 
+#[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
+enum StrMode {
+    Infix,
+    Prefix,
+    Dafny,
+    DafnyFunction,
+}
+
 impl BoolExpr_ {
-    fn mk_string(&self, inline: bool, dafny: bool) -> String {
+    fn mk_string(&self, mode: StrMode) -> String {
         use BoolExpr_::*;
+        use StrMode::*;
         match &*self {
             Const(c) => format!("{}", c),
             Var(v, old) => {
-                if *old {
-                    format!("old_{}", v)
-                } else {
-                    format!("{}", v)
+                let s = 
+                    if *old {
+                        format!("old_{}", v)
+                    } else {
+                        format!("{}", v)
+                    };
+                match mode {
+                    DafnyFunction => {
+                        match &v.find("carry") {
+                            None => format!("{}(i)", s),
+                            Some(_) => format!("{}(i-1)", s),
+                        }
+                    },
+                    _ => s
                 }
             }
             UniExpr(op, src) => {
                 let BoolUniOp::Not = *op;
-                let src = (*src).mk_string(inline, dafny);
-                if inline {
-                    format!("(~ {})", src)
-                } else if dafny {
-                    format!("!{}", src)
-                } else {
-                    format!("~{}", src)
+                let src = (*src).mk_string(mode);
+                match mode {
+                    Infix => format!("(~ {})", src),
+                    Prefix => format!("~{}", src),
+                    Dafny | DafnyFunction => format!("!{}", src),
                 }
             }
             BinExpr(op, src0, src1) => {
                 use BoolBinOp::*;
-                let s0 = src0.mk_string(inline, dafny);
-                let s1 = src1.mk_string(inline, dafny);
-                if dafny {
-                    match op {
-                        And => format!("({} && {})", s0, s1),
-                        Or => format!("({} || {})", s0, s1),
-                        Xor => format!("xor({}, {})", s0, s1),
-                    }
-                } else {
-                    let op_str = match op {
-                        And => "&",
-                        Or => "|",
-                        Xor => "^",
-                    };
-                    if inline {
-                        format!("({} {} {})", op_str, s0, s1)
-                    } else {
-                        format!("({} {} {})", s0, op_str, s1)
-                    }
+                let s0 = src0.mk_string(mode);
+                let s1 = src1.mk_string(mode);
+                let normal_op_str = match op {
+                    And => "&",
+                    Or => "|",
+                    Xor => "^",
+                };
+                match mode {
+                    Infix => format!("({} {} {})", s0, normal_op_str, s1),
+                    Prefix => format!("({} {} {})", normal_op_str, s0, s1),
+                    Dafny | DafnyFunction =>
+                        match op {
+                            And => format!("({} && {})", s0, s1),
+                            Or => format!("({} || {})", s0, s1),
+                            Xor => format!("xor({}, {})", s0, s1),
+                        }
                 }
             }
         }
@@ -195,7 +209,7 @@ impl BoolExpr_ {
 
 impl fmt::Display for BoolExpr_ {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.mk_string(false, true))
+        write!(f, "{}", self.mk_string(StrMode::DafnyFunction))
     }
 }
 
@@ -280,8 +294,17 @@ fn identity() -> BVExpr {
     BinExpr(Sub, x.clone(), x).into()
 }
 
+fn identity2() -> BVExpr {
+    use BVBinOp::*;
+    use BVExpr_::*;
+
+    let x: BVExpr = Var("x".to_owned()).into();
+    BinExpr(Sub, x.clone(), BinExpr(Add, x.clone(), BinExpr(Sub, x.clone(), x).into()).into()).into()
+}
+
 fn simple_example() {
     let f = identity();
+    //let f = identity2();
     println!("Original BV expr: {}", f);
     let f = f.simp();
     println!("Simplified BV expr: {}", f);
@@ -289,17 +312,19 @@ fn simple_example() {
     let mut namer = Namer::new();
     let (f_expr, carries) = f.get_bit_exprs(&mut namer);
     println!("Main bool expr: {}", f_expr);
-    println!("Main bool expr inline: {}", f_expr.mk_string(true, false));
+    println!("Main bool expr infix: {}", f_expr.mk_string(StrMode::Prefix));
+    println!("Main bool expr DafnyFunction: {}", f_expr.mk_string(StrMode::DafnyFunction));
 
     let rules = egg_rules();
-    let f_egg = egg_simp(f_expr.mk_string(true, false), &rules);
+    let f_egg = egg_simp(f_expr.mk_string(StrMode::Prefix), &rules);
     println!("Main bool expr simplified: {}", f_egg);
 
     for (carry, carry_expr) in carries.iter() {
         println!("{} = {}", carry, carry_expr);
-        let carry_expr_egg = egg_simp(carry_expr.mk_string(true, false), &rules);
+        let carry_expr_egg = egg_simp(carry_expr.mk_string(StrMode::Prefix), &rules);
         println!("Simplified {} = {}", carry, carry_expr_egg);
     }
+    /*
     use BoolExpr_::*;
     if let Some(c1) = carries.get((&Var("carry_1".to_string(), false)).into()) {
         if let Some(c2) = carries.get((&Var("carry_2".to_string(), false)).into()) {
@@ -319,6 +344,7 @@ fn simple_example() {
             );
         }
     }
+    */
 }
 
 fn egg_rules() -> Vec<egg::Rewrite<egg::SymbolLang, ()>> {
