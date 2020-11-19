@@ -76,7 +76,7 @@ enum BoolUniOp {
 
 #[derive(PartialEq, Eq, Hash, Debug, Clone)]
 enum BoolExpr_ {
-    Const(i64),
+    Const(bool),
     Var(String,bool),
     UniExpr(BoolUniOp, BoolExpr),
     BinExpr(BoolBinOp, BoolExpr, BoolExpr),
@@ -146,86 +146,30 @@ impl BoolExpr_ {
             }
         }
     }
-}
 
-impl fmt::Display for BoolExpr_ {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.mk_string(false, true))
-    }
-}
 
-impl BVExpr_ {
-    fn get_bit_exprs(&self, n:& mut Namer) -> (BoolExpr, HashMap<BoolExpr, BoolExpr>) {
+    fn age_carries(&self) -> BoolExpr {
         use BoolExpr_::*;
-        use BoolBinOp::*;
-        match e {
-            BVExpr::Const(_c) => (Const(false), None),
-            BVExpr::Var(v) => (Var(v, false), None),
-            BVExpr::UniExpr(op, src) => {
-                let BVUniOp::Neg = *op;
-                let (src, map) = src.get_bit_exprs(n);
-                (UniExpr(BoolUniOp::Not, src).into(), map)
-            }
-            BVExpr::BinExpr(op, src0, src1) => {
-                let (src0, map0) = src0.get_bit_exprs(n);
-                let (src1, map1) = src1.get_bit_exprs(n);
-                let maps = map0.into_iter().chain(map1.into_iter()).collect();
-                match op {
-                    BVBinOp::And => (BinExpr(And, src0, src1).into(), maps),
-                    BVBinOp::Or => (BinExpr(Or, src0, src1).into(), maps),
-                    BVBinOp::Xor => (BinExpr(Xor, src0, src1).into(), maps),
-                    BVBinOp::Add => {
-                        let carry_name = n.get_name("carry");
-                        let carry_var = Var(carry_name.clone(), false).into();
-                        let carry_Expr = BinExpr(
-                            Or,
-                            BinExpr(And, src0.clone(), src1.clone()).into(),
-                            BinExpr(
-                                And,
-                                carry_var.clone(),
-                                BinExpr(Or, src0.clone(), src1.clone()).into()).into(),
-                        ).into();
-                        let mut maps = maps;
-                        maps.insert(carry_var.clone(), carry_expr);
-                        let add_Expr = BinExpr(
-                            Xor,
-                            src0,
-                            BinExpr(Xor, src1, carry_var).into()).into();
-                        (add_Expr, maps)
+        match self {
+            Const(_) => self.clone().into(),
+            Var(name,old) => 
+                if !old {
+                    match &name.find("carry") {
+                        None => self.clone().into(),
+                        Some(_) => Var((*name).clone(), true).into()
                     }
-                    BVBinOp::Sub => unreachable(),
+                } else {
+                    self.clone().into()
                 }
+            UniExpr(op, src) => UniExpr(*op, src.age_carries()).into(),
+            BinExpr(op, src0, src1) => {
+                let src0 = src0.age_carries();
+                let src1 = src1.age_carries();
+                BinExpr(*op, src0, src1).into()
             }
         }
     }
-}
 
-/*
-
-
-fn simp_bv(e: BVexpr) -> BVexpr {
-    match e {
-        BVexpr::Const(_) => e,
-        BVexpr::Var(_) => e,
-        BVexpr::UniExpr(op, boxed_src) => BVexpr::UniExpr(op, Box::new(simp_bv(*boxed_src))),
-        BVexpr::BinExpr(op, boxed_src0, boxed_src1) => {
-            let s0 = Box::new(simp_bv(*boxed_src0));
-            let s1 = Box::new(simp_bv(*boxed_src1));
-            match op {
-                BVBinOp::Sub => BVexpr::BinExpr(
-                    BVBinOp::Add,
-                    s0,
-                    Box::new(BVexpr::BinExpr(
-                        BVBinOp::Add,
-                        Box::new(BVexpr::UniExpr(BVUniOp::Neg, s1)),
-                        Box::new(BVexpr::Const(1)),
-                    )),
-                ),
-                _ => BVexpr::BinExpr(op, s0, s1),
-            }
-        }
-    }
-}
 
 //fn subst_vars(e: Boolexpr, map:&HashMap<Boolexpr, Boolexpr>) -> Boolexpr {
 //    use Boolexpr::*;
@@ -249,44 +193,101 @@ fn simp_bv(e: BVexpr) -> BVexpr {
 //    }
 //}
 
-fn age_carries(e: Boolexpr) -> Boolexpr {
-    use Boolexpr::*;
-    match &e {
-        Const(_) => e,
-        Var(name,old) => 
-            if !old {
-                match &name.find("carry") {
-                    None => e,
-                    Some(_) => Var((*name).clone(), true)
-                }
-            } else {
-                e
+}
+
+impl fmt::Display for BoolExpr_ {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.mk_string(false, true))
+    }
+}
+
+impl BVExpr_ {
+    fn get_bit_exprs(&self, n:& mut Namer) -> (BoolExpr, HashMap<BoolExpr, BoolExpr>) {
+        use BoolExpr_::*;
+        use BoolBinOp::*;
+        match self {
+            BVExpr_::Const(_c) => (Const(false).into(), Default::default()),
+            BVExpr_::Var(v) => (Var(v.clone(), false).into(), Default::default()),
+            BVExpr_::UniExpr(op, src) => {
+                let BVUniOp::Neg = *op;
+                let (src, map) = src.get_bit_exprs(n);
+                (UniExpr(BoolUniOp::Not, src).into(), map)
             }
-        UniExpr(op, boxed_src) => UniExpr(*op, Box::new(age_carries((**boxed_src).clone()))),
-        BinExpr(op, boxed_src0, boxed_src1) => {
-            let s0 = age_carries((**boxed_src0).clone());
-            let s1 = age_carries((**boxed_src1).clone());
-            BinExpr(*op, Box::new(s0), Box::new(s1))
+            BVExpr_::BinExpr(op, src0, src1) => {
+                let (src0, map0) = src0.get_bit_exprs(n);
+                let (src1, map1) = src1.get_bit_exprs(n);
+                let maps = map0.into_iter().chain(map1.into_iter()).collect();
+                match op {
+                    BVBinOp::And => (BinExpr(And, src0, src1).into(), maps),
+                    BVBinOp::Or => (BinExpr(Or, src0, src1).into(), maps),
+                    BVBinOp::Xor => (BinExpr(Xor, src0, src1).into(), maps),
+                    BVBinOp::Add => {
+                        let carry_name = n.get_name("carry");
+                        let carry_var:BoolExpr = Var(carry_name.clone(), false).into();
+                        let carry_expr = BinExpr(
+                            Or,
+                            BinExpr(And, src0.clone(), src1.clone()).into(),
+                            BinExpr(
+                                And,
+                                carry_var.clone(),
+                                BinExpr(Or, src0.clone(), src1.clone()).into()).into(),
+                        ).into();
+                        let mut maps = maps;
+                        maps.insert(carry_var.clone(), carry_expr);
+                        let add_expr = BinExpr(
+                            Xor,
+                            src0,
+                            BinExpr(Xor, src1, carry_var).into()).into();
+                        (add_expr, maps)
+                    }
+                    BVBinOp::Sub => unreachable!(),
+                }
+            }
+        }
+    }
+
+    fn simp(&self) -> BVExpr {
+        use BVExpr_::*;
+        match self {
+            Const(_) | Var(_) => self.clone().into(),
+            UniExpr(op, src) => UniExpr(*op, src.simp()).into(),
+            BinExpr(op, src0, src1) => {
+                let src0 = src0.simp();
+                let src1 = src1.simp();
+                match op {
+                    BVBinOp::Sub => BinExpr(
+                        BVBinOp::Add,
+                        src0,
+                        BinExpr(
+                            BVBinOp::Add,
+                            UniExpr(BVUniOp::Neg, src1).into(),
+                            Const(1).into()).into(),
+                        ).into(),
+                    _ => BinExpr(*op, src0, src1).into(),
+                }
+            }
         }
     }
 }
 
-fn identity() -> BVexpr {
-    use BVexpr::*;
+
+fn identity() -> BVExpr {
+    use BVExpr_::*;
     use BVBinOp::*;
-    let x1 = Box::new(Var("x".to_owned()));
-    let x2 = Box::new(Var("x".to_owned()));
-    BinExpr(Sub, x1, x2)
+
+    let x:BVExpr = Var("x".to_owned()).into();
+    BinExpr(Sub, x.clone(), x).into()
 }
+
 
 fn simple_example() {
     let f = identity();
     println!("Original BV expr: {}", f);
-    let f = simp_bv(f);
+    let f = f.simp();
     println!("Simplified BV expr: {}", f);
 
     let mut namer = Namer::new();
-    let (f_expr, carries) = get_bit_exprs(f, &mut namer);
+    let (f_expr, carries) = f.get_bit_exprs(&mut namer);
     println!("Main bool expr: {}", f_expr);
     println!("Main bool expr inline: {}", f_expr.mk_string(true, false));
     
@@ -295,25 +296,21 @@ fn simple_example() {
     println!("Main bool expr simplified: {}", f_egg);
 
 
-    if let Some(m) = carries {
-        for (carry, carry_expr) in &m {
-            println!("{} = {}", carry, carry_expr);
-            let carry_expr_egg = egg_simp(carry_expr.mk_string(true, false), &rules);
-            println!("Simplified {} = {}", carry, carry_expr_egg);
+    for (carry, carry_expr) in carries.iter() {
+        println!("{} = {}", carry, carry_expr);
+        let carry_expr_egg = egg_simp(carry_expr.mk_string(true, false), &rules);
+        println!("Simplified {} = {}", carry, carry_expr_egg);
+    }
+    use BoolExpr_::*;
+    if let Some(c1) = carries.get((&Var("carry_1".to_string(), false)).into()) {
+        if let Some(c2) = carries.get((&Var("carry_2".to_string(), false)).into()) {
+            // rules.push(rw!("carry-subst"; "carry_1" => "(& (~ x) old_carry_1)"));
+            let carry2 = c2.age_carries();
+            println!("After aging, carry2 = {}", carry2);
+            let carry_r:BoolExpr = BinExpr(BoolBinOp::Xor, c1.clone(), UniExpr(BoolUniOp::Not, carry2).into()).into();
+            let carry_egg = egg_simp(carry_r.mk_string(true, false), &rules);
+            println!("Simplified carry recursion from:\n\t{}\nTo:\n\t{}", carry_r, carry_egg);
         }
-        use Boolexpr::*;
-        if let Some(c1) = m.get(&Var("carry_1".to_string(), false)) {
-            if let Some(c2) = m.get(&Var("carry_2".to_string(), false)) {
-                // rules.push(rw!("carry-subst"; "carry_1" => "(& (~ x) old_carry_1)"));
-                let carry2 = age_carries((*c2).clone());
-                println!("After aging, carry2 = {}", carry2);
-                let carry_r = BinExpr(BoolBinOp::Xor, Box::new(c1.clone()), Box::new(UniExpr(BoolUniOp::Not, Box::new(carry2))));
-                let carry_egg = egg_simp(carry_r.mk_string(true, false), &rules);
-                println!("Simplified carry recursion from:\n\t{}\nTo:\n\t{}", carry_r, carry_egg);
-            }
-        }
-    } else {
-        println!("Got no carries");
     }
 }
 
@@ -351,7 +348,6 @@ fn egg_rules() -> Vec<egg::Rewrite<egg::SymbolLang, ()>> {
     ];
     rules
 }
-
 
 fn egg_test() {
     let rules: &[Rewrite<SymbolLang, ()>] = &[
@@ -430,4 +426,4 @@ fn main() {
 
     println!("Done!");
 }
-*/
+
