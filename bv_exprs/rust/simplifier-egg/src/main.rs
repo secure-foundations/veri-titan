@@ -63,19 +63,19 @@ impl fmt::Display for BVExpr_ {
     }
 }
 
-#[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
+#[derive(PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord)]
 enum BoolBinOp {
     And,
     Or,
     Xor,
 }
 
-#[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
+#[derive(PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord)]
 enum BoolUniOp {
     Not,
 }
 
-#[derive(PartialEq, Eq, Hash, Debug, Clone)]
+#[derive(PartialEq, Eq, Hash, Debug, Clone, PartialOrd, Ord)]
 enum BoolExpr_ {
     Const(bool),
     Var(String, bool),
@@ -215,6 +215,63 @@ impl BoolExpr_ {
 impl fmt::Display for BoolExpr_ {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.mk_string(&StrMode::Infix))
+    }
+}
+
+//impl std::str::FromStr for BoolExpr_ {
+//    type Err = String;
+//    fn from_str(s: &str) -> Result<Self, Self::Err> {
+//        Ok(BoolExpr_::Const(true))
+//    }
+//}
+
+
+// egg language for BoolExprs
+#[derive(Debug, Hash, PartialEq, Eq, Clone, PartialOrd, Ord)]
+struct BoolLang {
+    expr: BoolExpr,
+
+    /// The enode's children `Id`s
+    children: Vec<Id>,
+}
+
+impl Language for BoolLang {
+    fn matches(&self, other: &Self) -> bool {
+        self.expr == other.expr && self.len() == other.len()
+    }
+
+    fn children(&self) -> &[Id] {
+        &self.children
+    }
+
+    fn children_mut(&mut self) -> &mut [Id] {
+        &mut self.children
+    }
+
+    fn display_op(&self) -> &dyn fmt::Display {
+        &self.expr
+    }
+
+    fn from_op_str(op_str: &str, children: Vec<Id>) -> Result<Self, String> {
+        /*
+        use BoolExpr_::*;
+        match op_str, children.into_slice() {
+            ("false", []) => Const(false),
+            ("true", []) => Const(true),
+            ("!", [c]) => UniExpr(BoolUniOp::Not, c),
+            ("&", [c0, c1]) => BoolExpr(BoolBinOp::And, c0, c1),
+            ("|", [c0, c1]) => BoolExpr(BoolBinOp::Or, c0, c1),
+            ("^", [c0, c1]) => BoolExpr(BoolBinOp::Xor, c0, c1),
+            (name, []) => Var(name, false),
+            _ => panic!("Bad op_str <<{}>> or children count <<{}>>", op_str, children.len())
+        }
+
+        Ok(Self {
+            expr: op_str.into(),
+            children,
+        })
+        */
+        panic!("Not yet implemented");
     }
 }
 
