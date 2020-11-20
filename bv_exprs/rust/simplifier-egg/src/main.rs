@@ -219,6 +219,7 @@ impl fmt::Display for BoolExpr_ {
 }
 
 impl BVExpr_ {
+    /*
     fn get_bit_exprs(&self, n: &mut Namer) -> (BoolExpr, HashMap<BoolExpr, BoolExpr>) {
         use BoolBinOp::*;
         use BoolExpr_::*;
@@ -263,6 +264,7 @@ impl BVExpr_ {
             }
         }
     }
+    */
 
     fn simp(&self) -> BVExpr {
         use BVExpr_::*;
@@ -420,18 +422,19 @@ fn test() {
     let f = f.simp();
     println!("{}", f);
     let mut namer = Namer::new();
-    let (f_generic_bit, carries) = f.get_bit_exprs(&mut namer);
-    namer.reset();
+    //let (f_generic_bit, carries) = f.get_bit_exprs(&mut namer);
+    //namer.reset();
     let f_base_bit = f.get_main_bit_expr(&mut namer, true);
     namer.reset();
     let f_generic_bit2 = f.get_main_bit_expr(&mut namer, false);
-    println!("Original: {}\nNew:      {}\nBase: {}", f_generic_bit, f_generic_bit2, f_base_bit);
+    //println!("Original: {}\nNew:      {}\nBase: {}", f_generic_bit, f_generic_bit2, f_base_bit);
+    println!("New:      {}\nBase: {}", f_generic_bit2, f_base_bit);
 
-    println!("\nOriginal carries:");
-    for (carry, carry_expr) in carries.iter() {
-        println!("{} = {}", carry, carry_expr);
-    }
-
+//    println!("\nOriginal carries:");
+//    for (carry, carry_expr) in carries.iter() {
+//        println!("{} = {}", carry, carry_expr);
+//    }
+//
     let mut new_carries = Default::default();
     namer.reset();
     f.get_carry_exprs(&mut namer, false, &mut new_carries);
@@ -455,9 +458,9 @@ fn print_dafny() {
     let f = identity();
     let f = f.simp();
     let mut namer = Namer::new();
-    let (f_generic_bit, carries) = f.get_bit_exprs(&mut namer);
+    let f_base_bit    = f.get_main_bit_expr(&mut namer, true);
     namer.reset();
-    let f_base_bit = f.get_main_bit_expr(&mut namer, true);
+    let f_generic_bit = f.get_main_bit_expr(&mut namer, false);
 
     let mut vars = HashSet::new();
     println!("{}", f.dafny_decl_vars(&mut vars));
@@ -467,9 +470,17 @@ fn print_dafny() {
              f_base_bit.mk_string(&StrMode::DafnyFunction("0".to_string())),
              f_generic_bit.mk_string(&StrMode::DafnyFunction("i".to_string())));
 
+    namer.reset();
+    let mut carries_base = Default::default();
+    f.get_carry_exprs(&mut namer, true, &mut carries_base);
+
+    namer.reset();
+    let mut carries_generic = Default::default();
+    f.get_carry_exprs(&mut namer, false, &mut carries_generic);
+
     // Declare the carry functions
     // TODO: Consider using egg to simplify the expressions first
-    for (carry, carry_expr) in carries.iter() {
+    for (carry, carry_expr) in carries_generic.iter() {
         if let BoolExpr_::Var(name, _old) = &**carry {
             println!("function {}(i:nat) : bool\n{{\n\tif i == 0 then TODO\n\telse {}\n}}",
                      name,
@@ -487,7 +498,13 @@ fn simple_example() {
     println!("Simplified BV expr: {}", f);
 
     let mut namer = Namer::new();
-    let (f_expr, carries) = f.get_bit_exprs(&mut namer);
+    //let (f_expr, carries) = f.get_bit_exprs(&mut namer);
+    let f_expr = f.get_main_bit_expr(&mut namer, false);
+
+    namer.reset();
+    let mut carries_generic = Default::default();
+    f.get_carry_exprs(&mut namer, false, &mut carries_generic);
+
     namer.reset();
     println!("Main bool expr: {}", f_expr);
     println!("Main bool expr infix: {}", f_expr.mk_string(&StrMode::Prefix));
@@ -498,7 +515,7 @@ fn simple_example() {
     let f_egg = egg_simp(f_expr.mk_string(&StrMode::Prefix), &rules);
     println!("Main bool expr simplified: {}", f_egg);
 
-    for (carry, carry_expr) in carries.iter() {
+    for (carry, carry_expr) in carries_generic.iter() {
         println!("{} = {}", carry, carry_expr);
 //        let carry_expr_egg = egg_simp(carry_expr.mk_string(&StrMode::Prefix), &rules);
 //        println!("Simplified {} = {}", carry, carry_expr_egg);
