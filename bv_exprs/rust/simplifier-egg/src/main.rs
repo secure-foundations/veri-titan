@@ -97,6 +97,10 @@ impl Namer {
         self.ctr = self.ctr + 1;
         format!("{}_{}", s, self.ctr)
     }
+
+    fn reset(&mut self) {
+        self.ctr = 0;
+    }
 }
 
 #[derive(PartialEq, Eq, Hash, Debug, Clone)]
@@ -307,7 +311,7 @@ impl BVExpr_ {
             BinExpr(_, src0, src1) => format!("{}{}", src0.dafny_decl_vars(vars), src1.dafny_decl_vars(vars)),
         }
     }
-
+/*
     fn dafny_get_base_bit(&self) -> BoolExpr {
         use BoolBinOp::*;
         use BoolExpr_::*;
@@ -340,9 +344,96 @@ impl BVExpr_ {
             }
         }
     }
+*/
 
+    fn get_main_bit_expr(&self, n: &mut Namer, base_case:bool) -> BoolExpr {
+        use BoolBinOp::*;
+        use BoolExpr_::*;
+        match self {
+            BVExpr_::Const(c) => 
+                if base_case {  // result depends on value of the constant
+                    if *c == 0 {
+                        Const(false).into()
+                    } else { 
+                        Const(true).into()
+                    }
+                } else {    // Otherwise, b/c we only support 0 and 1, the upper bits are always 0
+                    Const(false).into()
+                }
+            BVExpr_::Var(v) => Var(v.clone(), false).into(),
+            BVExpr_::UniExpr(op, src) => {
+                let BVUniOp::Neg = *op;
+                let src = src.get_main_bit_expr(n, base_case);
+                UniExpr(BoolUniOp::Not, src).into()
+            }
+            BVExpr_::BinExpr(op, src0, src1) => {
+                let src0 = src0.get_main_bit_expr(n, base_case);
+                let src1 = src1.get_main_bit_expr(n, base_case);
+                match op {
+                    BVBinOp::And => BinExpr(And, src0, src1).into(),
+                    BVBinOp::Or  => BinExpr(Or,  src0, src1).into(),
+                    BVBinOp::Xor => BinExpr(Xor, src0, src1).into(),
+                    BVBinOp::Add => {
+                        if base_case {  // No incoming carry
+                            BinExpr(Xor, src0, src1).into()
+                        } else {
+                            let carry_name = n.get_name("carry");
+                            let carry_var: BoolExpr = Var(carry_name.clone(), false).into();
+                            BinExpr(Xor, src0, BinExpr(Xor, src1, carry_var).into()).into()
+                        }
+                    }
+                    BVBinOp::Sub => unreachable!(),
+                }
+            }
+        }
+    }
+/*
     // TODO: Add a "get_carry_base_bit(&self)"
-
+    fn get_carry_exprs(&self, n: &mut Namer, carries: &mut HashMap<BoolExpr, BoolExpr>) -> (BoolExpr) {
+        use BoolBinOp::*;
+        use BoolExpr_::*;
+        match self {
+            BVExpr_::Const(_c) => (Const(false).into(), Default::default()),
+            BVExpr_::Var(v) => (Var(v.clone(), false).into(), Default::default()),
+            BVExpr_::UniExpr(op, src) => {
+                let BVUniOp::Neg = *op;
+                let (src, map) = src.get_bit_exprs(n);
+                (UniExpr(BoolUniOp::Not, src).into(), map)
+            }
+            BVExpr_::BinExpr(op, src0, src1) => {
+                let (src0, map0) = src0.get_bit_exprs(n);
+                let (src1, map1) = src1.get_bit_exprs(n);
+                let maps = map0.into_iter().chain(map1.into_iter()).collect();
+                match op {
+                    BVBinOp::And => (BinExpr(And, src0, src1).into(), maps),
+                    BVBinOp::Or => (BinExpr(Or, src0, src1).into(), maps),
+                    BVBinOp::Xor => (BinExpr(Xor, src0, src1).into(), maps),
+                    BVBinOp::Add => {
+                        let carry_name = n.get_name("carry");
+                        let carry_var: BoolExpr = Var(carry_name.clone(), false).into();
+                        let carry_expr = BinExpr(
+                            Or,
+                            BinExpr(And, src0.clone(), src1.clone()).into(),
+                            BinExpr(
+                                And,
+                                carry_var.clone(),
+                                BinExpr(Or, src0.clone(), src1.clone()).into(),
+                            )
+                            .into(),
+                        )
+                        .into();
+                        let mut maps = maps;
+                        maps.insert(carry_var.clone(), carry_expr);
+                        let add_expr =
+                            BinExpr(Xor, src0, BinExpr(Xor, src1, carry_var).into()).into();
+                        (add_expr, maps)
+                    }
+                    BVBinOp::Sub => unreachable!(),
+                }
+            }
+        }
+    }
+*/
 }
 
 fn identity() -> BVExpr {
@@ -366,7 +457,11 @@ fn print_dafny() {
     let f = f.simp();
     let mut namer = Namer::new();
     let (f_generic_bit, carries) = f.get_bit_exprs(&mut namer);
-    let f_base_bit = f.dafny_get_base_bit();
+    namer.reset();
+    let f_base_bit = f.get_main_bit_expr(&mut namer, true);
+    namer.reset();
+    let f_generic_bit2 = f.get_main_bit_expr(&mut namer, false);
+    println!("Original: {}\nNew:      {}\nBase: {}", f_generic_bit, f_generic_bit2, f_base_bit);
 
     let mut vars = HashSet::new();
     println!("{}", f.dafny_decl_vars(&mut vars));
@@ -397,10 +492,11 @@ fn simple_example() {
 
     let mut namer = Namer::new();
     let (f_expr, carries) = f.get_bit_exprs(&mut namer);
+    namer.reset();
     println!("Main bool expr: {}", f_expr);
     println!("Main bool expr infix: {}", f_expr.mk_string(&StrMode::Prefix));
     println!("Main bool expr DafnyFunction: {}", f_expr.mk_string(&StrMode::DafnyFunction("i".to_string())));
-    println!("Main bool expr base: {}", f.dafny_get_base_bit().mk_string(&StrMode::DafnyFunction("i".to_string())));
+    println!("Main bool expr base: {}", f.get_main_bit_expr(&mut namer, true).mk_string(&StrMode::DafnyFunction("i".to_string())));
 
     let rules = egg_rules();
     let f_egg = egg_simp(f_expr.mk_string(&StrMode::Prefix), &rules);
