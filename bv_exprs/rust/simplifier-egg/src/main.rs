@@ -509,14 +509,14 @@ function {}(i:nat) : bool {{
     // Find the recurrsion relation
     let rules = egg_rules();
     let f_egg = egg_simp(f_generic_bit.mk_string(&StrMode::Prefix), &rules);
-    eprintln!("Original: {}\nSimplified: {}", f_generic_bit.mk_string(&StrMode::Prefix), f_egg);
+    //eprintln!("Original: {}\nSimplified: {}", f_generic_bit.mk_string(&StrMode::Prefix), f_egg);
 
     // Print the verification lemma
     println!("
 lemma function_test(i:nat)
     // Sanity check base case\n
     ensures bit(0) == false
-    ensures {};
+    ensures {} == false;
 
     // Induction hypothesis
     ensures i > 0 ==> bit(i) == {};
