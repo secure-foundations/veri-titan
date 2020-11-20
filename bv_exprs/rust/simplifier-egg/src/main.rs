@@ -455,6 +455,9 @@ fn test() {
 }
 
 fn print_dafny() {
+    // Define xor
+    println!("function xor(x:bool, y:bool) : bool {{\n\t(x || y) && (!x || !y)\n}}\n");
+
     let f = identity();
     let f = f.simp();
     let mut namer = Namer::new();
@@ -466,7 +469,7 @@ fn print_dafny() {
     println!("{}", f.dafny_decl_vars(&mut vars));
 
     // Declare the main function
-    println!("function bit(i:nat) : bool\n{{\n\tif i == 0 then {}\n\telse {}\n}}",
+    println!("function bit(i:nat) : bool\n{{\n\tif i == 0 then {}\n\telse {}\n}}\n",
              f_base_bit.mk_string(&StrMode::DafnyFunction("0".to_string())),
              f_generic_bit.mk_string(&StrMode::DafnyFunction("i".to_string())));
 
@@ -482,10 +485,12 @@ fn print_dafny() {
     // TODO: Consider using egg to simplify the expressions first
     for (carry, carry_expr) in carries_generic.iter() {
         if let BoolExpr_::Var(name, _old) = &**carry {
-            println!("function {}(i:nat) : bool\n{{\n\tif i == 0 then TODO\n\telse {}\n}}",
-                     name,
-                     //f_base_bit.mk_string(&StrMode::DafnyFunction("0".to_string())),
-                     carry_expr.mk_string(&StrMode::DafnyFunction("i".to_string())));
+            if let Some(base_expr) = carries_base.get(carry) {
+                let base    = base_expr.mk_string(&StrMode::DafnyFunction("0".to_string()));
+                let generic = carry_expr.mk_string(&StrMode::DafnyFunction("i".to_string()));
+                println!("function {}(i:nat) : bool\n{{\n\tif i == 0 then {}\n\telse {}\n}}\n",
+                         name, base, generic);
+            }
         }
     }
 }
@@ -642,15 +647,15 @@ fn egg_simp(s: String, rules: &[Rewrite<SymbolLang, ()>]) -> egg::RecExpr<egg::S
 }
 
 fn main() {
-    println!("Hello, world!");
+    //println!("Hello, world!");
 
     //egg_test();
     //simple_example();
     
-    test();
+    //test();
 
-    println!("\n\n");
-    //print_dafny();
+    //println!("\n\n");
+    print_dafny();
 
-    println!("Done!");
+    //println!("Done!");
 }
