@@ -311,40 +311,6 @@ impl BVExpr_ {
             BinExpr(_, src0, src1) => format!("{}{}", src0.dafny_decl_vars(vars), src1.dafny_decl_vars(vars)),
         }
     }
-/*
-    fn dafny_get_base_bit(&self) -> BoolExpr {
-        use BoolBinOp::*;
-        use BoolExpr_::*;
-        match self {
-            BVExpr_::Const(c) => 
-                if *c == 0 {
-                    Const(false).into()
-                } else { 
-                    Const(true).into()
-                }
-            BVExpr_::Var(v) => Var(v.clone(), false).into(),
-            BVExpr_::UniExpr(op, src) => {
-                let BVUniOp::Neg = *op;
-                let src = src.dafny_get_base_bit();
-                UniExpr(BoolUniOp::Not, src).into()
-            },
-            BVExpr_::BinExpr(op, src0, src1) => {
-                let src0 = src0.dafny_get_base_bit();
-                let src1 = src1.dafny_get_base_bit();
-                match op {
-                    BVBinOp::And => BinExpr(And, src0, src1).into(),
-                    BVBinOp::Or  => BinExpr(Or,  src0, src1).into(),
-                    BVBinOp::Xor => BinExpr(Xor, src0, src1).into(),
-                    BVBinOp::Add => {
-                        let add_expr = BinExpr(Xor, src0, src1).into();
-                        add_expr
-                    },
-                    BVBinOp::Sub => unreachable!(),
-                }
-            }
-        }
-    }
-*/
 
     fn get_main_bit_expr(&self, n: &mut Namer, base_case:bool) -> BoolExpr {
         use BoolBinOp::*;
