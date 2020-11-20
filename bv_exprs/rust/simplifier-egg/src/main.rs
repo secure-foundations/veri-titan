@@ -341,6 +341,8 @@ impl BVExpr_ {
         }
     }
 
+    // TODO: Add a "get_carry_base_bit(&self)"
+
 }
 
 fn identity() -> BVExpr {
@@ -363,7 +365,7 @@ fn print_dafny() {
     let f = identity();
     let f = f.simp();
     let mut namer = Namer::new();
-    let (f_generic_bit, _carries) = f.get_bit_exprs(&mut namer);
+    let (f_generic_bit, carries) = f.get_bit_exprs(&mut namer);
     let f_base_bit = f.dafny_get_base_bit();
 
     let mut vars = HashSet::new();
@@ -373,6 +375,17 @@ fn print_dafny() {
     println!("function bit(i:nat) : bool\n{{\n\tif i == 0 then {}\n\telse {}\n}}",
              f_base_bit.mk_string(&StrMode::DafnyFunction("0".to_string())),
              f_generic_bit.mk_string(&StrMode::DafnyFunction("i".to_string())));
+
+    // Declare the carry functions
+    // TODO: Consider using egg to simplify the expressions first
+    for (carry, carry_expr) in carries.iter() {
+        if let BoolExpr_::Var(name, _old) = &**carry {
+            println!("function {}(i:nat) : bool\n{{\n\tif i == 0 then TODO\n\telse {}\n}}",
+                     name,
+                     //f_base_bit.mk_string(&StrMode::DafnyFunction("0".to_string())),
+                     carry_expr.mk_string(&StrMode::DafnyFunction("i".to_string())));
+        }
+    }
 }
 
 fn simple_example() {
