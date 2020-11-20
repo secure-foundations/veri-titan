@@ -138,8 +138,8 @@ impl BoolExpr_ {
                 let BoolUniOp::Not = *op;
                 let src = (*src).mk_string(mode);
                 match mode {
-                    Infix => format!("(~ {})", src),
-                    Prefix => format!("~{}", src),
+                    Infix => format!("~{}", src),
+                    Prefix => format!("(~ {})", src),
                     Dafny | DafnyFunction(_) => format!("!{}", src),
                 }
             }
@@ -456,7 +456,11 @@ fn test() {
 
 fn print_dafny() {
     // Define xor
-    println!("function xor(x:bool, y:bool) : bool {{\n\t(x || y) && (!x || !y)\n}}\n");
+    println!("
+function xor(x:bool, y:bool) : bool {{
+    (x || y) && (!x || !y)
+}}
+");
 
     let f = identity();
     let f = f.simp();
@@ -469,9 +473,13 @@ fn print_dafny() {
     println!("{}", f.dafny_decl_vars(&mut vars));
 
     // Declare the main function
-    println!("function bit(i:nat) : bool\n{{\n\tif i == 0 then {}\n\telse {}\n}}\n",
-             f_base_bit.mk_string(&StrMode::DafnyFunction("0".to_string())),
-             f_generic_bit.mk_string(&StrMode::DafnyFunction("i".to_string())));
+    println!("
+function bit(i:nat) : bool {{
+    if i == 0 then {}
+    else {}
+}}\n",
+        f_base_bit.mk_string(&StrMode::DafnyFunction("0".to_string())),
+        f_generic_bit.mk_string(&StrMode::DafnyFunction("i".to_string())));
 
     namer.reset();
     let mut carries_base = Default::default();
@@ -488,11 +496,38 @@ fn print_dafny() {
             if let Some(base_expr) = carries_base.get(carry) {
                 let base    = base_expr.mk_string(&StrMode::DafnyFunction("0".to_string()));
                 let generic = carry_expr.mk_string(&StrMode::DafnyFunction("i".to_string()));
-                println!("function {}(i:nat) : bool\n{{\n\tif i == 0 then {}\n\telse {}\n}}\n",
+                println!("
+function {}(i:nat) : bool {{
+    if i == 0 then {}
+    else {}
+}}\n",
                          name, base, generic);
             }
         }
     }
+
+    // Find the recurrsion relation
+    let rules = egg_rules();
+    let f_egg = egg_simp(f_generic_bit.mk_string(&StrMode::Prefix), &rules);
+    eprintln!("Original: {}\nSimplified: {}", f_generic_bit.mk_string(&StrMode::Prefix), f_egg);
+
+    // Print the verification lemma
+    println!("
+lemma function_test(i:nat)
+    // Sanity check base case\n
+    ensures bit(0) == false
+    ensures {};
+
+    // Induction hypothesis
+    ensures i > 0 ==> bit(i) == {};
+    ensures i > 0 ==> {} == {};
+
+    // Conclusion
+    ensures bit(i) == false
+{{
+}}
+",
+        f_egg, f_egg, f_egg, f_egg);
 }
 
 fn simple_example() {
