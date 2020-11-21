@@ -214,61 +214,6 @@ impl fmt::Display for BoolExpr_ {
     }
 }
 
-//impl std::str::FromStr for BoolExpr_ {
-//    type Err = String;
-//    fn from_str(s: &str) -> Result<Self, Self::Err> {
-//        Ok(BoolExpr_::Const(true))
-//    }
-//}
-
-// egg language for BoolExprs
-#[derive(Debug, Hash, PartialEq, Eq, Clone, PartialOrd, Ord)]
-struct BoolLang {
-    expr: BoolExpr,
-
-    /// The enode's children `Id`s
-    children: Vec<Id>,
-}
-
-impl Language for BoolLang {
-    fn matches(&self, other: &Self) -> bool {
-        self.expr == other.expr && self.len() == other.len()
-    }
-
-    fn children(&self) -> &[Id] {
-        &self.children
-    }
-
-    fn children_mut(&mut self) -> &mut [Id] {
-        &mut self.children
-    }
-
-    fn display_op(&self) -> &dyn fmt::Display {
-        &self.expr
-    }
-
-    fn from_op_str(op_str: &str, children: Vec<Id>) -> Result<Self, String> {
-        /*
-        use BoolExpr_::*;
-        match op_str, children.into_slice() {
-            ("false", []) => Const(false),
-            ("true", []) => Const(true),
-            ("!", [c]) => UniExpr(BoolUniOp::Not, c),
-            ("&", [c0, c1]) => BoolExpr(BoolBinOp::And, c0, c1),
-            ("|", [c0, c1]) => BoolExpr(BoolBinOp::Or, c0, c1),
-            ("^", [c0, c1]) => BoolExpr(BoolBinOp::Xor, c0, c1),
-            (name, []) => Var(name, false),
-            _ => panic!("Bad op_str <<{}>> or children count <<{}>>", op_str, children.len())
-        }
-
-        Ok(Self {
-            expr: op_str.into(),
-            children,
-        })
-        */
-        panic!("Not yet implemented");
-    }
-}
 
 impl BVExpr_ {
     /*
@@ -672,8 +617,42 @@ fn simple_example() {
     */
 }
 
-fn egg_rules() -> Vec<egg::Rewrite<egg::SymbolLang, ()>> {
-    let rules: Vec<Rewrite<SymbolLang, ()>> = vec![
+
+
+// Define an egg language
+define_language! {
+    enum BoolLanguage {
+        "true" = True,
+        "false" = False,
+        "~" = Not(Id),
+        "^" = Xor([Id; 2]),
+        "&" = And([Id; 2]),
+        "|" =  Or([Id; 2]),
+        Symbol(Symbol),
+    }
+}
+
+fn bool_expr_to_lang(e:BoolExpr) -> RecExpr<BoolLanguage> {
+    e.mk_string(&StrMode::Prefix).parse().unwrap()
+}
+
+fn bool_lang_to_expr(nodes:&Vec<BoolLanguage>, enode: &BoolLanguage) -> BoolExpr {
+    use BoolLanguage::*;
+    use BoolExpr_::*;
+    let expr_ = match enode {
+        True  => Const(true),
+        False => Const(false),
+        Not(c) => UniExpr(BoolUniOp::Not, bool_lang_to_expr(nodes, &nodes[usize::from(*c)]).into()),
+        Xor([c0, c1]) => BinExpr(BoolBinOp::Xor, bool_lang_to_expr(nodes, &nodes[usize::from(*c0)]).into(), bool_lang_to_expr(nodes, &nodes[usize::from(*c1)]).into()),
+        And([c0, c1]) => BinExpr(BoolBinOp::And, bool_lang_to_expr(nodes, &nodes[usize::from(*c0)]).into(), bool_lang_to_expr(nodes, &nodes[usize::from(*c1)]).into()),
+        Or([c0, c1]) => BinExpr(BoolBinOp::Or, bool_lang_to_expr(nodes, &nodes[usize::from(*c0)]).into(), bool_lang_to_expr(nodes, &nodes[usize::from(*c1)]).into()),
+        Symbol(s)  => Var(s.to_string(), false),
+    };
+    expr_.into()
+}
+
+fn egg_rules() -> Vec<egg::Rewrite<BoolLanguage, ()>> {
+    let rules: Vec<Rewrite<BoolLanguage, ()>> = vec![
         rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
         rw!("commute-or";  "(| ?x ?y)" => "(| ?y ?x)"),
         rw!("commute-xor"; "(^ ?x ?y)" => "(^ ?y ?x)"),
@@ -762,12 +741,23 @@ fn egg_test() {
     println!("Cost: {}", best_cost);
 }
 
-fn egg_simp(s: String, rules: &[Rewrite<SymbolLang, ()>]) -> egg::RecExpr<egg::SymbolLang> {
+fn egg_simp(s: String, rules: &[Rewrite<BoolLanguage, ()>]) -> egg::RecExpr<BoolLanguage> {
     let start = s.parse().unwrap();
     let runner = Runner::default().with_expr(&start).run(rules);
     let mut extractor = Extractor::new(&runner.egraph, AstSize);
     let (_best_cost, best_expr) = extractor.find_best(runner.roots[0]);
     best_expr
+}
+
+fn egg_simp_to_bool_expr(s: String, rules: &[Rewrite<BoolLanguage, ()>]) -> BoolExpr {
+    let start = s.parse().unwrap();
+    let runner = Runner::default().with_expr(&start).run(rules);
+    let mut extractor = Extractor::new(&runner.egraph, AstSize);
+    let (_best_cost, best_expr) = extractor.find_best(runner.roots[0]);
+    let nodes = &best_expr;
+    let enode = ;
+    best_expr
+    bool_lang_to_expr(nodes, enode)
 }
 
 fn main() {
