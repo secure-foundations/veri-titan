@@ -421,6 +421,7 @@ fn identity() -> BVExpr {
     use BVBinOp::*;
     use BVExpr_::*;
 
+    // x - x
     let x: BVExpr = Var("x".to_owned()).into();
     BinExpr(Sub, x.clone(), x).into()
 }
@@ -429,11 +430,32 @@ fn identity2() -> BVExpr {
     use BVBinOp::*;
     use BVExpr_::*;
 
+    // x - (x + (x - x))
     let x: BVExpr = Var("x".to_owned()).into();
     BinExpr(
         Sub,
         x.clone(),
         BinExpr(Add, x.clone(), BinExpr(Sub, x.clone(), x).into()).into(),
+    )
+    .into()
+}
+
+fn addsub_1043() -> BVExpr {
+    use BVBinOp::*;
+    use BVExpr_::*;
+
+    // ((x & y) ^ y) + 1 + (x | ~y)
+    let x: BVExpr = Var("x".to_owned()).into();
+    let y: BVExpr = Var("y".to_owned()).into();
+    BinExpr(
+        Add,
+        BinExpr(Xor, BinExpr(And, x.clone(), y.clone()).into(), y.clone()).into(),
+        BinExpr(
+            Add,
+            Const(1).into(),
+            BinExpr(Or, x, UniExpr(BVUniOp::Neg, y).into()).into(),
+        )
+        .into(),
     )
     .into()
 }
@@ -486,7 +508,8 @@ function xor(x:bool, y:bool) : bool {{
     );
 
     //let f = identity();
-    let f = identity2();
+    //let f = identity2();
+    let f = addsub_1043();
     let f = f.simp();
     let mut namer = Namer::new();
     let f_base_bit = f.get_main_bit_expr(&mut namer, true);
@@ -538,7 +561,7 @@ function {}(i:nat) : bool {{
     let rules = egg_rules();
     //let f_egg = egg_simp(f_generic_bit.mk_string(&StrMode::Prefix), &rules);
     let f_egg = egg_simp_to_bool_expr(f_generic_bit.mk_string(&StrMode::Prefix, true), &rules);
-    //eprintln!("Original: {}\nSimplified: {}", f_generic_bit.mk_string(&StrMode::Prefix, true), f_egg);
+    eprintln!("Original: {}\nSimplified: {}", f_generic_bit.mk_string(&StrMode::Prefix, true), f_egg);
     let f_egg_i = f_egg.mk_string(&StrMode::DafnyFunction("i".to_string()), false);
     let f_egg_i_minus_1 = f_egg.mk_string(&StrMode::DafnyFunction("i".to_string()), true);
     let f_egg_base = f_egg.mk_string(&StrMode::DafnyFunction("0".to_string()), false);
@@ -681,7 +704,7 @@ fn egg_rules() -> Vec<egg::Rewrite<BoolLanguage, ()>> {
         rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
         rw!("commute-or";  "(| ?x ?y)" => "(| ?y ?x)"),
         rw!("commute-xor"; "(^ ?x ?y)" => "(^ ?y ?x)"),
-        //    rw!("xor";         "(^ ?x ?y)" => "(& (| ?x ?y) (| (~ x) (~ y)))"),
+        rw!("xor";         "(^ ?x ?y)" => "(& (| ?x ?y) (| (~ ?x) (~ ?y)))"),
         rw!("dist-or-and"; "(| ?x (& ?y ?z))" => "(& (| ?x ?y) (| ?x ?z))"),
         rw!("dist-and-or"; "(& ?x (| ?y ?z))" => "(| (& ?x ?y) (& ?x ?z))"),
         rw!("dist-xor-or"; "(^ ?x (| ?y ?z))" => "(| (& (~ ?x) (| ?y ?z)) (& ?x (& (~ ?y) (~ ?z))))"),
