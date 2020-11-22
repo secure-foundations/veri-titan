@@ -536,7 +536,7 @@ function {}(i:nat) : bool {{
     let rules = egg_rules();
     //let f_egg = egg_simp(f_generic_bit.mk_string(&StrMode::Prefix), &rules);
     let f_egg = egg_simp_to_bool_expr(f_generic_bit.mk_string(&StrMode::Prefix, true), &rules);
-    //eprintln!("Original: {}\nSimplified: {}", f_generic_bit.mk_string(&StrMode::Prefix), f_egg);
+    //eprintln!("Original: {}\nSimplified: {}", f_generic_bit.mk_string(&StrMode::Prefix, true), f_egg);
     let f_egg_i = f_egg.mk_string(&StrMode::DafnyFunction("i".to_string()), false);
     let f_egg_i_minus_1 = f_egg.mk_string(&StrMode::DafnyFunction("i".to_string()), true);
     let f_egg_base = f_egg.mk_string(&StrMode::DafnyFunction("0".to_string()), false);

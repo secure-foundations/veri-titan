@@ -41,6 +41,7 @@ lemma rule_checker(x:bool, y:bool, z:bool)
   ensures (x && (y || z))    == ((x && y) || (x && z))
   ensures (xor(x, (y || z))) == ((!x && (y || z)) || (x && (!y && !z)))
   ensures (x && xor(y, z))   == (xor(x && y, x && z))
+  ensures !xor(x, y)         == xor(!x, y) == xor(x, !y)
 {}
 
 lemma function_test(i:nat) 
