@@ -112,7 +112,7 @@ enum StrMode {
 }
 
 impl BoolExpr_ {
-    fn mk_string(&self, mode: &StrMode) -> String {
+    fn mk_string(&self, mode: &StrMode, age_carries:bool) -> String {
         use BoolExpr_::*;
         use StrMode::*;
         match &*self {
@@ -126,14 +126,18 @@ impl BoolExpr_ {
                 match mode {
                     DafnyFunction(i) => match &v.find("carry") {
                         None => format!("{}({})", s, i),
-                        Some(_) => format!("{}({}-1)", s, i),
+                        Some(_) => if age_carries {
+                            format!("{}({}-1)", s, i)
+                        } else {
+                            format!("{}({})", s, i)
+                        }
                     },
                     _ => s,
                 }
             }
             UniExpr(op, src) => {
                 let BoolUniOp::Not = *op;
-                let src = (*src).mk_string(mode);
+                let src = (*src).mk_string(mode, age_carries);
                 match mode {
                     Infix => format!("~{}", src),
                     Prefix => format!("(~ {})", src),
@@ -142,8 +146,8 @@ impl BoolExpr_ {
             }
             BinExpr(op, src0, src1) => {
                 use BoolBinOp::*;
-                let s0 = src0.mk_string(mode);
-                let s1 = src1.mk_string(mode);
+                let s0 = src0.mk_string(mode, age_carries);
+                let s1 = src1.mk_string(mode, age_carries);
                 let normal_op_str = match op {
                     And => "&",
                     Or => "|",
@@ -210,7 +214,7 @@ impl BoolExpr_ {
 
 impl fmt::Display for BoolExpr_ {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.mk_string(&StrMode::Infix))
+        write!(f, "{}", self.mk_string(&StrMode::Infix, true))
     }
 }
 
@@ -497,8 +501,8 @@ function bit(i:nat) : bool {{
     if i == 0 then {}
     else {}
 }}\n",
-        f_base_bit.mk_string(&StrMode::DafnyFunction("0".to_string())),
-        f_generic_bit.mk_string(&StrMode::DafnyFunction("i".to_string()))
+        f_base_bit.mk_string(&StrMode::DafnyFunction("0".to_string()), true),
+        f_generic_bit.mk_string(&StrMode::DafnyFunction("i".to_string()), true)
     );
 
     namer.reset();
@@ -514,8 +518,8 @@ function bit(i:nat) : bool {{
     for (carry, carry_expr) in carries_generic.iter() {
         if let BoolExpr_::Var(name, _old) = &**carry {
             if let Some(base_expr) = carries_base.get(carry) {
-                let base = base_expr.mk_string(&StrMode::DafnyFunction("0".to_string()));
-                let generic = carry_expr.mk_string(&StrMode::DafnyFunction("i".to_string()));
+                let base = base_expr.mk_string(&StrMode::DafnyFunction("0".to_string()), true);
+                let generic = carry_expr.mk_string(&StrMode::DafnyFunction("i".to_string()), true);
                 println!(
                     "
 function {}(i:nat) : bool {{
@@ -530,8 +534,12 @@ function {}(i:nat) : bool {{
 
     // Find the recurrsion relation
     let rules = egg_rules();
-    let f_egg = egg_simp(f_generic_bit.mk_string(&StrMode::Prefix), &rules);
+    //let f_egg = egg_simp(f_generic_bit.mk_string(&StrMode::Prefix), &rules);
+    let f_egg = egg_simp_to_bool_expr(f_generic_bit.mk_string(&StrMode::Prefix, true), &rules);
     //eprintln!("Original: {}\nSimplified: {}", f_generic_bit.mk_string(&StrMode::Prefix), f_egg);
+    let f_egg_i = f_egg.mk_string(&StrMode::DafnyFunction("i".to_string()), false);
+    let f_egg_i_minus_1 = f_egg.mk_string(&StrMode::DafnyFunction("i".to_string()), true);
+    let f_egg_base = f_egg.mk_string(&StrMode::DafnyFunction("0".to_string()), false);
 
     // Print the verification lemma
     println!(
@@ -550,7 +558,7 @@ lemma function_test(i:nat)
 {{
 }}
 ",
-        f_egg, f_egg, f_egg, f_egg
+        f_egg_base, f_egg_i_minus_1, f_egg_i, f_egg_i_minus_1
     );
 }
 
@@ -573,20 +581,20 @@ fn simple_example() {
     println!("Main bool expr: {}", f_expr);
     println!(
         "Main bool expr infix: {}",
-        f_expr.mk_string(&StrMode::Prefix)
+        f_expr.mk_string(&StrMode::Prefix, true)
     );
     println!(
         "Main bool expr DafnyFunction: {}",
-        f_expr.mk_string(&StrMode::DafnyFunction("i".to_string()))
+        f_expr.mk_string(&StrMode::DafnyFunction("i".to_string()), true)
     );
     println!(
         "Main bool expr base: {}",
         f.get_main_bit_expr(&mut namer, true)
-            .mk_string(&StrMode::DafnyFunction("i".to_string()))
+            .mk_string(&StrMode::DafnyFunction("i".to_string()), true)
     );
 
     let rules = egg_rules();
-    let f_egg = egg_simp(f_expr.mk_string(&StrMode::Prefix), &rules);
+    let f_egg = egg_simp(f_expr.mk_string(&StrMode::Prefix, true), &rules);
     println!("Main bool expr simplified: {}", f_egg);
 
     for (carry, carry_expr) in carries_generic.iter() {
@@ -633,12 +641,14 @@ define_language! {
 }
 
 fn bool_expr_to_lang(e:BoolExpr) -> RecExpr<BoolLanguage> {
-    e.mk_string(&StrMode::Prefix).parse().unwrap()
+    e.mk_string(&StrMode::Prefix, true).parse().unwrap()
 }
 
-fn bool_lang_to_expr(nodes:&Vec<BoolLanguage>, enode: &BoolLanguage) -> BoolExpr {
+fn bool_lang_to_expr(nodes: &[BoolLanguage], enode: &BoolLanguage) -> BoolExpr {
     use BoolLanguage::*;
     use BoolExpr_::*;
+    //let nodes = &enode.as_ref();
+    //let enode = nodes[nodes.len()-1];
     let expr_ = match enode {
         True  => Const(true),
         False => Const(false),
@@ -754,10 +764,9 @@ fn egg_simp_to_bool_expr(s: String, rules: &[Rewrite<BoolLanguage, ()>]) -> Bool
     let runner = Runner::default().with_expr(&start).run(rules);
     let mut extractor = Extractor::new(&runner.egraph, AstSize);
     let (_best_cost, best_expr) = extractor.find_best(runner.roots[0]);
-    let nodes = &best_expr;
-    let enode = ;
-    best_expr
-    bool_lang_to_expr(nodes, enode)
+    let nodes = best_expr.as_ref();
+    let enode = &nodes[nodes.len()-1];
+    bool_lang_to_expr(nodes, &enode)
 }
 
 fn main() {
