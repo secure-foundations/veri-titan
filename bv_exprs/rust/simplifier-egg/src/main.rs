@@ -112,7 +112,7 @@ enum StrMode {
 }
 
 impl BoolExpr_ {
-    fn mk_string(&self, mode: &StrMode, age_carries:bool) -> String {
+    fn mk_string(&self, mode: &StrMode, age_carries: bool) -> String {
         use BoolExpr_::*;
         use StrMode::*;
         match &*self {
@@ -126,10 +126,12 @@ impl BoolExpr_ {
                 match mode {
                     DafnyFunction(i) => match &v.find("carry") {
                         None => format!("{}({})", s, i),
-                        Some(_) => if age_carries {
-                            format!("{}({}-1)", s, i)
-                        } else {
-                            format!("{}({})", s, i)
+                        Some(_) => {
+                            if age_carries {
+                                format!("{}({}-1)", s, i)
+                            } else {
+                                format!("{}({})", s, i)
+                            }
                         }
                     },
                     _ => s,
@@ -217,7 +219,6 @@ impl fmt::Display for BoolExpr_ {
         write!(f, "{}", self.mk_string(&StrMode::Infix, true))
     }
 }
-
 
 impl BVExpr_ {
     /*
@@ -626,8 +627,6 @@ fn simple_example() {
     */
 }
 
-
-
 // Define an egg language
 define_language! {
     enum BoolLanguage {
@@ -641,23 +640,38 @@ define_language! {
     }
 }
 
-fn bool_expr_to_lang(e:BoolExpr) -> RecExpr<BoolLanguage> {
+fn bool_expr_to_lang(e: BoolExpr) -> RecExpr<BoolLanguage> {
     e.mk_string(&StrMode::Prefix, true).parse().unwrap()
 }
 
 fn bool_lang_to_expr(nodes: &[BoolLanguage], enode: &BoolLanguage) -> BoolExpr {
-    use BoolLanguage::*;
     use BoolExpr_::*;
+    use BoolLanguage::*;
     //let nodes = &enode.as_ref();
     //let enode = nodes[nodes.len()-1];
     let expr_ = match enode {
-        True  => Const(true),
+        True => Const(true),
         False => Const(false),
-        Not(c) => UniExpr(BoolUniOp::Not, bool_lang_to_expr(nodes, &nodes[usize::from(*c)]).into()),
-        Xor([c0, c1]) => BinExpr(BoolBinOp::Xor, bool_lang_to_expr(nodes, &nodes[usize::from(*c0)]).into(), bool_lang_to_expr(nodes, &nodes[usize::from(*c1)]).into()),
-        And([c0, c1]) => BinExpr(BoolBinOp::And, bool_lang_to_expr(nodes, &nodes[usize::from(*c0)]).into(), bool_lang_to_expr(nodes, &nodes[usize::from(*c1)]).into()),
-        Or([c0, c1]) => BinExpr(BoolBinOp::Or, bool_lang_to_expr(nodes, &nodes[usize::from(*c0)]).into(), bool_lang_to_expr(nodes, &nodes[usize::from(*c1)]).into()),
-        Symbol(s)  => Var(s.to_string(), false),
+        Not(c) => UniExpr(
+            BoolUniOp::Not,
+            bool_lang_to_expr(nodes, &nodes[usize::from(*c)]).into(),
+        ),
+        Xor([c0, c1]) => BinExpr(
+            BoolBinOp::Xor,
+            bool_lang_to_expr(nodes, &nodes[usize::from(*c0)]).into(),
+            bool_lang_to_expr(nodes, &nodes[usize::from(*c1)]).into(),
+        ),
+        And([c0, c1]) => BinExpr(
+            BoolBinOp::And,
+            bool_lang_to_expr(nodes, &nodes[usize::from(*c0)]).into(),
+            bool_lang_to_expr(nodes, &nodes[usize::from(*c1)]).into(),
+        ),
+        Or([c0, c1]) => BinExpr(
+            BoolBinOp::Or,
+            bool_lang_to_expr(nodes, &nodes[usize::from(*c0)]).into(),
+            bool_lang_to_expr(nodes, &nodes[usize::from(*c1)]).into(),
+        ),
+        Symbol(s) => Var(s.to_string(), false),
     };
     expr_.into()
 }
@@ -766,7 +780,7 @@ fn egg_simp_to_bool_expr(s: String, rules: &[Rewrite<BoolLanguage, ()>]) -> Bool
     let mut extractor = Extractor::new(&runner.egraph, AstSize);
     let (_best_cost, best_expr) = extractor.find_best(runner.roots[0]);
     let nodes = best_expr.as_ref();
-    let enode = &nodes[nodes.len()-1];
+    let enode = &nodes[nodes.len() - 1];
     bool_lang_to_expr(nodes, &enode)
 }
 
