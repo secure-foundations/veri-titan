@@ -731,41 +731,45 @@ fn egg_rules() -> Vec<egg::Rewrite<BoolLanguage, ()>> {
 
 fn egg_test() {
     let rules: &[Rewrite<SymbolLang, ()>] = &[
-        //    rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
-        //    rw!("commute-or";  "(| ?x ?y)" => "(| ?y ?x)"),
-        rw!("commute-xor"; "(^ ?x ?y)" => "(^ ?y ?x)"),
-        //    rw!("xor";         "(^ ?x ?y)" => "(& (| ?x ?y) (| (~ x) (~ y)))"),
-
-        //    rw!("dist-or-and"; "(| ?x (& ?y ?z))" => "(& (| ?x ?y) (| ?x ?z))"),
-        //    rw!("dist-and-or"; "(& ?x (| ?y ?z))" => "(| (& ?x ?y) (& ?x ?z))"),
-        //    rw!("dist-xor-or"; "(^ ?x (| ?y ?z))" => "(| (& (~ ?x) (| ?y ?z)) (& ?x (& (~ y) (~ z))))"),
-        //    rw!("dist-and-xor"; "(& ?x (^ ?y ?z))"=> "(^ (& ?x ?y) (& ?x ?z))"),
-        rw!("assoc-xor"; "(^ ?x (^ ?y ?z))"=> "(^ (^ ?x ?y) ?z)"),
-        //
-        //
-        //    rw!("demorgan"; "(~ (^ ?x ?y))" => "(| (~ ?y) (~ ?x))"),
-        //
-        //    rw!("and-false"; "(& ?x false)" => "false"),
-        //    rw!("and-true"; "(& ?x true)" => "?x"),
-        //    rw!("and-self"; "(& ?x ?x)" => "?x"),
-        //    rw!("and-self-neg"; "(& ?x (~ ?x))" => "false"),
-        //
-        //    rw!("or-false";  "(| ?x false)" => "?x"),
-        //    rw!("or-true";  "(| ?x true)" => "true"),
-        //    rw!("or-self";  "(| ?x ?x)" => "?x"),
-        //    rw!("or-self-neg";  "(| ?x (~ ?x))" => "true"),
-        rw!("xor-false"; "(^ ?x false)" => "?x"),
+//        //    rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
+//        //    rw!("commute-or";  "(| ?x ?y)" => "(| ?y ?x)"),
+//        rw!("commute-xor"; "(^ ?x ?y)" => "(^ ?y ?x)"),
+//        //    rw!("xor";         "(^ ?x ?y)" => "(& (| ?x ?y) (| (~ x) (~ y)))"),
+//
+//        //    rw!("dist-or-and"; "(| ?x (& ?y ?z))" => "(& (| ?x ?y) (| ?x ?z))"),
+//        //    rw!("dist-and-or"; "(& ?x (| ?y ?z))" => "(| (& ?x ?y) (& ?x ?z))"),
+//        //    rw!("dist-xor-or"; "(^ ?x (| ?y ?z))" => "(| (& (~ ?x) (| ?y ?z)) (& ?x (& (~ y) (~ z))))"),
+//        //    rw!("dist-and-xor"; "(& ?x (^ ?y ?z))"=> "(^ (& ?x ?y) (& ?x ?z))"),
+//        rw!("assoc-xor"; "(^ ?x (^ ?y ?z))"=> "(^ (^ ?x ?y) ?z)"),
+//        //
+//        //
+//        //    rw!("demorgan"; "(~ (^ ?x ?y))" => "(| (~ ?y) (~ ?x))"),
+//        //
+//        //    rw!("and-false"; "(& ?x false)" => "false"),
+//        //    rw!("and-true"; "(& ?x true)" => "?x"),
+//        //    rw!("and-self"; "(& ?x ?x)" => "?x"),
+//        //    rw!("and-self-neg"; "(& ?x (~ ?x))" => "false"),
+//        //
+//        //    rw!("or-false";  "(| ?x false)" => "?x"),
+//        //    rw!("or-true";  "(| ?x true)" => "true"),
+//        //    rw!("or-self";  "(| ?x ?x)" => "?x"),
+//        //    rw!("or-self-neg";  "(| ?x (~ ?x))" => "true"),
+//        rw!("xor-false"; "(^ ?x false)" => "?x"),
         rw!("xor-true"; "(^ ?x true)" => "(~ ?x)"),
-        rw!("xor-self";   "(^ ?x ?x)" => "false"),
+//        rw!("xor-self";   "(^ ?x ?x)" => "false"),
         rw!("xor-self-neg"; "(^ ?x (~ ?x))" => "true"),
-        rw!("neg-dbl"; "(~ (~ ?x))" => "?x"),
+//        rw!("neg-dbl"; "(~ (~ ?x))" => "?x"),
+        rw!("assoc-xor1"; "(^ ?x (^ ?y ?z))"=> "(^ (^ ?x ?y) ?z)"),
+//        rw!("assoc-xor2"; "(^ (^ ?x ?y) ?z)"=> "(^ ?x (^ ?y ?z))"),
+        //rw!("neg-dbl"; "(~ (~ ?x))" => "?x"),
     ];
 
     // While it may look like we are working with numbers,
     // SymbolLang stores everything as strings.
     // We can make our own Language later to work with other types.
     //let start = "(| true (& true true))".parse().unwrap();
-    let start = "(^ x (^ (^ (~ x) (^ false carry_3)) carry_5))"
+    //let start = "(^ x (^ (^ (~ x) (^ false carry_3)) carry_5))"
+    let start = "(^ (^ a b) (~ b))"
         .parse()
         .unwrap();
 
@@ -816,7 +820,8 @@ fn main() {
     //test();
 
     //println!("\n\n");
-    print_dafny();
+    //print_dafny();
+    egg_test();
 
     //println!("Done!");
 }
