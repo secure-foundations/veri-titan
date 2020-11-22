@@ -704,14 +704,40 @@ fn egg_rules() -> Vec<egg::Rewrite<BoolLanguage, ()>> {
         rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
         rw!("commute-or";  "(| ?x ?y)" => "(| ?y ?x)"),
         rw!("commute-xor"; "(^ ?x ?y)" => "(^ ?y ?x)"),
-        rw!("xor";         "(^ ?x ?y)" => "(& (| ?x ?y) (| (~ ?x) (~ ?y)))"),
-        rw!("dist-or-and"; "(| ?x (& ?y ?z))" => "(& (| ?x ?y) (| ?x ?z))"),
-        rw!("dist-and-or"; "(& ?x (| ?y ?z))" => "(| (& ?x ?y) (& ?x ?z))"),
-        rw!("dist-xor-or"; "(^ ?x (| ?y ?z))" => "(| (& (~ ?x) (| ?y ?z)) (& ?x (& (~ ?y) (~ ?z))))"),
-        rw!("dist-and-xor"; "(& ?x (^ ?y ?z))"=> "(^ (& ?x ?y) (& ?x ?z))"),
-        rw!("assoc-xor"; "(^ ?x (^ ?y ?z))"=> "(^ (^ ?x ?y) ?z)"),
-        rw!("demorgan-and"; "(~ (& ?x ?y))" => "(| (~ ?x) (~ ?y))"),
-        rw!("demorgan-or";  "(~ (| ?x ?y))" => "(& (~ ?x) (~ ?y))"),
+
+        rw!("xor-def";     "(^ ?x ?y)" => "(& (| ?x ?y) (| (~ ?x) (~ ?y)))"),
+        rw!("xor-def-rev"; "(& (| ?x ?y) (| (~ ?x) (~ ?y)))" => "(^ ?x ?y)"),
+
+        rw!("dist-or-and-1"; "(| ?x (& ?y ?z))" => "(& (| ?x ?y) (| ?x ?z))"),
+        rw!("dist-or-and-2"; "(& (| ?x ?y) (| ?x ?z))" => "(| ?x (& ?y ?z))"),
+
+        rw!("dist-and-or-1"; "(& ?x (| ?y ?z))" => "(| (& ?x ?y) (& ?x ?z))"),
+        rw!("dist-and-or-2"; "(| (& ?x ?y) (& ?x ?z))" => "(& ?x (| ?y ?z))"),
+
+        rw!("dist-xor-or-1"; "(^ ?x (| ?y ?z))" => "(| (& (~ ?x) (| ?y ?z)) (& ?x (& (~ ?y) (~ ?z))))"),
+        rw!("dist-xor-or-2"; "(| (& (~ ?x) (| ?y ?z)) (& ?x (& (~ ?y) (~ ?z))))" => "(^ ?x (| ?y ?z))"),
+
+        rw!("dist-and-xor-1"; "(& ?x (^ ?y ?z))" => "(^ (& ?x ?y) (& ?x ?z))"),
+        rw!("dist-and-xor-2"; "(^ (& ?x ?y) (& ?x ?z))" => "(& ?x (^ ?y ?z))"),
+
+        rw!("dist-xor-and-1"; "(^ ?x (& ?y ?z))" => "(| (& (~ ?x) (& ?y ?z)) (& ?x (~ (& ?y ?z))))"),
+        rw!("dist-xor-and-1"; "(^ ?x (| ?y ?z))" => "(| (& (~ ?x) (| ?y ?z)) (& ?x (~ (| ?y ?z))))"),
+
+        rw!("assoc-xor-1"; "(^ ?x (^ ?y ?z))" => "(^ (^ ?x ?y) ?z)"),
+        rw!("assoc-xor-2"; "(^ (^ ?x ?y) ?z)" => "(^ ?x (^ ?y ?z))"),
+
+        rw!("assoc-and-1"; "(& ?x (& ?y ?z))" => "(& (& ?x ?y) ?z)"),
+        rw!("assoc-and-2"; "(& (& ?x ?y) ?z)" => "(& ?x (& ?y ?z))"),
+
+        rw!("assoc-or-1"; "(| ?x (| ?y ?z))" => "(| (| ?x ?y) ?z)"),
+        rw!("assoc-or-2"; "(| (| ?x ?y) ?z)" => "(| ?x (| ?y ?z))"),
+
+        rw!("demorgan-and-1"; "(~ (& ?x ?y))" => "(| (~ ?x) (~ ?y))"),
+        rw!("demorgan-and-2"; "(| (~ ?x) (~ ?y))" => "(~ (& ?x ?y))"),
+
+        rw!("demorgan-or-1"; "(~ (| ?x ?y))" => "(& (~ ?x) (~ ?y))"),
+        rw!("demorgan-or-2"; "(& (~ ?x) (~ ?y))" => "(~ (| ?x ?y))"),
+
         rw!("and-false"; "(& ?x false)" => "false"),
         rw!("and-true"; "(& ?x true)" => "?x"),
         rw!("and-self"; "(& ?x ?x)" => "?x"),
@@ -820,8 +846,8 @@ fn main() {
     //test();
 
     //println!("\n\n");
-    //print_dafny();
-    egg_test();
+    print_dafny();
+    //egg_test();
 
     //println!("Done!");
 }
