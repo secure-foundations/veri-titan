@@ -484,7 +484,8 @@ function xor(x:bool, y:bool) : bool {{
 "
     );
 
-    let f = identity();
+    //let f = identity();
+    let f = identity2();
     let f = f.simp();
     let mut namer = Namer::new();
     let f_base_bit = f.get_main_bit_expr(&mut namer, true);
