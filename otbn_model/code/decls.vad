@@ -43,25 +43,25 @@ function shl32(x:uint32, amount:uint32):uint32 extern; // TODO: requires clause
 function shr32(x:uint32, amount:uint32):uint32 extern; // TODO: requires clause
 function sext32(x:uint32, size:int):uint32 extern;
 
-function xor256(a:Bignum, b:Bignum, st:bool, sb:uint32):Bignum extern;
-function or256(a:Bignum, b:Bignum, st:bool, sb:uint32):Bignum extern;
-function and256(a:Bignum, b:Bignum, st:bool, sb:uint32):Bignum extern;
-function add256(a:Bignum, b:Bignum, st:bool, sb:uint32):tuple(Bignum, FlagsGroup) extern;
-function addc256(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
-function addi256(a:Bignum, imm:uint32):tuple(Bignum, FlagsGroup) extern;
-function addm256(a:Bignum, b:Bignum, mod:Bignum):Bignum extern;
+function bn_xor(a:Bignum, b:Bignum, st:bool, sb:uint32):Bignum extern;
+function bn_or(a:Bignum, b:Bignum, st:bool, sb:uint32):Bignum extern;
+function bn_and(a:Bignum, b:Bignum, st:bool, sb:uint32):Bignum extern;
+function bn_add(a:Bignum, b:Bignum, st:bool, sb:uint32):tuple(Bignum, FlagsGroup) extern;
+function bn_addc(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
+function bn_addi(a:Bignum, imm:uint32):tuple(Bignum, FlagsGroup) extern;
+function bn_addm(a:Bignum, b:Bignum, mod:Bignum):Bignum extern;
 
-function sub256(a:Bignum, b:Bignum, st:bool, sb:uint32):tuple(Bignum, FlagsGroup) extern;
-function subb256(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
-function subi256(a:Bignum, b:Bignum):tuple(Bignum, FlagsGroup) extern;
-function subm256(a:Bignum, b:Bignum, mod:Bignum):Bignum extern;
+function bn_sub(a:Bignum, b:Bignum, st:bool, sb:uint32):tuple(Bignum, FlagsGroup) extern;
+function bn_subb(a:Bignum, b:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup):tuple(Bignum, FlagsGroup) extern;
+function bn_subbi(a:Bignum, b:Bignum):tuple(Bignum, FlagsGroup) extern;
+function bn_subm(a:Bignum, b:Bignum, mod:Bignum):Bignum extern;
 
-function rshi256(src1:Bignum, src2:Bignum, imm:uint32):Bignum extern;
+function bn_rshi(src1:Bignum, src2:Bignum, imm:uint32):Bignum extern;
 
 function bn_mulqacc_is_safe(shift:uint32, macc: Bignum):bool extern;
 function bn_mulqacc_safe(zero: bool, a:Bignum, qa:uint32, b:Bignum, qb:uint32, shift:uint32, macc:Bignum):Bignum extern;
 
-function mulqacc256(zero: bool, a:Bignum, qa:uint32, b:Bignum, qb:uint32, shift:uint32, macc:Bignum):Bignum extern;
+function bn_mulqacc(zero: bool, a:Bignum, qa:uint32, b:Bignum, qb:uint32, shift:uint32, macc:Bignum):Bignum extern;
 function uint256_hwb(x: Bignum, v: uint128, lower: bool):Bignum extern;
 function uint256_qmul(x: uint256, qx: uint2, y: uint256, qy:uint2): uint128 extern;
 
@@ -294,7 +294,7 @@ procedure BN_XOR(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:boo
     requires
         sb < 32;
     ensures
-        dst == xor256(old(src1), old(src2), st, sb);
+        dst == bn_xor(old(src1), old(src2), st, sb);
 {
 assume false;
 }
@@ -306,7 +306,7 @@ procedure BN_ADD(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:boo
     modifies
         flags;
     ensures
-        let result := add256(old(src1), old(src2), st, sb);
+        let result := bn_add(old(src1), old(src2), st, sb);
         dst == fst(result) && flags == update_fg(fg, old(flags), snd(result));
 {
 assume false;
@@ -319,7 +319,7 @@ procedure BN_ADDC(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:bo
     modifies
         flags;
     ensures
-        let result := addc256(old(src1), old(src2), st, sb, get_flags_group(fg, old(flags)));
+        let result := bn_addc(old(src1), old(src2), st, sb, get_flags_group(fg, old(flags)));
         dst == fst(result) && flags == update_fg(fg, old(flags), snd(result));
 {
 assume false;
@@ -332,7 +332,7 @@ procedure BN_ADDI(inout dst:reg256, in src:reg256, in imm:imm32, inline fg:bool)
     modifies
         flags;
     ensures
-        let result := addi256(old(src), imm);
+        let result := bn_addi(old(src), imm);
         dst == fst(result) && flags == update_fg(fg, old(flags), snd(result));
 {
     assume false;
@@ -343,7 +343,7 @@ procedure ADDM_256(inout dst:reg256, in src1:reg256, in src2:reg256)
     reads
         wmod;
     ensures
-        dst == addm256(old(src1), old(src2), old(wmod));
+        dst == bn_addm(old(src1), old(src2), old(wmod));
 {
     assume false;
 }
@@ -355,7 +355,7 @@ procedure BN_SUB(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:boo
     modifies
         flags;
     ensures
-        let result := sub256(old(src1), old(src2), st, sb);
+        let result := bn_sub(old(src1), old(src2), st, sb);
         dst == fst(result) && flags == update_fg(fg, old(flags), snd(result));
 {
 assume false;
@@ -368,7 +368,7 @@ procedure BN_SUBB(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:bo
     modifies
         flags;
     ensures
-        let result := subb256(old(src1), old(src2), st, sb, get_flags_group(fg, old(flags)));
+        let result := bn_subb(old(src1), old(src2), st, sb, get_flags_group(fg, old(flags)));
         dst == fst(result) && flags == update_fg(fg, old(flags), snd(result));
 {
 assume false;
@@ -381,7 +381,7 @@ procedure BN_SUBI(inout dst:reg256, in src1:reg256, in src2:imm128, inline fg:bo
     modifies
         flags;
     ensures
-        let result := subi256(old(src1), src2);
+        let result := bn_subbi(old(src1), src2);
         dst == fst(result) && flags == update_fg(fg, old(flags), snd(result));
 {
 assume false;
@@ -392,7 +392,7 @@ procedure BN_SUBM(inout dst:reg256, in src1:reg256, in src2:reg256)
     reads
         wmod;
     ensures
-        dst == subm256(old(src1), old(src2), wmod);
+        dst == bn_subm(old(src1), old(src2), wmod);
 {
 assume false;
 }
@@ -404,7 +404,7 @@ procedure BN_OR(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:bool
     modifies
         flags;
     ensures
-        dst == or256(old(src1), old(src2), st, sb);
+        dst == bn_or(old(src1), old(src2), st, sb);
 {
 assume false;
 }
@@ -416,7 +416,7 @@ procedure BN_AND(inout dst:reg256, in src1:reg256, in src2:reg256, inline st:boo
     modifies
         flags;
     ensures
-        dst == and256(old(src1), old(src2), st, sb);
+        dst == bn_and(old(src1), old(src2), st, sb);
 {
 assume false;
 }
@@ -426,7 +426,7 @@ procedure BN_MULQACC_Z(in src1:reg256, in qwsel1:imm2, in src2:reg256, in qwsel2
     modifies
         wacc;
     ensures
-        wacc == mulqacc256(true, src1, qwsel1, src2, qwsel2, shift, old(wacc));
+        wacc == bn_mulqacc(true, src1, qwsel1, src2, qwsel2, shift, old(wacc));
 {
     assume false;
 }
@@ -436,7 +436,7 @@ procedure BN_MULQACC(in src1:reg256, in qwsel1:imm2, in src2:reg256, in qwsel2:i
     modifies
         wacc;
     ensures
-        wacc == mulqacc256(false, src1, qwsel1, src2, qwsel2, shift, old(wacc));
+        wacc == bn_mulqacc(false, src1, qwsel1, src2, qwsel2, shift, old(wacc));
 {
     assume false;
 }
@@ -466,7 +466,7 @@ procedure BN_MULQACC_SO(
     modifies
         wacc;
     ensures
-        let result := mulqacc256(false, src1, qwsel1, src2, qwsel2, shift, old(wacc));
+        let result := bn_mulqacc(false, src1, qwsel1, src2, qwsel2, shift, old(wacc));
         // the upper half stay in wacc
         wacc == uint256_uh(result)
         // the lower half gets written back into dst
@@ -512,7 +512,7 @@ procedure BN_RSHI(inout dst:reg256, in src1:reg256, in src2:reg256, in imm:imm32
     requires
         imm < 256;
     ensures
-        dst == rshi256(src1, src2, imm);
+        dst == bn_rshi(src1, src2, imm);
 {
     assume false;
 }
