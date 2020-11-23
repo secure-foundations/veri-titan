@@ -1,18 +1,12 @@
-// Trusted specification for the OpenTitan uint256 semantics
-
 include "types.dfy"
 include "ops.dfy"
+include "../lib/powers.dfy"
 
 module bignum_def {
 
 import opened types
 import opened ops    
-
-////////////////////////////////////////////////////////////////////////
-//
-//  Invariants over the state
-//
-////////////////////////////////////////////////////////////////////////
+import opened powers
 
 predicate valid_state(s:state)
 {
@@ -60,19 +54,19 @@ datatype ins32 =
 datatype ins256 =
 | ADD256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
 | ADDC256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
-| ADDI256(wrd:Reg256, wrs1:Reg256, imm:uint256, flg:bool)
+| ADDI256(wrd:Reg256, wrs1:Reg256, imm: uint256, flg:bool)
 | ADDM256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256)
 | MULQACC256(zero:bool, wrs1:Reg256, qwsel1:uint32, wrs2:Reg256, qwsel2:uint32, shift:uint32)
 | MULH256(wrd:Reg256, wrs1:Reg256, hw1:bool, wrs2:Reg256, hw2:bool)
 | SUB256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
 | SUBB256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
-| SUBI256(wrd:Reg256, wrs1:Reg256, imm:uint256, flg:bool)
+| SUBI256(wrd:Reg256, wrs1:Reg256, imm: uint256, flg:bool)
 | SUBM256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256)
 | AND256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
 | OR256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
 | NOT256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
 | XOR256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
-| RSHI256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, imm:uint256)
+| RSHI256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, imm: uint256)
 | SEL256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, flg:bool)
 | CMP256(wrs1:Reg256, wrs2:Reg256, flg:bool)
 | CMPB256(wrs1:Reg256, wrs2:Reg256, flg:bool)
@@ -264,31 +258,31 @@ function update_fg(b:bool, f:Flags, fg:FlagsGroup) : Flags { if b then f.(fg1 :=
 
 function cf(flags_group:FlagsGroup) : bool { flags_group.cf }
 
-function bn_add(x:uint256, y:uint256, st:bool, sb:uint32) : (uint256, FlagsGroup)
+function bn_add(x: uint256, y: uint256, st: bool, sb: uint32) : (uint256, FlagsGroup)
     requires sb < 32;
 {
     bn_add_carray(x, uint256_sb(y, st, sb), false)
 }
 
-function bn_addc(x:uint256, y:uint256, st:bool, sb:uint32, flags_group:FlagsGroup) : (uint256, FlagsGroup)
+function bn_addc(x: uint256, y: uint256, st: bool, sb: uint32, flags_group:FlagsGroup) : (uint256, FlagsGroup)
     requires sb < 32;
 {
     bn_add_carray(x, uint256_sb(y, st, sb), cf(flags_group))
 }
 
-function bn_addi(x:uint256, imm:uint256) : (uint256, FlagsGroup)
+function bn_addi(x: uint256, imm: uint256) : (uint256, FlagsGroup)
     requires imm < 1024;
 {
     bn_add_carray(x, imm, false)
 }
 
-function bn_addm(x:uint256, y:uint256, mod:uint256) : uint256
+function bn_addm(x: uint256, y: uint256, mod: uint256) : uint256
 {
     var (sum, _) := bn_add_carray(x, y, false);
     if sum >= mod then sum - mod else sum
 }
 
-function bn_sub(x:uint256, y:uint256, st:bool, sb:uint32) : (uint256, FlagsGroup)
+function bn_sub(x: uint256, y: uint256, st: bool, sb: uint32) : (uint256, FlagsGroup)
     requires sb < 32;
 {
     var diff :int := x - uint256_sb(y, st, sb);
@@ -297,7 +291,7 @@ function bn_sub(x:uint256, y:uint256, st:bool, sb:uint32) : (uint256, FlagsGroup
     (diff % BASE_256, fg)
 }
 
-function bn_subb(x:uint256, y:uint256, st:bool, sb:uint32, flags_group:FlagsGroup) : (uint256, FlagsGroup)
+function bn_subb(x: uint256, y: uint256, st: bool, sb :uint32, flags_group: FlagsGroup) : (uint256, FlagsGroup)
     requires sb < 32;
 {
     // FIXME: double check this
@@ -307,7 +301,7 @@ function bn_subb(x:uint256, y:uint256, st:bool, sb:uint32, flags_group:FlagsGrou
     (diff % BASE_256, fg)
 }
 
-function bn_subbi(x:uint256, imm:uint256) : (uint256, FlagsGroup)
+function bn_subbi(x: uint256, imm: uint256) : (uint256, FlagsGroup)
     requires imm < 1024;
     // requires imm < x; //TODO: Is this true?
 {
@@ -318,7 +312,7 @@ function bn_subbi(x:uint256, imm:uint256) : (uint256, FlagsGroup)
     (diff % BASE_256, fg)
 }
 
-function bn_subm(x:uint256, y:uint256, wmod:uint256) : uint256
+function bn_subm(x: uint256, y: uint256, wmod: uint256) : uint256
 {
     // FIXME: some bound checking?
     assume false;
@@ -336,8 +330,8 @@ function bn_add_carray(a: uint256, b: uint256, carry_in: bool) : (uint256, Flags
 
 function bn_mulqacc(
     zero: bool,
-    x:uint256, qx: uint2,
-    y:uint256, qy: uint2,
+    x: uint256, qx: uint2,
+    y: uint256, qy: uint2,
     shift: uint2,
     acc: uint256) : uint256
 {
@@ -357,8 +351,8 @@ predicate bn_mulqacc_is_safe(shift: uint2, acc: uint256)
 // mulquacc but no overflow
 function bn_mulqacc_safe(
     zero: bool,
-    x:uint256, qx: uint2,
-    y:uint256, qy: uint2,
+    x: uint256, qx: uint2,
+    y: uint256, qy: uint2,
     shift: uint2,
     acc: uint256) : uint256
 
@@ -381,30 +375,29 @@ function bn_qshift_safe(x: uint256, q: uint2): (r: uint256)
     else x * BASE_192
 }
 
-function bn_xor(x:uint256, y:uint256, st:bool, sb:uint32) : uint256
+function bn_xor(x: uint256, y: uint256, st: bool, sb: uint32) : uint256
     requires sb < 32;
 {
     uint256_xor(x, uint256_sb(y, st, sb))
 }
 
-function bn_or(x:uint256, y:uint256, st:bool, sb:uint32) : uint256
+function bn_or(x: uint256, y: uint256, st: bool, sb: uint32) : uint256
     requires sb < 32;
 {
     uint256_or(x, uint256_sb(y, st, sb))
 }
         
-function bn_and(x:uint256, y:uint256, st:bool, sb:uint32) : uint256
+function bn_and(x: uint256, y: uint256, st: bool, sb: uint32) : uint256
     requires sb < 32;
 {
     uint256_and(x, uint256_sb(y, st, sb))
 }
 
-function bn_rshi(x:uint256, y:uint256, shift_bit:int) : uint256
-    requires 0 <= shift_bit < 256;
+function bn_rshi(x: uint256, y: uint256, shift_amt:int) : uint256
+    requires 0 <= shift_amt < 256;
 {
-    var upper := (x as bv256 << (256)) as uint256;
-    var concat := upper + y;
-    ((concat as bv256 >> shift_bit) as uint256) % BASE_256
+    var concat : int := x * BASE_256 + y;
+    (concat / pow2(shift_amt)) % BASE_256
 }
 
 }

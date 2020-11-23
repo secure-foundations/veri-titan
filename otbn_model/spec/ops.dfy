@@ -4,10 +4,6 @@ include "../lib/powers.dfy"
 module ops {
 	import opened types
 	import opened powers
-
-	function pow2(n:nat) : nat {
-		if n == 0 then 1 else 2 * pow2(n-1)
-	}
 		
 	function method {:opaque} uint32_and(x:uint32, y:uint32) : uint32
 	{
@@ -78,7 +74,7 @@ module ops {
 		(x as bv256 << (num_bytes * 8)) as uint256
 	}
 
-	function {:opaque} uint256_rs(x:uint256, num_bytes:int): uint256
+	function {:opaque} uint256_rs(x: uint256, num_bytes:int): uint256
 		requires 0 <= num_bytes < 32;
 		ensures uint256_rs(x, 0) == x;
 	{
@@ -86,7 +82,7 @@ module ops {
 		(x as bv256 >> (num_bytes * 8)) as uint256
 	}
 
-	function uint256_sb(b:uint256, st:bool, sb:uint32) : uint256
+	function uint256_sb(b:uint256, st: bool, sb: uint32) : uint256
 		requires sb < 32;
 	{	
 		if sb == 0 then b
