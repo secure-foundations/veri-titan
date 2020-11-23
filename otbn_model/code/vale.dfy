@@ -23,10 +23,9 @@ type va_state = state
 
 function va_get_ok(s:va_state):bool { s.ok }
 function va_get_reg32(r:Reg32, s:va_state):uint32 requires r in s.xregs { s.xregs[r] }
-function va_get_reg256(r:Reg256, s:va_state):Bignum requires r in s.wregs { s.wregs[r] }
+function va_get_reg256(r:Reg256, s:va_state):uint256 requires r in s.wregs { s.wregs[r] }
 
 function va_get_flags(s:va_state):Flags { s.flags }
-function va_get_stack(s:va_state):Stack { s.stack }
 
 function va_update_ok(sM:va_state, sK:va_state):va_state { sK.(ok := sM.ok) }
 
@@ -41,7 +40,7 @@ function va_update_reg256(r:Reg256, sM:va_state, sK:va_state):va_state
 function va_update_flags(sM:va_state, sK:va_state):va_state
 { sK.(flags := sM.flags) }
 
-function va_update_stack(sM:va_state, sK:va_state):va_state { sK.(stack := sM.stack) }
+function va_update_lstack(sM:va_state, sK:va_state):va_state { sK.(lstack := sM.lstack) }
 
 type va_operand_imm128 = uint128
 predicate va_is_src_imm128(v:uint128, s:va_state) { true }
@@ -96,11 +95,11 @@ function va_update_operand_reg256(r:Reg256, sM:va_state, sK:va_state):va_state
 
 predicate va_state_eq(s0:va_state, s1:va_state)
 {
-    s0.xregs == s1.xregs
- && s0.wregs == s1.wregs
- && s0.flags == s1.flags
- && s0.stack == s1.stack
- && s0.ok == s1.ok
+    && s0.xregs == s1.xregs
+    && s0.wregs == s1.wregs
+    && s0.flags == s1.flags
+    && s0.lstack == s1.lstack
+    && s0.ok == s1.ok
 }
 
 predicate{:opaque} evalCodeOpaque(c:code, s0:state, sN:state)
@@ -119,9 +118,9 @@ predicate cTailIs(b:codes, t:codes) { b.va_CCons? && b.tl == t }
 
 predicate va_require(b0:codes, c1:code, s0:va_state, sN:va_state)
 {
-    cHeadIs(b0, c1)
-&& eval_code(Block(b0), s0, sN)
-&& BN_ValidState(s0)
+    && cHeadIs(b0, c1)
+    && eval_code(Block(b0), s0, sN)
+    && BN_ValidState(s0)
 }
 
 // Weaker form of eval_code that we can actually ensure generically in instructions
@@ -132,10 +131,10 @@ predicate eval_weak(c:code, s:state, r:state)
 
 predicate va_ensure(b0:codes, b1:codes, s0:va_state, s1:va_state, sN:va_state)
 {
-    cTailIs(b0, b1)
- && eval_weak(b0.hd, s0, s1)
- && eval_code(Block(b1), s1, sN)
- && BN_ValidState(s1)
+    && cTailIs(b0, b1)
+    && eval_weak(b0.hd, s0, s1)
+    && eval_code(Block(b1), s1, sN)
+    && BN_ValidState(s1)
 }
 
 lemma va_ins_lemma(b0:code, s0:va_state)
@@ -261,7 +260,7 @@ lemma va_lemma_block(b:codes, s0:va_state, r:va_state) returns(r1:va_state, c0:c
         var r':state :| evalCode(b.hd, s0, r') && evalBlock(b.tl, r', r);
         c0 := b.hd;
         b1 := b.tl;
-        r1 := state(r'.xregs, r'.wregs, r'.flags, r'.stack, r'.ok);
+        r1 := state(r'.xregs, r'.wregs, r'.flags, r'.lstack, r'.ok);
         if BN_ValidState(s0) {
             reveal_BN_ValidState();
             code_state_validity(c0, s0, r1);
