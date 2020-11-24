@@ -8,12 +8,6 @@ import opened types
 import opened ops    
 import opened powers
 
-predicate valid_state(s:state)
-{
-    && (forall r :: r in s.xregs)
-    && (forall t :: t in s.wregs)
-}
-
 type reg_index = i:int | 0 <= i < 32
 
 // General purpose and control registers, 32b
@@ -77,16 +71,16 @@ datatype ins256 =
 | WSRRS256 // TODO
 | WSRRW256 // TODO
 
-datatype codes = CNil | va_CCons(hd:code, tl:codes)
-
-datatype cmp = Eq | Ne | Gt | Ge | Lt | Le
-datatype whileCond = WhileCond(cmp:cmp, r:Reg32, c:uint32)
-
 datatype code =
 | Ins32(ins:ins32)
 | Ins256(bn_ins:ins256)
 | Block(block:codes)
 | While(whileCond:whileCond, whileBody:code)
+
+datatype codes = CNil | va_CCons(hd:code, tl:codes)
+
+datatype cmp = Eq | Ne | Gt | Ge | Lt | Le
+datatype whileCond = WhileCond(cmp:cmp, r:Reg32, c:uint32)
 
 datatype FlagsGroup = FlagsGroup(cf:bool, msb:bool, lsb:bool, zero:bool)
 datatype Flags = Flags(fg0:FlagsGroup, fg1:FlagsGroup)
@@ -95,11 +89,37 @@ datatype state = state(
     xregs: map<Reg32, uint32>, // 32-bit registers
     wregs: map<Reg256, uint256>, // 256-bit registers
     flags: Flags,
-    lstack: seq<nat>,
+    xmem: map<int, uint32>,
+    wmem: map<int, uint256>,
     ok: bool)
+{
+    function EvalMemAddr(addr: wmaddr) : int
+        requires ValidMemAddr(addr);
+    {
+        eval_xreg(xregs, addr.reg) + addr.offset
+    }
+}
 
-function fst(t:(uint256, FlagsGroup)) : uint256 { t.0 }
-function snd(t:(uint256, FlagsGroup)) : FlagsGroup { t.1 }
+predicate valid_state(s:state)
+{
+    && (forall r :: r in s.xregs)
+    && (forall t :: t in s.wregs)
+}
+
+datatype wmaddr = MReg(reg:Reg32, offset:int)
+
+predicate ValidMemAddr(addr: wmaddr)
+{
+    addr.reg.Gpr?
+}
+
+// predicate ValidHeapAddr(s:state, addr:maddr)
+// {
+//     ValidMemAddr(addr)
+//  && var resolved_addr := EvalMemAddr(s.regs, addr);
+//     resolved_addr in s.heap
+//  && s.heap[resolved_addr].Mem32?
+// }
 
 predicate IsUInt32(i:int) { 0 <= i < 0x1_0000_0000 }
 predicate IsUInt256(i:int) { 0 <= i < 0x1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000 }

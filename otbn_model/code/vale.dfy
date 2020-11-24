@@ -15,12 +15,6 @@ type va_code = code
 type va_codes = codes
 type va_state = state
 
-////////////////////////////////////////////////////////////////////////
-//
-//  Connecting Vale functions to Dafny functions
-//
-////////////////////////////////////////////////////////////////////////
-
 function va_get_ok(s:va_state): bool
 {
     s.ok
@@ -65,7 +59,14 @@ function va_update_flags(sM:va_state, sK:va_state): va_state
     sK.(flags := sM.flags)
 }
 
-function va_update_lstack(sM:va_state, sK:va_state):va_state { sK.(lstack := sM.lstack) }
+function fst(t:(uint256, FlagsGroup)) : uint256
+{
+    t.0
+}
+
+function snd(t:(uint256, FlagsGroup)) : FlagsGroup { t.1 }
+
+// function va_update_lstack(sM:va_state, sK:va_state):va_state { sK.(lstack := sM.lstack) }
 
 type va_operand_imm128 = uint128
 predicate va_is_src_imm128(v:uint128, s:va_state) { true }
@@ -123,7 +124,10 @@ predicate va_state_eq(s0:va_state, s1:va_state)
     && s0.xregs == s1.xregs
     && s0.wregs == s1.wregs
     && s0.flags == s1.flags
-    && s0.lstack == s1.lstack
+    // && s0.lstack == s1.lstack
+    && s0.xmem == s1.xmem
+    && s0.wmem == s1.wmem
+    
     && s0.ok == s1.ok
 }
 
@@ -185,7 +189,7 @@ function method va_get_whileBody(c:code):code requires c.While? { c.whileBody }
 
 lemma lemma_FailurePreservedByBlock(block:codes, s:state, r:state)
     requires evalBlock(block, s, r);
-    ensures  !s.ok ==> !r.ok;
+    ensures !s.ok ==> !r.ok;
     decreases block;
 {
     if !block.CNil? {
@@ -285,7 +289,7 @@ lemma va_lemma_block(b:codes, s0:va_state, r:va_state) returns(r1:va_state, c0:c
         var r':state :| evalCode(b.hd, s0, r') && evalBlock(b.tl, r', r);
         c0 := b.hd;
         b1 := b.tl;
-        r1 := state(r'.xregs, r'.wregs, r'.flags, r'.lstack, r'.ok);
+        r1 := state(r'.xregs, r'.wregs, r'.flags, r'.xmem, r'.wmem, r'.ok);
         if BN_ValidState(s0) {
             reveal_BN_ValidState();
             code_state_validity(c0, s0, r1);
@@ -298,8 +302,15 @@ lemma va_lemma_block(b:codes, s0:va_state, r:va_state) returns(r1:va_state, c0:c
     }
 }
 
-predicate{:opaque} evalWhileOpaque(w:whileCond, c:code, n:nat, s:state, r:state) { evalWhile(w, c, n, s, r) }
-predicate evalWhileLax(w:whileCond, c:code, n:nat, s:state, r:state) { s.ok ==> evalWhileOpaque(w, c, n, s, r) }
+predicate{:opaque} evalWhileOpaque(w:whileCond, c:code, n:nat, s:state, r:state)
+{
+    evalWhile(w, c, n, s, r)
+}
+
+predicate evalWhileLax(w:whileCond, c:code, n:nat, s:state, r:state)
+{
+    s.ok ==> evalWhileOpaque(w, c, n, s, r)
+}
 
 predicate va_whileInv(w:whileCond, c:code, n:int, r1:va_state, r2:va_state)
 {
@@ -358,8 +369,8 @@ lemma va_lemma_whileTrue(w:whileCond, c:code, n:nat, s:va_state, r:va_state) ret
     if BN_ValidState(s) {
         var s'':state, r'':state :| evalWhileCond(s, w) && branchRelation(s, s'', true) && evalCode(c, s'', r'')
                                 && evalWhile(w, c, n - 1, r'', r);
-        s' := state(s''.xregs, s''.wregs, s''.flags, s''.lstack, s''.ok);
-        r' := state(r''.xregs, r''.wregs, r''.flags, r''.lstack, r''.ok);
+        s' := s'';
+        r' := r'';
         code_state_validity(c, s'', r'');
     } else {
         s' := s.(ok := false);
@@ -393,7 +404,6 @@ lemma va_lemma_whileFalse(w:whileCond, c:code, s:va_state, r:va_state) returns(r
     }
     r' := r;
 }
-
 
 predicate {:opaque} BN_ValidState(s:state)
     ensures BN_ValidState(s) ==> valid_state(s);
