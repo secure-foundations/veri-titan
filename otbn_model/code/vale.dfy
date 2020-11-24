@@ -21,24 +21,49 @@ type va_state = state
 //
 ////////////////////////////////////////////////////////////////////////
 
-function va_get_ok(s:va_state):bool { s.ok }
-function va_get_reg32(r:Reg32, s:va_state):uint32 requires r in s.xregs { s.xregs[r] }
-function va_get_reg256(r:Reg256, s:va_state):uint256 requires r in s.wregs { s.wregs[r] }
+function va_get_ok(s:va_state): bool
+{
+    s.ok
+}
 
-function va_get_flags(s:va_state):Flags { s.flags }
+function va_get_reg32(r:Reg32, s:va_state): uint32
+    requires r in s.xregs
+{
+    s.xregs[r]
+}
 
-function va_update_ok(sM:va_state, sK:va_state):va_state { sK.(ok := sM.ok) }
+function va_get_reg256(r:Reg256, s:va_state): uint256
+    requires r in s.wregs
+{
+    s.wregs[r]
+}
 
-function va_update_reg32(r:Reg32, sM:va_state, sK:va_state):va_state
+function va_get_flags(s:va_state):Flags
+{
+    s.flags
+}
+
+function va_update_ok(sM:va_state, sK:va_state): va_state
+{
+    sK.(ok := sM.ok)
+}
+
+function va_update_reg32(r:Reg32, sM:va_state, sK:va_state): va_state
     requires r in sM.xregs
-{ sK.(xregs := sK.xregs[r := sM.xregs[r]]) }
+{
+    sK.(xregs := sK.xregs[r := sM.xregs[r]])
+}
 
-function va_update_reg256(r:Reg256, sM:va_state, sK:va_state):va_state
+function va_update_reg256(r:Reg256, sM:va_state, sK:va_state): va_state
     requires r in sM.wregs
-{ sK.(wregs := sK.wregs[r := sM.wregs[r]]) }
+{
+    sK.(wregs := sK.wregs[r := sM.wregs[r]])
+}
 
-function va_update_flags(sM:va_state, sK:va_state):va_state
-{ sK.(flags := sM.flags) }
+function va_update_flags(sM:va_state, sK:va_state): va_state
+{
+    sK.(flags := sM.flags)
+}
 
 function va_update_lstack(sM:va_state, sK:va_state):va_state { sK.(lstack := sM.lstack) }
 
@@ -313,9 +338,9 @@ lemma va_lemma_whileTrue(w:whileCond, c:code, n:nat, s:va_state, r:va_state) ret
     ensures  eval_code(c, s', r');
     ensures  BN_ValidState(s) ==> if s.ok then BN_branchRelation(s, s', true) else s' == s;
     ensures  if s.ok && BN_ValidState(s) then
-                    s'.ok
-                 && va_is_src_reg32(w.r, s)
-                 && evalWhileCond(s, w)
+                && s'.ok
+                && va_is_src_reg32(w.r, s)
+                && evalWhileCond(s, w)
              else
                  true; //!r.ok;
 {
@@ -333,8 +358,8 @@ lemma va_lemma_whileTrue(w:whileCond, c:code, n:nat, s:va_state, r:va_state) ret
     if BN_ValidState(s) {
         var s'':state, r'':state :| evalWhileCond(s, w) && branchRelation(s, s'', true) && evalCode(c, s'', r'')
                                 && evalWhile(w, c, n - 1, r'', r);
-        s' := state(s''.xregs, s''.wregs, s''.flags, s''.stack, s''.ok);
-        r' := state(r''.xregs, r''.wregs, r''.flags, r''.stack, r''.ok);
+        s' := state(s''.xregs, s''.wregs, s''.flags, s''.lstack, s''.ok);
+        r' := state(r''.xregs, r''.wregs, r''.flags, r''.lstack, r''.ok);
         code_state_validity(c, s'', r'');
     } else {
         s' := s.(ok := false);
