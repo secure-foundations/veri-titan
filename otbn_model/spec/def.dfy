@@ -34,7 +34,7 @@ datatype ins32 =
 | XOR32(xrd:Reg32, xrs1:Reg32, xrs2:Reg32)
 | XORI32(xrd:Reg32, xrs1:Reg32, imm:uint32)
 | LW32(xrd:Reg32, xrs1:Reg32, imm:uint32)
-| SW32(xrs1:Reg32, imm:uint32, xrs2:Reg32)
+| SW32(xrs1:Reg32, xrs2:Reg32, imm:uint32)
 | BEQ32(xrs1:Reg32, xrs2:Reg32, offset:uint32)
 | BNE32(xrs1:Reg32, xrs2:Reg32, offset:uint32)
 | LOOP32(xrs1:Reg32, bodysize:uint32)

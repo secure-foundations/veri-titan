@@ -185,7 +185,7 @@ operand_type imm2:uint2 := const;
 
 function ValidAddr(h: Xmem, addr:int):bool extern;
 
-procedure Lw32(out dst:reg32, in src:reg32, in offset:imm32)
+procedure LW(out dst:reg32, in src:reg32, in offset:imm32)
     {:instruction Ins32(LW32(dst, src, offset))}
     reads
         xmem;
@@ -198,14 +198,14 @@ procedure Lw32(out dst:reg32, in src:reg32, in offset:imm32)
     assume false;
 }
 
-procedure Sw32(in dst:reg32, in src:reg32, in offset:imm32)
-    {:instruction Ins32(SW32(dst, offset, src))}
+procedure SW(in grs2:reg32, in grs1:reg32, in offset:imm32)
+    {:instruction Ins32(SW32(grs2, grs1, offset))}
     modifies
         xmem;
     requires/ensures
-        ValidAddr(xmem, dst + offset);
+        ValidAddr(xmem, grs1 + offset);
     ensures
-        xmem == old(xmem)[dst + offset := src];
+        xmem == old(xmem)[grs1 + offset := grs2];
 {
     assume false;
 }
