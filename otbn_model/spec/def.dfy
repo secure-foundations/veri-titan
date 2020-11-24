@@ -33,8 +33,8 @@ datatype ins32 =
 | ORI32(xrd:Reg32, xrs1:Reg32, imm:uint32)
 | XOR32(xrd:Reg32, xrs1:Reg32, xrs2:Reg32)
 | XORI32(xrd:Reg32, xrs1:Reg32, imm:uint32)
-| LW32 // TODO
-| SW32 // TODO
+| LW32(xrd:Reg32, xrs1:Reg32, imm:uint32)
+| SW32(xrs1:Reg32, imm:uint32, xrs2:Reg32)
 | BEQ32(xrs1:Reg32, xrs2:Reg32, offset:uint32)
 | BNE32(xrs1:Reg32, xrs2:Reg32, offset:uint32)
 | LOOP32(xrs1:Reg32, bodysize:uint32)
@@ -85,6 +85,8 @@ datatype whileCond = WhileCond(cmp:cmp, r:Reg32, c:uint32)
 datatype FlagsGroup = FlagsGroup(cf:bool, msb:bool, lsb:bool, zero:bool)
 datatype Flags = Flags(fg0:FlagsGroup, fg1:FlagsGroup)
 
+datatype mAddr = mAddr(reg:Reg32, offset:int)
+
 datatype state = state(
     xregs: map<Reg32, uint32>, // 32-bit registers
     wregs: map<Reg256, uint256>, // 256-bit registers
@@ -92,13 +94,6 @@ datatype state = state(
     xmem: map<int, uint32>,
     wmem: map<int, uint256>,
     ok: bool)
-{
-    function EvalMemAddr(addr: wmaddr) : int
-        requires ValidMemAddr(addr);
-    {
-        eval_xreg(xregs, addr.reg) + addr.offset
-    }
-}
 
 predicate valid_state(s:state)
 {
@@ -106,20 +101,10 @@ predicate valid_state(s:state)
     && (forall t :: t in s.wregs)
 }
 
-datatype wmaddr = MReg(reg:Reg32, offset:int)
-
-predicate ValidMemAddr(addr: wmaddr)
+predicate ValidMemAddr(addr: mAddr)
 {
     addr.reg.Gpr?
 }
-
-// predicate ValidHeapAddr(s:state, addr:maddr)
-// {
-//     ValidMemAddr(addr)
-//  && var resolved_addr := EvalMemAddr(s.regs, addr);
-//     resolved_addr in s.heap
-//  && s.heap[resolved_addr].Mem32?
-// }
 
 predicate IsUInt32(i:int) { 0 <= i < 0x1_0000_0000 }
 predicate IsUInt256(i:int) { 0 <= i < 0x1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000 }

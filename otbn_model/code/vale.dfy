@@ -37,6 +37,16 @@ function va_get_flags(s:va_state):Flags
     s.flags
 }
 
+function va_get_xmem(s:va_state): map<int, uint32>
+{
+    s.xmem
+}
+
+function va_update_xmem(sM:va_state, sK:va_state):va_state
+{
+    sK.(xmem := sM.xmem)
+}
+
 function va_update_ok(sM:va_state, sK:va_state): va_state
 {
     sK.(ok := sM.ok)
@@ -88,6 +98,11 @@ type va_operand_reg32 = Reg32
 
 predicate va_is_src_reg32(r:Reg32, s:va_state) { (r.Gpr? ==> 0 <= r.x <= 31) && r in s.xregs && IsUInt32(s.xregs[r]) }
 predicate va_is_dst_reg32(r:Reg32, s:va_state) { (r in s.xregs && IsUInt32(s.xregs[r]) && r.Gpr? && 0 <= r.x <= 31) }
+
+predicate ValidAddr(h: map<int, uint32>, addr:int)
+{
+    addr in h
+}
 
 function va_eval_reg32(s:va_state, r:Reg32):uint32
   requires va_is_src_reg32(r, s);

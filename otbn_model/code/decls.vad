@@ -20,9 +20,9 @@ type uint256:Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff_fffff
 
 type seq(a:Type(0)):Type(0) {:primitive} extern;
 type map(a:Type(0), b:Type(0)):Type(0) extern;
-type uint256:Type(0) := uint256;
-type Frame:Type(0) := map(int, uint32);
-type Stack:Type(0) := seq(Frame);
+// type Frame:Type(0) := map(int, uint32);
+type Xmem:Type(0) := map(int, uint32);
+
 type flagGroup:Type(0) extern;
 type Flags:Type(0) extern;
 type Reg256:Type(0) extern;
@@ -35,13 +35,13 @@ function operator([ := ]) #[a:Type(0)](s:seq(a), i:int, v:a):seq(a) extern; // T
 function operator([]) #[a:Type(0), b:Type(0)](m:map(a, b), key:a):b extern; // TODO: requires clause
 function operator([ := ]) #[a:Type(0), b:Type(0)](m:map(a, b), key:a, v:b):map(a, b) extern;
 
-function xor32(x:uint32, y:uint32):uint32 extern;
-function or32(x:uint32, y:uint32):uint32 extern;
-function and32(x:uint32, y:uint32):uint32 extern;
-function not32(x:uint32):uint32 extern;
-function shl32(x:uint32, amount:uint32):uint32 extern; // TODO: requires clause
-function shr32(x:uint32, amount:uint32):uint32 extern; // TODO: requires clause
-function sext32(x:uint32, size:int):uint32 extern;
+function uint32_xor(x:uint32, y:uint32):uint32 extern;
+function uint32_or(x:uint32, y:uint32):uint32 extern;
+function uint32_and(x:uint32, y:uint32):uint32 extern;
+function uint32_not(x:uint32):uint32 extern;
+function uint32_ls(x:uint32, amount:uint32):uint32 extern; // TODO: requires clause
+// function shr32(x:uint32, amount:uint32):uint32 extern; // TODO: requires clause
+function uint32_se(x:uint32, size:int):uint32 extern;
 
 function bn_xor(a:uint256, b:uint256, st: bool, sb: uint32):uint256 extern;
 function bn_or(a:uint256, b:uint256, st: bool, sb: uint32):uint256 extern;
@@ -80,7 +80,7 @@ function fst(t:tuple(uint256, flagGroup)):uint256 extern;
 function snd(t:tuple(uint256, flagGroup)):flagGroup extern;
 
 var ok:bool {:state ok()};
-var stack:Stack {:state stack()};
+var xmem:Xmem {:state xmem()};
 var flags:Flags {:state flags() };
 
 var x0:uint32 {:state reg32(Gpr(0))};
@@ -183,6 +183,33 @@ operand_type imm128:uint128 := const;
 operand_type imm32:uint32 := const;
 operand_type imm2:uint2 := const;
 
+function ValidAddr(h: Xmem, addr:int):bool extern;
+
+procedure Lw32(out dst:reg32, in src:reg32, in offset:imm32)
+    {:instruction Ins32(LW32(dst, src, offset))}
+    reads
+        xmem;
+    requires
+        ValidAddr(xmem, src + offset);
+    ensures
+        ValidAddr(xmem, old(src) + offset);
+        dst == xmem[old(src) + offset];
+{
+    assume false;
+}
+
+procedure Sw32(in dst:reg32, in src:reg32, in offset:imm32)
+    {:instruction Ins32(SW32(dst, offset, src))}
+    modifies
+        xmem;
+    requires/ensures
+        ValidAddr(xmem, dst + offset);
+    ensures
+        xmem == old(xmem)[dst + offset := src];
+{
+    assume false;
+}
+
 procedure Add32(inout dst:reg32, in src1:reg32, in src2:reg32)
     {:instruction Ins32(ADD32(dst, src1, src2))}
     ensures
@@ -197,7 +224,7 @@ procedure Addi32(inout dst:reg32, in src1:reg32, in src2:imm32)
     requires
         src2 < 0x1000;
     ensures
-        //dst = old(src1) + sext32(old(src2), 12);
+        //dst = old(src1) + uint32_se(old(src2), 12);
         dst = old(src1) + old(src2);
 {
 assume false;
@@ -214,7 +241,7 @@ assume false;
 procedure And32(inout dst:reg32, in src1:reg32, in src2:reg32)
     {:instruction Ins32(AND32(dst, src1, src2))}
     ensures
-        dst == and32(old(src1), old(src2));
+        dst == uint32_and(old(src1), old(src2));
 {
 assume false;
 }
@@ -224,7 +251,7 @@ procedure Andi32(inout dst:reg32, in src1:reg32, in src2:imm32)
     requires
         src2 < 0x1000;
     ensures
-        dst == and32(old(src1), sext32(old(src2), 12));
+        dst == uint32_and(old(src1), uint32_se(old(src2), 12));
 {
 assume false;
 }
@@ -232,7 +259,7 @@ assume false;
 procedure Or32(inout dst:reg32, in src1:reg32, in src2:reg32)
     {:instruction Ins32(OR32(dst, src1, src2))}
     ensures
-        dst == or32(old(src1), old(src2));
+        dst == uint32_or(old(src1), old(src2));
 {
 assume false;
 }
@@ -242,7 +269,7 @@ procedure Ori32(inout dst:reg32, in src1:reg32, in src2:imm32)
     requires
         src2 < 0x1000;
     ensures
-        dst == or32(old(src1), sext32(old(src2), 12));
+        dst == uint32_or(old(src1), uint32_se(old(src2), 12));
 {
 assume false;
 }
@@ -250,7 +277,7 @@ assume false;
 procedure Xor32(inout dst:reg32, in src1:reg32, in src2:reg32)
     {:instruction Ins32(XOR32(dst, src1, src2))}
     ensures
-        dst == xor32(old(src1), old(src2));
+        dst == uint32_xor(old(src1), old(src2));
 {
 assume false;
 }
@@ -260,7 +287,7 @@ procedure Xori32(inout dst:reg32, in src1:reg32, in src2:imm32)
     requires
         src2 < 0x1000;
     ensures
-        dst == xor32(old(src1), sext32(old(src2), 12));
+        dst == uint32_xor(old(src1), uint32_se(old(src2), 12));
 {
 assume false;
 }
@@ -270,7 +297,7 @@ procedure Lui32(inout dst:reg32, in src:imm32)
     requires
         src < 0x100000; // 20-bit immediate
     ensures
-        dst == shl32(old(src), 12);
+        dst == uint32_ls(old(src), 12);
 {
 assume false;
 }
