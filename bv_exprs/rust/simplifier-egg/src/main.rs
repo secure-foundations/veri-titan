@@ -190,6 +190,28 @@ impl BoolExpr_ {
             }
         }
     }
+    
+    fn remove_xor(&self) -> BoolExpr {
+        use BoolExpr_::*;
+        use BoolBinOp::*;
+        use BoolUniOp::*;
+        match self {
+            Const(_) | Var(_, _) => self.clone().into(),
+            UniExpr(op, src) => UniExpr(*op, src.remove_xor()).into(),
+            BinExpr(op, src0, src1) => {
+                let src0 = src0.remove_xor();
+                let src1 = src1.remove_xor();
+                match op {
+                    And | Or => BinExpr(*op, src0, src1).into(),
+                    Xor => BinExpr(And, 
+                                   BinExpr(Or, src0.clone(), src1.clone()).into(),
+                                   BinExpr(Or, 
+                                           UniExpr(Not, src0).into(), 
+                                           UniExpr(Not, src1).into()).into()).into()
+                }
+            }
+        }
+    }
 
     //fn subst_vars(e: Boolexpr, map:&HashMap<Boolexpr, Boolexpr>) -> Boolexpr {
     //    use Boolexpr::*;
@@ -426,6 +448,15 @@ fn identity() -> BVExpr {
     BinExpr(Sub, x.clone(), x).into()
 }
 
+fn xor_self() -> BVExpr {
+    use BVBinOp::*;
+    use BVExpr_::*;
+
+    // x ^ x
+    let x: BVExpr = Var("x".to_owned()).into();
+    BinExpr(Xor, x.clone(), x).into()
+}
+
 fn identity2() -> BVExpr {
     use BVBinOp::*;
     use BVExpr_::*;
@@ -495,6 +526,31 @@ fn test() {
     for (carry, carry_expr) in base_carries.iter() {
         println!("{} = {}", carry, carry_expr);
     }
+}
+
+
+fn no_xor(f:BVExpr) {
+    let f = f.simp();
+    let mut namer = Namer::new();
+    let f_generic_bit = f.get_main_bit_expr(&mut namer, false);
+    let f_no_xor = f_generic_bit.remove_xor();
+    println!("Generic bit: {}\nNo xor bit: {}", f_generic_bit, f_no_xor);
+
+    // Find the recurrsion relation
+    let rules = egg_rules_no_xor();
+    let f_egg = egg_simp_to_bool_expr(f_no_xor.mk_string(&StrMode::Prefix, true), &rules);
+    eprintln!("Simplified: {}", f_egg);
+}
+
+fn no_xor_test() {
+    let f = identity();
+    no_xor(f);
+    let f = xor_self();
+    no_xor(f);
+    let f = identity2();
+    no_xor(f);
+    let f = addsub_1043();
+    no_xor(f);
 }
 
 fn print_dafny() {
@@ -699,6 +755,42 @@ fn bool_lang_to_expr(nodes: &[BoolLanguage], enode: &BoolLanguage) -> BoolExpr {
     expr_.into()
 }
 
+fn egg_rules_no_xor() -> Vec<egg::Rewrite<BoolLanguage, ()>> {
+    let rules: Vec<Rewrite<BoolLanguage, ()>> = vec![
+        rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
+        rw!("commute-or";  "(| ?x ?y)" => "(| ?y ?x)"),
+
+        rw!("dist-or-and-1"; "(| ?x (& ?y ?z))" => "(& (| ?x ?y) (| ?x ?z))"),
+        rw!("dist-or-and-2"; "(& (| ?x ?y) (| ?x ?z))" => "(| ?x (& ?y ?z))"),
+
+        rw!("dist-and-or-1"; "(& ?x (| ?y ?z))" => "(| (& ?x ?y) (& ?x ?z))"),
+        rw!("dist-and-or-2"; "(| (& ?x ?y) (& ?x ?z))" => "(& ?x (| ?y ?z))"),
+
+        rw!("assoc-and-1"; "(& ?x (& ?y ?z))" => "(& (& ?x ?y) ?z)"),
+        rw!("assoc-and-2"; "(& (& ?x ?y) ?z)" => "(& ?x (& ?y ?z))"),
+
+        rw!("assoc-or-1"; "(| ?x (| ?y ?z))" => "(| (| ?x ?y) ?z)"),
+        rw!("assoc-or-2"; "(| (| ?x ?y) ?z)" => "(| ?x (| ?y ?z))"),
+
+        rw!("demorgan-and-1"; "(~ (& ?x ?y))" => "(| (~ ?x) (~ ?y))"),
+        rw!("demorgan-and-2"; "(| (~ ?x) (~ ?y))" => "(~ (& ?x ?y))"),
+
+        rw!("demorgan-or-1"; "(~ (| ?x ?y))" => "(& (~ ?x) (~ ?y))"),
+        rw!("demorgan-or-2"; "(& (~ ?x) (~ ?y))" => "(~ (| ?x ?y))"),
+
+        rw!("and-false"; "(& ?x false)" => "false"),
+        rw!("and-true"; "(& ?x true)" => "?x"),
+        rw!("and-self"; "(& ?x ?x)" => "?x"),
+        rw!("and-self-neg"; "(& ?x (~ ?x))" => "false"),
+        rw!("or-false";  "(| ?x false)" => "?x"),
+        rw!("or-true";  "(| ?x true)" => "true"),
+        rw!("or-self";  "(| ?x ?x)" => "?x"),
+        rw!("or-self-neg";  "(| ?x (~ ?x))" => "true"),
+        rw!("neg-dbl"; "(~ (~ ?x))" => "?x"),
+    ];
+    rules
+}
+
 fn egg_rules() -> Vec<egg::Rewrite<BoolLanguage, ()>> {
     let rules: Vec<Rewrite<BoolLanguage, ()>> = vec![
         rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
@@ -721,7 +813,7 @@ fn egg_rules() -> Vec<egg::Rewrite<BoolLanguage, ()>> {
         rw!("dist-and-xor-2"; "(^ (& ?x ?y) (& ?x ?z))" => "(& ?x (^ ?y ?z))"),
 
         rw!("dist-xor-and-1"; "(^ ?x (& ?y ?z))" => "(| (& (~ ?x) (& ?y ?z)) (& ?x (~ (& ?y ?z))))"),
-        rw!("dist-xor-and-1"; "(^ ?x (| ?y ?z))" => "(| (& (~ ?x) (| ?y ?z)) (& ?x (~ (| ?y ?z))))"),
+        rw!("dist-xor-and-2"; "(^ ?x (| ?y ?z))" => "(| (& (~ ?x) (| ?y ?z)) (& ?x (~ (| ?y ?z))))"),
 
         rw!("assoc-xor-1"; "(^ ?x (^ ?y ?z))" => "(^ (^ ?x ?y) ?z)"),
         rw!("assoc-xor-2"; "(^ (^ ?x ?y) ?z)" => "(^ ?x (^ ?y ?z))"),
@@ -846,8 +938,10 @@ fn main() {
     //test();
 
     //println!("\n\n");
-    print_dafny();
+    //print_dafny();
     //egg_test();
+    
+    no_xor_test();
 
     //println!("Done!");
 }
