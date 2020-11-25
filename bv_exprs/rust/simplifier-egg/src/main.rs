@@ -760,11 +760,15 @@ fn egg_rules_no_xor() -> Vec<egg::Rewrite<BoolLanguage, ()>> {
         rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
         rw!("commute-or";  "(| ?x ?y)" => "(| ?y ?x)"),
 
-        rw!("dist-or-and-1"; "(| ?x (& ?y ?z))" => "(& (| ?x ?y) (| ?x ?z))"),
-        rw!("dist-or-and-2"; "(& (| ?x ?y) (| ?x ?z))" => "(| ?x (& ?y ?z))"),
+        rw!("dist-or-and-left-1"; "(| ?x (& ?y ?z))" => "(& (| ?x ?y) (| ?x ?z))"),
+        rw!("dist-or-and-left-2"; "(& (| ?x ?y) (| ?x ?z))" => "(| ?x (& ?y ?z))"),
+        rw!("dist-or-and-right-1"; "(| (& ?y ?z) ?x)" => "(& (| ?y ?x) (| ?z ?x))"),
+        rw!("dist-or-and-right-2"; "(& (| ?y ?x) (| ?z ?x))" => "(| (& ?y ?z) ?x)"),
 
-        rw!("dist-and-or-1"; "(& ?x (| ?y ?z))" => "(| (& ?x ?y) (& ?x ?z))"),
-        rw!("dist-and-or-2"; "(| (& ?x ?y) (& ?x ?z))" => "(& ?x (| ?y ?z))"),
+        rw!("dist-and-or-left-1"; "(& ?x (| ?y ?z))" => "(| (& ?x ?y) (& ?x ?z))"),
+        rw!("dist-and-or-left-2"; "(| (& ?x ?y) (& ?x ?z))" => "(& ?x (| ?y ?z))"),
+        rw!("dist-and-or-right-1"; "(& (| ?y ?z) ?x)" => "(| (& ?y ?x) (& ?z ?x))"),
+        rw!("dist-and-or-right-2"; "(| (& ?y ?x) (& ?z ?x))" => "(& (| ?y ?z) ?x)"),
 
         rw!("assoc-and-1"; "(& ?x (& ?y ?z))" => "(& (& ?x ?y) ?z)"),
         rw!("assoc-and-2"; "(& (& ?x ?y) ?z)" => "(& ?x (& ?y ?z))"),
