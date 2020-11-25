@@ -791,6 +791,9 @@ fn egg_rules_no_xor() -> Vec<egg::Rewrite<BoolLanguage, ()>> {
         rw!("or-self";  "(| ?x ?x)" => "?x"),
         rw!("or-self-neg";  "(| ?x (~ ?x))" => "true"),
         rw!("neg-dbl"; "(~ (~ ?x))" => "?x"),
+//        rw!("neg-true"; "(~ true)" => "false"),
+//        rw!("neg-false"; "(~ false)" => "true"),
+
     ];
     rules
 }
