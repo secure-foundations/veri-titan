@@ -22,6 +22,7 @@ type seq(a:Type(0)):Type(0) {:primitive} extern;
 type map(a:Type(0), b:Type(0)):Type(0) extern;
 // type Frame:Type(0) := map(int, uint32);
 type Xmem:Type(0) := map(int, uint32);
+type Wmem:Type(0) := map(int, uint256);
 
 type flagGroup:Type(0) extern;
 type Flags:Type(0) extern;
@@ -81,6 +82,7 @@ function snd(t:tuple(uint256, flagGroup)):flagGroup extern;
 
 var ok:bool {:state ok()};
 var xmem:Xmem {:state xmem()};
+var wmem:Wmem {:state wmem()};
 var flags:Flags {:state flags() };
 
 var x0:uint32 {:state reg32(Gpr(0))};
@@ -183,16 +185,16 @@ operand_type imm128:uint128 := const;
 operand_type imm32:uint32 := const;
 operand_type imm2:uint2 := const;
 
-function ValidAddr(h: Xmem, addr:int):bool extern;
+function Valid32Addr(h: Xmem, addr:int):bool extern;
 
 procedure LW(out dst:reg32, in src:reg32, in offset:imm32)
     {:instruction Ins32(LW32(dst, src, offset))}
     reads
         xmem;
     requires
-        ValidAddr(xmem, src + offset);
+        Valid32Addr(xmem, src + offset);
     ensures
-        ValidAddr(xmem, old(src) + offset);
+        Valid32Addr(xmem, old(src) + offset);
         dst == xmem[old(src) + offset];
 {
     assume false;
@@ -203,7 +205,7 @@ procedure SW(in grs2:reg32, in grs1:reg32, in offset:imm32)
     modifies
         xmem;
     requires/ensures
-        ValidAddr(xmem, grs1 + offset);
+        Valid32Addr(xmem, grs1 + offset);
     ensures
         xmem == old(xmem)[grs1 + offset := grs2];
 {

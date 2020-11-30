@@ -99,7 +99,12 @@ type va_operand_reg32 = Reg32
 predicate va_is_src_reg32(r:Reg32, s:va_state) { (r.Gpr? ==> 0 <= r.x <= 31) && r in s.xregs && IsUInt32(s.xregs[r]) }
 predicate va_is_dst_reg32(r:Reg32, s:va_state) { (r in s.xregs && IsUInt32(s.xregs[r]) && r.Gpr? && 0 <= r.x <= 31) }
 
-predicate ValidAddr(h: map<int, uint32>, addr:int)
+predicate Valid32Addr(h: map<int, uint32>, addr:int)
+{
+    addr in h
+}
+
+predicate Valid256Addr(h: map<int, uint256>, addr:int)
 {
     addr in h
 }

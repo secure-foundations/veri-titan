@@ -64,8 +64,10 @@ datatype ins256 =
 | SEL256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, flg:bool)
 | CMP256(wrs1:Reg256, wrs2:Reg256, flg:bool)
 | CMPB256(wrs1:Reg256, wrs2:Reg256, flg:bool)
-| LID256 // TODO
-| SID256 // TODO
+// BN.LID <grd>[<grd_inc>], <offset>(<grs1>[<grs1_inc>])
+| LID256(grd:Reg32, grd_inc:bool, offset:uint16, grs:Reg32, grs_inc:bool)
+// BN.SID <grs2>[<grs2_inc>], <offset>(<grs1>[<grs1_inc>])
+| SID256(grs2:Reg32, grs2_inc:bool, offset:uint16, grs1:Reg32, grs1_inc:bool)
 | MOV256(wrd:Reg256, wrs:Reg256)
 | MOVR256 // TODO
 | WSRRS256 // TODO
@@ -99,11 +101,6 @@ predicate valid_state(s:state)
 {
     && (forall r :: r in s.xregs)
     && (forall t :: t in s.wregs)
-}
-
-predicate ValidMemAddr(addr: mAddr)
-{
-    addr.reg.Gpr?
 }
 
 predicate IsUInt32(i:int) { 0 <= i < 0x1_0000_0000 }
