@@ -63,15 +63,17 @@ procedure LoopExample(inout dst:reg32)
 
 procedure CopyExample()
     requires
-        ValidAddr(xmem, x1 + 0);
+        ValidAddr(xmem, x0 + 0);
+        ValidAddr(xmem, x0 + 4);
     reads
-        x1;
+        x0;
     ensures
-        ValidAddr(xmem, x1 + 0);
-        xmem[x1 + 0] == x2;
+        ValidAddr(xmem, x0 + 0);
+        ValidAddr(xmem, x0 + 4);
+        xmem[x0 + 0] == xmem[x0 + 4];
     modifies
         xmem; x2;
 {
-    LW(x2, x1, 0);
-    // SW(x2, x0, 4);
+    LW(x2, x0, 0);
+    SW(x2, x0, 4);
 }
