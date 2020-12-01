@@ -235,6 +235,22 @@ procedure BN_LID(in grd:reg32, inline grd_inc:bool, in offset:imm32, in grs:reg3
     assume false;
 }
 
+procedure BN_SID(in grs2:reg32, inline grs2_inc:bool, in offset:imm32, in grs1:reg32, inline grs1_inc:bool)
+    {:instruction Ins256(SID256(grs2, grs2_inc, offset, grs1, grs1_inc))}
+    reads
+        wregs;
+    modifies
+        wmem;
+    requires
+        Valid256Addr(wmem, grs1 + offset);
+        0 <= grs2 < 32;
+    ensures
+        Valid256Addr(wmem, old(grs1) + offset);
+        wmem == old(wmem)[old(grs1) + offset := wregs[Wdr(old(grs2))]];
+{
+    assume false;
+}
+
 procedure Add32(inout dst:reg32, in src1:reg32, in src2:reg32)
     {:instruction Ins32(ADD32(dst, src1, src2))}
     ensures
@@ -578,7 +594,7 @@ procedure BN_SEL(inout dst:reg256, in src1:reg256, in src2:reg256, inline fg:boo
 {
     assume false;
 }
-    
+
 #verbatim
 } // end module bignum_decls
 #endverbatim
