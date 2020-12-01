@@ -65,9 +65,9 @@ datatype ins256 =
 | CMP256(wrs1:Reg256, wrs2:Reg256, flg:bool)
 | CMPB256(wrs1:Reg256, wrs2:Reg256, flg:bool)
 // BN.LID <grd>[<grd_inc>], <offset>(<grs1>[<grs1_inc>])
-| LID256(grd:Reg32, grd_inc:bool, offset:uint16, grs:Reg32, grs_inc:bool)
+| LID256(grd:Reg32, grd_inc:bool, offset:uint32, grs:Reg32, grs_inc:bool)
 // BN.SID <grs2>[<grs2_inc>], <offset>(<grs1>[<grs1_inc>])
-| SID256(grs2:Reg32, grs2_inc:bool, offset:uint16, grs1:Reg32, grs1_inc:bool)
+| SID256(grs2:Reg32, grs2_inc:bool, offset:uint32, grs1:Reg32, grs1_inc:bool)
 | MOV256(wrd:Reg256, wrs:Reg256)
 | MOVR256 // TODO
 | WSRRS256 // TODO

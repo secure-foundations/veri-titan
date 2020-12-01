@@ -47,6 +47,26 @@ function va_update_xmem(sM:va_state, sK:va_state):va_state
     sK.(xmem := sM.xmem)
 }
 
+function va_get_wmem(s:va_state): map<int, uint256>
+{
+    s.wmem
+}
+
+function va_update_wmem(sM:va_state, sK:va_state):va_state
+{
+    sK.(wmem := sM.wmem)
+}
+
+function va_get_wregs(s:va_state): map<Reg256, uint256>
+{
+    s.wregs
+}
+
+function va_update_wregs(sM:va_state, sK:va_state):va_state
+{
+    sK.(wregs := sM.wregs)
+}
+
 function va_update_ok(sM:va_state, sK:va_state): va_state
 {
     sK.(ok := sM.ok)
