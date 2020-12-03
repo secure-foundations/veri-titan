@@ -116,8 +116,8 @@ function method va_const_imm2(v:uint32):uint32 {v}
 type va_value_reg32 = uint32
 type va_operand_reg32 = Reg32
 
-predicate va_is_src_reg32(r:Reg32, s:va_state) { (r.Gpr? ==> 0 <= r.x <= 31) && r in s.xregs && IsUInt32(s.xregs[r]) }
-predicate va_is_dst_reg32(r:Reg32, s:va_state) { (r in s.xregs && IsUInt32(s.xregs[r]) && r.Gpr? && 0 <= r.x <= 31) }
+predicate va_is_src_reg32(r:Reg32, s:va_state) { r in s.xregs }
+predicate va_is_dst_reg32(r:Reg32, s:va_state) { r in s.xregs }
 
 predicate Valid32Addr(h: map<int, uint32>, addr:int)
 {
@@ -213,10 +213,16 @@ lemma va_ins_lemma(b0:code, s0:va_state)
 function method va_const_cmp(n:uint32):uint32 { n }
 function method va_coerce_reg32_to_cmp(r:Reg32):Reg32 { r }
 
-function method va_cmp_ge(r:Reg32, c:uint32):whileCond { WhileCond(Ge, r, c) }
-function method va_cmp_gt(r:Reg32, c:uint32):whileCond { WhileCond(Gt, r, c) }
-function method va_cmp_le(r:Reg32, c:uint32):whileCond { WhileCond(Le, r, c) }
-function method va_cmp_lt(r:Reg32, c:uint32):whileCond { WhileCond(Lt, r, c) }
+function method va_cmp_neq(r:Reg32, c:uint32):whileCond 
+    requires c == 0;
+{
+    WhileCond(Ne, r, c)
+}
+
+// function method va_cmp_ge(r:Reg32, c:uint32):whileCond { WhileCond(Ge, r, c) }
+// function method va_cmp_gt(r:Reg32, c:uint32):whileCond { WhileCond(Gt, r, c) }
+// function method va_cmp_le(r:Reg32, c:uint32):whileCond { WhileCond(Le, r, c) }
+// function method va_cmp_lt(r:Reg32, c:uint32):whileCond { WhileCond(Lt, r, c) }
 
 function method va_op_reg32_reg32(r:Reg32):Reg32 { r }
 function method va_op_reg256_reg256(r:Reg256):Reg256 { r }
@@ -342,10 +348,10 @@ lemma va_lemma_block(b:codes, s0:va_state, r:va_state) returns(r1:va_state, c0:c
     }
 }
 
-predicate{:opaque} evalWhileOpaque(w:whileCond, c:code, n:nat, s:state, r:state)
-{
-    evalWhile(w, c, n, s, r)
-}
+predicate evalWhileOpaque(w:whileCond, c:code, n:nat, s:state, r:state)
+// {
+//     evalWhile(w, c, n, s, r)
+// }
 
 predicate evalWhileLax(w:whileCond, c:code, n:nat, s:state, r:state)
 {
@@ -362,26 +368,27 @@ lemma va_lemma_while(w:whileCond, c:code, s:va_state, r:va_state) returns(n:nat,
     requires va_is_src_imm32(w.c, s);
     requires BN_ValidState(s);
     requires eval_code(While(w, c), s, r)
-    ensures  evalWhileLax(w, c, n, s, r)
+    ensures  evalWhileLax(w, c, n, r', r)
     //ensures  r'.ok
+    ensures n == va_eval_reg32(s, w.r);
     ensures  BN_ValidState(r');
-    ensures  r' == s
+    ensures  r' == s.(lstack := [n] + s.lstack);
 {
-    reveal_evalCodeOpaque();
-    reveal_BN_ValidState();
-    reveal_evalWhileOpaque();
-    if s.ok {
-        assert evalCode(While(w, c), s, r);
-        n :| evalWhile(w, c, n, s, r);
-    } else {
-        n := 0;
-    }
-    r' := s;
+    // reveal_evalCodeOpaque();
+    // reveal_BN_ValidState();
+    // reveal_evalWhileOpaque();
+    // if s.ok {
+    //     assert evalCode(While(w, c), s, r);
+    //     n :| evalWhile(w, c, n, s, r);
+    // } else {
+    //     n := 0;
+    // }
+    // r' := s;
 }
 
 lemma va_lemma_whileTrue(w:whileCond, c:code, n:nat, s:va_state, r:va_state) returns(s':va_state, r':va_state)
-    requires va_is_src_reg32(w.r, s) && ValidSourceRegister32(s, w.r);
-    requires va_is_src_imm32(w.c, s);
+    // requires va_is_src_reg32(w.r, s) && ValidSourceRegister32(s, w.r);
+    // requires va_is_src_imm32(w.c, s);
     requires n > 0
     requires evalWhileLax(w, c, n, s, r)
     ensures  BN_ValidState(s) ==> BN_ValidState(s');

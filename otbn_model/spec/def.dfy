@@ -93,6 +93,7 @@ datatype state = state(
     xregs: map<Reg32, uint32>, // 32-bit registers
     wregs: map<Reg256, uint256>, // 256-bit registers
     flags: Flags,
+    lstack: seq<nat>,
     xmem: map<int, uint32>,
     wmem: map<int, uint256>,
     ok: bool)
@@ -216,7 +217,7 @@ function {:axiom} updateFlagsUsingCondition(flags:Flags, cond:bool) : Flags
 
 predicate branchRelation(s:state, s':state, cond:bool)
 {
-    s' == s.(flags := updateFlagsUsingCondition(s.flags, cond))
+    // s' == s.(flags := updateFlagsUsingCondition(s.flags, cond))
 }
 
 predicate evalWhile(wc:whileCond, c:code, n:nat, s:state, r:state)
