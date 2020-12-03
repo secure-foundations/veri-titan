@@ -250,7 +250,7 @@ procedure BN_SID(in grs2:reg32, inline grs2_inc:bool, in offset:imm32, in grs1:r
         0 <= grs2 < 32;
     ensures
         Valid256Addr(wmem, old(grs1) + offset);
-        wmem == old(wmem)[old(grs1) + offset := wregs[Wdr(old(grs2))]];
+        wmem == old(wmem[grs1 + offset := wregs[Wdr(grs2)]]);
         grs2_inc ==> grs2 == (old(grs2) + 1) % 32;
         grs1_inc ==> grs1 == (old(grs1) + 32) % 0xffff_ffff;
 {
@@ -259,9 +259,10 @@ procedure BN_SID(in grs2:reg32, inline grs2_inc:bool, in offset:imm32, in grs1:r
 
 procedure Add32(inout dst:reg32, in src1:reg32, in src2:reg32)
     {:instruction Ins32(ADD32(dst, src1, src2))}
+    requires
+       src1 + src2 < 0xffff_ffff;
     ensures
-        // TODO: How does Dafny addition handle overflows?
-        dst == (old(src1) + old(src2));
+        dst == old(src1 + src2);
 {
 assume false;
 }
@@ -269,9 +270,8 @@ assume false;
 procedure Addi32(inout dst:reg32, in src1:reg32, in src2:imm32)
     {:instruction Ins32(ADDI32(dst, src1, src2))}
     requires
-        src2 < 0x1000;
+       src1 + src2 < 0xffff_ffff;
     ensures
-        //dst = old(src1) + uint32_se(old(src2), 12);
         dst = old(src1) + old(src2);
 {
 assume false;
@@ -279,8 +279,10 @@ assume false;
 
 procedure Sub32(inout dst:reg32, in src1:reg32, in src2:reg32)
     {:instruction Ins32(SUB32(dst, src1, src2))}
+    requires
+        src1 - src2 >= 0;
     ensures
-        dst == old(src1) - old(src2);
+        dst == old(src1 - src2);
 {
 assume false;
 }
