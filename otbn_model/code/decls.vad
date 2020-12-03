@@ -218,7 +218,7 @@ procedure SW(in grs2:reg32, in grs1:reg32, in offset:imm32)
     assume false;
 }
 
-procedure BN_LID(in grd:reg32, inline grd_inc:bool, in offset:imm32, in grs:reg32, inline grs_inc:bool)
+procedure BN_LID(inout grd:reg32, inline grd_inc:bool, in offset:imm32, inout grs:reg32, inline grs_inc:bool)
     {:instruction Ins256(LID256(grd, grd_inc, offset, grs, grs_inc))}
     reads
         wmem;
@@ -230,9 +230,10 @@ procedure BN_LID(in grd:reg32, inline grd_inc:bool, in offset:imm32, in grs:reg3
         0 <= grd < 32;
     ensures
         Valid256Addr(wmem, old(grs) + offset);
-        wregs[Wdr(old(grd))] == wmem[old(grs) + offset];
-        grd_inc ==> grd == (old(grd) + 1) % 32;
-        grs_inc ==> grs == (old(grs) + 32) % 0xffff_ffff;
+        // wregs[Wdr(old(grd))] == wmem[old(grs) + offset];
+        wregs == old(wregs[Wdr(grd) := wmem[grs + offset]])
+        grd == if grd_inc then (old(grd) + 1) % 32 else old(grd);
+        grs == if grs_inc then (old(grs) + 32) % 0x1_0000_0000 else old(grs);
 {
     assume false;
 }
@@ -250,8 +251,8 @@ procedure BN_SID(in grs2:reg32, inline grs2_inc:bool, in offset:imm32, in grs1:r
     ensures
         Valid256Addr(wmem, old(grs1) + offset);
         wmem == old(wmem[grs1 + offset := wregs[Wdr(grs2)]]);
-        grs2_inc ==> grs2 == (old(grs2) + 1) % 32;
-        grs1_inc ==> grs1 == (old(grs1) + 32) % 0xffff_ffff;
+        grs2 == if grs2_inc then (old(grs2) + 1) % 32 else old(grs2);
+        grs1 == if grs1_inc then (old(grs1) + 32) % 0x1_0000_0000 else old(grs1);
 {
     assume false;
 }
