@@ -23,9 +23,10 @@ type map(a:Type(0), b:Type(0)):Type(0) extern;
 // type Frame:Type(0) := map(int, uint32);
 type Xmem:Type(0) := map(int, uint32);
 type Wmem:Type(0) := map(int, uint256);
-type Reg256:Type(0) extern;
-// type Reg32:Type(0) extern;
 type Wregs:Type(0) := map(Reg256, uint256);
+
+type Reg256:Type(0) extern;
+type Reg32:Type(0) extern;
 
 type flagGroup:Type(0) extern;
 type Flags:Type(0) extern;
@@ -162,9 +163,7 @@ var wmod:uint256 {:state reg256(WMod)};
 var wrnd:uint256 {:state reg256(WRnd)};
 var wacc:uint256 {:state reg256(WAcc)};
 
-const WAcc: Reg256 extern;
-
-operand_type reg32:uint32 :=
+operand_type reg32:uint32 @ Reg32 :=
 | inout x0 | inout x1 | inout x2 | inout x3
 | inout x4 | inout x5 | inout x6 | inout x7
 | inout x8 | inout x9 | inout x10 | inout x11

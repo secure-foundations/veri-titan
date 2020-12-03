@@ -38,6 +38,8 @@ procedure DoubleRegExample32()
 }
 
 procedure Increment(inout dst:reg32)
+    requires
+        old(dst) < 100;
     ensures
         dst == old(dst) + 1;
 {

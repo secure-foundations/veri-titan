@@ -30,6 +30,8 @@ import opened otbn_mul
 #endverbatim
 
 procedure Increment(inout dst:reg32)
+    requires
+        dst <= 256;
     ensures
         dst == old(dst) + 1;
 {
