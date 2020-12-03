@@ -226,11 +226,14 @@ procedure BN_LID(in grd:reg32, inline grd_inc:bool, in offset:imm32, in grs:reg3
     modifies
         wregs;
     requires
+        !(grd_inc && grs_inc);
         Valid256Addr(wmem, grs + offset);
         0 <= grd < 32;
     ensures
         Valid256Addr(wmem, old(grs) + offset);
         wregs[Wdr(old(grd))] == wmem[old(grs) + offset];
+        grd_inc ==> grd == (old(grd) + 1) % 32;
+        grs_inc ==> grs == (old(grs) + 32) % 0xffff_ffff;
 {
     assume false;
 }
@@ -242,11 +245,14 @@ procedure BN_SID(in grs2:reg32, inline grs2_inc:bool, in offset:imm32, in grs1:r
     modifies
         wmem;
     requires
+        !(grs1_inc && grs2_inc);
         Valid256Addr(wmem, grs1 + offset);
         0 <= grs2 < 32;
     ensures
         Valid256Addr(wmem, old(grs1) + offset);
         wmem == old(wmem)[old(grs1) + offset := wregs[Wdr(old(grs2))]];
+        grs2_inc ==> grs2 == (old(grs2) + 1) % 32;
+        grs1_inc ==> grs1 == (old(grs1) + 32) % 0xffff_ffff;
 {
     assume false;
 }
