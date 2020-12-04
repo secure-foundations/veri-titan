@@ -48,22 +48,21 @@ procedure Increment(inout dst:reg32)
 
 procedure LoopExample(inout dst:reg32)
     requires
-        dst == 0;
-    ensures
         dst == 3;
     modifies
         flags;
 {
-    let gc := dst;
+    ghost var gc : int := 0;
 
     while (dst != 0)
         invariant 0 <= gc <= old(dst);
         // invariant 0 <= dst <= 3;
-        // decreases 3 - dst;
+        decreases old(dst) - gc;
     {
-        
-        gc := gc - 1;
+        gc := gc + 1;
     }
+
+    assert gc == 3;
 }
 
 procedure CopyExample()
