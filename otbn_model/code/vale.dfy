@@ -15,33 +15,88 @@ type va_code = code
 type va_codes = codes
 type va_state = state
 
-////////////////////////////////////////////////////////////////////////
-//
-//  Connecting Vale functions to Dafny functions
-//
-////////////////////////////////////////////////////////////////////////
+function va_get_ok(s:va_state): bool
+{
+    s.ok
+}
 
-function va_get_ok(s:va_state):bool { s.ok }
-function va_get_reg32(r:Reg32, s:va_state):uint32 requires r in s.xregs { s.xregs[r] }
-function va_get_reg256(r:Reg256, s:va_state):Bignum requires r in s.wregs { s.wregs[r] }
+function va_get_reg32(r:Reg32, s:va_state): uint32
+    requires r in s.xregs
+{
+    s.xregs[r]
+}
 
-function va_get_flags(s:va_state):Flags { s.flags }
-function va_get_stack(s:va_state):Stack { s.stack }
+function va_get_reg256(r:Reg256, s:va_state): uint256
+    requires r in s.wregs
+{
+    s.wregs[r]
+}
 
-function va_update_ok(sM:va_state, sK:va_state):va_state { sK.(ok := sM.ok) }
+function va_get_flags(s:va_state):Flags
+{
+    s.flags
+}
 
-function va_update_reg32(r:Reg32, sM:va_state, sK:va_state):va_state
+function va_get_xmem(s:va_state): map<int, uint32>
+{
+    s.xmem
+}
+
+function va_update_xmem(sM:va_state, sK:va_state):va_state
+{
+    sK.(xmem := sM.xmem)
+}
+
+function va_get_wmem(s:va_state): map<int, uint256>
+{
+    s.wmem
+}
+
+function va_update_wmem(sM:va_state, sK:va_state):va_state
+{
+    sK.(wmem := sM.wmem)
+}
+
+function va_get_wregs(s:va_state): map<Reg256, uint256>
+{
+    s.wregs
+}
+
+function va_update_wregs(sM:va_state, sK:va_state):va_state
+{
+    sK.(wregs := sM.wregs)
+}
+
+function va_update_ok(sM:va_state, sK:va_state): va_state
+{
+    sK.(ok := sM.ok)
+}
+
+function va_update_reg32(r:Reg32, sM:va_state, sK:va_state): va_state
     requires r in sM.xregs
-{ sK.(xregs := sK.xregs[r := sM.xregs[r]]) }
+{
+    sK.(xregs := sK.xregs[r := sM.xregs[r]])
+}
 
-function va_update_reg256(r:Reg256, sM:va_state, sK:va_state):va_state
+function va_update_reg256(r:Reg256, sM:va_state, sK:va_state): va_state
     requires r in sM.wregs
-{ sK.(wregs := sK.wregs[r := sM.wregs[r]]) }
+{
+    sK.(wregs := sK.wregs[r := sM.wregs[r]])
+}
 
-function va_update_flags(sM:va_state, sK:va_state):va_state
-{ sK.(flags := sM.flags) }
+function va_update_flags(sM:va_state, sK:va_state): va_state
+{
+    sK.(flags := sM.flags)
+}
 
-function va_update_stack(sM:va_state, sK:va_state):va_state { sK.(stack := sM.stack) }
+function fst(t:(uint256, FlagsGroup)) : uint256
+{
+    t.0
+}
+
+function snd(t:(uint256, FlagsGroup)) : FlagsGroup { t.1 }
+
+// function va_update_lstack(sM:va_state, sK:va_state):va_state { sK.(lstack := sM.lstack) }
 
 type va_operand_imm128 = uint128
 predicate va_is_src_imm128(v:uint128, s:va_state) { true }
@@ -63,6 +118,16 @@ type va_operand_reg32 = Reg32
 
 predicate va_is_src_reg32(r:Reg32, s:va_state) { (r.Gpr? ==> 0 <= r.x <= 31) && r in s.xregs && IsUInt32(s.xregs[r]) }
 predicate va_is_dst_reg32(r:Reg32, s:va_state) { (r in s.xregs && IsUInt32(s.xregs[r]) && r.Gpr? && 0 <= r.x <= 31) }
+
+predicate Valid32Addr(h: map<int, uint32>, addr:int)
+{
+    addr in h
+}
+
+predicate Valid256Addr(h: map<int, uint256>, addr:int)
+{
+    addr in h
+}
 
 function va_eval_reg32(s:va_state, r:Reg32):uint32
   requires va_is_src_reg32(r, s);
@@ -96,11 +161,14 @@ function va_update_operand_reg256(r:Reg256, sM:va_state, sK:va_state):va_state
 
 predicate va_state_eq(s0:va_state, s1:va_state)
 {
-    s0.xregs == s1.xregs
- && s0.wregs == s1.wregs
- && s0.flags == s1.flags
- && s0.stack == s1.stack
- && s0.ok == s1.ok
+    && s0.xregs == s1.xregs
+    && s0.wregs == s1.wregs
+    && s0.flags == s1.flags
+    // && s0.lstack == s1.lstack
+    && s0.xmem == s1.xmem
+    && s0.wmem == s1.wmem
+    
+    && s0.ok == s1.ok
 }
 
 predicate{:opaque} evalCodeOpaque(c:code, s0:state, sN:state)
@@ -119,9 +187,9 @@ predicate cTailIs(b:codes, t:codes) { b.va_CCons? && b.tl == t }
 
 predicate va_require(b0:codes, c1:code, s0:va_state, sN:va_state)
 {
-    cHeadIs(b0, c1)
-&& eval_code(Block(b0), s0, sN)
-&& BN_ValidState(s0)
+    && cHeadIs(b0, c1)
+    && eval_code(Block(b0), s0, sN)
+    && BN_ValidState(s0)
 }
 
 // Weaker form of eval_code that we can actually ensure generically in instructions
@@ -132,10 +200,10 @@ predicate eval_weak(c:code, s:state, r:state)
 
 predicate va_ensure(b0:codes, b1:codes, s0:va_state, s1:va_state, sN:va_state)
 {
-    cTailIs(b0, b1)
- && eval_weak(b0.hd, s0, s1)
- && eval_code(Block(b1), s1, sN)
- && BN_ValidState(s1)
+    && cTailIs(b0, b1)
+    && eval_weak(b0.hd, s0, s1)
+    && eval_code(Block(b1), s1, sN)
+    && BN_ValidState(s1)
 }
 
 lemma va_ins_lemma(b0:code, s0:va_state)
@@ -161,7 +229,7 @@ function method va_get_whileBody(c:code):code requires c.While? { c.whileBody }
 
 lemma lemma_FailurePreservedByBlock(block:codes, s:state, r:state)
     requires evalBlock(block, s, r);
-    ensures  !s.ok ==> !r.ok;
+    ensures !s.ok ==> !r.ok;
     decreases block;
 {
     if !block.CNil? {
@@ -261,7 +329,7 @@ lemma va_lemma_block(b:codes, s0:va_state, r:va_state) returns(r1:va_state, c0:c
         var r':state :| evalCode(b.hd, s0, r') && evalBlock(b.tl, r', r);
         c0 := b.hd;
         b1 := b.tl;
-        r1 := state(r'.xregs, r'.wregs, r'.flags, r'.stack, r'.ok);
+        r1 := state(r'.xregs, r'.wregs, r'.flags, r'.xmem, r'.wmem, r'.ok);
         if BN_ValidState(s0) {
             reveal_BN_ValidState();
             code_state_validity(c0, s0, r1);
@@ -274,8 +342,15 @@ lemma va_lemma_block(b:codes, s0:va_state, r:va_state) returns(r1:va_state, c0:c
     }
 }
 
-predicate{:opaque} evalWhileOpaque(w:whileCond, c:code, n:nat, s:state, r:state) { evalWhile(w, c, n, s, r) }
-predicate evalWhileLax(w:whileCond, c:code, n:nat, s:state, r:state) { s.ok ==> evalWhileOpaque(w, c, n, s, r) }
+predicate{:opaque} evalWhileOpaque(w:whileCond, c:code, n:nat, s:state, r:state)
+{
+    evalWhile(w, c, n, s, r)
+}
+
+predicate evalWhileLax(w:whileCond, c:code, n:nat, s:state, r:state)
+{
+    s.ok ==> evalWhileOpaque(w, c, n, s, r)
+}
 
 predicate va_whileInv(w:whileCond, c:code, n:int, r1:va_state, r2:va_state)
 {
@@ -314,9 +389,9 @@ lemma va_lemma_whileTrue(w:whileCond, c:code, n:nat, s:va_state, r:va_state) ret
     ensures  eval_code(c, s', r');
     ensures  BN_ValidState(s) ==> if s.ok then BN_branchRelation(s, s', true) else s' == s;
     ensures  if s.ok && BN_ValidState(s) then
-                    s'.ok
-                 && va_is_src_reg32(w.r, s)
-                 && evalWhileCond(s, w)
+                && s'.ok
+                && va_is_src_reg32(w.r, s)
+                && evalWhileCond(s, w)
              else
                  true; //!r.ok;
 {
@@ -334,8 +409,8 @@ lemma va_lemma_whileTrue(w:whileCond, c:code, n:nat, s:va_state, r:va_state) ret
     if BN_ValidState(s) {
         var s'':state, r'':state :| evalWhileCond(s, w) && branchRelation(s, s'', true) && evalCode(c, s'', r'')
                                 && evalWhile(w, c, n - 1, r'', r);
-        s' := state(s''.xregs, s''.wregs, s''.flags, s''.stack, s''.ok);
-        r' := state(r''.xregs, r''.wregs, r''.flags, r''.stack, r''.ok);
+        s' := s'';
+        r' := r'';
         code_state_validity(c, s'', r'');
     } else {
         s' := s.(ok := false);
@@ -369,7 +444,6 @@ lemma va_lemma_whileFalse(w:whileCond, c:code, s:va_state, r:va_state) returns(r
     }
     r' := r;
 }
-
 
 predicate {:opaque} BN_ValidState(s:state)
     ensures BN_ValidState(s) ==> valid_state(s);

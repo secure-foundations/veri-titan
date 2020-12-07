@@ -9,8 +9,6 @@ include "../spec/types.dfy"
 
 include "../gen/decls.dfy"
 
-module examples {
-
 import opened bignum_vale
 import opened bignum_def
 import opened ops
@@ -40,6 +38,8 @@ procedure DoubleRegExample32()
 }
 
 procedure Increment(inout dst:reg32)
+    requires
+        old(dst) < 100;
     ensures
         dst == old(dst) + 1;
 {
@@ -62,6 +62,19 @@ procedure LoopExample(inout dst:reg32)
     }
 }
 
-#verbatim
+procedure CopyExample()
+    requires
+        Valid32Addr(xmem, x0 + 0);
+        Valid32Addr(xmem, x0 + 4);
+    reads
+        x0;
+    ensures
+        Valid32Addr(xmem, x0 + 0);
+        Valid32Addr(xmem, x0 + 4);
+        xmem[x0 + 0] == xmem[x0 + 4];
+    modifies
+        xmem; x2;
+{
+    LW(x2, x0, 0);
+    SW(x2, x0, 4);
 }
-#endverbatim

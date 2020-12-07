@@ -39,18 +39,18 @@ module otbn_mul_lemmas {
 		w28: uint256,
 		w29: uint256
 	)
-		requires pc1: wacc_g1 == mulqacc256(true, w28, 0, w29, 0, 0, 0);
-		requires pc2: wacc_g2 == mulqacc256(false, w28, 1, w29, 0, 1, wacc_g1);
-		requires pc3: result_g1 == mulqacc256(false, w28, 0, w29, 1, 1, wacc_g2)
+		requires pc1: wacc_g1 == bn_mulqacc(true, w28, 0, w29, 0, 0, 0);
+		requires pc2: wacc_g2 == bn_mulqacc(false, w28, 1, w29, 0, 1, wacc_g1);
+		requires pc3: result_g1 == bn_mulqacc(false, w28, 0, w29, 1, 1, wacc_g2)
 			&& wacc_g3 == uint256_uh(result_g1)
 			&& w1_g2 == uint256_hwb(w1_g1, uint256_lh(result_g1), true);
-		requires pc4: wacc_g4 == mulqacc256(false, w28, 2, w29, 0, 0, wacc_g3);
-		requires pc5: wacc_g5 == mulqacc256(false, w28, 1, w29, 1, 0, wacc_g4);
-		requires pc6: wacc_g6 == mulqacc256(false, w28, 0, w29, 2, 0, wacc_g5);
-		requires pc7: wacc_g7 == mulqacc256(false, w28, 3, w29, 0, 1, wacc_g6);
-		requires pc8: wacc_g8 == mulqacc256(false, w28, 2, w29, 1, 1, wacc_g7);
-		requires pc9: wacc_g9 == mulqacc256(false, w28, 1, w29, 2, 1, wacc_g8);
-		requires pc10: result_g2 == mulqacc256(false, w28, 0, w29, 3, 1, wacc_g9)
+		requires pc4: wacc_g4 == bn_mulqacc(false, w28, 2, w29, 0, 0, wacc_g3);
+		requires pc5: wacc_g5 == bn_mulqacc(false, w28, 1, w29, 1, 0, wacc_g4);
+		requires pc6: wacc_g6 == bn_mulqacc(false, w28, 0, w29, 2, 0, wacc_g5);
+		requires pc7: wacc_g7 == bn_mulqacc(false, w28, 3, w29, 0, 1, wacc_g6);
+		requires pc8: wacc_g8 == bn_mulqacc(false, w28, 2, w29, 1, 1, wacc_g7);
+		requires pc9: wacc_g9 == bn_mulqacc(false, w28, 1, w29, 2, 1, wacc_g8);
+		requires pc10: result_g2 == bn_mulqacc(false, w28, 0, w29, 3, 1, wacc_g9)
 			&& wacc == uint256_uh(result_g2)
 			&& w1 == uint256_hwb(w1_g2, uint256_lh(result_g2), false);
 		ensures half_product(w1, w28, w29);

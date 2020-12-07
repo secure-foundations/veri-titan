@@ -30,6 +30,8 @@ import opened otbn_mul
 #endverbatim
 
 procedure Increment(inout dst:reg32)
+    requires
+        dst <= 256;
     ensures
         dst == old(dst) + 1;
 {
@@ -80,11 +82,11 @@ procedure d0inv(inout i:reg32)
     BN_XOR(w0, w0, w0, false, 0);
     // BN.XOR w0, w0, w0
     let w0_g2 := w0;
-    assert w0_g2 == xor256(w0_g1, w0_g1, false, 0);
+    assert w0_g2 == bn_xor(w0_g1, w0_g1, false, 0);
 
     BN_ADDI(w0, w0, 1, false);
     // BN.ADDI w0, w0, 1
-    assert w0 == fst(addi256(w0_g2, 1));
+    assert w0 == fst(bn_addi(w0_g2, 1));
 
     BN_MOV(w29, w0);
     // BN.MOV w29, w0
@@ -108,15 +110,15 @@ procedure d0inv(inout i:reg32)
         BN_AND(w1, w1, w0, false, 0);
         // BN.AND w1, w1, w0
         let w1_g2 := w1;
-        assert w1_g2 == and256(w1_g1, w0_g1, false, 0);
+        assert w1_g2 == bn_and(w1_g1, w0_g1, false, 0);
 
         BN_OR(w29, w29, w1, false, 0);
         // BN.OR w29, w29, w1
-        assert w29 == or256(w29_g1, w1_g2, false, 0);
+        assert w29 == bn_or(w29_g1, w1_g2, false, 0);
 
         BN_ADD(w0, w0, w0, false, 0, false);
         // BN.ADD w0, w0, w0
-        assert w0 == fst(add256(w0_g1, w0_g1, false, 0));
+        assert w0 == fst(bn_add(w0_g1, w0_g1, false, 0));
 
         let i_0 := i;
 
@@ -130,7 +132,7 @@ procedure d0inv(inout i:reg32)
     BN_SUB(w29, w31, w29, false, 0, false);
     // BN.SUB w29, w31, w29
 
-    assert w29 == fst(sub256(w31, w29_g2, false, 0));
+    assert w29 == fst(bn_sub(w31, w29_g2, false, 0));
 
     lemma_d0inv_post_loop(w28, w29, w29_g2, w31);
 }

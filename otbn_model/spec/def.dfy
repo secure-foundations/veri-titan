@@ -1,25 +1,12 @@
-// Trusted specification for the OpenTitan Bignum semantics
-
 include "types.dfy"
 include "ops.dfy"
+include "../lib/powers.dfy"
 
 module bignum_def {
 
 import opened types
-import opened ops	
-
-////////////////////////////////////////////////////////////////////////
-//
-//  Invariants over the state
-//
-////////////////////////////////////////////////////////////////////////
-
-predicate valid_state(s:state)
-{
-    |s.stack| >= 0
- && (forall r :: r in s.xregs)
- && (forall t :: t in s.wregs)
-}
+import opened ops    
+import opened powers
 
 type reg_index = i:int | 0 <= i < 32
 
@@ -46,8 +33,8 @@ datatype ins32 =
 | ORI32(xrd:Reg32, xrs1:Reg32, imm:uint32)
 | XOR32(xrd:Reg32, xrs1:Reg32, xrs2:Reg32)
 | XORI32(xrd:Reg32, xrs1:Reg32, imm:uint32)
-| LW32 // TODO
-| SW32 // TODO
+| LW32(xrd:Reg32, xrs1:Reg32, imm:uint32)
+| SW32(xrs1:Reg32, xrs2:Reg32, imm:uint32)
 | BEQ32(xrs1:Reg32, xrs2:Reg32, offset:uint32)
 | BNE32(xrs1:Reg32, xrs2:Reg32, offset:uint32)
 | LOOP32(xrs1:Reg32, bodysize:uint32)
@@ -61,33 +48,30 @@ datatype ins32 =
 datatype ins256 =
 | ADD256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
 | ADDC256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
-| ADDI256(wrd:Reg256, wrs1:Reg256, imm:Bignum, flg:bool)
+| ADDI256(wrd:Reg256, wrs1:Reg256, imm: uint256, flg:bool)
 | ADDM256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256)
 | MULQACC256(zero:bool, wrs1:Reg256, qwsel1:uint32, wrs2:Reg256, qwsel2:uint32, shift:uint32)
 | MULH256(wrd:Reg256, wrs1:Reg256, hw1:bool, wrs2:Reg256, hw2:bool)
 | SUB256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
 | SUBB256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
-| SUBI256(wrd:Reg256, wrs1:Reg256, imm:Bignum, flg:bool)
+| SUBI256(wrd:Reg256, wrs1:Reg256, imm: uint256, flg:bool)
 | SUBM256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256)
 | AND256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
 | OR256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
 | NOT256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
 | XOR256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
-| RSHI256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, imm:Bignum)
+| RSHI256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, imm: uint256)
 | SEL256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, flg:bool)
 | CMP256(wrs1:Reg256, wrs2:Reg256, flg:bool)
 | CMPB256(wrs1:Reg256, wrs2:Reg256, flg:bool)
-| LID256 // TODO
-| SID256 // TODO
+// BN.LID <grd>[<grd_inc>], <offset>(<grs1>[<grs1_inc>])
+| LID256(grd:Reg32, grd_inc:bool, offset:uint32, grs:Reg32, grs_inc:bool)
+// BN.SID <grs2>[<grs2_inc>], <offset>(<grs1>[<grs1_inc>])
+| SID256(grs2:Reg32, grs2_inc:bool, offset:uint32, grs1:Reg32, grs1_inc:bool)
 | MOV256(wrd:Reg256, wrs:Reg256)
 | MOVR256 // TODO
 | WSRRS256 // TODO
 | WSRRW256 // TODO
-
-datatype codes = CNil | va_CCons(hd:code, tl:codes)
-
-datatype cmp = Eq | Ne | Gt | Ge | Lt | Le
-datatype whileCond = WhileCond(cmp:cmp, r:Reg32, c:uint32)
 
 datatype code =
 | Ins32(ins:ins32)
@@ -95,103 +79,111 @@ datatype code =
 | Block(block:codes)
 | While(whileCond:whileCond, whileBody:code)
 
-type Frame = map<int, uint32>
-type Stack = seq<Frame>
+datatype codes = CNil | va_CCons(hd:code, tl:codes)
+
+datatype cmp = Eq | Ne | Gt | Ge | Lt | Le
+datatype whileCond = WhileCond(cmp:cmp, r:Reg32, c:uint32)
 
 datatype FlagsGroup = FlagsGroup(cf:bool, msb:bool, lsb:bool, zero:bool)
 datatype Flags = Flags(fg0:FlagsGroup, fg1:FlagsGroup)
 
-datatype state = state(
-	 xregs: map<Reg32, uint32>, // 32-bit registers
-	 wregs: map<Reg256, Bignum>, // 256-bit registers
-	 flags: Flags,
-	 stack: Stack,
-	 ok: bool)
+datatype mAddr = mAddr(reg:Reg32, offset:int)
 
-function fst(t:(Bignum, FlagsGroup)) : Bignum { t.0 }
-function snd(t:(Bignum, FlagsGroup)) : FlagsGroup { t.1 }
+datatype state = state(
+    xregs: map<Reg32, uint32>, // 32-bit registers
+    wregs: map<Reg256, uint256>, // 256-bit registers
+    flags: Flags,
+    xmem: map<int, uint32>,
+    wmem: map<int, uint256>,
+    ok: bool)
+
+predicate valid_state(s:state)
+{
+    && (forall r :: r in s.xregs)
+    && (forall t :: t in s.wregs)
+}
 
 predicate IsUInt32(i:int) { 0 <= i < 0x1_0000_0000 }
 predicate IsUInt256(i:int) { 0 <= i < 0x1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000 }
 
 predicate ValidRegister32(xregs:map<Reg32, uint32>, r:Reg32)
 {
-	r in xregs
+    r in xregs
 }
 
 predicate ValidRegister256(wregs:map<Reg256, uint256>, r:Reg256)
 {
-	r in wregs
+    r in wregs
 }
 
 predicate ValidCsr32(r:Reg32)
 {
-	// TODO: Other CSRs are limbs of WMod or flags-- will these ever be used?
-	r.Rnd?
+    // TODO: Other CSRs are limbs of WMod or flags-- will these ever be used?
+    r.Rnd?
 }
 
 function eval_xreg(xregs:map<Reg32, uint32>, r:Reg32) : uint32
 {
-	if !ValidRegister32(xregs, r) then 24 // TODO: better error message
-	else xregs[r]
+    if !ValidRegister32(xregs, r) then 24 // TODO: better error message
+    else xregs[r]
 }
 
 function eval_wreg(wregs:map<Reg256, uint256>, r:Reg256) : uint256
 {
-	if !ValidRegister256(wregs, r) then 24 // TODO: better error message
-	else wregs[r]
+    if !ValidRegister256(wregs, r) then 24 // TODO: better error message
+    else wregs[r]
 }
 
 predicate ValidSourceRegister32(s:state, r:Reg32)
 {
-	ValidRegister32(s.xregs, r)
+    ValidRegister32(s.xregs, r)
 }
 
 predicate ValidDestinationRegister32(s:state, r:Reg32)
 {
-		!r.Rnd? && ValidRegister32(s.xregs, r)
+    !r.Rnd? && ValidRegister32(s.xregs, r)
 }
 
 function eval_reg32(s:state, r:Reg32) : uint32
 {
-	if !ValidSourceRegister32(s, r) then
-		42
-	else
-		s.xregs[r]
+    if !ValidSourceRegister32(s, r) then
+        42
+    else
+        s.xregs[r]
 }
 
 predicate evalIns32(xins:ins32, s:state, r:state)
 {
-	if !s.ok then
-		!r.ok
-	else
-		r.ok && (valid_state(s) ==> valid_state(r))
+    if !s.ok then
+        !r.ok
+    else
+        r.ok && (valid_state(s) ==> valid_state(r))
 }
 
 predicate ValidSourceRegister256(s:state, r:Reg256)
 {
-	ValidRegister256(s.wregs, r)
+    ValidRegister256(s.wregs, r)
 }
 
 predicate ValidDestinationRegister256(s:state, r:Reg256)
 {
-	!r.WRnd? && ValidRegister256(s.wregs, r)
+    !r.WRnd? && ValidRegister256(s.wregs, r)
 }
 
 function eval_reg256(s:state, r:Reg256) : uint256
 {
-	if !ValidSourceRegister256(s, r) then
-		42
-	else
-		s.wregs[r]
+    if !ValidSourceRegister256(s, r) then
+        42
+    else
+        s.wregs[r]
 }
 
 predicate evalIns256(wins:ins256, s:state, r:state)
 {
-	if !s.ok then
-		!r.ok
-	else
-		r.ok && (valid_state(s) ==> valid_state(r))
+    if !s.ok then
+        !r.ok
+    else
+        r.ok && (valid_state(s) ==> valid_state(r))
 }
 
 predicate evalBlock(block:codes, s:state, r:state)
@@ -204,43 +196,42 @@ predicate evalBlock(block:codes, s:state, r:state)
 
 function evalCmp(c:cmp, i1:uint32, i2:uint32):bool
 {
-	match c
-		case Eq => i1 == i2
-		case Ne => i1 != i2
-		case Gt => i1 > i2
-		case Ge => i1 >= i2
-		case Lt => i1 < i2
-		case Le => i1 <= i2
+    match c
+        case Eq => i1 == i2
+        case Ne => i1 != i2
+        case Gt => i1 > i2
+        case Ge => i1 >= i2
+        case Lt => i1 < i2
+        case Le => i1 <= i2
 }
 
 function evalWhileCond(s:state, wc:whileCond):bool
-	requires ValidSourceRegister32(s, wc.r);
-	requires IsUInt32(wc.c);
+    requires ValidSourceRegister32(s, wc.r);
+    requires IsUInt32(wc.c);
 {
-	evalCmp(wc.cmp, eval_reg32(s, wc.r), wc.c)
+    evalCmp(wc.cmp, eval_reg32(s, wc.r), wc.c)
 }
 
-// TODO
 function {:axiom} updateFlagsUsingCondition(flags:Flags, cond:bool) : Flags
 
 predicate branchRelation(s:state, s':state, cond:bool)
 {
-	s' == s.(flags := updateFlagsUsingCondition(s.flags, cond))
+    s' == s.(flags := updateFlagsUsingCondition(s.flags, cond))
 }
 
 predicate evalWhile(wc:whileCond, c:code, n:nat, s:state, r:state)
-	decreases c, n
+    decreases c, n
 {
-	if s.ok && ValidSourceRegister32(s, wc.r) && IsUInt32(wc.c) then
-		if n == 0 then
-			!evalWhileCond(s, wc) && branchRelation(s, r, false)
-		else
-			exists loop_start:state, loop_end:state :: evalWhileCond(s, wc)
-			&& branchRelation(s, loop_start, true)
-			&& evalCode(c, loop_start, loop_end)
-			&& evalWhile(wc, c, n - 1, loop_end, r)
-	else
-		!r.ok
+    if s.ok && ValidSourceRegister32(s, wc.r) && IsUInt32(wc.c) then
+        if n == 0 then
+            !evalWhileCond(s, wc) && branchRelation(s, r, false)
+        else
+            exists loop_start:state, loop_end:state :: evalWhileCond(s, wc)
+            && branchRelation(s, loop_start, true)
+            && evalCode(c, loop_start, loop_end)
+            && evalWhile(wc, c, n - 1, loop_end, r)
+    else
+        !r.ok
 }
 
 predicate evalCode(c:code, s:state, r:state)
@@ -257,124 +248,98 @@ predicate evalCode(c:code, s:state, r:state)
 function get_flags_group(fg:bool, flags:Flags) : FlagsGroup { if fg then flags.fg1 else flags.fg0 }
 
 function get_flag(fg:bool, flag:int, flags:Flags) : bool
-	requires 0 <= flag <= 4;
-{ if flag == 0 then get_flags_group(fg, flags).cf else
+    requires 0 <= flag <= 4;
+{
+    if flag == 0 then get_flags_group(fg, flags).cf else
     if flag == 1 then get_flags_group(fg, flags).msb else
-      if flag == 2 then get_flags_group(fg, flags).lsb else
-        get_flags_group(fg, flags).zero
+    if flag == 2 then get_flags_group(fg, flags).lsb else
+    get_flags_group(fg, flags).zero
 }
 
 function update_fg(b:bool, f:Flags, fg:FlagsGroup) : Flags { if b then f.(fg1 := fg) else f.(fg0 := fg) }
 
 function cf(flags_group:FlagsGroup) : bool { flags_group.cf }
 
-function xor32(x:uint32, y:uint32) : uint32  { BitwiseXor(x, y) }
-
-function or32(x:uint32, y:uint32) : uint32  { BitwiseOr(x, y) }
-
-function and32(x:uint32, y:uint32) : uint32  { BitwiseAnd(x, y) }
-
-function not32(x:uint32) : uint32 { BitwiseNot(x) }
-
-function rol32(x:uint32, amount:uint32) : uint32
-    requires 0 <= amount < 32;
-{ RotateLeft(x, amount) }
-
-function ror32(x:uint32, amount:uint32) : uint32
-    requires 0 <= amount < 32;
-{ RotateRight(x, amount) }
-
-function shl32(x:uint32, amount:uint32) : uint32
-    requires 0 <= amount < 32;
-{ LeftShift(x, amount) }
-
-function shr32(x:uint32, amount:uint32) : uint32
-    requires 0 <= amount < 32;
-{ RightShift(x, amount) }
-
-function sext32(x:uint32, sz:int) : uint32
-  requires 0 < sz < 32;
-{ BitwiseSignExtend(x, sz) }
-
-function add256(x:Bignum, y:Bignum, st:bool, sb:uint32) : (Bignum, FlagsGroup)
-	requires sb < 32;
+function bn_add(x: uint256, y: uint256, st: bool, sb: uint32) : (uint256, FlagsGroup)
+    requires sb < 32;
 {
-	AddWithCarry(x, uint256_sb(y, st, sb), false)
+    bn_add_carray(x, uint256_sb(y, st, sb), false)
 }
 
-function addc256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
-	requires sb < 32;
+function bn_addc(x: uint256, y: uint256, st: bool, sb: uint32, flags_group:FlagsGroup) : (uint256, FlagsGroup)
+    requires sb < 32;
 {
-	AddWithCarry(x, uint256_sb(y, st, sb), cf(flags_group))
+    bn_add_carray(x, uint256_sb(y, st, sb), cf(flags_group))
 }
 
-function addi256(x:Bignum, imm:Bignum) : (Bignum, FlagsGroup)
-	requires imm < 1024;
+function bn_addi(x: uint256, imm: uint256) : (uint256, FlagsGroup)
+    requires imm < 1024;
 {
-	AddWithCarry(x, imm, false)
+    bn_add_carray(x, imm, false)
 }
 
-function addm256(x:Bignum, y:Bignum, mod:Bignum) : Bignum
+function bn_addm(x: uint256, y: uint256, mod: uint256) : uint256
 {
-	var (sum, _) := AddWithCarry(x, y, false);
-	if sum >= mod then sum - mod else sum
+    var (sum, _) := bn_add_carray(x, y, false);
+    if sum >= mod then sum - mod else sum
 }
 
-function sub256(x:Bignum, y:Bignum, st:bool, sb:uint32) : (Bignum, FlagsGroup)
-	requires sb < 32;
+function bn_sub(x: uint256, y: uint256, st: bool, sb: uint32) : (uint256, FlagsGroup)
+    requires sb < 32;
 {
-	var diff :int := x - uint256_sb(y, st, sb);
-	// FIXME: figure out the flags
-	var fg := FlagsGroup(false, false, false, diff == 0);
-	(diff % BASE_256, fg)
+    var diff :int := x - uint256_sb(y, st, sb);
+    // FIXME: figure out the flags
+    var fg := FlagsGroup(false, false, false, diff == 0);
+    (diff % BASE_256, fg)
 }
 
-function subb256(x:Bignum, y:Bignum, st:bool, sb:uint32, flags_group:FlagsGroup) : (Bignum, FlagsGroup)
-	requires sb < 32;
+function bn_subb(x: uint256, y: uint256, st: bool, sb :uint32, flags_group: FlagsGroup) : (uint256, FlagsGroup)
+    requires sb < 32;
 {
-	// FIXME: double check this
-	var diff :int := x - uint256_sb(y, st, sb) - BoolToInt(cf(flags_group));
-	var fg := FlagsGroup(false, false, false, diff == 0);
-	(diff % BASE_256, fg)
+    // FIXME: double check this
+    var cf := if cf(flags_group) then 1 else 0;
+    var diff :int := x - uint256_sb(y, st, sb) - cf;
+    var fg := FlagsGroup(false, false, false, diff == 0);
+    (diff % BASE_256, fg)
 }
 
-function subi256(x:Bignum, imm:Bignum) : (Bignum, FlagsGroup)
-	requires imm < 1024;
-	// requires imm < x; //TODO: Is this true?
+function bn_subbi(x: uint256, imm: uint256) : (uint256, FlagsGroup)
+    requires imm < 1024;
+    // requires imm < x; //TODO: Is this true?
 {
-	// FIXME: double check this
-	var diff :int := x - imm;
-	// FIXME: figure out the flags
-	var fg := FlagsGroup(false, false, false, diff == 0);
-	(diff % BASE_256, fg)
+    // FIXME: double check this
+    var diff :int := x - imm;
+    // FIXME: figure out the flags
+    var fg := FlagsGroup(false, false, false, diff == 0);
+    (diff % BASE_256, fg)
 }
 
-function subm256(x:Bignum, y:Bignum, wmod:Bignum) : Bignum
+function bn_subm(x: uint256, y: uint256, wmod: uint256) : uint256
 {
-	// FIXME: some bound checking?
-	assume false;
-	var result := (x as bv256 - y as bv256) as Bignum;
-	if result >= wmod then (result as bv256 - wmod as bv256) as Bignum else result
+    // FIXME: some bound checking?
+    assume false;
+    var result := (x as bv256 - y as bv256) as uint256;
+    if result >= wmod then (result as bv256 - wmod as bv256) as uint256 else result
 }
 
-function AddWithCarry(a: Bignum, b: Bignum, carry_in: bool) : (Bignum, FlagsGroup)
+function bn_add_carray(a: uint256, b: uint256, carry_in: bool) : (uint256, FlagsGroup)
 {
-	var sum :int := a + b + BoolToInt(carry_in);
-	// FIXME: get MSB and LSM
-	var fg := FlagsGroup(sum >= BASE_256, false, false, sum == 0);
-	(sum % BASE_256, fg)
+    var sum :int := a + b + if carry_in then 1 else 0;
+    // FIXME: get MSB and LSM
+    var fg := FlagsGroup(sum >= BASE_256, false, false, sum == 0);
+    (sum % BASE_256, fg)
 }
 
-function mulqacc256(
-	zero: bool,
-	x:uint256, qx: uint2,
-	y:uint256, qy: uint2,
-	shift: uint2,
-	acc: uint256) : uint256
+function bn_mulqacc(
+    zero: bool,
+    x: uint256, qx: uint2,
+    y: uint256, qy: uint2,
+    shift: uint2,
+    acc: uint256) : uint256
 {
-	var product := uint256_qmul(x, qx, y, qy);
-	var shift := uint256_ls(product, shift * 8);
-	if zero then shift else (acc + shift) % BASE_256
+    var product := uint256_qmul(x, qx, y, qy);
+    var shift := uint256_ls(product, shift * 8);
+    if zero then shift else (acc + shift) % BASE_256
 }
 
 predicate bn_mulqacc_is_safe(shift: uint2, acc: uint256)
@@ -388,16 +353,16 @@ predicate bn_mulqacc_is_safe(shift: uint2, acc: uint256)
 // mulquacc but no overflow
 function bn_mulqacc_safe(
     zero: bool,
-	x:uint256, qx: uint2,
-	y:uint256, qy: uint2,
-	shift: uint2,
-	acc: uint256) : uint256
+    x: uint256, qx: uint2,
+    y: uint256, qy: uint2,
+    shift: uint2,
+    acc: uint256) : uint256
 
     requires bn_mulqacc_is_safe(shift, acc);
 {
-	var product := uint256_qmul(x, qx, y, qy);
-	var shift := bn_qshift_safe(product, shift);
-	if zero then shift else acc + shift
+    var product := uint256_qmul(x, qx, y, qy);
+    var shift := bn_qshift_safe(product, shift);
+    if zero then shift else acc + shift
 }
 
 // quater shift but no overflow
@@ -412,30 +377,29 @@ function bn_qshift_safe(x: uint256, q: uint2): (r: uint256)
     else x * BASE_192
 }
 
-function xor256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
-	requires sb < 32;
+function bn_xor(x: uint256, y: uint256, st: bool, sb: uint32) : uint256
+    requires sb < 32;
 {
-	uint256_xor(x, uint256_sb(y, st, sb))
+    uint256_xor(x, uint256_sb(y, st, sb))
 }
 
-function or256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
-	requires sb < 32;
+function bn_or(x: uint256, y: uint256, st: bool, sb: uint32) : uint256
+    requires sb < 32;
 {
-	uint256_or(x, uint256_sb(y, st, sb))
+    uint256_or(x, uint256_sb(y, st, sb))
 }
-		
-function and256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
-	requires sb < 32;
+        
+function bn_and(x: uint256, y: uint256, st: bool, sb: uint32) : uint256
+    requires sb < 32;
 {
-	uint256_and(x, uint256_sb(y, st, sb))
+    uint256_and(x, uint256_sb(y, st, sb))
 }
 
-function rshi256(x:Bignum, y:Bignum, shift_bit:int) : Bignum
-	requires 0 <= shift_bit < 256;
+function bn_rshi(x: uint256, y: uint256, shift_amt:int) : uint256
+    requires 0 <= shift_amt < 256;
 {
-  var upper := (x as bv256 << (256)) as uint256;
-	var concat := upper + y;
-	((concat as bv256 >> shift_bit) as uint256) % BASE_256
+    var concat : int := x * BASE_256 + y;
+    (concat / pow2(shift_amt)) % BASE_256
 }
 
 }

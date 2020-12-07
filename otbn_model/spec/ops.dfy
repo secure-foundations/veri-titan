@@ -4,187 +4,51 @@ include "../lib/powers.dfy"
 module ops {
 	import opened types
 	import opened powers
-
-	function pow2(n:nat) : nat {
-		if n == 0 then 1 else 2 * pow2(n-1)
-	}
-
-	///////////////////////////
-	// Operations on bv32s
-	///////////////////////////
-	function method {:opaque} BitAdd(x:bv32, y:bv32): bv32
+		
+	function method {:opaque} uint32_and(x:uint32, y:uint32) : uint32
 	{
-		x + y
+        (x as bv32 & y as bv32) as uint32
 	}
 
-	function method {:opaque} BitSub(x:bv32, y:bv32): bv32
+	function method {:opaque} uint32_or(x:uint32, y:uint32):uint32
 	{
-		x - y
+        (x as bv32 | y as bv32) as uint32
 	}
 
-	function method {:opaque} BitAnd(x:bv32, y:bv32): bv32
+	function method {:opaque} uint32_not(x:uint32) : uint32
 	{
-		x & y
+		!(x as bv32) as uint32
 	}
 
-	function method {:opaque} BitOr(x:bv32, y:bv32): bv32
+	function method {:opaque} uint32_xor(x:uint32, y:uint32) : uint32
 	{
-		x | y
+        (x as bv32 ^ y as bv32) as uint32
 	}
 
-	function method {:opaque} BitXor(x:bv32, y:bv32): bv32
-	{
-		x ^ y
-	}
-
-	function method {:opaque} BitMod(x:bv32, y:bv32): bv32
-		requires y != 0
-	{
-		x % y
-	}
-
-	function method {:opaque} BitDiv(x:bv32, y:bv32): bv32
-		requires y != 0
-	{
-		x / y
-	}
-
-	function method {:opaque} BitMul(x:bv32, y:bv32): bv32
-	{
-		x * y
-	}
-
-	function method {:opaque} BitNot(x:bv32): bv32
-	{
-		!x
-	}
-
-	function method {:opaque} BitShiftLeft(x:bv32, amount:int): bv32
-		requires 0 <= amount < 32;
-	{
-		x << amount
-	}
-
-	function method {:opaque} BitShiftRight(x:bv32, amount:int): bv32
-		requires 0 <= amount < 32;
-	{
-		x >> amount
-	}
-
-	function method {:opaque} BitRotateRight(x:bv32, amount:int): bv32
-		requires 0 <= amount < 32;
-	{
-		// TODO: Replace with Dafny's builtin operator for this
-		(x >> amount) | (x << (32 - amount))
-	}
-
-	function method {:opaque} BitRotateLeft(x:bv32, amount:int): bv32
-		requires 0 <= amount < 32;
-	{
-		// TODO: Replace with Dafny's builtin operator for this
-		(x << amount) | (x >> (32 - amount))
-	}
-
-	function method {:opauqe} BitSignExtend(x:bv32, sz:int): bv32
-		requires 0 < sz < 32;
-	{
-		(x ^ (1 << (sz - 1))) - (1 << (sz - 1))
-	}
-			
-	function method BoolToInt(b: bool) : int
-	{
-		if b then 1 else 0
-	}
-
-	////////////////////////
-	// Operations on words
-	////////////////////////
-
-	function BitwiseAnd(x:uint32, y:uint32) : uint32
-	{
-		BitsToWord(BitAnd(WordToBits(x), WordToBits(y)))
-	}
-
-	function BitwiseOr(x:uint32, y:uint32):uint32
-	{
-		BitsToWord(BitOr(WordToBits(x), WordToBits(y)))
-	}
-
-	function BitwiseNot(x:uint32) : uint32
-	{
-		BitsToWord(BitNot(WordToBits(x)))
-	}
-
-	function BitwiseXor(x:uint32, y:uint32) : uint32
-	{
-		BitsToWord(BitXor(WordToBits(x), WordToBits(y)))
-	}
-
-	function RotateRight(x:uint32, amount:uint32) : uint32
+	function method {:opaque} uint32_rs(x:uint32, amount:uint32) : uint32
 		requires amount < 32;
 	{
-		BitsToWord(BitRotateRight(WordToBits(x), amount))
+		(x as bv32 >> amount) as uint32
 	}
 
-	function RotateLeft(x:uint32, amount:uint32):uint32
+	function method {:opaque} uint32_ls(x:uint32, amount:uint32) : uint32
 		requires amount < 32;
 	{
-		BitsToWord(BitRotateLeft(WordToBits(x), amount))
+		(x as bv32 << amount) as uint32
 	}
 
-	function RightShift(x:uint32, amount:uint32) : uint32
-		requires amount < 32;
-	{
-		BitsToWord(BitShiftRight(WordToBits(x), amount))
-	}
-
-	function LeftShift(x:uint32, amount:uint32) : uint32
-		requires amount < 32;
-	{
-		BitsToWord(BitShiftLeft(WordToBits(x), amount))
-	}
-
-	function {:opaque} BitwiseAdd32(x:uint32, y:uint32):uint32
+	function method {:opaque} uint32_add(x:uint32, y:uint32):uint32
 	{
 		(x + y) % 0x1_0000_0000
 	}
 
-	function {:opaque} BitwiseAddCarry(x:uint32, y:uint32):uint64
+	function method {:opaque} uint32_sub(x:uint32, y:uint32):uint32
 	{
-		(x + y) % 0x1_0000_0000_0000_0000
+		(x - y) % 0x1_0000_0000
 	}
 
-	function BitwiseSub32(x:uint32, y:uint32):uint32
-	{
-		BitsToWord(BitSub(WordToBits(x), WordToBits(y)))
-	}
-
-	function BitwiseMul32(x:uint32, y:uint32):uint32
-	{
-		BitsToWord(BitMul(WordToBits(x), WordToBits(y)))
-	}
-
-	function BitwiseDiv32(x:uint32, y:uint32):uint32
-		requires y != 0;
-	{
-		if WordToBits(y) == 0 then 0 else BitsToWord(BitDiv(WordToBits(x), WordToBits(y)))
-	}
-
-	function BitwiseMod32(x:uint32, y:uint32):uint32
-		requires y != 0;
-	{
-		if WordToBits(y) == 0 then 0 else BitsToWord(BitMod(WordToBits(x), WordToBits(y)))
-	}
-
-	function BitwiseSignExtend(x:uint32, size:int):uint32
+	function method {:opaque} uint32_se(x:uint32, size:int):uint32
 		requires 0 <= size < 32;
-	{
-		if size == 0 then x else BitsToWord(BitSignExtend(WordToBits(x), size))
-	}
-
-	////////////////////////
-	// Operations on bv256s
-	////////////////////////
 
 	function {:opaque} uint256_xor(x: uint256, y: uint256): uint256
 	{
@@ -210,7 +74,7 @@ module ops {
 		(x as bv256 << (num_bytes * 8)) as uint256
 	}
 
-	function {:opaque} uint256_rs(x:uint256, num_bytes:int): uint256
+	function {:opaque} uint256_rs(x: uint256, num_bytes:int): uint256
 		requires 0 <= num_bytes < 32;
 		ensures uint256_rs(x, 0) == x;
 	{
@@ -218,7 +82,7 @@ module ops {
 		(x as bv256 >> (num_bytes * 8)) as uint256
 	}
 
-	function uint256_sb(b:uint256, st:bool, sb:uint32) : uint256
+	function uint256_sb(b:uint256, st: bool, sb: uint32) : uint256
 		requires sb < 32;
 	{	
 		if sb == 0 then b
@@ -285,10 +149,6 @@ module ops {
 	{
 		reveal uint256_xor();
 	}
-
-	// lemma lemma_ls_mul(x: uint256)
-	// 	requires x < BASE_128;
-	// 	ensures uint256_ls(x, 8) == x * BASE_64;
 
 	lemma lemma_uint256_hwb(x1: uint256, x2: uint256, x3: uint256, lo: uint128, hi: uint128)
 		requires x2 == uint256_hwb(x1, lo, true);
