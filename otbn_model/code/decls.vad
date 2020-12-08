@@ -193,20 +193,20 @@ operand_type imm2:uint2 := const;
 function Valid32Addr(h: Xmem, addr:int):bool extern;
 function Valid256Addr(h: Wmem, addr:int):bool extern;
 
-procedure LW(out dst:reg32, in src:reg32, in offset:imm32)
-    {:instruction Ins32(LW32(dst, src, offset))}
+procedure LW(out grd:reg32, in offset:imm32, in grs1:reg32)
+    {:instruction Ins32(LW32(grd, src, offset))}
     reads
         xmem;
     requires
-        Valid32Addr(xmem, src + offset);
+        Valid32Addr(xmem, grs1 + offset);
     ensures
-        Valid32Addr(xmem, old(src) + offset);
-        dst == xmem[old(src) + offset];
+        Valid32Addr(xmem, old(grs1) + offset);
+        grd == xmem[old(grs1) + offset];
 {
     assume false;
 }
 
-procedure SW(in grs2:reg32, in grs1:reg32, in offset:imm32)
+procedure SW(in grs2:reg32, in offset:imm32, in grs1:reg32)
     {:instruction Ins32(SW32(grs2, grs1, offset))}
     modifies
         xmem;
@@ -230,7 +230,6 @@ procedure BN_LID(inout grd:reg32, inline grd_inc:bool, in offset:imm32, inout gr
         0 <= grd < 32;
     ensures
         Valid256Addr(wmem, old(grs) + offset);
-        // wregs[Wdr(old(grd))] == wmem[old(grs) + offset];
         wregs == old(wregs[Wdr(grd) := wmem[grs + offset]]);
         grd == (if grd_inc then (old(grd) + 1) % 32 else old(grd));
         grs == (if grs_inc then (old(grs) + 32) % 0x1_0000_0000 else old(grs));
