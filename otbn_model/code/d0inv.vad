@@ -40,7 +40,7 @@ procedure Increment(inout dst:reg32)
 
 function half_product(p: int, x:int, y:int): bool extern;
 
-function invariant_d0inv(i: uint32, w28: uint256, w29: uint256, w0: uint256) : bool extern;
+function invariant_d0inv(i: int, w28: uint256, w29: uint256, w0: uint256) : bool extern;
 
 function d0inv_256(w29: uint256, w28: uint256): bool extern;
 
@@ -51,7 +51,7 @@ ghost procedure lemma_d0inv_pre_loop(
     ghost w29: uint256) extern;
 
 ghost procedure lemma_d0inv_mid_loop(
-    ghost i_0: uint32,
+    ghost i_0: int,
     ghost w0: uint256,
     ghost w0_g1: uint256,
     ghost w1_g1: uint256,
@@ -67,9 +67,9 @@ ghost procedure lemma_d0inv_post_loop(
     ghost w31: uint256) extern;
 
 // TODO: loop doesn't actually use a register, add loop counter to model maybe
-procedure d0inv(inout i:reg32)
+procedure d0inv()
     requires
-        i == 0; w31 == 0; w28 % 2 == 1;
+        w31 == 0; w28 % 2 == 1;
     reads
         w28;
     modifies
@@ -93,11 +93,14 @@ procedure d0inv(inout i:reg32)
     assert w29 == w0;
 
     lemma_d0inv_pre_loop(w0_g1, w0_g2, w0, w29);
+    ghost var i : int := 0;
 
-    while (i < 256)
+    while (LoopImm(256))
+        invariant i + loop_ctr == 256;
         invariant w31 == 0;
         invariant invariant_d0inv(i, w28, w29, w0);
-        decreases 256 - i;
+        // invariant 0 <= loop_ctr < 256;
+        decreases loop_ctr;
     {
         let w0_g1 := w0;
         let w29_g1 := w29;
@@ -120,17 +123,13 @@ procedure d0inv(inout i:reg32)
         // BN.ADD w0, w0, w0
         assert w0 == fst(bn_add(w0_g1, w0_g1, false, 0));
 
-        let i_0 := i;
-
-        Increment(i);
-
-        lemma_d0inv_mid_loop(i_0, w0, w0_g1, w1_g1, w1_g2, w28, w29, w29_g1);
+        i := 256 - loop_ctr;
+        lemma_d0inv_mid_loop(i, w0, w0_g1, w1_g1, w1_g2, w28, w29, w29_g1);
     }
 
     let w29_g2 := w29;
 
     BN_SUB(w29, w31, w29, false, 0, false);
-    // BN.SUB w29, w31, w29
 
     assert w29 == fst(bn_sub(w31, w29_g2, false, 0));
 

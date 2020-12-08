@@ -82,7 +82,9 @@ datatype code =
 datatype codes = CNil | va_CCons(hd:code, tl:codes)
 
 datatype cmp = Eq | Ne | Gt | Ge | Lt | Le
-datatype whileCond = WhileCond(cmp:cmp, r:Reg32, c:uint32)
+datatype whileCond = 
+    | RegCond(r: Reg32)
+    | ImmCond(c: uint32)
 
 datatype FlagsGroup = FlagsGroup(cf:bool, msb:bool, lsb:bool, zero:bool)
 datatype Flags = Flags(fg0:FlagsGroup, fg1:FlagsGroup)
@@ -93,6 +95,7 @@ datatype state = state(
     xregs: map<Reg32, uint32>, // 32-bit registers
     wregs: map<Reg256, uint256>, // 256-bit registers
     flags: Flags,
+    // lstack: seq<nat>,
     xmem: map<int, uint32>,
     wmem: map<int, uint256>,
     ok: bool)
@@ -194,42 +197,35 @@ predicate evalBlock(block:codes, s:state, r:state)
         exists r':state :: evalCode(block.hd, s, r') && evalBlock(block.tl, r', r)
 }
 
-function evalCmp(c:cmp, i1:uint32, i2:uint32):bool
+// function evalCmp(c:cmp, i1:uint32, i2:uint32):bool
+// {
+//     match c
+//         case Eq => i1 == i2
+//         case Ne => i1 != i2
+//         case Gt => i1 > i2
+//         case Ge => i1 >= i2
+//         case Lt => i1 < i2
+//         case Le => i1 <= i2
+// }
+
+function eval_cond(s:state, wc:whileCond): nat
+    // requires ValidSourceRegister32(s, wc.r);
+    // requires IsUInt32(wc.c);
 {
-    match c
-        case Eq => i1 == i2
-        case Ne => i1 != i2
-        case Gt => i1 > i2
-        case Ge => i1 >= i2
-        case Lt => i1 < i2
-        case Le => i1 <= i2
+    match wc 
+        case RegCond(r) => eval_xreg(s.xregs, r)
+        case ImmCond(c) => c
 }
 
-function evalWhileCond(s:state, wc:whileCond):bool
-    requires ValidSourceRegister32(s, wc.r);
-    requires IsUInt32(wc.c);
-{
-    evalCmp(wc.cmp, eval_reg32(s, wc.r), wc.c)
-}
-
-function {:axiom} updateFlagsUsingCondition(flags:Flags, cond:bool) : Flags
-
-predicate branchRelation(s:state, s':state, cond:bool)
-{
-    s' == s.(flags := updateFlagsUsingCondition(s.flags, cond))
-}
-
-predicate evalWhile(wc:whileCond, c:code, n:nat, s:state, r:state)
+predicate evalWhile(c:code, n:nat, s:state, r:state)
     decreases c, n
 {
-    if s.ok && ValidSourceRegister32(s, wc.r) && IsUInt32(wc.c) then
+    if s.ok then
         if n == 0 then
-            !evalWhileCond(s, wc) && branchRelation(s, r, false)
+            s == r
         else
-            exists loop_start:state, loop_end:state :: evalWhileCond(s, wc)
-            && branchRelation(s, loop_start, true)
-            && evalCode(c, loop_start, loop_end)
-            && evalWhile(wc, c, n - 1, loop_end, r)
+            exists loop_body_end:state :: evalCode(c, s, loop_body_end)
+                && evalWhile(c, n - 1, loop_body_end, r)
     else
         !r.ok
 }
@@ -242,7 +238,7 @@ predicate evalCode(c:code, s:state, r:state)
         case Ins256(ins) => evalIns256(ins, s, r)
         case Block(block) => evalBlock(block, s, r)
         //case IfElse(cond, ifT, ifF) => evalIfElse(cond, ifT, ifF, s, r)
-        case While(cond, body) => exists n:nat :: evalWhile(cond, body, n, s, r)
+        case While(cond, body) => evalWhile(body, eval_cond(s, cond), s, r)
 }
 
 function get_flags_group(fg:bool, flags:Flags) : FlagsGroup { if fg then flags.fg1 else flags.fg0 }
