@@ -213,17 +213,8 @@ lemma va_ins_lemma(b0:code, s0:va_state)
 function method va_const_cmp(n:uint32):uint32 { n }
 function method va_coerce_reg32_to_cmp(r:Reg32):Reg32 { r }
 
-function method va_cmp_ne(r:Reg32, c:uint32):whileCond 
-    requires c == 0;
-{
-    RegCond(r)
-    // WhileCond(Ne, r, c)
-}
-
-// function method va_cmp_ge(r:Reg32, c:uint32):whileCond { WhileCond(Ge, r, c) }
-// function method va_cmp_gt(r:Reg32, c:uint32):whileCond { WhileCond(Gt, r, c) }
-// function method va_cmp_le(r:Reg32, c:uint32):whileCond { WhileCond(Le, r, c) }
-// function method va_cmp_lt(r:Reg32, c:uint32):whileCond { WhileCond(Lt, r, c) }
+function method va_cmp_LoopImm(u:uint32):whileCond { ImmCond(u) }
+function method va_cmp_Loop(r:Reg32):whileCond { RegCond(r) }
 
 function method va_op_reg32_reg32(r:Reg32):Reg32 { r }
 function method va_op_reg256_reg256(r:Reg256):Reg256 { r }

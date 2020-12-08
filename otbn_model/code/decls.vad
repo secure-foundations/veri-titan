@@ -31,6 +31,9 @@ type Reg32:Type(0) extern;
 type flagGroup:Type(0) extern;
 type Flags:Type(0) extern;
 
+function Loop(u:uint32) : bool extern;
+function LoopImm(u:uint32) : bool extern;
+
 function operator(.ok) (s:state):bool extern;
 function operator(.ok :=) (s:state, b:bool):state extern;
 

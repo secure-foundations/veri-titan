@@ -46,23 +46,37 @@ procedure Increment(inout dst:reg32)
     Addi32(dst, dst, 1);
 }
 
-procedure LoopExample(inout dst:reg32)
+procedure LoopImmExample(inout dst:reg32)
     requires
-        dst == 3;
+        dst == 0;
     modifies
         flags;
+    ensures
+        dst == 6;
 {
-    ghost var gc : int := 0;
-
-    while (dst != 0)
-        invariant 0 <= gc <= old(dst);
-        // invariant 0 <= dst <= 3;
-        decreases old(dst) - gc;
+    while (LoopImm(3))
+        invariant dst == (3 - loop_ctr) * 2;
+        decreases loop_ctr;
     {
-        gc := gc + 1;
+        Addi32(dst, dst, 2);
     }
+}
 
-    assert gc == 3;
+procedure LoopRegExample(inout dst:reg32, in cnt:reg32)
+    requires
+        dst == 0;
+        cnt == 3;
+    modifies
+        flags;
+    ensures
+        dst == 6;
+{
+    while (Loop(cnt))
+        invariant dst == (3 - loop_ctr) * 2;
+        decreases loop_ctr;
+    {
+        Addi32(dst, dst, 2);
+    }
 }
 
 procedure CopyExample()
