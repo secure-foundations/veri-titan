@@ -93,6 +93,7 @@ var wregs:Wregs {:state wregs()};
 var flags:Flags {:state flags()};
 
 function Wdr(gr: uint32):Reg256 extern;
+const WAcc: Reg256 extern;
 
 var x0:uint32 {:state reg32(Gpr(0))};
 var x1:uint32 {:state reg32(Gpr(1))};
