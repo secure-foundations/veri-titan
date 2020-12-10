@@ -213,6 +213,28 @@ impl BoolExpr_ {
         }
     }
 
+    fn remove_or(&self) -> BoolExpr {
+        use BoolExpr_::*;
+        use BoolBinOp::*;
+        use BoolUniOp::*;
+        match self {
+            Const(_) | Var(_, _) => self.clone().into(),
+            UniExpr(op, src) => UniExpr(*op, src.remove_or()).into(),
+            BinExpr(op, src0, src1) => {
+                let src0 = src0.remove_or();
+                let src1 = src1.remove_or();
+                match op {
+                    And | Xor => BinExpr(*op, src0, src1).into(),
+                    Or => UniExpr(Not,
+                            BinExpr(And, 
+                              UniExpr(Not, src0.clone()).into(),
+                              UniExpr(Not, src1.clone()).into()).into()).into()
+                }
+            }
+        }
+    }
+
+
     //fn subst_vars(e: Boolexpr, map:&HashMap<Boolexpr, Boolexpr>) -> Boolexpr {
     //    use Boolexpr::*;
     //    match &e {
@@ -553,6 +575,33 @@ fn no_xor_test() {
 //    no_xor(f);
 }
 
+
+fn no_or(f:BVExpr) {
+    let f = f.simp();
+    let mut namer = Namer::new();
+    let f_generic_bit = f.get_main_bit_expr(&mut namer, false);
+    let f_no_or = f_generic_bit.remove_or();
+    println!("Generic bit: {}\nNo or bit: {}", f_generic_bit, f_no_or);
+
+    // Find the recurrsion relation
+    //let rules = egg_rules_no_or();
+    let rules = egg_rules_no_or_2();
+    let f_egg = egg_simp_to_bool_expr(f_no_or.mk_string(&StrMode::Prefix, true), &rules);
+    eprintln!("Simplified: {}", f_egg);
+}
+
+fn no_or_test() {
+    let f = identity();
+    no_or(f);
+    let f = xor_self();
+    no_or(f);
+//    let f = identity2();
+//    no_or(f);
+//    let f = addsub_1043();
+//    no_or(f);
+}
+
+
 fn print_dafny() {
     // Define xor
     println!(
@@ -801,11 +850,60 @@ fn egg_rules_no_xor() -> Vec<egg::Rewrite<BoolLanguage, ()>> {
     rules
 }
 
+// From 2.5 of https://www.cs.tau.ac.il/~nachum/papers/survey-draft.pdf
+fn egg_rules_no_or() -> Vec<egg::Rewrite<BoolLanguage, ()>> {
+    let rules: Vec<Rewrite<BoolLanguage, ()>> = vec![
+        // AC equations
+        rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
+
+        rw!("assoc-and-1"; "(& ?x (& ?y ?z))" => "(& (& ?x ?y) ?z)"),
+        rw!("assoc-and-2"; "(& (& ?x ?y) ?z)" => "(& ?x (& ?y ?z))"),
+
+        rw!("commute-xor"; "(^ ?x ?y)" => "(^ ?y ?x)"),
+
+        rw!("assoc-xor-1"; "(^ ?x (^ ?y ?z))" => "(^ (^ ?x ?y) ?z)"),
+        rw!("assoc-xor-2"; "(^ (^ ?x ?y) ?z)" => "(^ ?x (^ ?y ?z))"),
+
+        // BA rewrite rules
+        rw!("and-true"; "(& ?x true)" => "?x"),
+        rw!("and-false"; "(& ?x false)" => "false"),
+        rw!("and-self"; "(& ?x ?x)" => "?x"),
+
+        rw!("xor-false"; "(^ ?x false)" => "?x"),
+        rw!("xor-self";   "(^ ?x ?x)" => "false"),
+
+        rw!("dist-and-xor"; "(& (^ ?x ?y) ?z))" => "(^ (& ?x ?z) (& ?y ?z))"),
+    ];
+    rules
+}
+
+// Page 3 of http://www.cs.tau.ac.il/~nachum/papers/LNCS/RewriteMethods.pdf
+fn egg_rules_no_or_2() -> Vec<egg::Rewrite<BoolLanguage, ()>> {
+    let rules: Vec<Rewrite<BoolLanguage, ()>> = vec![
+        // Commutativity
+        rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
+        rw!("xor-self";   "(^ ?x ?x)" => "false"),      // Note: The text introduces this as an equation, rather than a rewrite
+        rw!("commute-xor"; "(^ ?x ?y)" => "(^ ?y ?x)"), // Not mentioned, but seems important
+
+        // Term rewrites
+        rw!("not-to-xor"; "(~ ?x)" => "(^ ?x true)"),   // R4
+        rw!("xor-false"; "(^ ?x false)" => "?x"),       // R5
+        rw!("xor-self";   "(^ ?x ?x)" => "false"),      // R6
+        rw!("and-true"; "(& ?x true)" => "?x"),         // R7
+        rw!("and-self"; "(& ?x ?x)" => "?x"),           // R8
+        rw!("and-false"; "(& ?x false)" => "false"),    // R9
+        rw!("dist-and-xor"; "(& ?x (^ ?y ?z))" => "(^ (& ?x ?y) (& ?x ?z))"),   // R10
+
+        // What about associativity of xor/and with itself?
+
+    ];
+    rules
+}
+
 fn egg_rules() -> Vec<egg::Rewrite<BoolLanguage, ()>> {
     let rules: Vec<Rewrite<BoolLanguage, ()>> = vec![
         rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
         rw!("commute-or";  "(| ?x ?y)" => "(| ?y ?x)"),
-        rw!("commute-xor"; "(^ ?x ?y)" => "(^ ?y ?x)"),
 
         rw!("xor-def";     "(^ ?x ?y)" => "(& (| ?x ?y) (| (~ ?x) (~ ?y)))"),
         rw!("xor-def-rev"; "(& (| ?x ?y) (| (~ ?x) (~ ?y)))" => "(^ ?x ?y)"),
@@ -951,7 +1049,11 @@ fn main() {
     //print_dafny();
     //egg_test();
     
+    println!("\nXor test:");
     no_xor_test();
+    
+    println!("\n\nOr test:");
+    no_or_test();
 
     //println!("Done!");
 }
