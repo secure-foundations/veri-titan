@@ -9,8 +9,6 @@ include "../spec/types.dfy"
 
 include "../gen/decls.dfy"
 
-module examples {
-
 import opened bignum_vale
 import opened bignum_def
 import opened ops
@@ -40,28 +38,60 @@ procedure DoubleRegExample32()
 }
 
 procedure Increment(inout dst:reg32)
+    requires
+        old(dst) < 100;
     ensures
         dst == old(dst) + 1;
 {
     Addi32(dst, dst, 1);
 }
 
-procedure LoopExample(inout dst:reg32)
+procedure LoopImmExample(inout dst:reg32)
     requires
         dst == 0;
-    ensures
-        dst == 3;
     modifies
         flags;
+    ensures
+        dst == 6;
 {
-    while (dst < 3)
-        invariant 0 <= dst <= 3;
-        decreases 3 - dst;
+    while (LoopImm(3))
+        invariant dst == (3 - loop_ctr) * 2;
+        decreases loop_ctr;
     {
-        Increment(dst);
+        Addi32(dst, dst, 2);
     }
 }
 
-#verbatim
+procedure LoopRegExample(inout dst:reg32, in cnt:reg32)
+    requires
+        dst == 0;
+        cnt == 3;
+    modifies
+        flags;
+    ensures
+        dst == 6;
+{
+    while (Loop(cnt))
+        invariant dst == (3 - loop_ctr) * 2;
+        decreases loop_ctr;
+    {
+        Addi32(dst, dst, 2);
+    }
 }
-#endverbatim
+
+procedure CopyExample()
+    requires
+        Valid32Addr(xmem, x0 + 0);
+        Valid32Addr(xmem, x0 + 4);
+    reads
+        x0;
+    ensures
+        Valid32Addr(xmem, x0 + 0);
+        Valid32Addr(xmem, x0 + 4);
+        xmem == old(xmem[x0 + 4 := xmem[x0 + 0]]);
+    modifies
+        xmem; x2;
+{
+    LW(x2, x0, 0);
+    SW(x2, x0, 4);
+}

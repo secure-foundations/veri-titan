@@ -4,7 +4,7 @@ module powers
 {
     import opened congruences
 
-    function method {:opaque} power(b:int, e:nat) : int
+    function method {:opaque} power(b: int, e: nat) : int
         decreases e;
         ensures b > 0 ==> power(b, e) > 0;
         ensures b == 0 && e != 0 ==> power(b, e) == 0;
@@ -13,10 +13,11 @@ module powers
         else b * power(b, e - 1)
     }
 
-    function method pow2(n: nat) : nat
+    function pow2(e: nat) : (r : nat)
+        ensures r != 0;
     {
-        power(2, n)
-    }
+		if e == 0 then 1 else 2 * pow2(e - 1)
+	}
 
     lemma {:induction e} power_base_one_lemma(e: nat) 
         ensures power(1, e) == 1;
