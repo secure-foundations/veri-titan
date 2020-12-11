@@ -882,13 +882,12 @@ fn egg_rules_no_or_2() -> Vec<egg::Rewrite<BoolLanguage, ()>> {
     let rules: Vec<Rewrite<BoolLanguage, ()>> = vec![
         // Commutativity
         rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
-        rw!("xor-self";   "(^ ?x ?x)" => "false"),      // Note: The text introduces this as an equation, rather than a rewrite
         rw!("commute-xor"; "(^ ?x ?y)" => "(^ ?y ?x)"), // Not mentioned, but seems important
 
         // Term rewrites
         rw!("not-to-xor"; "(~ ?x)" => "(^ ?x true)"),   // R4
         rw!("xor-false"; "(^ ?x false)" => "?x"),       // R5
-        rw!("xor-self";   "(^ ?x ?x)" => "false"),      // R6
+        rw!("xor-self";   "(^ ?x ?x)" => "false"),      // R6  // Note: The text introduces this as an equation, rather than a rewrite
         rw!("and-true"; "(& ?x true)" => "?x"),         // R7
         rw!("and-self"; "(& ?x ?x)" => "?x"),           // R8
         rw!("and-false"; "(& ?x false)" => "false"),    // R9
