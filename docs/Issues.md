@@ -18,7 +18,7 @@ To summarize, the current barrett384.s:
 * should have this tighter bound for `q3` when working with particular modulus, and might have optimization potential
 * might need a fix for general modulus. 
 
-My understanding is that there will be different versions for each. 
+Our understanding is that there will be different versions for each, and we are interested in seeing them when available. 
 
 [otbn, sw] computation of `q3` in `barrett384.s`
 ----
@@ -71,4 +71,4 @@ q3 * m % 2^385
 = (b * 2^384 + q3') * m % 2^385
 = (b * 2^384 * m + q3' * m) % 2^385
 ```
-So it seems like when `b = 1`, unless `m` (which is the modulo) is even, the remainders are not equal. 
+So it seems like when `b = 1`, unless `m` (which is the modulo) is even, the remainders are not equal? Please correct me if I made a mistake somewhere, thank you.
