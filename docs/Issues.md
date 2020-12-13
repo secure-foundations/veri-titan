@@ -1,18 +1,24 @@
 [otbn, sw] clarification on the RSA signature verification routine
 ----
-I am wondering what the plan is on the RSA signature verification routine (used for secure boot process). `modexp.s` seems to be a general version that could handle variable key length. Is there going to be a version that tailors to the specific key length for the secure boot process? If so, how much difference would be expected? Thank you. 
+We had a discussion with @gkelly @domrizz0 at some point. 
+
+We are wondering what the plan is on the RSA signature verification routine (used for secure boot process). `modexp.s` seems to be a general version that could handle variable key length. Is there going to be a version that tailors to the specific key length for the secure boot process? If so, how much difference would be expected? Thank you. 
 
 [otbn, sw] assumptions of `barrett384.s`
 ----
-We had a discussion with @felixmiller at some point, so this is more for the record. 
+We had a discussion with @felixmiller at some point. 
 
-Using the terms from 14.42 in "Handbook of Applied Cryptography",  `b` is the radix, and `k` is some exponent. The book assumes that `b > 3`, so the inequality `(Q - q3) * m + R < 3 * m < b ^ (k + 1)` holds.
+Using the terms from 14.42 in "Handbook of Applied Cryptography",  `b` is the radix, and `k` is some exponent. The book version assumes a general `m`, so the bound for `q3` is `Q ≤ q3 ≤ Q + 2`. The book assumes that the radix `b > 3`, so the inequality `(Q - q3) * m + R < 3 * m < b ^ (k + 1)` holds.
 
 The current implementation of `barrett384` is using radix `b = 2`, and exponent `k = 384`. If we assume generally that `2^383 < m < 2^384`, then the inequality should not hold. 
 
-However, as @felixmiller pointed out earlier, using the modulus of p384 and p256, it should be possible to show that `Q ≤ q3 ≤ Q + 1`. Then we can show that `(Q - q3) * m + R < 2 * m < b ^ (k + 1)` holds.
+However, as @felixmiller pointed out earlier, using the modulus of p384 and p256, it should be possible to show that `Q ≤ q3 ≤ Q + 1`. Then we can show that `(Q - q3) * m + R < 2 * m < b ^ (k + 1)` holds. In that case it might be possible to remove one conditional subtraction as well. 
 
-To summarize, the current barrett384.s should have this tighter bounded when working with particular modulus, but might need a fix for general modulus. My understanding is that there will be different versions for each. 
+To summarize, the current barrett384.s should
+* have this tighter bound when working with particular modulus, and might have optimization potential
+* might need a fix for general modulus. 
+
+My understanding is that there will be different versions for each. 
 
 [otbn, sw] computation of `q3` in `barrett384.s`
 ----
