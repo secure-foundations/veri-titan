@@ -14,8 +14,8 @@ The current implementation of `barrett384` is using radix `b = 2`, and exponent 
 
 However, as @felixmiller pointed out earlier, using the modulus of p384 and p256, it should be possible to show that `Q ≤ q3 ≤ Q + 1`. Then we can show that `(Q - q3) * m + R < 2 * m < b ^ (k + 1)` holds. In that case it might be possible to remove one conditional subtraction as well. 
 
-To summarize, the current barrett384.s should
-* have this tighter bound when working with particular modulus, and might have optimization potential
+To summarize, the current barrett384.s: 
+* should have this tighter bound for `q3` when working with particular modulus, and might have optimization potential
 * might need a fix for general modulus. 
 
 My understanding is that there will be different versions for each. 
