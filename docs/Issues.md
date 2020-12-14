@@ -1,12 +1,12 @@
 [otbn, sw] clarification on the RSA signature verification routine
 ----
-We had a discussion with @gkelly @domrizz0 at some point. 
+Following up on a discussion with @gkelly @domrizz0: 
 
-We are wondering what the plan is on the RSA signature verification routine (used for secure boot process). `modexp.s` seems to be a general version that could handle variable key length. Is there going to be a version that tailors to the specific key length for the secure boot process? If so, how much difference would be expected? Thank you. 
+We are wondering what the plan is for the RSA signature verification routine that will be used for the secure boot process. `modexp.s` seems to be a general verification routine that handle variable key lengths. Is there going to be a version tailored to the specific key length used by the secure boot process? If so, what differences would be expected? Thank you. 
 
 [otbn, sw] assumptions of `barrett384.s`
 ----
-We had a discussion with @felixmiller at some point. 
+Following up on a discussion with @felixmiller: 
 
 Using the terms from 14.42 in "Handbook of Applied Cryptography",  `b` is the radix, and `k` is some exponent. The book version assumes a general `m`, so the bound for `q3` is `Q ≤ q3 ≤ Q + 2`. The book assumes that the radix `b > 3`, so the inequality `(Q - q3) * m + R < 3 * m < b ^ (k + 1)` holds.
 
@@ -16,7 +16,7 @@ However, as @felixmiller pointed out earlier, using the modulus of p384 and p256
 
 To summarize, the current barrett384.s: 
 * should have this tighter bound for `q3` when working with particular modulus, and might have optimization potential
-* might need a fix for general modulus. 
+* might need a fix for general moduli. 
 
 Our understanding is that there will be different versions for each, and we are interested in seeing them when available. 
 
@@ -65,10 +65,10 @@ bn.mov w10, w12
 bn.mov w11, w13
 jal x1, mul384
 ```
-The multiplication works for 384 bits numbers. However `q3` is 385 bits. Let `b` be the most significant bit of `q3` and `q3'` be the rest of the 384 bits. So `q3 = b * 2^384 + q3'`. So it seem like that the multiplication computes `q3' * m`, instead of  `q3 * m`.  We note that `r` only cares about `q3 * m % 2^385`, so we check:
+The multiplication works for 384 bits numbers. However `q3` is 385 bits. Let `b` be the most significant bit of `q3` and `q3'` be the rest of the 384 bits. So `q3 = b * 2^384 + q3'`. It seems like the multiplication computes `q3' * m`, instead of  `q3 * m`.  We note that `r` only cares about `q3 * m % 2^385`, so we check:
 ```
 q3 * m % 2^385 
 = (b * 2^384 + q3') * m % 2^385
 = (b * 2^384 * m + q3' * m) % 2^385
 ```
-So it seems like when `b = 1`, unless `m` (which is the modulo) is even, the remainders are not equal? Please correct me if I made a mistake somewhere, thank you.
+Hence, it seems that when `b = 1`, unless `m` (which is the modulo) is even, the remainders are not equal. Please correct me if I made a mistake somewhere.  Thank you.
