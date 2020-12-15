@@ -587,7 +587,7 @@ fn no_or(f:BVExpr) {
     //let rules = egg_rules_no_or();
     let rules = egg_rules_no_or_2();
     let f_egg = egg_simp_to_bool_expr(f_no_or.mk_string(&StrMode::Prefix, true), &rules);
-    eprintln!("Simplified: {}", f_egg);
+    eprintln!("Simplified: {}\n", f_egg);
 }
 
 fn no_or_test() {
