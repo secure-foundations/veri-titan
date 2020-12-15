@@ -585,7 +585,7 @@ fn no_or(f:BVExpr) {
 
     // Find the recurrsion relation
     //let rules = egg_rules_no_or();
-    let rules = egg_rules_no_or_2();
+    let rules = egg_rules_no_or_3();
     let f_egg = egg_simp_to_bool_expr(f_no_or.mk_string(&StrMode::Prefix, true), &rules);
     eprintln!("Simplified: {}\n", f_egg);
 }
@@ -595,10 +595,10 @@ fn no_or_test() {
     no_or(f);
     let f = xor_self();
     no_or(f);
-//    let f = identity2();
-//    no_or(f);
-//    let f = addsub_1043();
-//    no_or(f);
+    let f = identity2();
+    no_or(f);
+    let f = addsub_1043();
+    no_or(f);
 }
 
 
@@ -899,6 +899,37 @@ fn egg_rules_no_or_2() -> Vec<egg::Rewrite<BoolLanguage, ()>> {
     rules
 }
 
+// Same as egg_rules_no_or_2 but with associativity (since it mentioned "axioms of ring theory")
+fn egg_rules_no_or_3() -> Vec<egg::Rewrite<BoolLanguage, ()>> {
+    let rules: Vec<Rewrite<BoolLanguage, ()>> = vec![
+        // Commutativity
+        rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
+        rw!("commute-xor"; "(^ ?x ?y)" => "(^ ?y ?x)"), // Not mentioned, but implied by "axioms of ring theory"?
+
+        // Term rewrites
+        rw!("not-to-xor"; "(~ ?x)" => "(^ ?x true)"),   // R4
+        rw!("xor-to-not"; "(^ ?x true)" => "(~ ?x)"),   // This seems more compact...  Just a matter of taste?
+
+        rw!("xor-false"; "(^ ?x false)" => "?x"),       // R5  // False is the "additive" identity
+        rw!("xor-self";   "(^ ?x ?x)" => "false"),      // R6  // Each element is its own "additive" in inverse.  Note: The text introduces this as an equation, rather than a rewrite
+        rw!("and-true"; "(& ?x true)" => "?x"),         // R7  // True is the multiplicative identity
+        rw!("and-self"; "(& ?x ?x)" => "?x"),           // R8
+        rw!("and-false"; "(& ?x false)" => "false"),    // R9
+
+        rw!("dist-and-xor-1"; "(& ?x (^ ?y ?z))" => "(^ (& ?x ?y) (& ?x ?z))"),   // R10 (aka left distributivity)
+        rw!("dist-and-xor-2"; "(^ (& ?x ?y) (& ?x ?z))" => "(& ?x (^ ?y ?z))"),   // Turn R10 into an equation
+        // No need for right distributivity, since it's implied by commutativity of &
+
+        // associativity 
+        rw!("assoc-and-1"; "(& ?x (& ?y ?z))" => "(& (& ?x ?y) ?z)"),
+        rw!("assoc-and-2"; "(& (& ?x ?y) ?z)" => "(& ?x (& ?y ?z))"),
+
+        rw!("assoc-xor-1"; "(^ ?x (^ ?y ?z))" => "(^ (^ ?x ?y) ?z)"),
+        rw!("assoc-xor-2"; "(^ (^ ?x ?y) ?z)" => "(^ ?x (^ ?y ?z))"),
+    ];
+    rules
+}
+
 fn egg_rules() -> Vec<egg::Rewrite<BoolLanguage, ()>> {
     let rules: Vec<Rewrite<BoolLanguage, ()>> = vec![
         rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
@@ -1048,8 +1079,8 @@ fn main() {
     //print_dafny();
     //egg_test();
     
-    println!("\nNo xor test:");
-    no_xor_test();
+    //println!("\nNo xor test:");
+    //no_xor_test();
     
     println!("\n\nNo or test:");
     no_or_test();
