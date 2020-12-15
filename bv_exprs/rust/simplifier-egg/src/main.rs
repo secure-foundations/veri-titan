@@ -174,6 +174,25 @@ impl BoolExpr_ {
         }
     }
 
+    fn has_non_carry_vars(&self) -> bool {
+        use BoolExpr_::*;
+        match self {
+            Const(_) => false,
+            Var(name, _) => {
+                match &name.find("carry") {
+                    None => true,
+                    Some(_) => false,
+                }
+            }
+            UniExpr(_, src) => src.has_non_carry_vars(),
+            BinExpr(_, src0, src1) => {
+                let src0 = src0.has_non_carry_vars();
+                let src1 = src1.has_non_carry_vars();
+                src0 || src1
+            }
+        }
+    }
+
     fn age_carries(&self) -> BoolExpr {
         use BoolExpr_::*;
         match self {
@@ -525,6 +544,73 @@ fn addsub_1043() -> BVExpr {
     .into()
 }
 
+// From https://github.com/Boolector/boolector/blob/55f45be1de9f5b44ba4dba262a1dc11898bdddbf/src/btorrewrite.c#L1764
+fn addsub_0() -> BVExpr {
+    use BVBinOp::*;
+    use BVExpr_::*;
+
+    // a + 0 - a == 0
+    let x: BVExpr = Var("x".to_owned()).into();
+    BinExpr(
+        Add,
+        x.clone(),
+        BinExpr(Sub, Const(0).into(), x).into()
+    ).into()
+}
+
+fn identity2x2() -> BVExpr {
+    use BVBinOp::*;
+    use BVExpr_::*;
+
+    // x - (y + (x - y))
+    let x: BVExpr = Var("x".to_owned()).into();
+    let y: BVExpr = Var("y".to_owned()).into();
+    BinExpr(
+        Sub,
+        x.clone(),
+        BinExpr(Add, y.clone(), BinExpr(Sub, x, y).into()).into(),
+    )
+    .into()
+}
+
+// From https://github.com/Boolector/boolector/blob/55f45be1de9f5b44ba4dba262a1dc11898bdddbf/src/btorrewrite.c#L1855
+fn identity3x2() -> BVExpr {
+    use BVBinOp::*;
+    use BVExpr_::*;
+
+    // x + y - ((z + x) + (y - z))
+    let x: BVExpr = Var("x".to_owned()).into();
+    let y: BVExpr = Var("y".to_owned()).into();
+    let z: BVExpr = Var("z".to_owned()).into();
+    BinExpr(
+        Add,
+        x.clone(),
+        BinExpr(Sub, y.clone(), BinExpr(Add, BinExpr(Add, z.clone(), x).into(), BinExpr(Sub, y, z).into()).into()).into()
+    )
+    .into()
+}
+
+// From https://github.com/Boolector/boolector/blob/55f45be1de9f5b44ba4dba262a1dc11898bdddbf/src/btorrewrite.c#L2653
+fn and_neg_self() -> BVExpr {
+    use BVBinOp::*;
+    use BVExpr_::*;
+
+    // x & !x
+    let x: BVExpr = Var("x".to_owned()).into();
+    BinExpr(And, x.clone(), UniExpr(BVUniOp::Neg, x).into()).into()
+}
+
+fn get_tests() -> Vec<(String,BVExpr)> {
+    vec![("identity".to_string(),     identity()),
+         ("xor_self".to_string(),     xor_self()),
+         ("identity2".to_string(),    identity2()),
+         ("addsub_1043".to_string(),  addsub_1043()),
+         ("addsub_0".to_string(),     addsub_0()),
+         ("identity2x2".to_string(),  identity2x2()),
+         ("identity3x2".to_string(),  identity3x2()),
+         ("and_neg_self".to_string(), and_neg_self())]
+}
+
 ////////////////////////////////////////////////////////////
 //  Various experiments
 ////////////////////////////////////////////////////////////
@@ -591,33 +677,49 @@ fn no_xor_test() {
 }
 
 
-fn no_or(f:BVExpr) {
+fn no_or(f:&BVExpr) {
     let f = f.simp();
     let mut namer = Namer::new();
     let f_generic_bit = f.get_main_bit_expr(&mut namer, false);
     let f_no_or = f_generic_bit.remove_or();
-    println!("Generic bit: {}\nNo or bit: {}", f_generic_bit, f_no_or);
+    println!("Generic bit: {}\nNo or bit: {}", f_generic_bit, f_no_or.mk_string(&StrMode::Prefix, true));
 
     // Find the recurrsion relation
     //let rules = egg_rules_no_or();
     let rules = egg_rules_no_or_3();
     let f_egg = egg_simp_to_bool_expr(f_no_or.mk_string(&StrMode::Prefix, true), &rules);
-    eprintln!("Simplified: {}\n", f_egg);
+    eprintln!("Simplified: {}", f_egg);
+
+    if f_egg.has_non_carry_vars() {
+        println!("************************************");
+        println!("WARNING: Failed to fully simplify!");
+        //println!("Dafny version: {}", f_egg.mk_string(&StrMode::Dafny, false));
+        print_dafny(&f);
+        println!("************************************\n");
+    } else {
+        println!("Success: Fully simplified!\n");
+    }
 }
 
 fn no_or_test() {
     let f = identity();
-    no_or(f);
+    no_or(&f);
     let f = xor_self();
-    no_or(f);
+    no_or(&f);
     let f = identity2();
-    no_or(f);
+    no_or(&f);
     let f = addsub_1043();
-    no_or(f);
+    no_or(&f);
 }
 
+fn larger_no_or_test() {
+    for (s, f) in get_tests().iter() {
+        println!("Running: {}", s);
+        no_or(f);
+    }
+}
 
-fn print_dafny() {
+fn print_dafny(f:&BVExpr) {
     // Define xor
     println!(
         "
@@ -629,7 +731,7 @@ function xor(x:bool, y:bool) : bool {{
 
     //let f = identity();
     //let f = identity2();
-    let f = addsub_1043();
+    //let f = addsub_1043();
     let f = f.simp();
     let mut namer = Namer::new();
     let f_base_bit = f.get_main_bit_expr(&mut namer, true);
@@ -681,7 +783,7 @@ function {}(i:nat) : bool {{
     let rules = egg_rules();
     //let f_egg = egg_simp(f_generic_bit.mk_string(&StrMode::Prefix), &rules);
     let f_egg = egg_simp_to_bool_expr(f_generic_bit.mk_string(&StrMode::Prefix, true), &rules);
-    eprintln!("Original: {}\nSimplified: {}", f_generic_bit.mk_string(&StrMode::Prefix, true), f_egg);
+    //eprintln!("Original: {}\nSimplified: {}", f_generic_bit.mk_string(&StrMode::Prefix, true), f_egg);
     let f_egg_i = f_egg.mk_string(&StrMode::DafnyFunction("i".to_string()), false);
     let f_egg_i_minus_1 = f_egg.mk_string(&StrMode::DafnyFunction("i".to_string()), true);
     let f_egg_base = f_egg.mk_string(&StrMode::DafnyFunction("0".to_string()), false);
@@ -768,6 +870,14 @@ fn simple_example() {
         }
     }
     */
+}
+
+
+fn small_rules3_test() {
+    let rules = egg_rules_no_or_3();
+    //let f = "(^ x (^ (^ y (^ (^ (~ (^ (^ z (^ x carry_1)) (^ (^ y (^ (^ (~ z) (^ false carry_2)) carry_3)) carry_4))) (^ false carry_5)) carry_6)) carry_7))";
+    let f = "(^ x (^ (^ y (^ (^ (~ (^ x c1)) (^ (~ y) c2)) c3)) c4))";
+    println!("Simp: {}", egg_simp(f.to_string(), &rules));
 }
 
 ////////////////////////////////////////////////////////////
@@ -1104,8 +1214,13 @@ fn main() {
     //println!("\nNo xor test:");
     //no_xor_test();
     
-    println!("\n\nNo or test:");
-    no_or_test();
+//    println!("\n\nNo or test:");
+//    no_or_test();
+
+//    println!("\n\nBigger no-or test:");
+//    larger_no_or_test();
+
+    small_rules3_test();
 
     //println!("Done!");
 }

@@ -51,6 +51,19 @@ lemma rule_checker(x:bool, y:bool, z:bool)
   //ensures xor(y, !z) == ((((x || !y) || z) && (!z || (x || y))) && ((y || !(x && (y || z))) && (z || !(x && (y || z)))))
 {}
 
+lemma random_checks(x:bool, y:bool, z:bool,
+  carry_1:bool,
+  carry_2:bool,
+  carry_3:bool,
+  carry_4:bool,
+  carry_5:bool,
+  carry_6:bool,
+  carry_7:bool)
+  //ensures xor(x, xor(xor(y, xor(xor(!xor(xor(z, xor(x, carry_1)), xor(xor(y, xor(xor(!z, carry_2), carry_3)), carry_4)), carry_5), carry_6)), carry_7))
+  ensures xor((x && y), xor((!x && !y), xor(xor(carry_5, carry_6), xor(xor(x, xor(xor(y, carry_1), carry_2)), xor(carry_3, carry_4))))) == true
+{
+}
+
 lemma function_test(i:nat) 
   // Sanity check base case
   ensures b(0) == false
