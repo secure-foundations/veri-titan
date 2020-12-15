@@ -561,7 +561,7 @@ fn no_xor(f:BVExpr) {
     // Find the recurrsion relation
     let rules = egg_rules_no_xor();
     let f_egg = egg_simp_to_bool_expr(f_no_xor.mk_string(&StrMode::Prefix, true), &rules);
-    eprintln!("Simplified: {}", f_egg);
+    eprintln!("Simplified: {}\n", f_egg);
 }
 
 fn no_xor_test() {
@@ -1048,10 +1048,10 @@ fn main() {
     //print_dafny();
     //egg_test();
     
-    println!("\nXor test:");
+    println!("\nNo xor test:");
     no_xor_test();
     
-    println!("\n\nOr test:");
+    println!("\n\nNo or test:");
     no_or_test();
 
     //println!("Done!");
