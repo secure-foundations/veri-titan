@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
 use std::rc::Rc;
+use std::time::Duration;
 
 ////////////////////////////////////////////////////////////
 //  Basic type definitions
@@ -694,7 +695,7 @@ fn no_or(f:&BVExpr) {
         println!("************************************");
         println!("WARNING: Failed to fully simplify!");
         //println!("Dafny version: {}", f_egg.mk_string(&StrMode::Dafny, false));
-        print_dafny(&f);
+        //print_dafny(&f);
         println!("************************************\n");
     } else {
         println!("Success: Fully simplified!\n");
@@ -1226,23 +1227,81 @@ fn egg_test() {
     println!("Cost: {}", best_cost);
 }
 
-fn egg_simp(s: String, rules: &[Rewrite<BoolLanguage, ()>]) -> egg::RecExpr<BoolLanguage> {
+fn rec_expr_to_bool_expr(e:egg::RecExpr<BoolLanguage>) -> BoolExpr {
+    let nodes = e.as_ref();
+    let enode = &nodes[nodes.len() - 1];
+    bool_lang_to_expr(nodes, &enode)
+}
+
+fn egg_simp_robust(s: String, rules: &[Rewrite<BoolLanguage, ()>]) -> egg::RecExpr<BoolLanguage> {
     let start = s.parse().unwrap();
-    let runner = Runner::default().with_expr(&start).run(rules);
-    //let mut extractor = Extractor::new(&runner.egraph, AstSize);
-    let mut extractor = Extractor::new(&runner.egraph, NonCarryCountFn);
-    let (_best_cost, best_expr) = extractor.find_best(runner.roots[0]);
-    best_expr
+    let mut runner = Runner::default().with_expr(&start).run(rules);
+    let mut prev_best = u64::MAX;
+    loop {
+        let mut extractor = Extractor::new(&runner.egraph, NonCarryCountFn);
+        let (best_cost, best_expr) = extractor.find_best(runner.roots[0]);
+        use egg::StopReason::*;
+        match runner.stop_reason {
+            None => unreachable!(),     // Should only reach this if runner hasn't terminated
+            Some(Saturated) => { println!("Saturated!"); return best_expr },
+            Some(r) => {
+                println!("Saturation stopped early due to {:?}.  Best cost: {} ", r, best_cost);
+                if best_cost < prev_best {
+                    prev_best = best_cost;
+
+                    // Try to simplify the improved expression with the same settings
+                    let start = best_expr.to_string().parse().unwrap();
+                    runner = Runner::default().with_expr(&start).run(rules);
+                } else {
+                    // We didn't actually improve.  Try with larger limits
+                    match r {
+                        Saturated => unreachable!(), // Excluded above
+                        IterationLimit(l) => 
+                            runner = Runner::default().with_iter_limit(l * 2).with_expr(&start).run(rules),
+                        NodeLimit(l) => 
+                            runner = Runner::default().with_node_limit(l * 2).with_expr(&start).run(rules),
+                        TimeLimit(l) => 
+                            runner = Runner::default().with_time_limit(Duration::new(l as u64 * 2,0)).with_expr(&start).run(rules),
+                        Other(s) => {
+                            println!("Failed because of {}", s);
+                            panic!();
+                        }
+                    }
+                }
+            },
+        }
+
+    }
+
+    
+}
+
+
+fn egg_simp(s: String, rules: &[Rewrite<BoolLanguage, ()>]) -> egg::RecExpr<BoolLanguage> {
+    egg_simp_robust(s, rules)
+//    let start = s.parse().unwrap();
+//    let runner = Runner::default().with_expr(&start).run(rules);
+//    //let mut extractor = Extractor::new(&runner.egraph, AstSize);
+//    let mut extractor = Extractor::new(&runner.egraph, NonCarryCountFn);
+//    let (best_cost, best_expr) = extractor.find_best(runner.roots[0]);
+//    match runner.stop_reason {
+//        None => unreachable!(),     // Should only reach this if runner hasn't terminated
+//        //Some(r) => println!("Simplifier stopped due to {:?}", r),
+//        Some(egg::StopReason::Saturated) => { println!("Saturated!"); return best_expr },
+//        Some(r) => {
+//            println!("Saturation stopped early due to {:?}.  Best cost: {} ", r, best_cost);
+//            if keep_trying {
+//                return egg_simp(best_expr.to_string(), rules, keep_trying)
+//            } else {
+//                return best_expr
+//            }
+//        },
+//    }
 }
 
 fn egg_simp_to_bool_expr(s: String, rules: &[Rewrite<BoolLanguage, ()>]) -> BoolExpr {
-    let start = s.parse().unwrap();
-    let runner = Runner::default().with_expr(&start).run(rules);
-    let mut extractor = Extractor::new(&runner.egraph, AstSize);
-    let (_best_cost, best_expr) = extractor.find_best(runner.roots[0]);
-    let nodes = best_expr.as_ref();
-    let enode = &nodes[nodes.len() - 1];
-    bool_lang_to_expr(nodes, &enode)
+    let best_expr = egg_simp_robust(s, rules);
+    rec_expr_to_bool_expr(best_expr)
 }
 
 ////////////////////////////////////////////////////////////
@@ -1267,9 +1326,9 @@ fn main() {
 //    no_or_test();
 
 //    println!("\n\nBigger no-or test:");
-//    larger_no_or_test();
+    larger_no_or_test();
 
-    small_rules3_test();
+//    small_rules3_test();
 
     //println!("Done!");
 }
