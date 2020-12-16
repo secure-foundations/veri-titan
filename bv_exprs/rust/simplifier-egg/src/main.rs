@@ -876,8 +876,27 @@ fn simple_example() {
 fn small_rules3_test() {
     let rules = egg_rules_no_or_3();
     //let f = "(^ x (^ (^ y (^ (^ (~ (^ (^ z (^ x carry_1)) (^ (^ y (^ (^ (~ z) (^ false carry_2)) carry_3)) carry_4))) (^ false carry_5)) carry_6)) carry_7))";
-    let f = "(^ x (^ (^ y (^ (^ (~ (^ x c1)) (^ (~ y) c2)) c3)) c4))";
-    println!("Simp: {}", egg_simp(f.to_string(), &rules));
+    //let f = "(^ x (^ (^ y (^ (^ (~ (^ (^ z (^ x carry_1)) (^ (^ y (^ (^ (~ z) carry_2) carry_3)) carry_4))) carry_5) carry_6)) carry_7))";
+    let f = "(^ x (^ y (^ (~ (^ (^ z (^ x carry_1)) (^ (^ y (^ (^ (~ z) carry_2) carry_3)) carry_4))) carry_5) ) ))";
+    // That f produces:
+    let g = "(~ (^ (^ (^ z (^ x carry_1)) (^ (^ (^ (~ z) carry_2) carry_3) carry_4)) (^ x carry_5)))";
+    //let f = "(^ x (^ (^ y (^ (^ (~ (^ x c1)) (^ (~ y) c2)) c3)) c4))";
+    println!("Simp {} \n  to: {}", f, egg_simp(f.to_string(), &rules));
+    println!("Simp {} \n  to: {}", g, egg_simp(g.to_string(), &rules));
+
+    let correct = "(~ (^ carry_2 (^ carry_3 (^ carry_4 (~ (^ carry_1 carry_5))))))";
+
+
+    //let e:RecExpr<BoolLanguage> = "(^ carry_1 x)".parse().unwrap();
+    let e:RecExpr<BoolLanguage> = f.parse().unwrap();
+    println!("{}", AstSize.cost_rec(&e));
+    println!("{}\n", NonCarryCountFn.cost_rec(&e));
+    let e = g.parse().unwrap();
+    println!("{}", AstSize.cost_rec(&e));
+    println!("{}\n", NonCarryCountFn.cost_rec(&e));
+    let e = correct.parse().unwrap();
+    println!("{}", AstSize.cost_rec(&e));
+    println!("{}\n", NonCarryCountFn.cost_rec(&e));
 }
 
 ////////////////////////////////////////////////////////////
@@ -1114,6 +1133,35 @@ fn egg_rules() -> Vec<egg::Rewrite<BoolLanguage, ()>> {
     rules
 }
 
+struct NonCarryCountFn;
+impl CostFunction<BoolLanguage> for NonCarryCountFn {
+    type Cost = u64;
+    fn cost<C>(&mut self, enode: &BoolLanguage, mut costs: C) -> Self::Cost
+    where
+        C: FnMut(Id) -> Self::Cost
+    {
+        use BoolLanguage::*;
+        let cost = match enode {
+//            True => 1,
+//            False => 1,
+//            Not(c) => 1 + enode.fold(1, |sum, id| sum + costs(id)),
+//            Xor([c0, c1]) => BinExpr(
+//            ),
+//            And([c0, c1]) => BinExpr(
+//            ),
+//            Or([c0, c1]) => BinExpr(
+//            ),
+            Symbol(s) => 
+                match &s.to_string().find("carry") {
+                    None => 100,
+                    Some(_) => 1
+                },
+            _ => 1
+        };
+        enode.fold(cost, |sum, id| sum + costs(id))
+    }
+}
+
 fn egg_test() {
     let rules: &[Rewrite<SymbolLang, ()>] = &[
 //        //    rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
@@ -1181,7 +1229,8 @@ fn egg_test() {
 fn egg_simp(s: String, rules: &[Rewrite<BoolLanguage, ()>]) -> egg::RecExpr<BoolLanguage> {
     let start = s.parse().unwrap();
     let runner = Runner::default().with_expr(&start).run(rules);
-    let mut extractor = Extractor::new(&runner.egraph, AstSize);
+    //let mut extractor = Extractor::new(&runner.egraph, AstSize);
+    let mut extractor = Extractor::new(&runner.egraph, NonCarryCountFn);
     let (_best_cost, best_expr) = extractor.find_best(runner.roots[0]);
     best_expr
 }
