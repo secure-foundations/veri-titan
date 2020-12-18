@@ -179,12 +179,10 @@ impl BoolExpr_ {
         use BoolExpr_::*;
         match self {
             Const(_) => false,
-            Var(name, _) => {
-                match &name.find("carry") {
-                    None => true,
-                    Some(_) => false,
-                }
-            }
+            Var(name, _) => match &name.find("carry") {
+                None => true,
+                Some(_) => false,
+            },
             UniExpr(_, src) => src.has_non_carry_vars(),
             BinExpr(_, src0, src1) => {
                 let src0 = src0.has_non_carry_vars();
@@ -216,10 +214,10 @@ impl BoolExpr_ {
             }
         }
     }
-    
+
     fn remove_xor(&self) -> BoolExpr {
-        use BoolExpr_::*;
         use BoolBinOp::*;
+        use BoolExpr_::*;
         use BoolUniOp::*;
         match self {
             Const(_) | Var(_, _) => self.clone().into(),
@@ -229,19 +227,20 @@ impl BoolExpr_ {
                 let src1 = src1.remove_xor();
                 match op {
                     And | Or => BinExpr(*op, src0, src1).into(),
-                    Xor => BinExpr(And, 
-                                   BinExpr(Or, src0.clone(), src1.clone()).into(),
-                                   BinExpr(Or, 
-                                           UniExpr(Not, src0).into(), 
-                                           UniExpr(Not, src1).into()).into()).into()
+                    Xor => BinExpr(
+                        And,
+                        BinExpr(Or, src0.clone(), src1.clone()).into(),
+                        BinExpr(Or, UniExpr(Not, src0).into(), UniExpr(Not, src1).into()).into(),
+                    )
+                    .into(),
                 }
             }
         }
     }
 
     fn remove_or(&self) -> BoolExpr {
-        use BoolExpr_::*;
         use BoolBinOp::*;
+        use BoolExpr_::*;
         use BoolUniOp::*;
         match self {
             Const(_) | Var(_, _) => self.clone().into(),
@@ -251,15 +250,20 @@ impl BoolExpr_ {
                 let src1 = src1.remove_or();
                 match op {
                     And | Xor => BinExpr(*op, src0, src1).into(),
-                    Or => UniExpr(Not,
-                            BinExpr(And, 
-                              UniExpr(Not, src0.clone()).into(),
-                              UniExpr(Not, src1.clone()).into()).into()).into()
+                    Or => UniExpr(
+                        Not,
+                        BinExpr(
+                            And,
+                            UniExpr(Not, src0.clone()).into(),
+                            UniExpr(Not, src1.clone()).into(),
+                        )
+                        .into(),
+                    )
+                    .into(),
                 }
             }
         }
     }
-
 
     //fn subst_vars(e: Boolexpr, map:&HashMap<Boolexpr, Boolexpr>) -> Boolexpr {
     //    use Boolexpr::*;
@@ -552,11 +556,7 @@ fn addsub_0() -> BVExpr {
 
     // a + 0 - a == 0
     let x: BVExpr = Var("x".to_owned()).into();
-    BinExpr(
-        Add,
-        x.clone(),
-        BinExpr(Sub, Const(0).into(), x).into()
-    ).into()
+    BinExpr(Add, x.clone(), BinExpr(Sub, Const(0).into(), x).into()).into()
 }
 
 fn identity2x2() -> BVExpr {
@@ -586,7 +586,17 @@ fn identity3x2() -> BVExpr {
     BinExpr(
         Add,
         x.clone(),
-        BinExpr(Sub, y.clone(), BinExpr(Add, BinExpr(Add, z.clone(), x).into(), BinExpr(Sub, y, z).into()).into()).into()
+        BinExpr(
+            Sub,
+            y.clone(),
+            BinExpr(
+                Add,
+                BinExpr(Add, z.clone(), x).into(),
+                BinExpr(Sub, y, z).into(),
+            )
+            .into(),
+        )
+        .into(),
     )
     .into()
 }
@@ -601,15 +611,17 @@ fn and_neg_self() -> BVExpr {
     BinExpr(And, x.clone(), UniExpr(BVUniOp::Neg, x).into()).into()
 }
 
-fn get_tests() -> Vec<(String,BVExpr)> {
-    vec![("identity".to_string(),     identity()),
-         ("xor_self".to_string(),     xor_self()),
-         ("identity2".to_string(),    identity2()),
-         ("addsub_1043".to_string(),  addsub_1043()),
-         ("addsub_0".to_string(),     addsub_0()),
-         ("identity2x2".to_string(),  identity2x2()),
-         ("identity3x2".to_string(),  identity3x2()),
-         ("and_neg_self".to_string(), and_neg_self())]
+fn get_tests() -> Vec<(String, BVExpr)> {
+    vec![
+        ("identity".to_string(), identity()),
+        ("xor_self".to_string(), xor_self()),
+        ("identity2".to_string(), identity2()),
+        ("addsub_1043".to_string(), addsub_1043()),
+        ("addsub_0".to_string(), addsub_0()),
+        ("identity2x2".to_string(), identity2x2()),
+        ("identity3x2".to_string(), identity3x2()),
+        ("and_neg_self".to_string(), and_neg_self()),
+    ]
 }
 
 ////////////////////////////////////////////////////////////
@@ -652,8 +664,7 @@ fn test() {
     }
 }
 
-
-fn no_xor(f:BVExpr) {
+fn no_xor(f: BVExpr) {
     let f = f.simp();
     let mut namer = Namer::new();
     let f_generic_bit = f.get_main_bit_expr(&mut namer, false);
@@ -671,19 +682,22 @@ fn no_xor_test() {
     no_xor(f);
     let f = xor_self();
     no_xor(f);
-//    let f = identity2();
-//    no_xor(f);
-//    let f = addsub_1043();
-//    no_xor(f);
+    //    let f = identity2();
+    //    no_xor(f);
+    //    let f = addsub_1043();
+    //    no_xor(f);
 }
 
-
-fn no_or(f:&BVExpr) {
+fn no_or(f: &BVExpr) {
     let f = f.simp();
     let mut namer = Namer::new();
     let f_generic_bit = f.get_main_bit_expr(&mut namer, false);
     let f_no_or = f_generic_bit.remove_or();
-    println!("Generic bit: {}\nNo or bit: {}", f_generic_bit, f_no_or.mk_string(&StrMode::Prefix, true));
+    println!(
+        "Generic bit: {}\nNo or bit: {}",
+        f_generic_bit,
+        f_no_or.mk_string(&StrMode::Prefix, true)
+    );
 
     // Find the recurrsion relation
     //let rules = egg_rules_no_or();
@@ -720,7 +734,7 @@ fn larger_no_or_test() {
     }
 }
 
-fn print_dafny(f:&BVExpr) {
+fn print_dafny(f: &BVExpr) {
     // Define xor
     println!(
         "
@@ -873,23 +887,22 @@ fn simple_example() {
     */
 }
 
-
 fn small_rules3_test() {
     let rules = egg_rules_no_or_3();
     //let f = "(^ x (^ (^ y (^ (^ (~ (^ (^ z (^ x carry_1)) (^ (^ y (^ (^ (~ z) (^ false carry_2)) carry_3)) carry_4))) (^ false carry_5)) carry_6)) carry_7))";
     //let f = "(^ x (^ (^ y (^ (^ (~ (^ (^ z (^ x carry_1)) (^ (^ y (^ (^ (~ z) carry_2) carry_3)) carry_4))) carry_5) carry_6)) carry_7))";
     let f = "(^ x (^ y (^ (~ (^ (^ z (^ x carry_1)) (^ (^ y (^ (^ (~ z) carry_2) carry_3)) carry_4))) carry_5) ) ))";
     // That f produces:
-    let g = "(~ (^ (^ (^ z (^ x carry_1)) (^ (^ (^ (~ z) carry_2) carry_3) carry_4)) (^ x carry_5)))";
+    let g =
+        "(~ (^ (^ (^ z (^ x carry_1)) (^ (^ (^ (~ z) carry_2) carry_3) carry_4)) (^ x carry_5)))";
     //let f = "(^ x (^ (^ y (^ (^ (~ (^ x c1)) (^ (~ y) c2)) c3)) c4))";
     println!("Simp {} \n  to: {}", f, egg_simp(f.to_string(), &rules));
     println!("Simp {} \n  to: {}", g, egg_simp(g.to_string(), &rules));
 
     let correct = "(~ (^ carry_2 (^ carry_3 (^ carry_4 (~ (^ carry_1 carry_5))))))";
 
-
     //let e:RecExpr<BoolLanguage> = "(^ carry_1 x)".parse().unwrap();
-    let e:RecExpr<BoolLanguage> = f.parse().unwrap();
+    let e: RecExpr<BoolLanguage> = f.parse().unwrap();
     println!("{}", AstSize.cost_rec(&e));
     println!("{}\n", NonCarryCountFn.cost_rec(&e));
     let e = g.parse().unwrap();
@@ -957,32 +970,24 @@ fn egg_rules_no_xor() -> Vec<egg::Rewrite<BoolLanguage, ()>> {
     let rules: Vec<Rewrite<BoolLanguage, ()>> = vec![
         rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
         rw!("commute-or";  "(| ?x ?y)" => "(| ?y ?x)"),
-
         rw!("dist-or-and-left-1"; "(| ?x (& ?y ?z))" => "(& (| ?x ?y) (| ?x ?z))"),
         rw!("dist-or-and-left-2"; "(& (| ?x ?y) (| ?x ?z))" => "(| ?x (& ?y ?z))"),
-//        rw!("dist-or-and-right-1"; "(| (& ?y ?z) ?x)" => "(& (| ?y ?x) (| ?z ?x))"),
-//        rw!("dist-or-and-right-2"; "(& (| ?y ?x) (| ?z ?x))" => "(| (& ?y ?z) ?x)"),
-
+        //        rw!("dist-or-and-right-1"; "(| (& ?y ?z) ?x)" => "(& (| ?y ?x) (| ?z ?x))"),
+        //        rw!("dist-or-and-right-2"; "(& (| ?y ?x) (| ?z ?x))" => "(| (& ?y ?z) ?x)"),
         rw!("dist-and-or-left-1"; "(& ?x (| ?y ?z))" => "(| (& ?x ?y) (& ?x ?z))"),
         rw!("dist-and-or-left-2"; "(| (& ?x ?y) (& ?x ?z))" => "(& ?x (| ?y ?z))"),
-//        rw!("dist-and-or-right-1"; "(& (| ?y ?z) ?x)" => "(| (& ?y ?x) (& ?z ?x))"),
-//        rw!("dist-and-or-right-2"; "(| (& ?y ?x) (& ?z ?x))" => "(& (| ?y ?z) ?x)"),
-
+        //        rw!("dist-and-or-right-1"; "(& (| ?y ?z) ?x)" => "(| (& ?y ?x) (& ?z ?x))"),
+        //        rw!("dist-and-or-right-2"; "(| (& ?y ?x) (& ?z ?x))" => "(& (| ?y ?z) ?x)"),
         rw!("assoc-and-1"; "(& ?x (& ?y ?z))" => "(& (& ?x ?y) ?z)"),
         rw!("assoc-and-2"; "(& (& ?x ?y) ?z)" => "(& ?x (& ?y ?z))"),
-
         rw!("assoc-or-1"; "(| ?x (| ?y ?z))" => "(| (| ?x ?y) ?z)"),
         rw!("assoc-or-2"; "(| (| ?x ?y) ?z)" => "(| ?x (| ?y ?z))"),
-
         rw!("demorgan-and-1"; "(~ (& ?x ?y))" => "(| (~ ?x) (~ ?y))"),
         rw!("demorgan-and-2"; "(| (~ ?x) (~ ?y))" => "(~ (& ?x ?y))"),
-
         rw!("demorgan-or-1"; "(~ (| ?x ?y))" => "(& (~ ?x) (~ ?y))"),
         rw!("demorgan-or-2"; "(& (~ ?x) (~ ?y))" => "(~ (| ?x ?y))"),
-
         rw!("absorbtion-and"; "(& ?x (| ?x ?y))" => "?x"),
         rw!("absorbtion-or"; "(| ?x (& ?x ?y))" => "?x"),
-
         rw!("and-false"; "(& ?x false)" => "false"),
         rw!("and-true"; "(& ?x true)" => "?x"),
         rw!("and-self"; "(& ?x ?x)" => "?x"),
@@ -992,9 +997,8 @@ fn egg_rules_no_xor() -> Vec<egg::Rewrite<BoolLanguage, ()>> {
         rw!("or-self";  "(| ?x ?x)" => "?x"),
         rw!("or-self-neg";  "(| ?x (~ ?x))" => "true"),
         rw!("neg-dbl"; "(~ (~ ?x))" => "?x"),
-//        rw!("neg-true"; "(~ true)" => "false"),
-//        rw!("neg-false"; "(~ false)" => "true"),
-
+        //        rw!("neg-true"; "(~ true)" => "false"),
+        //        rw!("neg-false"; "(~ false)" => "true"),
     ];
     rules
 }
@@ -1004,23 +1008,17 @@ fn egg_rules_no_or() -> Vec<egg::Rewrite<BoolLanguage, ()>> {
     let rules: Vec<Rewrite<BoolLanguage, ()>> = vec![
         // AC equations
         rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
-
         rw!("assoc-and-1"; "(& ?x (& ?y ?z))" => "(& (& ?x ?y) ?z)"),
         rw!("assoc-and-2"; "(& (& ?x ?y) ?z)" => "(& ?x (& ?y ?z))"),
-
         rw!("commute-xor"; "(^ ?x ?y)" => "(^ ?y ?x)"),
-
         rw!("assoc-xor-1"; "(^ ?x (^ ?y ?z))" => "(^ (^ ?x ?y) ?z)"),
         rw!("assoc-xor-2"; "(^ (^ ?x ?y) ?z)" => "(^ ?x (^ ?y ?z))"),
-
         // BA rewrite rules
         rw!("and-true"; "(& ?x true)" => "?x"),
         rw!("and-false"; "(& ?x false)" => "false"),
         rw!("and-self"; "(& ?x ?x)" => "?x"),
-
         rw!("xor-false"; "(^ ?x false)" => "?x"),
         rw!("xor-self";   "(^ ?x ?x)" => "false"),
-
         rw!("dist-and-xor"; "(& (^ ?x ?y) ?z))" => "(^ (& ?x ?z) (& ?y ?z))"),
     ];
     rules
@@ -1032,18 +1030,16 @@ fn egg_rules_no_or_2() -> Vec<egg::Rewrite<BoolLanguage, ()>> {
         // Commutativity
         rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
         rw!("commute-xor"; "(^ ?x ?y)" => "(^ ?y ?x)"), // Not mentioned, but seems important
-
         // Term rewrites
-        rw!("not-to-xor"; "(~ ?x)" => "(^ ?x true)"),   // R4
-        rw!("xor-false"; "(^ ?x false)" => "?x"),       // R5
-        rw!("xor-self";   "(^ ?x ?x)" => "false"),      // R6  // Note: The text introduces this as an equation, rather than a rewrite
-        rw!("and-true"; "(& ?x true)" => "?x"),         // R7
-        rw!("and-self"; "(& ?x ?x)" => "?x"),           // R8
-        rw!("and-false"; "(& ?x false)" => "false"),    // R9
-        rw!("dist-and-xor"; "(& ?x (^ ?y ?z))" => "(^ (& ?x ?y) (& ?x ?z))"),   // R10
+        rw!("not-to-xor"; "(~ ?x)" => "(^ ?x true)"), // R4
+        rw!("xor-false"; "(^ ?x false)" => "?x"),     // R5
+        rw!("xor-self";   "(^ ?x ?x)" => "false"), // R6  // Note: The text introduces this as an equation, rather than a rewrite
+        rw!("and-true"; "(& ?x true)" => "?x"),    // R7
+        rw!("and-self"; "(& ?x ?x)" => "?x"),      // R8
+        rw!("and-false"; "(& ?x false)" => "false"), // R9
+        rw!("dist-and-xor"; "(& ?x (^ ?y ?z))" => "(^ (& ?x ?y) (& ?x ?z))"), // R10
 
-        // What about associativity of xor/and with itself?
-
+                                                   // What about associativity of xor/and with itself?
     ];
     rules
 }
@@ -1054,25 +1050,21 @@ fn egg_rules_no_or_3() -> Vec<egg::Rewrite<BoolLanguage, ()>> {
         // Commutativity
         rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
         rw!("commute-xor"; "(^ ?x ?y)" => "(^ ?y ?x)"), // Not mentioned, but implied by "axioms of ring theory"?
-
         // Term rewrites
-        rw!("not-to-xor"; "(~ ?x)" => "(^ ?x true)"),   // R4
-        rw!("xor-to-not"; "(^ ?x true)" => "(~ ?x)"),   // This seems more compact...  Just a matter of taste?
-
-        rw!("xor-false"; "(^ ?x false)" => "?x"),       // R5  // False is the "additive" identity
-        rw!("xor-self";   "(^ ?x ?x)" => "false"),      // R6  // Each element is its own "additive" in inverse.  Note: The text introduces this as an equation, rather than a rewrite
-        rw!("and-true"; "(& ?x true)" => "?x"),         // R7  // True is the multiplicative identity
-        rw!("and-self"; "(& ?x ?x)" => "?x"),           // R8
-        rw!("and-false"; "(& ?x false)" => "false"),    // R9
-
-        rw!("dist-and-xor-1"; "(& ?x (^ ?y ?z))" => "(^ (& ?x ?y) (& ?x ?z))"),   // R10 (aka left distributivity)
-        rw!("dist-and-xor-2"; "(^ (& ?x ?y) (& ?x ?z))" => "(& ?x (^ ?y ?z))"),   // Turn R10 into an equation
+        rw!("not-to-xor"; "(~ ?x)" => "(^ ?x true)"), // R4
+        rw!("xor-to-not"; "(^ ?x true)" => "(~ ?x)"), // This seems more compact...  Just a matter of taste?
+        rw!("xor-false"; "(^ ?x false)" => "?x"),     // R5  // False is the "additive" identity
+        rw!("xor-self";   "(^ ?x ?x)" => "false"), // R6  // Each element is its own "additive" in inverse.  Note: The text introduces this as an equation, rather than a rewrite
+        rw!("and-true"; "(& ?x true)" => "?x"),    // R7  // True is the multiplicative identity
+        rw!("and-self"; "(& ?x ?x)" => "?x"),      // R8
+        rw!("and-false"; "(& ?x false)" => "false"), // R9
+        rw!("dist-and-xor-1"; "(& ?x (^ ?y ?z))" => "(^ (& ?x ?y) (& ?x ?z))"), // R10 (aka left distributivity)
+        rw!("dist-and-xor-2"; "(^ (& ?x ?y) (& ?x ?z))" => "(& ?x (^ ?y ?z))"), // Turn R10 into an equation
         // No need for right distributivity, since it's implied by commutativity of &
 
-        // associativity 
+        // associativity
         rw!("assoc-and-1"; "(& ?x (& ?y ?z))" => "(& (& ?x ?y) ?z)"),
         rw!("assoc-and-2"; "(& (& ?x ?y) ?z)" => "(& ?x (& ?y ?z))"),
-
         rw!("assoc-xor-1"; "(^ ?x (^ ?y ?z))" => "(^ (^ ?x ?y) ?z)"),
         rw!("assoc-xor-2"; "(^ (^ ?x ?y) ?z)" => "(^ ?x (^ ?y ?z))"),
     ];
@@ -1083,40 +1075,28 @@ fn egg_rules() -> Vec<egg::Rewrite<BoolLanguage, ()>> {
     let rules: Vec<Rewrite<BoolLanguage, ()>> = vec![
         rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
         rw!("commute-or";  "(| ?x ?y)" => "(| ?y ?x)"),
-
         rw!("xor-def";     "(^ ?x ?y)" => "(& (| ?x ?y) (| (~ ?x) (~ ?y)))"),
         rw!("xor-def-rev"; "(& (| ?x ?y) (| (~ ?x) (~ ?y)))" => "(^ ?x ?y)"),
-
         rw!("dist-or-and-1"; "(| ?x (& ?y ?z))" => "(& (| ?x ?y) (| ?x ?z))"),
         rw!("dist-or-and-2"; "(& (| ?x ?y) (| ?x ?z))" => "(| ?x (& ?y ?z))"),
-
         rw!("dist-and-or-1"; "(& ?x (| ?y ?z))" => "(| (& ?x ?y) (& ?x ?z))"),
         rw!("dist-and-or-2"; "(| (& ?x ?y) (& ?x ?z))" => "(& ?x (| ?y ?z))"),
-
         rw!("dist-xor-or-1"; "(^ ?x (| ?y ?z))" => "(| (& (~ ?x) (| ?y ?z)) (& ?x (& (~ ?y) (~ ?z))))"),
         rw!("dist-xor-or-2"; "(| (& (~ ?x) (| ?y ?z)) (& ?x (& (~ ?y) (~ ?z))))" => "(^ ?x (| ?y ?z))"),
-
         rw!("dist-and-xor-1"; "(& ?x (^ ?y ?z))" => "(^ (& ?x ?y) (& ?x ?z))"),
         rw!("dist-and-xor-2"; "(^ (& ?x ?y) (& ?x ?z))" => "(& ?x (^ ?y ?z))"),
-
         rw!("dist-xor-and-1"; "(^ ?x (& ?y ?z))" => "(| (& (~ ?x) (& ?y ?z)) (& ?x (~ (& ?y ?z))))"),
         rw!("dist-xor-and-2"; "(^ ?x (| ?y ?z))" => "(| (& (~ ?x) (| ?y ?z)) (& ?x (~ (| ?y ?z))))"),
-
         rw!("assoc-xor-1"; "(^ ?x (^ ?y ?z))" => "(^ (^ ?x ?y) ?z)"),
         rw!("assoc-xor-2"; "(^ (^ ?x ?y) ?z)" => "(^ ?x (^ ?y ?z))"),
-
         rw!("assoc-and-1"; "(& ?x (& ?y ?z))" => "(& (& ?x ?y) ?z)"),
         rw!("assoc-and-2"; "(& (& ?x ?y) ?z)" => "(& ?x (& ?y ?z))"),
-
         rw!("assoc-or-1"; "(| ?x (| ?y ?z))" => "(| (| ?x ?y) ?z)"),
         rw!("assoc-or-2"; "(| (| ?x ?y) ?z)" => "(| ?x (| ?y ?z))"),
-
         rw!("demorgan-and-1"; "(~ (& ?x ?y))" => "(| (~ ?x) (~ ?y))"),
         rw!("demorgan-and-2"; "(| (~ ?x) (~ ?y))" => "(~ (& ?x ?y))"),
-
         rw!("demorgan-or-1"; "(~ (| ?x ?y))" => "(& (~ ?x) (~ ?y))"),
         rw!("demorgan-or-2"; "(& (~ ?x) (~ ?y))" => "(~ (| ?x ?y))"),
-
         rw!("and-false"; "(& ?x false)" => "false"),
         rw!("and-true"; "(& ?x true)" => "?x"),
         rw!("and-self"; "(& ?x ?x)" => "?x"),
@@ -1139,25 +1119,24 @@ impl CostFunction<BoolLanguage> for NonCarryCountFn {
     type Cost = u64;
     fn cost<C>(&mut self, enode: &BoolLanguage, mut costs: C) -> Self::Cost
     where
-        C: FnMut(Id) -> Self::Cost
+        C: FnMut(Id) -> Self::Cost,
     {
         use BoolLanguage::*;
         let cost = match enode {
-//            True => 1,
-//            False => 1,
-//            Not(c) => 1 + enode.fold(1, |sum, id| sum + costs(id)),
-//            Xor([c0, c1]) => BinExpr(
-//            ),
-//            And([c0, c1]) => BinExpr(
-//            ),
-//            Or([c0, c1]) => BinExpr(
-//            ),
-            Symbol(s) => 
-                match &s.to_string().find("carry") {
-                    None => 100,
-                    Some(_) => 1
-                },
-            _ => 1
+            //            True => 1,
+            //            False => 1,
+            //            Not(c) => 1 + enode.fold(1, |sum, id| sum + costs(id)),
+            //            Xor([c0, c1]) => BinExpr(
+            //            ),
+            //            And([c0, c1]) => BinExpr(
+            //            ),
+            //            Or([c0, c1]) => BinExpr(
+            //            ),
+            Symbol(s) => match &s.to_string().find("carry") {
+                None => 100,
+                Some(_) => 1,
+            },
+            _ => 1,
         };
         enode.fold(cost, |sum, id| sum + costs(id))
     }
@@ -1165,36 +1144,36 @@ impl CostFunction<BoolLanguage> for NonCarryCountFn {
 
 fn egg_test() {
     let rules: &[Rewrite<SymbolLang, ()>] = &[
-//        //    rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
-//        //    rw!("commute-or";  "(| ?x ?y)" => "(| ?y ?x)"),
-//        rw!("commute-xor"; "(^ ?x ?y)" => "(^ ?y ?x)"),
-//        //    rw!("xor";         "(^ ?x ?y)" => "(& (| ?x ?y) (| (~ x) (~ y)))"),
-//
-//        //    rw!("dist-or-and"; "(| ?x (& ?y ?z))" => "(& (| ?x ?y) (| ?x ?z))"),
-//        //    rw!("dist-and-or"; "(& ?x (| ?y ?z))" => "(| (& ?x ?y) (& ?x ?z))"),
-//        //    rw!("dist-xor-or"; "(^ ?x (| ?y ?z))" => "(| (& (~ ?x) (| ?y ?z)) (& ?x (& (~ y) (~ z))))"),
-//        //    rw!("dist-and-xor"; "(& ?x (^ ?y ?z))"=> "(^ (& ?x ?y) (& ?x ?z))"),
-//        rw!("assoc-xor"; "(^ ?x (^ ?y ?z))"=> "(^ (^ ?x ?y) ?z)"),
-//        //
-//        //
-//        //    rw!("demorgan"; "(~ (^ ?x ?y))" => "(| (~ ?y) (~ ?x))"),
-//        //
-//        //    rw!("and-false"; "(& ?x false)" => "false"),
-//        //    rw!("and-true"; "(& ?x true)" => "?x"),
-//        //    rw!("and-self"; "(& ?x ?x)" => "?x"),
-//        //    rw!("and-self-neg"; "(& ?x (~ ?x))" => "false"),
-//        //
-//        //    rw!("or-false";  "(| ?x false)" => "?x"),
-//        //    rw!("or-true";  "(| ?x true)" => "true"),
-//        //    rw!("or-self";  "(| ?x ?x)" => "?x"),
-//        //    rw!("or-self-neg";  "(| ?x (~ ?x))" => "true"),
-//        rw!("xor-false"; "(^ ?x false)" => "?x"),
+        //        //    rw!("commute-and"; "(& ?x ?y)" => "(& ?y ?x)"),
+        //        //    rw!("commute-or";  "(| ?x ?y)" => "(| ?y ?x)"),
+        //        rw!("commute-xor"; "(^ ?x ?y)" => "(^ ?y ?x)"),
+        //        //    rw!("xor";         "(^ ?x ?y)" => "(& (| ?x ?y) (| (~ x) (~ y)))"),
+        //
+        //        //    rw!("dist-or-and"; "(| ?x (& ?y ?z))" => "(& (| ?x ?y) (| ?x ?z))"),
+        //        //    rw!("dist-and-or"; "(& ?x (| ?y ?z))" => "(| (& ?x ?y) (& ?x ?z))"),
+        //        //    rw!("dist-xor-or"; "(^ ?x (| ?y ?z))" => "(| (& (~ ?x) (| ?y ?z)) (& ?x (& (~ y) (~ z))))"),
+        //        //    rw!("dist-and-xor"; "(& ?x (^ ?y ?z))"=> "(^ (& ?x ?y) (& ?x ?z))"),
+        //        rw!("assoc-xor"; "(^ ?x (^ ?y ?z))"=> "(^ (^ ?x ?y) ?z)"),
+        //        //
+        //        //
+        //        //    rw!("demorgan"; "(~ (^ ?x ?y))" => "(| (~ ?y) (~ ?x))"),
+        //        //
+        //        //    rw!("and-false"; "(& ?x false)" => "false"),
+        //        //    rw!("and-true"; "(& ?x true)" => "?x"),
+        //        //    rw!("and-self"; "(& ?x ?x)" => "?x"),
+        //        //    rw!("and-self-neg"; "(& ?x (~ ?x))" => "false"),
+        //        //
+        //        //    rw!("or-false";  "(| ?x false)" => "?x"),
+        //        //    rw!("or-true";  "(| ?x true)" => "true"),
+        //        //    rw!("or-self";  "(| ?x ?x)" => "?x"),
+        //        //    rw!("or-self-neg";  "(| ?x (~ ?x))" => "true"),
+        //        rw!("xor-false"; "(^ ?x false)" => "?x"),
         rw!("xor-true"; "(^ ?x true)" => "(~ ?x)"),
-//        rw!("xor-self";   "(^ ?x ?x)" => "false"),
+        //        rw!("xor-self";   "(^ ?x ?x)" => "false"),
         rw!("xor-self-neg"; "(^ ?x (~ ?x))" => "true"),
-//        rw!("neg-dbl"; "(~ (~ ?x))" => "?x"),
+        //        rw!("neg-dbl"; "(~ (~ ?x))" => "?x"),
         rw!("assoc-xor1"; "(^ ?x (^ ?y ?z))"=> "(^ (^ ?x ?y) ?z)"),
-//        rw!("assoc-xor2"; "(^ (^ ?x ?y) ?z)"=> "(^ ?x (^ ?y ?z))"),
+        //        rw!("assoc-xor2"; "(^ (^ ?x ?y) ?z)"=> "(^ ?x (^ ?y ?z))"),
         //rw!("neg-dbl"; "(~ (~ ?x))" => "?x"),
     ];
 
@@ -1203,9 +1182,7 @@ fn egg_test() {
     // We can make our own Language later to work with other types.
     //let start = "(| true (& true true))".parse().unwrap();
     //let start = "(^ x (^ (^ (~ x) (^ false carry_3)) carry_5))"
-    let start = "(^ (^ a b) (~ b))"
-        .parse()
-        .unwrap();
+    let start = "(^ (^ a b) (~ b))".parse().unwrap();
 
     // That's it! We can run equality saturation now.
     let runner = Runner::default().with_expr(&start).run(rules);
@@ -1227,7 +1204,7 @@ fn egg_test() {
     println!("Cost: {}", best_cost);
 }
 
-fn rec_expr_to_bool_expr(e:egg::RecExpr<BoolLanguage>) -> BoolExpr {
+fn rec_expr_to_bool_expr(e: egg::RecExpr<BoolLanguage>) -> BoolExpr {
     let nodes = e.as_ref();
     let enode = &nodes[nodes.len() - 1];
     bool_lang_to_expr(nodes, &enode)
@@ -1242,10 +1219,16 @@ fn egg_simp_robust(s: String, rules: &[Rewrite<BoolLanguage, ()>]) -> egg::RecEx
         let (best_cost, best_expr) = extractor.find_best(runner.roots[0]);
         use egg::StopReason::*;
         match runner.stop_reason {
-            None => unreachable!(),     // Should only reach this if runner hasn't terminated
-            Some(Saturated) => { println!("Saturated!"); return best_expr },
+            None => unreachable!(), // Should only reach this if runner hasn't terminated
+            Some(Saturated) => {
+                println!("Saturated!");
+                return best_expr;
+            }
             Some(r) => {
-                println!("Saturation stopped early due to {:?}.  Best cost: {} ", r, best_cost);
+                println!(
+                    "Saturation stopped early due to {:?}.  Best cost: {} ",
+                    r, best_cost
+                );
                 if best_cost < prev_best {
                     prev_best = best_cost;
 
@@ -1256,47 +1239,55 @@ fn egg_simp_robust(s: String, rules: &[Rewrite<BoolLanguage, ()>]) -> egg::RecEx
                     // We didn't actually improve.  Try with larger limits
                     match r {
                         Saturated => unreachable!(), // Excluded above
-                        IterationLimit(l) => 
-                            runner = Runner::default().with_iter_limit(l * 2).with_expr(&start).run(rules),
-                        NodeLimit(l) => 
-                            runner = Runner::default().with_node_limit(l * 2).with_expr(&start).run(rules),
-                        TimeLimit(l) => 
-                            runner = Runner::default().with_time_limit(Duration::new(l as u64 * 2,0)).with_expr(&start).run(rules),
+                        IterationLimit(l) => {
+                            runner = Runner::default()
+                                .with_iter_limit(l * 2)
+                                .with_expr(&start)
+                                .run(rules)
+                        }
+                        NodeLimit(l) => {
+                            runner = Runner::default()
+                                .with_node_limit(l * 2)
+                                .with_expr(&start)
+                                .run(rules)
+                        }
+                        TimeLimit(l) => {
+                            runner = Runner::default()
+                                .with_time_limit(Duration::new(l as u64 * 2, 0))
+                                .with_expr(&start)
+                                .run(rules)
+                        }
                         Other(s) => {
                             println!("Failed because of {}", s);
                             panic!();
                         }
                     }
                 }
-            },
+            }
         }
-
     }
-
-    
 }
-
 
 fn egg_simp(s: String, rules: &[Rewrite<BoolLanguage, ()>]) -> egg::RecExpr<BoolLanguage> {
     egg_simp_robust(s, rules)
-//    let start = s.parse().unwrap();
-//    let runner = Runner::default().with_expr(&start).run(rules);
-//    //let mut extractor = Extractor::new(&runner.egraph, AstSize);
-//    let mut extractor = Extractor::new(&runner.egraph, NonCarryCountFn);
-//    let (best_cost, best_expr) = extractor.find_best(runner.roots[0]);
-//    match runner.stop_reason {
-//        None => unreachable!(),     // Should only reach this if runner hasn't terminated
-//        //Some(r) => println!("Simplifier stopped due to {:?}", r),
-//        Some(egg::StopReason::Saturated) => { println!("Saturated!"); return best_expr },
-//        Some(r) => {
-//            println!("Saturation stopped early due to {:?}.  Best cost: {} ", r, best_cost);
-//            if keep_trying {
-//                return egg_simp(best_expr.to_string(), rules, keep_trying)
-//            } else {
-//                return best_expr
-//            }
-//        },
-//    }
+    //    let start = s.parse().unwrap();
+    //    let runner = Runner::default().with_expr(&start).run(rules);
+    //    //let mut extractor = Extractor::new(&runner.egraph, AstSize);
+    //    let mut extractor = Extractor::new(&runner.egraph, NonCarryCountFn);
+    //    let (best_cost, best_expr) = extractor.find_best(runner.roots[0]);
+    //    match runner.stop_reason {
+    //        None => unreachable!(),     // Should only reach this if runner hasn't terminated
+    //        //Some(r) => println!("Simplifier stopped due to {:?}", r),
+    //        Some(egg::StopReason::Saturated) => { println!("Saturated!"); return best_expr },
+    //        Some(r) => {
+    //            println!("Saturation stopped early due to {:?}.  Best cost: {} ", r, best_cost);
+    //            if keep_trying {
+    //                return egg_simp(best_expr.to_string(), rules, keep_trying)
+    //            } else {
+    //                return best_expr
+    //            }
+    //        },
+    //    }
 }
 
 fn egg_simp_to_bool_expr(s: String, rules: &[Rewrite<BoolLanguage, ()>]) -> BoolExpr {
@@ -1318,17 +1309,17 @@ fn main() {
     //println!("\n\n");
     //print_dafny();
     //egg_test();
-    
+
     //println!("\nNo xor test:");
     //no_xor_test();
-    
-//    println!("\n\nNo or test:");
-//    no_or_test();
 
-//    println!("\n\nBigger no-or test:");
+    //    println!("\n\nNo or test:");
+    //    no_or_test();
+
+    //    println!("\n\nBigger no-or test:");
     larger_no_or_test();
 
-//    small_rules3_test();
+    //    small_rules3_test();
 
     //println!("Done!");
 }
