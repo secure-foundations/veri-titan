@@ -256,6 +256,14 @@ function update_fg(b:bool, f:Flags, fg:FlagsGroup) : Flags { if b then f.(fg1 :=
 
 function cf(flags_group:FlagsGroup) : bool { flags_group.cf }
 
+function bn_add_carray(a: uint256, b: uint256, carry_in: bool) : (uint256, FlagsGroup)
+{
+    var sum :int := a + b + if carry_in then 1 else 0;
+    // FIXME: get MSB and LSM
+    var fg := FlagsGroup(sum >= BASE_256, false, false, sum == 0);
+    (sum % BASE_256, fg)
+}
+
 function bn_add(x: uint256, y: uint256, st: bool, sb: uint32) : (uint256, FlagsGroup)
     requires sb < 32;
 {
@@ -316,14 +324,6 @@ function bn_subm(x: uint256, y: uint256, wmod: uint256) : uint256
     assume false;
     var result := (x as bv256 - y as bv256) as uint256;
     if result >= wmod then (result as bv256 - wmod as bv256) as uint256 else result
-}
-
-function bn_add_carray(a: uint256, b: uint256, carry_in: bool) : (uint256, FlagsGroup)
-{
-    var sum :int := a + b + if carry_in then 1 else 0;
-    // FIXME: get MSB and LSM
-    var fg := FlagsGroup(sum >= BASE_256, false, false, sum == 0);
-    (sum % BASE_256, fg)
 }
 
 function bn_mulqacc(

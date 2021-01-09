@@ -72,6 +72,11 @@ function bn_mulqacc(zero: bool, a:uint256, qa:uint32, b:uint256, qb:uint32, shif
 function uint256_hwb(x: uint256, v: uint128, lower: bool):uint256 extern;
 function uint256_qmul(x: uint256, qx: uint2, y: uint256, qy:uint2): uint128 extern;
 
+function uint256_mul(x: uint256, y: uint256): uint256 extern;
+function uint256_and(x: uint256, y: uint256): uint256 extern;
+function uint256_or(x: uint256, y: uint256): uint256 extern;
+function uint256_add(x: uint256, y: uint256): uint256 extern;
+
 function uint256_ls(x: uint256, num_bytes:int): uint256 extern;
 function uint256_rs(x: uint256, num_bytes:int): uint256 extern;
 

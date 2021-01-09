@@ -50,22 +50,32 @@ module ops {
 	function method {:opaque} uint32_se(x:uint32, size:int):uint32
 		requires 0 <= size < 32;
 
-	function {:opaque} uint256_xor(x: uint256, y: uint256): uint256
+	function method uint256_mul(x: uint256, y: uint256): uint256
+	{
+		(x * y) % BASE_256
+	}
+
+	function method uint256_add(x: uint256, y: uint256): uint256
+	{
+		(x + y) % BASE_256
+	}
+
+	function method {:opaque} uint256_xor(x: uint256, y: uint256): uint256
 	{
 		(x as bv256 ^ y as bv256) as uint256
 	}
 
-	function {:opaque} uint256_or(x: uint256, y: uint256): uint256
+	function method {:opaque} uint256_or(x: uint256, y: uint256): uint256
 	{
 		(x as bv256 | y as bv256) as uint256
 	}
 	
-	function {:opaque} uint256_and(x: uint256, y: uint256): uint256
+	function method {:opaque} uint256_and(x: uint256, y: uint256): uint256
 	{
 		(x as bv256 | y as bv256) as uint256
 	}
 
-	function {:opaque} uint256_ls(x: uint256, num_bytes:int): (r: uint256)
+	function method {:opaque} uint256_ls(x: uint256, num_bytes:int): (r: uint256)
 		requires 0 <= num_bytes < 32;
 		ensures (num_bytes == 0) ==> r == x;
 		ensures (num_bytes == 8 && x < BASE_192) ==> (r == x * BASE_64);
@@ -74,7 +84,7 @@ module ops {
 		(x as bv256 << (num_bytes * 8)) as uint256
 	}
 
-	function {:opaque} uint256_rs(x: uint256, num_bytes:int): uint256
+	function method {:opaque} uint256_rs(x: uint256, num_bytes:int): uint256
 		requires 0 <= num_bytes < 32;
 		ensures uint256_rs(x, 0) == x;
 	{
@@ -82,7 +92,7 @@ module ops {
 		(x as bv256 >> (num_bytes * 8)) as uint256
 	}
 
-	function uint256_sb(b:uint256, st: bool, sb: uint32) : uint256
+	function method uint256_sb(b:uint256, st: bool, sb: uint32) : uint256
 		requires sb < 32;
 	{	
 		if sb == 0 then b
@@ -90,29 +100,29 @@ module ops {
 		else uint256_rs(b, sb)
 	}
 
-	function {:opaque} uint256_lh(x: uint256): uint128
+	function method {:opaque} uint256_lh(x: uint256): uint128
 	{
 		x % BASE_128
 	}
 
-	function {:opaque} uint256_uh(x: uint256): uint128
+	function method {:opaque} uint256_uh(x: uint256): uint128
 	{
 		x / BASE_128
 	}
 
-	function {:opaque} uint256_hwb(x: uint256, v: uint128, lower: bool): (x': uint256)
+	function method {:opaque} uint256_hwb(x: uint256, v: uint128, lower: bool): (x': uint256)
 		// overwrites the lower half, keeps the higher half
 		ensures lower ==> (uint256_lh(x') == v && uint256_uh(x') == uint256_uh(x));
 		// overwrites the higher half, keeps the lower half
 		ensures !lower ==> (uint256_uh(x') == v && uint256_lh(x') == uint256_lh(x));
 
-	function {:opaque} uint256_qmul(x: uint256, qx: uint2, y: uint256, qy:uint2): uint128
+	function method {:opaque} uint256_qmul(x: uint256, qx: uint2, y: uint256, qy:uint2): uint128
 	{
 		assume false; // TODO: add a bound proof
 		uint256_qsel(x, qx) * uint256_qsel(y, qy)
 	}
 
-	function {:opaque} uint256_qsel(x: uint256, qx: uint2): uint64
+	function method {:opaque} uint256_qsel(x: uint256, qx: uint2): uint64
 	{
 		if qx == 0 then
 			x % BASE_64
