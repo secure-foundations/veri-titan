@@ -14,7 +14,7 @@ module CutomBitVector {
 
     type cbv768 = t: cbv | |t| == 768
 
-    function to_nat(v: cbv) : nat
+    function {:opaque} to_nat(v: cbv) : nat
     {
         to_nat_aux(v, |v|)
     }
@@ -393,11 +393,11 @@ module CutomBitVector {
         assert to_nat(v') == to_nat(v);
     }
 
-    function method {:opaque} add(v1: cbv, v2: cbv) : (cbv, uint1)
+    function method {:opaque} add(v1: cbv, v2: cbv, cin: uint1) : (cbv, uint1)
         requires |v1| == |v2|;
         ensures
-            var (v3, c) := add(v1, v2);
-            var sum := to_nat(v1) + to_nat(v2);
+            var (v3, c) := add(v1, v2, cin);
+            var sum := to_nat(v1) + to_nat(v2) + cin;
         |v3| == |v1| && to_nat(v3) == sum % pow2(|v1|) && c == sum / pow2(|v1|);
     {
         assume false;
