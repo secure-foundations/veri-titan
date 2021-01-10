@@ -13,6 +13,7 @@ import opened bignum_def
 // type nat:Type(0) := int_range(0, _);
 type state:Type(0) {:primitive} extern;
 
+type uint1:Type(0) := int_range(0, 1);
 type uint2:Type(0) := int_range(0, 3);
 type uint32:Type(0) := int_range(0, 0xffff_ffff);
 type uint128:Type(0) := int_range(0, 0xffffffffffffffffffffffffffffffff);
@@ -42,12 +43,15 @@ function operator([ := ]) #[a:Type(0)](s:seq(a), i:int, v:a):seq(a) extern; // T
 function operator([]) #[a:Type(0), b:Type(0)](m:map(a, b), key:a):b extern; // TODO: requires clause
 function operator([ := ]) #[a:Type(0), b:Type(0)](m:map(a, b), key:a, v:b):map(a, b) extern;
 
+function fst #[a:Type(0), b:Type(0)](m:tuple(a, b)):a extern;
+function snd #[a:Type(0), b:Type(0)](m:tuple(a, b)):b extern;
+
 function uint32_xor(x:uint32, y:uint32):uint32 extern;
 function uint32_or(x:uint32, y:uint32):uint32 extern;
 function uint32_and(x:uint32, y:uint32):uint32 extern;
 function uint32_not(x:uint32):uint32 extern;
-function uint32_ls(x:uint32, amount:uint32):uint32 extern; // TODO: requires clause
-// function shr32(x:uint32, amount:uint32):uint32 extern; // TODO: requires clause
+function uint32_ls(x:uint32, amount:uint32):uint32 extern; 
+// function shr32(x:uint32, amount:uint32):uint32 extern;
 function uint32_se(x:uint32, size:int):uint32 extern;
 
 function bn_xor(a:uint256, b:uint256, st: bool, sb: uint32):uint256 extern;
@@ -87,9 +91,6 @@ function get_flags_group(fg:bool, flags:Flags):flagGroup extern;
 function get_flag(fg:bool, flag:int, flags:Flags):bool extern;
 function update_fg(b:bool, f:Flags, fg:flagGroup):Flags extern;
 function cf(flags_group:flagGroup):bool extern;
-
-function fst(t:tuple(uint256, flagGroup)):uint256 extern;
-function snd(t:tuple(uint256, flagGroup)):flagGroup extern;
 
 var ok:bool {:state ok()};
 var xmem:Xmem {:state xmem()};

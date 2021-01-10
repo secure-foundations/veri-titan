@@ -89,12 +89,8 @@ function va_update_flags(sM:va_state, sK:va_state): va_state
     sK.(flags := sM.flags)
 }
 
-function fst(t:(uint256, FlagsGroup)) : uint256
-{
-    t.0
-}
-
-function snd(t:(uint256, FlagsGroup)) : FlagsGroup { t.1 }
+function fst<T,Q>(t:(T, Q)) : T { t.0 }
+function snd<T,Q>(t:(T, Q)) : Q { t.1 }
 
 // function va_update_lstack(sM:va_state, sK:va_state):va_state { sK.(lstack := sM.lstack) }
 
