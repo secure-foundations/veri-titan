@@ -32,6 +32,11 @@ function va_get_reg256(r:Reg256, s:va_state): uint256
     s.wregs[r]
 }
 
+function get_carray_flag(flags: Flags) : uint1
+{
+    if flags.fg0.cf then 1 else 0
+}
+
 function va_get_flags(s:va_state):Flags
 {
     s.flags
