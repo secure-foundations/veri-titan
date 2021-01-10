@@ -1,0 +1,43 @@
+include "../code/decls.vad"
+
+#verbatim
+include "../code/vale.dfy"
+
+include "../spec/def.dfy"
+include "../spec/ops.dfy"
+include "../spec/types.dfy"
+
+include "../gen/decls.dfy"
+
+include "BitVector.dfy"
+
+import opened bignum_vale
+import opened bignum_def
+import opened ops
+import opened types
+
+import opened bignum_decls
+import opened CutomBitVector
+
+#endverbatim
+
+type cbv:Type(0) extern;
+
+procedure add_256(ghost a: cbv)
+    reads
+        w1; w2;
+    modifies
+        w3; flags;
+{
+    BN_ADD(w3, w2, w1, false, 0, false);
+}
+
+procedure add_512()
+    reads
+        w1; w2; w3; w4;
+    modifies
+        w5; w6; flags;
+{
+    BN_ADD(w5, w3, w1, false, 0, false);
+    BN_ADDC(w6, w4, w2, false, 0, false);
+}

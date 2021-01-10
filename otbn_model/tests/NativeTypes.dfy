@@ -12,6 +12,9 @@ module NativeTypes {
  	newtype{:nativeType "int"} nat32 = i:int | 0 <= i < 0x80000000
  	newtype{:nativeType "long"} nat64 = i:int | 0 <= i < 0x8000000000000000
   
+ 	type uint1 = i: int | 0 <= i < 2
+	type uint2 = i: int | 0 <= i < 4
+
  	const UINT64_MAX :uint64 := 0xffffffffffffffff;
  	const UINT32_MAX :uint32 := 0xffffffff;
  	const UINT16_MAX :uint16 := 0xffff;
