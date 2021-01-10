@@ -395,7 +395,9 @@ module CutomBitVector {
 
     function method add(v1: cbv, v2: cbv) : (v3: cbv)
         requires |v1| == |v2|;
+        ensures |v3| == |v1| &&  to_nat(v3) == (to_nat(v1) + to_nat(v2)) % pow2(|v1|);
     {
+        assume false;
         add_aux(v1, v2, 0)
     }
 
@@ -408,6 +410,11 @@ module CutomBitVector {
         var b2 := v2[0];
         var s : int := b1 as int + b2 as int;
         [s % 2] + add_aux(v1[1..], v2[1..], s / 2)
+    }
+
+    predicate equal_uint256(bv: cbv, v: uint256)
+    {
+        |bv| == 256 && to_nat(bv) == v
     }
 
     method cbv_test()

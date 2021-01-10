@@ -18,18 +18,30 @@ import opened types
 
 import opened bignum_decls
 import opened CutomBitVector
+import opened powers
 
 #endverbatim
 
 type cbv:Type(0) extern;
 
-procedure add_256(ghost a: cbv)
+function equal_uint256(bv: cbv, v: uint256): bool extern;
+function add(v1: cbv, v2: cbv) : (v3: cbv) extern;
+function pow2(e: int) : (r : int) extern;
+const BASE_256: int extern;
+
+procedure add_256(ghost a: cbv, ghost b: cbv)
+    requires
+        equal_uint256(a, w1);
+        equal_uint256(b, w2);
     reads
         w1; w2;
     modifies
         w3; flags;
 {
     BN_ADD(w3, w2, w1, false, 0, false);
+    ghost var c := add(a, b);
+    assume pow2(256) == BASE_256;
+    assert equal_uint256(c, w3);
 }
 
 procedure add_512()
