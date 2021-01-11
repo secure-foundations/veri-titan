@@ -260,7 +260,7 @@ function bn_add_carray(a: uint256, b: uint256, carry_in: bool) : (uint256, Flags
 {
     var sum :int := a + b + if carry_in then 1 else 0;
     // FIXME: get MSB and LSM
-    var fg := FlagsGroup(sum >= BASE_256, false, false, sum == 0);
+    var fg := FlagsGroup(sum / BASE_256 != 0, false, false, sum == 0);
     (sum % BASE_256, fg)
 }
 

@@ -89,13 +89,21 @@ procedure add_512_2(ghost v1: cbv, ghost v2: cbv)
     modifies
         w5; w6; flags;
 {
-    BN_ADD(w5, w3, w1, false, 0, false);
-    BN_ADDC(w6, w4, w2, false, 0, false);
     assume pow2(256) == BASE_256;
     assume pow2(512) == BASE_256 * BASE_256;
 
+    BN_ADD(w5, w3, w1, false, 0, false);
+    ghost var c := get_carray_flag(flags);
+    assert w5 == mod(w3 + w1, BASE_256);
+    assert w5 + c * BASE_256 == w3 + w1;
+
+    BN_ADDC(w6, w4, w2, false, 0, false);
+    // assert w6 == mod(w3 + w1, BASE_256);
+
     assert to_nat(v1) == w1 + BASE_256 * w2;
     assert to_nat(v2) == w3 + BASE_256 * w4;
+
+    // assert w6 == mod(w4 + w2, BASE_256);
 
     ghost var rst := add(v1, v2, 0);
     ghost var v3 := fst(rst);
