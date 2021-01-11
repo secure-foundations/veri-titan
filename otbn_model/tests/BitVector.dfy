@@ -5,6 +5,12 @@ module CutomBitVector {
     import opened NativeTypes
     import opened powers
 
+    function mod(p: int, n: int) : (r : int)
+        requires n != 0
+    {
+        p % n
+    }
+
     // lsb .. msb
     type cbv = t: seq<uint1> | 0 < |t| <= UINT32_MAX witness [1]
 
