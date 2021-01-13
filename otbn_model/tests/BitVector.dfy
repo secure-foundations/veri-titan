@@ -431,10 +431,20 @@ module CutomBitVector {
         |bv| == 512 && to_nat(bv) == v1 + v2 * BASE_256
     }
 
-    // predicate equal_uint256_seq(bv: cbv, vs: seq<uint256>)
-    // {
-    //     (|bv| == 256 * vs) && to_nat(bv) == 
-    // }
+    predicate equal_uint768(bv: cbv, v1: uint256, v2: uint256, v3: uint256)
+    {
+        |bv| == 768 && to_nat(bv) == v1 + v2 * BASE_256 + v3 * BASE_256 * BASE_256
+    }
+
+    function eval_bignum_seq(vs: seq<uint256>): nat
+    {
+        if |vs| == 0 then 0 else vs[0] + eval_bignum_seq(vs[1..]) * BASE_256
+    }
+
+    predicate equal_uint256_seq(bv: cbv, vs: seq<uint256>)
+    {
+        (|bv| == 256 * |vs|) && to_nat(bv) == eval_bignum_seq(vs) 
+    }
 
     method cbv_test()
     {

@@ -26,6 +26,9 @@ type cbv:Type(0) extern;
 
 function equal_uint256(bv: cbv, v: uint256): bool extern;
 function equal_uint512(bv: cbv, v1: uint256, v2: uint256): bool extern;
+function equal_uint768(bv: cbv, v1: uint256, v2: uint256, v3: uint256): bool extern;
+
+function equal_uint256_seq(bv: cbv, vs: seq(uint256)): bool extern;
 function get_carray_flag(fg: Flags): uint1 extern;
 function add(v1: cbv, v2: cbv, cin: uint1) : tuple(cbv, uint1) extern;
 function pow2(e: int) : (r : int) extern;
@@ -42,17 +45,18 @@ procedure add_256(ghost v1: cbv, ghost v2: cbv)
     modifies
         w3; flags;
 {
+    assume pow2(256) == BASE_256;
+
     BN_ADD(w3, w2, w1, false, 0, false);
     ghost var rst := add(v1, v2, 0);
     ghost var v3 := fst(rst);
     ghost var c := snd(rst);
 
-    assume pow2(256) == BASE_256;
     assert c == get_carray_flag(flags);
     assert equal_uint256(v3, w3);
 }
 
-procedure add_512(ghost v1: cbv, ghost v2: cbv, ghost v3: cbv, ghost v4: cbv)
+procedure add_512_1(ghost v1: cbv, ghost v2: cbv, ghost v3: cbv, ghost v4: cbv)
     requires
         equal_uint256(v1, w1);
         equal_uint256(v2, w2);
@@ -90,7 +94,7 @@ procedure add_512_2(ghost v1: cbv, ghost v2: cbv)
         w5; w6; flags;
 {
     assume pow2(256) == BASE_256;
-    // assume pow2(512) == BASE_256 * BASE_256;
+    assume pow2(512) == BASE_256 * BASE_256;
 
     BN_ADD(w5, w3, w1, false, 0, false);
     ghost var c1 := get_carray_flag(flags);
@@ -122,9 +126,80 @@ procedure add_512_2(ghost v1: cbv, ghost v2: cbv)
         mod(w5 + w6 * BASE_256 + c2 * BASE_256 * BASE_256, pow2(512));
         == { assume false; }
         mod(w5 + w6 * BASE_256, pow2(512));
-        == { assume false; }
+        ==
         w5 + w6 * BASE_256;
     }
 
     assert equal_uint512(v3, w5, w6);
+}
+
+// procedure add_512_3(ghost v1: cbv, ghost v2: cbv)
+//     requires
+//         equal_uint256_seq(v1, seq(w1, w2));
+//         equal_uint256_seq(v2, seq(w3, w4));
+//     reads
+//         w1; w2; w3; w4;
+//     modifies
+//         w5; w6; flags;
+// {
+// }
+
+procedure add_768(ghost v1: cbv, ghost v2: cbv)
+    requires
+        equal_uint768(v1, w1, w2, w3);
+        equal_uint768(v2, w4, w5, w6);
+    reads
+        w1; w2; w3; w4; w5; w6;
+    modifies
+        w7; w8; w9; flags;
+{
+    assume pow2(256) == BASE_256;
+    assume pow2(512) == BASE_256 * BASE_256;
+    assume pow2(768) == BASE_256 * BASE_256 * BASE_256;
+
+    BN_ADD(w7, w4, w1, false, 0, false);
+    ghost var c1 := get_carray_flag(flags);
+
+    BN_ADDC(w8, w5, w2, false, 0, false);
+    ghost var c2 := get_carray_flag(flags);
+    assert w8 + c2 * BASE_256 == w5 + w2 + c1;
+
+    BN_ADDC(w9, w6, w3, false, 0, false);
+    ghost var c3 := get_carray_flag(flags);
+    assert w9 + c3 * BASE_256 == w6 + w3 + c2;
+
+    ghost var rst := add(v1, v2, 0);
+    ghost var v3 := fst(rst);
+
+    assert to_nat(v1) == w1 + w2 * BASE_256 + w3 * BASE_256 * BASE_256;
+    assert to_nat(v2) == w4 + w5 * BASE_256 + w6 * BASE_256 * BASE_256;
+
+    calc == {
+        to_nat(v1) + to_nat(v2);
+        ==
+        w1 + w2 * BASE_256 + w3 * BASE_256 * BASE_256 +
+        w4 + w5 * BASE_256 + w6 * BASE_256 * BASE_256;
+        == { assert w7 + c1 * BASE_256 == w4 + w1; }
+        w7 + c1 * BASE_256 + w2 * BASE_256 + w3 * BASE_256 * BASE_256 +
+        w5 * BASE_256 + w6 * BASE_256 * BASE_256;    
+        == { assert w8 + c2 * BASE_256 == w5 + w2 + c1; }
+        w7 + w8 * BASE_256 + c2 * BASE_256 * BASE_256 + w3 * BASE_256 * BASE_256 +
+        w6 * BASE_256 * BASE_256;
+        == { assert w9 + c3 * BASE_256 == w6 + w3 + c2; }
+        w7 + w8 * BASE_256 + w9 * BASE_256 * BASE_256 + c3 * BASE_256 * BASE_256 * BASE_256;
+    }
+
+    calc == {
+        to_nat(v3);
+        ==
+        mod(to_nat(v1) + to_nat(v2), pow2(768));
+        == { assert to_nat(v1) + to_nat(v2) == w7 + w8 * BASE_256 + w9 * BASE_256 * BASE_256 + c3 * BASE_256 * BASE_256 * BASE_256; }
+        mod(w7 + w8 * BASE_256 + w9 * BASE_256 * BASE_256 + c3 * BASE_256 * BASE_256 * BASE_256, pow2(768));
+        == { assume false; }
+        mod(w7 + w8 * BASE_256 + w9 * BASE_256 * BASE_256, pow2(768));
+        ==
+        w7 + w8 * BASE_256 + w9 * BASE_256 * BASE_256;
+    }
+
+    assert equal_uint768(v3, w7, w8, w9);
 }
