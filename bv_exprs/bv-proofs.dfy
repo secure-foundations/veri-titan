@@ -173,7 +173,7 @@ function TruncateStore(s:store, w:nat, t:nat) : (s':store)
 
 lemma ValidityImplication(e:CmpExpr, m:nat, n:nat)
     requires e.op.Neq?
-    requires n > m
+    requires m < n
     requires ValidCmpExprWidth(e, m)
     ensures  ValidCmpExprWidth(e, n)
 {
