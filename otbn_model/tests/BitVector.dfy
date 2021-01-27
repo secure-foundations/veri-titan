@@ -248,6 +248,7 @@ module CutomBitVector {
         requires l != 0;
         decreases l;
         ensures |v| == l;
+        ensures to_nat(v) == 0;
     {
         if l == 1 then [0]
         else zero(l - 1) + [0]
@@ -285,11 +286,11 @@ module CutomBitVector {
         v[amt..]
     }
 
-    lemma {:induction amt} rshift_is_div_lemma(v: cbv, v1: cbv, amt: uint32)
+    lemma {:induction amt} rshift_is_div_lemma(v: cbv, amt: uint32, v': cbv)
         decreases amt;
         requires amt < |v|;
-        requires v1 == rshift(v, amt);
-        ensures to_nat(v1) == to_nat(v) / pow2(amt);
+        requires v' == rshift(v, amt);
+        ensures to_nat(v') == to_nat(v) / pow2(amt);
     {
         if amt == 0 {
             reveal power();
@@ -309,23 +310,23 @@ module CutomBitVector {
                 }
                 to_nat(v) / pow2(amt-1) == v2[0] + 2 * to_nat(v2[1..]);
                 {
-                    assert to_nat(v1) == to_nat(v2[1..]);
+                    assert to_nat(v') == to_nat(v2[1..]);
                 }
-                to_nat(v) / pow2(amt-1) == v2[0] + 2 * to_nat(v1);
-                to_nat(v) / pow2(amt-1) / 2 == to_nat(v1);
+                to_nat(v) / pow2(amt-1) == v2[0] + 2 * to_nat(v');
+                to_nat(v) / pow2(amt-1) / 2 == to_nat(v');
                 {
                     assume to_nat(v) / pow2(amt-1) / 2 == to_nat(v) / (pow2(amt-1) * 2); 
                 }
-                to_nat(v) / (pow2(amt-1) * 2) == to_nat(v1);
+                to_nat(v) / (pow2(amt-1) * 2) == to_nat(v');
                 {
                     assert pow2(amt-1) * 2 == pow2(amt) by {
                         reveal power();
                     }
                 }
-                to_nat(v) / pow2(amt) == to_nat(v1);
+                to_nat(v) / pow2(amt) == to_nat(v');
             }
 
-            assert to_nat(v) / pow2(amt) == to_nat(v1);
+            assert to_nat(v) / pow2(amt) == to_nat(v');
         }
     }
 
@@ -370,15 +371,14 @@ module CutomBitVector {
         v' := v[lo..hi];
     }
 
-    method bvzero_extend(v: cbv, l': uint32) returns (v': cbv)
+    function method zext(v: cbv, l': uint32) : (v': cbv)
         requires l' > |v|;
         ensures |v'| == l';
         ensures to_nat(v') == to_nat(v);
     {
         var l := |v|;
         var z := zero(l' - l);
-        v' := v + z;
-
+        var v' := v + z;
         calc == {
             to_nat(v');
             {
@@ -397,6 +397,8 @@ module CutomBitVector {
             to_nat(v);
         }
         assert to_nat(v') == to_nat(v);
+
+        v'
     }
 
     function method {:opaque} add(v1: cbv, v2: cbv, cin: uint1) : (cbv, uint1)
