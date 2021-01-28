@@ -89,7 +89,23 @@ module barret384 {
         requires b != 0;
         ensures (a / b) * b <= a;
     {
-        
+    }
+
+    lemma trivial6(a: int, b: int, c: int)
+        requires b != 0;
+        ensures (a - b * c) / b == a / b - c;
+    {
+        var left := (a - b * c) / b;
+        var right := a / b - c;
+
+        var q1 := a / b;
+        var r1 := a % b;
+
+        var q2 := left;
+        var r2 := (a - b * c) % b;
+
+        assume r2 == r1;
+        assert left == right;
     }
 
     /*
@@ -160,47 +176,82 @@ module barret384 {
 
         assert to_nat(q2'''') + cout2 * pow2(385) == to_nat(q2''') + to_nat(t);
 
-        calc <= {
-            to_nat(q2'''') * pow2(384) + cout1 * pow2(769) + cout2 * pow2(769);
-            {
-                assume pow2(385) * pow2(384) == pow2(769);
-                assume false;
-            }
-            (to_nat(q2'''') + cout1 * pow2(385) + cout2 * pow2(385)) * pow2(384);
-            calc == {
-                to_nat(q2'''') + cout1 * pow2(385) + cout2 * pow2(385);
-                to_nat(q2'') + to_nat(q1) + to_nat(t);
-                to_nat(q2') / pow2(384) + to_nat(q1') + pow2(384) * xmsb + to_nat(t);
-                to_nat(q2') / pow2(384) + to_nat(q1) + to_nat(t);
-                (to_nat(q1') * to_nat(u)) / pow2(384) + to_nat(q1) + to_nat(t);
-            }
-            ((to_nat(q1') * to_nat(u)) / pow2(384) + to_nat(q1) + to_nat(t)) * pow2(384);
-            (to_nat(q1') * to_nat(u)) / pow2(384) * pow2(384) + to_nat(q1) * pow2(384) + to_nat(t) * pow2(384);
-            {
-                trivial5((to_nat(q1') * to_nat(u)), pow2(384));
-            }
-            to_nat(q1') * to_nat(u) + to_nat(q1) * pow2(384) + to_nat(t) * pow2(384);
-            (to_nat(q1) - pow2(384) * xmsb) * to_nat(u) + to_nat(q1) * pow2(384) + to_nat(t) * pow2(384);
-            to_nat(q1) * to_nat(u) - pow2(384) * xmsb * to_nat(u) + to_nat(q1) * pow2(384) + to_nat(t) * pow2(384);
-            {
-                assert if xmsb == 1 then to_nat(t) == to_nat(u) else to_nat(t) == 0;
-            }
-            to_nat(q1) * to_nat(u) - pow2(384) * xmsb * to_nat(u) + to_nat(q1) * pow2(384) + if xmsb == 1 then to_nat(u) * pow2(384) else 0;
-            to_nat(q1) * to_nat(u) + to_nat(q1) * pow2(384);
-            to_nat(x) / pow2(383) * (to_nat(u) + pow2(384));
-            to_nat(x) / pow2(383) * (pow2(768) / gm);
-            (to_nat(a) * to_nat(b)) / pow2(383) * (pow2(768) / gm);
-            {
-                assert to_nat(a) <= gm - 1;
-                assert to_nat(b) <= gm - 1;
-                assume false;
-            }
-            ((gm - 1) * (gm - 1)) / pow2(383) * (pow2(768) / gm);
+        assume cout1 == 0 && cout2 == 0;
+
+        ghost var q2 := to_nat(q1) * uf;
+
+        calc == {
+            to_nat(q2'''');
+            to_nat(q2'') + to_nat(q1) + to_nat(t);
+            to_nat(q2') / pow2(384) + to_nat(q1) + to_nat(t);
+            (to_nat(q1') * to_nat(u)) / pow2(384) + to_nat(q1) + to_nat(t);
+            ((to_nat(q1) - pow2(384) * xmsb) * to_nat(u)) / pow2(384) + to_nat(q1) + to_nat(t);
+            ((to_nat(q1) - pow2(384) * xmsb) * to_nat(u)) / pow2(384) + to_nat(q1) + to_nat(t);
             {
                 assume false;
             }
-            pow2(769);
+            (to_nat(q1) * to_nat(u) - pow2(384) * xmsb * to_nat(u)) / pow2(384) + to_nat(q1) + to_nat(t);
+            {
+                trivial6(to_nat(q1) * to_nat(u), pow2(384), xmsb * to_nat(u));
+                assert (to_nat(q1) * to_nat(u) - pow2(384) * xmsb * to_nat(u)) / pow2(384) == 
+                    (to_nat(q1) * to_nat(u)) / pow2(384) - xmsb * to_nat(u);
+            }
+            (to_nat(q1) * to_nat(u)) / pow2(384) - xmsb * to_nat(u) + to_nat(q1) + to_nat(t);
+            (to_nat(q1) * to_nat(u)) / pow2(384) - xmsb * to_nat(u) + to_nat(q1) + if xmsb == 1 then to_nat(u) else 0;
+            (to_nat(q1) * to_nat(u)) / pow2(384) + to_nat(q1);
+            {
+                assume false;
+            }
+            (to_nat(q1) * to_nat(u) + to_nat(q1) * pow2(384)) / pow2(384);
+            {
+                assume false;
+            }
+            (to_nat(q1) * (to_nat(u) + pow2(384))) / pow2(384);
+            (to_nat(q1) * uf) / pow2(384);
+            q2 / pow2(384);
         }
+
+        // calc <= {
+        //     to_nat(q2'''') * pow2(384) + cout1 * pow2(769) + cout2 * pow2(769);
+        //     {
+        //         assume pow2(385) * pow2(384) == pow2(769);
+        //         assume false;
+        //     }
+        //     (to_nat(q2'''') + cout1 * pow2(385) + cout2 * pow2(385)) * pow2(384);
+        //     calc == {
+        //         to_nat(q2'''') + cout1 * pow2(385) + cout2 * pow2(385);
+        //         to_nat(q2'') + to_nat(q1) + to_nat(t);
+        //         to_nat(q2') / pow2(384) + to_nat(q1') + pow2(384) * xmsb + to_nat(t);
+        //         to_nat(q2') / pow2(384) + to_nat(q1) + to_nat(t);
+        //         (to_nat(q1') * to_nat(u)) / pow2(384) + to_nat(q1) + to_nat(t);
+        //     }
+        //     ((to_nat(q1') * to_nat(u)) / pow2(384) + to_nat(q1) + to_nat(t)) * pow2(384);
+        //     (to_nat(q1') * to_nat(u)) / pow2(384) * pow2(384) + to_nat(q1) * pow2(384) + to_nat(t) * pow2(384);
+        //     {
+        //         trivial5((to_nat(q1') * to_nat(u)), pow2(384));
+        //     }
+        //     to_nat(q1') * to_nat(u) + to_nat(q1) * pow2(384) + to_nat(t) * pow2(384);
+        //     (to_nat(q1) - pow2(384) * xmsb) * to_nat(u) + to_nat(q1) * pow2(384) + to_nat(t) * pow2(384);
+        //     to_nat(q1) * to_nat(u) - pow2(384) * xmsb * to_nat(u) + to_nat(q1) * pow2(384) + to_nat(t) * pow2(384);
+        //     {
+        //         assert if xmsb == 1 then to_nat(t) == to_nat(u) else to_nat(t) == 0;
+        //     }
+        //     to_nat(q1) * to_nat(u) - pow2(384) * xmsb * to_nat(u) + to_nat(q1) * pow2(384) + if xmsb == 1 then to_nat(u) * pow2(384) else 0;
+        //     to_nat(q1) * to_nat(u) + to_nat(q1) * pow2(384);
+        //     to_nat(x) / pow2(383) * (to_nat(u) + pow2(384));
+        //     to_nat(x) / pow2(383) * (pow2(768) / gm);
+        //     (to_nat(a) * to_nat(b)) / pow2(383) * (pow2(768) / gm);
+        //     {
+        //         assert to_nat(a) <= gm - 1;
+        //         assert to_nat(b) <= gm - 1;
+        //         assume false;
+        //     }
+        //     ((gm - 1) * (gm - 1)) / pow2(383) * (pow2(768) / gm);
+        //     {
+        //         assume false;
+        //     }
+        //     pow2(769);
+        // }
 
         // calc ==> {
         //     to_nat(q2'''') * pow2(384) + cout1 * pow2(769) + cout2 * pow2(769) < pow2(769);
