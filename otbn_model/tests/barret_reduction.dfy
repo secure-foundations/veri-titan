@@ -60,7 +60,8 @@ module barret384 {
     {
         trivial2(a * b, c, b);
         assert (a * b) / b <= c / b;
-        assume a * b / b == a;
+        mod_mul_lemma(a, b, b);
+        assert a * b / b == a;
         assert a <= c / b;
     }
 
@@ -104,7 +105,14 @@ module barret384 {
         var q2 := left;
         var r2 := (a - b * c) % b;
 
-        assume r2 == r1;
+        assert r2 == r1 by {
+            assert -c * b % b == 0 by {
+                mod_mul_lemma(-c, b, b);
+            }
+            cong_add_lemma_3(a, -b * c, b);
+            assert cong(a, a - b * c, b);
+            reveal cong();
+        }
         assert left == right;
     }
 
