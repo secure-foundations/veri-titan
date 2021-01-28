@@ -116,6 +116,96 @@ module barret384 {
         assert left == right;
     }
 
+    lemma bounded(
+        q1: cbv, q1': cbv,
+        q2': cbv, q2'': cbv, q2''': cbv, q2'''': cbv,
+        x: cbv, u: cbv, t: cbv, m: cbv,
+        xmsb: uint1, cout1: uint1, cout2: uint1,
+        gm: nat, uf: nat
+    )
+        requires msb(q1) == xmsb;
+        requires to_nat(q1) == to_nat(x) / pow2(383);
+        requires to_nat(q1) == to_nat(q1') + pow2(384) * xmsb;
+        requires to_nat(q2') == to_nat(q1') * to_nat(u);
+        requires to_nat(q2'') == to_nat(q2') / pow2(384);
+        requires to_nat(q2''') + cout1 * pow2(385) == to_nat(q2'') + to_nat(q1);
+        requires to_nat(q2'''') + cout2 * pow2(385) == to_nat(q2''') + to_nat(t);
+        requires to_nat(t) == if xmsb == 1 then to_nat(u) else 0;
+
+        requires gm == to_nat(m) != 0;
+        requires x_bound: to_nat(x) <= (gm - 1) * (gm - 1);
+        requires uf == to_nat(u) + pow2(384) == pow2(768) / gm;
+
+        ensures cout1 == 0 && cout2 == 0;
+    {
+        calc <= {
+            to_nat(q2'''') * pow2(384) + cout1 * pow2(769) + cout2 * pow2(769);
+            {
+                assume pow2(385) * pow2(384) == pow2(769);
+            }
+            to_nat(q2'''') * pow2(384) + cout1 * pow2(385) * pow2(384) + cout2 * pow2(769);
+            {
+                assume pow2(385) * pow2(384) == pow2(769);
+            }
+            to_nat(q2'''') * pow2(384) + cout1 * pow2(385) * pow2(384) + cout2 * pow2(385) * pow2(384);
+            (to_nat(q2'''') + cout1 * pow2(385) + cout2 * pow2(385)) * pow2(384);
+            {
+                calc == {
+                    to_nat(q2'''') + cout1 * pow2(385) + cout2 * pow2(385);
+                    to_nat(q2'') + to_nat(q1) + to_nat(t);
+                    to_nat(q2') / pow2(384) + to_nat(q1') + pow2(384) * xmsb + to_nat(t);
+                    to_nat(q2') / pow2(384) + to_nat(q1) + to_nat(t);
+                    (to_nat(q1') * to_nat(u)) / pow2(384) + to_nat(q1) + to_nat(t);
+                }
+            }
+            ((to_nat(q1') * to_nat(u)) / pow2(384) + to_nat(q1) + to_nat(t)) * pow2(384);
+            (to_nat(q1') * to_nat(u)) / pow2(384) * pow2(384) + to_nat(q1) * pow2(384) + to_nat(t) * pow2(384);
+            {
+                trivial5((to_nat(q1') * to_nat(u)), pow2(384));
+            }
+            to_nat(q1') * to_nat(u) + to_nat(q1) * pow2(384) + to_nat(t) * pow2(384);
+            (to_nat(q1) - pow2(384) * xmsb) * to_nat(u) + to_nat(q1) * pow2(384) + to_nat(t) * pow2(384);
+            to_nat(q1) * to_nat(u) - pow2(384) * xmsb * to_nat(u) + to_nat(q1) * pow2(384) + to_nat(t) * pow2(384);
+            {
+                assert if xmsb == 1 then to_nat(t) == to_nat(u) else to_nat(t) == 0;
+            }
+            to_nat(q1) * to_nat(u) - pow2(384) * xmsb * to_nat(u) + to_nat(q1) * pow2(384) + if xmsb == 1 then to_nat(u) * pow2(384) else 0;
+            to_nat(q1) * to_nat(u) + to_nat(q1) * pow2(384);
+            to_nat(x) / pow2(383) * (to_nat(u) + pow2(384));
+            to_nat(x) / pow2(383) * uf;
+            to_nat(x) / pow2(383) * (pow2(768) / gm);
+            {
+                reveal x_bound;
+                assume false;
+            }
+            ((gm - 1) * (gm - 1)) / pow2(383) * (pow2(768) / gm);
+        }
+
+        assume ((gm - 1) * (gm - 1)) / pow2(383) * (pow2(768) / gm) < pow2(769);
+
+        assert to_nat(q2'''') * pow2(384) + cout1 * pow2(769) + cout2 * pow2(769) < pow2(769);
+
+        assert cout1 == 0 && cout2 == 0;
+
+        // calc ==> {
+        //     to_nat(q2'''') * pow2(384) + cout1 * pow2(769) + cout2 * pow2(769) < pow2(769);
+        //     {
+        //         assert cout1 == 0 && cout2 == 0;
+        //     }
+        //     to_nat(q2'''') * pow2(384) < pow2(769);
+        //     {
+        //         assume pow2(769) % pow2(384) == 0;
+        //         trivial4(to_nat(q2''''), pow2(384), pow2(769));
+        //     }
+        //     to_nat(q2'''') < pow2(769) / pow2(384);
+        //     {
+        //         assume pow2(769) / pow2(384) == pow2(385);
+        //     }
+        //     to_nat(q2'''') < pow2(385);
+        // }
+    }
+
+
     /*
     * @param[in] [w9, w8]: a, first operand, max. length 384 bit.
     * @param[in] [w11, w10]: b, second operand, max. length 384 bit.
@@ -133,6 +223,7 @@ module barret384 {
         ghost gm: nat,
         ghost uf: nat)
         requires gm == to_nat(m) != 0;
+        requires gm < pow2(385);
         requires to_nat(a) <= gm - 1;
         requires to_nat(b) <= gm - 1;
         requires uf == to_nat(u) + pow2(384) == pow2(768) / gm;
@@ -150,41 +241,38 @@ module barret384 {
         // q1: 385 := x >> 383;
         // q1 == q1_r + (2 ** 384) * msb
         var q1: cbv385 := rshift(x, 383);
-
-        assert msb(q1) == xmsb;
-
-        assert to_nat(q1) == to_nat(x) / pow2(383) by {
-            rshift_is_div_lemma(x, 383, q1);
-        }
-
+        
         // q2': 768 := mul_384_384_768(q1[384:0], u);
         var q1': cbv384 := slice(q1, 0, 384);
 
-        assert to_nat(q1) == to_nat(q1') + pow2(384) * xmsb by {
-            to_nat_msb_lemma(q1, 385);
-        }
-
         var q2': cbv768 := mul_384_384_768(q1', u);
-
-        assert to_nat(q2') == to_nat(q1') * to_nat(u);
 
         // q2'': 384 := q2' >> 384;
         var q2'': cbv384 := rshift(q2', 384);
 
-        assert to_nat(q2'') == to_nat(q2') / pow2(384) by {
-            rshift_is_div_lemma(q2', 384, q2'');
-        }
-
         // q2''': 385 := q2'' + q1;
         var (q2''', cout1) := add(zext(q2'', 385), q1, 0);
 
-        assert to_nat(q2''') + cout1 * pow2(385) == to_nat(q2'') + to_nat(q1);
-
         var (q2'''', cout2) := add(q2''', zext(t, 385), 0);
 
+        assert msb(q1) == xmsb;
+        assert to_nat(q1) == to_nat(x) / pow2(383) by {
+            rshift_is_div_lemma(x, 383, q1);
+        }
+        assert to_nat(q1) == to_nat(q1') + pow2(384) * xmsb by {
+            to_nat_msb_lemma(q1, 385);
+        }
+        assert to_nat(q2') == to_nat(q1') * to_nat(u);
+        assert to_nat(q2'') == to_nat(q2') / pow2(384) by {
+            rshift_is_div_lemma(q2', 384, q2'');
+        }
+        assert to_nat(q2''') + cout1 * pow2(385) == to_nat(q2'') + to_nat(q1);
         assert to_nat(q2'''') + cout2 * pow2(385) == to_nat(q2''') + to_nat(t);
 
-        assume cout1 == 0 && cout2 == 0;
+        assert cout1 == 0 && cout2 == 0 by {
+            assume to_nat(x) <= (gm - 1) * (gm - 1);
+            bounded(q1, q1', q2', q2'', q2''', q2'''', x, u, t, m, xmsb, cout1, cout2, gm, uf);
+        }
 
         ghost var q2 := to_nat(q1) * uf;
 
@@ -218,65 +306,6 @@ module barret384 {
             (to_nat(q1) * uf) / pow2(384);
             q2 / pow2(384);
         }
-
-        // calc <= {
-        //     to_nat(q2'''') * pow2(384) + cout1 * pow2(769) + cout2 * pow2(769);
-        //     {
-        //         assume pow2(385) * pow2(384) == pow2(769);
-        //         assume false;
-        //     }
-        //     (to_nat(q2'''') + cout1 * pow2(385) + cout2 * pow2(385)) * pow2(384);
-        //     calc == {
-        //         to_nat(q2'''') + cout1 * pow2(385) + cout2 * pow2(385);
-        //         to_nat(q2'') + to_nat(q1) + to_nat(t);
-        //         to_nat(q2') / pow2(384) + to_nat(q1') + pow2(384) * xmsb + to_nat(t);
-        //         to_nat(q2') / pow2(384) + to_nat(q1) + to_nat(t);
-        //         (to_nat(q1') * to_nat(u)) / pow2(384) + to_nat(q1) + to_nat(t);
-        //     }
-        //     ((to_nat(q1') * to_nat(u)) / pow2(384) + to_nat(q1) + to_nat(t)) * pow2(384);
-        //     (to_nat(q1') * to_nat(u)) / pow2(384) * pow2(384) + to_nat(q1) * pow2(384) + to_nat(t) * pow2(384);
-        //     {
-        //         trivial5((to_nat(q1') * to_nat(u)), pow2(384));
-        //     }
-        //     to_nat(q1') * to_nat(u) + to_nat(q1) * pow2(384) + to_nat(t) * pow2(384);
-        //     (to_nat(q1) - pow2(384) * xmsb) * to_nat(u) + to_nat(q1) * pow2(384) + to_nat(t) * pow2(384);
-        //     to_nat(q1) * to_nat(u) - pow2(384) * xmsb * to_nat(u) + to_nat(q1) * pow2(384) + to_nat(t) * pow2(384);
-        //     {
-        //         assert if xmsb == 1 then to_nat(t) == to_nat(u) else to_nat(t) == 0;
-        //     }
-        //     to_nat(q1) * to_nat(u) - pow2(384) * xmsb * to_nat(u) + to_nat(q1) * pow2(384) + if xmsb == 1 then to_nat(u) * pow2(384) else 0;
-        //     to_nat(q1) * to_nat(u) + to_nat(q1) * pow2(384);
-        //     to_nat(x) / pow2(383) * (to_nat(u) + pow2(384));
-        //     to_nat(x) / pow2(383) * (pow2(768) / gm);
-        //     (to_nat(a) * to_nat(b)) / pow2(383) * (pow2(768) / gm);
-        //     {
-        //         assert to_nat(a) <= gm - 1;
-        //         assert to_nat(b) <= gm - 1;
-        //         assume false;
-        //     }
-        //     ((gm - 1) * (gm - 1)) / pow2(383) * (pow2(768) / gm);
-        //     {
-        //         assume false;
-        //     }
-        //     pow2(769);
-        // }
-
-        // calc ==> {
-        //     to_nat(q2'''') * pow2(384) + cout1 * pow2(769) + cout2 * pow2(769) < pow2(769);
-        //     {
-        //         assert cout1 == 0 && cout2 == 0;
-        //     }
-        //     to_nat(q2'''') * pow2(384) < pow2(769);
-        //     {
-        //         assume pow2(769) % pow2(384) == 0;
-        //         trivial4(to_nat(q2''''), pow2(384), pow2(769));
-        //     }
-        //     to_nat(q2'''') < pow2(769) / pow2(384);
-        //     {
-        //         assume pow2(769) / pow2(384) == pow2(385);
-        //     }
-        //     to_nat(q2'''') < pow2(385);
-        // }
 
         // var q3: bv384 := q2'''' >> 1;
         // var r2: bv512 := mul_384_384_512(q3, m);
