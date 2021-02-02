@@ -60,7 +60,7 @@ lemma random_checks(x:bool, y:bool, z:bool,
   carry_6:bool,
   carry_7:bool)
   //ensures xor(x, xor(xor(y, xor(xor(!xor(xor(z, xor(x, carry_1)), xor(xor(y, xor(xor(!z, carry_2), carry_3)), carry_4)), carry_5), carry_6)), carry_7))
-  ensures xor((x && y), xor((!x && !y), xor(xor(carry_5, carry_6), xor(xor(x, xor(xor(y, carry_1), carry_2)), xor(carry_3, carry_4))))) == true
+  //ensures xor((x && y), xor((!x && !y), xor(xor(carry_5, carry_6), xor(xor(x, xor(xor(y, carry_1), carry_2)), xor(carry_3, carry_4))))) == true
 {
 }
 
@@ -74,8 +74,57 @@ lemma function_test(i:nat)
   // Conclusion
   ensures b(i) == false   // Dafny's auto-induction solves this one, but the rest don't need it
 {
-
 }
+
+
+// Formula:
+//   x - y == 0
+//   x + z == 0, where z = !y + 1
+function y(i:nat) : bool
+
+// Carry bit that emerges from x + z
+function d(i:nat) : bool
+{
+  if i == 0 then x(0) && z(0)
+  else ((x(i) && z(i)) || (d(i-1) && (x(i) || z(i))))
+}
+
+// Carry bit that emerges from !y + 1
+function d'(i:nat) : bool
+{
+  if i == 0 then !y(0) && true
+  else (d'(i-1) && !y(i))
+}
+
+// z == !y + 1
+function z(i:nat) : bool
+{
+  if i == 0 then xor(!y(0), true)
+  else xor(!y(i), d'(i-1))
+}
+
+// res == x + z
+function res(i:nat) : bool
+{
+  if i == 0 then xor(x(0), z(0))
+  else xor(xor(x(i), z(i)), d(i-1))
+}
+
+lemma equality_test(i:nat)
+	requires forall i :: x(i) == y(i)
+
+	// Sanity check base case
+	ensures res(0) == false
+	ensures xor(c(0), !c'(0)) == false
+	// Induction hypothesis
+  ensures i > 0 ==> res(i) == xor(!d'(i-1), d(i-1))
+  ensures i > 0 ==> xor(!d'(i), d(i)) == xor(!d'(i-1), d(i-1))
+
+	// Conclusion
+	ensures res(i) == false
+{
+}
+
 
 /*
 lemma test(b_i:bool, x_i:bool, x_i_minus_1:bool, c_i_minus_1:bool, c_i_minus_2:bool, e_i:bool, e_i_minus_1:bool, cp_i:bool, cp_i_minus_1:bool, cp_i_minus_2:bool)

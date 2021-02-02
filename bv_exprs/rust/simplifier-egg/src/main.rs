@@ -529,6 +529,16 @@ fn identity2() -> BVExpr {
     .into()
 }
 
+fn sub_equality() -> BVExpr {
+    use BVBinOp::*;
+    use BVExpr_::*;
+
+    // x - y
+    let x: BVExpr = Var("x".to_owned()).into();
+    let y: BVExpr = Var("y".to_owned()).into();
+    BinExpr(Sub, x, y).into()
+} 
+
 fn addsub_1043() -> BVExpr {
     use BVBinOp::*;
     use BVExpr_::*;
@@ -613,14 +623,15 @@ fn and_neg_self() -> BVExpr {
 
 fn get_tests() -> Vec<(String, BVExpr)> {
     vec![
-        ("identity".to_string(), identity()),
-        ("xor_self".to_string(), xor_self()),
-        ("identity2".to_string(), identity2()),
-        ("addsub_1043".to_string(), addsub_1043()),
-        ("addsub_0".to_string(), addsub_0()),
-        ("identity2x2".to_string(), identity2x2()),
-        ("identity3x2".to_string(), identity3x2()),
-        ("and_neg_self".to_string(), and_neg_self()),
+        // ("identity".to_string(), identity()),
+        // ("xor_self".to_string(), xor_self()),
+        // ("identity2".to_string(), identity2()),
+        // ("addsub_1043".to_string(), addsub_1043()),
+        // ("addsub_0".to_string(), addsub_0()),
+        //("identity2x2".to_string(), identity2x2()),
+        // ("identity3x2".to_string(), identity3x2()),
+        // ("and_neg_self".to_string(), and_neg_self()),
+	("sub_equality".to_string(), sub_equality()),
     ]
 }
 
@@ -709,7 +720,7 @@ fn no_or(f: &BVExpr) {
         println!("************************************");
         println!("WARNING: Failed to fully simplify!");
         //println!("Dafny version: {}", f_egg.mk_string(&StrMode::Dafny, false));
-        //print_dafny(&f);
+        print_dafny(&f);
         println!("************************************\n");
     } else {
         println!("Success: Fully simplified!\n");
