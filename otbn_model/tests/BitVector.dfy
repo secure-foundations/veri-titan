@@ -414,14 +414,20 @@ module CutomBitVector {
 
     function method add_aux(v1: cbv, v2: cbv, c: uint1) : (v3: cbv)
         requires |v1| == |v2|;
-    {
-        if |v1| == 0 then []
-        else 
-        var b1 := v1[0];
-        var b2 := v2[0];
-        var s : int := b1 as int + b2 as int;
-        [s % 2] + add_aux(v1[1..], v2[1..], s / 2)
-    }
+        // if |v1| == 0 then []
+        // else 
+        // var b1 := v1[0];
+        // var b2 := v2[0];
+        // var s : int := b1 as int + b2 as int;
+        // [s % 2] + add_aux(v1[1..], v2[1..], s / 2)
+
+    function method {:opaque} sub(v1: cbv, v2: cbv, bin: uint1) : (cbv, uint1)
+        requires |v1| == |v2|;
+        ensures
+            var (v3, bout) := sub(v1, v2, bin);
+            var sum := to_nat(v2) + to_nat(v3) + bin;
+        |v3| == |v1| && to_nat(v1) == sum % pow2(|v1|) && bout == sum / pow2(|v1|);
+        // b * pow2(|v1|) + sum == to_nat(v2) + to_nat(v3) + bin
 
     predicate equal_uint256(bv: cbv, v: uint256)
     {
