@@ -34,6 +34,38 @@ module CutomBitVector {
         else to_nat_aux(v, i - 1) + pow2(i - 1) * v[i - 1]
     }
 
+    lemma to_nat_bound(v: cbv)
+        ensures to_nat(v) < pow2(|v|)
+        decreases |v|;
+    {
+        if |v| == 0 {
+            reveal pow2();
+        } else {
+            var i := |v|;
+            assert to_nat(v) == to_nat_aux(v, i - 1) + pow2(i - 1) * v[i - 1] by {
+                reveal to_nat();
+            }
+            to_nat_prefix_lemma(v, v[..i - 1], i - 1);
+            assert to_nat_aux(v[..i - 1], i - 1) == to_nat_aux(v, i - 1);
+
+            // assert to_nat(v) <= to_nat_aux(v[..i], i - 1) + pow2(|v| - 1);
+
+            assert to_nat(v) <= to_nat(v[..i - 1]) + pow2(|v| - 1) by {
+                reveal to_nat(); 
+            }
+
+            assert |v[..i - 1]| == |v| - 1;
+
+            assert to_nat(v) < pow2(|v| - 1) + pow2(|v| - 1) by {
+                to_nat_bound(v[..i - 1]);
+            }
+
+            assert pow2(|v| - 1) * 2 == pow2(|v|) by {
+                reveal pow2();
+            }
+        }
+    }
+
     lemma {:induction i} to_nat_prefix_lemma(v: cbv, v': cbv, i: nat)
         requires 0 <= i <= |v| && 0 <= i <= |v'|;
         requires v[..i] == v'[..i];
@@ -404,28 +436,17 @@ module CutomBitVector {
     function method {:opaque} add(v1: cbv, v2: cbv, cin: uint1) : (cbv, uint1)
         requires |v1| == |v2|;
         ensures
-            var (v3, c) := add(v1, v2, cin);
+            var (v3, cout) := add(v1, v2, cin);
             var sum := to_nat(v1) + to_nat(v2) + cin;
-        |v3| == |v1| && to_nat(v3) == sum % pow2(|v1|) && c == sum / pow2(|v1|);
-    {
-        assume false;
-        (add_aux(v1, v2, 0), 0)
-    }
-
-    function method add_aux(v1: cbv, v2: cbv, c: uint1) : (v3: cbv)
-        requires |v1| == |v2|;
-        // if |v1| == 0 then []
-        // else 
-        // var b1 := v1[0];
-        // var b2 := v2[0];
-        // var s : int := b1 as int + b2 as int;
-        // [s % 2] + add_aux(v1[1..], v2[1..], s / 2)
+            && |v3| == |v1|
+            && to_nat(v3) == sum % pow2(|v1|)
+            && cout == sum / pow2(|v1|);
 
     function method {:opaque} sub(v1: cbv, v2: cbv, bin: uint1) : (cbv, uint1)
         requires |v1| == |v2|;
         ensures
             var (v3, bout) := sub(v1, v2, bin);
-            var diff := to_nat(v1) - (to_nat(v2) + bin);
+            var diff : int := to_nat(v1) - (to_nat(v2) + bin);
         && |v3| == |v1|
         && to_nat(v3) == diff % pow2(|v1|)
         && bout == if diff < 0 then 1 else 0;
@@ -441,7 +462,6 @@ module CutomBitVector {
             assert to_nat(v3) == to_nat(v1) - to_nat(v2);
         }
     }
-
 
     predicate equal_uint256(bv: cbv, v: uint256)
     {
