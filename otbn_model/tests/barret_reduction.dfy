@@ -156,8 +156,8 @@ module barret384 {
         requires to_nat(q2'''') + cout2 * pow2(385) == to_nat(q2''') + to_nat(t);
         requires to_nat(t) == if xmsb == 1 then to_nat(u) else 0;
 
-        requires gm < pow2(385);
         requires gm == to_nat(m) != 0;
+        requires gm < pow2(384);
         requires x_bound: to_nat(x) <= (gm - 1) * (gm - 1);
         requires uf == to_nat(u) + pow2(384) == pow2(768) / gm;
 
@@ -211,29 +211,11 @@ module barret384 {
         assert to_nat(q2'''') * pow2(384) + cout1 * pow2(769) + cout2 * pow2(769) < pow2(769);
 
         assert cout1 == 0 && cout2 == 0;
-
-        // calc ==> {
-        //     to_nat(q2'''') * pow2(384) + cout1 * pow2(769) + cout2 * pow2(769) < pow2(769);
-        //     {
-        //         assert cout1 == 0 && cout2 == 0;
-        //     }
-        //     to_nat(q2'''') * pow2(384) < pow2(769);
-        //     {
-        //         assume pow2(769) % pow2(384) == 0;
-        //         trivial4(to_nat(q2''''), pow2(384), pow2(769));
-        //     }
-        //     to_nat(q2'''') < pow2(769) / pow2(384);
-        //     {
-        //         assume pow2(769) / pow2(384) == pow2(385);
-        //     }
-        //     to_nat(q2'''') < pow2(385);
-        // }
     }
 
     lemma value(
         q1: cbv, q1': cbv,
         q2': cbv, q2'': cbv, q2''': cbv, q2'''': cbv,
-        q2: nat,
         q3: cbv,
         x: cbv, u: cbv, t: cbv, m: cbv,
         xmsb: uint1,
@@ -249,9 +231,8 @@ module barret384 {
 
         requires to_nat(t) == if xmsb == 1 then to_nat(u) else 0;
         requires uf == to_nat(u) + pow2(384);
-        requires q2 == to_nat(q1) * uf;
 
-        ensures to_nat(q3) == q2 / pow2(385);
+        ensures to_nat(q3) == (to_nat(x) / pow2(383)) * uf / pow2(385);
     {
         ghost var q2 := to_nat(q1) * uf;
 
@@ -320,14 +301,13 @@ module barret384 {
         ghost uf: nat)
         requires |f| == 386 && to_nat(f) == pow2(385)
         requires gm == to_nat(m) != 0;
-        requires gm < pow2(385);
+        requires gm < pow2(384);
         requires to_nat(a) <= gm - 1;
         requires to_nat(b) <= gm - 1;
         requires uf == to_nat(u) + pow2(384) == pow2(768) / gm;
     {
         var x: cbv768 := mul_384_384_768(a, b);
         var t: cbv384 := zero(384);
-        var r1: cbv385 := slice(x, 0, 385);
 
         var xmsb := msb(x);
 
@@ -336,7 +316,6 @@ module barret384 {
         }
 
         // q1: 385 := x >> 383;
-        // q1 == q1_r + (2 ** 384) * msb
         var q1: cbv385 := rshift(x, 383);
         
         // q2': 768 := mul_384_384_768(q1[384:0], u);
@@ -369,45 +348,37 @@ module barret384 {
 
         var q3: cbv384 := rshift(q2'''', 1);
 
-        assert to_nat(q3) == to_nat(q2'''') / pow2(1) by {
-            rshift_is_div_lemma(q2'''', 1, q3);
+        // assert to_nat(q3) == q2 / pow2(385) by {
+        assert to_nat(q3) == (to_nat(x) / pow2(383)) * uf / pow2(385) by {
+            assert to_nat(q3) == to_nat(q2'''') / pow2(1) by {
+                rshift_is_div_lemma(q2'''', 1, q3);
+            }
+            value(q1, q1', q2', q2'', q2''', q2'''', q3, x, u, t, m, xmsb, uf);
         }
+        
+        barrett_reduction_q3_bound(to_nat(x), gm, to_nat(x) / gm, to_nat(q3), 384);
 
-        ghost var q2 := to_nat(q1) * uf;
+        // var p: cbv768 := mul_384_384_768(q3, m);
 
-        assert to_nat(q3) == q2 / pow2(385) by {
-            value(q1, q1', q2', q2'', q2''', q2'''', q2, q3, x, u, t, m, xmsb, uf);
-        }
+        // var (r: cbv, bout) := sub(slice(x, 0, 512), slice(p, 0, 512), 0);
+        // var (r: cbv, bout) := sub(slice(x, 0, 512), slice(p, 0, 512), 0);
 
-        var p: cbv768 := mul_384_384_768(q3, m);
-        var r2: cbv385 := slice(p, 0, 385);
-        var (r: cbv, bout) := sub(r1, r2, 0);
-
-        if bout == 1 {
-            assert pow2(385) + to_nat(r1) == to_nat(r) + to_nat(r2);
-            assert to_nat(r1) as int - to_nat(r2) == to_nat(r) as int - pow2(385) as int;
-            assume to_nat(r) < pow2(385);
-            assert to_nat(r1) < to_nat(r2);
-            // var cout3: uint1;
-            var (r', cout3) := add(zext(r, 386), f, 0);
-            // assert 
-        }
     }
 
-    // lemma barrett_reduction_q3_bound(
-    //     x: nat,
-    //     m: nat,
-    //     Q: nat,
-    //     q3: nat,
-    //     n: nat)
+    lemma barrett_reduction_q3_bound(
+        x: nat,
+        m: nat,
+        Q: nat,
+        q3: nat,
+        n: nat)
 
-    //     requires n > 0;
-    //     requires pow2(n - 1) <= m < pow2(n);
-    //     requires 0 < x < pow2(2 * n);
-    //     requires Q == x / m;
-    //     requires q3 == ((x / pow2(n - 1)) * (pow2(2 * n) / m)) / pow2(n + 1);
+        requires n > 0;
+        // requires pow2(n - 1) <= m < pow2(n);
+        // requires 0 < x < pow2(2 * n);
+        requires Q == x / m;
+        requires q3 == ((x / pow2(n - 1)) * (pow2(2 * n) / m)) / pow2(n + 1);
 
-    //     ensures Q - 2 <= q3 <= Q;
+        ensures Q - 2 <= q3 <= Q;
     // {
     //     var c0 := pow2(n - 1);
     //     var c1 := pow2(n + 1);

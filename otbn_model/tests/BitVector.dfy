@@ -300,7 +300,7 @@ module CutomBitVector {
             calc ==> {
                 true;
                 {
-                    rshift_is_div_lemma(v, v2, amt-1);
+                    rshift_is_div_lemma(v, amt-1, v2);
                 }
                 to_nat(v2) == to_nat(v) / pow2(amt-1);
                 {
@@ -364,11 +364,11 @@ module CutomBitVector {
         v1 + v2
     }
 
-    method slice(v: cbv, lo: uint32, hi: uint32) returns (v': cbv)
+    function method slice(v: cbv, lo: uint32, hi: uint32) : (v': cbv)
         requires 0 <= lo < hi <= |v|;
         ensures v' == v[lo..hi];
     {
-        v' := v[lo..hi];
+        v[lo..hi]
     }
 
     function method zext(v: cbv, l': uint32) : (v': cbv)
@@ -425,9 +425,23 @@ module CutomBitVector {
         requires |v1| == |v2|;
         ensures
             var (v3, bout) := sub(v1, v2, bin);
-            var sum := to_nat(v2) + to_nat(v3) + bin;
-        |v3| == |v1| && to_nat(v1) == sum % pow2(|v1|) && bout == sum / pow2(|v1|);
-        // b * pow2(|v1|) + sum == to_nat(v2) + to_nat(v3) + bin
+            var diff := to_nat(v1) - (to_nat(v2) + bin);
+        && |v3| == |v1|
+        && to_nat(v3) == diff % pow2(|v1|)
+        && bout == if diff < 0 then 1 else 0;
+
+    lemma testsub(v1: cbv, v2: cbv)
+        requires |v1| == |v2|;
+    {
+        var (v3, bout) := sub(v1, v2, 0);
+        if to_nat(v1) > to_nat(v2) {
+            assume 0 <= to_nat(v1) < pow2(|v1|);
+            assume 0 <= to_nat(v2) < pow2(|v1|);
+
+            assert to_nat(v3) == to_nat(v1) - to_nat(v2);
+        }
+    }
+
 
     predicate equal_uint256(bv: cbv, v: uint256)
     {
