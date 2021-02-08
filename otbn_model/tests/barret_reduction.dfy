@@ -213,7 +213,7 @@ module barret384 {
         assert cout1 == 0 && cout2 == 0;
     }
 
-    lemma value(
+    lemma q3value(
         q1: cbv, q1': cbv,
         q2': cbv, q2'': cbv, q2''': cbv, q2'''': cbv,
         q3: cbv,
@@ -282,15 +282,52 @@ module barret384 {
         }
     }
 
-    /*
-    * @param[in] [w9, w8]: a, first operand, max. length 384 bit.
-    * @param[in] [w11, w10]: b, second operand, max. length 384 bit.
-    * @param[in] [w13, w12]: m, modulus, max. length 384 bit, 2^384 > m > 2^383.
-    * @param[in] [w15, w14]: u, pre-computed Barrett constant (without u[384]/MSb
-    *                           of u which is always 1 for the allowed range but
-    *                           has to be set to 0 here).
-    * @param[in] w31: all-zero.
-    */
+    lemma rvalue(
+        x: cbv768, p: cbv768, q3: cbv, m: cbv, r: cbv, bout: uint1
+    )
+        requires to_nat(m) != 0;
+        requires var Q := to_nat(x) / to_nat(m);
+            Q - 2 <= to_nat(q3) <= Q;
+        requires to_nat(p) == to_nat(q3) * to_nat(m);
+        // requires (r, bout) == sub(slice(x, 0, 512), slice(p, 0, 512), 0);
+        requires (r, bout) == sub(x, p, 0);
+
+        ensures var R := to_nat(x) % to_nat(m);
+            R <= to_nat(r) <= 2 * to_nat(m) + R; 
+        ensures cong(to_nat(x), to_nat(r), to_nat(m)); 
+    {
+        assert to_nat(x) >= to_nat(p);
+        assert bout == 0;
+
+        assert to_nat(x) < pow2(768) by {
+            to_nat_bound(x);
+        }
+
+        assert to_nat(p) < pow2(768) by {
+            to_nat_bound(p);
+        }
+
+        assert to_nat(r) == to_nat(x) - to_nat(p);
+
+        var Q := to_nat(x) / to_nat(m);
+        var R := to_nat(x) % to_nat(m);
+
+        calc ==> 
+        {
+            to_nat(x) == Q * to_nat(m) + R;
+            to_nat(r) == Q * to_nat(m) + R - to_nat(p);
+            to_nat(r) == Q * to_nat(m) + R - to_nat(q3) * to_nat(m);
+            to_nat(r) == (Q - to_nat(q3)) * to_nat(m) + R;
+            R <= to_nat(r) <= 2 * to_nat(m) + R; 
+        }
+
+        assert R <= to_nat(r) <= 2 * to_nat(m) + R; 
+
+        assert cong(to_nat(x), to_nat(r), to_nat(m)) by {
+            cong_add_lemma_4(to_nat(x), -(to_nat(q3) as int), to_nat(m));
+        }
+    }
+
     method barret384(
         a: cbv384,
         b: cbv384,
@@ -348,21 +385,20 @@ module barret384 {
 
         var q3: cbv384 := rshift(q2'''', 1);
 
-        // assert to_nat(q3) == q2 / pow2(385) by {
-        assert to_nat(q3) == (to_nat(x) / pow2(383)) * uf / pow2(385) by {
-            assert to_nat(q3) == to_nat(q2'''') / pow2(1) by {
-                rshift_is_div_lemma(q2'''', 1, q3);
-            }
-            value(q1, q1', q2', q2'', q2''', q2'''', q3, x, u, t, m, xmsb, uf);
-        }
+        // assert to_nat(q3) == (to_nat(x) / pow2(383)) * uf / pow2(385) by {
+        //     assert to_nat(q3) == to_nat(q2'''') / pow2(1) by {
+        //         rshift_is_div_lemma(q2'''', 1, q3);
+        //     }
+        //     q3value(q1, q1', q2', q2'', q2''', q2'''', q3, x, u, t, m, xmsb, uf);
+        // }
         
-        barrett_reduction_q3_bound(to_nat(x), gm, to_nat(x) / gm, to_nat(q3), 384);
+        // barrett_reduction_q3_bound(to_nat(x), gm, to_nat(x) / gm, to_nat(q3), 384);
 
-        // var p: cbv768 := mul_384_384_768(q3, m);
-
+        var p: cbv768 := mul_384_384_768(q3, m);
         // var (r: cbv, bout) := sub(slice(x, 0, 512), slice(p, 0, 512), 0);
-        // var (r: cbv, bout) := sub(slice(x, 0, 512), slice(p, 0, 512), 0);
+        var (r: cbv, bout) := sub(x, p, 0);
 
+        // assert to_nat(r) == (to_nat(x) - to_nat(p)) % pow2(768);
     }
 
     lemma barrett_reduction_q3_bound(
