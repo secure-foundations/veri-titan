@@ -283,48 +283,85 @@ module barret384 {
     }
 
     lemma rvalue(
-        x: cbv768, p: cbv768, q3: cbv, m: cbv, r: cbv, bout: uint1
+        x: cbv768, p: cbv768, q3: cbv, m: cbv384, r: cbv, bout: uint1
     )
         requires to_nat(m) != 0;
         requires var Q := to_nat(x) / to_nat(m);
             Q - 2 <= to_nat(q3) <= Q;
         requires to_nat(p) == to_nat(q3) * to_nat(m);
-        // requires (r, bout) == sub(slice(x, 0, 512), slice(p, 0, 512), 0);
-        requires (r, bout) == sub(x, p, 0);
+        requires (r, bout) == sub(slice(x, 0, 512), slice(p, 0, 512), 0);
 
         ensures var R := to_nat(x) % to_nat(m);
-            R <= to_nat(r) <= 2 * to_nat(m) + R; 
+            R <= to_nat(r) <= 3 * to_nat(m); 
         ensures cong(to_nat(x), to_nat(r), to_nat(m)); 
     {
-        assert to_nat(x) >= to_nat(p);
-        assert bout == 0;
-
-        assert to_nat(x) < pow2(768) by {
-            to_nat_bound(x);
-        }
-
-        assert to_nat(p) < pow2(768) by {
-            to_nat_bound(p);
-        }
-
-        assert to_nat(r) == to_nat(x) - to_nat(p);
-
         var Q := to_nat(x) / to_nat(m);
         var R := to_nat(x) % to_nat(m);
+
+        assert to_nat(x) >= to_nat(p);
+        // assert bout == 0;
+
+        var full_r := to_nat(x) - to_nat(p);
 
         calc ==> 
         {
             to_nat(x) == Q * to_nat(m) + R;
-            to_nat(r) == Q * to_nat(m) + R - to_nat(p);
-            to_nat(r) == Q * to_nat(m) + R - to_nat(q3) * to_nat(m);
-            to_nat(r) == (Q - to_nat(q3)) * to_nat(m) + R;
-            R <= to_nat(r) <= 2 * to_nat(m) + R; 
+            full_r == Q * to_nat(m) + R - to_nat(p);
+            full_r == Q * to_nat(m) + R - to_nat(q3) * to_nat(m);
+            full_r == (Q - to_nat(q3)) * to_nat(m) + R;
+            R <= full_r <= 2 * to_nat(m) + R; 
+            R <= full_r <= 3 * to_nat(m);
         }
 
-        assert R <= to_nat(r) <= 2 * to_nat(m) + R; 
+        assert R <= full_r <= 3 * to_nat(m);
 
-        assert cong(to_nat(x), to_nat(r), to_nat(m)) by {
+        calc ==> {
+            R <= full_r <= 3 * to_nat(m);
+            {
+                to_nat_bound(m);
+                assert to_nat(m) < pow2(384);
+            }
+            R <= full_r <= 3 * pow2(384);
+            R <= full_r <= 4 * pow2(384);
+            {
+                assume 4 * pow2(384) == pow2(386);
+            }
+            R <= full_r <= pow2(386);
+        }
+
+        var x' := slice(x, 0, 512);
+        var p' := slice(p, 0, 512);
+
+        assert to_nat(x) == to_nat(x') + to_nat(x[512..]) * pow2(512) by {
+            to_nat_split_lemma(x, 512);
+        }
+
+        assert to_nat(p) == to_nat(p') + to_nat(p[512..]) * pow2(512) by {
+            to_nat_split_lemma(p, 512);
+        }
+
+        assert full_r == to_nat(x') - to_nat(p') + (to_nat(x[512..]) - to_nat(p[512..])) * pow2(512);
+
+        assert to_nat(r) == (to_nat(x') - to_nat(p')) % pow2(512);
+
+        assert cong(to_nat(x') - to_nat(p'), full_r, pow2(512)) by {
+            cong_add_lemma_4(to_nat(x') - to_nat(p'), to_nat(x[512..]) - to_nat(p[512..]), pow2(512));
+        }
+
+        assert to_nat(r) == full_r % pow2(512) by {
+            reveal cong();
+        }
+
+        assert to_nat(r) == full_r by {
+            // assume pow2(386) < pow2(512);
+            assume false;
+        }
+
+        assert R <= to_nat(r) <= 3 * to_nat(m); 
+
+        assert cong(to_nat(x), full_r, to_nat(m)) by {
             cong_add_lemma_4(to_nat(x), -(to_nat(q3) as int), to_nat(m));
+            assert cong(to_nat(x), to_nat(x) - to_nat(q3) * to_nat(m), to_nat(m));
         }
     }
 

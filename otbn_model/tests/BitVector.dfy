@@ -387,10 +387,6 @@ module CutomBitVector {
     //     }
     // }
 
-    // lemma {:axiom} nested_div_lemma(x: nat, m: nat, n: nat) 
-    //     requires m != 0 && n != 0;
-    //     ensures x / m / n == x / (m * n);
-
     function method concat(v1: cbv, v2: cbv) : (v3: cbv)
     {
         v1 + v2
@@ -450,18 +446,6 @@ module CutomBitVector {
         && |v3| == |v1|
         && to_nat(v3) == diff % pow2(|v1|)
         && bout == if diff < 0 then 1 else 0;
-
-    lemma testsub(v1: cbv, v2: cbv)
-        requires |v1| == |v2|;
-    {
-        var (v3, bout) := sub(v1, v2, 0);
-        if to_nat(v1) > to_nat(v2) {
-            assume 0 <= to_nat(v1) < pow2(|v1|);
-            assume 0 <= to_nat(v2) < pow2(|v1|);
-
-            assert to_nat(v3) == to_nat(v1) - to_nat(v2);
-        }
-    }
 
     predicate equal_uint256(bv: cbv, v: uint256)
     {
