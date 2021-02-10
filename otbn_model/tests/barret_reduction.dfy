@@ -291,8 +291,7 @@ module barret384 {
         requires to_nat(p) == to_nat(q3) * to_nat(m);
         requires (r, bout) == sub(slice(x, 0, 512), slice(p, 0, 512), 0);
 
-        ensures var R := to_nat(x) % to_nat(m);
-            R <= to_nat(r) <= 3 * to_nat(m); 
+        ensures to_nat(r) < 3 * to_nat(m); 
         ensures cong(to_nat(x), to_nat(r), to_nat(m)); 
     {
         var Q := to_nat(x) / to_nat(m);
@@ -357,7 +356,7 @@ module barret384 {
             assume false;
         }
 
-        assert R <= to_nat(r) <= 3 * to_nat(m); 
+        assert R <= to_nat(r) < 3 * to_nat(m); 
 
         assert cong(to_nat(x), full_r, to_nat(m)) by {
             cong_add_lemma_4(to_nat(x), -(to_nat(q3) as int), to_nat(m));
@@ -424,32 +423,52 @@ module barret384 {
         ghost var Q := to_nat(x) / gm;
         ghost var R := to_nat(x) % to_nat(m);
 
-        assert Q - 2 <= to_nat(q3) <= Q by {
-            assert to_nat(q3) == ((to_nat(x) / pow2(383)) * (pow2(768) / gm)) / pow2(385) by {
-                assert to_nat(q3) == to_nat(q2'''') / pow2(1) by {
-                    rshift_is_div_lemma(q2'''', 1, q3);
-                }
-                assert to_nat(q1) == to_nat(x) / pow2(383) by {
-                    rshift_is_div_lemma(x, 383, q1);
-                }
-                assert to_nat(q1) == to_nat(q1') + pow2(384) * xmsb by {
-                    to_nat_msb_lemma(q1, 385);
-                }
-                assert to_nat(q2'') == to_nat(q2') / pow2(384) by {
-                    rshift_is_div_lemma(q2', 384, q2'');
-                }
-                q3value(q1, q1', q2', q2'', q2''', q2'''', q3, x, u, t, m, xmsb, uf);
-            }
-            barrett_reduction_q3_bound(to_nat(x), gm, Q, to_nat(q3), 384);
-        }
-
         var p: cbv768 := mul_384_384_768(q3, m);
         var (r: cbv, bout) := sub(slice(x, 0, 512), slice(p, 0, 512), 0);
 
-        assert R <= to_nat(r) <= 3 * to_nat(m) 
+        assert to_nat(r) < 3 * to_nat(m) 
             && cong(to_nat(x), to_nat(r), to_nat(m)) by {
+
+            assert Q - 2 <= to_nat(q3) <= Q by {
+                assert to_nat(q3) == ((to_nat(x) / pow2(383)) * (pow2(768) / gm)) / pow2(385) by {
+                    assert to_nat(q3) == to_nat(q2'''') / pow2(1) by {
+                        rshift_is_div_lemma(q2'''', 1, q3);
+                    }
+                    assert to_nat(q1) == to_nat(x) / pow2(383) by {
+                        rshift_is_div_lemma(x, 383, q1);
+                    }
+                    assert to_nat(q1) == to_nat(q1') + pow2(384) * xmsb by {
+                        to_nat_msb_lemma(q1, 385);
+                    }
+                    assert to_nat(q2'') == to_nat(q2') / pow2(384) by {
+                        rshift_is_div_lemma(q2', 384, q2'');
+                    }
+                    q3value(q1, q1', q2', q2'', q2''', q2'''', q3, x, u, t, m, xmsb, uf);
+                }
+                barrett_reduction_q3_bound(to_nat(x), gm, Q, to_nat(q3), 384);
+            }
+
             rvalue(x, p, q3, m, r, bout);
         }
+
+        var (d1, bout1) := sub(r, zext(m, 512), 0);
+
+        if bout1 == 0 {
+            r := d1;
+        }
+
+        var (d2, bout2) := sub(r, zext(m, 512), 0);
+
+        if bout2 == 0 {
+            r := d2;
+        }
+
+        // assert 0 <= to_nat(r) < to_nat(m);
+        // assume cong(to_nat(r), to_nat(x), to_nat(m));
+
+        // cong_remainder_lemma(to_nat(r), to_nat(x), to_nat(m));
+
+        // assert to_nat(r) == to_nat(x) % to_nat(m);
     }
 
     lemma barrett_reduction_q3_bound(
