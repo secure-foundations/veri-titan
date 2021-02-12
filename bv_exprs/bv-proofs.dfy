@@ -8,19 +8,25 @@ function EvalBVTruncated(s:store, e:BVExpr, width:nat, t:nat) : (r:Option<bv>)
     match e
         case Const(b) => if |b| >= t then Some(b[..t]) else None
         case Var(st) => if st in s then Some(s[st][..t]) else None
-        case Neg(e) => 
+        case Neg(e) =>
             (match EvalBVTruncated(s, e, width, t)
             case None => None
             case Some(b) => Some(bitwise_neg(b)))
-        case BinaryOp(op, lhs, rhs) => 
+        case BinaryOp(op, lhs, rhs) =>
             var lhs := EvalBVTruncated(s, lhs, width, t);
             var rhs := EvalBVTruncated(s, rhs, width, t);
             if lhs.None? || rhs.None? then None
             else
-                match op
+                (match op
                 case And => Some(bitwise_and(lhs.v, rhs.v))
                 case Or  => Some(bitwise_or (lhs.v, rhs.v))
-                case Add => Some(bitwise_add(lhs.v, rhs.v))
+                case Add => Some(bitwise_add(lhs.v, rhs.v)))
+			  case ShiftOp(sh, bve, amt) =>
+				    var bve := EvalBVTruncated(s, bve, width, t);
+					  if bve.None? || (amt > t) then None // TODO: Is rhs of this statement ok?
+						else
+							(match sh
+							case Lsh => Some(bitwise_lsh(bve.v, amt)))
 }
 
 // TODO: Refactor definition of bitwise_* ops, so we can write this proof once
@@ -28,7 +34,7 @@ lemma bitwise_neg_truncated(a:bv, t:nat)
     requires t <= |a|
     ensures bitwise_neg(a)[..t] == bitwise_neg(a[..t])
 {
-    if |a| == 0 {         
+    if |a| == 0 {
     } else {
         if t > 0 {
             calc {
@@ -48,7 +54,7 @@ lemma bitwise_and_truncated(a:bv, b:bv, t:nat)
     requires t <= |a| == |b|
     ensures bitwise_and(a, b)[..t] == bitwise_and(a[..t], b[..t])
 {
-    if |a| == 0 {         
+    if |a| == 0 {
     } else {
         if t > 0 {
             calc {
@@ -70,7 +76,7 @@ lemma bitwise_or_truncated(a:bv, b:bv, t:nat)
     requires t <= |a| == |b|
     ensures bitwise_or(a, b)[..t] == bitwise_or(a[..t], b[..t])
 {
-    if |a| == 0 {         
+    if |a| == 0 {
     } else {
         if t > 0 {
             calc {
@@ -88,11 +94,26 @@ lemma bitwise_or_truncated(a:bv, b:bv, t:nat)
     }
 }
 
+lemma bitwise_lsh_truncated(a:bv, amt:nat, t:nat)
+	  requires amt <= t <= |a|
+    ensures bitwise_lsh(a, amt)[..t] == bitwise_lsh(a[..t], amt)
+{
+    if |a| == 0 {
+    } else {
+			    calc {
+						bitwise_lsh(a, amt)[..t];
+						(seq(amt, n => false) + a[0..(|a| - amt)])[..t];
+						(seq(amt, n => false) + a[..t][0..(|a[..t]| - amt)]);
+						bitwise_lsh(a[..t], amt);
+				}
+    }
+}
+
 lemma bitwise_add_carry_truncated(a:bv, b:bv, c:bool, t:nat)
     requires t <= |a| == |b|
     ensures bitwise_add_carry(a, b, c)[..t] == bitwise_add_carry(a[..t], b[..t], c)
 {
-    if |a| == 0 {         
+    if |a| == 0 {
     } else {
         if t > 0 {
             var sum := xor(xor(a[0], b[0]), c);
@@ -121,14 +142,14 @@ lemma EvalBVTruncated_same_store(s_w:store, e:BVExpr, width:nat, t:nat)
 
 {
     match e {
-        case Const(b) => 
-        case Var(st) => 
-        case Neg(e) => 
+        case Const(b) =>
+        case Var(st) =>
+        case Neg(e) =>
             var r_w := EvalBV(s_w, e, width).v;
             var r_t := EvalBVTruncated(s_w, e, width, t).v;
             bitwise_neg_truncated(r_w, t);
             assert bitwise_neg(r_t) == bitwise_neg(r_w)[..t];
-        case BinaryOp(op, lhs, rhs) => 
+        case BinaryOp(op, lhs, rhs) =>
             var l_w := EvalBV(s_w, lhs, width).v;
             var l_t := EvalBVTruncated(s_w, lhs, width, t).v;
             var r_w := EvalBV(s_w, rhs, width).v;
@@ -136,6 +157,11 @@ lemma EvalBVTruncated_same_store(s_w:store, e:BVExpr, width:nat, t:nat)
             bitwise_and_truncated(l_w, r_w, t);
             bitwise_or_truncated(l_w, r_w, t);
             bitwise_add_carry_truncated(l_w, r_w, false, t);
+			  case ShiftOp(sh, bve, amt) =>
+				    var l_w := EvalBV(s_w, bve, width).v;
+					  var l_t := EvalBVTruncated(s_w, bve, width, t).v;
+						assume(amt < t); // TODO: how should we show t > amt??
+						bitwise_lsh_truncated(l_w, amt, t);
     }
 }
 
@@ -153,13 +179,15 @@ lemma EvalBVTruncated_properties(s_w:store, s_t:store, e:BVExpr, width:nat, t:na
 {
     EvalBVTruncated_same_store(s_w, e, width, t);
     match e {
-        case Const(b) => 
+        case Const(b) =>
         case Var(st) =>
-        case Neg(e) => 
+        case Neg(e) =>
             EvalBVTruncated_properties(s_w, s_t, e, width, t);
-        case BinaryOp(op, lhs, rhs) =>  
+        case BinaryOp(op, lhs, rhs) =>
             EvalBVTruncated_properties(s_w, s_t, lhs, width, t);
             EvalBVTruncated_properties(s_w, s_t, rhs, width, t);
+			case ShiftOp(sh, bve, amt) =>
+				    EvalBVTruncated_properties(s_w, s_t, bve, width, t);
     }
 }
 
