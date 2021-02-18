@@ -20,10 +20,11 @@ function EvalBVTruncated(s:store, e:BVExpr, width:nat, t:nat) : (r:Option<bv>)
                 (match op
                 case And => Some(bitwise_and(lhs.v, rhs.v))
                 case Or  => Some(bitwise_or (lhs.v, rhs.v))
-                case Add => Some(bitwise_add(lhs.v, rhs.v)))
+                case Add => Some(bitwise_add(lhs.v, rhs.v))
+                case Mul => Some(bitwise_mul(lhs.v, rhs.v)))
 			  case ShiftOp(sh, bve, amt) =>
 				    var bve := EvalBVTruncated(s, bve, width, t);
-					  if bve.None? || (amt > t) then None // TODO: Is rhs of this statement ok?
+					  if bve.None? then None
 						else
 							(match sh
 							case Lsh => Some(bitwise_lsh(bve.v, amt)))
@@ -95,18 +96,53 @@ lemma bitwise_or_truncated(a:bv, b:bv, t:nat)
 }
 
 lemma bitwise_lsh_truncated(a:bv, amt:nat, t:nat)
-	  requires amt <= t <= |a|
+	  requires t <= |a|
     ensures bitwise_lsh(a, amt)[..t] == bitwise_lsh(a[..t], amt)
 {
     if |a| == 0 {
     } else {
 			    calc {
 						bitwise_lsh(a, amt)[..t];
-						(seq(amt, n => false) + a[0..(|a| - amt)])[..t];
-						(seq(amt, n => false) + a[..t][0..(|a[..t]| - amt)]);
+						(seq(min(amt, |a|), n => false) + a[0..(|a| - min(amt, |a|))])[..t];
+						(seq(min(amt, |a[..t]|), n => false) + a[..t][0..(|a[..t]| - min(amt, |a[..t]|))]);
 						bitwise_lsh(a[..t], amt);
 				}
     }
+}
+
+lemma bitwise_mul_partial_truncated(a:bv, b:bv, i: nat, j:nat, t:nat)
+	  requires j <= i < t <= |a| == |b|
+    ensures (bitwise_mul_partial(a, b, i, j) == bitwise_mul_partial(a[..t], b[..t], i, j))
+		decreases i - j
+{
+	if j == i {
+	} else {
+		calc {
+			bitwise_mul_partial(a, b, i, j);
+			xor(a[j] && b[i-j], bitwise_mul_partial(a, b, i, j+1));
+			    { bitwise_mul_partial_truncated(a, b, i, j+1, t); }
+			xor(a[..t][j] && b[..t][i-j], bitwise_mul_partial(a[..t], b[..t], i, j+1));
+			bitwise_mul_partial(a[..t], b[..t], i, j);
+		}
+	}
+}
+
+lemma bitwise_mul_truncated(a:bv, b:bv, t:nat)
+	  requires t <= |a| == |b|
+    ensures bitwise_mul(a, b)[..t] == bitwise_mul(a[..t], b[..t])
+{
+	if |a| == 0 {
+	} else {
+		  calc {
+				bitwise_mul(a, b)[..t];
+			  (seq(|a|, (n:nat) => if n < |a| then bitwise_mul_partial(a, b, n, 0) else false)[..t]);
+				    { forall n | 0 <= n < t ensures bitwise_mul_partial(a, b, n, 0) == bitwise_mul_partial(a[..t], b[..t], n, 0)
+                { bitwise_mul_partial_truncated(a, b, n, 0, t); }
+						}
+			  (seq(|a[..t]|, (n:nat) => if n < |a[..t]| then bitwise_mul_partial(a[..t], b[..t], n, 0) else false));
+				bitwise_mul(a[..t], b[..t]);
+		  }
+	}
 }
 
 lemma bitwise_add_carry_truncated(a:bv, b:bv, c:bool, t:nat)
@@ -157,10 +193,10 @@ lemma EvalBVTruncated_same_store(s_w:store, e:BVExpr, width:nat, t:nat)
             bitwise_and_truncated(l_w, r_w, t);
             bitwise_or_truncated(l_w, r_w, t);
             bitwise_add_carry_truncated(l_w, r_w, false, t);
+						bitwise_mul_truncated(l_w, r_w, t);
 			  case ShiftOp(sh, bve, amt) =>
 				    var l_w := EvalBV(s_w, bve, width).v;
 					  var l_t := EvalBVTruncated(s_w, bve, width, t).v;
-						assume(amt < t); // TODO: how should we show t > amt??
 						bitwise_lsh_truncated(l_w, amt, t);
     }
 }

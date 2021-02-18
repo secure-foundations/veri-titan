@@ -29,11 +29,14 @@ function method xor(a:bool, b:bool) : bool
     (a || b) && (!a || !b)
 }
 
+function min(a:int, b:int) : int {
+	  if a < b then a else b
+}
+
 function bitwise_lsh(a:bv, b:nat) : (c:bv)
-	requires b <= |a|
 	ensures |c| == |a|
 {
-	seq(b, n => false) + a[0..(|a| - b)]
+    seq(min(b, |a|), n => false) + a[0..(|a| - min(|a|, b))]
 }
 
 function bitwise_add_carry(a:bv, b:bv, c:bool) : (sum:bv)
@@ -87,7 +90,7 @@ method Main()
   if bitwise_mul(c, d) == d { print "ok6\n"; }
 }
 
-datatype BinaryOp = And | Or | Add
+datatype BinaryOp = And | Or | Add | Mul
 datatype ShiftOp = Lsh
 
 datatype BVExpr =
@@ -134,12 +137,11 @@ function EvalBV(s:store, e:BVExpr, width:nat) : (r:Option<bv>)
                 (match op
                 case And => Some(bitwise_and(lhs.v, rhs.v))
                 case Or  => Some(bitwise_or (lhs.v, rhs.v))
-                case Add => Some(bitwise_add(lhs.v, rhs.v)))
+                case Add => Some(bitwise_add(lhs.v, rhs.v))
+				        case Mul => Some(bitwise_mul(lhs.v, rhs.v)))
 				case ShiftOp(sh, bve, amt) =>
 					var bve := EvalBV(s, bve, width);
 					if bve.None? then None
-					else
-						if amt > |bve.v| then None
 					else
 						match sh
 						case Lsh => Some(bitwise_lsh(bve.v, amt))
