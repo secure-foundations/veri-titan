@@ -27,7 +27,8 @@ function EvalBVTruncated(s:store, e:BVExpr, width:nat, t:nat) : (r:Option<bv>)
 					  if bve.None? then None
 						else
 							(match sh
-							case Lsh => Some(bitwise_lsh(bve.v, amt)))
+							case Lsh => Some(bitwise_lsh(bve.v, amt))
+                            case Rsh => Some(bitwise_rsh(bve.v, amt)))
 }
 
 // TODO: Refactor definition of bitwise_* ops, so we can write this proof once
@@ -101,12 +102,75 @@ lemma bitwise_lsh_truncated(a:bv, amt:nat, t:nat)
 {
     if |a| == 0 {
     } else {
-			    calc {
-						bitwise_lsh(a, amt)[..t];
-						(seq(min(amt, |a|), n => false) + a[0..(|a| - min(amt, |a|))])[..t];
-						(seq(min(amt, |a[..t]|), n => false) + a[..t][0..(|a[..t]| - min(amt, |a[..t]|))]);
-						bitwise_lsh(a[..t], amt);
-				}
+        calc {
+            bitwise_lsh(a, amt)[..t];
+            (seq(min(amt, |a|), n => false) + a[0..(|a| - min(amt, |a|))])[..t];
+            (seq(min(amt, |a[..t]|), n => false) + a[..t][0..(|a[..t]| - min(amt, |a[..t]|))]);
+            bitwise_lsh(a[..t], amt);
+        }
+    }
+}
+
+lemma bitwise_rsh_truncated(a:bv, amt:nat, t:nat)
+	  requires t <= |a|
+    ensures bitwise_rsh(a, amt)[..t] == bitwise_rsh(a[..t], amt)
+{
+    if |a| == 0 {
+    } else {
+        var num_0s := min(amt, |a|);
+        var num_0s' := min(amt, |a[..t]|);
+        var s := (a[num_0s..] + seq(num_0s, n => false))[..t];
+        var s' := a[..t][num_0s'..] + seq(num_0s', n => false);
+        assert |s| == |s'|;
+        forall i | 0 <= i < |s|
+            ensures s[i] == s'[i]
+        {
+            if amt < |a| {
+                assert num_0s == amt;
+                if amt < t {
+                    assert num_0s' == amt;
+                    if i < |a| - num_0s {
+                        assert s[i] == a[num_0s..][i] == a[num_0s+i];
+                        if i < t - amt {
+                            //assert s'[i] == a[..t][num_0s'..][i];
+                        } else {
+                            assert s'[i] == false;
+                            // This is a problematic case, since s[i] == a[num_0s+i],
+                            // i.e., it may not be false.
+                            assume false;
+                        }                        
+                    } else {
+                        assert s[i] == false;
+                        assert |a[..t][num_0s'..]| == t - num_0s';
+                        // To be continued...
+                        assume false;
+                    }
+                } else {
+                    assert num_0s' == t;
+                    assume false;
+                }
+            } else {
+                // Easy case, where rsh eliminates all content
+            }
+/*
+            if i < |a| - num_0s {
+                assert s[i] == a[num_0s..][i];
+                assert s[i] == a[num_0s+i];
+
+                assert s'[i] == 
+
+                assume false;
+            } else {
+                assume false;
+            }
+        */
+        }
+        calc {
+            bitwise_rsh(a, amt)[..t];
+            (a[num_0s..] + seq(num_0s, n => false))[..t];
+            a[..t][num_0s'..] + seq(num_0s', n => false);
+            bitwise_rsh(a[..t], amt);
+        }
     }
 }
 
@@ -194,10 +258,13 @@ lemma EvalBVTruncated_same_store(s_w:store, e:BVExpr, width:nat, t:nat)
             bitwise_or_truncated(l_w, r_w, t);
             bitwise_add_carry_truncated(l_w, r_w, false, t);
 						bitwise_mul_truncated(l_w, r_w, t);
-			  case ShiftOp(sh, bve, amt) =>
-				    var l_w := EvalBV(s_w, bve, width).v;
-					  var l_t := EvalBVTruncated(s_w, bve, width, t).v;
-						bitwise_lsh_truncated(l_w, amt, t);
+		case ShiftOp(sh, bve, amt) =>    
+            var l_w := EvalBV(s_w, bve, width).v;
+            var l_t := EvalBVTruncated(s_w, bve, width, t).v;
+            match sh {
+                case Lsh => bitwise_lsh_truncated(l_w, amt, t);
+                case Rsh => bitwise_rsh_truncated(l_w, amt, t);
+            }
     }
 }
 

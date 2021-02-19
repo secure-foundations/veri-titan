@@ -39,6 +39,13 @@ function bitwise_lsh(a:bv, b:nat) : (c:bv)
     seq(min(b, |a|), n => false) + a[0..(|a| - min(|a|, b))]
 }
 
+function bitwise_rsh(a:bv, b:nat) : (c:bv)
+	ensures |c| == |a|
+{
+    var num_0s := min(b, |a|);
+    a[num_0s..] + seq(num_0s, n => false)
+}
+
 function bitwise_add_carry(a:bv, b:bv, c:bool) : (sum:bv)
     requires |a| == |b|
     ensures  |sum| == |a|
@@ -91,14 +98,14 @@ method Main()
 }
 
 datatype BinaryOp = And | Or | Add | Mul
-datatype ShiftOp = Lsh
+datatype ShiftOp = Lsh | Rsh
 
 datatype BVExpr =
     | Const(bv)
     | Var(string)
     | Neg(e:BVExpr)
     | BinaryOp(op:BinaryOp, lhs:BVExpr, rhs:BVExpr)
-		| ShiftOp(sh:ShiftOp, bve:BVExpr, amt:nat)
+	| ShiftOp(sh:ShiftOp, bve:BVExpr, amt:nat)
 
 datatype CmpOp = Eq | Neq //| Lt
 
@@ -145,6 +152,7 @@ function EvalBV(s:store, e:BVExpr, width:nat) : (r:Option<bv>)
 					else
 						match sh
 						case Lsh => Some(bitwise_lsh(bve.v, amt))
+                        case Rsh => Some(bitwise_rsh(bve.v, amt))
 
 }
 
