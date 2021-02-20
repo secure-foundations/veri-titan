@@ -132,6 +132,7 @@ lemma bitwise_rsh_truncated(a:bv, amt:nat, t:nat)
                     if i < |a| - num_0s {
                         assert s[i] == a[num_0s..][i] == a[num_0s+i];
                         if i < t - amt {
+                            // This case is okay
                             //assert s'[i] == a[..t][num_0s'..][i];
                         } else {
                             assert s'[i] == false;
@@ -140,30 +141,26 @@ lemma bitwise_rsh_truncated(a:bv, amt:nat, t:nat)
                             assume false;
                         }                        
                     } else {
+                        // This case is okay
                         assert s[i] == false;
                         assert |a[..t][num_0s'..]| == t - num_0s';
-                        // To be continued...
-                        assume false;
+                        assert s'[i] == false;
                     }
                 } else {
                     assert num_0s' == t;
-                    assume false;
+                    if i < |a| - num_0s { 
+                        assert s[i] == a[num_0s..][i] == a[num_0s+i] == a[amt+i];
+                        assert s'[i] == false;
+                        // This is a problematic case, since s[i] == a[amt+i],
+                        // i.e., it may not be false.
+                        assume false;
+                    } else {
+                        assert s[i] == assert s'[i] == false;
+                    }
                 }
             } else {
                 // Easy case, where rsh eliminates all content
             }
-/*
-            if i < |a| - num_0s {
-                assert s[i] == a[num_0s..][i];
-                assert s[i] == a[num_0s+i];
-
-                assert s'[i] == 
-
-                assume false;
-            } else {
-                assume false;
-            }
-        */
         }
         calc {
             bitwise_rsh(a, amt)[..t];
@@ -172,6 +169,14 @@ lemma bitwise_rsh_truncated(a:bv, amt:nat, t:nat)
             bitwise_rsh(a[..t], amt);
         }
     }
+}
+
+// Truncation works for RSH if we do it to the MSBs
+lemma bitwise_rsh_truncated_msb(a:bv, amt:nat, t:nat)
+	  requires t <= |a|
+    ensures bitwise_rsh(a, amt)[t..] == bitwise_rsh(a[t..], amt)
+{
+
 }
 
 lemma bitwise_mul_partial_truncated(a:bv, b:bv, i: nat, j:nat, t:nat)
