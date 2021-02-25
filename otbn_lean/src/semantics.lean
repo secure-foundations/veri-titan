@@ -4,9 +4,13 @@ set_option pp.beta
 /-! Basic types -/
 def uint32 := {i : N // i ≤ 0x100000000}
 
-/-! Register defintions and lemmas adapted from lovelib.lean's definition of state -/
+/-! Register definitions and lemmas adapted from lovelib.lean's definition of state -/
 def registers := nat -> uint32
 
+/- 
+   TODO: This all belongs in a generic (finite) map library, 
+         with a set of lemmas that match F*/Dafny's axioms
+ -/
 def registers.update (id:nat) (val:uint32) (regs:registers) : registers :=
   λ id', if id' = id then val else s id'
 
@@ -62,5 +66,9 @@ inductive instr : Type
 | add32 : nat -> nat -> nat -> instr
 // | mov32 : (dst:nat) -> (src:nat) -> instr
 | mov32 : nat -> nat -> instr
+
+inductive code : Type 
+| Ins : instr -> code
+| Block : list code -> code
 
 end
