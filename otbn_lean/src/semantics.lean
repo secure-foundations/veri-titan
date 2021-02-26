@@ -1,8 +1,13 @@
+import topology.basic
+#check topological_space
+import data.zmod
+/-- 
 namespace otbn
 set_option pp.beta true
 
 /-! Basic types -/
-def uint32 := {i : ℕ // i ≤ 0x100000000}
+/- def uint32 := {i : ℕ // i ≤ 0x100000000} -/
+def uint32 := zmod 0x100000000
 
 /-! Register definitions and lemmas adapted from lovelib.lean's definition of state -/
 def registers := nat -> uint32
@@ -67,8 +72,20 @@ inductive instr : Type
 /--| mov32 : (dst:nat) -> (src:nat) -> instr -/
 | mov32 : nat -> nat -> instr
 
+/-! Top-level code definitions -/
 inductive code : Type 
 | Ins : instr -> code
 | Block : list code -> code
 
+/-! Instruction semantics -/
+def eval_ins32 : instr -> state -> state -> bool
+| (instr.add32 dst src1 src2) s r := 
+  let new_regs := s.regs { dst ↦ (s.regs src1 + s.regs src2) % 2 } in
+  r = { regs := new_regs, ok := s.ok }
+| (instr.mov32 dst src) s r := tt
+
+
+/-! Code semantics -/
+
 end otbn
+-/
