@@ -1,7 +1,7 @@
 import topology.basic
-#check topological_space
-import data.zmod
-/-- 
+/- #check topological_space -/
+import data.zmod.basic 
+
 namespace otbn
 set_option pp.beta true
 
@@ -59,6 +59,9 @@ begin
     simp * at *
 end
 
+def registers.eq (r0 r1:registers) : bool :=
+  ∀ i . 0 ≤ i ∧ i < 32 → r0 i = r1 i
+
 /-! State definition -/
 structure state : Type :=
   (regs : registers)
@@ -80,7 +83,9 @@ inductive code : Type
 /-! Instruction semantics -/
 def eval_ins32 : instr -> state -> state -> bool
 | (instr.add32 dst src1 src2) s r := 
-  let new_regs := s.regs { dst ↦ (s.regs src1 + s.regs src2) % 2 } in
+  let sum : nat := zmod.val (s.regs src1) + zmod.val (s.regs src2) in
+  let sum32 : uint32 := sum % 0x100000000 in
+  let new_regs := s.regs { dst ↦ sum32 } in
   r = { regs := new_regs, ok := s.ok }
 | (instr.mov32 dst src) s r := tt
 
@@ -88,4 +93,3 @@ def eval_ins32 : instr -> state -> state -> bool
 /-! Code semantics -/
 
 end otbn
--/
