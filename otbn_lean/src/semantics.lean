@@ -1,15 +1,15 @@
-import topology.basic
-/- #check topological_space -/
 import data.zmod.basic 
+import init.data.nat
+open nat
 
 namespace otbn
 set_option pp.beta true
 
-/-! Basic types -/
-/- def uint32 := {i : ℕ // i ≤ 0x100000000} -/
+/- Basic types -/
+attribute [reducible]
 def uint32 := zmod 0x100000000
 
-/-! Register definitions and lemmas adapted from lovelib.lean's definition of state -/
+/- Register definitions and lemmas adapted from lovelib.lean's definition of state -/
 def registers := nat -> uint32
 
 /- 
@@ -59,37 +59,74 @@ begin
     simp * at *
 end
 
-def registers.eq (r0 r1:registers) : bool :=
-  ∀ i . 0 ≤ i ∧ i < 32 → r0 i = r1 i
+def decide (i:nat) (r0 r1:registers) : bool := 
+  if i = 1 then r0 i = r1 i else ff
 
-/-! State definition -/
+def decide_proof (r0 r1:registers) (h:decide 1 r0 r1 = tt) : Prop :=
+  have h : ∀ i:nat , i = 1 → r0 i = r1 i, from
+  begin
+    intro i,
+    intro hi,
+    cases i,
+    { exfalso,
+      have h_nz : succ 0 ≠ 0 := succ_ne_zero 0,
+      have hi_rev : 1 = 0 := 
+        begin
+          symmetry,
+          exact hi         
+        end,
+      exact (h_nz hi_rev) },
+    {
+      rw hi,      
+      have h_duh : r0 1 = r1 1 := h, 
+    }
+
+  end
+/-
+def registers.eq (r0 r1:registers) : bool :=
+  let p := ∀ i:nat , i = 1 → r0 i = r1 i in
+  let proof : decidable p :=
+  begin
+    
+    
+
+  end
+
+
+def registers.eq (r0 r1:registers) : bool :=
+  let p := ∀ i:nat , (0 ≤ i ∧ i < 32) → r0 i = r1 i in
+  let proof : decidable p :=
+  begin
+    
+  end
+
+/- State definition -/
 structure state : Type :=
   (regs : registers)
   (ok : bool)
 
 
-/-! Instructions -/
+/- Instructions -/
 inductive instr : Type
 /- | add32 : (dst: nat) -> (src1:nat) -> (src2:nat) -> instr -/
 | add32 : nat -> nat -> nat -> instr
-/--| mov32 : (dst:nat) -> (src:nat) -> instr -/
+/-| mov32 : (dst:nat) -> (src:nat) -> instr -/
 | mov32 : nat -> nat -> instr
 
-/-! Top-level code definitions -/
+/- Top-level code definitions -/
 inductive code : Type 
 | Ins : instr -> code
 | Block : list code -> code
 
-/-! Instruction semantics -/
+/- Instruction semantics -/
 def eval_ins32 : instr -> state -> state -> bool
 | (instr.add32 dst src1 src2) s r := 
-  let sum : nat := zmod.val (s.regs src1) + zmod.val (s.regs src2) in
-  let sum32 : uint32 := sum % 0x100000000 in
-  let new_regs := s.regs { dst ↦ sum32 } in
+  let new_regs := s.regs { dst ↦ (s.regs src1) + (s.regs src2) } in
   r = { regs := new_regs, ok := s.ok }
 | (instr.mov32 dst src) s r := tt
 
 
-/-! Code semantics -/
+/- Code semantics -/
 
+-/
 end otbn
