@@ -144,10 +144,8 @@ module barret384 {
         q1: cbv, q1': cbv,
         q2': cbv, q2'': cbv, q2''': cbv, q2'''': cbv,
         x: cbv, u: cbv, t: cbv, m: cbv,
-        xmsb: uint1, cout1: uint1, cout2: uint1,
-        gm: nat, uf: nat
+        xmsb: uint1, cout1: uint1, cout2: uint1, gm: nat
     )
-        requires msb(q1) == xmsb;
         requires to_nat(q1) == to_nat(x) / pow2(383);
         requires to_nat(q1) == to_nat(q1') + pow2(384) * xmsb;
         requires to_nat(q2') == to_nat(q1') * to_nat(u);
@@ -159,7 +157,7 @@ module barret384 {
         requires gm == to_nat(m) != 0;
         requires gm < pow2(384);
         requires x_bound: to_nat(x) <= (gm - 1) * (gm - 1);
-        requires uf == to_nat(u) + pow2(384) == pow2(768) / gm;
+        requires to_nat(u) + pow2(384) == pow2(768) / gm;
 
         ensures cout1 == 0 && cout2 == 0;
     {
@@ -197,7 +195,6 @@ module barret384 {
             to_nat(q1) * to_nat(u) - pow2(384) * xmsb * to_nat(u) + to_nat(q1) * pow2(384) + if xmsb == 1 then to_nat(u) * pow2(384) else 0;
             to_nat(q1) * to_nat(u) + to_nat(q1) * pow2(384);
             to_nat(x) / pow2(383) * (to_nat(u) + pow2(384));
-            to_nat(x) / pow2(383) * uf;
             to_nat(x) / pow2(383) * (pow2(768) / gm);
             {
                 reveal x_bound;
@@ -281,6 +278,17 @@ module barret384 {
             }
         }
     }
+
+    lemma boundtest(a: nat, b: nat, gm: nat)
+        requires a < gm;
+        requires b < gm;
+        requires 19701003098197239606139520050071806902539869635232723333974146702122860885748605305707133127442457820403313995153408 < gm < 39402006196394479212279040100143613805079739270465446667948293404245721771497210611414266254884915640806627990306816;
+
+        ensures (a * b / (19701003098197239606139520050071806902539869635232723333974146702122860885748605305707133127442457820403313995153408) * (1552518092300708935148979488462502555256886017116696611139052038026050952686376886330878408828646477950487730697131073206171580044114814391444287275041181139204454976020849905550265285631598444825262999193716468750892846853816057856 / gm)) < 3105036184601417870297958976925005110513772034233393222278104076052101905372753772661756817657292955900975461394262146412343160088229628782888574550082362278408909952041699811100530571263196889650525998387432937501785693707632115712
+    {
+
+    }
+
 
     lemma rvalue(
         x: cbv768, p: cbv768, q3: cbv, m: cbv384, r: cbv, bout: uint1
@@ -415,7 +423,7 @@ module barret384 {
                 rshift_is_div_lemma(q2', 384, q2'');
             }
             assume to_nat(x) <= (gm - 1) * (gm - 1);
-            bounded(q1, q1', q2', q2'', q2''', q2'''', x, u, t, m, xmsb, cout1, cout2, gm, uf);
+            bounded(q1, q1', q2', q2'', q2''', q2'''', x, u, t, m, xmsb, cout1, cout2, gm);
         }
 
         var q3: cbv384 := rshift(q2'''', 1);

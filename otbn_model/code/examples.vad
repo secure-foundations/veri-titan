@@ -79,19 +79,19 @@ procedure LoopRegExample(inout dst:reg32, in cnt:reg32)
     }
 }
 
-procedure CopyExample()
-    requires
-        Valid32Addr(xmem, x0 + 0);
-        Valid32Addr(xmem, x0 + 4);
-    reads
-        x0;
-    ensures
-        Valid32Addr(xmem, x0 + 0);
-        Valid32Addr(xmem, x0 + 4);
-        xmem == old(xmem[x0 + 4 := xmem[x0 + 0]]);
-    modifies
-        xmem; x2;
-{
-    LW(x2, x0, 0);
-    SW(x2, x0, 4);
-}
+// procedure CopyExample()
+//     requires
+//         Valid32Addr(xmem, x0 + 0);
+//         Valid32Addr(xmem, x0 + 4);
+//     reads
+//         x0;
+//     ensures
+//         Valid32Addr(xmem, x0 + 0);
+//         Valid32Addr(xmem, x0 + 4);
+//         xmem == old(xmem[x0 + 4 := xmem[x0 + 0]]);
+//     modifies
+//         xmem; x2;
+// {
+//     LW(x2, x0, 0);
+//     SW(x2, x0, 4);
+// }

@@ -204,7 +204,7 @@ function Valid32Addr(h: Xmem, addr:int):bool extern;
 function Valid256Addr(h: Wmem, addr:int):bool extern;
 
 procedure LW(out grd:reg32, in offset:imm32, in grs1:reg32)
-    {:instruction Ins32(LW32(grd, src, offset))}
+    {:instruction Ins32(LW32(grd, grs1, offset))}
     reads
         xmem;
     requires

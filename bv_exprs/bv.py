@@ -275,6 +275,3 @@ def AddSub_1156():
 		0 - x == 1,
 	)
 	prove(query)
-
-
-AddSub_1156()
