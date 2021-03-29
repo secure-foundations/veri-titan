@@ -1,0 +1,62 @@
+include "decls.vad"
+include "otbn_mul.vad"
+
+#verbatim
+include "../code/vale.dfy"
+
+include "../spec/def.dfy"
+include "../spec/ops.dfy"
+include "../spec/types.dfy"
+
+include "../gen/decls.dfy"
+
+module barrett384 {
+
+import opened bignum_vale
+
+import opened bignum_def
+import opened ops
+import opened types
+
+import opened bignum_decls
+
+#endverbatim
+
+// function Valid256Addr(p: int, x:int, y:int): bool extern;
+
+procedure cond_sub_mod()
+    requires
+        w31 == 0;
+        x16 < 0xfffffe60;
+        // forall(i:int){wmem?[i]}{ValidSrcAddr(wmem, i)} rsi <= i < rsi + 32 ==> Valid256Addr(wmem, i);
+        forall(i:int) 0 <= i < 12 ==> Valid256Addr(wmem, old(x16) + 32 * i);
+    modifies
+        x8; x10; x11; x16;
+        flags; wmem;
+        wregs; w31;
+{
+    LI(x8, 5);
+    LI(x10, 3);
+    LI(x11, 2);
+
+    BN_ADD(w31, w31, w31, false, 0, false);
+    ghost var i : int := 0;
+
+    while (LoopImm(12))
+        invariant x10 == 3;
+        invariant i + loop_ctr == 12;
+        invariant x16 == old(x16) + 32 * i;
+        invariant forall(i:int) 0 <= i < 12 ==> Valid256Addr(wmem, old(x16) + 32 * i);
+        decreases loop_ctr;
+    {
+        assert Valid256Addr(wmem, old(x16) + 32 * i);
+        BN_LID(x10, false, 0, x16, true);
+        i := i + 1;
+    }
+}
+
+
+
+#verbatim
+}
+#endverbatim
