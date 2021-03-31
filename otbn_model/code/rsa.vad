@@ -30,14 +30,14 @@ procedure cond_sub_mod()
             Valid256Addr(wmem, old(x16) + 32 * i);
     modifies
         x8; x10; x11; x16;
-        flags; wmem;
-        wregs; w31;
+        fgroups; wmem;
+        wregs; w2; w3; w4; w31;
 {
     li(x8, 5);
     li(x10, 3);
     li(x11, 2);
 
-    bn_add(w31, w31, w31, false, 0, false);
+    bn_add(w31, w31, w31, false, 0, 0);
     ghost var i : int := 0;
 
     while (LoopImm(12))
@@ -46,6 +46,8 @@ procedure cond_sub_mod()
         invariant x16 == old(x16) + 32 * i;
         invariant forall(i:int) 0 <= i < 12
             ==> Valid256Addr(wmem, old(x16) + 32 * i);
+        invariant x8 == 5 + i;
+        invariant x11 == 2;
         decreases loop_ctr;
     {
         assert Valid256Addr(wmem, old(x16) + 32 * i);
@@ -53,11 +55,11 @@ procedure cond_sub_mod()
 
         bn_movr(x11, false, x8, false);
 
-        bn_subb(w4, w2, w3);
+        bn_subb(w4, w2, w3, false, 0, 0);
 
         bn_sel(w3, w4, w2, 0, 0);
 
-        bn_mor(x8, true, x10, false);
+        bn_movr(x8, true, x10, false);
 
         i := i + 1;
     }
