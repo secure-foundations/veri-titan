@@ -51,6 +51,8 @@ procedure cond_sub_mod()
     {
         assert Valid256Addr(wmem, old(x16) + 32 * i);
         BN_LID(x10, false, 0, x16, true);
+        // BN_MOVR
+
         i := i + 1;
     }
 }

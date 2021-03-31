@@ -154,6 +154,12 @@ function va_eval_reg256(s:va_state, r:Reg256):uint256
     s.wregs[r]
 }
 
+function mod_add(a: nat, b: nat, m: nat): nat 
+    requires a < m && b < m;
+{
+    if a + b > m then a + b - m else a + b
+}
+
 function va_update_operand_reg256(r:Reg256, sM:va_state, sK:va_state):va_state
     requires r in sM.wregs;
 {
