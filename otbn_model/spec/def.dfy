@@ -79,11 +79,11 @@ datatype code =
 
 datatype codes = CNil | va_CCons(hd: code, tl: codes)
 
-datatype cmp = Eq | Ne | Gt | Ge | Lt | Le
 datatype whileCond = 
     | RegCond(r: Reg32)
     | ImmCond(c: uint32)
 
+// datatype flag = CF | MSB | LSB | ZERO
 datatype flags = flags(cf: bool, msb: bool, lsb: bool, zero: bool)
 datatype flagGroups = flagGroups(fg0: flags, fg1: flags)
 

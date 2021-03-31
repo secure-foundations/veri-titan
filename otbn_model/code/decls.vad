@@ -344,8 +344,8 @@ procedure bn_xor(inout dst: reg256, in src1: reg256, in src2: reg256, inline st:
     assume false;
 }
 
-procedure bn_add(inout dst: reg256, in src1: reg256, in src2: reg256, inline st: bool, in sb: imm32, inline which_fg: uint1)
-    {:instruction Ins256(BN_ADD(dst, src1, src2, st, sb, which_fg))}
+procedure bn_add(inout dst: reg256, in src1: reg256, in src2: reg256, inline st: bool, in sb: imm32, inline which_group: uint1)
+    {:instruction Ins256(BN_ADD(dst, src1, src2, st, sb, which_group))}
     requires
         sb < 32;
     modifies
@@ -353,27 +353,27 @@ procedure bn_add(inout dst: reg256, in src1: reg256, in src2: reg256, inline st:
     ensures
         let result := otbn_add(old(src1), old(src2), st, sb);
         dst == fst(result) &&
-        fgroups == update_fgroups(old(fgroups), which_fg, snd(result));
+        fgroups == update_fgroups(old(fgroups), which_group, snd(result));
 {
     assume false;
 }
 
-procedure bn_addc(inout dst: reg256, in src1: reg256, in src2: reg256, inline st: bool, in sb: imm32, inline which_fg: uint1)
-    {:instruction Ins256(BN_ADDC(dst, src1, src2, st, sb, which_fg))}
+procedure bn_addc(inout dst: reg256, in src1: reg256, in src2: reg256, inline st: bool, in sb: imm32, inline which_group: uint1)
+    {:instruction Ins256(BN_ADDC(dst, src1, src2, st, sb, which_group))}
     requires
         sb < 32;
     modifies
         fgroups;
     ensures
-        let result := otbn_addc(old(src1), old(src2), st, sb, select_fgroup(old(fgroups), which_fg));
+        let result := otbn_addc(old(src1), old(src2), st, sb, select_fgroup(old(fgroups), which_group));
         dst == fst(result) &&
-        fgroups == update_fgroups(old(fgroups), which_fg, snd(result));
+        fgroups == update_fgroups(old(fgroups), which_group, snd(result));
 {
     assume false;
 }
 
-procedure bn_addi(inout dst: reg256, in src: reg256, in imm: imm32, inline which_fg: uint1)
-    {:instruction Ins256(BN_ADDI(dst, src, imm, which_fg))}
+procedure bn_addi(inout dst: reg256, in src: reg256, in imm: imm32, inline which_group: uint1)
+    {:instruction Ins256(BN_ADDI(dst, src, imm, which_group))}
     requires
         imm < 1024;
     modifies
@@ -381,7 +381,7 @@ procedure bn_addi(inout dst: reg256, in src: reg256, in imm: imm32, inline which
     ensures
         let result := otbn_addi(old(src), imm);
         dst == fst(result) &&
-        fgroups == update_fgroups(old(fgroups), which_fg, snd(result));
+        fgroups == update_fgroups(old(fgroups), which_group, snd(result));
 {
     assume false;
 }
@@ -396,8 +396,8 @@ procedure bn_addm(inout dst: reg256, in src1: reg256, in src2: reg256)
     assume false;
 }
 
-procedure bn_sub(inout dst: reg256, in src1: reg256, in src2: reg256, inline st: bool, in sb: imm32, inline which_fg: uint1)
-    {:instruction Ins256(BN_SUB(dst, src1, src2, st, sb, which_fg))}
+procedure bn_sub(inout dst: reg256, in src1: reg256, in src2: reg256, inline st: bool, in sb: imm32, inline which_group: uint1)
+    {:instruction Ins256(BN_SUB(dst, src1, src2, st, sb, which_group))}
     requires
         sb < 32;
     modifies
@@ -405,27 +405,27 @@ procedure bn_sub(inout dst: reg256, in src1: reg256, in src2: reg256, inline st:
     ensures
         let result := otbn_sub(old(src1), old(src2), st, sb);
         dst == fst(result) &&
-        fgroups == update_fgroups(old(fgroups), which_fg, snd(result));
+        fgroups == update_fgroups(old(fgroups), which_group, snd(result));
 {
     assume false;
 }
 
-procedure bn_subb(inout dst: reg256, in src1: reg256, in src2: reg256, inline st: bool, in sb: imm32, inline which_fg: uint1)
-    {:instruction Ins256(BN_SUBB(dst, src1, src2, st, sb, which_fg))}
+procedure bn_subb(inout dst: reg256, in src1: reg256, in src2: reg256, inline st: bool, in sb: imm32, inline which_group: uint1)
+    {:instruction Ins256(BN_SUBB(dst, src1, src2, st, sb, which_group))}
     requires
         sb < 32;
     modifies
         fgroups;
     ensures
-        let result := otbn_subb(old(src1), old(src2), st, sb, select_fgroup(old(fgroups), which_fg));
+        let result := otbn_subb(old(src1), old(src2), st, sb, select_fgroup(old(fgroups), which_group));
         dst == fst(result) &&
-        fgroups == update_fgroups(old(fgroups), which_fg, snd(result));
+        fgroups == update_fgroups(old(fgroups), which_group, snd(result));
 {
     assume false;
 }
 
-procedure bn_subi(inout dst: reg256, in src1: reg256, in src2: imm128, inline which_fg: uint1)
-    {:instruction Ins256(BN_SUBI(dst, src1, src2, which_fg))}
+procedure bn_subi(inout dst: reg256, in src1: reg256, in src2: imm128, inline which_group: uint1)
+    {:instruction Ins256(BN_SUBI(dst, src1, src2, which_group))}
     requires
         src2 < 1024;
     modifies
@@ -433,7 +433,7 @@ procedure bn_subi(inout dst: reg256, in src1: reg256, in src2: imm128, inline wh
     ensures
         let result := otbn_subbi(old(src1), src2);
         dst == fst(result) &&
-        fgroups == update_fgroups(old(fgroups), which_fg, snd(result));
+        fgroups == update_fgroups(old(fgroups), which_group, snd(result));
 {
     assume false;
 }
@@ -661,13 +661,13 @@ procedure bn_rshi(inout dst: reg256, in src1: reg256, in src2: reg256, in imm: i
     assume false;
 }
 
-procedure bn_sel(inout dst: reg256, in src1: reg256, in src2: reg256, inline which_fg: uint1, in flag: imm2)
-    {:instruction Ins256(BN_SEL(dst, src1, src2, which_fg))} 
+procedure bn_sel(inout dst: reg256, in src1: reg256, in src2: reg256, inline which_group: uint1, in flag: imm2)
+    {:instruction Ins256(BN_SEL(dst, src1, src2, which_group))} 
     // TODO: sort out fg/flag
     modifies
         fgroups;
     ensures
-        dst == (if get_flag(old(fgroups), which_fg, flag) then src2 else src1);
+        dst == (if get_flag(old(fgroups), which_group, flag) then src2 else src1);
 {
     assume false;
 }

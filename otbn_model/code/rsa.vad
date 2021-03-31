@@ -55,6 +55,8 @@ procedure cond_sub_mod()
 
         bn_subb(w4, w2, w3);
 
+        bn_sel(w3, w4, w2, 0, 0);
+
         bn_mor(x8, true, x10, false);
 
         i := i + 1;
