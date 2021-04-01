@@ -672,7 +672,7 @@ procedure bn_sel(inout dst: reg256, in src1: reg256, in src2: reg256, inline whi
     reads
         fgroups;
     ensures
-        dst == (if get_flag(old(fgroups), which_group, flag) then src2 else src1);
+        dst == (if get_flag(old(fgroups), which_group, flag) then src1 else src2);
 {
     assume false;
 }

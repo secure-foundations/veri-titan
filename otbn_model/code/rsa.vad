@@ -73,7 +73,8 @@ procedure cond_sub_mod()
         assert cf' == (diff < 0);
         // assert w4 == diff % BASE_256;
 
-        bn_sel(w3, w4, w2, 0, 1);
+        bn_sel(w3, w4, w2, 1, 0);
+        assert if selection then (w3 == w4) else (w3 == w2);
 
         bn_movr(x8, true, x10, false);
 
