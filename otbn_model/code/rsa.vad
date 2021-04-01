@@ -22,6 +22,7 @@ import opened bignum_decls
 
 #endverbatim
 
+//  FG1.C: s, selection flag
 procedure cond_sub_mod()
     requires
         w31 == 0;
@@ -33,6 +34,8 @@ procedure cond_sub_mod()
         fgroups; wmem;
         wregs; w2; w3; w4; w31;
 {
+    ghost var selection := get_cf1(fgroups);
+
     li(x8, 5);
     li(x10, 3);
     li(x11, 2);
@@ -41,23 +44,36 @@ procedure cond_sub_mod()
     ghost var i : int := 0;
 
     while (LoopImm(12))
-        invariant x10 == 3;
         invariant i + loop_ctr == 12;
+        invariant x8 == 5 + i;
+        invariant x11 == 2;
+        invariant x10 == 3;
         invariant x16 == old(x16) + 32 * i;
         invariant forall(i:int) 0 <= i < 12
             ==> Valid256Addr(wmem, old(x16) + 32 * i);
-        invariant x8 == 5 + i;
-        invariant x11 == 2;
+        invariant get_cf1(fgroups) == selection;
         decreases loop_ctr;
     {
-        assert Valid256Addr(wmem, old(x16) + 32 * i);
+        // assert Valid256Addr(wmem, old(x16) + 32 * i);
         bn_lid_safe(x10, false, 0, x16, true);
+        assert w3 == wmem[old(x16) + 32 * i];
 
         bn_movr(x11, false, x8, false);
+        assert w2 == wregs[Wdr(x8)];
 
+        ghost var cf := get_cf0(fgroups);
+        ghost var fg := select_fgroup(fgroups, 0);
         bn_subb(w4, w2, w3, false, 0, 0);
+        ghost var cf' := get_cf0(fgroups);
+        ghost var result := otbn_subb(w2, w3, false, 0, fg);
+        assert w4 == fst(result);
 
-        bn_sel(w3, w4, w2, 0, 0);
+        ghost var carry := if cf then 1 else 0;
+        ghost var diff : int := w2 - w3 - carry;
+        assert cf' == (diff < 0);
+        // assert w4 == diff % BASE_256;
+
+        bn_sel(w3, w4, w2, 0, 1);
 
         bn_movr(x8, true, x10, false);
 

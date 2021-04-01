@@ -239,6 +239,16 @@ function get_flag(fgps: flagGroups, which_group: uint1, which_flag: int) : bool
     else select_fgroup(fgps, which_group).zero
 }
 
+function get_cf0(fgps: flagGroups): bool
+{
+    select_fgroup(fgps, 0).cf 
+}
+
+function get_cf1(fgps: flagGroups): bool
+{
+    select_fgroup(fgps, 1).cf 
+}
+
 function update_fgroups(fgps: flagGroups, which_group: uint1, new_flags: flags) : flagGroups
 {
     if which_group == 0 then fgps.(fg0 := new_flags) else fgps.(fg1 := new_flags)
@@ -291,7 +301,7 @@ function otbn_subb(x: uint256, y: uint256, st: bool, sb : uint32, flgs: flags) :
     // TODO: double check this
     var cf := if flgs.cf then 1 else 0;
     var diff : int := x - uint256_sb(y, st, sb) - cf;
-    var fg := flags(false, false, false, diff == 0);
+    var fg := flags(diff < 0, false, false, diff == 0);
     (diff % BASE_256, fg)
 }
 
