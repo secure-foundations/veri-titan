@@ -101,6 +101,21 @@ predicate valid_state(s: state)
     && (forall t :: t in s.wregs)
 }
 
+function interp_wdr_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): int 
+    requires start <= end
+    decreases end - start
+{
+    if start == end then wregs[Wdr(start)]
+    else BASE_256 * interp_wdr_seq(wregs, start + 1, end) + wregs[Wdr(start)]
+}
+
+// function wdr_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): seq<uint256>
+//     requires start <= end
+// {
+
+// }
+
+
 predicate IsUInt32(i: int) { 0 <= i < 0x1_0000_0000 }
 predicate IsUInt256(i: int) { 0 <= i < 0x1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000 }
 

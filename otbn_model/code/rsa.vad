@@ -10,6 +10,8 @@ include "../spec/types.dfy"
 
 include "../gen/decls.dfy"
 
+include "../code/rsa_leammas.dfy"
+
 module barrett384 {
 
 import opened bignum_vale
@@ -17,10 +19,13 @@ import opened bignum_vale
 import opened bignum_def
 import opened ops
 import opened types
+import opened rsa_leammas
 
 import opened bignum_decls
 
 #endverbatim
+
+function interp_wdr_seq(start: int, end: int): int extern;
 
 //  FG1.C: s, selection flag
 procedure cond_sub_mod()
@@ -49,9 +54,19 @@ procedure cond_sub_mod()
         invariant x11 == 2;
         invariant x10 == 3;
         invariant x16 == old(x16) + 32 * i;
+
+        invariant get_cf1(fgroups) == selection;
+
         invariant forall(i:int) 0 <= i < 12
             ==> Valid256Addr(wmem, old(x16) + 32 * i);
-        invariant get_cf1(fgroups) == selection;
+
+        invariant !selection
+            ==> (forall(i:int) 0 <= i < 12
+            ==> wregs[Wdr(5 + i)] == old(wregs[Wdr(5 + i)]));
+
+        // invariant !selection ==>
+        //     interp_wdr_seq(wregs, 5, 5 + i) == interp_wdr_seq(old(wregs), 5, 5 + i);
+
         decreases loop_ctr;
     {
         // assert Valid256Addr(wmem, old(x16) + 32 * i);
@@ -59,7 +74,8 @@ procedure cond_sub_mod()
         assert w3 == wmem[old(x16) + 32 * i];
 
         bn_movr(x11, false, x8, false);
-        assert w2 == wregs[Wdr(x8)];
+        assert w2 == wregs[Wdr(5 + i)];
+        ghost var old_limb := w2;
 
         ghost var cf := get_cf0(fgroups);
         ghost var fg := select_fgroup(fgroups, 0);
@@ -77,6 +93,8 @@ procedure cond_sub_mod()
         assert if selection then (w3 == w4) else (w3 == w2);
 
         bn_movr(x8, true, x10, false);
+        // assert wregs[Wdr(5 + i)] == w3;
+        // assert !selection ==> (wregs[Wdr(5 + i)] == old_limb);
 
         i := i + 1;
     }

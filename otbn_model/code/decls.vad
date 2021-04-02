@@ -95,7 +95,7 @@ var wmem: Wmem {:state wmem()};
 var wregs: Wregs {:state wregs()};
 var fgroups: flagGroups  {:state fgroups()};
 
-function Wdr(gr: uint32): Reg256 extern;
+function Wdr(gr: int): Reg256 extern;
 const WAcc: Reg256 extern;
 
 var x0: uint32 {:state reg32(Gpr(0))};
