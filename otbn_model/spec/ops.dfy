@@ -60,6 +60,14 @@ module ops {
 		(x + y) % BASE_256
 	}
 
+	function method uint256_subb(x: uint256, y: uint256, cin: uint1): (uint256, uint1)
+	{
+	    var diff : int := x - y - cin;
+		var diff_out := if diff >= 0 then diff else diff + BASE_256;
+		var cout := if diff < 0 then 1 else 0;
+		(diff_out, cout)
+	}
+
 	function method {:opaque} uint256_xor(x: uint256, y: uint256): uint256
 	{
 		(x as bv256 ^ y as bv256) as uint256

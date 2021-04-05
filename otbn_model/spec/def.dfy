@@ -109,12 +109,18 @@ function interp_wdr_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_
     else BASE_256 * interp_wdr_seq(wregs, start + 1, end) + wregs[Wdr(start)]
 }
 
-// function wdr_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): seq<uint256>
-//     requires start <= end
-// {
-
-// }
-
+function seq_subb(x: seq<uint256>, y: seq<uint256>, cin: uint1) : (seq<uint256>, uint1)
+    requires |x| == |y|
+    ensures var (z, cout) := seq_subb(x, y, cin);
+        && |z| == |x|
+{
+    if |x| == 0 then ([], cin)
+    else 
+        var idx := |x| - 1;
+        var (z0, c) := uint256_subb(x[idx], y[idx], cin);
+        var (zrest, cout) := seq_subb(x[..idx], y[..idx], c);
+        (zrest + [z0], cout)
+}
 
 predicate IsUInt32(i: int) { 0 <= i < 0x1_0000_0000 }
 predicate IsUInt256(i: int) { 0 <= i < 0x1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000 }
@@ -254,6 +260,11 @@ function get_flag(fgps: flagGroups, which_group: uint1, which_flag: int) : bool
     else select_fgroup(fgps, which_group).zero
 }
 
+function bool_to_uint1(i:bool) : uint1
+{
+    if i then 1 else 0
+}
+
 function get_cf0(fgps: flagGroups): bool
 {
     select_fgroup(fgps, 0).cf 
@@ -313,11 +324,11 @@ function otbn_sub(x: uint256, y: uint256, st: bool, sb: uint32) : (uint256, flag
 function otbn_subb(x: uint256, y: uint256, st: bool, sb : uint32, flgs: flags) : (uint256, flags)
     requires sb < 32;
 {
-    // TODO: double check this
+    // TODO: replace this with uint256_subb
     var cf := if flgs.cf then 1 else 0;
-    var diff : int := x - uint256_sb(y, st, sb) - cf;
-    var fg := flags(diff < 0, false, false, diff == 0);
-    (diff % BASE_256, fg)
+	var (diff, cout) := uint256_subb(x, uint256_sb(y, st, sb), cf);
+    var fg := flags(cout == 1, false, false, diff == 0);
+    (diff, fg)
 }
 
 function otbn_subbi(x: uint256, imm: uint256) : (uint256, flags)

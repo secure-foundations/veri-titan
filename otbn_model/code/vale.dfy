@@ -11,6 +11,25 @@ import opened bignum_def
 //
 ////////////////////////////////////////////////////////////////////////
 
+function fst<T,Q>(t:(T, Q)) : T { t.0 }
+function snd<T,Q>(t:(T, Q)) : Q { t.1 }
+
+function sub_seq<T>(s: seq<T>, start: int, end: int): seq<T>
+    requires 0 <= start <= end <= |s|
+{
+    s[start..end]
+}
+
+function seq_len<T>(s: seq<T>): nat
+{
+    |s|
+}
+
+function seq_concat<T>(x: seq<T>, y: seq<T>): seq<T>
+{
+    x + y
+}
+
 type va_code = code
 type va_codes = codes
 type va_state = state
@@ -88,11 +107,6 @@ function va_update_fgroups(sM: va_state, sK: va_state): va_state
 {
     sK.(fgroups := sM.fgroups)
 }
-
-function fst<T,Q>(t:(T, Q)) : T { t.0 }
-function snd<T,Q>(t:(T, Q)) : Q { t.1 }
-
-// function va_update_lstack(sM: va_state, sK: va_state): va_state { sK.(lstack := sM.lstack) }
 
 type va_operand_imm128 = uint128
 predicate va_is_src_imm128(v:uint128, s: va_state) { true }

@@ -11,7 +11,7 @@ import opened bignum_def
 import opened types
 #endverbatim
 
-// type nat: Type(0) := int_range(0, _);
+type nat: Type(0) := int_range(0, _);
 type state: Type(0) {: primitive} extern;
 
 type uint1: Type(0) := int_range(0, 1);
@@ -45,6 +45,12 @@ function operator([]) #[a: Type(0)](s: seq(a), i: int): a extern; // TODO: requi
 function operator([ := ]) #[a: Type(0)](s: seq(a), i: int, v: a): seq(a) extern; // TODO: requires clause
 function operator([]) #[a: Type(0), b: Type(0)](m: map(a, b), key: a): b extern; // TODO: requires clause
 function operator([ := ]) #[a: Type(0), b: Type(0)](m: map(a, b), key: a, v: b): map(a, b) extern;
+
+function sub_seq #[a: Type(0)] (s: seq(a), start: int, end: int): seq(a) extern;
+function seq_len #[a: Type(0)] (s: seq(a)): nat extern;
+function seq_concat #[a: Type(0)](x: seq(a), y: seq(a)): seq(a) extern;
+
+function bool_to_uint1(i:bool) : uint1 extern;
 
 function fst #[a: Type(0), b: Type(0)](m: tuple(a, b)): a extern;
 function snd #[a: Type(0), b: Type(0)](m: tuple(a, b)): b extern;
