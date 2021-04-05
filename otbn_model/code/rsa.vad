@@ -204,11 +204,18 @@ procedure cond_sub_mod(ghost m: seq(uint256), ghost selection: bool)
             tuple(seq_append(fst(p1), fst(p2)), snd(p2));
             ==
             tuple(seq_append(prefix_seq(pre_c, i-1), w4), cin);
-
+            ==
+            {
+                calc == {
+                    prefix_seq(cur_c, i);
+                    ==
+                    seq_append(prefix_seq(cur_c, i-1), w4);
+                    ==
+                    seq_append(prefix_seq(pre_c, i-1), w4);
+                }
+            }
+            tuple(prefix_seq(cur_c, i), cin);
         }
-
-        // assert tuple(w4, cin) == uint256_subb(x_i, y_i, pre_cin);
-
     }
 }
 
