@@ -109,16 +109,16 @@ function interp_wdr_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_
     else BASE_256 * interp_wdr_seq(wregs, start + 1, end) + wregs[Wdr(start)]
 }
 
-function seq_subb(x: seq<uint256>, y: seq<uint256>, cin: uint1) : (seq<uint256>, uint1)
+function seq_subb(x: seq<uint256>, y: seq<uint256>) : (seq<uint256>, uint1)
     requires |x| == |y|
-    ensures var (z, cout) := seq_subb(x, y, cin);
+    ensures var (z, cout) := seq_subb(x, y);
         && |z| == |x|
 {
-    if |x| == 0 then ([], cin)
+    if |x| == 0 then ([], 0)
     else 
         var idx := |x| - 1;
-        var (z0, c) := uint256_subb(x[idx], y[idx], cin);
-        var (zrest, cout) := seq_subb(x[..idx], y[..idx], c);
+        var (zrest, cin) := seq_subb(x[..idx], y[..idx]);
+        var (z0, cout) := uint256_subb(x[idx], y[idx], cin);
         (zrest + [z0], cout)
 }
 
