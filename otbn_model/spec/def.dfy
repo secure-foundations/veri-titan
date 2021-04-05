@@ -8,146 +8,156 @@ import opened types
 import opened ops    
 import opened powers
 
-type reg_index = i:int | 0 <= i < 32
+type reg_index = i: int | 0 <= i < 32
 
 // General purpose and control registers, 32b
 datatype Reg32 =
-| Gpr(x:reg_index)
+| Gpr(x: reg_index)
 | Rnd // Random number
 
 // Wide data and special registers, 256b
 datatype Reg256 =
-| Wdr(w:reg_index)
+| Wdr(w: reg_index)
 | WMod // Wide modulo register
 | WRnd // Wide random number
 | WAcc // Wide accumulator
 
 datatype ins32 =
-| ADD32(xrd:Reg32, xrs1:Reg32, xrs2:Reg32)
-| ADDI32(xrd:Reg32, xrs1:Reg32, imm:uint32)
-| LUI32(xrd:Reg32, imm:uint32)
-| SUB32(xrd:Reg32, xrs1:Reg32, xrs2:Reg32)
-| AND32(xrd:Reg32, xrs1:Reg32, xrs2:Reg32)
-| ANDI32(xrd:Reg32, xrs1:Reg32, imm:uint32)
-| OR32(xrd:Reg32, xrs1:Reg32, xrs2:Reg32)
-| ORI32(xrd:Reg32, xrs1:Reg32, imm:uint32)
-| XOR32(xrd:Reg32, xrs1:Reg32, xrs2:Reg32)
-| XORI32(xrd:Reg32, xrs1:Reg32, imm:uint32)
-| LW32(xrd:Reg32, xrs1:Reg32, imm:uint32)
-| SW32(xrs1:Reg32, xrs2:Reg32, imm:uint32)
-| BEQ32(xrs1:Reg32, xrs2:Reg32, offset:uint32)
-| BNE32(xrs1:Reg32, xrs2:Reg32, offset:uint32)
-| LOOP32(xrs1:Reg32, bodysize:uint32)
-| LOOPI32(iterations:uint32, bodysize:uint32)
-| JAL32(xrd:Reg32, offset:uint32)
-| JALR32(xrd:Reg32, xrs1:Reg32, offset:uint32)
-| CSRRS32(xrd:Reg32, csr:Reg32, xrs2:Reg32)
-| CSRRW32(xrd:Reg32, csr:Reg32, xrs2:Reg32)
-| ECALL32 // TODO
+| ADD(xrd: Reg32, xrs1: Reg32, xrs2: Reg32)
+| ADDI(xrd: Reg32, xrs1: Reg32, imm: uint32)
+| LUI(xrd: Reg32, imm: uint32)
+| SUB(xrd: Reg32, xrs1: Reg32, xrs2: Reg32)
+| AND(xrd: Reg32, xrs1: Reg32, xrs2: Reg32)
+| ANDI(xrd: Reg32, xrs1: Reg32, imm: uint32)
+| OR(xrd: Reg32, xrs1: Reg32, xrs2: Reg32)
+| ORI(xrd: Reg32, xrs1: Reg32, imm: uint32)
+| XOR(xrd: Reg32, xrs1: Reg32, xrs2: Reg32)
+| XORI(xrd: Reg32, xrs1: Reg32, imm: uint32)
+| LW(xrd: Reg32, xrs1: Reg32, imm: uint32)
+| SW(xrs1: Reg32, xrs2: Reg32, imm: uint32)
+| BEQ(xrs1: Reg32, xrs2: Reg32, offset: uint32)
+| BNE(xrs1: Reg32, xrs2: Reg32, offset: uint32)
+| LOOP(grs: Reg32, bodysize: uint32)
+| LOOPI(iterations: uint32, bodysize: uint32)
+| JAL(xrd: Reg32, offset: uint32)
+| JALR(xrd: Reg32, xrs1: Reg32, offset: uint32)
+| CSRRS(xrd: Reg32, csr: Reg32, xrs2: Reg32)
+| CSRRW(xrd: Reg32, csr: Reg32, xrs2: Reg32)
+| ECALL // TODO
 
 datatype ins256 =
-| ADD256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
-| ADDC256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
-| ADDI256(wrd:Reg256, wrs1:Reg256, imm: uint256, flg:bool)
-| ADDM256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256)
-| MULQACC256(zero:bool, wrs1:Reg256, qwsel1:uint32, wrs2:Reg256, qwsel2:uint32, shift:uint32)
-| MULH256(wrd:Reg256, wrs1:Reg256, hw1:bool, wrs2:Reg256, hw2:bool)
-| SUB256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
-| SUBB256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32, flg:bool)
-| SUBI256(wrd:Reg256, wrs1:Reg256, imm: uint256, flg:bool)
-| SUBM256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256)
-| AND256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
-| OR256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
-| NOT256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
-| XOR256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, shift_type:bool, shift_bytes:uint32)
-| RSHI256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, imm: uint256)
-| SEL256(wrd:Reg256, wrs1:Reg256, wrs2:Reg256, flg:bool)
-| CMP256(wrs1:Reg256, wrs2:Reg256, flg:bool)
-| CMPB256(wrs1:Reg256, wrs2:Reg256, flg:bool)
-// BN.LID <grd>[<grd_inc>], <offset>(<grs1>[<grs1_inc>])
-| LID256(grd:Reg32, grd_inc:bool, offset:uint32, grs:Reg32, grs_inc:bool)
-// BN.SID <grs2>[<grs2_inc>], <offset>(<grs1>[<grs1_inc>])
-| SID256(grs2:Reg32, grs2_inc:bool, offset:uint32, grs1:Reg32, grs1_inc:bool)
-| MOV256(wrd:Reg256, wrs:Reg256)
-| MOVR256 // TODO
-| WSRRS256 // TODO
-| WSRRW256 // TODO
+| BN_ADD(wrd: Reg256, wrs1: Reg256, wrs2: Reg256, shift_type: bool, shift_bytes: uint32, fg: uint1)
+| BN_ADDC(wrd: Reg256, wrs1: Reg256, wrs2: Reg256, shift_type: bool, shift_bytes: uint32, fg: uint1)
+| BN_ADDI(wrd: Reg256, wrs1: Reg256, imm: uint256, fg: uint1)
+| BN_ADDM(wrd: Reg256, wrs1: Reg256, wrs2: Reg256)
+| BN_MULQACC(zero: bool, wrs1: Reg256, qwsel1: uint32, wrs2: Reg256, qwsel2: uint32, shift: uint32)
+| BN_MULH(wrd: Reg256, wrs1: Reg256, hw1: bool, wrs2: Reg256, hw2: bool)
+| BN_SUB(wrd: Reg256, wrs1: Reg256, wrs2: Reg256, shift_type: bool, shift_bytes: uint32, fg: uint1)
+| BN_SUBB(wrd: Reg256, wrs1: Reg256, wrs2: Reg256, shift_type: bool, shift_bytes: uint32, fg: uint1)
+| BN_SUBI(wrd: Reg256, wrs1: Reg256, imm: uint256, fg: uint1)
+| BN_SUBM(wrd: Reg256, wrs1: Reg256, wrs2: Reg256)
+| BN_AND(wrd: Reg256, wrs1: Reg256, wrs2: Reg256, shift_type: bool, shift_bytes: uint32)
+| BN_OR(wrd: Reg256, wrs1: Reg256, wrs2: Reg256, shift_type: bool, shift_bytes: uint32)
+| BN_NOT(wrd: Reg256, wrs1: Reg256, wrs2: Reg256, shift_type: bool, shift_bytes: uint32)
+| BN_XOR(wrd: Reg256, wrs1: Reg256, wrs2: Reg256, shift_type: bool, shift_bytes: uint32)
+| BN_RSHI(wrd: Reg256, wrs1: Reg256, wrs2: Reg256, imm: uint256)
+| BN_SEL(wrd: Reg256, wrs1: Reg256, wrs2: Reg256, fg: uint1)
+| BN_CMP(wrs1: Reg256, wrs2: Reg256, fg: uint1)
+| BN_CMPB(wrs1: Reg256, wrs2: Reg256, fg: uint1)
+| BN_LID(grd: Reg32, grd_inc: bool, offset: uint32, grs: Reg32, grs_inc: bool)
+| BN_SID(grs2: Reg32, grs2_inc: bool, offset: uint32, grs1: Reg32, grs1_inc: bool)
+| BN_MOV(wrd: Reg256, wrs: Reg256)
+| BN_MOVR(grd: Reg32, grd_inc: bool, grs: Reg32, grs_inc: bool)
+| BN_WSRRS // TODO
+| BN_WSRRW // TODO
 
 datatype code =
-| Ins32(ins:ins32)
-| Ins256(bn_ins:ins256)
-| Block(block:codes)
-| While(whileCond:whileCond, whileBody:code)
+| Ins32(ins: ins32)
+| Ins256(bn_ins: ins256)
+| Block(block: codes)
+| While(whileCond: whileCond, whileBody: code)
 
-datatype codes = CNil | va_CCons(hd:code, tl:codes)
+datatype codes = CNil | va_CCons(hd: code, tl: codes)
 
-datatype cmp = Eq | Ne | Gt | Ge | Lt | Le
 datatype whileCond = 
     | RegCond(r: Reg32)
     | ImmCond(c: uint32)
 
-datatype FlagsGroup = FlagsGroup(cf:bool, msb:bool, lsb:bool, zero:bool)
-datatype Flags = Flags(fg0:FlagsGroup, fg1:FlagsGroup)
-
-datatype mAddr = mAddr(reg:Reg32, offset:int)
+// datatype flag = CF | MSB | LSB | ZERO
+datatype flags = flags(cf: bool, msb: bool, lsb: bool, zero: bool)
+datatype flagGroups = flagGroups(fg0: flags, fg1: flags)
 
 datatype state = state(
     xregs: map<Reg32, uint32>, // 32-bit registers
     wregs: map<Reg256, uint256>, // 256-bit registers
-    flags: Flags,
-    // lstack: seq<nat>,
+    fgroups: flagGroups,
     xmem: map<int, uint32>,
     wmem: map<int, uint256>,
     ok: bool)
 
-predicate valid_state(s:state)
+predicate valid_state(s: state)
 {
     && (forall r :: r in s.xregs)
     && (forall t :: t in s.wregs)
 }
 
-predicate IsUInt32(i:int) { 0 <= i < 0x1_0000_0000 }
-predicate IsUInt256(i:int) { 0 <= i < 0x1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000 }
+function interp_wdr_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): int 
+    requires start <= end
+    decreases end - start
+{
+    if start == end then wregs[Wdr(start)]
+    else BASE_256 * interp_wdr_seq(wregs, start + 1, end) + wregs[Wdr(start)]
+}
 
-predicate ValidRegister32(xregs:map<Reg32, uint32>, r:Reg32)
+// function wdr_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): seq<uint256>
+//     requires start <= end
+// {
+
+// }
+
+
+predicate IsUInt32(i: int) { 0 <= i < 0x1_0000_0000 }
+predicate IsUInt256(i: int) { 0 <= i < 0x1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000 }
+
+predicate ValidRegister32(xregs: map<Reg32, uint32>, r: Reg32)
 {
     r in xregs
 }
 
-predicate ValidRegister256(wregs:map<Reg256, uint256>, r:Reg256)
+predicate ValidRegister256(wregs: map<Reg256, uint256>, r: Reg256)
 {
     r in wregs
 }
 
-predicate ValidCsr32(r:Reg32)
+predicate ValidCsr32(r: Reg32)
 {
     // TODO: Other CSRs are limbs of WMod or flags-- will these ever be used?
     r.Rnd?
 }
 
-function eval_xreg(xregs:map<Reg32, uint32>, r:Reg32) : uint32
+function eval_xreg(xregs: map<Reg32, uint32>, r: Reg32) : uint32
 {
     if !ValidRegister32(xregs, r) then 24 // TODO: better error message
     else xregs[r]
 }
 
-function eval_wreg(wregs:map<Reg256, uint256>, r:Reg256) : uint256
+function eval_wreg(wregs: map<Reg256, uint256>, r: Reg256) : uint256
 {
     if !ValidRegister256(wregs, r) then 24 // TODO: better error message
     else wregs[r]
 }
 
-predicate ValidSourceRegister32(s:state, r:Reg32)
+predicate ValidSourceRegister32(s: state, r: Reg32)
 {
     ValidRegister32(s.xregs, r)
 }
 
-predicate ValidDestinationRegister32(s:state, r:Reg32)
+predicate ValidDestinationRegister32(s: state, r: Reg32)
 {
     !r.Rnd? && ValidRegister32(s.xregs, r)
 }
 
-function eval_reg32(s:state, r:Reg32) : uint32
+function eval_reg32(s: state, r: Reg32) : uint32
 {
     if !ValidSourceRegister32(s, r) then
         42
@@ -155,7 +165,7 @@ function eval_reg32(s:state, r:Reg32) : uint32
         s.xregs[r]
 }
 
-predicate evalIns32(xins:ins32, s:state, r:state)
+predicate evalIns32(xins: ins32, s: state, r: state)
 {
     if !s.ok then
         !r.ok
@@ -163,17 +173,17 @@ predicate evalIns32(xins:ins32, s:state, r:state)
         r.ok && (valid_state(s) ==> valid_state(r))
 }
 
-predicate ValidSourceRegister256(s:state, r:Reg256)
+predicate ValidSourceRegister256(s: state, r: Reg256)
 {
     ValidRegister256(s.wregs, r)
 }
 
-predicate ValidDestinationRegister256(s:state, r:Reg256)
+predicate ValidDestinationRegister256(s: state, r: Reg256)
 {
     !r.WRnd? && ValidRegister256(s.wregs, r)
 }
 
-function eval_reg256(s:state, r:Reg256) : uint256
+function eval_reg256(s: state, r: Reg256) : uint256
 {
     if !ValidSourceRegister256(s, r) then
         42
@@ -181,7 +191,7 @@ function eval_reg256(s:state, r:Reg256) : uint256
         s.wregs[r]
 }
 
-predicate evalIns256(wins:ins256, s:state, r:state)
+predicate evalIns256(wins: ins256, s: state, r: state)
 {
     if !s.ok then
         !r.ok
@@ -189,26 +199,15 @@ predicate evalIns256(wins:ins256, s:state, r:state)
         r.ok && (valid_state(s) ==> valid_state(r))
 }
 
-predicate evalBlock(block:codes, s:state, r:state)
+predicate evalBlock(block: codes, s: state, r: state)
 {
     if block.CNil? then
         r == s
     else
-        exists r':state :: evalCode(block.hd, s, r') && evalBlock(block.tl, r', r)
+        exists r': state :: evalCode(block.hd, s, r') && evalBlock(block.tl, r', r)
 }
 
-// function evalCmp(c:cmp, i1:uint32, i2:uint32):bool
-// {
-//     match c
-//         case Eq => i1 == i2
-//         case Ne => i1 != i2
-//         case Gt => i1 > i2
-//         case Ge => i1 >= i2
-//         case Lt => i1 < i2
-//         case Le => i1 <= i2
-// }
-
-function eval_cond(s:state, wc:whileCond): nat
+function eval_cond(s: state, wc: whileCond): nat
     // requires ValidSourceRegister32(s, wc.r);
     // requires IsUInt32(wc.c);
 {
@@ -217,20 +216,20 @@ function eval_cond(s:state, wc:whileCond): nat
         case ImmCond(c) => c
 }
 
-predicate evalWhile(c:code, n:nat, s:state, r:state)
+predicate evalWhile(c: code, n: nat, s: state, r: state)
     decreases c, n
 {
     if s.ok then
         if n == 0 then
             s == r
         else
-            exists loop_body_end:state :: evalCode(c, s, loop_body_end)
+            exists loop_body_end: state :: evalCode(c, s, loop_body_end)
                 && evalWhile(c, n - 1, loop_body_end, r)
     else
         !r.ok
 }
 
-predicate evalCode(c:code, s:state, r:state)
+predicate evalCode(c: code, s: state, r: state)
     decreases c, 0
 {
     match c
@@ -241,84 +240,98 @@ predicate evalCode(c:code, s:state, r:state)
         case While(cond, body) => evalWhile(body, eval_cond(s, cond), s, r)
 }
 
-function get_flags_group(fg:bool, flags:Flags) : FlagsGroup { if fg then flags.fg1 else flags.fg0 }
-
-function get_flag(fg:bool, flag:int, flags:Flags) : bool
-    requires 0 <= flag <= 4;
+function select_fgroup(fgps: flagGroups, which: uint1): flags
 {
-    if flag == 0 then get_flags_group(fg, flags).cf else
-    if flag == 1 then get_flags_group(fg, flags).msb else
-    if flag == 2 then get_flags_group(fg, flags).lsb else
-    get_flags_group(fg, flags).zero
+    if which == 0 then fgps.fg0 else fgps.fg1
 }
 
-function update_fg(b:bool, f:Flags, fg:FlagsGroup) : Flags { if b then f.(fg1 := fg) else f.(fg0 := fg) }
-
-function cf(flags_group:FlagsGroup) : bool { flags_group.cf }
-
-function bn_add_carray(a: uint256, b: uint256, carry_in: bool) : (uint256, FlagsGroup)
+function get_flag(fgps: flagGroups, which_group: uint1, which_flag: int) : bool
+    requires 0 <= which_flag <= 3;
 {
-    var sum :int := a + b + if carry_in then 1 else 0;
+    if which_flag == 0 then select_fgroup(fgps, which_group).cf 
+    else if which_flag == 1 then select_fgroup(fgps, which_group).msb
+    else if which_flag == 2 then select_fgroup(fgps, which_group).lsb
+    else select_fgroup(fgps, which_group).zero
+}
+
+function get_cf0(fgps: flagGroups): bool
+{
+    select_fgroup(fgps, 0).cf 
+}
+
+function get_cf1(fgps: flagGroups): bool
+{
+    select_fgroup(fgps, 1).cf 
+}
+
+function update_fgroups(fgps: flagGroups, which_group: uint1, new_flags: flags) : flagGroups
+{
+    if which_group == 0 then fgps.(fg0 := new_flags) else fgps.(fg1 := new_flags)
+}
+
+function otbn_add_carray(a: uint256, b: uint256, carry_in: bool) : (uint256, flags)
+{
+    var sum : int := a + b + if carry_in then 1 else 0;
     // FIXME: get MSB and LSM
-    var fg := FlagsGroup(sum >= BASE_256, false, false, sum == 0);
+    var fg := flags(sum / BASE_256 != 0, false, false, sum == 0);
     (sum % BASE_256, fg)
 }
 
-function bn_add(x: uint256, y: uint256, st: bool, sb: uint32) : (uint256, FlagsGroup)
+function otbn_add(x: uint256, y: uint256, st: bool, sb: uint32) : (uint256, flags)
     requires sb < 32;
 {
-    bn_add_carray(x, uint256_sb(y, st, sb), false)
+    otbn_add_carray(x, uint256_sb(y, st, sb), false)
 }
 
-function bn_addc(x: uint256, y: uint256, st: bool, sb: uint32, flags_group:FlagsGroup) : (uint256, FlagsGroup)
+function otbn_addc(x: uint256, y: uint256, st: bool, sb: uint32, fg: flags) : (uint256, flags)
     requires sb < 32;
 {
-    bn_add_carray(x, uint256_sb(y, st, sb), cf(flags_group))
+    otbn_add_carray(x, uint256_sb(y, st, sb), fg.cf)
 }
 
-function bn_addi(x: uint256, imm: uint256) : (uint256, FlagsGroup)
+function otbn_addi(x: uint256, imm: uint256) : (uint256, flags)
     requires imm < 1024;
 {
-    bn_add_carray(x, imm, false)
+    otbn_add_carray(x, imm, false)
 }
 
-function bn_addm(x: uint256, y: uint256, mod: uint256) : uint256
+function otbn_addm(x: uint256, y: uint256, mod: uint256) : uint256
 {
-    var (sum, _) := bn_add_carray(x, y, false);
+    var (sum, _) := otbn_add_carray(x, y, false);
     if sum >= mod then sum - mod else sum
 }
 
-function bn_sub(x: uint256, y: uint256, st: bool, sb: uint32) : (uint256, FlagsGroup)
+function otbn_sub(x: uint256, y: uint256, st: bool, sb: uint32) : (uint256, flags)
     requires sb < 32;
 {
-    var diff :int := x - uint256_sb(y, st, sb);
+    var diff : int := x - uint256_sb(y, st, sb);
     // FIXME: figure out the flags
-    var fg := FlagsGroup(false, false, false, diff == 0);
+    var fg := flags(false, false, false, diff == 0);
     (diff % BASE_256, fg)
 }
 
-function bn_subb(x: uint256, y: uint256, st: bool, sb :uint32, flags_group: FlagsGroup) : (uint256, FlagsGroup)
+function otbn_subb(x: uint256, y: uint256, st: bool, sb : uint32, flgs: flags) : (uint256, flags)
     requires sb < 32;
 {
-    // FIXME: double check this
-    var cf := if cf(flags_group) then 1 else 0;
-    var diff :int := x - uint256_sb(y, st, sb) - cf;
-    var fg := FlagsGroup(false, false, false, diff == 0);
+    // TODO: double check this
+    var cf := if flgs.cf then 1 else 0;
+    var diff : int := x - uint256_sb(y, st, sb) - cf;
+    var fg := flags(diff < 0, false, false, diff == 0);
     (diff % BASE_256, fg)
 }
 
-function bn_subbi(x: uint256, imm: uint256) : (uint256, FlagsGroup)
+function otbn_subbi(x: uint256, imm: uint256) : (uint256, flags)
     requires imm < 1024;
     // requires imm < x; //TODO: Is this true?
 {
     // FIXME: double check this
-    var diff :int := x - imm;
+    var diff : int := x - imm;
     // FIXME: figure out the flags
-    var fg := FlagsGroup(false, false, false, diff == 0);
+    var fg := flags(false, false, false, diff == 0);
     (diff % BASE_256, fg)
 }
 
-function bn_subm(x: uint256, y: uint256, wmod: uint256) : uint256
+function otbn_subm(x: uint256, y: uint256, wmod: uint256) : uint256
 {
     // FIXME: some bound checking?
     assume false;
@@ -326,7 +339,7 @@ function bn_subm(x: uint256, y: uint256, wmod: uint256) : uint256
     if result >= wmod then (result as bv256 - wmod as bv256) as uint256 else result
 }
 
-function bn_mulqacc(
+function otbn_mulqacc(
     zero: bool,
     x: uint256, qx: uint2,
     y: uint256, qy: uint2,
@@ -338,31 +351,31 @@ function bn_mulqacc(
     if zero then shift else (acc + shift) % BASE_256
 }
 
-predicate bn_mulqacc_is_safe(shift: uint2, acc: uint256)
+predicate otbn_mulqacc_is_safe(shift: uint2, acc: uint256)
 {
     // make sure no overflow from shift (product is assumed to be 128 bits)
     && (shift <= 2) 
     // make sure no overflow from addtion
-    && (acc + bn_qshift_safe(BASE_128 - 1, shift) < BASE_256)
+    && (acc + otbn_qshift_safe(BASE_128 - 1, shift) < BASE_256)
 }
 
 // mulquacc but no overflow
-function bn_mulqacc_safe(
+function otbn_mulqacc_safe(
     zero: bool,
     x: uint256, qx: uint2,
     y: uint256, qy: uint2,
     shift: uint2,
     acc: uint256) : uint256
 
-    requires bn_mulqacc_is_safe(shift, acc);
+    requires otbn_mulqacc_is_safe(shift, acc);
 {
     var product := uint256_qmul(x, qx, y, qy);
-    var shift := bn_qshift_safe(product, shift);
+    var shift := otbn_qshift_safe(product, shift);
     if zero then shift else acc + shift
 }
 
 // quater shift but no overflow
-function bn_qshift_safe(x: uint256, q: uint2): (r: uint256)
+function otbn_qshift_safe(x: uint256, q: uint2): (r: uint256)
     requires (q == 1) ==> (x < BASE_192);
     requires (q == 2) ==> (x < BASE_128);
     requires (q == 3) ==> (x < BASE_64);
@@ -373,25 +386,25 @@ function bn_qshift_safe(x: uint256, q: uint2): (r: uint256)
     else x * BASE_192
 }
 
-function bn_xor(x: uint256, y: uint256, st: bool, sb: uint32) : uint256
+function otbn_xor(x: uint256, y: uint256, st: bool, sb: uint32) : uint256
     requires sb < 32;
 {
     uint256_xor(x, uint256_sb(y, st, sb))
 }
 
-function bn_or(x: uint256, y: uint256, st: bool, sb: uint32) : uint256
+function otbn_or(x: uint256, y: uint256, st: bool, sb: uint32) : uint256
     requires sb < 32;
 {
     uint256_or(x, uint256_sb(y, st, sb))
 }
         
-function bn_and(x: uint256, y: uint256, st: bool, sb: uint32) : uint256
+function otbn_and(x: uint256, y: uint256, st: bool, sb: uint32) : uint256
     requires sb < 32;
 {
     uint256_and(x, uint256_sb(y, st, sb))
 }
 
-function bn_rshi(x: uint256, y: uint256, shift_amt:int) : uint256
+function otbn_rshi(x: uint256, y: uint256, shift_amt: int) : uint256
     requires 0 <= shift_amt < 256;
 {
     var concat : int := x * BASE_256 + y;

@@ -17,16 +17,7 @@ import opened bignum_decls
 
 #endverbatim
 
-procedure DoubleExample32(inout dst:reg32, in src:reg32)
-    requires
-        src + src < 0x1_0000_0000;
-    ensures
-        dst = old(src) + old(src);
-{
-    Add32(dst, src, src);
-}
-
-procedure DoubleRegExample32()
+procedure double()
     requires
         x2 + x2 < 0x1_0000_0000;
     ensures
@@ -34,23 +25,23 @@ procedure DoubleRegExample32()
     modifies
         x2;
 {
-    Add32(x2, x2, x2);
+    add(x2, x2, x2);
 }
 
-procedure Increment(inout dst:reg32)
+procedure double_reg(inout dst:reg32, in src:reg32)
     requires
-        old(dst) < 100;
+        src + src < 0x1_0000_0000;
     ensures
-        dst == old(dst) + 1;
+        dst = old(src) + old(src);
 {
-    Addi32(dst, dst, 1);
+    add(dst, src, src);
 }
 
-procedure LoopImmExample(inout dst:reg32)
+procedure loop_imm(inout dst:reg32)
     requires
         dst == 0;
     modifies
-        flags;
+        fgroups;
     ensures
         dst == 6;
 {
@@ -58,16 +49,16 @@ procedure LoopImmExample(inout dst:reg32)
         invariant dst == (3 - loop_ctr) * 2;
         decreases loop_ctr;
     {
-        Addi32(dst, dst, 2);
+        addi(dst, dst, 2);
     }
 }
 
-procedure LoopRegExample(inout dst:reg32, in cnt:reg32)
+procedure loop_reg(inout dst:reg32, in cnt:reg32)
     requires
         dst == 0;
         cnt == 3;
     modifies
-        flags;
+        fgroups;
     ensures
         dst == 6;
 {
@@ -75,11 +66,11 @@ procedure LoopRegExample(inout dst:reg32, in cnt:reg32)
         invariant dst == (3 - loop_ctr) * 2;
         decreases loop_ctr;
     {
-        Addi32(dst, dst, 2);
+        addi(dst, dst, 2);
     }
 }
 
-procedure CopyExample()
+procedure copy()
     requires
         Valid32Addr(xmem, x0 + 0);
         Valid32Addr(xmem, x0 + 4);
@@ -92,6 +83,6 @@ procedure CopyExample()
     modifies
         xmem; x2;
 {
-    LW(x2, x0, 0);
-    SW(x2, x0, 4);
+    lw(x2, 0, x0);
+    sw(x2, 4, x0);
 }

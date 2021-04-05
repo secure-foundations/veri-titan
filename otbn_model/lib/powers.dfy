@@ -13,7 +13,7 @@ module powers
         else b * power(b, e - 1)
     }
 
-    function pow2(e: nat) : (r : nat)
+    function {:opaque} pow2(e: nat) : (r : nat)
         ensures r != 0;
     {
 		if e == 0 then 1 else 2 * pow2(e - 1)

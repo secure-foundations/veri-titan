@@ -1,6 +1,6 @@
-include{:verbatim} "../code/vale.dfy"
-include{:verbatim} "../spec/def.dfy"
-include{:verbatim} "../spec/ops.dfy"
+include{: verbatim} "../code/vale.dfy"
+include{: verbatim} "../spec/def.dfy"
+include{: verbatim} "../spec/ops.dfy"
 
 #verbatim
 module bignum_decls {
@@ -8,171 +8,168 @@ module bignum_decls {
 import opened ops
 import opened bignum_vale
 import opened bignum_def
+import opened types
 #endverbatim
 
-// type nat:Type(0) := int_range(0, _);
-type state:Type(0) {:primitive} extern;
+// type nat: Type(0) := int_range(0, _);
+type state: Type(0) {: primitive} extern;
 
-type uint2:Type(0) := int_range(0, 3);
-type uint32:Type(0) := int_range(0, 0xffff_ffff);
-type uint128:Type(0) := int_range(0, 0xffffffffffffffffffffffffffffffff);
-type uint256:Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff);
+type uint1: Type(0) := int_range(0, 1);
+type uint2: Type(0) := int_range(0, 3);
+type uint32: Type(0) := int_range(0, 0xffff_ffff);
+type uint128: Type(0) := int_range(0, 0xffffffffffffffffffffffffffffffff);
+type uint256: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff);
 
-type seq(a:Type(0)):Type(0) {:primitive} extern;
-type map(a:Type(0), b:Type(0)):Type(0) extern;
-// type Frame:Type(0) := map(int, uint32);
-type Xmem:Type(0) := map(int, uint32);
-type Wmem:Type(0) := map(int, uint256);
-type Wregs:Type(0) := map(Reg256, uint256);
+type seq(a: Type(0)): Type(0) {: primitive} extern;
+type map(a: Type(0), b: Type(0)): Type(0) extern;
+// type Frame: Type(0) := map(int, uint32);
+type Xmem: Type(0) := map(int, uint32);
+type Wmem: Type(0) := map(int, uint256);
+type Wregs: Type(0) := map(Reg256, uint256);
 
-type Reg256:Type(0) extern;
-type Reg32:Type(0) extern;
+type Reg256: Type(0) extern;
+type Reg32: Type(0) extern;
 
-type flagGroup:Type(0) extern;
-type Flags:Type(0) extern;
+type flags: Type(0) extern;
+type flagGroups: Type(0) extern;
 
-function Loop(u:uint32) : bool extern;
-function LoopImm(u:uint32) : bool extern;
+function Wdr(idx: int): Reg256 extern;
 
-function operator(.ok) (s:state):bool extern;
-function operator(.ok :=) (s:state, b:bool):state extern;
+function Loop(u: uint32) : bool extern;
+function LoopImm(u: uint32) : bool extern;
 
-function operator([]) #[a:Type(0)](s:seq(a), i:int):a extern; // TODO: requires clause
-function operator([ := ]) #[a:Type(0)](s:seq(a), i:int, v:a):seq(a) extern; // TODO: requires clause
-function operator([]) #[a:Type(0), b:Type(0)](m:map(a, b), key:a):b extern; // TODO: requires clause
-function operator([ := ]) #[a:Type(0), b:Type(0)](m:map(a, b), key:a, v:b):map(a, b) extern;
+function operator(.ok) (s: state): bool extern;
+function operator(.ok :=) (s: state, b: bool): state extern;
 
-function uint32_xor(x:uint32, y:uint32):uint32 extern;
-function uint32_or(x:uint32, y:uint32):uint32 extern;
-function uint32_and(x:uint32, y:uint32):uint32 extern;
-function uint32_not(x:uint32):uint32 extern;
-function uint32_ls(x:uint32, amount:uint32):uint32 extern; // TODO: requires clause
-// function shr32(x:uint32, amount:uint32):uint32 extern; // TODO: requires clause
-function uint32_se(x:uint32, size:int):uint32 extern;
+function operator([]) #[a: Type(0)](s: seq(a), i: int): a extern; // TODO: requires clause
+function operator([ := ]) #[a: Type(0)](s: seq(a), i: int, v: a): seq(a) extern; // TODO: requires clause
+function operator([]) #[a: Type(0), b: Type(0)](m: map(a, b), key: a): b extern; // TODO: requires clause
+function operator([ := ]) #[a: Type(0), b: Type(0)](m: map(a, b), key: a, v: b): map(a, b) extern;
 
-function bn_xor(a:uint256, b:uint256, st: bool, sb: uint32):uint256 extern;
-function bn_or(a:uint256, b:uint256, st: bool, sb: uint32):uint256 extern;
-function bn_and(a:uint256, b:uint256, st: bool, sb: uint32):uint256 extern;
-function bn_add(a:uint256, b:uint256, st: bool, sb: uint32):tuple(uint256, flagGroup) extern;
-function bn_addc(a:uint256, b:uint256, st: bool, sb: uint32, flags_group:flagGroup):tuple(uint256, flagGroup) extern;
-function bn_addi(a:uint256, imm:uint32):tuple(uint256, flagGroup) extern;
-function bn_addm(a:uint256, b:uint256, mod:uint256):uint256 extern;
+function fst #[a: Type(0), b: Type(0)](m: tuple(a, b)): a extern;
+function snd #[a: Type(0), b: Type(0)](m: tuple(a, b)): b extern;
 
-function bn_sub(a:uint256, b:uint256, st: bool, sb: uint32):tuple(uint256, flagGroup) extern;
-function bn_subb(a:uint256, b:uint256, st: bool, sb: uint32, flags_group:flagGroup):tuple(uint256, flagGroup) extern;
-function bn_subbi(a:uint256, b:uint256):tuple(uint256, flagGroup) extern;
-function bn_subm(a:uint256, b:uint256, mod:uint256):uint256 extern;
+function uint32_xor(x: uint32, y: uint32): uint32 extern;
+function uint32_or(x: uint32, y: uint32): uint32 extern;
+function uint32_and(x: uint32, y: uint32): uint32 extern;
+function uint32_not(x: uint32): uint32 extern;
+function uint32_ls(x: uint32, amount: uint32): uint32 extern; 
+function uint32_se(x: uint32, size: int): uint32 extern;
 
-function bn_rshi(src1:uint256, src2:uint256, imm:uint32):uint256 extern;
-
-function bn_mulqacc_is_safe(shift:uint32, macc: uint256):bool extern;
-function bn_mulqacc_safe(zero: bool, a:uint256, qa:uint32, b:uint256, qb:uint32, shift:uint32, macc:uint256):uint256 extern;
-
-function bn_mulqacc(zero: bool, a:uint256, qa:uint32, b:uint256, qb:uint32, shift:uint32, macc:uint256):uint256 extern;
-function uint256_hwb(x: uint256, v: uint128, lower: bool):uint256 extern;
-function uint256_qmul(x: uint256, qx: uint2, y: uint256, qy:uint2): uint128 extern;
-
+function uint256_hwb(x: uint256, v: uint128, lower: bool): uint256 extern;
+function uint256_qmul(x: uint256, qx: uint2, y: uint256, qy: uint2): uint128 extern;
 function uint256_mul(x: uint256, y: uint256): uint256 extern;
 function uint256_and(x: uint256, y: uint256): uint256 extern;
 function uint256_or(x: uint256, y: uint256): uint256 extern;
 function uint256_add(x: uint256, y: uint256): uint256 extern;
-
-function uint256_ls(x: uint256, num_bytes:int): uint256 extern;
-function uint256_rs(x: uint256, num_bytes:int): uint256 extern;
-
+function uint256_ls(x: uint256, num_bytes: int): uint256 extern;
+function uint256_rs(x: uint256, num_bytes: int): uint256 extern;
 function uint256_lh(a: uint256): uint128 extern;
 function uint256_uh(a: uint256): uint128 extern;
 
-function get_flags_group(fg:bool, flags:Flags):flagGroup extern;
-function get_flag(fg:bool, flag:int, flags:Flags):bool extern;
-function update_fg(b:bool, f:Flags, fg:flagGroup):Flags extern;
-function cf(flags_group:flagGroup):bool extern;
+function otbn_xor(a: uint256, b: uint256, st: bool, sb: uint32): uint256 extern;
+function otbn_or(a: uint256, b: uint256, st: bool, sb: uint32): uint256 extern;
+function otbn_and(a: uint256, b: uint256, st: bool, sb: uint32): uint256 extern;
+function otbn_add(a: uint256, b: uint256, st: bool, sb: uint32): tuple(uint256, flags) extern;
+function otbn_addc(a: uint256, b: uint256, st: bool, sb: uint32, flgs: flags): tuple(uint256, flags) extern;
+function otbn_addi(a: uint256, imm: uint32): tuple(uint256, flags) extern;
+function otbn_addm(a: uint256, b: uint256, mod: uint256): uint256 extern;
+function otbn_sub(a: uint256, b: uint256, st: bool, sb: uint32): tuple(uint256, flags) extern;
+function otbn_subb(a: uint256, b: uint256, st: bool, sb: uint32, flgs: flags): tuple(uint256, flags) extern;
+function otbn_subbi(a: uint256, b: uint256): tuple(uint256, flags) extern;
+function otbn_subm(a: uint256, b: uint256, mod: uint256): uint256 extern;
+function otbn_rshi(src1: uint256, src2: uint256, imm: uint32): uint256 extern;
+function otbn_mulqacc_is_safe(shift: uint32, macc: uint256): bool extern;
+function otbn_mulqacc_safe(zero: bool, a: uint256, qa: uint32, b: uint256, qb: uint32, shift: uint32, macc: uint256): uint256 extern;
+function otbn_mulqacc(zero: bool, a: uint256, qa: uint32, b: uint256, qb: uint32, shift: uint32, macc: uint256): uint256 extern;
 
-function fst(t:tuple(uint256, flagGroup)):uint256 extern;
-function snd(t:tuple(uint256, flagGroup)):flagGroup extern;
+function select_fgroup(fgps: flagGroups, which_group: uint1): flags extern;
+function update_fgroups(fgps: flagGroups, which_group: uint1, new_flags: flags) : flagGroups extern;
+function get_flag(fgps: flagGroups, which_group: uint1, which_flag: int): bool extern;
+function get_cf0(fgps: flagGroups): bool extern;
+function get_cf1(fgps: flagGroups): bool extern;
 
-var ok:bool {:state ok()};
-var xmem:Xmem {:state xmem()};
-var wmem:Wmem {:state wmem()};
-var wregs:Wregs {:state wregs()};
-var flags:Flags {:state flags()};
+var ok: bool {:state ok()};
+var xmem: Xmem {:state xmem()};
+var wmem: Wmem {:state wmem()};
+var wregs: Wregs {:state wregs()};
+var fgroups: flagGroups  {:state fgroups()};
 
-function Wdr(gr: uint32):Reg256 extern;
+function Wdr(gr: int): Reg256 extern;
 const WAcc: Reg256 extern;
 
-var x0:uint32 {:state reg32(Gpr(0))};
-var x1:uint32 {:state reg32(Gpr(1))};
-var x2:uint32 {:state reg32(Gpr(2))};
-var x3:uint32 {:state reg32(Gpr(3))};
-var x4:uint32 {:state reg32(Gpr(4))};
-var x5:uint32 {:state reg32(Gpr(5))};
-var x6:uint32 {:state reg32(Gpr(6))};
-var x7:uint32 {:state reg32(Gpr(7))};
-var x8:uint32 {:state reg32(Gpr(8))};
-var x9:uint32 {:state reg32(Gpr(9))};
-var x10:uint32 {:state reg32(Gpr(10))};
-var x11:uint32 {:state reg32(Gpr(11))};
-var x12:uint32 {:state reg32(Gpr(12))};
-var x13:uint32 {:state reg32(Gpr(13))};
-var x14:uint32 {:state reg32(Gpr(14))};
-var x15:uint32 {:state reg32(Gpr(15))};
-var x16:uint32 {:state reg32(Gpr(16))};
-var x17:uint32 {:state reg32(Gpr(17))};
-var x18:uint32 {:state reg32(Gpr(18))};
-var x19:uint32 {:state reg32(Gpr(19))};
-var x20:uint32 {:state reg32(Gpr(20))};
-var x21:uint32 {:state reg32(Gpr(21))};
-var x22:uint32 {:state reg32(Gpr(22))};
-var x23:uint32 {:state reg32(Gpr(23))};
-var x24:uint32 {:state reg32(Gpr(24))};
-var x25:uint32 {:state reg32(Gpr(25))};
-var x26:uint32 {:state reg32(Gpr(26))};
-var x27:uint32 {:state reg32(Gpr(27))};
-var x28:uint32 {:state reg32(Gpr(28))};
-var x29:uint32 {:state reg32(Gpr(29))};
-var x30:uint32 {:state reg32(Gpr(30))};
-var x31:uint32 {:state reg32(Gpr(31))};
+var x0: uint32 {:state reg32(Gpr(0))};
+var x1: uint32 {:state reg32(Gpr(1))};
+var x2: uint32 {:state reg32(Gpr(2))};
+var x3: uint32 {:state reg32(Gpr(3))};
+var x4: uint32 {:state reg32(Gpr(4))};
+var x5: uint32 {:state reg32(Gpr(5))};
+var x6: uint32 {:state reg32(Gpr(6))};
+var x7: uint32 {:state reg32(Gpr(7))};
+var x8: uint32 {:state reg32(Gpr(8))};
+var x9: uint32 {:state reg32(Gpr(9))};
+var x10: uint32 {:state reg32(Gpr(10))};
+var x11: uint32 {:state reg32(Gpr(11))};
+var x12: uint32 {:state reg32(Gpr(12))};
+var x13: uint32 {:state reg32(Gpr(13))};
+var x14: uint32 {:state reg32(Gpr(14))};
+var x15: uint32 {:state reg32(Gpr(15))};
+var x16: uint32 {:state reg32(Gpr(16))};
+var x17: uint32 {:state reg32(Gpr(17))};
+var x18: uint32 {:state reg32(Gpr(18))};
+var x19: uint32 {:state reg32(Gpr(19))};
+var x20: uint32 {:state reg32(Gpr(20))};
+var x21: uint32 {:state reg32(Gpr(21))};
+var x22: uint32 {:state reg32(Gpr(22))};
+var x23: uint32 {:state reg32(Gpr(23))};
+var x24: uint32 {:state reg32(Gpr(24))};
+var x25: uint32 {:state reg32(Gpr(25))};
+var x26: uint32 {:state reg32(Gpr(26))};
+var x27: uint32 {:state reg32(Gpr(27))};
+var x28: uint32 {:state reg32(Gpr(28))};
+var x29: uint32 {:state reg32(Gpr(29))};
+var x30: uint32 {:state reg32(Gpr(30))};
+var x31: uint32 {:state reg32(Gpr(31))};
+var rnd: uint32 {:state reg32(Rnd)};
 
-var rnd:uint32 {:state reg32(Rnd)};
+var w0: uint256 {:state reg256(Wdr(0))};
+var w1: uint256 {:state reg256(Wdr(1))};
+var w2: uint256 {:state reg256(Wdr(2))};
+var w3: uint256 {:state reg256(Wdr(3))};
+var w4: uint256 {:state reg256(Wdr(4))};
+var w5: uint256 {:state reg256(Wdr(5))};
+var w6: uint256 {:state reg256(Wdr(6))};
+var w7: uint256 {:state reg256(Wdr(7))};
+var w8: uint256 {:state reg256(Wdr(8))};
+var w9: uint256 {:state reg256(Wdr(9))};
+var w10: uint256 {:state reg256(Wdr(10))};
+var w11: uint256 {:state reg256(Wdr(11))};
+var w12: uint256 {:state reg256(Wdr(12))};
+var w13: uint256 {:state reg256(Wdr(13))};
+var w14: uint256 {:state reg256(Wdr(14))};
+var w15: uint256 {:state reg256(Wdr(15))};
+var w16: uint256 {:state reg256(Wdr(16))};
+var w17: uint256 {:state reg256(Wdr(17))};
+var w18: uint256 {:state reg256(Wdr(18))};
+var w19: uint256 {:state reg256(Wdr(19))};
+var w20: uint256 {:state reg256(Wdr(20))};
+var w21: uint256 {:state reg256(Wdr(21))};
+var w22: uint256 {:state reg256(Wdr(22))};
+var w23: uint256 {:state reg256(Wdr(23))};
+var w24: uint256 {:state reg256(Wdr(24))};
+var w25: uint256 {:state reg256(Wdr(25))};
+var w26: uint256 {:state reg256(Wdr(26))};
+var w27: uint256 {:state reg256(Wdr(27))};
+var w28: uint256 {:state reg256(Wdr(28))};
+var w29: uint256 {:state reg256(Wdr(29))};
+var w30: uint256 {:state reg256(Wdr(30))};
+var w31: uint256 {:state reg256(Wdr(31))};
 
-var w0:uint256 {:state reg256(Wdr(0))};
-var w1:uint256 {:state reg256(Wdr(1))};
-var w2:uint256 {:state reg256(Wdr(2))};
-var w3:uint256 {:state reg256(Wdr(3))};
-var w4:uint256 {:state reg256(Wdr(4))};
-var w5:uint256 {:state reg256(Wdr(5))};
-var w6:uint256 {:state reg256(Wdr(6))};
-var w7:uint256 {:state reg256(Wdr(7))};
-var w8:uint256 {:state reg256(Wdr(8))};
-var w9:uint256 {:state reg256(Wdr(9))};
-var w10:uint256 {:state reg256(Wdr(10))};
-var w11:uint256 {:state reg256(Wdr(11))};
-var w12:uint256 {:state reg256(Wdr(12))};
-var w13:uint256 {:state reg256(Wdr(13))};
-var w14:uint256 {:state reg256(Wdr(14))};
-var w15:uint256 {:state reg256(Wdr(15))};
-var w16:uint256 {:state reg256(Wdr(16))};
-var w17:uint256 {:state reg256(Wdr(17))};
-var w18:uint256 {:state reg256(Wdr(18))};
-var w19:uint256 {:state reg256(Wdr(19))};
-var w20:uint256 {:state reg256(Wdr(20))};
-var w21:uint256 {:state reg256(Wdr(21))};
-var w22:uint256 {:state reg256(Wdr(22))};
-var w23:uint256 {:state reg256(Wdr(23))};
-var w24:uint256 {:state reg256(Wdr(24))};
-var w25:uint256 {:state reg256(Wdr(25))};
-var w26:uint256 {:state reg256(Wdr(26))};
-var w27:uint256 {:state reg256(Wdr(27))};
-var w28:uint256 {:state reg256(Wdr(28))};
-var w29:uint256 {:state reg256(Wdr(29))};
-var w30:uint256 {:state reg256(Wdr(30))};
-var w31:uint256 {:state reg256(Wdr(31))};
+var wmod: uint256 {:state reg256(WMod)};
+var wrnd: uint256 {:state reg256(WRnd)};
+var wacc: uint256 {:state reg256(WAcc)};
 
-var wmod:uint256 {:state reg256(WMod)};
-var wrnd:uint256 {:state reg256(WRnd)};
-var wacc:uint256 {:state reg256(WAcc)};
-
-operand_type reg32:uint32 @ Reg32 :=
+operand_type reg32: uint32 @ Reg32 :=
 | inout x0 | inout x1 | inout x2 | inout x3
 | inout x4 | inout x5 | inout x6 | inout x7
 | inout x8 | inout x9 | inout x10 | inout x11
@@ -183,7 +180,7 @@ operand_type reg32:uint32 @ Reg32 :=
 | inout x28 | inout x29 | inout x30 | inout x31
 | inout xrnd;
 
-operand_type reg256:uint256 @ Reg256 := 
+operand_type reg256: uint256 @ Reg256 := 
 | inout w0 | inout w1 | inout w2 | inout w3
 | inout w4 | inout w5 | inout w6 | inout w7
 | inout w8 | inout w9 | inout w10 | inout w11
@@ -194,16 +191,18 @@ operand_type reg256:uint256 @ Reg256 :=
 | inout w28 | inout w29 | inout w30 | inout w31
 | inout wmod | inout wrnd | inout wacc;
 
-operand_type imm128:uint128 := const;
-operand_type imm32:uint32 := const;
-operand_type imm2:uint2 := const;
-// operand_type Bool:bool;
+operand_type imm128: uint128 := const;
+operand_type imm32: uint32 := const;
+operand_type imm2: uint2 := const;
+// operand_type Bool: bool;
 
-function Valid32Addr(h: Xmem, addr:int):bool extern;
-function Valid256Addr(h: Wmem, addr:int):bool extern;
+function Valid32Addr(h: Xmem, addr: int): bool extern;
+function Valid256Addr(h: Wmem, addr: int): bool extern;
 
-procedure LW(out grd:reg32, in offset:imm32, in grs1:reg32)
-    {:instruction Ins32(LW32(grd, src, offset))}
+const BASE_256: int extern;
+
+procedure lw(out grd: reg32, in offset: imm32, in grs1: reg32)
+    {:instruction Ins32(LW(grd, grs1, offset))}
     reads
         xmem;
     requires
@@ -215,8 +214,8 @@ procedure LW(out grd:reg32, in offset:imm32, in grs1:reg32)
     assume false;
 }
 
-procedure SW(in grs2:reg32, in offset:imm32, in grs1:reg32)
-    {:instruction Ins32(SW32(grs2, grs1, offset))}
+procedure sw(in grs2: reg32, in offset: imm32, in grs1: reg32)
+    {:instruction Ins32(SW(grs2, grs1, offset))}
     modifies
         xmem;
     requires/ensures
@@ -227,27 +226,376 @@ procedure SW(in grs2:reg32, in offset:imm32, in grs1:reg32)
     assume false;
 }
 
-procedure BN_LID(inout grd:reg32, inline grd_inc:bool, in offset:imm32, inout grs:reg32, inline grs_inc:bool)
-    {:instruction Ins256(LID256(grd, grd_inc, offset, grs, grs_inc))}
+procedure add(inout dst: reg32, in src1: reg32, in src2: reg32)
+    {:instruction Ins32(ADD(dst, src1, src2))}
+    requires
+       src1 + src2 < 0xffff_ffff;
+    ensures
+        dst == old(src1 + src2);
+{
+    assume false;
+}
+
+procedure addi(inout dst: reg32, in src1: reg32, in src2: imm32)
+    {:instruction Ins32(ADDI(dst, src1, src2))}
+    requires
+       src1 + src2 < 0xffff_ffff;
+    ensures
+        dst = old(src1) + old(src2);
+{
+    assume false;
+}
+
+procedure sub(inout dst: reg32, in src1: reg32, in src2: reg32)
+    {:instruction Ins32(SUB(dst, src1, src2))}
+    requires
+        src1 - src2 >= 0;
+    ensures
+        dst == old(src1 - src2);
+{
+    assume false;
+}
+
+procedure and(inout dst: reg32, in src1: reg32, in src2: reg32)
+    {:instruction Ins32(AND(dst, src1, src2))}
+    ensures
+        dst == uint32_and(old(src1), old(src2));
+{
+    assume false;
+}
+
+procedure andi(inout dst: reg32, in src1: reg32, in src2: imm32)
+    {:instruction Ins32(ANDI(dst, src1, src2))}
+    requires
+        src2 < 0x1000;
+    ensures
+        dst == uint32_and(old(src1), uint32_se(old(src2), 12));
+{
+    assume false;
+}
+
+procedure or(inout dst: reg32, in src1: reg32, in src2: reg32)
+    {:instruction Ins32(OR(dst, src1, src2))}
+    ensures
+        dst == uint32_or(old(src1), old(src2));
+{
+    assume false;
+}
+
+procedure ori(inout dst: reg32, in src1: reg32, in src2: imm32)
+    {:instruction Ins32(ORI(dst, src1, src2))}
+    requires
+        src2 < 0x1000;
+    ensures
+        dst == uint32_or(old(src1), uint32_se(old(src2), 12));
+{
+    assume false;
+}
+
+procedure xor(inout dst: reg32, in src1: reg32, in src2: reg32)
+    {:instruction Ins32(XOR(dst, src1, src2))}
+    ensures
+        dst == uint32_xor(old(src1), old(src2));
+{
+    assume false;
+}
+
+procedure xori(inout dst: reg32, in src1: reg32, in src2: imm32)
+    {:instruction Ins32(XORI(dst, src1, src2))}
+    requires
+        src2 < 0x1000;
+    ensures
+        dst == uint32_xor(old(src1), uint32_se(old(src2), 12));
+{
+    assume false;
+}
+
+procedure lui32(inout dst: reg32, in src: imm32)
+    {:instruction Ins32(LUI(dst, src))}
+    requires
+        src < 0x100000; // 20-bit immediate
+    ensures
+        dst == uint32_ls(old(src), 12);
+{
+    assume false;
+}
+
+// TODO: Handle case where dst is x0
+procedure csrrw(inout dst: reg32, inout csr: reg32, in src: reg32)
+    {:instruction Ins32(CSRRW(dst, csr, src))}
+    requires
+        csr == rnd; // TODO: check if this is correct
+    ensures
+        dst == old(csr);
+        csr == old(src);
+{
+    assume false;
+}
+
+procedure li(inout dst: reg32, in imm: imm32)
+    ensures
+        dst == imm;
+{
+    assume false;    
+}
+
+procedure bn_xor(inout dst: reg256, in src1: reg256, in src2: reg256, inline st: bool, in sb: imm32)
+    {:instruction Ins256(BN_XOR(dst, src1, src2, st, sb))}
+    requires
+        sb < 32;
+    ensures
+        dst == otbn_xor(old(src1), old(src2), st, sb);
+{
+    assume false;
+}
+
+procedure bn_add(inout dst: reg256, in src1: reg256, in src2: reg256, inline st: bool, in sb: imm32, inline which_group: uint1)
+    {:instruction Ins256(BN_ADD(dst, src1, src2, st, sb, which_group))}
+    requires
+        sb < 32;
+    modifies
+        fgroups;
+    ensures
+        let result := otbn_add(old(src1), old(src2), st, sb);
+        dst == fst(result) &&
+        fgroups == update_fgroups(old(fgroups), which_group, snd(result));
+{
+    assume false;
+}
+
+procedure bn_addc(inout dst: reg256, in src1: reg256, in src2: reg256, inline st: bool, in sb: imm32, inline which_group: uint1)
+    {:instruction Ins256(BN_ADDC(dst, src1, src2, st, sb, which_group))}
+    requires
+        sb < 32;
+    modifies
+        fgroups;
+    ensures
+        let result := otbn_addc(old(src1), old(src2), st, sb, select_fgroup(old(fgroups), which_group));
+        dst == fst(result) &&
+        fgroups == update_fgroups(old(fgroups), which_group, snd(result));
+{
+    assume false;
+}
+
+procedure bn_addi(inout dst: reg256, in src: reg256, in imm: imm32, inline which_group: uint1)
+    {:instruction Ins256(BN_ADDI(dst, src, imm, which_group))}
+    requires
+        imm < 1024;
+    modifies
+        fgroups;
+    ensures
+        let result := otbn_addi(old(src), imm);
+        dst == fst(result) &&
+        fgroups == update_fgroups(old(fgroups), which_group, snd(result));
+{
+    assume false;
+}
+
+procedure bn_addm(inout dst: reg256, in src1: reg256, in src2: reg256)
+    {:instruction Ins256(BN_ADDM(dst, src1, src2))}
+    reads
+        wmod;
+    ensures
+        dst == otbn_addm(old(src1), old(src2), old(wmod));
+{
+    assume false;
+}
+
+procedure bn_sub(inout dst: reg256, in src1: reg256, in src2: reg256, inline st: bool, in sb: imm32, inline which_group: uint1)
+    {:instruction Ins256(BN_SUB(dst, src1, src2, st, sb, which_group))}
+    requires
+        sb < 32;
+    modifies
+        fgroups;
+    ensures
+        let result := otbn_sub(old(src1), old(src2), st, sb);
+        dst == fst(result) &&
+        fgroups == update_fgroups(old(fgroups), which_group, snd(result));
+{
+    assume false;
+}
+
+procedure bn_subb(inout dst: reg256, in src1: reg256, in src2: reg256, inline st: bool, in sb: imm32, inline which_group: uint1)
+    {:instruction Ins256(BN_SUBB(dst, src1, src2, st, sb, which_group))}
+    requires
+        sb < 32;
+    modifies
+        fgroups;
+    ensures
+        let result := otbn_subb(old(src1), old(src2), st, sb, select_fgroup(old(fgroups), which_group));
+        dst == fst(result) &&
+        fgroups == update_fgroups(old(fgroups), which_group, snd(result));
+{
+    assume false;
+}
+
+procedure bn_subi(inout dst: reg256, in src1: reg256, in src2: imm128, inline which_group: uint1)
+    {:instruction Ins256(BN_SUBI(dst, src1, src2, which_group))}
+    requires
+        src2 < 1024;
+    modifies
+        fgroups;
+    ensures
+        let result := otbn_subbi(old(src1), src2);
+        dst == fst(result) &&
+        fgroups == update_fgroups(old(fgroups), which_group, snd(result));
+{
+    assume false;
+}
+
+procedure bn_subm(inout dst: reg256, in src1: reg256, in src2: reg256)
+    {:instruction Ins256(BN_SUBM(dst, src1, src2))}
+    reads
+        wmod;
+    ensures
+        dst == otbn_subm(old(src1), old(src2), wmod);
+{
+    assume false;
+}
+
+procedure bn_or(inout dst: reg256, in src1: reg256, in src2: reg256, inline st: bool, in sb: imm32)
+    {:instruction Ins256(BN_OR(dst, src1, src2, st, sb))}
+    requires
+        sb < 32;
+    modifies
+        fgroups;
+    ensures
+        dst == otbn_or(old(src1), old(src2), st, sb);
+{
+    assume false;
+}
+
+procedure bn_and(inout dst: reg256, in src1: reg256, in src2: reg256, inline st: bool, in sb: imm32)
+    {:instruction Ins256(BN_AND(dst, src1, src2, st, sb))}
+    requires
+        sb < 32;
+    modifies
+        fgroups;
+    ensures
+        dst == otbn_and(old(src1), old(src2), st, sb);
+{
+    assume false;
+}
+
+procedure bn_mulqacc_z(in src1: reg256, in qwsel1: imm2, in src2: reg256, in qwsel2: imm2, in shift: imm2)
+    {:instruction Ins256(BN_MULQACC(true, src1, qwsel1, src2, qwsel2, shift))}
+    modifies
+        wacc;
+    ensures
+        wacc == otbn_mulqacc(true, src1, qwsel1, src2, qwsel2, shift, old(wacc));
+{
+    assume false;
+}
+
+procedure bn_mulqacc(in src1: reg256, in qwsel1: imm2, in src2: reg256, in qwsel2: imm2, in shift: imm2)
+    {:instruction Ins256(BN_MULQACC(false, src1, qwsel1, src2, qwsel2, shift))}
+    modifies
+        wacc;
+    ensures
+        wacc == otbn_mulqacc(false, src1, qwsel1, src2, qwsel2, shift, old(wacc));
+{
+    assume false;
+}
+
+procedure bn_mulqacc_safe(in src1: reg256, in qwsel1: imm2, in src2: reg256, in qwsel2: imm2, in shift: imm2)
+    {:instruction Ins256(BN_MULQACC(false, src1, qwsel1, src2, qwsel2, shift))}
+    requires
+        otbn_mulqacc_is_safe(shift, old(wacc));
+    modifies
+        wacc;
+    ensures
+        wacc == otbn_mulqacc_safe(false, src1, qwsel1, src2, qwsel2, shift, old(wacc));
+{
+    // TODO: call bn_mulqacc
+    assume false;
+}
+
+procedure bn_mulqacc_so( 
+    inout dst: reg256,
+    inline lower: bool,
+    in src1: reg256, in qwsel1: imm2,
+    in src2: reg256, in qwsel2: imm2,
+    in shift: imm2)
+    {:instruction Ins256(BN_MULQACC(false, src1, qwsel1, src2, qwsel2, shift))}
+    modifies
+        wacc;
+    ensures
+        let result := otbn_mulqacc(false, src1, qwsel1, src2, qwsel2, shift, old(wacc));
+        // the upper half stay in wacc
+        wacc == uint256_uh(result)
+        // the lower half gets written back into dst
+        && dst == uint256_hwb(old(dst), uint256_lh(result), lower);
+{
+    assume false;
+}
+
+procedure bn_mulqacc_so_safe( 
+    inout dst: reg256,
+    inline lower: bool,
+    in src1: reg256, in qwsel1: imm2,
+    in src2: reg256, in qwsel2: imm2,
+    in shift: imm2)
+    {:instruction Ins256(BN_MULQACC(false, src1, qwsel1, src2, qwsel2, shift))}
+
+    requires
+        otbn_mulqacc_is_safe(shift, old(wacc));
+    modifies
+        wacc;
+    ensures
+        let result := otbn_mulqacc_safe(false, src1, qwsel1, src2, qwsel2, shift, old(wacc));
+        // the upper half stay in wacc
+        wacc == uint256_uh(result)
+        // the lower half gets written back into dst
+        && dst == uint256_hwb(old(dst), uint256_lh(result), lower);
+{
+    // TODO: call bn_mulqacc_so
+    assume false;
+}
+
+function mod_add(a: int, b: int, m: int): int extern;
+
+procedure bn_lid(inout grd: reg32, inline grd_inc: bool, in offset: imm32, inout grs: reg32, inline grs_inc: bool)
+    {:instruction Ins256(BN_LID(grd, grd_inc, offset, grs, grs_inc))}
     reads
         wmem;
     modifies
         wregs;
     requires
         !(grd_inc && grs_inc);
+        grd < 32;
         Valid256Addr(wmem, grs + offset);
-        0 <= grd < 32;
     ensures
         Valid256Addr(wmem, old(grs) + offset);
         wregs == old(wregs[Wdr(grd) := wmem[grs + offset]]);
-        grd == (if grd_inc then (old(grd) + 1) % 32 else old(grd));
-        grs == (if grs_inc then (old(grs) + 32) % 0x1_0000_0000 else old(grs));
+        // grd == (if grd_inc then (old(grd) + 1) % 32 else old(grd));
+        grd == (if grd_inc then mod_add(old(grd), 1, 32) else old(grd));
+        // grs == (if grs_inc then (old(grs) + 32) % 0x1_0000_0000 else old(grs));
+        grs == (if grs_inc then mod_add(old(grs), 32, 0x1_0000_0000) else old(grs));
 {
     assume false;
 }
 
-procedure BN_SID(in grs2:reg32, inline grs2_inc:bool, in offset:imm32, in grs1:reg32, inline grs1_inc:bool)
-    {:instruction Ins256(SID256(grs2, grs2_inc, offset, grs1, grs1_inc))}
+procedure bn_lid_safe(inout grd: reg32, inline grd_inc: bool, in offset: imm32, inout grs: reg32, inline grs_inc: bool)
+    reads
+        wmem;
+    modifies
+        wregs;
+    requires
+        !(grd_inc && grs_inc);
+        if grd_inc then grd < 31 else grd < 32;
+        if grs_inc then grs < 0xffffffe0 else grs < 0x1_0000_0000;
+        Valid256Addr(wmem, grs + offset);
+    ensures
+        Valid256Addr(wmem, old(grs) + offset);
+        wregs == old(wregs[Wdr(grd) := wmem[grs + offset]]);
+        grd == (if grd_inc then (old(grd) + 1) else old(grd));
+        grs == (if grs_inc then (old(grs) + 32) else old(grs));
+{
+    bn_lid(grd, grd_inc, offset, grs, grs_inc);
+}
+
+procedure bn_sid(in grs2: reg32, inline grs2_inc: bool, in offset: imm32, in grs1: reg32, inline grs1_inc: bool)
+    {:instruction Ins256(BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc))}
     reads
         wregs;
     modifies
@@ -255,358 +603,76 @@ procedure BN_SID(in grs2:reg32, inline grs2_inc:bool, in offset:imm32, in grs1:r
     requires
         !(grs1_inc && grs2_inc);
         Valid256Addr(wmem, grs1 + offset);
-        0 <= grs2 < 32;
+        grs2 < 32;
     ensures
         Valid256Addr(wmem, old(grs1) + offset);
         wmem == old(wmem[grs1 + offset := wregs[Wdr(grs2)]]);
-        grs2 == (if grs2_inc then (old(grs2) + 1) % 32 else old(grs2));
-        grs1 == (if grs1_inc then (old(grs1) + 32) % 0x1_0000_0000 else old(grs1));
+        grs2 == (if grs2_inc then mod_add(old(grs2), 1, 32) else old(grs2));
+        grs1 == (if grs1_inc then mod_add(old(grs1), 32, 0x1_0000_0000) else old(grs1));
 {
     assume false;
 }
 
-procedure Add32(inout dst:reg32, in src1:reg32, in src2:reg32)
-    {:instruction Ins32(ADD32(dst, src1, src2))}
-    requires
-       src1 + src2 < 0xffff_ffff;
-    ensures
-        dst == old(src1 + src2);
-{
-assume false;
-}
-
-procedure Addi32(inout dst:reg32, in src1:reg32, in src2:imm32)
-    {:instruction Ins32(ADDI32(dst, src1, src2))}
-    requires
-       src1 + src2 < 0xffff_ffff;
-    ensures
-        dst = old(src1) + old(src2);
-{
-assume false;
-}
-
-procedure Sub32(inout dst:reg32, in src1:reg32, in src2:reg32)
-    {:instruction Ins32(SUB32(dst, src1, src2))}
-    requires
-        src1 - src2 >= 0;
-    ensures
-        dst == old(src1 - src2);
-{
-assume false;
-}
-
-procedure And32(inout dst:reg32, in src1:reg32, in src2:reg32)
-    {:instruction Ins32(AND32(dst, src1, src2))}
-    ensures
-        dst == uint32_and(old(src1), old(src2));
-{
-assume false;
-}
-
-procedure Andi32(inout dst:reg32, in src1:reg32, in src2:imm32)
-    {:instruction Ins32(ANDI32(dst, src1, src2))}
-    requires
-        src2 < 0x1000;
-    ensures
-        dst == uint32_and(old(src1), uint32_se(old(src2), 12));
-{
-assume false;
-}
-
-procedure Or32(inout dst:reg32, in src1:reg32, in src2:reg32)
-    {:instruction Ins32(OR32(dst, src1, src2))}
-    ensures
-        dst == uint32_or(old(src1), old(src2));
-{
-assume false;
-}
-
-procedure Ori32(inout dst:reg32, in src1:reg32, in src2:imm32)
-    {:instruction Ins32(ORI32(dst, src1, src2))}
-    requires
-        src2 < 0x1000;
-    ensures
-        dst == uint32_or(old(src1), uint32_se(old(src2), 12));
-{
-assume false;
-}
-
-procedure Xor32(inout dst:reg32, in src1:reg32, in src2:reg32)
-    {:instruction Ins32(XOR32(dst, src1, src2))}
-    ensures
-        dst == uint32_xor(old(src1), old(src2));
-{
-assume false;
-}
-
-procedure Xori32(inout dst:reg32, in src1:reg32, in src2:imm32)
-    {:instruction Ins32(XORI32(dst, src1, src2))}
-    requires
-        src2 < 0x1000;
-    ensures
-        dst == uint32_xor(old(src1), uint32_se(old(src2), 12));
-{
-assume false;
-}
-
-procedure Lui32(inout dst:reg32, in src:imm32)
-    {:instruction Ins32(LUI32(dst, src))}
-    requires
-        src < 0x100000; // 20-bit immediate
-    ensures
-        dst == uint32_ls(old(src), 12);
-{
-assume false;
-}
-
-// TODO: Handle case where dst is x0
-procedure Csrrw32(inout dst:reg32, inout csr:reg32, in src:reg32)
-    {:instruction Ins32(CSRRW32(dst, csr, src))}
-    requires
-        csr == rnd; // TODO: check if this is correct
-    ensures
-        dst == old(csr);
-        csr == old(src);
-{
-assume false;
-}
-
-// uint256 Instructions
-
-procedure BN_XOR(inout dst:reg256, in src1:reg256, in src2:reg256, inline st: bool, in sb:imm32)
-    {:instruction Ins256(XOR256(dst, src1, src2, st, sb))}
-    requires
-        sb < 32;
-    ensures
-        dst == bn_xor(old(src1), old(src2), st, sb);
-{
-assume false;
-}
-
-procedure BN_ADD(inout dst:reg256, in src1:reg256, in src2:reg256, inline st: bool, in sb:imm32, inline fg:bool)
-    {:instruction Ins256(ADD256(dst, src1, src2, st, sb, fg))}
-    requires
-        sb < 32;
-    modifies
-        flags;
-    ensures
-        let result := bn_add(old(src1), old(src2), st, sb);
-        dst == fst(result) && flags == update_fg(fg, old(flags), snd(result));
-{
-assume false;
-}
-
-procedure BN_ADDC(inout dst:reg256, in src1:reg256, in src2:reg256, inline st: bool, in sb:imm32, inline fg:bool)
-    {:instruction Ins256(ADDC256(dst, src1, src2, st, sb, fg))}
-    requires
-        sb < 32;
-    modifies
-        flags;
-    ensures
-        let result := bn_addc(old(src1), old(src2), st, sb, get_flags_group(fg, old(flags)));
-        dst == fst(result) && flags == update_fg(fg, old(flags), snd(result));
-{
-assume false;
-}
-
-procedure BN_ADDI(inout dst:reg256, in src:reg256, in imm:imm32, inline fg:bool)
-    {:instruction Ins256(ADDI256(dst, src, imm, fg))}
-    requires
-        imm < 1024;
-    modifies
-        flags;
-    ensures
-        let result := bn_addi(old(src), imm);
-        dst == fst(result) && flags == update_fg(fg, old(flags), snd(result));
-{
-    assume false;
-}
-
-procedure ADDM_256(inout dst:reg256, in src1:reg256, in src2:reg256)
-    {:instruction Ins256(ADDM256(dst, src1, src2))}
+procedure bn_sid_safe(in grs2: reg32, inline grs2_inc: bool, in offset: imm32, in grs1: reg32, inline grs1_inc: bool)
     reads
-        wmod;
-    ensures
-        dst == bn_addm(old(src1), old(src2), old(wmod));
-{
-    assume false;
-}
-
-procedure BN_SUB(inout dst:reg256, in src1:reg256, in src2:reg256, inline st: bool, in sb:imm32, inline fg:bool)
-    {:instruction Ins256(SUB256(dst, src1, src2, st, sb, fg))}
+        wregs;
+    modifies
+        wmem;
     requires
-        sb < 32;
-    modifies
-        flags;
+        !(grs1_inc && grs2_inc);
+        Valid256Addr(wmem, grs1 + offset);
+        if grs1_inc then grs1 < 0xffffffe0 else grs1 < 0x1_0000_0000;
+        if grs2_inc then grs2 < 31 else grs2 < 32;
     ensures
-        let result := bn_sub(old(src1), old(src2), st, sb);
-        dst == fst(result) && flags == update_fg(fg, old(flags), snd(result));
+        Valid256Addr(wmem, old(grs1) + offset);
+        wmem == old(wmem[grs1 + offset := wregs[Wdr(grs2)]]);
+        grs1 == (if grs1_inc then (old(grs1) + 32) else old(grs1));
+        grs2 == (if grs2_inc then (old(grs2) + 1) else old(grs2));
 {
-assume false;
+    bn_sid(grs2, grs2_inc, offset, grs1, grs1_inc);
 }
 
-procedure BN_SUBB(inout dst:reg256, in src1:reg256, in src2:reg256, inline st: bool, in sb:imm32, inline fg:bool)
-    {:instruction Ins256(SUBB256(dst, src1, src2, st, sb, fg))}
-    requires
-        sb < 32;
-    modifies
-        flags;
-    ensures
-        let result := bn_subb(old(src1), old(src2), st, sb, get_flags_group(fg, old(flags)));
-        dst == fst(result) && flags == update_fg(fg, old(flags), snd(result));
-{
-assume false;
-}
-
-procedure BN_SUBI(inout dst:reg256, in src1:reg256, in src2:imm128, inline fg:bool)
-    {:instruction Ins256(SUBI256(dst, src1, src2, fg))}
-    requires
-        src2 < 1024;
-    modifies
-        flags;
-    ensures
-        let result := bn_subbi(old(src1), src2);
-        dst == fst(result) && flags == update_fg(fg, old(flags), snd(result));
-{
-assume false;
-}
-
-procedure BN_SUBM(inout dst:reg256, in src1:reg256, in src2:reg256)
-    {:instruction Ins256(SUBM256(dst, src1, src2))}
-    reads
-        wmod;
-    ensures
-        dst == bn_subm(old(src1), old(src2), wmod);
-{
-assume false;
-}
-
-procedure BN_OR(inout dst:reg256, in src1:reg256, in src2:reg256, inline st: bool, in sb:imm32)
-    {:instruction Ins256(OR256(dst, src1, src2, st, sb))}
-    requires
-        sb < 32;
-    modifies
-        flags;
-    ensures
-        dst == bn_or(old(src1), old(src2), st, sb);
-{
-assume false;
-}
-
-procedure BN_AND(inout dst:reg256, in src1:reg256, in src2:reg256, inline st: bool, in sb:imm32)
-    {:instruction Ins256(AND256(dst, src1, src2, st, sb))}
-    requires
-        sb < 32;
-    modifies
-        flags;
-    ensures
-        dst == bn_and(old(src1), old(src2), st, sb);
-{
-assume false;
-}
-
-procedure BN_MULQACC_Z(in src1:reg256, in qwsel1:imm2, in src2:reg256, in qwsel2:imm2, in shift:imm2)
-    {:instruction Ins256(MULQACC256(true, src1, qwsel1, src2, qwsel2, shift))}
-    modifies
-        wacc;
-    ensures
-        wacc == bn_mulqacc(true, src1, qwsel1, src2, qwsel2, shift, old(wacc));
-{
-    assume false;
-}
-
-procedure BN_MULQACC(in src1:reg256, in qwsel1:imm2, in src2:reg256, in qwsel2:imm2, in shift:imm2)
-    {:instruction Ins256(MULQACC256(false, src1, qwsel1, src2, qwsel2, shift))}
-    modifies
-        wacc;
-    ensures
-        wacc == bn_mulqacc(false, src1, qwsel1, src2, qwsel2, shift, old(wacc));
-{
-    assume false;
-}
-
-procedure BN_MULQACC_SAFE(in src1:reg256, in qwsel1:imm2, in src2:reg256, in qwsel2:imm2, in shift:imm2)
-    {:instruction Ins256(MULQACC256(false, src1, qwsel1, src2, qwsel2, shift))}
-    requires
-        bn_mulqacc_is_safe(shift, old(wacc));
-    modifies
-        wacc;
-    ensures
-        wacc == bn_mulqacc_safe(false, src1, qwsel1, src2, qwsel2, shift, old(wacc));
-{
-    assume false;
-}
-
-procedure BN_MULQACC_SO( 
-    inout dst: reg256,
-    inline lower: bool,
-    in src1: reg256,
-    in qwsel1:imm2,
-    in src2:reg256,
-    in qwsel2:imm2,
-    in shift:imm2)
-    {:instruction Ins256(MULQACC256(false, src1, qwsel1, src2, qwsel2, shift))}
-
-    modifies
-        wacc;
-    ensures
-        let result := bn_mulqacc(false, src1, qwsel1, src2, qwsel2, shift, old(wacc));
-        // the upper half stay in wacc
-        wacc == uint256_uh(result)
-        // the lower half gets written back into dst
-        && dst == uint256_hwb(old(dst), uint256_lh(result), lower);
-{
-    assume false;
-}
-
-procedure BN_MULQACC_SO_SAFE( 
-    inout dst: reg256,
-    inline lower: bool,
-    in src1: reg256,
-    in qwsel1:imm2,
-    in src2:reg256,
-    in qwsel2:imm2,
-    in shift:imm2)
-    {:instruction Ins256(MULQACC256(false, src1, qwsel1, src2, qwsel2, shift))}
-
-    requires
-        bn_mulqacc_is_safe(shift, old(wacc));
-    modifies
-        wacc;
-    ensures
-        let result := bn_mulqacc_safe(false, src1, qwsel1, src2, qwsel2, shift, old(wacc));
-        // the upper half stay in wacc
-        wacc == uint256_uh(result)
-        // the lower half gets written back into dst
-        && dst == uint256_hwb(old(dst), uint256_lh(result), lower);
-{
-    assume false;
-}
-
-procedure BN_MOV(inout dst:reg256, in src:reg256)
-    {:instruction Ins256(MOV256(dst, src))}
+procedure bn_mov(inout dst: reg256, in src: reg256)
+    {:instruction Ins256(BN_MOV(dst, src))}
     ensures
         dst == old(src);
 {
     assume false;
 }
 
-procedure BN_RSHI(inout dst:reg256, in src1:reg256, in src2:reg256, in imm:imm32)
-    {:instruction Ins256(RSHI256(dst, src1, src2, imm))}
+procedure bn_movr(inout grd: reg32, inline grd_inc: bool, inout grs: reg32, inline grs_inc: bool)
+    {:instruction Ins256(BN_MOVR(grd, grd_inc, grs, grs_inc))}
+    modifies
+        wregs;
     requires
-        imm < 256;
+        !(grd_inc && grs_inc);
+        if grd_inc then grd < 31 else grd < 32;
+        if grs_inc then grs < 31 else grs < 32;
     ensures
-        dst == bn_rshi(src1, src2, imm);
+        grd == (if grd_inc then (old(grd) + 1) else old(grd));
+        grs == (if grs_inc then (old(grs) + 1) else old(grs));
+        wregs == old(wregs[Wdr(grd) := wregs[Wdr(grs)]]);
 {
     assume false;
 }
 
-procedure BN_SEL(inout dst:reg256, in src1:reg256, in src2:reg256, inline fg:bool, in flag:imm2)
-    {:instruction Ins256(SEL256(dst, src1, src2, fg))} // TODO: sort out fg/flag
-    modifies
-        flags;
+procedure bn_rshi(inout dst: reg256, in src1: reg256, in src2: reg256, in imm: imm32)
+    {:instruction Ins256(BN_RSHI(dst, src1, src2, imm))}
+    requires
+        imm < 256;
     ensures
-        dst == (if get_flag(fg, flag, old(flags)) then src2 else src1);
+        dst == otbn_rshi(src1, src2, imm);
+{
+    assume false;
+}
+
+procedure bn_sel(inout dst: reg256, in src1: reg256, in src2: reg256, inline which_group: uint1, in flag: imm2)
+    {:instruction Ins256(BN_SEL(dst, src1, src2, which_group))} 
+    // TODO: sort out fg/flag
+    reads
+        fgroups;
+    ensures
+        dst == (if get_flag(old(fgroups), which_group, flag) then src1 else src2);
 {
     assume false;
 }

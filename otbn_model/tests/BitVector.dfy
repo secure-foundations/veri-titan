@@ -1,11 +1,18 @@
 include "NativeTypes.dfy"
-include "../otbn_model/lib/powers.dfy"
+include "../lib/powers.dfy"
 
 module CutomBitVector {
     import opened NativeTypes
     import opened powers
 
-    type cbv = t: seq<uint2> | 0 < |t| <= UINT32_MAX witness [1]
+    function mod(p: int, n: int) : (r : int)
+        requires n != 0
+    {
+        p % n
+    }
+
+    // lsb .. msb
+    type cbv = t: seq<uint1> | 0 < |t| <= UINT32_MAX witness [1]
 
     type cbv384 = t: cbv | |t| == 384
 
@@ -13,7 +20,7 @@ module CutomBitVector {
 
     type cbv768 = t: cbv | |t| == 768
 
-    function to_nat(v: cbv) : nat
+    function {:opaque} to_nat(v: cbv) : nat
     {
         to_nat_aux(v, |v|)
     }
@@ -25,6 +32,38 @@ module CutomBitVector {
     {
         if i == 0 then 0
         else to_nat_aux(v, i - 1) + pow2(i - 1) * v[i - 1]
+    }
+
+    lemma to_nat_bound(v: cbv)
+        ensures to_nat(v) < pow2(|v|)
+        decreases |v|;
+    {
+        if |v| == 0 {
+            reveal pow2();
+        } else {
+            var i := |v|;
+            assert to_nat(v) == to_nat_aux(v, i - 1) + pow2(i - 1) * v[i - 1] by {
+                reveal to_nat();
+            }
+            to_nat_prefix_lemma(v, v[..i - 1], i - 1);
+            assert to_nat_aux(v[..i - 1], i - 1) == to_nat_aux(v, i - 1);
+
+            // assert to_nat(v) <= to_nat_aux(v[..i], i - 1) + pow2(|v| - 1);
+
+            assert to_nat(v) <= to_nat(v[..i - 1]) + pow2(|v| - 1) by {
+                reveal to_nat(); 
+            }
+
+            assert |v[..i - 1]| == |v| - 1;
+
+            assert to_nat(v) < pow2(|v| - 1) + pow2(|v| - 1) by {
+                to_nat_bound(v[..i - 1]);
+            }
+
+            assert pow2(|v| - 1) * 2 == pow2(|v|) by {
+                reveal pow2();
+            }
+        }
     }
 
     lemma {:induction i} to_nat_prefix_lemma(v: cbv, v': cbv, i: nat)
@@ -88,12 +127,12 @@ module CutomBitVector {
         }
     } 
 
-    function method lsb(v: cbv) : uint2
+    function method lsb(v: cbv) : uint1
     {
         v[0]
     }
 
-    function method msb(v: cbv) : uint2
+    function method msb(v: cbv) : uint1
     {
         v[|v| - 1]
     }
@@ -199,17 +238,17 @@ module CutomBitVector {
             to_nat(v1) + (v[i-1] + to_nat(v3) * 2) * pow2(i-1);
             to_nat(v1) + v[i-1] * pow2(i-1) + to_nat(v3) * 2 * pow2(i-1);
             {
-                assert 2 * pow2(i-1) == pow2(i) by {
-                    reveal power();
-                }
+                assume false;
+                // assert to_nat(v3) * 2 * pow2(i-1) == to_nat(v3) * pow2(i) by {
+                //     reveal power();
+                // }
             }
             to_nat(v1) + v[i-1] * pow2(i-1) + to_nat(v3) * pow2(i);
             {
-                assert to_nat(v4) == to_nat(v1) + v[i-1] * pow2(i-1) 
-                     by {
-                        to_nat_msb_lemma(v4, i);
-                        assume v4[..i-1] == v[..i-1];
-                    }
+                assert to_nat(v4) == to_nat(v1) + v[i-1] * pow2(i-1) by {
+                    to_nat_msb_lemma(v4, i);
+                    assume v4[..i-1] == v[..i-1];
+                }
             }
             to_nat(v4) + to_nat(v3) * pow2(i);
         }
@@ -241,6 +280,7 @@ module CutomBitVector {
         requires l != 0;
         decreases l;
         ensures |v| == l;
+        ensures to_nat(v) == 0;
     {
         if l == 1 then [0]
         else zero(l - 1) + [0]
@@ -278,11 +318,11 @@ module CutomBitVector {
         v[amt..]
     }
 
-    lemma {:induction amt} rshift_is_div_lemma(v: cbv, v1: cbv, amt: uint32)
+    lemma {:induction amt} rshift_is_div_lemma(v: cbv, amt: uint32, v': cbv)
         decreases amt;
         requires amt < |v|;
-        requires v1 == rshift(v, amt);
-        ensures to_nat(v1) == to_nat(v) / pow2(amt);
+        requires v' == rshift(v, amt);
+        ensures to_nat(v') == to_nat(v) / pow2(amt);
     {
         if amt == 0 {
             reveal power();
@@ -292,7 +332,7 @@ module CutomBitVector {
             calc ==> {
                 true;
                 {
-                    rshift_is_div_lemma(v, v2, amt-1);
+                    rshift_is_div_lemma(v, amt-1, v2);
                 }
                 to_nat(v2) == to_nat(v) / pow2(amt-1);
                 {
@@ -302,23 +342,23 @@ module CutomBitVector {
                 }
                 to_nat(v) / pow2(amt-1) == v2[0] + 2 * to_nat(v2[1..]);
                 {
-                    assert to_nat(v1) == to_nat(v2[1..]);
+                    assert to_nat(v') == to_nat(v2[1..]);
                 }
-                to_nat(v) / pow2(amt-1) == v2[0] + 2 * to_nat(v1);
-                to_nat(v) / pow2(amt-1) / 2 == to_nat(v1);
+                to_nat(v) / pow2(amt-1) == v2[0] + 2 * to_nat(v');
+                to_nat(v) / pow2(amt-1) / 2 == to_nat(v');
                 {
                     assume to_nat(v) / pow2(amt-1) / 2 == to_nat(v) / (pow2(amt-1) * 2); 
                 }
-                to_nat(v) / (pow2(amt-1) * 2) == to_nat(v1);
+                to_nat(v) / (pow2(amt-1) * 2) == to_nat(v');
                 {
                     assert pow2(amt-1) * 2 == pow2(amt) by {
                         reveal power();
                     }
                 }
-                to_nat(v) / pow2(amt) == to_nat(v1);
+                to_nat(v) / pow2(amt) == to_nat(v');
             }
 
-            assert to_nat(v) / pow2(amt) == to_nat(v1);
+            assert to_nat(v) / pow2(amt) == to_nat(v');
         }
     }
 
@@ -347,31 +387,26 @@ module CutomBitVector {
     //     }
     // }
 
-    // lemma {:axiom} nested_div_lemma(x: nat, m: nat, n: nat) 
-    //     requires m != 0 && n != 0;
-    //     ensures x / m / n == x / (m * n);
-
-    method concat(v1: cbv, v2: cbv) returns (v3: cbv)
+    function method concat(v1: cbv, v2: cbv) : (v3: cbv)
     {
-        return v1 + v2; 
+        v1 + v2
     }
 
-    method slice(v: cbv, lo: uint32, hi: uint32) returns (v': cbv)
+    function method slice(v: cbv, lo: uint32, hi: uint32) : (v': cbv)
         requires 0 <= lo < hi <= |v|;
         ensures v' == v[lo..hi];
     {
-        v' := v[lo..hi];
+        v[lo..hi]
     }
 
-    method bvzero_extend(v: cbv, l': uint32) returns (v': cbv)
+    function method zext(v: cbv, l': uint32) : (v': cbv)
         requires l' > |v|;
         ensures |v'| == l';
         ensures to_nat(v') == to_nat(v);
     {
         var l := |v|;
         var z := zero(l' - l);
-        v' := v + z;
-
+        var v' := v + z;
         calc == {
             to_nat(v');
             {
@@ -390,6 +425,51 @@ module CutomBitVector {
             to_nat(v);
         }
         assert to_nat(v') == to_nat(v);
+
+        v'
+    }
+
+    function method {:opaque} add(v1: cbv, v2: cbv, cin: uint1) : (cbv, uint1)
+        requires |v1| == |v2|;
+        ensures
+            var (v3, cout) := add(v1, v2, cin);
+            var sum := to_nat(v1) + to_nat(v2) + cin;
+            && |v3| == |v1|
+            && to_nat(v3) == sum % pow2(|v1|)
+            && cout == sum / pow2(|v1|);
+
+    function method {:opaque} sub(v1: cbv, v2: cbv, bin: uint1) : (cbv, uint1)
+        requires |v1| == |v2|;
+        ensures
+            var (v3, bout) := sub(v1, v2, bin);
+            var diff : int := to_nat(v1) - (to_nat(v2) + bin);
+        && |v3| == |v1|
+        && to_nat(v3) == diff % pow2(|v1|)
+        && bout == if diff < 0 then 1 else 0;
+
+    predicate equal_uint256(bv: cbv, v: uint256)
+    {
+        |bv| == 256 && to_nat(bv) == v
+    }
+
+    predicate equal_uint512(bv: cbv, v1: uint256, v2: uint256)
+    {
+        |bv| == 512 && to_nat(bv) == v1 + v2 * BASE_256
+    }
+
+    predicate equal_uint768(bv: cbv, v1: uint256, v2: uint256, v3: uint256)
+    {
+        |bv| == 768 && to_nat(bv) == v1 + v2 * BASE_256 + v3 * BASE_256 * BASE_256
+    }
+
+    function eval_bignum_seq(vs: seq<uint256>): nat
+    {
+        if |vs| == 0 then 0 else vs[0] + eval_bignum_seq(vs[1..]) * BASE_256
+    }
+
+    predicate equal_uint256_seq(bv: cbv, vs: seq<uint256>)
+    {
+        (|bv| == 256 * |vs|) && to_nat(bv) == eval_bignum_seq(vs) 
     }
 
     method cbv_test()
