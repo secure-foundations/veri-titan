@@ -34,36 +34,37 @@ procedure cond_sub_mod(ghost m: seq(uint256), ghost selection: bool)
     requires
         w31 == 0;
         x16 < 0xfffffe60;
-        forall(i:int) 0 <= i < 12 ==>
+        forall(i:int) 0 <= i < 3 ==>
             Valid256Addr(wmem, old(x16) + 32 * i);
         selection == get_cf1(fgroups);
-        
+        get_cf0(fgroups) == false;
+
         Valid256Addr(wmem, old(x16) + 0);
         Valid256Addr(wmem, old(x16) + 32);
         Valid256Addr(wmem, old(x16) + 64);
-        Valid256Addr(wmem, old(x16) + 96);
-        Valid256Addr(wmem, old(x16) + 128);
-        Valid256Addr(wmem, old(x16) + 160);
-        Valid256Addr(wmem, old(x16) + 192);
-        Valid256Addr(wmem, old(x16) + 224);
-        Valid256Addr(wmem, old(x16) + 256);
-        Valid256Addr(wmem, old(x16) + 288);
-        Valid256Addr(wmem, old(x16) + 320);
-        Valid256Addr(wmem, old(x16) + 352);
+        // Valid256Addr(wmem, old(x16) + 96);
+        // Valid256Addr(wmem, old(x16) + 128);
+        // Valid256Addr(wmem, old(x16) + 160);
+        // Valid256Addr(wmem, old(x16) + 192);
+        // Valid256Addr(wmem, old(x16) + 224);
+        // Valid256Addr(wmem, old(x16) + 256);
+        // Valid256Addr(wmem, old(x16) + 288);
+        // Valid256Addr(wmem, old(x16) + 320);
+        // Valid256Addr(wmem, old(x16) + 352);
 
         m == seq(
             wmem[old(x16) + 0], 
             wmem[old(x16) + 32], 
-            wmem[old(x16) + 64], 
-            wmem[old(x16) + 96], 
-            wmem[old(x16) + 128], 
-            wmem[old(x16) + 160], 
-            wmem[old(x16) + 192], 
-            wmem[old(x16) + 224], 
-            wmem[old(x16) + 256], 
-            wmem[old(x16) + 288], 
-            wmem[old(x16) + 320], 
-            wmem[old(x16) + 352]
+            wmem[old(x16) + 64]
+            // wmem[old(x16) + 96], 
+            // wmem[old(x16) + 128], 
+            // wmem[old(x16) + 160], 
+            // wmem[old(x16) + 192], 
+            // wmem[old(x16) + 224], 
+            // wmem[old(x16) + 256], 
+            // wmem[old(x16) + 288], 
+            // wmem[old(x16) + 320], 
+            // wmem[old(x16) + 352]
         );
     modifies
         x8; x10; x11; x16;
@@ -72,7 +73,6 @@ procedure cond_sub_mod(ghost m: seq(uint256), ghost selection: bool)
         w5; w6; w7; w8; w9; w10; w11; w12; w13; w14; w15; w16;
 {
     assume selection == true;
-    // ghost var selection := get_cf1(fgroups);
 
     li(x8, 5);
     li(x10, 3);
@@ -80,62 +80,77 @@ procedure cond_sub_mod(ghost m: seq(uint256), ghost selection: bool)
 
     bn_add(w31, w31, w31, false, 0, 0);
     ghost var i : int := 0;
-    ghost var old_c :seq(uint256):= seq(w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15, w16);
-    // ghost var m : seq(uint256) := seq();
-    ghost var current := seq(w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15, w16);
+    ghost var old_c := seq(w5, w6, w7);
+    ghost var current := seq(w5, w6, w7);
+    ghost var cin := bool_to_uint1(get_cf0(fgroups));
+    ghost var cout := cin;
 
-    while (LoopImm(12))
-        invariant i + loop_ctr == 12;
+    while (LoopImm(3))
+        invariant i + loop_ctr == 3;
         invariant x8 == 5 + i;
-        invariant x11 == 2;
         invariant x10 == 3;
+        invariant x11 == 2;
         invariant x16 == old(x16) + 32 * i;
 
         invariant get_cf1(fgroups) == selection;
 
-        invariant forall(i:int) 0 <= i < 12
+        invariant forall(i:int) 0 <= i < 3
             ==> Valid256Addr(wmem, old(x16) + 32 * i);
 
+        invariant Valid256Addr(wmem, old(x16) + 0);
+        invariant Valid256Addr(wmem, old(x16) + 32);
+        invariant Valid256Addr(wmem, old(x16) + 64);
+        invariant m == seq(wmem[old(x16) + 0], wmem[old(x16) + 32], wmem[old(x16) + 64]);
         // invariant !selection
         //     ==> (forall(i:int) 0 <= i < 12
         //     ==> wregs[Wdr(5 + i)] == old(wregs[Wdr(5 + i)]));
 
-        invariant seq_len(current) == 12;
+        invariant seq_len(current) == 3;
 
-        invariant selection ==>
-        tuple(sub_seq(current, 0, i), bool_to_uint1(get_cf0(fgroups))) == seq_subb(
-            sub_seq(old_c, 0, i), sub_seq(m, 0, i), 0);
+        // invariant selection ==>
+        // tuple(sub_seq(current, 0, i), bool_to_uint1(get_cf0(fgroups))) == seq_subb(
+        //     sub_seq(old_c, 0, i), sub_seq(m, 0, i), );
 
-        invariant current == seq(w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15, w16);
+        invariant current == seq(w5, w6, w7);
 
         decreases loop_ctr;
     {
+        ghost var pre_x := sub_seq(old_c, 0, i);
+        ghost var pre_y := sub_seq(m, 0, i);
+
+        ghost var x_i := wregs[Wdr(5 + i)];
+        ghost var y_i := m[i];
+
+        cin := bool_to_uint1(get_cf0(fgroups));
+
         bn_lid_safe(x10, false, 0, x16, true);
+        assert w3 == wmem[old(x16) + 32 * i];
+        assert w3 == m[i];
 
         bn_movr(x11, false, x8, false);
+        assert w2 == wregs[Wdr(5 + i)];
 
-        ghost var cin := get_cf0(fgroups);
-        ghost var old_slice: seq(uint256) := sub_seq(current, 0, i);
-
-        assert tuple(old_slice, bool_to_uint1(cin)) == seq_subb(
-            sub_seq(old_c, 0, i), sub_seq(m, 0, i), 0);
-        
         bn_subb(w4, w2, w3, false, 0, 0);
+        cout := bool_to_uint1(get_cf0(fgroups));
 
-        assert tuple(w4, bool_to_uint1(get_cf0(fgroups))) 
-            == uint256_subb(w2, w3, bool_to_uint1(cin));
+        assert tuple(w4, cout) == uint256_subb(x_i, y_i, cin);
 
         bn_sel(w3, w4, w2, 1, 0);
-        assert if selection then (w3 == w4) else (w3 == w2);
-
         bn_movr(x8, true, x10, false);
 
         i := i + 1;
-        current := seq(w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15, w16);
-        
-        ghost var new_slice : seq(uint256) := sub_seq(current, 0, i);
-        ghost var temp : uint256 := wregs[Wdr(4 + i)];
-        assert seq_concat(old_slice, seq(temp)) == new_slice;
+        current := seq(w5, w6, w7);
+
+        // ghost var new_slice : seq(uint256) := sub_seq(current, 0, i);
+        // assert seq_concat(pre_slice, seq(temp)) == new_slice;
+
+        ghost var x := sub_seq(old_c, 0, i);
+        ghost var y := sub_seq(m, 0, i);
+        ghost var rhs := seq_subb(x, y, cin);
+        // assert tuple(z0, cout) := uint256_subb(x[idx], y[idx], cin);
+        assert tuple(w4, cout) == uint256_subb(x_i, y_i, cin);
+
+
     }
 }
 

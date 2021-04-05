@@ -122,6 +122,19 @@ function seq_subb(x: seq<uint256>, y: seq<uint256>, cin: uint1) : (seq<uint256>,
         (zrest + [z0], cout)
 }
 
+// function seq_subb(x: seq<uint256>, y: seq<uint256>, cin: uint1) : (seq<uint256>, uint1)
+//     requires |x| == |y|
+//     ensures var (z, cout) := seq_subb(x, y, cin);
+//         && |z| == |x|
+// {
+//     if |x| == 0 then ([], cin)
+//     else 
+//         var (z0, c) := uint256_subb(x[0], y[0], cin);
+//         var (zrest, cout) := seq_subb(x[1..], y[1..], c);
+//         ([z0] + zrest, cout)
+// }
+
+
 predicate IsUInt32(i: int) { 0 <= i < 0x1_0000_0000 }
 predicate IsUInt256(i: int) { 0 <= i < 0x1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000 }
 
