@@ -26,7 +26,7 @@ import opened bignum_decls
 #endverbatim
 
 function interp_wdr_seq(start: int, end: int): int extern;
-function seq_subb(x: seq(uint256), y: seq(uint256), cin: uint1) : tuple(seq(uint256), uint1) extern;
+function seq_subb(x: seq(uint256), y: seq(uint256)) : tuple(seq(uint256), uint1) extern;
 function uint256_subb(x: uint256, y: uint256, cin: uint1): tuple(uint256, uint1) extern;
 
 //  FG1.C: s, selection flag
@@ -81,10 +81,10 @@ procedure cond_sub_mod(ghost m: seq(uint256), ghost selection: bool)
     bn_add(w31, w31, w31, false, 0, 0);
     ghost var i : int := 0;
     ghost var old_x := seq(w5, w6, w7);
+    ghost var cur_c := seq(w5, w6, w7);
 
-    ghost var x := seq(w5, w6, w7);
     ghost var cin :uint1 := 0;
-    ghost var cout :uint1 := 0;
+    // ghost var cout :uint1 := 0;
 
     while (LoopImm(3))
         invariant i + loop_ctr == 3;
@@ -98,32 +98,32 @@ procedure cond_sub_mod(ghost m: seq(uint256), ghost selection: bool)
         invariant forall(i:int) 0 <= i < 3
             ==> Valid256Addr(wmem, old(x16) + 32 * i);
 
-        invariant x == seq(w5, w6, w7);
+        invariant cur_c == seq(w5, w6, w7);
 
         invariant forall(j:int) i <= j < 3
-            ==> x[j] == old_x[j];
+            ==> cur_c[j] == old_x[j];
 
         invariant Valid256Addr(wmem, old(x16) + 0);
         invariant Valid256Addr(wmem, old(x16) + 32);
         invariant Valid256Addr(wmem, old(x16) + 64);
         invariant m == seq(wmem[old(x16) + 0], wmem[old(x16) + 32], wmem[old(x16) + 64]);
 
-        // invariant tuple(, ) == seq_subb(sub_seq(old_x, 0, i) , y[..idx])
         // invariant !selection
         //     ==> (forall(i:int) 0 <= i < 12
         //     ==> wregs[Wdr(5 + i)] == old(wregs[Wdr(5 + i)]));
 
-        invariant seq_len(x) == 3;
+        invariant cin == bool_to_uint1(get_cf0(fgroups));
 
-        // invariant selection ==>
-        // tuple(sub_seq(current, 0, i), bool_to_uint1(get_cf0(fgroups))) == seq_subb(
-        //     sub_seq(old_c, 0, i), sub_seq(m, 0, i));
-
+        invariant selection ==>
+        tuple(prefix_seq(cur_c, i), cin)
+            == seq_subb(prefix_seq(old_x, i), prefix_seq(m, i));
 
         decreases loop_ctr;
     {
         ghost var x_i := old_x[i];
         ghost var y_i := m[i];
+        ghost var pre_x := prefix_seq(old_x, i);
+        ghost var pre_y := prefix_seq(m, i);
 
         bn_lid_safe(x10, false, 0, x16, true);
         assert w3 == wmem[old(x16) + 32 * i];
@@ -133,26 +133,82 @@ procedure cond_sub_mod(ghost m: seq(uint256), ghost selection: bool)
         assert w2 == wregs[Wdr(5 + i)];
         assert w2 == x_i;
 
-        cin := bool_to_uint1(get_cf0(fgroups));
+        ghost var pre_cin := bool_to_uint1(get_cf0(fgroups));
+        ghost var pre_c := cur_c;
+        assert tuple(prefix_seq(pre_c, i), pre_cin)
+            == seq_subb(pre_x, pre_y);
+
         bn_subb(w4, w2, w3, false, 0, 0);
-        cout := bool_to_uint1(get_cf0(fgroups));
+        cin := bool_to_uint1(get_cf0(fgroups));
 
         bn_sel(w3, w4, w2, 1, 0);
         bn_movr(x8, true, x10, false);
 
         i := i + 1;
-        x := seq(w5, w6, w7);
+        cur_c := seq(w5, w6, w7);
 
-        // ghost var new_slice : seq(uint256) := sub_seq(current, 0, i);
+        // ghost var new_slice : seq(uint256) := prefix_seq(current, 0, i);
         // assert seq_concat(pre_slice, seq(temp)) == new_slice;
 
-        // ghost var x := sub_seq(old_x, 0, i);
-        // ghost var y := sub_seq(m, 0, i);
+        ghost var x := prefix_seq(old_x, i);
+        ghost var y := prefix_seq(m, i);
+        ghost var p3 := seq_subb(x, y);
 
-        // ghost var rhs := seq_subb(x, y, cin);
-        // assert tuple(z0, cout) := uint256_subb(x[idx], y[idx], cin);
-        assert tuple(w4, cout) == uint256_subb(x_i, y_i, cin);
-        // var (zrest, cout) := seq_subb(x, y, c);
+        ghost var idx := seq_len(x) - 1;
+        assert idx == i - 1;
+        ghost var p1 := seq_subb(prefix_seq(x, idx), prefix_seq(y, idx));
+        ghost var p2 := uint256_subb(x[idx], y[idx], snd(p1));
+        assert p3 == tuple(seq_append(fst(p1), fst(p2)), snd(p2));
+
+        calc ==
+        {
+            p1;
+            ==
+            seq_subb(prefix_seq(x, idx), prefix_seq(y, idx));
+            ==
+            {
+                assert pre_x == prefix_seq(x, idx);
+                assert pre_y == prefix_seq(y, idx);
+            }
+            seq_subb(pre_x, pre_y);
+            ==
+            {
+                assert tuple(prefix_seq(pre_c, i-1), pre_cin) 
+                    == seq_subb(pre_x, pre_y);
+            }
+            tuple(prefix_seq(pre_c, i-1), pre_cin);
+        }
+
+        calc ==
+        {
+            p2;
+            ==
+            uint256_subb(x[idx], y[idx], snd(p1));
+            ==
+            {
+                assert snd(p1) == pre_cin;
+            }
+            uint256_subb(x[idx], y[idx], pre_cin);
+            ==
+            {
+                assert x_i == x[idx];
+                assert y_i == y[idx];
+            }
+            tuple(w4, cin);
+        }
+        
+        calc == 
+        {
+            p3;
+            ==
+            tuple(seq_append(fst(p1), fst(p2)), snd(p2));
+            ==
+            tuple(seq_append(prefix_seq(pre_c, i-1), w4), cin);
+
+        }
+
+        // assert tuple(w4, cin) == uint256_subb(x_i, y_i, pre_cin);
+
     }
 }
 

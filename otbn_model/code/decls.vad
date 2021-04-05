@@ -47,8 +47,10 @@ function operator([]) #[a: Type(0), b: Type(0)](m: map(a, b), key: a): b extern;
 function operator([ := ]) #[a: Type(0), b: Type(0)](m: map(a, b), key: a, v: b): map(a, b) extern;
 
 function sub_seq #[a: Type(0)] (s: seq(a), start: int, end: int): seq(a) extern;
+function prefix_seq #[a: Type(0)] (s: seq(a), end: int): seq(a) extern;
 function seq_len #[a: Type(0)] (s: seq(a)): nat extern;
 function seq_concat #[a: Type(0)](x: seq(a), y: seq(a)): seq(a) extern;
+function seq_append #[a: Type(0)](xs: seq(a), x: a): seq(a) extern;
 
 function bool_to_uint1(i:bool) : uint1 extern;
 

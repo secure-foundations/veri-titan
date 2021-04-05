@@ -101,13 +101,45 @@ predicate valid_state(s: state)
     && (forall t :: t in s.wregs)
 }
 
-function interp_wdr_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): int 
-    requires start <= end
-    decreases end - start
+// function interp_wdr_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): int 
+//     requires start <= end
+//     decreases end - start
+//     fix domain
+// {
+//     if start == end then wregs[Wdr(start)]
+//     else BASE_256 * interp_wdr_seq(wregs, start + 1, end) + wregs[Wdr(start)]
+// }
+
+function fst<T,Q>(t:(T, Q)) : T { t.0 }
+function snd<T,Q>(t:(T, Q)) : Q { t.1 }
+
+function sub_seq<T>(s: seq<T>, start: int, end: int): seq<T>
+    requires 0 <= start <= end <= |s|
 {
-    if start == end then wregs[Wdr(start)]
-    else BASE_256 * interp_wdr_seq(wregs, start + 1, end) + wregs[Wdr(start)]
+    s[start..end]
 }
+
+function prefix_seq<T>(s: seq<T>, end: int): seq<T>
+    requires 0 <= end <= |s|
+{
+    s[..end]
+}
+
+function seq_len<T>(s: seq<T>): nat
+{
+    |s|
+}
+
+function seq_concat<T>(x: seq<T>, y: seq<T>): seq<T>
+{
+    x + y
+}
+
+function seq_append<T>(xs: seq<T>, x: T): seq<T>
+{
+    xs + [x]
+}
+
 
 function seq_subb(x: seq<uint256>, y: seq<uint256>) : (seq<uint256>, uint1)
     requires |x| == |y|
@@ -117,8 +149,8 @@ function seq_subb(x: seq<uint256>, y: seq<uint256>) : (seq<uint256>, uint1)
     if |x| == 0 then ([], 0)
     else 
         var idx := |x| - 1;
-        var (zrest, cin) := seq_subb(x[..idx], y[..idx]);
-        var (z0, cout) := uint256_subb(x[idx], y[idx], cin);
+        var (zrest, ctmp) := seq_subb(prefix_seq(x, idx), prefix_seq(y, idx));
+        var (z0, cout) := uint256_subb(x[idx], y[idx], ctmp);
         (zrest + [z0], cout)
 }
 

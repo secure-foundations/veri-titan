@@ -11,25 +11,6 @@ import opened bignum_def
 //
 ////////////////////////////////////////////////////////////////////////
 
-function fst<T,Q>(t:(T, Q)) : T { t.0 }
-function snd<T,Q>(t:(T, Q)) : Q { t.1 }
-
-function sub_seq<T>(s: seq<T>, start: int, end: int): seq<T>
-    requires 0 <= start <= end <= |s|
-{
-    s[start..end]
-}
-
-function seq_len<T>(s: seq<T>): nat
-{
-    |s|
-}
-
-function seq_concat<T>(x: seq<T>, y: seq<T>): seq<T>
-{
-    x + y
-}
-
 type va_code = code
 type va_codes = codes
 type va_state = state
