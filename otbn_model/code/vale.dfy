@@ -110,16 +110,6 @@ type va_operand_reg32 = Reg32
 predicate va_is_src_reg32(r:Reg32, s: va_state) { r in s.xregs }
 predicate va_is_dst_reg32(r:Reg32, s: va_state) { r in s.xregs }
 
-predicate Valid32Addr(h: map<int, uint32>, addr:int)
-{
-    addr in h
-}
-
-predicate Valid256Addr(h: map<int, uint256>, addr:int)
-{
-    addr in h
-}
-
 function va_eval_reg32(s: va_state, r:Reg32):uint32
   requires va_is_src_reg32(r, s);
 {

@@ -144,24 +144,25 @@ lemma wregs_seq_contents(wregs: map<Reg256, uint256>, start: reg_index, end: reg
     }
 }
 
-// function wmem_seq(wmem: map<int, uint256>, start: nat, count: nat): seq<uint256>
-//     requires count <= 12
-//     requires forall i | 0 <= i < count :: Valid256Addr(wmem, start + 32 * i)
-//     decreases count
+// lemma test(wregs: map<Reg256, uint256>)
+//     requires forall t :: t in wregs
 // {
-//     if count == 0 then []
-//     else
-//         assert Valid256Addr(wmem, start) by {
-//             assert Valid256Addr(wmem, start + 32 * 0);
-//         }
-//         // forall r | r in this.I().graph ensures !this.deallocable(r)
-//         assert forall i | 0 <= i < count - 1 :: Valid256Addr(wmem, start + 32 + 32 * i) by {
-//             forall i | 0 <= i < count - 1 ensures false {
-//                 assume false;
-//             }
-//         }
-//         [wmem[start]] + wmem_seq(wmem, start + 32, count - 1)
+//     var s := wregs_seq(wregs, 3, 12);
+//     var wregs' := wregs[Wdr(13) := 42];
+//     var s' := wregs_seq(wregs', 3, 12);
+//     assert s' == s[8 := 42];
 // }
+
+function wmem_seq(wmem: map<int, uint256>, start: nat, count: nat): (s: seq<uint256>)
+    requires count <= 12 // to prevent use of count as an address
+    requires forall i | 0 <= i < count :: Valid256Addr(wmem, start + 32 * i)
+    ensures |s| == count
+    ensures forall i | 0 <= i < |s| :: s[i] == wmem[start + 32 * i];
+    decreases count
+{
+    if count == 0 then []
+    else wmem_seq(wmem, start, count - 1) + [wmem[start + 32 * (count - 1)]]
+}
 
 // function wdr_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): int 
 //     requires start <= end
