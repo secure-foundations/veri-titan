@@ -101,7 +101,69 @@ predicate valid_state(s: state)
     && (forall t :: t in s.wregs)
 }
 
-// function interp_wdr_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): int 
+function wregs_seq_rev(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): seq<uint256>
+    requires forall t :: t in wregs
+    requires start <= end
+    decreases end - start
+{
+    if start == end then []
+    else [wregs[Wdr(start)]] + wregs_seq(wregs, start + 1, end)
+}
+
+function wregs_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): (s: seq<uint256>)
+    requires forall t :: t in wregs
+    requires start <= end
+    ensures |s| == end - start
+    ensures forall i | 0 <= i < |s| :: s[i] == wregs[Wdr(i + start)];
+    decreases end - start
+{
+    if start == end then []
+    else 
+    var partial := wregs_seq(wregs, start, end - 1);
+    var s := partial + [wregs[Wdr(end-1)]];
+    s    
+}
+
+lemma wregs_seq_contents(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index, s: seq<uint256>)
+    requires forall t :: t in wregs
+    requires start <= end
+    requires s == wregs_seq(wregs, start, end)
+    ensures forall i | 0 <= i < |s| :: s[i] == wregs[Wdr(i + start)];
+{
+    if start != end {
+        var partial := wregs_seq(wregs, start, end - 1);
+        var s := partial + [wregs[Wdr(end-1)]];
+        forall i | 0 <= i < |s| ensures s[i] == wregs[Wdr(i + start)] {
+            if i < |s| - 1 {
+                wregs_seq_contents(wregs, start, end - 1, partial);
+                assert s[i] == partial[i];
+            } else {
+                assert s[i] == wregs[Wdr(i + start)];
+            }
+        }
+    }
+}
+
+// function wmem_seq(wmem: map<int, uint256>, start: nat, count: nat): seq<uint256>
+//     requires count <= 12
+//     requires forall i | 0 <= i < count :: Valid256Addr(wmem, start + 32 * i)
+//     decreases count
+// {
+//     if count == 0 then []
+//     else
+//         assert Valid256Addr(wmem, start) by {
+//             assert Valid256Addr(wmem, start + 32 * 0);
+//         }
+//         // forall r | r in this.I().graph ensures !this.deallocable(r)
+//         assert forall i | 0 <= i < count - 1 :: Valid256Addr(wmem, start + 32 + 32 * i) by {
+//             forall i | 0 <= i < count - 1 ensures false {
+//                 assume false;
+//             }
+//         }
+//         [wmem[start]] + wmem_seq(wmem, start + 32, count - 1)
+// }
+
+// function wdr_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): int 
 //     requires start <= end
 //     decreases end - start
 //     fix domain
@@ -140,7 +202,6 @@ function seq_append<T>(xs: seq<T>, x: T): seq<T>
     xs + [x]
 }
 
-
 function seq_subb(x: seq<uint256>, y: seq<uint256>) : (seq<uint256>, uint1)
     requires |x| == |y|
     ensures var (z, cout) := seq_subb(x, y);
@@ -166,8 +227,18 @@ function seq_subb(x: seq<uint256>, y: seq<uint256>) : (seq<uint256>, uint1)
 //         ([z0] + zrest, cout)
 // }
 
+predicate Valid32Addr(h: map<int, uint32>, addr:int)
+{
+    addr in h
+}
+
+predicate Valid256Addr(h: map<int, uint256>, addr:int)
+{
+    addr in h
+}
 
 predicate IsUInt32(i: int) { 0 <= i < 0x1_0000_0000 }
+
 predicate IsUInt256(i: int) { 0 <= i < 0x1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000 }
 
 predicate ValidRegister32(xregs: map<Reg32, uint32>, r: Reg32)
