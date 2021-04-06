@@ -101,7 +101,11 @@ predicate valid_state(s: state)
     && (forall t :: t in s.wregs)
 }
 
-function wregs_seq_rev(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): seq<uint256>
+predicate ValidWregs(wregs: map<Reg256, uint256>) {
+    forall t :: t in wregs
+}
+
+function {:opaque} wregs_seq_rev(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): seq<uint256>
     requires forall t :: t in wregs
     requires start <= end
     decreases end - start
@@ -110,7 +114,7 @@ function wregs_seq_rev(wregs: map<Reg256, uint256>, start: reg_index, end: reg_i
     else [wregs[Wdr(start)]] + wregs_seq(wregs, start + 1, end)
 }
 
-function wregs_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): (s: seq<uint256>)
+function {:opaque} wregs_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): (s: seq<uint256>)
     requires forall t :: t in wregs
     requires start <= end
     ensures |s| == end - start
@@ -130,6 +134,7 @@ lemma wregs_seq_contents(wregs: map<Reg256, uint256>, start: reg_index, end: reg
     requires s == wregs_seq(wregs, start, end)
     ensures forall i | 0 <= i < |s| :: s[i] == wregs[Wdr(i + start)];
 {
+    reveal wregs_seq;
     if start != end {
         var partial := wregs_seq(wregs, start, end - 1);
         var s := partial + [wregs[Wdr(end-1)]];
@@ -153,7 +158,7 @@ lemma wregs_seq_contents(wregs: map<Reg256, uint256>, start: reg_index, end: reg
 //     assert s' == s[8 := 42];
 // }
 
-function wmem_seq(wmem: map<int, uint256>, start: nat, count: nat): (s: seq<uint256>)
+function {:opaque} wmem_seq(wmem: map<int, uint256>, start: nat, count: nat): (s: seq<uint256>)
     requires count <= 12 // to prevent use of count as an address
     requires forall i | 0 <= i < count :: Valid256Addr(wmem, start + 32 * i)
     ensures |s| == count
