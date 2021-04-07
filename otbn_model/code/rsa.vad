@@ -45,7 +45,7 @@ procedure cond_sub_mod_inner(ghost m: seq(uint256), ghost old_wregs:map(Reg256, 
         ValidWregs(old_wregs);
 
 
-        0 <= loop_ctr < 3;
+        0 <= loop_ctr <= 3;
         i < 3;
 
         i + loop_ctr == 3;
@@ -54,7 +54,7 @@ procedure cond_sub_mod_inner(ghost m: seq(uint256), ghost old_wregs:map(Reg256, 
         x11 == 2;
         x16 == old_x16 + 32 * i;
         
-        wregs[Wdr(x8)] == old_wregs[Wdr(x8)];
+        forall (i:int) x8 <= i && i <= 5 + 3 ==> wregs[Wdr(i)] == old_wregs[Wdr(i)];
 
         get_cf1(fgroups) == selection;
         selection == true;
@@ -79,6 +79,8 @@ procedure cond_sub_mod_inner(ghost m: seq(uint256), ghost old_wregs:map(Reg256, 
         x10 == 3;
         x11 == 2;
         x16 == old_x16 + 32 * (i+1);
+        
+        forall (i:int) x8 <= i && i <= 5 + 3 ==> wregs[Wdr(i)] == old_wregs[Wdr(i)];
 
         get_cf1(fgroups) == selection;
         selection == true;
@@ -147,6 +149,8 @@ procedure cond_sub_mod(ghost m: seq(uint256), ghost selection: bool)
 
         invariant get_cf1(fgroups) == selection;
         invariant selection == true;
+
+        invariant forall (i:int) x8 <= i && i <= 5 + 3 ==> wregs[Wdr(i)] == old(wregs)[Wdr(i)];
 
         invariant forall(i:int) 0 <= i < 3
             ==> Valid256Addr(wmem, old(x16) + 32 * i);
