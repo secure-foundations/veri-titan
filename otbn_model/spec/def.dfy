@@ -122,11 +122,18 @@ function {:opaque} wregs_seq(wregs: map<Reg256, uint256>, start: reg_index, end:
     decreases end - start
 {
     if start == end then []
-    else 
-    var partial := wregs_seq(wregs, start, end - 1);
+    else var partial := wregs_seq(wregs, start, end - 1);
     var s := partial + [wregs[Wdr(end-1)]];
     s    
 }
+
+// function interp_wdr_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): int 
+//     requires start <= end
+//     decreases end - start
+// {
+//     if start == end then wregs[Wdr(start)]
+//     else BASE_256 * interp_wdr_seq(wregs, start + 1, end) + wregs[Wdr(start)]
+// }
 
 lemma wregs_seq_contents(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index, s: seq<uint256>)
     requires forall t :: t in wregs
@@ -134,7 +141,7 @@ lemma wregs_seq_contents(wregs: map<Reg256, uint256>, start: reg_index, end: reg
     requires s == wregs_seq(wregs, start, end)
     ensures forall i | 0 <= i < |s| :: s[i] == wregs[Wdr(i + start)];
 {
-    reveal wregs_seq;
+    reveal wregs_seq();
     if start != end {
         var partial := wregs_seq(wregs, start, end - 1);
         var s := partial + [wregs[Wdr(end-1)]];

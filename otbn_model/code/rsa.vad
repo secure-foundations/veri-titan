@@ -1,5 +1,4 @@
 include "decls.vad"
-include "otbn_mul.vad"
 
 #verbatim
 include "../code/vale.dfy"
@@ -72,8 +71,6 @@ procedure cond_sub_mod_inner(ghost m: seq(uint256), ghost old_wregs:map(Reg256, 
         x8; x10; x11; x16;
         fgroups; 
         wregs; w2; w3; w4; 
-        w5; w6; w7; w8; w9; w11; w12; w13; w14; w15; w16;
-      
     ensures
         x8 == 5 + i + 1;
         x10 == 3;
@@ -112,7 +109,8 @@ procedure cond_sub_mod_inner(ghost m: seq(uint256), ghost old_wregs:map(Reg256, 
     assert fst(p3) == wregs_seq(wregs, 5, x8);
 }
 
-procedure cond_sub_mod(ghost m: seq(uint256), ghost selection: bool)
+procedure cond_sub_mod(ghost m: seq(uint256), ghost selection: bool) 
+// {:frame false}
     requires
         w31 == 0;
         x16 < 0xfffffe60;
@@ -128,7 +126,6 @@ procedure cond_sub_mod(ghost m: seq(uint256), ghost selection: bool)
         x8; x10; x11; x16;
         fgroups; 
         wregs; w2; w3; w4; w31;
-        w5; w6; w7; w8; w9; w10; w11; w12; w13; w14; w15; w16;
 {
     assume selection == true;
 
@@ -160,11 +157,14 @@ procedure cond_sub_mod(ghost m: seq(uint256), ghost selection: bool)
         invariant selection ==> tuple(wregs_seq(wregs, 5, x8), cin) == 
                 seq_subb(wregs_seq(old(wregs), 5, x8), wmem_seq(wmem, old(x16), i));
 
+        invariant wmem == old(wmem);
+
+        // invariant forall 
+
         decreases loop_ctr;
     {
         cin := cond_sub_mod_inner(m, old(wregs), old(x16), selection, i, loop_ctr, cin);
         i := i + 1;
-
     }
 }
 
