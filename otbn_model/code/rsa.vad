@@ -1,5 +1,4 @@
 include "decls.vad"
-include "otbn_mul.vad"
 
 #verbatim
 include "../code/vale.dfy"
@@ -10,7 +9,7 @@ include "../spec/types.dfy"
 
 include "../gen/decls.dfy"
 
-include "../code/rsa_leammas.dfy"
+// include "../code/rsa_leammas.dfy"
 
 module barrett384 {
 
@@ -19,7 +18,7 @@ import opened bignum_vale
 import opened bignum_def
 import opened ops
 import opened types
-import opened rsa_leammas
+// import opened rsa_leammas
 
 import opened bignum_decls
 
