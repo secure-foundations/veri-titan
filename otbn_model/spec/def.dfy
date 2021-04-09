@@ -127,6 +127,14 @@ function {:opaque} wregs_seq(wregs: map<Reg256, uint256>, start: reg_index, end:
     s    
 }
 
+lemma lemma_wregs_seq_update(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index)
+    requires forall t :: t in wregs
+    requires start <= end 
+    requires end < 31
+    //requires forall i | start <= i < end - 1 :: wregs[Wdr(i)] == wregs'[Wdr(i)]
+    //requires wregs[Wdr()] == wregs'[Wdr(i)]
+    ensures  wregs_seq(wregs, start, end) + [wregs[Wdr(end)]] == wregs_seq(wregs, start, end + 1)
+
 // function interp_wdr_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): int 
 //     requires start <= end
 //     decreases end - start
@@ -134,7 +142,7 @@ function {:opaque} wregs_seq(wregs: map<Reg256, uint256>, start: reg_index, end:
 //     if start == end then wregs[Wdr(start)]
 //     else BASE_256 * interp_wdr_seq(wregs, start + 1, end) + wregs[Wdr(start)]
 // }
-
+/*
 lemma wregs_seq_contents(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index, s: seq<uint256>)
     requires forall t :: t in wregs
     requires start <= end
@@ -155,7 +163,7 @@ lemma wregs_seq_contents(wregs: map<Reg256, uint256>, start: reg_index, end: reg
         }
     }
 }
-
+*/
 // lemma test(wregs: map<Reg256, uint256>)
 //     requires forall t :: t in wregs
 // {
@@ -175,6 +183,11 @@ function {:opaque} wmem_seq(wmem: map<int, uint256>, start: nat, count: nat): (s
     if count == 0 then []
     else wmem_seq(wmem, start, count - 1) + [wmem[start + 32 * (count - 1)]]
 }
+
+lemma lemma_wmem_seq_update(wmem: map<int, uint256>, start: nat, count: nat)
+    requires 1 <= count <= 12
+    requires forall i | 0 <= i < count :: Valid256Addr(wmem, start + 32 * i)
+    ensures  wmem_seq(wmem, start, count - 1) + [wmem[start + 32 * (count-1)]] == wmem_seq(wmem, start, count)
 
 // function wdr_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): int 
 //     requires start <= end
