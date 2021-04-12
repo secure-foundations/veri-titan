@@ -32,6 +32,11 @@ function uint256_subb(x: uint256, y: uint256, cin: uint1): tuple(uint256, uint1)
 function ValidWregs(wregs:Wregs):bool extern;
 ghost procedure lemma_wregs_seq_update(ghost wregs:Wregs, ghost start:int, ghost end:int) extern;
 ghost procedure lemma_wmem_seq_update(ghost wmem:Wmem, ghost start:int, ghost count:int) extern;
+ghost procedure lemma_extend_seq_subb(
+    ghost x:seq(uint256), ghost y:seq(uint256), ghost z:seq(uint256), 
+    ghost cin_old:uint1, ghost cin:uint1,
+    ghost new_x:uint256, ghost new_y:uint256, ghost new_z:uint256) extern;
+ghost procedure lemma_wregs_seq_unchanged(ghost wregs0: Wregs, ghost wregs1: Wregs, ghost start: int, ghost end: int) extern;
 
 //  FG1.C: s, selection flag
 procedure cond_sub_mod_inner(ghost m: seq(uint256), ghost old_wregs:map(Reg256, uint256), ghost old_x16:nat, ghost selection: bool, ghost i:nat, ghost loop_ctr:int, ghost cin_old:uint1) returns (ghost cin:uint1)
@@ -88,28 +93,55 @@ procedure cond_sub_mod_inner(ghost m: seq(uint256), ghost old_wregs:map(Reg256, 
 
         cin == bool_to_uint1(get_cf0(fgroups));
 
-//        selection ==> tuple(wregs_seq(wregs, 5, x8), cin) == 
-//                seq_subb(wregs_seq(old_wregs, 5, x8), wmem_seq(wmem, old_x16, i+1));
+        selection ==> tuple(wregs_seq(wregs, 5, x8), cin) == 
+                seq_subb(wregs_seq(old_wregs, 5, x8), wmem_seq(wmem, old_x16, i+1));
 {
     bn_lid_safe(x10, false, 0, x16, true);
     bn_movr(x11, false, x8, false);
     bn_subb(w4, w2, w3, false, 0, 0);
+    ghost var new_x := w2;
+    ghost var new_y := w3;
+    ghost var new_z := w4;
     cin := bool_to_uint1(get_cf0(fgroups));
 
     bn_sel(w3, w4, w2, 1, 0);
     bn_movr(x8, true, x10, false);
 
-    ghost var x := wregs_seq(old_wregs, 5, x8);
-    ghost var y := wmem_seq(wmem, old_x16, i+1);
+//    ghost var x := wregs_seq(old_wregs, 5, x8);
+//    ghost var y := wmem_seq(wmem, old_x16, i+1);
 
     // OBSERVE:
     lemma_wregs_seq_update(old_wregs, 5, x8-1);
+    lemma_wregs_seq_update(wregs, 5, x8-1);
     lemma_wmem_seq_update(wmem, old_x16, i+1);
 //    assert x == seq_append(wregs_seq(old_wregs, 5, x8 - 1), old(wregs[Wdr(x8)]));
 //    assert y == seq_append(wmem_seq(wmem, old_x16, i), wmem[old_x16 + 32 * i]);
-    ghost var p3 := seq_subb(x, y);
-    assert snd(p3) == cin;
-    assert fst(p3) == wregs_seq(wregs, 5, x8);
+//    ghost var p3 := seq_subb(x, y);
+//    assert snd(p3) == cin;
+//    assert fst(p3) == wregs_seq(wregs, 5, x8);
+//
+//    assert tuple(wregs_seq(wregs, 5, x8), cin) == 
+//                seq_subb(wregs_seq(old_wregs, 5, x8), wmem_seq(wmem, old_x16, i+1));
+//
+    lemma_extend_seq_subb(
+        wregs_seq(old_wregs, 5, old(x8)), wmem_seq(wmem, old_x16, i), old(wregs_seq(wregs, 5, x8)),
+        cin_old, cin, new_x, new_y, new_z);
+//    assert (tuple(seq_append(old(wregs_seq(wregs, 5, x8)), new_z), cin) ==
+//        seq_subb(seq_append(wregs_seq(old_wregs, 5, old(x8)), new_x),
+//                 seq_append(wmem_seq(wmem, old_x16, i), new_y)));
+
+    // This seems necessary, whereas the others don't.  Why?
+    // Ah, it's because it relates the old(wregs) to the new ones,
+    // which the lemma invocations above don't help with.
+    // And almost all of the instructions modify wregs
+    lemma_wregs_seq_unchanged(wregs, old(wregs), 5, x8-1);
+    //assert wregs_seq(wregs, 5, x8) == seq_append(old(wregs_seq(wregs, 5, x8)), new_z);
+
+//    assert seq_append(wregs_seq(old_wregs, 5, old(x8)), new_x) == wregs_seq(old_wregs, 5, x8);
+//    assert seq_append(wmem_seq(wmem, old_x16, i), new_y) == wmem_seq(wmem, old_x16, i+1);
+//    assert 
+//        selection ==> tuple(wregs_seq(wregs, 5, x8), cin) == 
+//                seq_subb(wregs_seq(old_wregs, 5, x8), wmem_seq(wmem, old_x16, i+1));
 }
 
 procedure cond_sub_mod(ghost m: seq(uint256), ghost selection: bool) 

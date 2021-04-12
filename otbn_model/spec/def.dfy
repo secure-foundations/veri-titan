@@ -135,6 +135,14 @@ lemma lemma_wregs_seq_update(wregs: map<Reg256, uint256>, start: reg_index, end:
     //requires wregs[Wdr()] == wregs'[Wdr(i)]
     ensures  wregs_seq(wregs, start, end) + [wregs[Wdr(end)]] == wregs_seq(wregs, start, end + 1)
 
+lemma lemma_wregs_seq_unchanged(wregs0: map<Reg256, uint256>, wregs1: map<Reg256, uint256>, start: reg_index, end: reg_index)
+    requires forall t :: t in wregs0
+    requires forall t :: t in wregs1
+    requires start <= end 
+    requires end < 31
+    requires forall i :: start <= i < end ==> wregs0[Wdr(i)] == wregs1[Wdr(i)]
+    ensures  wregs_seq(wregs0, start, end) == wregs_seq(wregs1, start, end)
+
 // function interp_wdr_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): int 
 //     requires start <= end
 //     decreases end - start
@@ -228,7 +236,7 @@ function seq_append<T>(xs: seq<T>, x: T): seq<T>
     xs + [x]
 }
 
-function seq_subb(x: seq<uint256>, y: seq<uint256>) : (seq<uint256>, uint1)
+function {:opaque} seq_subb(x: seq<uint256>, y: seq<uint256>) : (seq<uint256>, uint1)
     requires |x| == |y|
     ensures var (z, cout) := seq_subb(x, y);
         && |z| == |x|
@@ -239,6 +247,18 @@ function seq_subb(x: seq<uint256>, y: seq<uint256>) : (seq<uint256>, uint1)
         var (zrest, ctmp) := seq_subb(prefix_seq(x, idx), prefix_seq(y, idx));
         var (z0, cout) := uint256_subb(x[idx], y[idx], ctmp);
         (zrest + [z0], cout)
+}
+
+lemma lemma_extend_seq_subb(
+        x: seq<uint256>, y: seq<uint256>, z: seq<uint256>, 
+        cin_old:uint1, cin:uint1,
+        new_x:uint256, new_y:uint256, new_z:uint256)
+    requires |x| == |y|
+    requires (z, cin_old) == seq_subb(x, y)
+    requires (new_z, cin) == uint256_subb(new_x, new_y, cin_old)
+    ensures (z + [new_z], cin) == seq_subb(x + [new_x], y + [new_y])
+{
+    reveal seq_subb();
 }
 
 // function seq_subb(x: seq<uint256>, y: seq<uint256>, cin: uint1) : (seq<uint256>, uint1)
