@@ -160,6 +160,11 @@ function wmem_seq(wmem: map<int, uint256>, start: nat, count: nat): (s: seq<uint
     wmem_seq_core(wmem, start, count) 
 }
 
+// lemma lemma_wmem_seq_update(wmem: map<int, uint256>, start: nat, count: nat)
+//      requires 1 <= count <= 12
+//      requires forall i | 0 <= i < count :: Valid256Addr(wmem, start + 32 * i)
+//      ensures  wmem_seq(wmem, start, count - 1) + [wmem[start + 32 * (count-1)]] == wmem_seq(wmem, start, count)
+ 
 function fst<T,Q>(t:(T, Q)) : T { t.0 }
 function snd<T,Q>(t:(T, Q)) : Q { t.1 }
 
@@ -190,7 +195,7 @@ function seq_append<T>(xs: seq<T>, x: T): seq<T>
     xs + [x]
 }
 
-function {:opaque} seq_subb_core(x: seq<uint256>, y: seq<uint256>) : (seq<uint256>, uint1)
+function {:opaque} seq_subb(x: seq<uint256>, y: seq<uint256>) : (seq<uint256>, uint1)
     requires |x| == |y|
     ensures var (z, cout) := seq_subb(x, y);
         && |z| == |x|
@@ -201,15 +206,6 @@ function {:opaque} seq_subb_core(x: seq<uint256>, y: seq<uint256>) : (seq<uint25
         var (zrest, ctmp) := seq_subb(prefix_seq(x, idx), prefix_seq(y, idx));
         var (z0, cout) := uint256_subb(x[idx], y[idx], ctmp);
         (zrest + [z0], cout)
-}
-
-function seq_subb(x: seq<uint256>, y: seq<uint256>) : (seq<uint256>, uint1)
-    requires |x| == |y|
-    ensures var (z, cout) := seq_subb(x, y);
-        && |z| == |x|
-        && |x| > 0 ==> seq_subb(x, y) == seq_subb(x[..|x|-1] + [x[|x|-1]], y[..|y|-1] + [y[|y|-1]])
-{
-    seq_subb_core(x, y)
 }
 
 lemma lemma_extend_seq_subb(
