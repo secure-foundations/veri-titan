@@ -111,8 +111,8 @@ procedure cond_sub_mod_inner(ghost m: seq(uint256), ghost old_wregs:map(Reg256, 
 //    ghost var y := wmem_seq(wmem, old_x16, i+1);
 
     // OBSERVE:
-    lemma_wregs_seq_update(old_wregs, 5, x8-1);
-    lemma_wregs_seq_update(wregs, 5, x8-1);
+//    lemma_wregs_seq_update(old_wregs, 5, x8-1);
+//    lemma_wregs_seq_update(wregs, 5, x8-1);
     lemma_wmem_seq_update(wmem, old_x16, i+1);
 //    assert x == seq_append(wregs_seq(old_wregs, 5, x8 - 1), old(wregs[Wdr(x8)]));
 //    assert y == seq_append(wmem_seq(wmem, old_x16, i), wmem[old_x16 + 32 * i]);

@@ -133,6 +133,7 @@ function wregs_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index
     ensures |s| == end - start
     ensures forall i | 0 <= i < |s| :: s[i] == wregs[Wdr(i + start)]
     ensures forall w :: (forall t :: t in w) && (forall i :: start <= i < end ==> wregs[Wdr(i)] == w[Wdr(i)]) ==> wregs_seq_core(wregs, start, end) == wregs_seq_core(w, start, end)
+    ensures end - start > 0 ==> wregs_seq_core(wregs, start, end - 1) + [wregs[Wdr(end - 1)]] == wregs_seq_core(wregs, start, end)
 {
     assert forall w :: (forall t :: t in w) && (forall i :: start <= i < end ==> wregs[Wdr(i)] == w[Wdr(i)]) ==> wregs_seq_core(wregs, start, end) == wregs_seq_core(w, start, end) by {
         forall w | (forall t :: t in w) && (forall i :: start <= i < end ==> wregs[Wdr(i)] == w[Wdr(i)]) 
