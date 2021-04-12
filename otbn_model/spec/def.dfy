@@ -114,7 +114,7 @@ function {:opaque} wregs_seq_rev(wregs: map<Reg256, uint256>, start: reg_index, 
     else [wregs[Wdr(start)]] + wregs_seq(wregs, start + 1, end)
 }
 
-function {:opaque} wregs_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): (s: seq<uint256>)
+function {:opaque} wregs_seq_core(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): (s: seq<uint256>)
     requires forall t :: t in wregs
     requires start <= end
     ensures |s| == end - start
@@ -122,9 +122,26 @@ function {:opaque} wregs_seq(wregs: map<Reg256, uint256>, start: reg_index, end:
     decreases end - start
 {
     if start == end then []
-    else var partial := wregs_seq(wregs, start, end - 1);
+    else var partial := wregs_seq_core(wregs, start, end - 1);
     var s := partial + [wregs[Wdr(end-1)]];
     s    
+}
+
+function wregs_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): (s: seq<uint256>)
+    requires forall t :: t in wregs
+    requires start <= end
+    ensures |s| == end - start
+    ensures forall i | 0 <= i < |s| :: s[i] == wregs[Wdr(i + start)]
+    ensures forall w :: (forall t :: t in w) && (forall i :: start <= i < end ==> wregs[Wdr(i)] == w[Wdr(i)]) ==> wregs_seq_core(wregs, start, end) == wregs_seq_core(w, start, end)
+{
+    assert forall w :: (forall t :: t in w) && (forall i :: start <= i < end ==> wregs[Wdr(i)] == w[Wdr(i)]) ==> wregs_seq_core(wregs, start, end) == wregs_seq_core(w, start, end) by {
+        forall w | (forall t :: t in w) && (forall i :: start <= i < end ==> wregs[Wdr(i)] == w[Wdr(i)]) 
+            ensures wregs_seq_core(wregs, start, end) == wregs_seq_core(w, start, end)
+        {            
+            lemma_wregs_seq_unchanged(w, wregs, start, end);
+        }
+    }
+    wregs_seq_core(wregs, start, end)
 }
 
 lemma lemma_wregs_seq_update(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index)
@@ -139,9 +156,8 @@ lemma lemma_wregs_seq_unchanged(wregs0: map<Reg256, uint256>, wregs1: map<Reg256
     requires forall t :: t in wregs0
     requires forall t :: t in wregs1
     requires start <= end 
-    requires end < 31
     requires forall i :: start <= i < end ==> wregs0[Wdr(i)] == wregs1[Wdr(i)]
-    ensures  wregs_seq(wregs0, start, end) == wregs_seq(wregs1, start, end)
+    ensures  wregs_seq_core(wregs0, start, end) == wregs_seq_core(wregs1, start, end)
 
 // function interp_wdr_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): int 
 //     requires start <= end

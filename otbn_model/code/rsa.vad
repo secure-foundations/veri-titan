@@ -134,7 +134,7 @@ procedure cond_sub_mod_inner(ghost m: seq(uint256), ghost old_wregs:map(Reg256, 
     // Ah, it's because it relates the old(wregs) to the new ones,
     // which the lemma invocations above don't help with.
     // And almost all of the instructions modify wregs
-    lemma_wregs_seq_unchanged(wregs, old(wregs), 5, x8-1);
+    //lemma_wregs_seq_unchanged(wregs, old(wregs), 5, x8-1);
     //assert wregs_seq(wregs, 5, x8) == seq_append(old(wregs_seq(wregs, 5, x8)), new_z);
 
 //    assert seq_append(wregs_seq(old_wregs, 5, old(x8)), new_x) == wregs_seq(old_wregs, 5, x8);
