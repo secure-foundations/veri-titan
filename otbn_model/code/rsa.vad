@@ -113,7 +113,7 @@ procedure cond_sub_mod_inner(ghost m: seq(uint256), ghost old_wregs:map(Reg256, 
     // OBSERVE:
 //    lemma_wregs_seq_update(old_wregs, 5, x8-1);
 //    lemma_wregs_seq_update(wregs, 5, x8-1);
-    lemma_wmem_seq_update(wmem, old_x16, i+1);
+//    lemma_wmem_seq_update(wmem, old_x16, i+1);
 //    assert x == seq_append(wregs_seq(old_wregs, 5, x8 - 1), old(wregs[Wdr(x8)]));
 //    assert y == seq_append(wmem_seq(wmem, old_x16, i), wmem[old_x16 + 32 * i]);
 //    ghost var p3 := seq_subb(x, y);
@@ -123,9 +123,9 @@ procedure cond_sub_mod_inner(ghost m: seq(uint256), ghost old_wregs:map(Reg256, 
 //    assert tuple(wregs_seq(wregs, 5, x8), cin) == 
 //                seq_subb(wregs_seq(old_wregs, 5, x8), wmem_seq(wmem, old_x16, i+1));
 //
-    lemma_extend_seq_subb(
-        wregs_seq(old_wregs, 5, old(x8)), wmem_seq(wmem, old_x16, i), old(wregs_seq(wregs, 5, x8)),
-        cin_old, cin, new_x, new_y, new_z);
+//    lemma_extend_seq_subb(
+//        wregs_seq(old_wregs, 5, old(x8)), wmem_seq(wmem, old_x16, i), old(wregs_seq(wregs, 5, x8)),
+//        cin_old, cin, new_x, new_y, new_z);
 //    assert (tuple(seq_append(old(wregs_seq(wregs, 5, x8)), new_z), cin) ==
 //        seq_subb(seq_append(wregs_seq(old_wregs, 5, old(x8)), new_x),
 //                 seq_append(wmem_seq(wmem, old_x16, i), new_y)));
