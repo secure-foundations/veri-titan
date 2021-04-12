@@ -12,12 +12,12 @@ type reg_index = i: int | 0 <= i < 32
 
 // General purpose and control registers, 32b
 datatype Reg32 =
-| Gpr(x: reg_index)
+| Gpr(index: reg_index)
 | Rnd // Random number
 
 // Wide data and special registers, 256b
 datatype Reg256 =
-| Wdr(w: reg_index)
+| Wdr(index: reg_index)
 | WMod // Wide modulo register
 | WRnd // Wide random number
 | WAcc // Wide accumulator
@@ -87,9 +87,11 @@ datatype whileCond =
 datatype flags = flags(cf: bool, msb: bool, lsb: bool, zero: bool)
 datatype flagGroups = flagGroups(fg0: flags, fg1: flags)
 
+type wregs_seq = wregs: seq<uint256> | |wregs| == 32 witness *
+
 datatype state = state(
     xregs: map<Reg32, uint32>, // 32-bit registers
-    wregs: map<Reg256, uint256>, // 256-bit registers
+    wregs: wregs_seq, // 256-bit registers
     fgroups: flagGroups,
     xmem: map<int, uint32>,
     wmem: map<int, uint256>,
@@ -98,13 +100,10 @@ datatype state = state(
 predicate valid_state(s: state)
 {
     && (forall r :: r in s.xregs)
-    && (forall t :: t in s.wregs)
+    // && (forall t :: t in s.wregs)
 }
 
-predicate ValidWregs(wregs: map<Reg256, uint256>) {
-    forall t :: t in wregs
-}
-
+/*
 function {:opaque} wregs_seq_rev(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): seq<uint256>
     requires forall t :: t in wregs
     requires start <= end
@@ -159,6 +158,7 @@ function wmem_seq(wmem: map<int, uint256>, start: nat, count: nat): (s: seq<uint
 {
     wmem_seq_core(wmem, start, count) 
 }
+*/
 
 // lemma lemma_wmem_seq_update(wmem: map<int, uint256>, start: nat, count: nat)
 //      requires 1 <= count <= 12
@@ -239,9 +239,9 @@ predicate ValidRegister32(xregs: map<Reg32, uint32>, r: Reg32)
     r in xregs
 }
 
-predicate ValidRegister256(wregs: map<Reg256, uint256>, r: Reg256)
+predicate ValidRegister256(wregs: wregs_seq, r: Reg256)
 {
-    r in wregs
+    r.Wdr?
 }
 
 predicate ValidCsr32(r: Reg32)
@@ -256,11 +256,11 @@ function eval_xreg(xregs: map<Reg32, uint32>, r: Reg32) : uint32
     else xregs[r]
 }
 
-function eval_wreg(wregs: map<Reg256, uint256>, r: Reg256) : uint256
-{
-    if !ValidRegister256(wregs, r) then 24 // TODO: better error message
-    else wregs[r]
-}
+// function eval_wreg(wregs: wregs_seq, r: Reg256) : uint256
+// {
+//     if !ValidRegister256(wregs, r) then 24 // TODO: better error message
+//     else wregs[r.index]
+// }
 
 predicate ValidSourceRegister32(s: state, r: Reg32)
 {
@@ -303,7 +303,7 @@ function eval_reg256(s: state, r: Reg256) : uint256
     if !ValidSourceRegister256(s, r) then
         42
     else
-        s.wregs[r]
+        s.wregs[r.index]
 }
 
 predicate evalIns256(wins: ins256, s: state, r: state)
