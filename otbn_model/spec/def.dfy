@@ -217,7 +217,7 @@ lemma lemma_extend_seq_subb(
     requires (new_z, cin) == uint256_subb(new_x, new_y, cin_old)
     ensures (z + [new_z], cin) == seq_subb(x + [new_x], y + [new_y])
 {
-    reveal seq_subb_core();
+    reveal seq_subb();
 }
 
 predicate Valid32Addr(h: map<int, uint32>, addr:int)
