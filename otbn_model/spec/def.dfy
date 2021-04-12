@@ -135,68 +135,8 @@ function wregs_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index
     ensures forall w :: (forall t :: t in w) && (forall i :: start <= i < end ==> wregs[Wdr(i)] == w[Wdr(i)]) ==> wregs_seq_core(wregs, start, end) == wregs_seq_core(w, start, end)
     ensures end - start > 0 ==> wregs_seq_core(wregs, start, end - 1) + [wregs[Wdr(end - 1)]] == wregs_seq_core(wregs, start, end)
 {
-    // assert forall w :: (forall t :: t in w) && (forall i :: start <= i < end ==> wregs[Wdr(i)] == w[Wdr(i)]) ==> wregs_seq_core(wregs, start, end) == wregs_seq_core(w, start, end) by {
-    //     forall w | (forall t :: t in w) && (forall i :: start <= i < end ==> wregs[Wdr(i)] == w[Wdr(i)]) 
-    //         ensures wregs_seq_core(wregs, start, end) == wregs_seq_core(w, start, end)
-    //     {            
-    //         //lemma_wregs_seq_unchanged(w, wregs, start, end);
-    //     }
-    // }
     wregs_seq_core(wregs, start, end)
 }
-
-// lemma lemma_wregs_seq_update(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index)
-//     requires forall t :: t in wregs
-//     requires start <= end 
-//     requires end < 31
-//     //requires forall i | start <= i < end - 1 :: wregs[Wdr(i)] == wregs'[Wdr(i)]
-//     //requires wregs[Wdr()] == wregs'[Wdr(i)]
-//     ensures  wregs_seq(wregs, start, end) + [wregs[Wdr(end)]] == wregs_seq(wregs, start, end + 1)
-
-// lemma lemma_wregs_seq_unchanged(wregs0: map<Reg256, uint256>, wregs1: map<Reg256, uint256>, start: reg_index, end: reg_index)
-//     requires forall t :: t in wregs0
-//     requires forall t :: t in wregs1
-//     requires start <= end 
-//     requires forall i :: start <= i < end ==> wregs0[Wdr(i)] == wregs1[Wdr(i)]
-//     ensures  wregs_seq_core(wregs0, start, end) == wregs_seq_core(wregs1, start, end)
-
-// function interp_wdr_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): int 
-//     requires start <= end
-//     decreases end - start
-// {
-//     if start == end then wregs[Wdr(start)]
-//     else BASE_256 * interp_wdr_seq(wregs, start + 1, end) + wregs[Wdr(start)]
-// }
-/*
-lemma wregs_seq_contents(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index, s: seq<uint256>)
-    requires forall t :: t in wregs
-    requires start <= end
-    requires s == wregs_seq(wregs, start, end)
-    ensures forall i | 0 <= i < |s| :: s[i] == wregs[Wdr(i + start)];
-{
-    reveal wregs_seq();
-    if start != end {
-        var partial := wregs_seq(wregs, start, end - 1);
-        var s := partial + [wregs[Wdr(end-1)]];
-        forall i | 0 <= i < |s| ensures s[i] == wregs[Wdr(i + start)] {
-            if i < |s| - 1 {
-                wregs_seq_contents(wregs, start, end - 1, partial);
-                assert s[i] == partial[i];
-            } else {
-                assert s[i] == wregs[Wdr(i + start)];
-            }
-        }
-    }
-}
-*/
-// lemma test(wregs: map<Reg256, uint256>)
-//     requires forall t :: t in wregs
-// {
-//     var s := wregs_seq(wregs, 3, 12);
-//     var wregs' := wregs[Wdr(13) := 42];
-//     var s' := wregs_seq(wregs', 3, 12);
-//     assert s' == s[8 := 42];
-// }
 
 function {:opaque} wmem_seq_core(wmem: map<int, uint256>, start: nat, count: nat): (s: seq<uint256>)
     requires count <= 12 // to prevent use of count as an address
@@ -219,20 +159,6 @@ function wmem_seq(wmem: map<int, uint256>, start: nat, count: nat): (s: seq<uint
 {
     wmem_seq_core(wmem, start, count) 
 }
-
-// lemma lemma_wmem_seq_update(wmem: map<int, uint256>, start: nat, count: nat)
-//     requires 1 <= count <= 12
-//     requires forall i | 0 <= i < count :: Valid256Addr(wmem, start + 32 * i)
-//     ensures  wmem_seq(wmem, start, count - 1) + [wmem[start + 32 * (count-1)]] == wmem_seq(wmem, start, count)
-
-// function wdr_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): int 
-//     requires start <= end
-//     decreases end - start
-//     fix domain
-// {
-//     if start == end then wregs[Wdr(start)]
-//     else BASE_256 * interp_wdr_seq(wregs, start + 1, end) + wregs[Wdr(start)]
-// }
 
 function fst<T,Q>(t:(T, Q)) : T { t.0 }
 function snd<T,Q>(t:(T, Q)) : Q { t.1 }
@@ -281,7 +207,6 @@ function seq_subb(x: seq<uint256>, y: seq<uint256>) : (seq<uint256>, uint1)
     requires |x| == |y|
     ensures var (z, cout) := seq_subb(x, y);
         && |z| == |x|
-        //&& (forall new_x, new_y, new_z, carry :: (new_z, carry) == uint256_subb(new_x, new_y, cout) ==> (z + [new_z], carry) == seq_subb(x + [new_x], y + [new_y]))
         && |x| > 0 ==> seq_subb(x, y) == seq_subb(x[..|x|-1] + [x[|x|-1]], y[..|y|-1] + [y[|y|-1]])
 {
     seq_subb_core(x, y)
@@ -298,18 +223,6 @@ lemma lemma_extend_seq_subb(
 {
     reveal seq_subb_core();
 }
-
-// function seq_subb(x: seq<uint256>, y: seq<uint256>, cin: uint1) : (seq<uint256>, uint1)
-//     requires |x| == |y|
-//     ensures var (z, cout) := seq_subb(x, y, cin);
-//         && |z| == |x|
-// {
-//     if |x| == 0 then ([], cin)
-//     else 
-//         var (z0, c) := uint256_subb(x[0], y[0], cin);
-//         var (zrest, cout) := seq_subb(x[1..], y[1..], c);
-//         ([z0] + zrest, cout)
-// }
 
 predicate Valid32Addr(h: map<int, uint32>, addr:int)
 {
