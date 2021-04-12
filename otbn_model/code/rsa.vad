@@ -99,9 +99,6 @@ procedure cond_sub_mod_inner(ghost m: seq(uint256), ghost old_wregs:map(Reg256, 
     bn_lid_safe(x10, false, 0, x16, true);
     bn_movr(x11, false, x8, false);
     bn_subb(w4, w2, w3, false, 0, 0);
-    ghost var new_x := w2;
-    ghost var new_y := w3;
-    ghost var new_z := w4;
     cin := bool_to_uint1(get_cf0(fgroups));
 
     bn_sel(w3, w4, w2, 1, 0);
