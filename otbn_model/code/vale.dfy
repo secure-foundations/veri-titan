@@ -27,9 +27,9 @@ function va_get_reg32(r:Reg32, s: va_state): uint32
 }
 
 function va_get_reg256(r:Reg256, s: va_state): uint256
-    requires r in s.wregs
+    requires r.Wdr? // TODO: update this
 {
-    s.wregs[r]
+    s.wregs[r.index]
 }
 
 function va_get_fgroups(s: va_state): flagGroups
@@ -57,7 +57,7 @@ function va_update_wmem(sM: va_state, sK: va_state): va_state
     sK.(wmem := sM.wmem)
 }
 
-function va_get_wregs(s: va_state): map<Reg256, uint256>
+function va_get_wregs(s: va_state): wideRegs
 {
     s.wregs
 }
@@ -79,9 +79,10 @@ function va_update_reg32(r:Reg32, sM: va_state, sK: va_state): va_state
 }
 
 function va_update_reg256(r:Reg256, sM: va_state, sK: va_state): va_state
-    requires r in sM.wregs
+    requires r.Wdr? // TODO
 {
-    sK.(wregs := sK.wregs[r := sM.wregs[r]])
+    var index := r.index;
+    sK.(wregs := sK.wregs[index := sM.wregs[index]])
 }
 
 function va_update_fgroups(sM: va_state, sK: va_state): va_state
@@ -125,13 +126,23 @@ function va_update_operand_reg32(r:Reg32, sM: va_state, sK: va_state): va_state
 type va_value_reg256 = uint256
 type va_operand_reg256 = Reg256
 
-predicate va_is_src_reg256(r:Reg256, s: va_state) { (r.Wdr? ==> 0 <= r.w <= 31) && r in s.wregs && IsUInt256(s.wregs[r]) }
-predicate va_is_dst_reg256(r:Reg256, s: va_state) { (r in s.wregs && IsUInt256(s.wregs[r]) && r.Wdr? && 0 <= r.w <= 31) }
+predicate va_is_src_reg256(r:Reg256, s: va_state)
+{
+    r.Wdr?
+    // (r.Wdr? ==> 0 <= r.w <= 31) && r in s.wregs && IsUInt256(s.wregs[r])
+}
+
+predicate va_is_dst_reg256(r:Reg256, s: va_state)
+{
+    r.Wdr?
+    // (r in s.wregs && IsUInt256(s.wregs[r]) && r.Wdr? && 0 <= r.w <= 31)
+}
 
 function va_eval_reg256(s: va_state, r:Reg256):uint256
   requires va_is_src_reg256(r, s);
 {
-    s.wregs[r]
+    // TODO
+    s.wregs[r.index]
 }
 
 function mod_add(a: nat, b: nat, m: nat): nat 
@@ -141,7 +152,7 @@ function mod_add(a: nat, b: nat, m: nat): nat
 }
 
 function va_update_operand_reg256(r:Reg256, sM: va_state, sK: va_state): va_state
-    requires r in sM.wregs;
+    requires r.Wdr? // TODO
 {
     va_update_reg256(r, sM, sK)
 }
@@ -151,7 +162,6 @@ predicate va_state_eq(s0: va_state, s1: va_state)
     && s0.xregs == s1.xregs
     && s0.wregs == s1.wregs
     && s0.fgroups == s1.fgroups
-    // && s0.lstack == s1.lstack
     && s0.xmem == s1.xmem
     && s0.wmem == s1.wmem
     
