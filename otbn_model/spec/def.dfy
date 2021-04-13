@@ -138,6 +138,12 @@ function wregs_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index
 }
 */
 
+function wregs_seq(wregs: wideRegs, start: reg_index, end: reg_index): (s: seq<uint256>)
+    requires start <= end
+{
+    wregs[start..end]
+}
+
 function {:opaque} wmem_seq_core(wmem: map<int, uint256>, start: nat, count: nat): (s: seq<uint256>)
     requires count <= 12 // to prevent use of count as an address
     requires forall i | 0 <= i < count :: Valid256Addr(wmem, start + 32 * i)

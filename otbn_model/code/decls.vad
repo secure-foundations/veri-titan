@@ -61,7 +61,7 @@ function bool_to_uint1(i:bool) : uint1 extern;
 function fst #[a: Type(0), b: Type(0)](m: tuple(a, b)): a extern;
 function snd #[a: Type(0), b: Type(0)](m: tuple(a, b)): b extern;
 
-// function wregs_seq(wregs: Wregs, start: int, end: int): seq(uint256) extern;
+function wregs_seq(wregs: wideRegs, start: int, end: int): seq(uint256) extern;
 function wmem_seq(wmem: Wmem, start: int, count: int): seq(uint256) extern;
 
 function uint32_xor(x: uint32, y: uint32): uint32 extern;
