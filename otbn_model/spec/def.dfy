@@ -140,6 +140,7 @@ function wregs_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index
 
 function wregs_seq(wregs: wideRegs, start: reg_index, end: reg_index): (s: seq<uint256>)
     requires start <= end
+    ensures |s| == end - start
 {
     wregs[start..end]
 }
@@ -223,6 +224,39 @@ lemma lemma_extend_seq_subb(
     requires (new_z, cin) == uint256_subb(new_x, new_y, cin_old)
     ensures (z + [new_z], cin) == seq_subb(x + [new_x], y + [new_y])
 {
+    reveal seq_subb();
+}
+
+function tail_split<T>(s: seq<T>) : (seq<T>, T)
+    requires |s| >= 1
+    ensures var (rest, tail) := tail_split(s);
+        rest + [tail] == s;
+{
+    var last := |s| - 1;
+    assert s[..last] + [s[last]]== s;
+    (s[..last], s[last])
+}
+
+lemma lemma_extend_seq_subb2(
+        xs: seq<uint256>, ys: seq<uint256>, zs: seq<uint256>, 
+        cin_old:uint1, cin:uint1)    
+    requires |xs| == |ys| == |zs| >= 1
+    requires 
+        var (xh, x) := tail_split(xs);
+        var (yh, y) := tail_split(ys);
+        var (zh, z) := tail_split(zs);
+        && (zh, cin_old) == seq_subb(xh, yh)
+        && (z, cin) == uint256_subb(x, y, cin_old)
+    ensures (zs, cin) == seq_subb(xs, ys)
+{
+    var (xh, x) := tail_split(xs);
+    var (yh, y) := tail_split(ys);
+    var (zh, z) := tail_split(zs);
+
+    lemma_extend_seq_subb(
+        xh, yh, zh, 
+        cin_old, cin,
+        x, y, z);
     reveal seq_subb();
 }
 
