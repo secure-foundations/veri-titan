@@ -29,17 +29,26 @@ function seq_subb(x: seq(uint256), y: seq(uint256)) : tuple(seq(uint256), uint1)
 function uint256_subb(x: uint256, y: uint256, cin: uint1): tuple(uint256, uint1) extern;
 
 // TODO: Move these somewhere more central
-function ValidWregs(wregs:Wregs):bool extern;
-ghost procedure lemma_wregs_seq_update(ghost wregs:Wregs, ghost start:int, ghost end:int) extern;
-ghost procedure lemma_wmem_seq_update(ghost wmem:Wmem, ghost start:int, ghost count:int) extern;
-ghost procedure lemma_extend_seq_subb(
-    ghost x:seq(uint256), ghost y:seq(uint256), ghost z:seq(uint256), 
-    ghost cin_old:uint1, ghost cin:uint1,
-    ghost new_x:uint256, ghost new_y:uint256, ghost new_z:uint256) extern;
-ghost procedure lemma_wregs_seq_unchanged(ghost wregs0: Wregs, ghost wregs1: Wregs, ghost start: int, ghost end: int) extern;
+// function ValidWregs(wregs:Wregs):bool extern;
+// ghost procedure lemma_wregs_seq_update(ghost wregs:Wregs, ghost start:int, ghost end:int) extern;
+// ghost procedure lemma_wmem_seq_update(ghost wmem:Wmem, ghost start:int, ghost count:int) extern;
+// ghost procedure lemma_extend_seq_subb(
+//     ghost x:seq(uint256), ghost y:seq(uint256), ghost z:seq(uint256), 
+//     ghost cin_old:uint1, ghost cin:uint1,
+//     ghost new_x:uint256, ghost new_y:uint256, ghost new_z:uint256) extern;
+// ghost procedure lemma_wregs_seq_unchanged(ghost wregs0: Wregs, ghost wregs1: Wregs, ghost start: int, ghost end: int) extern;
 
 //  FG1.C: s, selection flag
-procedure cond_sub_mod_inner(ghost m: seq(uint256), ghost old_wregs:map(Reg256, uint256), ghost old_x16:nat, ghost selection: bool, ghost i:nat, ghost loop_ctr:int, ghost cin_old:uint1) returns (ghost cin:uint1)
+procedure cond_sub_mod_inner(
+    ghost m: seq(uint256),
+    ghost old_wregs: wideRegs,
+    ghost old_x16: nat,
+    ghost selection: bool,
+    ghost i:nat,
+    ghost loop_ctr:int,
+    ghost cin_old:uint1)
+
+    returns (ghost cin:uint1)
     requires
         old_x16 < 0xfffffe60;
         forall(i:int) 0 <= i < 3 ==>
@@ -47,8 +56,7 @@ procedure cond_sub_mod_inner(ghost m: seq(uint256), ghost old_wregs:map(Reg256, 
         selection == true; //get_cf1(fgroups);
         m == wmem_seq(wmem, old_x16, 3);
 
-        ValidWregs(old_wregs);
-
+        // ValidWregs(old_wregs);
 
         0 <= loop_ctr <= 3;
         i < 3;
@@ -59,7 +67,7 @@ procedure cond_sub_mod_inner(ghost m: seq(uint256), ghost old_wregs:map(Reg256, 
         x11 == 2;
         x16 == old_x16 + 32 * i;
         
-        forall (i:int) x8 <= i && i <= 5 + 3 ==> wregs[Wdr(i)] == old_wregs[Wdr(i)];
+        forall (i:int) x8 <= i && i <= 5 + 3 ==> wregs[i] == old_wregs[i];
 
         get_cf1(fgroups) == selection;
         selection == true;
@@ -69,107 +77,107 @@ procedure cond_sub_mod_inner(ghost m: seq(uint256), ghost old_wregs:map(Reg256, 
 
         cin_old == bool_to_uint1(get_cf0(fgroups));
 
-        selection ==> tuple(wregs_seq(wregs, 5, x8), cin_old) == 
-                seq_subb(wregs_seq(old_wregs, 5, x8), wmem_seq(wmem, old_x16, i));
+        // selection ==> tuple(wregs_seq(wregs, 5, x8), cin_old) == 
+        //         seq_subb(wregs_seq(old_wregs, 5, x8), wmem_seq(wmem, old_x16, i));
     reads
         wmem;
     modifies
         x8; x10; x11; x16;
-        fgroups; 
+        fgroups;
         wregs; w2; w3; w4; 
-    ensures
-        x8 == 5 + i + 1;
-        x10 == 3;
-        x11 == 2;
-        x16 == old_x16 + 32 * (i+1);
+    // ensures
+    //     x8 == 5 + i + 1;
+    //     x10 == 3;
+    //     x11 == 2;
+    //     x16 == old_x16 + 32 * (i+1);
         
-        forall (i:int) x8 <= i && i <= 5 + 3 ==> wregs[Wdr(i)] == old_wregs[Wdr(i)];
+    //     forall (i:int) x8 <= i && i <= 5 + 3 ==> wregs[Wdr(i)] == old_wregs[Wdr(i)];
 
-        get_cf1(fgroups) == selection;
-        selection == true;
+    //     get_cf1(fgroups) == selection;
+    //     selection == true;
 
-        forall(i:int) 0 <= i < 3
-            ==> Valid256Addr(wmem, old_x16 + 32 * i);
+    //     forall(i:int) 0 <= i < 3
+    //         ==> Valid256Addr(wmem, old_x16 + 32 * i);
 
-        cin == bool_to_uint1(get_cf0(fgroups));
+    //     cin == bool_to_uint1(get_cf0(fgroups));
 
-        selection ==> tuple(wregs_seq(wregs, 5, x8), cin) == 
-                seq_subb(wregs_seq(old_wregs, 5, x8), wmem_seq(wmem, old_x16, i+1));
+    //     selection ==> tuple(wregs_seq(wregs, 5, x8), cin) == 
+    //             seq_subb(wregs_seq(old_wregs, 5, x8), wmem_seq(wmem, old_x16, i+1));
 {
     bn_lid_safe(x10, false, 0, x16, true);
     bn_movr(x11, false, x8, false);
     bn_subb(w4, w2, w3, false, 0, 0);
-    ghost var new_x := w2;
-    ghost var new_y := w3;
-    ghost var new_z := w4;
+    // ghost var new_x := w2;
+    // ghost var new_y := w3;
+    // ghost var new_z := w4;
     cin := bool_to_uint1(get_cf0(fgroups));
 
     bn_sel(w3, w4, w2, 1, 0);
     bn_movr(x8, true, x10, false);
 
-    lemma_extend_seq_subb(
-        wregs_seq(old_wregs, 5, old(x8)), wmem_seq(wmem, old_x16, i), old(wregs_seq(wregs, 5, x8)),
-        cin_old, cin, new_x, new_y, new_z);
+    // lemma_extend_seq_subb(
+    //     wregs_seq(old_wregs, 5, old(x8)), wmem_seq(wmem, old_x16, i), old(wregs_seq(wregs, 5, x8)),
+    //     cin_old, cin, new_x, new_y, new_z);
 }
 
-procedure cond_sub_mod(ghost m: seq(uint256), ghost selection: bool) 
-// {:frame false}
-    requires
-        w31 == 0;
-        x16 < 0xfffffe60;
-        forall(i:int) 0 <= i < 3 ==>
-            Valid256Addr(wmem, old(x16) + 32 * i);
-        selection == get_cf1(fgroups);
-        get_cf0(fgroups) == false;
-        m == wmem_seq(wmem, old(x16), 3);
+// procedure cond_sub_mod(ghost m: seq(uint256), ghost selection: bool) 
+// // {:frame false}
+//     requires
+//         w31 == 0;
+//         x16 < 0xfffffe60;
+//         forall(i:int) 0 <= i < 3 ==>
+//             Valid256Addr(wmem, old(x16) + 32 * i);
+//         selection == get_cf1(fgroups);
+//         get_cf0(fgroups) == false;
+//         m == wmem_seq(wmem, old(x16), 3);
 
-    reads
-      wmem;
-    modifies
-        x8; x10; x11; x16;
-        fgroups; 
-        wregs; w2; w3; w4; w31;
-{
-    assume selection == true;
+//     reads
+//       wmem;
+//     modifies
+//         x8; x10; x11; x16;
+//         fgroups; 
+//         wregs; w2; w3; w4; w31;
+// {
+//     assume selection == true;
 
-    li(x8, 5);
-    li(x10, 3);
-    li(x11, 2);
+//     li(x8, 5);
+//     li(x10, 3);
+//     li(x11, 2);
 
-    bn_add(w31, w31, w31, false, 0, 0);
-    ghost var i : nat := 0;
-    ghost var cin :uint1 := 0;
+//     bn_add(w31, w31, w31, false, 0, 0);
+//     ghost var i : nat := 0;
+//     ghost var cin :uint1 := 0;
 
-    while (LoopImm(3))
-        invariant i + loop_ctr == 3;
-        invariant x8 == 5 + i;
-        invariant x10 == 3;
-        invariant x11 == 2;
-        invariant x16 == old(x16) + 32 * i;
+//     while (LoopImm(3))
+//         invariant i + loop_ctr == 3;
+//         invariant x8 == 5 + i;
+//         invariant x10 == 3;
+//         invariant x11 == 2;
+//         invariant x16 == old(x16) + 32 * i;
 
-        invariant get_cf1(fgroups) == selection;
-        invariant selection == true;
+//         invariant get_cf1(fgroups) == selection;
+//         invariant selection == true;
 
-        invariant forall (i:int) x8 <= i && i <= 5 + 3 ==> wregs[Wdr(i)] == old(wregs)[Wdr(i)];
+//         invariant forall (i:int) x8 <= i && i <= 5 + 3 ==> wregs[Wdr(i)] == old(wregs)[Wdr(i)];
 
-        invariant forall(i:int) 0 <= i < 3
-            ==> Valid256Addr(wmem, old(x16) + 32 * i);
+//         invariant forall(i:int) 0 <= i < 3
+//             ==> Valid256Addr(wmem, old(x16) + 32 * i);
 
-        invariant cin == bool_to_uint1(get_cf0(fgroups));
+//         invariant cin == bool_to_uint1(get_cf0(fgroups));
 
-        invariant selection ==> tuple(wregs_seq(wregs, 5, x8), cin) == 
-                seq_subb(wregs_seq(old(wregs), 5, x8), wmem_seq(wmem, old(x16), i));
+//         invariant selection ==> tuple(wregs_seq(wregs, 5, x8), cin) == 
+//                 seq_subb(wregs_seq(old(wregs), 5, x8), wmem_seq(wmem, old(x16), i));
 
-        invariant wmem == old(wmem);
+//         invariant wmem == old(wmem);
 
-        // invariant forall 
+//         // invariant forall 
 
-        decreases loop_ctr;
-    {
-        cin := cond_sub_mod_inner(m, old(wregs), old(x16), selection, i, loop_ctr, cin);
-        i := i + 1;
-    }
-}
+//         decreases loop_ctr;
+//     {
+//         cin := cond_sub_mod_inner(m, old(wregs), old(x16), selection, i, loop_ctr, cin);
+//         i := i + 1;
+//     }
+// }
 
 
 /*
