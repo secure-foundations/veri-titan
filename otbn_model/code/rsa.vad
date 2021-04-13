@@ -40,7 +40,6 @@ ghost procedure lemma_extend_seq_subb(
 
 //  FG1.C: s, selection flag
 procedure cond_sub_mod_inner(
-    ghost m: seq(uint256),
     ghost old_wregs: wideRegs,
     ghost old_x16: nat,
     ghost selection: bool,
@@ -54,7 +53,6 @@ procedure cond_sub_mod_inner(
         forall(i:int) 0 <= i < 3 ==>
             Valid256Addr(wmem, old_x16 + 32 * i);
         selection == true; //get_cf1(fgroups);
-        m == wmem_seq(wmem, old_x16, 3);
 
         0 <= loop_ctr <= 3;
         i + loop_ctr == 3;
@@ -122,8 +120,6 @@ procedure cond_sub_mod_inner(
         x, y, z,
         cin_old, cin, new_x, new_y, new_z);
     
-    assert tuple(seq_append(z, new_z), cin)
-        == seq_subb(seq_append(x, new_x), seq_append(y, new_y));
     assert wregs_seq(old_wregs, 5, x8) == seq_append(x, new_x);
     assert wmem_seq(wmem, old_x16, i+1) == seq_append(y, new_y);
     assert wregs_seq(wregs, 5, x8) == seq_append(z, new_z);
