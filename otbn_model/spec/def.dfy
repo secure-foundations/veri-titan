@@ -87,11 +87,11 @@ datatype whileCond =
 datatype flags = flags(cf: bool, msb: bool, lsb: bool, zero: bool)
 datatype flagGroups = flagGroups(fg0: flags, fg1: flags)
 
-type wregs_seq = wregs: seq<uint256> | |wregs| == 32 witness *
+type wideRegs = wregs: seq<uint256> | |wregs| == 32 witness *
 
 datatype state = state(
     xregs: map<Reg32, uint32>, // 32-bit registers
-    wregs: wregs_seq, // 256-bit registers
+    wregs: wideRegs, // 256-bit registers
     fgroups: flagGroups,
     xmem: map<int, uint32>,
     wmem: map<int, uint256>,
@@ -136,6 +136,7 @@ function wregs_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index
 {
     wregs_seq_core(wregs, start, end)
 }
+*/
 
 function {:opaque} wmem_seq_core(wmem: map<int, uint256>, start: nat, count: nat): (s: seq<uint256>)
     requires count <= 12 // to prevent use of count as an address
@@ -158,7 +159,6 @@ function wmem_seq(wmem: map<int, uint256>, start: nat, count: nat): (s: seq<uint
 {
     wmem_seq_core(wmem, start, count) 
 }
-*/
 
 // lemma lemma_wmem_seq_update(wmem: map<int, uint256>, start: nat, count: nat)
 //      requires 1 <= count <= 12
@@ -239,7 +239,7 @@ predicate ValidRegister32(xregs: map<Reg32, uint32>, r: Reg32)
     r in xregs
 }
 
-predicate ValidRegister256(wregs: wregs_seq, r: Reg256)
+predicate ValidRegister256(wregs: wideRegs, r: Reg256)
 {
     r.Wdr?
 }
@@ -255,12 +255,6 @@ function eval_xreg(xregs: map<Reg32, uint32>, r: Reg32) : uint32
     if !ValidRegister32(xregs, r) then 24 // TODO: better error message
     else xregs[r]
 }
-
-// function eval_wreg(wregs: wregs_seq, r: Reg256) : uint256
-// {
-//     if !ValidRegister256(wregs, r) then 24 // TODO: better error message
-//     else wregs[r.index]
-// }
 
 predicate ValidSourceRegister32(s: state, r: Reg32)
 {
