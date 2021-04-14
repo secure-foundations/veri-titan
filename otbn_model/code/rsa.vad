@@ -102,7 +102,7 @@ procedure cond_sub_mod_inner(
 
     ghost var cin := bool_to_uint1(get_cf0(fgroups));
     bn_subb(w4, w2, w3, false, 0, 0);
-    ghost var cout := bool_to_uint1(get_cf0(fgroups));
+    //ghost var cout := bool_to_uint1(get_cf0(fgroups));
 
     bn_sel(w3, w4, w2, 1, 0);
     bn_movr(x8, true, x10, false);
