@@ -207,7 +207,7 @@ function seq_append<T>(xs: seq<T>, x: T): seq<T>
     xs + [x]
 }
 
-function {:opaque} seq_subb(x: seq<uint256>, y: seq<uint256>) : (seq<uint256>, uint1)
+function seq_subb(x: seq<uint256>, y: seq<uint256>) : (seq<uint256>, uint1)
     requires |x| == |y|
     ensures var (z, cout) := seq_subb(x, y);
         && |z| == |x|

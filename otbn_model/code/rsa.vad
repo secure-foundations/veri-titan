@@ -109,16 +109,16 @@ procedure cond_sub_mod_inner(
 
     ghost if (selection) {
         ghost var x := initial_wregs[widx];
-        ghost var y := wmem[initial_x16 + 32 * i];
+//        ghost var y := wmem[initial_x16 + 32 * i];
         ghost var z := wregs[widx];
 
         ghost var xs := wregs_seq(initial_wregs, 5, widx);
-        ghost var ys := wmem_seq(wmem, initial_x16, i);
+//        ghost var ys := wmem_seq(wmem, initial_x16, i);
         ghost var zs := old(wregs_seq(wregs, 5, x8));
 
-        lemma_extend_seq_subb(
-            xs, ys, zs,
-            cin, cout, x, y, z);
+//        lemma_extend_seq_subb(
+//            xs, ys, zs,
+//            cin, cout, x, y, z);
         
         assert wregs_seq(initial_wregs, 5, x8) == seq_append(xs, x);
         assert wregs_seq(wregs, 5, x8) == seq_append(zs, z);
