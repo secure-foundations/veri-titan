@@ -125,9 +125,9 @@ procedure cond_sub_mod_inner(
     } else {
         calc == {
             wregs_seq(initial_wregs, 5, widx + 1);
-            == seq_append(wregs_seq(initial_wregs, 5, widx), initial_wregs[widx]);
-            == { assert wregs[widx] == initial_wregs[widx];}
-            seq_append(wregs_seq(initial_wregs, 5, widx), wregs[widx]);
+//            == seq_append(wregs_seq(initial_wregs, 5, widx), initial_wregs[widx]);
+//            == { assert wregs[widx] == initial_wregs[widx];}
+//            seq_append(wregs_seq(initial_wregs, 5, widx), wregs[widx]);
             == { assert wregs_seq(wregs, 5, widx) == wregs_seq(initial_wregs, 5, widx);}
             seq_append(wregs_seq(wregs, 5, widx), wregs[widx]);
             ==
