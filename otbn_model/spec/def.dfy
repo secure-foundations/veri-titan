@@ -181,6 +181,11 @@ function sub_seq<T>(s: seq<T>, start: int, end: int): seq<T>
     s[start..end]
 }
 
+function seq_empty<T>(): seq<T>
+{
+    []
+}
+
 function prefix_seq<T>(s: seq<T>, end: int): seq<T>
     requires 0 <= end <= |s|
 {
@@ -227,6 +232,12 @@ lemma lemma_extend_seq_subb(
     reveal seq_subb();
 }
 
+lemma lemma_empty_seq_subb()
+    ensures ([], 0) == seq_subb([], [])
+{
+    reveal seq_subb();
+}
+
 function tail_split<T>(s: seq<T>) : (seq<T>, T)
     requires |s| >= 1
     ensures var (rest, tail) := tail_split(s);
@@ -235,29 +246,6 @@ function tail_split<T>(s: seq<T>) : (seq<T>, T)
     var last := |s| - 1;
     assert s[..last] + [s[last]]== s;
     (s[..last], s[last])
-}
-
-lemma lemma_extend_seq_subb2(
-        xs: seq<uint256>, ys: seq<uint256>, zs: seq<uint256>, 
-        cin_old:uint1, cin:uint1)    
-    requires |xs| == |ys| == |zs| >= 1
-    requires 
-        var (xh, x) := tail_split(xs);
-        var (yh, y) := tail_split(ys);
-        var (zh, z) := tail_split(zs);
-        && (zh, cin_old) == seq_subb(xh, yh)
-        && (z, cin) == uint256_subb(x, y, cin_old)
-    ensures (zs, cin) == seq_subb(xs, ys)
-{
-    var (xh, x) := tail_split(xs);
-    var (yh, y) := tail_split(ys);
-    var (zh, z) := tail_split(zs);
-
-    lemma_extend_seq_subb(
-        xh, yh, zh, 
-        cin_old, cin,
-        x, y, z);
-    reveal seq_subb();
 }
 
 predicate Valid32Addr(h: map<int, uint32>, addr:int)

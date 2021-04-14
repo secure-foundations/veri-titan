@@ -157,6 +157,11 @@ function va_update_operand_reg256(r:Reg256, sM: va_state, sK: va_state): va_stat
     va_update_reg256(r, sM, sK)
 }
 
+function method va_op_cmp_reg32(r: Reg32) : Reg32
+{
+    r
+}
+
 predicate va_state_eq(s0: va_state, s1: va_state)
 {
     && s0.xregs == s1.xregs
@@ -254,11 +259,6 @@ lemma lemma_FailurePreservedByCode(c:code, s:state, r:state)
         }
     }
 }
-
-// predicate BN_branchRelation(s:state, r:state, cond:bool)
-// {
-// 	branchRelation(s, r, cond)
-// }
 
 lemma block_state_validity(block:codes, s:state, r:state)
 	requires evalBlock(block, s, r);

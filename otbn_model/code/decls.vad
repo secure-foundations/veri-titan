@@ -48,6 +48,7 @@ function prefix_seq #[a: Type(0)] (s: seq(a), end: int): seq(a) extern;
 function seq_len #[a: Type(0)] (s: seq(a)): nat extern;
 function seq_concat #[a: Type(0)](x: seq(a), y: seq(a)): seq(a) extern;
 function seq_append #[a: Type(0)](xs: seq(a), x: a): seq(a) extern;
+function seq_empty #[a: Type(0)](): seq(a) extern;
 
 function operator([]) #[a: Type(0), b: Type(0)](m: map(a, b), key: a): b extern;
 function operator([ := ]) #[a: Type(0), b: Type(0)](m: map(a, b), key: a, v: b): map(a, b) extern;
@@ -363,19 +364,19 @@ procedure bn_xor(inout dst: reg256, in src1: reg256, in src2: reg256, inline st:
     assume false;
 }
 
-// procedure bn_add(inout dst: reg256, in src1: reg256, in src2: reg256, inline st: bool, in sb: imm32, inline which_group: uint1)
-//     {:instruction Ins256(BN_ADD(dst, src1, src2, st, sb, which_group))}
-//     requires
-//         sb < 32;
-//     modifies
-//         fgroups;
-//     ensures
-//         let result := otbn_add(old(src1), old(src2), st, sb);
-//         dst == fst(result) &&
-//         fgroups == update_fgroups(old(fgroups), which_group, snd(result));
-// {
-//     assume false;
-// }
+procedure bn_add(inout dst: reg256, in src1: reg256, in src2: reg256, inline st: bool, in sb: imm32, inline which_group: uint1)
+    {:instruction Ins256(BN_ADD(dst, src1, src2, st, sb, which_group))}
+    requires
+        sb < 32;
+    modifies
+        fgroups;
+    ensures
+        let result := otbn_add(old(src1), old(src2), st, sb);
+        dst == fst(result) &&
+        fgroups == update_fgroups(old(fgroups), which_group, snd(result));
+{
+    assume false;
+}
 
 // procedure bn_addc(inout dst: reg256, in src1: reg256, in src2: reg256, inline st: bool, in sb: imm32, inline which_group: uint1)
 //     {:instruction Ins256(BN_ADDC(dst, src1, src2, st, sb, which_group))}
