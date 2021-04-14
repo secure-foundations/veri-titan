@@ -40,19 +40,18 @@ ghost procedure lemma_extend_seq_subb(
 
 //  FG1.C: s, selection flag
 procedure cond_sub_mod_inner(
-    ghost old_wregs: wideRegs,
-    ghost old_x16: nat,
+    ghost initial_wregs: wideRegs,
+    ghost initial_x16: nat,
     ghost selection: bool,
-    ghost i:nat,
-    ghost loop_ctr:int,
-    ghost cin_old:uint1)
+    ghost i: nat,
+    ghost loop_ctr: int)
 
-    returns (ghost cin:uint1)
     requires
-        old_x16 < 0xfffffe60;
+        selection == get_cf1(fgroups);
+
+        initial_x16 < 0xfffffe60;
         forall(i:int) 0 <= i < 3 ==>
-            Valid256Addr(wmem, old_x16 + 32 * i);
-        selection == true; //get_cf1(fgroups);
+            Valid256Addr(wmem, initial_x16 + 32 * i);
 
         0 <= loop_ctr <= 3;
         i + loop_ctr == 3;
@@ -61,20 +60,20 @@ procedure cond_sub_mod_inner(
         x8 == 5 + i;
         x10 == 3;
         x11 == 2;
-        x16 == old_x16 + 32 * i;
+        x16 == initial_x16 + 32 * i;
         
-        forall (i:int) x8 <= i && i <= 5 + 3 ==> wregs[i] == old_wregs[i];
-
-        get_cf1(fgroups) == selection;
-        selection == true;
+        wregs_seq(wregs, x8, 5 + 3) == wregs_seq(initial_wregs, x8, 5 + 3);
 
         forall(i:int) 0 <= i < 3
-            ==> Valid256Addr(wmem, old_x16 + 32 * i);
+            ==> Valid256Addr(wmem, initial_x16 + 32 * i);
 
-        cin_old == bool_to_uint1(get_cf0(fgroups));
-
-        selection ==> tuple(wregs_seq(wregs, 5, x8), cin_old) == 
-                seq_subb(wregs_seq(old_wregs, 5, x8), wmem_seq(wmem, old_x16, i));
+        selection ==>
+            tuple(wregs_seq(wregs, 5, x8), bool_to_uint1(get_cf0(fgroups)))
+            ==
+            seq_subb(wregs_seq(initial_wregs, 5, x8), wmem_seq(wmem, initial_x16, i));
+        
+        !selection ==>
+            wregs_seq(wregs, 5, x8) == wregs_seq(initial_wregs, 5, x8);
     reads
         wmem;
     modifies
@@ -82,47 +81,63 @@ procedure cond_sub_mod_inner(
         fgroups;
         wregs; w2; w3; w4; 
     ensures
-
         x8 == 5 + i + 1;
         x10 == 3;
         x11 == 2;
-        x16 == old_x16 + 32 * (i + 1);
+        x16 == initial_x16 + 32 * (i + 1);
         
-        forall (i:int) x8 <= i && i <= 5 + 3 ==> wregs[i] == old_wregs[i];
-
-        get_cf1(fgroups) == selection;
-        selection == true;
+        wregs_seq(wregs, x8, 5 + 3) == wregs_seq(initial_wregs, x8, 5 + 3);
 
         forall(i:int) 0 <= i < 3
-            ==> Valid256Addr(wmem, old_x16 + 32 * i);
+            ==> Valid256Addr(wmem, initial_x16 + 32 * i);
 
-        cin == bool_to_uint1(get_cf0(fgroups));
+        selection ==> 
+            tuple(wregs_seq(wregs, 5, x8), bool_to_uint1(get_cf0(fgroups)))
+            ==
+            seq_subb(wregs_seq(initial_wregs, 5, x8), wmem_seq(wmem, initial_x16, i+1));
 
-        selection ==> tuple(wregs_seq(wregs, 5, x8), cin) == 
-                seq_subb(wregs_seq(old_wregs, 5, x8), wmem_seq(wmem, old_x16, i+1));
+        !selection ==>
+            wregs_seq(wregs, 5, x8) == wregs_seq(initial_wregs, 5, x8);
 {
+    ghost var widx := x8;
+
     bn_lid_safe(x10, false, 0, x16, true);
     bn_movr(x11, false, x8, false);
+
+    ghost var cin := bool_to_uint1(get_cf0(fgroups));
     bn_subb(w4, w2, w3, false, 0, 0);
-    ghost var new_x := w2;
-    ghost var new_y := w3;
-    ghost var new_z := w4;
-    cin := bool_to_uint1(get_cf0(fgroups));
+    ghost var cout := bool_to_uint1(get_cf0(fgroups));
 
     bn_sel(w3, w4, w2, 1, 0);
     bn_movr(x8, true, x10, false);
 
-    ghost var x := wregs_seq(old_wregs, 5, old(x8));
-    ghost var y := wmem_seq(wmem, old_x16, i);
-    ghost var z := old(wregs_seq(wregs, 5, x8));
+    ghost if (selection) {
+        ghost var x := initial_wregs[widx];
+        ghost var y := wmem[initial_x16 + 32 * i];
+        ghost var z := wregs[widx];
 
-    lemma_extend_seq_subb(
-        x, y, z,
-        cin_old, cin, new_x, new_y, new_z);
-    
-    assert wregs_seq(old_wregs, 5, x8) == seq_append(x, new_x);
-    assert wmem_seq(wmem, old_x16, i+1) == seq_append(y, new_y);
-    assert wregs_seq(wregs, 5, x8) == seq_append(z, new_z);
+        ghost var xs := wregs_seq(initial_wregs, 5, widx);
+        ghost var ys := wmem_seq(wmem, initial_x16, i);
+        ghost var zs := old(wregs_seq(wregs, 5, x8));
+
+        lemma_extend_seq_subb(
+            xs, ys, zs,
+            cin, cout, x, y, z);
+        
+        assert wregs_seq(initial_wregs, 5, x8) == seq_append(xs, x);
+        assert wregs_seq(wregs, 5, x8) == seq_append(zs, z);
+    } else {
+        calc == {
+            wregs_seq(initial_wregs, 5, widx + 1);
+            == seq_append(wregs_seq(initial_wregs, 5, widx), initial_wregs[widx]);
+            == { assert wregs[widx] == initial_wregs[widx];}
+            seq_append(wregs_seq(initial_wregs, 5, widx), wregs[widx]);
+            == { assert wregs_seq(wregs, 5, widx) == wregs_seq(initial_wregs, 5, widx);}
+            seq_append(wregs_seq(wregs, 5, widx), wregs[widx]);
+            ==
+            wregs_seq(wregs, 5, widx + 1);
+        }
+    }
 }
 
 // procedure cond_sub_mod(ghost m: seq(uint256), ghost selection: bool) 

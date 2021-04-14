@@ -40,9 +40,6 @@ function LoopImm(u: uint32) : bool extern;
 function operator(.ok) (s: state): bool extern;
 function operator(.ok :=) (s: state, b: bool): state extern;
 
-function operator([]) (s: wideRegs, i: int): uint256 extern; 
-function operator([ := ]) (s: wideRegs, i: int, v: uint256): wideRegs extern;
-
 function operator([]) #[a: Type(0)](s: seq(a), i: int): a extern; 
 function operator([ := ]) #[a: Type(0)](s: seq(a), i: int, v: a): seq(a) extern;
 
@@ -52,17 +49,19 @@ function seq_len #[a: Type(0)] (s: seq(a)): nat extern;
 function seq_concat #[a: Type(0)](x: seq(a), y: seq(a)): seq(a) extern;
 function seq_append #[a: Type(0)](xs: seq(a), x: a): seq(a) extern;
 
-
 function operator([]) #[a: Type(0), b: Type(0)](m: map(a, b), key: a): b extern;
 function operator([ := ]) #[a: Type(0), b: Type(0)](m: map(a, b), key: a, v: b): map(a, b) extern;
-
-function bool_to_uint1(i:bool) : uint1 extern;
 
 function fst #[a: Type(0), b: Type(0)](m: tuple(a, b)): a extern;
 function snd #[a: Type(0), b: Type(0)](m: tuple(a, b)): b extern;
 
+function operator([]) (s: wideRegs, i: int): uint256 extern; 
+function operator([ := ]) (s: wideRegs, i: int, v: uint256): wideRegs extern;
+
 function wregs_seq(wregs: wideRegs, start: int, end: int): seq(uint256) extern;
 function wmem_seq(wmem: Wmem, start: int, count: int): seq(uint256) extern;
+
+function bool_to_uint1(i:bool) : uint1 extern;
 
 function uint32_xor(x: uint32, y: uint32): uint32 extern;
 function uint32_or(x: uint32, y: uint32): uint32 extern;
