@@ -24,15 +24,7 @@ import opened bignum_decls
 
 #endverbatim
 
-function interp_wdr_seq(start: int, end: int): int extern;
 function seq_subb(x: seq(uint256), y: seq(uint256)) : tuple(seq(uint256), uint1) extern;
-function uint256_subb(x: uint256, y: uint256, cin: uint1): tuple(uint256, uint1) extern;
-
-// TODO: Move these somewhere more central
-// function ValidWregs(wregs:Wregs):bool extern;
-// ghost procedure lemma_wregs_seq_update(ghost wregs:Wregs, ghost start:int, ghost end:int) extern;
-// ghost procedure lemma_wmem_seq_update(ghost wmem:Wmem, ghost start:int, ghost count:int) extern;
-// ghost procedure lemma_wregs_seq_unchanged(ghost wregs0: Wregs, ghost wregs1: Wregs, ghost start: int, ghost end: int) extern;
 
 ghost procedure lemma_extend_seq_subb(
     ghost x:seq(uint256), ghost y:seq(uint256), ghost z:seq(uint256), 
@@ -144,8 +136,12 @@ procedure cond_sub_mod_inner(
     }
 }
 
-procedure cond_sub_mod() // {:frame false}
+procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
+    // {:frame false}
     requires
+        selection == get_cf1(fgroups);
+        num_words == x31;
+
         x31 <= 12;
         x16 < 0xfffffe60;
 
@@ -157,14 +153,26 @@ procedure cond_sub_mod() // {:frame false}
             Valid256Addr(wmem, old(x16) + 32 * i);
     reads
         wmem; x31;
+
     modifies
         x8; x10; x11; x16;
         fgroups; 
         wregs; w2; w3; w4; w31;
-{
-    ghost var selection := get_cf1(fgroups);
-    ghost var num_words := x31;
 
+    ensures
+        wmem == old(wmem);
+
+        forall(i:int) 0 <= i < num_words
+            ==> Valid256Addr(wmem, old(x16) + 32 * i);
+
+        selection ==> 
+            tuple(wregs_seq(wregs, 5, 5 + num_words), bool_to_uint1(get_cf0(fgroups)))
+            ==
+            seq_subb(wregs_seq(old(wregs), 5, 5 + num_words), wmem_seq(wmem, old(x16), num_words));
+
+        !selection ==>
+            wregs_seq(wregs, 5, 5 + num_words) == wregs_seq(old(wregs), 5, 5 + num_words);
+{
     li(x8, 5);
     li(x10, 3);
     li(x11, 2);
