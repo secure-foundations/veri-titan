@@ -5,34 +5,29 @@ module bignum_vale {
 import opened types	
 import opened bignum_def
 
-////////////////////////////////////////////////////////////////////////
-//
-//  Connecting Vale types to Dafny types
-//
-////////////////////////////////////////////////////////////////////////
-
 type va_code = code
 type va_codes = codes
 type va_state = state
+
+function fst<T,Q>(t:(T, Q)) : T { t.0 }
+function snd<T,Q>(t:(T, Q)) : Q { t.1 }
 
 function va_get_ok(s: va_state): bool
 {
     s.ok
 }
 
-function va_get_reg32(r:Reg32, s: va_state): uint32
-    requires r in s.xregs
+function va_get_reg32_t(r : reg32_t, s: va_state): uint32
 {
-    s.xregs[r]
+    eval_reg32(s, r)
 }
 
-function va_get_reg256(r:Reg256, s: va_state): uint256
-    requires r in s.wregs
+function va_get_reg256_t(r :reg256_t, s: va_state): uint256
 {
-    s.wregs[r]
+    eval_reg256(s, r)
 }
 
-function va_get_fgroups(s: va_state): flagGroups
+function va_get_fgroups(s: va_state): fgroups_t
 {
     s.fgroups
 }
@@ -57,14 +52,14 @@ function va_update_wmem(sM: va_state, sK: va_state): va_state
     sK.(wmem := sM.wmem)
 }
 
-function va_get_wregs(s: va_state): map<Reg256, uint256>
+function va_get_wdrs(s: va_state): seq<uint256>
 {
-    s.wregs
+    s.wdrs
 }
 
-function va_update_wregs(sM: va_state, sK: va_state): va_state
+function va_update_wdrs(sM: va_state, sK: va_state): va_state
 {
-    sK.(wregs := sM.wregs)
+    sK.(wdrs := sM.wdrs)
 }
 
 function va_update_ok(sM: va_state, sK: va_state): va_state
@@ -72,27 +67,26 @@ function va_update_ok(sM: va_state, sK: va_state): va_state
     sK.(ok := sM.ok)
 }
 
-function va_update_reg32(r:Reg32, sM: va_state, sK: va_state): va_state
-    requires r in sM.xregs
+function va_update_reg32_t(r: reg32_t, sM: va_state, sK: va_state): va_state
 {
-    sK.(xregs := sK.xregs[r := sM.xregs[r]])
+    var index := r.index;
+    sK.(gprs := sK.gprs[index := sM.gprs[index]])
 }
 
-function va_update_reg256(r:Reg256, sM: va_state, sK: va_state): va_state
-    requires r in sM.wregs
+function va_update_reg256_t(r :reg256_t, sM: va_state, sK: va_state): va_state
 {
-    sK.(wregs := sK.wregs[r := sM.wregs[r]])
+    match r {
+        case WDR(index) => sK.(wdrs := sK.wdrs[index := sM.wdrs[index]])
+        case WMOD =>  sK.(wmod := sM.wmod)
+        case WRND => sK.(wrnd := sM.wrnd)
+        case WACC => sK.(wacc := sM.wacc)
+    }
 }
 
 function va_update_fgroups(sM: va_state, sK: va_state): va_state
 {
     sK.(fgroups := sM.fgroups)
 }
-
-function fst<T,Q>(t:(T, Q)) : T { t.0 }
-function snd<T,Q>(t:(T, Q)) : Q { t.1 }
-
-// function va_update_lstack(sM: va_state, sK: va_state): va_state { sK.(lstack := sM.lstack) }
 
 type va_operand_imm128 = uint128
 predicate va_is_src_imm128(v:uint128, s: va_state) { true }
@@ -109,44 +103,62 @@ predicate va_is_src_imm2(v:uint2, s: va_state) {true}
 function va_eval_imm2(s: va_state, v:uint2):uint2 {v}
 function method va_const_imm2(v:uint32):uint32 {v}
 
+// reg32
+
 type va_value_reg32 = uint32
-type va_operand_reg32 = Reg32
 
-predicate va_is_src_reg32(r:Reg32, s: va_state) { r in s.xregs }
-predicate va_is_dst_reg32(r:Reg32, s: va_state) { r in s.xregs }
+type va_operand_reg32 = reg32_t
 
-predicate Valid32Addr(h: map<int, uint32>, addr:int)
+predicate va_is_src_reg32(r: reg32_t, s: va_state)
 {
-    addr in h
+    true
 }
 
-predicate Valid256Addr(h: map<int, uint256>, addr:int)
+predicate va_is_dst_reg32(r: reg32_t, s: va_state)
 {
-    addr in h
+    true
 }
 
-function va_eval_reg32(s: va_state, r:Reg32):uint32
-  requires va_is_src_reg32(r, s);
+function va_eval_reg32(s: va_state, r : reg32_t):uint32
 {
-    s.xregs[r]
+    s.gprs[r.index]
 }
 
-function va_update_operand_reg32(r:Reg32, sM: va_state, sK: va_state): va_state
-    requires r in sM.xregs;
+function va_update_operand_reg32(r: reg32_t, sM: va_state, sK: va_state): va_state
 {
-    va_update_reg32(r, sM, sK)
+    va_update_reg32_t(r, sM, sK)
 }
+
+function method va_op_cmp_reg32_t(r : reg32_t)  : reg32_t
+{
+    r
+}
+
+// reg256
 
 type va_value_reg256 = uint256
-type va_operand_reg256 = Reg256
 
-predicate va_is_src_reg256(r:Reg256, s: va_state) { (r.Wdr? ==> 0 <= r.w <= 31) && r in s.wregs && IsUInt256(s.wregs[r]) }
-predicate va_is_dst_reg256(r:Reg256, s: va_state) { (r in s.wregs && IsUInt256(s.wregs[r]) && r.Wdr? && 0 <= r.w <= 31) }
+type va_operand_reg256 = reg256_t
 
-function va_eval_reg256(s: va_state, r:Reg256):uint256
+predicate va_is_src_reg256(r :reg256_t, s: va_state)
+{
+    true
+}
+
+predicate va_is_dst_reg256(r :reg256_t, s: va_state)
+{
+    !r.WRND?
+}
+
+function va_eval_reg256(s: va_state, r :reg256_t):uint256
   requires va_is_src_reg256(r, s);
 {
-    s.wregs[r]
+    eval_reg256(s, r)
+}
+
+function va_update_operand_reg256(r :reg256_t, sM: va_state, sK: va_state): va_state
+{
+    va_update_reg256_t(r, sM, sK)
 }
 
 function mod_add(a: nat, b: nat, m: nat): nat 
@@ -155,22 +167,22 @@ function mod_add(a: nat, b: nat, m: nat): nat
     if a + b > m then a + b - m else a + b
 }
 
-function va_update_operand_reg256(r:Reg256, sM: va_state, sK: va_state): va_state
-    requires r in sM.wregs;
-{
-    va_update_reg256(r, sM, sK)
-}
-
 predicate va_state_eq(s0: va_state, s1: va_state)
 {
-    && s0.xregs == s1.xregs
-    && s0.wregs == s1.wregs
-    && s0.fgroups == s1.fgroups
-    // && s0.lstack == s1.lstack
-    && s0.xmem == s1.xmem
-    && s0.wmem == s1.wmem
+    s0 == s1
+
+    // && s0.gprs == s1.gprs
+    // && s0.wdrs == s1.wdrs
+    // && s0.fgroups == s1.fgroups
+
+    // && s0.wmod == s1.wmod
+    // && s0.wrnd == s1.wrnd
+    // && s0.wacc == s1.wacc
+
+    // && s0.xmem == s1.xmem
+    // && s0.wmem == s1.wmem
     
-    && s0.ok == s1.ok
+    // && s0.ok == s1.ok
 }
 
 predicate{:opaque} evalCodeOpaque(c:code, s0:state, sN:state)
@@ -213,13 +225,13 @@ lemma va_ins_lemma(b0:code, s0: va_state)
 }
 
 function method va_const_cmp(n:uint32):uint32 { n }
-function method va_coerce_reg32_to_cmp(r:Reg32):Reg32 { r }
+function method va_coerce_reg32_to_cmp(r: reg32_t): reg32_t { r }
 
 function method va_cmp_LoopImm(u:uint32):whileCond { ImmCond(u) }
-function method va_cmp_Loop(r:Reg32):whileCond { RegCond(r) }
+function method va_cmp_Loop(r: reg32_t):whileCond { RegCond(r) }
 
-function method va_op_reg32_reg32(r:Reg32):Reg32 { r }
-function method va_op_reg256_reg256(r:Reg256):Reg256 { r }
+function method va_op_reg32_reg32_t(r: reg32_t): reg32_t { r }
+function method va_op_reg256_reg256_t(r :reg256_t) :reg256_t { r }
 function method va_Block(block:codes):code { Block(block) }
 function method va_While(wcond:whileCond, wcode:code):code { While(wcond, wcode) }
 
@@ -259,11 +271,6 @@ lemma lemma_FailurePreservedByCode(c:code, s:state, r:state)
         }
     }
 }
-
-// predicate BN_branchRelation(s:state, r:state, cond:bool)
-// {
-// 	branchRelation(s, r, cond)
-// }
 
 lemma block_state_validity(block:codes, s:state, r:state)
 	requires evalBlock(block, s, r);
@@ -348,7 +355,7 @@ lemma va_lemma_block(b:codes, s0: va_state, r: va_state) returns(r1: va_state, c
         var r':state :| evalCode(b.hd, s0, r') && evalBlock(b.tl, r', r);
         c0 := b.hd;
         b1 := b.tl;
-        r1 := state(r'.xregs, r'.wregs, r'.fgroups, r'.xmem, r'.wmem, r'.ok);
+        r1 := state(r'.gprs, r'.wdrs, r'.wmod, r'.wrnd, r'.wacc, r'.fgroups, r'.xmem, r'.wmem, r'.ok);
         if BN_ValidState(s0) {
             reveal_BN_ValidState();
             code_state_validity(c0, s0, r1);
@@ -438,8 +445,6 @@ lemma va_lemma_whileTrue(w:whileCond, c:code, n:nat, s: va_state, r: va_state) r
 }
 
 lemma va_lemma_whileFalse(w:whileCond, c:code, s: va_state, r: va_state) returns(r': va_state)
-    // requires va_is_src_reg32(w.r, s) && ValidSourceRegister32(s, w.r);
-    // requires va_is_src_imm32(w.c, s);
     requires evalWhileLax(w, c, 0, s, r)
     ensures  if s.ok then
                 (if BN_ValidState(s) then
@@ -464,14 +469,5 @@ lemma va_lemma_whileFalse(w:whileCond, c:code, s: va_state, r: va_state) returns
     }
     r' := r;
 }
-/*
 
-////////////////////////////////////////////////////////////////////////
-//
-//  Helper lemmas about control flow
-//
-////////////////////////////////////////////////////////////////////////
-
-
-*/
 }

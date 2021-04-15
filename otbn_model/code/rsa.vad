@@ -24,77 +24,192 @@ import opened bignum_decls
 
 #endverbatim
 
-function interp_wdr_seq(start: int, end: int): int extern;
+function seq_subb(x: seq(uint256), y: seq(uint256)) : tuple(seq(uint256), uint1) extern;
 
-//  FG1.C: s, selection flag
-procedure cond_sub_mod()
+ghost procedure lemma_extend_seq_subb(
+    ghost x:seq(uint256), ghost y:seq(uint256), ghost z:seq(uint256), 
+    ghost cin:uint1, ghost cout:uint1,
+    ghost new_x:uint256, ghost new_y:uint256, ghost new_z:uint256) extern;
+
+ghost procedure lemma_empty_seq_subb() extern;
+
+procedure cond_sub_mod_inner(
+    ghost initial_wdrs: wdrs_t,
+    ghost initial_x16: nat,
+    ghost num_words: nat,
+    ghost selection: bool,
+    ghost i: nat,
+    ghost loop_ctr: int)
+
     requires
-        w31 == 0;
-        x16 < 0xfffffe60;
-        forall(i:int) 0 <= i < 12 ==>
-            Valid256Addr(wmem, old(x16) + 32 * i);
+        x8 == 5 + i;
+        x10 == 3;
+        x11 == 2;
+        x16 == initial_x16 + 32 * i;
+
+        initial_x16 < 0xfffffe60;
+        num_words <= 12;
+
+        0 <= loop_ctr <= num_words;
+        i + loop_ctr == num_words;
+        i < num_words;
+
+        wdrs_seq(wdrs, x8, 5 + num_words) == wdrs_seq(initial_wdrs, x8, 5 + num_words);
+
+        forall(i:int) 0 <= i < num_words
+            ==> Valid256Addr(wmem, initial_x16 + 32 * i);
+
+        selection == get_cf1(fgroups);
+
+        selection ==>
+            tuple(wdrs_seq(wdrs, 5, x8), bool_to_uint1(get_cf0(fgroups)))
+            ==
+            seq_subb(wdrs_seq(initial_wdrs, 5, x8), wmem_seq(wmem, initial_x16, i));
+        
+        !selection ==>
+            wdrs_seq(wdrs, 5, x8) == wdrs_seq(initial_wdrs, 5, x8);
+    reads
+        wmem;
     modifies
         x8; x10; x11; x16;
-        fgroups; wmem;
-        wregs; w2; w3; w4; w31;
-{
-    ghost var selection := get_cf1(fgroups);
+        fgroups;
+        wdrs; w2; w3; w4; 
+    ensures
+        x8 == 5 + i + 1;
+        x10 == 3;
+        x11 == 2;
+        x16 == initial_x16 + 32 * (i + 1);
 
+        wdrs_seq(wdrs, x8, 5 + num_words) == wdrs_seq(initial_wdrs, x8, 5 + num_words);
+
+        selection == get_cf1(fgroups);
+
+        forall(i:int) 0 <= i < num_words
+            ==> Valid256Addr(wmem, initial_x16 + 32 * i);
+
+        selection ==> 
+            tuple(wdrs_seq(wdrs, 5, x8), bool_to_uint1(get_cf0(fgroups)))
+            ==
+            seq_subb(wdrs_seq(initial_wdrs, 5, x8), wmem_seq(wmem, initial_x16, i+1));
+
+        !selection ==>
+            wdrs_seq(wdrs, 5, x8) == wdrs_seq(initial_wdrs, 5, x8);
+{
+    ghost var widx := x8;
+
+    bn_lid_safe(x10, false, 0, x16, true);
+    bn_movr(x11, false, x8, false);
+
+    ghost var cin := bool_to_uint1(get_cf0(fgroups));
+    bn_subb(w4, w2, w3, false, 0, 0);
+    ghost var cout := bool_to_uint1(get_cf0(fgroups));
+
+    bn_sel(w3, w4, w2, 1, 0);
+    bn_movr(x8, true, x10, false);
+
+    ghost if (selection) {
+        ghost var x := initial_wdrs[widx];
+        // ghost var y := wmem[initial_x16 + 32 * i];
+        ghost var z := wdrs[widx];
+
+        ghost var xs := wdrs_seq(initial_wdrs, 5, widx);
+        // ghost var ys := wmem_seq(wmem, initial_x16, i);
+        ghost var zs := old(wdrs_seq(wdrs, 5, x8));
+
+    //    lemma_extend_seq_subb(
+    //        xs, ys, zs,
+    //        cin, cout, x, y, z);
+        
+        assert wdrs_seq(initial_wdrs, 5, x8) == seq_append(xs, x);
+        assert wdrs_seq(wdrs, 5, x8) == seq_append(zs, z);
+    } else {
+        calc == {
+            wdrs_seq(initial_wdrs, 5, widx + 1);
+            == seq_append(wdrs_seq(initial_wdrs, 5, widx), initial_wdrs[widx]);
+            == { assert wdrs[widx] == initial_wdrs[widx];}
+           seq_append(wdrs_seq(initial_wdrs, 5, widx), wdrs[widx]);
+            == { assert wdrs_seq(wdrs, 5, widx) == wdrs_seq(initial_wdrs, 5, widx);}
+            seq_append(wdrs_seq(wdrs, 5, widx), wdrs[widx]);
+            ==
+            wdrs_seq(wdrs, 5, widx + 1);
+        }
+    }
+}
+
+procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
+    // {:frame false}
+    requires
+        selection == get_cf1(fgroups);
+        num_words == x31;
+
+        x31 <= 12;
+        x16 < 0xfffffe60;
+
+        w31 == 0;
+
+        get_cf0(fgroups) == false;
+
+        forall(i:int) 0 <= i < x31 ==>
+            Valid256Addr(wmem, old(x16) + 32 * i);
+    reads
+        wmem; x31;
+
+    modifies
+        x8; x10; x11; x16;
+        fgroups; 
+        wdrs; w2; w3; w4; w31;
+
+    ensures
+        wmem == old(wmem);
+
+        forall(i:int) 0 <= i < num_words
+            ==> Valid256Addr(wmem, old(x16) + 32 * i);
+
+        selection ==> 
+            tuple(wdrs_seq(wdrs, 5, 5 + num_words), bool_to_uint1(get_cf0(fgroups)))
+            ==
+            seq_subb(wdrs_seq(old(wdrs), 5, 5 + num_words), wmem_seq(wmem, old(x16), num_words));
+
+        !selection ==>
+            wdrs_seq(wdrs, 5, 5 + num_words) == wdrs_seq(old(wdrs), 5, 5 + num_words);
+{
     li(x8, 5);
     li(x10, 3);
     li(x11, 2);
 
     bn_add(w31, w31, w31, false, 0, 0);
-    ghost var i : int := 0;
+    ghost var i: nat := 0;
+    ghost var initial_wdrs := wdrs;
+    ghost var initial_x16 := x16;
 
-    while (LoopImm(12))
-        invariant i + loop_ctr == 12;
+    lemma_empty_seq_subb();
+
+    while (Loop(x31))
+        invariant i + loop_ctr == num_words;
         invariant x8 == 5 + i;
-        invariant x11 == 2;
         invariant x10 == 3;
-        invariant x16 == old(x16) + 32 * i;
+        invariant x11 == 2;
+        invariant x16 == initial_x16 + 32 * i;
 
         invariant get_cf1(fgroups) == selection;
 
-        invariant forall(i:int) 0 <= i < 12
-            ==> Valid256Addr(wmem, old(x16) + 32 * i);
+        invariant wdrs_seq(wdrs, x8, 5 + num_words) == wdrs_seq(initial_wdrs, x8, 5 + num_words);
 
-        invariant !selection
-            ==> (forall(i:int) 0 <= i < 12
-            ==> wregs[Wdr(5 + i)] == old(wregs[Wdr(5 + i)]));
+        invariant forall(i:int) 0 <= i < num_words
+            ==> Valid256Addr(wmem, initial_x16 + 32 * i);
 
-        // invariant !selection ==>
-        //     interp_wdr_seq(wregs, 5, 5 + i) == interp_wdr_seq(old(wregs), 5, 5 + i);
+        invariant selection ==>
+            tuple(wdrs_seq(wdrs, 5, x8), bool_to_uint1(get_cf0(fgroups)))
+            ==
+            seq_subb(wdrs_seq(initial_wdrs, 5, x8), wmem_seq(wmem, initial_x16, i));
+        
+        invariant !selection ==>
+            wdrs_seq(wdrs, 5, x8) == wdrs_seq(initial_wdrs, 5, x8);
 
+        invariant wmem == old(wmem);
         decreases loop_ctr;
     {
-        // assert Valid256Addr(wmem, old(x16) + 32 * i);
-        bn_lid_safe(x10, false, 0, x16, true);
-        assert w3 == wmem[old(x16) + 32 * i];
-
-        bn_movr(x11, false, x8, false);
-        assert w2 == wregs[Wdr(5 + i)];
-        ghost var old_limb := w2;
-
-        ghost var cf := get_cf0(fgroups);
-        ghost var fg := select_fgroup(fgroups, 0);
-        bn_subb(w4, w2, w3, false, 0, 0);
-        ghost var cf' := get_cf0(fgroups);
-        ghost var result := otbn_subb(w2, w3, false, 0, fg);
-        assert w4 == fst(result);
-
-        ghost var carry := if cf then 1 else 0;
-        ghost var diff : int := w2 - w3 - carry;
-        assert cf' == (diff < 0);
-        // assert w4 == diff % BASE_256;
-
-        bn_sel(w3, w4, w2, 1, 0);
-        assert if selection then (w3 == w4) else (w3 == w2);
-
-        bn_movr(x8, true, x10, false);
-        // assert wregs[Wdr(5 + i)] == w3;
-        // assert !selection ==> (wregs[Wdr(5 + i)] == old_limb);
-
+        cond_sub_mod_inner(initial_wdrs, initial_x16, num_words, selection, i, loop_ctr);
         i := i + 1;
     }
 }
