@@ -83,10 +83,11 @@ datatype whileCond =
 datatype flags_t = flags_t(cf: bool, msb: bool, lsb: bool, zero: bool)
 datatype fgroups_t = fgroups_t(fg0: flags_t, fg1: flags_t)
 
-type wdrs_t = wdrs : seq<uint256> | |wdrs| == 32
+type gprs_t = gprs : seq<uint32> | |gprs| == 32 witness *
+type wdrs_t = wdrs : seq<uint256> | |wdrs| == 32 witness *
 
-datatype raw_state = raw_state(
-    gprs: seq<uint32>,  // 32-bit registers
+datatype state = state(
+    gprs: gprs_t,  // 32-bit registers
     wdrs: wdrs_t, // 256-bit registers
 
     wmod: uint256,
@@ -99,10 +100,6 @@ datatype raw_state = raw_state(
     wmem: map<int, uint256>,
 
     ok: bool)
-
-type state = s : raw_state |
-    && |s.gprs| == 32
-    witness *
 
 predicate valid_state(s: state)
 {

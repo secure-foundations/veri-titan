@@ -355,7 +355,7 @@ lemma va_lemma_block(b:codes, s0: va_state, r: va_state) returns(r1: va_state, c
         var r':state :| evalCode(b.hd, s0, r') && evalBlock(b.tl, r', r);
         c0 := b.hd;
         b1 := b.tl;
-        r1 := raw_state(r'.gprs, r'.wdrs, r'.wmod, r'.wrnd, r'.wacc, r'.fgroups, r'.xmem, r'.wmem, r'.ok);
+        r1 := state(r'.gprs, r'.wdrs, r'.wmod, r'.wrnd, r'.wacc, r'.fgroups, r'.xmem, r'.wmem, r'.ok);
         if BN_ValidState(s0) {
             reveal_BN_ValidState();
             code_state_validity(c0, s0, r1);

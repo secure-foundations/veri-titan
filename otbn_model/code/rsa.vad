@@ -109,11 +109,11 @@ procedure cond_sub_mod_inner(
 
     ghost if (selection) {
         ghost var x := initial_wdrs[widx];
-        ghost var y := wmem[initial_x16 + 32 * i];
+        // ghost var y := wmem[initial_x16 + 32 * i];
         ghost var z := wdrs[widx];
 
         ghost var xs := wdrs_seq(initial_wdrs, 5, widx);
-        ghost var ys := wmem_seq(wmem, initial_x16, i);
+        // ghost var ys := wmem_seq(wmem, initial_x16, i);
         ghost var zs := old(wdrs_seq(wdrs, 5, x8));
 
     //    lemma_extend_seq_subb(
