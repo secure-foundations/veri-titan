@@ -34,7 +34,7 @@ ghost procedure lemma_extend_seq_subb(
 ghost procedure lemma_empty_seq_subb() extern;
 
 procedure cond_sub_mod_inner(
-    ghost initial_wregs: wideRegs,
+    ghost initial_wdrs: wdrs_t,
     ghost initial_x16: nat,
     ghost num_words: nat,
     ghost selection: bool,
@@ -54,7 +54,7 @@ procedure cond_sub_mod_inner(
         i + loop_ctr == num_words;
         i < num_words;
 
-        wregs_seq(wregs, x8, 5 + num_words) == wregs_seq(initial_wregs, x8, 5 + num_words);
+        wdrs_seq(wdrs, x8, 5 + num_words) == wdrs_seq(initial_wdrs, x8, 5 + num_words);
 
         forall(i:int) 0 <= i < num_words
             ==> Valid256Addr(wmem, initial_x16 + 32 * i);
@@ -62,25 +62,25 @@ procedure cond_sub_mod_inner(
         selection == get_cf1(fgroups);
 
         selection ==>
-            tuple(wregs_seq(wregs, 5, x8), bool_to_uint1(get_cf0(fgroups)))
+            tuple(wdrs_seq(wdrs, 5, x8), bool_to_uint1(get_cf0(fgroups)))
             ==
-            seq_subb(wregs_seq(initial_wregs, 5, x8), wmem_seq(wmem, initial_x16, i));
+            seq_subb(wdrs_seq(initial_wdrs, 5, x8), wmem_seq(wmem, initial_x16, i));
         
         !selection ==>
-            wregs_seq(wregs, 5, x8) == wregs_seq(initial_wregs, 5, x8);
+            wdrs_seq(wdrs, 5, x8) == wdrs_seq(initial_wdrs, 5, x8);
     reads
         wmem;
     modifies
         x8; x10; x11; x16;
         fgroups;
-        wregs; w2; w3; w4; 
+        wdrs; w2; w3; w4; 
     ensures
         x8 == 5 + i + 1;
         x10 == 3;
         x11 == 2;
         x16 == initial_x16 + 32 * (i + 1);
 
-        wregs_seq(wregs, x8, 5 + num_words) == wregs_seq(initial_wregs, x8, 5 + num_words);
+        wdrs_seq(wdrs, x8, 5 + num_words) == wdrs_seq(initial_wdrs, x8, 5 + num_words);
 
         selection == get_cf1(fgroups);
 
@@ -88,12 +88,12 @@ procedure cond_sub_mod_inner(
             ==> Valid256Addr(wmem, initial_x16 + 32 * i);
 
         selection ==> 
-            tuple(wregs_seq(wregs, 5, x8), bool_to_uint1(get_cf0(fgroups)))
+            tuple(wdrs_seq(wdrs, 5, x8), bool_to_uint1(get_cf0(fgroups)))
             ==
-            seq_subb(wregs_seq(initial_wregs, 5, x8), wmem_seq(wmem, initial_x16, i+1));
+            seq_subb(wdrs_seq(initial_wdrs, 5, x8), wmem_seq(wmem, initial_x16, i+1));
 
         !selection ==>
-            wregs_seq(wregs, 5, x8) == wregs_seq(initial_wregs, 5, x8);
+            wdrs_seq(wdrs, 5, x8) == wdrs_seq(initial_wdrs, 5, x8);
 {
     ghost var widx := x8;
 
@@ -102,36 +102,36 @@ procedure cond_sub_mod_inner(
 
     ghost var cin := bool_to_uint1(get_cf0(fgroups));
     bn_subb(w4, w2, w3, false, 0, 0);
-    //ghost var cout := bool_to_uint1(get_cf0(fgroups));
+    ghost var cout := bool_to_uint1(get_cf0(fgroups));
 
     bn_sel(w3, w4, w2, 1, 0);
     bn_movr(x8, true, x10, false);
 
     ghost if (selection) {
-        ghost var x := initial_wregs[widx];
-//        ghost var y := wmem[initial_x16 + 32 * i];
-        ghost var z := wregs[widx];
+        ghost var x := initial_wdrs[widx];
+        ghost var y := wmem[initial_x16 + 32 * i];
+        ghost var z := wdrs[widx];
 
-        ghost var xs := wregs_seq(initial_wregs, 5, widx);
-//        ghost var ys := wmem_seq(wmem, initial_x16, i);
-        ghost var zs := old(wregs_seq(wregs, 5, x8));
+        ghost var xs := wdrs_seq(initial_wdrs, 5, widx);
+        ghost var ys := wmem_seq(wmem, initial_x16, i);
+        ghost var zs := old(wdrs_seq(wdrs, 5, x8));
 
-//        lemma_extend_seq_subb(
-//            xs, ys, zs,
-//            cin, cout, x, y, z);
+    //    lemma_extend_seq_subb(
+    //        xs, ys, zs,
+    //        cin, cout, x, y, z);
         
-        assert wregs_seq(initial_wregs, 5, x8) == seq_append(xs, x);
-        assert wregs_seq(wregs, 5, x8) == seq_append(zs, z);
+        assert wdrs_seq(initial_wdrs, 5, x8) == seq_append(xs, x);
+        assert wdrs_seq(wdrs, 5, x8) == seq_append(zs, z);
     } else {
         calc == {
-            wregs_seq(initial_wregs, 5, widx + 1);
-//            == seq_append(wregs_seq(initial_wregs, 5, widx), initial_wregs[widx]);
-//            == { assert wregs[widx] == initial_wregs[widx];}
-//            seq_append(wregs_seq(initial_wregs, 5, widx), wregs[widx]);
-            == { assert wregs_seq(wregs, 5, widx) == wregs_seq(initial_wregs, 5, widx);}
-            seq_append(wregs_seq(wregs, 5, widx), wregs[widx]);
+            wdrs_seq(initial_wdrs, 5, widx + 1);
+            == seq_append(wdrs_seq(initial_wdrs, 5, widx), initial_wdrs[widx]);
+            == { assert wdrs[widx] == initial_wdrs[widx];}
+           seq_append(wdrs_seq(initial_wdrs, 5, widx), wdrs[widx]);
+            == { assert wdrs_seq(wdrs, 5, widx) == wdrs_seq(initial_wdrs, 5, widx);}
+            seq_append(wdrs_seq(wdrs, 5, widx), wdrs[widx]);
             ==
-            wregs_seq(wregs, 5, widx + 1);
+            wdrs_seq(wdrs, 5, widx + 1);
         }
     }
 }
@@ -157,7 +157,7 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
     modifies
         x8; x10; x11; x16;
         fgroups; 
-        wregs; w2; w3; w4; w31;
+        wdrs; w2; w3; w4; w31;
 
     ensures
         wmem == old(wmem);
@@ -166,12 +166,12 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
             ==> Valid256Addr(wmem, old(x16) + 32 * i);
 
         selection ==> 
-            tuple(wregs_seq(wregs, 5, 5 + num_words), bool_to_uint1(get_cf0(fgroups)))
+            tuple(wdrs_seq(wdrs, 5, 5 + num_words), bool_to_uint1(get_cf0(fgroups)))
             ==
-            seq_subb(wregs_seq(old(wregs), 5, 5 + num_words), wmem_seq(wmem, old(x16), num_words));
+            seq_subb(wdrs_seq(old(wdrs), 5, 5 + num_words), wmem_seq(wmem, old(x16), num_words));
 
         !selection ==>
-            wregs_seq(wregs, 5, 5 + num_words) == wregs_seq(old(wregs), 5, 5 + num_words);
+            wdrs_seq(wdrs, 5, 5 + num_words) == wdrs_seq(old(wdrs), 5, 5 + num_words);
 {
     li(x8, 5);
     li(x10, 3);
@@ -179,7 +179,7 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
 
     bn_add(w31, w31, w31, false, 0, 0);
     ghost var i: nat := 0;
-    ghost var initial_wregs := wregs;
+    ghost var initial_wdrs := wdrs;
     ghost var initial_x16 := x16;
 
     lemma_empty_seq_subb();
@@ -193,23 +193,23 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
 
         invariant get_cf1(fgroups) == selection;
 
-        invariant wregs_seq(wregs, x8, 5 + num_words) == wregs_seq(initial_wregs, x8, 5 + num_words);
+        invariant wdrs_seq(wdrs, x8, 5 + num_words) == wdrs_seq(initial_wdrs, x8, 5 + num_words);
 
         invariant forall(i:int) 0 <= i < num_words
             ==> Valid256Addr(wmem, initial_x16 + 32 * i);
 
         invariant selection ==>
-            tuple(wregs_seq(wregs, 5, x8), bool_to_uint1(get_cf0(fgroups)))
+            tuple(wdrs_seq(wdrs, 5, x8), bool_to_uint1(get_cf0(fgroups)))
             ==
-            seq_subb(wregs_seq(initial_wregs, 5, x8), wmem_seq(wmem, initial_x16, i));
+            seq_subb(wdrs_seq(initial_wdrs, 5, x8), wmem_seq(wmem, initial_x16, i));
         
         invariant !selection ==>
-            wregs_seq(wregs, 5, x8) == wregs_seq(initial_wregs, 5, x8);
+            wdrs_seq(wdrs, 5, x8) == wdrs_seq(initial_wdrs, 5, x8);
 
         invariant wmem == old(wmem);
         decreases loop_ctr;
     {
-        cond_sub_mod_inner(initial_wregs, initial_x16, num_words, selection, i, loop_ctr);
+        cond_sub_mod_inner(initial_wdrs, initial_x16, num_words, selection, i, loop_ctr);
         i := i + 1;
     }
 }

@@ -10,139 +10,103 @@ import opened powers
 
 type reg_index = i: int | 0 <= i < 32
 
-// General purpose and control registers, 32b
-datatype Reg32 =
-| Gpr(index: reg_index)
-| Rnd // Random number
+datatype reg32_t = GPR(index: reg_index)
 
-// Wide data and special registers, 256b
-datatype Reg256 =
-| Wdr(index: reg_index)
-| WMod // Wide modulo register
-| WRnd // Wide random number
-| WAcc // Wide accumulator
+datatype reg256_t =
+    | WDR(index: reg_index)
+    | WMOD // Wide modulo register
+    | WRND // Wide random number
+    | WACC // Wide accumulator
 
 datatype ins32 =
-| ADD(xrd: Reg32, xrs1: Reg32, xrs2: Reg32)
-| ADDI(xrd: Reg32, xrs1: Reg32, imm: uint32)
-| LUI(xrd: Reg32, imm: uint32)
-| SUB(xrd: Reg32, xrs1: Reg32, xrs2: Reg32)
-| AND(xrd: Reg32, xrs1: Reg32, xrs2: Reg32)
-| ANDI(xrd: Reg32, xrs1: Reg32, imm: uint32)
-| OR(xrd: Reg32, xrs1: Reg32, xrs2: Reg32)
-| ORI(xrd: Reg32, xrs1: Reg32, imm: uint32)
-| XOR(xrd: Reg32, xrs1: Reg32, xrs2: Reg32)
-| XORI(xrd: Reg32, xrs1: Reg32, imm: uint32)
-| LW(xrd: Reg32, xrs1: Reg32, imm: uint32)
-| SW(xrs1: Reg32, xrs2: Reg32, imm: uint32)
-| BEQ(xrs1: Reg32, xrs2: Reg32, offset: uint32)
-| BNE(xrs1: Reg32, xrs2: Reg32, offset: uint32)
-| LOOP(grs: Reg32, bodysize: uint32)
-| LOOPI(iterations: uint32, bodysize: uint32)
-| JAL(xrd: Reg32, offset: uint32)
-| JALR(xrd: Reg32, xrs1: Reg32, offset: uint32)
-| CSRRS(xrd: Reg32, csr: Reg32, xrs2: Reg32)
-| CSRRW(xrd: Reg32, csr: Reg32, xrs2: Reg32)
-| ECALL // TODO
+    | ADD(xrd: reg32_t, xrs1: reg32_t, xrs2: reg32_t)
+    | ADDI(xrd: reg32_t, xrs1: reg32_t, imm: uint32)
+    | LUI(xrd: reg32_t, imm: uint32)
+    | SUB(xrd: reg32_t, xrs1: reg32_t, xrs2: reg32_t)
+    | AND(xrd: reg32_t, xrs1: reg32_t, xrs2: reg32_t)
+    | ANDI(xrd: reg32_t, xrs1: reg32_t, imm: uint32)
+    | OR(xrd: reg32_t, xrs1: reg32_t, xrs2: reg32_t)
+    | ORI(xrd: reg32_t, xrs1: reg32_t, imm: uint32)
+    | XOR(xrd: reg32_t, xrs1: reg32_t, xrs2: reg32_t)
+    | XORI(xrd: reg32_t, xrs1: reg32_t, imm: uint32)
+    | LW(xrd: reg32_t, xrs1: reg32_t, imm: uint32)
+    | SW(xrs1: reg32_t, xrs2: reg32_t, imm: uint32)
+    | BEQ(xrs1: reg32_t, xrs2: reg32_t, offset: uint32)
+    | BNE(xrs1: reg32_t, xrs2: reg32_t, offset: uint32)
+    | LOOP(grs: reg32_t, bodysize: uint32)
+    | LOOPI(iterations: uint32, bodysize: uint32)
+    | JAL(xrd: reg32_t, offset: uint32)
+    | JALR(xrd: reg32_t, xrs1: reg32_t, offset: uint32)
+    | CSRRS(xrd: reg32_t, csr: reg32_t, xrs2: reg32_t)
+    | CSRRW(xrd: reg32_t, csr: reg32_t, xrs2: reg32_t)
+    | ECALL // TODO
 
 datatype ins256 =
-| BN_ADD(wrd: Reg256, wrs1: Reg256, wrs2: Reg256, shift_type: bool, shift_bytes: uint32, fg: uint1)
-| BN_ADDC(wrd: Reg256, wrs1: Reg256, wrs2: Reg256, shift_type: bool, shift_bytes: uint32, fg: uint1)
-| BN_ADDI(wrd: Reg256, wrs1: Reg256, imm: uint256, fg: uint1)
-| BN_ADDM(wrd: Reg256, wrs1: Reg256, wrs2: Reg256)
-| BN_MULQACC(zero: bool, wrs1: Reg256, qwsel1: uint32, wrs2: Reg256, qwsel2: uint32, shift: uint32)
-| BN_MULH(wrd: Reg256, wrs1: Reg256, hw1: bool, wrs2: Reg256, hw2: bool)
-| BN_SUB(wrd: Reg256, wrs1: Reg256, wrs2: Reg256, shift_type: bool, shift_bytes: uint32, fg: uint1)
-| BN_SUBB(wrd: Reg256, wrs1: Reg256, wrs2: Reg256, shift_type: bool, shift_bytes: uint32, fg: uint1)
-| BN_SUBI(wrd: Reg256, wrs1: Reg256, imm: uint256, fg: uint1)
-| BN_SUBM(wrd: Reg256, wrs1: Reg256, wrs2: Reg256)
-| BN_AND(wrd: Reg256, wrs1: Reg256, wrs2: Reg256, shift_type: bool, shift_bytes: uint32)
-| BN_OR(wrd: Reg256, wrs1: Reg256, wrs2: Reg256, shift_type: bool, shift_bytes: uint32)
-| BN_NOT(wrd: Reg256, wrs1: Reg256, wrs2: Reg256, shift_type: bool, shift_bytes: uint32)
-| BN_XOR(wrd: Reg256, wrs1: Reg256, wrs2: Reg256, shift_type: bool, shift_bytes: uint32)
-| BN_RSHI(wrd: Reg256, wrs1: Reg256, wrs2: Reg256, imm: uint256)
-| BN_SEL(wrd: Reg256, wrs1: Reg256, wrs2: Reg256, fg: uint1)
-| BN_CMP(wrs1: Reg256, wrs2: Reg256, fg: uint1)
-| BN_CMPB(wrs1: Reg256, wrs2: Reg256, fg: uint1)
-| BN_LID(grd: Reg32, grd_inc: bool, offset: uint32, grs: Reg32, grs_inc: bool)
-| BN_SID(grs2: Reg32, grs2_inc: bool, offset: uint32, grs1: Reg32, grs1_inc: bool)
-| BN_MOV(wrd: Reg256, wrs: Reg256)
-| BN_MOVR(grd: Reg32, grd_inc: bool, grs: Reg32, grs_inc: bool)
-| BN_WSRRS // TODO
-| BN_WSRRW // TODO
+    | BN_ADD(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift_type: bool, shift_bytes: uint32, fg: uint1)
+    | BN_ADDC(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift_type: bool, shift_bytes: uint32, fg: uint1)
+    | BN_ADDI(wrd: reg256_t, wrs1: reg256_t, imm: uint256, fg: uint1)
+    | BN_ADDM(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t)
+    | BN_MULQACC(zero: bool, wrs1: reg256_t, qwsel1: uint32, wrs2: reg256_t, qwsel2: uint32, shift: uint32)
+    | BN_MULH(wrd: reg256_t, wrs1: reg256_t, hw1: bool, wrs2: reg256_t, hw2: bool)
+    | BN_SUB(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift_type: bool, shift_bytes: uint32, fg: uint1)
+    | BN_SUBB(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift_type: bool, shift_bytes: uint32, fg: uint1)
+    | BN_SUBI(wrd: reg256_t, wrs1: reg256_t, imm: uint256, fg: uint1)
+    | BN_SUBM(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t)
+    | BN_AND(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift_type: bool, shift_bytes: uint32)
+    | BN_OR(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift_type: bool, shift_bytes: uint32)
+    | BN_NOT(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift_type: bool, shift_bytes: uint32)
+    | BN_XOR(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift_type: bool, shift_bytes: uint32)
+    | BN_RSHI(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, imm: uint256)
+    | BN_SEL(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, fg: uint1)
+    | BN_CMP(wrs1: reg256_t, wrs2: reg256_t, fg: uint1)
+    | BN_CMPB(wrs1: reg256_t, wrs2: reg256_t, fg: uint1)
+    | BN_LID(grd: reg32_t, grd_inc: bool, offset: uint32, grs: reg32_t, grs_inc: bool)
+    | BN_SID(grs2: reg32_t, grs2_inc: bool, offset: uint32, grs1: reg32_t, grs1_inc: bool)
+    | BN_MOV(wrd: reg256_t, wrs: reg256_t)
+    | BN_MOVR(grd: reg32_t, grd_inc: bool, grs: reg32_t, grs_inc: bool)
+    | BN_WSRRS // TODO
+    | BN_WSRRW // TODO
 
 datatype code =
-| Ins32(ins: ins32)
-| Ins256(bn_ins: ins256)
-| Block(block: codes)
-| While(whileCond: whileCond, whileBody: code)
+    | Ins32(ins: ins32)
+    | Ins256(bn_ins: ins256)
+    | Block(block: codes)
+    | While(whileCond: whileCond, whileBody: code)
 
 datatype codes = CNil | va_CCons(hd: code, tl: codes)
 
 datatype whileCond = 
-    | RegCond(r: Reg32)
+    | RegCond(r: reg32_t)
     | ImmCond(c: uint32)
 
 // datatype flag = CF | MSB | LSB | ZERO
-datatype flags = flags(cf: bool, msb: bool, lsb: bool, zero: bool)
-datatype flagGroups = flagGroups(fg0: flags, fg1: flags)
+datatype flags_t = flags_t(cf: bool, msb: bool, lsb: bool, zero: bool)
+datatype fgroups_t = fgroups_t(fg0: flags_t, fg1: flags_t)
 
-type wideRegs = wregs: seq<uint256> | |wregs| == 32 witness *
+type wdrs_t = wdrs : seq<uint256> | |wdrs| == 32
 
-datatype state = state(
-    xregs: map<Reg32, uint32>, // 32-bit registers
-    wregs: wideRegs, // 256-bit registers
-    fgroups: flagGroups,
+datatype raw_state = raw_state(
+    gprs: seq<uint32>,  // 32-bit registers
+    wdrs: wdrs_t, // 256-bit registers
+
+    wmod: uint256,
+    wrnd: uint256,
+    wacc: uint256,
+
+    fgroups: fgroups_t,
+
     xmem: map<int, uint32>,
     wmem: map<int, uint256>,
+
     ok: bool)
+
+type state = s : raw_state |
+    && |s.gprs| == 32
+    witness *
 
 predicate valid_state(s: state)
 {
-    && (forall r :: r in s.xregs)
-    // && (forall t :: t in s.wregs)
-}
-
-/*
-function {:opaque} wregs_seq_rev(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): seq<uint256>
-    requires forall t :: t in wregs
-    requires start <= end
-    decreases end - start
-{
-    if start == end then []
-    else [wregs[Wdr(start)]] + wregs_seq(wregs, start + 1, end)
-}
-
-function {:opaque} wregs_seq_core(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): (s: seq<uint256>)
-    requires forall t :: t in wregs
-    requires start <= end
-    ensures |s| == end - start
-    ensures forall i | 0 <= i < |s| :: s[i] == wregs[Wdr(i + start)];
-    decreases end - start
-{
-    if start == end then []
-    else var partial := wregs_seq_core(wregs, start, end - 1);
-    var s := partial + [wregs[Wdr(end-1)]];
-    s    
-}
-
-function wregs_seq(wregs: map<Reg256, uint256>, start: reg_index, end: reg_index): (s: seq<uint256>)
-    requires forall t :: t in wregs
-    requires start <= end
-    ensures |s| == end - start
-    ensures forall i | 0 <= i < |s| :: s[i] == wregs[Wdr(i + start)]
-    ensures forall w :: (forall t :: t in w) && (forall i :: start <= i < end ==> wregs[Wdr(i)] == w[Wdr(i)]) ==> wregs_seq_core(wregs, start, end) == wregs_seq_core(w, start, end)
-    ensures end - start > 0 ==> wregs_seq_core(wregs, start, end - 1) + [wregs[Wdr(end - 1)]] == wregs_seq_core(wregs, start, end)
-{
-    wregs_seq_core(wregs, start, end)
-}
-*/
-
-function wregs_seq(wregs: wideRegs, start: reg_index, end: reg_index): (s: seq<uint256>)
-    requires start <= end
-    ensures |s| == end - start
-{
-    wregs[start..end]
+    s.ok
 }
 
 function {:opaque} wmem_seq_core(wmem: map<int, uint256>, start: nat, count: nat): (s: seq<uint256>)
@@ -167,13 +131,12 @@ function wmem_seq(wmem: map<int, uint256>, start: nat, count: nat): (s: seq<uint
     wmem_seq_core(wmem, start, count) 
 }
 
-// lemma lemma_wmem_seq_update(wmem: map<int, uint256>, start: nat, count: nat)
-//      requires 1 <= count <= 12
-//      requires forall i | 0 <= i < count :: Valid256Addr(wmem, start + 32 * i)
-//      ensures  wmem_seq(wmem, start, count - 1) + [wmem[start + 32 * (count-1)]] == wmem_seq(wmem, start, count)
- 
-function fst<T,Q>(t:(T, Q)) : T { t.0 }
-function snd<T,Q>(t:(T, Q)) : Q { t.1 }
+function wdrs_seq(wdrs: wdrs_t, start: reg_index, end: reg_index): (s: seq<uint256>)
+    requires start <= end
+    ensures |s| == end - start
+{
+    wdrs[start..end]
+}
 
 function sub_seq<T>(s: seq<T>, start: int, end: int): seq<T>
     requires 0 <= start <= end <= |s|
@@ -229,23 +192,11 @@ lemma lemma_extend_seq_subb(
     requires (new_z, cin) == uint256_subb(new_x, new_y, cin_old)
     ensures (z + [new_z], cin) == seq_subb(x + [new_x], y + [new_y])
 {
-    reveal seq_subb();
 }
 
 lemma lemma_empty_seq_subb()
     ensures ([], 0) == seq_subb([], [])
 {
-    reveal seq_subb();
-}
-
-function tail_split<T>(s: seq<T>) : (seq<T>, T)
-    requires |s| >= 1
-    ensures var (rest, tail) := tail_split(s);
-        rest + [tail] == s;
-{
-    var last := |s| - 1;
-    assert s[..last] + [s[last]]== s;
-    (s[..last], s[last])
 }
 
 predicate Valid32Addr(h: map<int, uint32>, addr:int)
@@ -258,48 +209,9 @@ predicate Valid256Addr(h: map<int, uint256>, addr:int)
     addr in h
 }
 
-predicate IsUInt32(i: int) { 0 <= i < 0x1_0000_0000 }
-
-predicate IsUInt256(i: int) { 0 <= i < 0x1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000 }
-
-predicate ValidRegister32(xregs: map<Reg32, uint32>, r: Reg32)
+function eval_reg32(s: state, r: reg32_t) : uint32
 {
-    r in xregs
-}
-
-predicate ValidRegister256(wregs: wideRegs, r: Reg256)
-{
-    r.Wdr?
-}
-
-predicate ValidCsr32(r: Reg32)
-{
-    // TODO: Other CSRs are limbs of WMod or flags-- will these ever be used?
-    r.Rnd?
-}
-
-function eval_xreg(xregs: map<Reg32, uint32>, r: Reg32) : uint32
-{
-    if !ValidRegister32(xregs, r) then 24 // TODO: better error message
-    else xregs[r]
-}
-
-predicate ValidSourceRegister32(s: state, r: Reg32)
-{
-    ValidRegister32(s.xregs, r)
-}
-
-predicate ValidDestinationRegister32(s: state, r: Reg32)
-{
-    !r.Rnd? && ValidRegister32(s.xregs, r)
-}
-
-function eval_reg32(s: state, r: Reg32) : uint32
-{
-    if !ValidSourceRegister32(s, r) then
-        42
-    else
-        s.xregs[r]
+    s.gprs[r.index]
 }
 
 predicate evalIns32(xins: ins32, s: state, r: state)
@@ -310,25 +222,17 @@ predicate evalIns32(xins: ins32, s: state, r: state)
         r.ok && (valid_state(s) ==> valid_state(r))
 }
 
-predicate ValidSourceRegister256(s: state, r: Reg256)
+function eval_reg256(s: state, r: reg256_t) : uint256
 {
-    ValidRegister256(s.wregs, r)
+    match r {
+        case WDR(index) => s.wdrs[r.index]
+        case WMOD => s.wmod
+        case WRND => s.wrnd
+        case WACC => s.wacc
+    }
 }
 
-predicate ValidDestinationRegister256(s: state, r: Reg256)
-{
-    !r.WRnd? && ValidRegister256(s.wregs, r)
-}
-
-function eval_reg256(s: state, r: Reg256) : uint256
-{
-    if !ValidSourceRegister256(s, r) then
-        42
-    else
-        s.wregs[r.index]
-}
-
-predicate evalIns256(wins: ins256, s: state, r: state)
+predicate eval_ins256(wins: ins256, s: state, r: state)
 {
     if !s.ok then
         !r.ok
@@ -345,11 +249,9 @@ predicate evalBlock(block: codes, s: state, r: state)
 }
 
 function eval_cond(s: state, wc: whileCond): nat
-    // requires ValidSourceRegister32(s, wc.r);
-    // requires IsUInt32(wc.c);
 {
     match wc 
-        case RegCond(r) => eval_xreg(s.xregs, r)
+        case RegCond(r) => eval_reg32(s, r)
         case ImmCond(c) => c
 }
 
@@ -371,18 +273,18 @@ predicate evalCode(c: code, s: state, r: state)
 {
     match c
         case Ins32(ins) => evalIns32(ins, s, r)
-        case Ins256(ins) => evalIns256(ins, s, r)
+        case Ins256(ins) => eval_ins256(ins, s, r)
         case Block(block) => evalBlock(block, s, r)
         //case IfElse(cond, ifT, ifF) => evalIfElse(cond, ifT, ifF, s, r)
         case While(cond, body) => evalWhile(body, eval_cond(s, cond), s, r)
 }
 
-function select_fgroup(fgps: flagGroups, which: uint1): flags
+function select_fgroup(fgps: fgroups_t, which: uint1): flags_t
 {
     if which == 0 then fgps.fg0 else fgps.fg1
 }
 
-function get_flag(fgps: flagGroups, which_group: uint1, which_flag: int) : bool
+function get_flag(fgps: fgroups_t, which_group: uint1, which_flag: int) : bool
     requires 0 <= which_flag <= 3;
 {
     if which_flag == 0 then select_fgroup(fgps, which_group).cf 
@@ -396,42 +298,42 @@ function bool_to_uint1(i:bool) : uint1
     if i then 1 else 0
 }
 
-function get_cf0(fgps: flagGroups): bool
+function get_cf0(fgps: fgroups_t): bool
 {
     select_fgroup(fgps, 0).cf 
 }
 
-function get_cf1(fgps: flagGroups): bool
+function get_cf1(fgps: fgroups_t): bool
 {
     select_fgroup(fgps, 1).cf 
 }
 
-function update_fgroups(fgps: flagGroups, which_group: uint1, new_flags: flags) : flagGroups
+function update_fgroups(fgps: fgroups_t, which_group: uint1, new_flags_t: flags_t) : fgroups_t
 {
-    if which_group == 0 then fgps.(fg0 := new_flags) else fgps.(fg1 := new_flags)
+    if which_group == 0 then fgps.(fg0 := new_flags_t) else fgps.(fg1 := new_flags_t)
 }
 
-function otbn_add_carray(a: uint256, b: uint256, carry_in: bool) : (uint256, flags)
+function otbn_add_carray(a: uint256, b: uint256, carry_in: bool) : (uint256, flags_t)
 {
     var sum : int := a + b + if carry_in then 1 else 0;
     // FIXME: get MSB and LSM
-    var fg := flags(sum / BASE_256 != 0, false, false, sum == 0);
+    var fg := flags_t(sum / BASE_256 != 0, false, false, sum == 0);
     (sum % BASE_256, fg)
 }
 
-function otbn_add(x: uint256, y: uint256, st: bool, sb: uint32) : (uint256, flags)
+function otbn_add(x: uint256, y: uint256, st: bool, sb: uint32) : (uint256, flags_t)
     requires sb < 32;
 {
     otbn_add_carray(x, uint256_sb(y, st, sb), false)
 }
 
-function otbn_addc(x: uint256, y: uint256, st: bool, sb: uint32, fg: flags) : (uint256, flags)
+function otbn_addc(x: uint256, y: uint256, st: bool, sb: uint32, fg: flags_t) : (uint256, flags_t)
     requires sb < 32;
 {
     otbn_add_carray(x, uint256_sb(y, st, sb), fg.cf)
 }
 
-function otbn_addi(x: uint256, imm: uint256) : (uint256, flags)
+function otbn_addi(x: uint256, imm: uint256) : (uint256, flags_t)
     requires imm < 1024;
 {
     otbn_add_carray(x, imm, false)
@@ -443,33 +345,33 @@ function otbn_addm(x: uint256, y: uint256, mod: uint256) : uint256
     if sum >= mod then sum - mod else sum
 }
 
-function otbn_sub(x: uint256, y: uint256, st: bool, sb: uint32) : (uint256, flags)
+function otbn_sub(x: uint256, y: uint256, st: bool, sb: uint32) : (uint256, flags_t)
     requires sb < 32;
 {
     var diff : int := x - uint256_sb(y, st, sb);
-    // FIXME: figure out the flags
-    var fg := flags(false, false, false, diff == 0);
+    // FIXME: figure out the flags_t
+    var fg := flags_t(false, false, false, diff == 0);
     (diff % BASE_256, fg)
 }
 
-function otbn_subb(x: uint256, y: uint256, st: bool, sb : uint32, flgs: flags) : (uint256, flags)
+function otbn_subb(x: uint256, y: uint256, st: bool, sb : uint32, flgs: flags_t) : (uint256, flags_t)
     requires sb < 32;
 {
     // TODO: replace this with uint256_subb
     var cf := if flgs.cf then 1 else 0;
 	var (diff, cout) := uint256_subb(x, uint256_sb(y, st, sb), cf);
-    var fg := flags(cout == 1, false, false, diff == 0);
+    var fg := flags_t(cout == 1, false, false, diff == 0);
     (diff, fg)
 }
 
-function otbn_subbi(x: uint256, imm: uint256) : (uint256, flags)
+function otbn_subbi(x: uint256, imm: uint256) : (uint256, flags_t)
     requires imm < 1024;
     // requires imm < x; //TODO: Is this true?
 {
     // FIXME: double check this
     var diff : int := x - imm;
-    // FIXME: figure out the flags
-    var fg := flags(false, false, false, diff == 0);
+    // FIXME: figure out the flags_t
+    var fg := flags_t(false, false, false, diff == 0);
     (diff % BASE_256, fg)
 }
 
