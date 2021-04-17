@@ -54,7 +54,7 @@ procedure cond_sub_mod_inner(
         i + loop_ctr == num_words;
         i < num_words;
 
-        wdrs[x8 ..5+num_words] == initial_wdrs[x8..5+num_words];
+        wdrs[x8..] == initial_wdrs[x8..];
 
         forall(i:int) 0 <= i < num_words
             ==> valid_wmem_addr(wmem, initial_x16 + 32 * i);
@@ -67,7 +67,7 @@ procedure cond_sub_mod_inner(
             seq_subb(initial_wdrs[5..x8], wmem_seq(wmem, initial_x16, i));
         
         !selection ==>
-            wdrs[5.. x8] == initial_wdrs[5..x8];
+            wdrs[5..x8] == initial_wdrs[5..x8];
     reads
         wmem;
     modifies
@@ -80,7 +80,7 @@ procedure cond_sub_mod_inner(
         x11 == 2;
         x16 == initial_x16 + 32 * (i + 1);
 
-        wdrs[x8..5+num_words] == initial_wdrs[x8..5+num_words];
+        wdrs[x8..] == initial_wdrs[x8..];
 
         selection == get_cf1(fgroups);
 
@@ -107,7 +107,7 @@ procedure cond_sub_mod_inner(
     bn_sel(w3, w4, w2, 1, 0);
     bn_movr(x8, true, x10, false);
 
-    assert wdrs[x8..5+num_words] == initial_wdrs[x8..5+num_words];
+    assert wdrs[x8..] == initial_wdrs[x8..];
 
     ghost if (selection) {
         ghost var x := initial_wdrs[widx];
@@ -166,8 +166,6 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
         wdrs; w2; w3; w4; w31;
 
     ensures
-        wmem == old(wmem);
-
         forall(i:int) 0 <= i < num_words
             ==> valid_wmem_addr(wmem, old(x16) + 32 * i);
 
@@ -199,7 +197,7 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
 
         invariant get_cf1(fgroups) == selection;
 
-        invariant wdrs[x8..5 + num_words] == initial_wdrs[x8 ..5+num_words];
+        invariant wdrs[x8..] == initial_wdrs[x8..];
 
         invariant forall(i:int) 0 <= i < num_words
             ==> valid_wmem_addr(wmem, initial_x16 + 32 * i);
@@ -212,7 +210,6 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
         invariant !selection ==>
             wdrs[5..x8] == initial_wdrs[5..x8];
 
-        invariant wmem == old(wmem);
         decreases loop_ctr;
     {
         cond_sub_mod_inner(initial_wdrs, initial_x16, num_words, selection, i, loop_ctr);
