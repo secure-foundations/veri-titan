@@ -9,16 +9,13 @@ include "../spec/types.dfy"
 
 include "../gen/decls.dfy"
 
-// include "../code/rsa_leammas.dfy"
-
-module barrett384 {
+module cond_sub_mod {
 
 import opened bignum_vale
 
 import opened bignum_def
 import opened ops
 import opened types
-// import opened rsa_leammas
 
 import opened bignum_decls
 
@@ -38,8 +35,7 @@ procedure cond_sub_mod_inner(
     ghost initial_x16: nat,
     ghost num_words: nat,
     ghost selection: bool,
-    ghost i: nat,
-    ghost loop_ctr: int)
+    ghost i: nat)
 
     requires
         x8 == 5 + i;
@@ -50,8 +46,6 @@ procedure cond_sub_mod_inner(
         initial_x16 < 0xfffffe60;
         num_words <= 12;
 
-        0 <= loop_ctr <= num_words;
-        i + loop_ctr == num_words;
         i < num_words;
 
         wdrs[x8..] == initial_wdrs[x8..];
@@ -70,10 +64,12 @@ procedure cond_sub_mod_inner(
             wdrs[5..x8] == initial_wdrs[5..x8];
     reads
         wmem;
+
     modifies
-        x8; x10; x11; x16;
         fgroups;
-        wdrs; w2; w3; w4; 
+        x8; x10; x11; x16;
+        wdrs; w2; w3; w4;
+
     ensures
         x8 == 5 + i + 1;
         x10 == 3;
@@ -161,8 +157,8 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
         wmem; x31;
 
     modifies
-        x8; x10; x11; x16;
         fgroups; 
+        x8; x10; x11; x16;
         wdrs; w2; w3; w4; w31;
 
     ensures
@@ -212,7 +208,7 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
 
         decreases loop_ctr;
     {
-        cond_sub_mod_inner(initial_wdrs, initial_x16, num_words, selection, i, loop_ctr);
+        cond_sub_mod_inner(initial_wdrs, initial_x16, num_words, selection, i);
         i := i + 1;
     }
 }
