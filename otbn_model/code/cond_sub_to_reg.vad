@@ -21,6 +21,10 @@ import opened bignum_decls
 
 #endverbatim
 
+function seq_subb(x: seq(uint256), y: seq(uint256)) : tuple(seq(uint256), uint1) extern;
+
+ghost procedure lemma_empty_seq_subb() extern;
+
 procedure cond_sub_to_reg_inner(
     ghost initial_wdrs: wdrs_t,
     ghost initial_x8: nat,
@@ -49,10 +53,10 @@ procedure cond_sub_to_reg_inner(
         forall(i:int) 0 <= i < num_words
             ==> valid_wmem_addr(wmem, initial_x16 + 32 * i);
 
-        // selection ==>
-        //     tuple(wdrs[initial_x8 ..x8], bool_to_uint1(get_cf0(fgroups)))
-        //     ==
-        //     seq_subb(initial_wdrs[initial_x8 ..x8]], wmem_seq(wmem, initial_x16, i));
+        selection ==>
+            tuple(wdrs[initial_x8..x8], bool_to_uint1(get_cf0(fgroups)))
+            ==
+            seq_subb(initial_wdrs[initial_x8..x8], wmem_seq(wmem, initial_x16, i));
 
         !selection ==>
             wdrs[initial_x8..x8] == initial_wdrs[initial_x8..x8];
@@ -72,8 +76,15 @@ procedure cond_sub_to_reg_inner(
         x12 == 30;
         x13 == 24;
 
+        wdrs[x8..final_x8] == initial_wdrs[x8..final_x8];
+
         forall(i:int) 0 <= i < num_words
             ==> valid_wmem_addr(wmem, initial_x16 + 32 * i);
+
+        selection ==>
+            tuple(wdrs[initial_x8 ..x8], bool_to_uint1(get_cf0(fgroups)))
+            ==
+            seq_subb(initial_wdrs[initial_x8..x8], wmem_seq(wmem, initial_x16, i+1));
 
         !selection ==>
             wdrs[initial_x8..x8] == initial_wdrs[initial_x8..x8];
@@ -98,8 +109,14 @@ procedure cond_sub_to_reg_inner(
     bn_movr(x8, true, x13, false);
 
     ghost if (selection) {
-        // assert false;
-        // assert wdrs[widx] == w29;
+        ghost var x := initial_wdrs[widx];
+        ghost var z := wdrs[widx];
+        
+        ghost var xs := initial_wdrs[initial_x8..widx];
+        ghost var zs := old(wdrs[initial_x8..widx]);
+
+        assert initial_wdrs[initial_x8.. x8] == seq_append(xs, x);
+        assert wdrs[initial_x8.. x8] == seq_append(zs, z);
     } else {
         calc == {
             wdrs[initial_x8..x8];
@@ -145,6 +162,15 @@ procedure cond_sub_to_reg_inner(
 procedure cond_sub_to_reg(ghost num_words: nat, ghost selection: bool)
     requires
         selection == get_cf1(fgroups);
+        num_words == x31;
+        num_words <= 12;
+        x8 < 12;
+
+        x16 < 0xfffffe60;
+        forall(i:int) 0 <= i < num_words
+            ==> valid_wmem_addr(wmem, x16 + 32 * i);
+
+        get_cf0(fgroups) == false;
 
     reads
         x31; wmem;
@@ -158,13 +184,47 @@ procedure cond_sub_to_reg(ghost num_words: nat, ghost selection: bool)
     li(x12, 30);
     li(x13, 24);
 
+    ghost var i: nat := 0;
+    ghost var initial_wdrs := wdrs;
+    ghost var initial_x8 := x8;
+    ghost var final_x8 := x8 + num_words;
+    ghost var initial_x16 := x16;
+
+    lemma_empty_seq_subb();
+
     /* iterate over all limbs for conditional limb-wise subtraction */
     while (Loop(x31))
+        invariant i + loop_ctr == num_words;
+
+        invariant selection == get_cf1(fgroups);
+        invariant num_words <= 12;
+        invariant final_x8 == initial_x8 + num_words;
+        invariant final_x8 < 24;
+
+        invariant x8 == initial_x8 + i;
+        invariant x16 == initial_x16 + 32 * i;
+        invariant x12 == 30;
+        invariant x13 == 24;
+
+        invariant wdrs[x8..final_x8] == initial_wdrs[x8..final_x8];
+
+        invariant initial_x16 < 0xfffffe60;
+        invariant forall(i:int) 0 <= i < num_words
+            ==> valid_wmem_addr(wmem, initial_x16 + 32 * i);
+
+        invariant selection ==>
+            tuple(wdrs[initial_x8..x8], bool_to_uint1(get_cf0(fgroups)))
+            ==
+            seq_subb(initial_wdrs[initial_x8..x8], wmem_seq(wmem, initial_x16, i));
+
+        invariant !selection ==>
+            wdrs[initial_x8..x8] == initial_wdrs[initial_x8..x8];
+
         decreases loop_ctr;
     {
-
+        cond_sub_to_reg_inner(initial_wdrs, initial_x8, final_x8, initial_x16, num_words, selection, i);
+        i := i + 1;
     }
-    
     // ret
 }
 
