@@ -62,6 +62,7 @@ procedure cond_sub_mod_inner(
         
         !selection ==>
             wdrs[5..x8] == initial_wdrs[5..x8];
+
     reads
         wmem;
 
@@ -127,9 +128,10 @@ procedure cond_sub_mod_inner(
 
         calc == {
             initial_wdrs[5.. widx + 1];
-            == seq_append(initial_wdrs[5.. widx], initial_wdrs[widx]);
+            ==
+            seq_append(initial_wdrs[5.. widx], initial_wdrs[widx]);
             == { assert wdrs[widx] == initial_wdrs[widx]; }
-           seq_append(initial_wdrs[5.. widx], wdrs[widx]);
+            seq_append(initial_wdrs[5.. widx], wdrs[widx]);
             == { assert wdrs[5.. widx] == initial_wdrs[5.. widx];}
             seq_append(wdrs[5.. widx], wdrs[widx]);
             ==
