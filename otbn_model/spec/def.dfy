@@ -108,7 +108,7 @@ predicate valid_state(s: state)
 
 function {:opaque} wmem_seq_core(wmem: map<int, uint256>, start: nat, count: nat): (s: seq<uint256>)
     requires count <= 12 // to prevent use of count as an address
-    requires forall i | 0 <= i < count :: Valid256Addr(wmem, start + 32 * i)
+    requires forall i | 0 <= i < count :: valid_wmem_addr(wmem, start + 32 * i)
     ensures |s| == count
     ensures forall i | 0 <= i < |s| :: s[i] == wmem[start + 32 * i];
     decreases count
@@ -119,7 +119,7 @@ function {:opaque} wmem_seq_core(wmem: map<int, uint256>, start: nat, count: nat
 
 function wmem_seq(wmem: map<int, uint256>, start: nat, count: nat): (s: seq<uint256>)
     requires count <= 12 // to prevent use of count as an address
-    requires forall i | 0 <= i < count :: Valid256Addr(wmem, start + 32 * i)
+    requires forall i | 0 <= i < count :: valid_wmem_addr(wmem, start + 32 * i)
     ensures |s| == count
     ensures forall i | 0 <= i < |s| :: s[i] == wmem[start + 32 * i];
     ensures count > 0 ==> wmem_seq_core(wmem, start, count - 1) + [wmem[start + 32 * (count-1)]] == wmem_seq_core(wmem, start, count)
@@ -196,12 +196,12 @@ lemma lemma_empty_seq_subb()
 {
 }
 
-predicate Valid32Addr(h: map<int, uint32>, addr:int)
+predicate valid_xmem_addr(h: map<int, uint32>, addr:int)
 {
     addr in h
 }
 
-predicate Valid256Addr(h: map<int, uint256>, addr:int)
+predicate valid_wmem_addr(h: map<int, uint256>, addr:int)
 {
     addr in h
 }
@@ -354,7 +354,6 @@ function otbn_sub(x: uint256, y: uint256, st: bool, sb: uint32) : (uint256, flag
 function otbn_subb(x: uint256, y: uint256, st: bool, sb : uint32, flgs: flags_t) : (uint256, flags_t)
     requires sb < 32;
 {
-    // TODO: replace this with uint256_subb
     var cf := if flgs.cf then 1 else 0;
 	var (diff, cout) := uint256_subb(x, uint256_sb(y, st, sb), cf);
     var fg := flags_t(cout == 1, false, false, diff == 0);

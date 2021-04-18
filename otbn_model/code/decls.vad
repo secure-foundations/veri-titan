@@ -42,6 +42,7 @@ function operator(.ok :=) (s: state, b: bool): state extern;
 
 function operator([]) #[a: Type(0)](s: seq(a), i: int): a extern; 
 function operator([ := ]) #[a: Type(0)](s: seq(a), i: int, v: a): seq(a) extern;
+function operator([ .. ]) #[a: Type(0)](s: seq(a), begin: int, end: int): seq(a) extern;
 
 function sub_seq #[a: Type(0)] (s: seq(a), start: int, end: int): seq(a) extern;
 function prefix_seq #[a: Type(0)] (s: seq(a), end: int): seq(a) extern;
@@ -58,8 +59,8 @@ function snd #[a: Type(0), b: Type(0)](m: tuple(a, b)): b extern;
 
 function operator([]) (s: wdrs_t, i: int): uint256 extern; 
 function operator([ := ]) (s: wdrs_t, i: int, v: uint256): wdrs_t extern;
+function operator([ .. ]) (wdrs: wdrs_t, begin: int, end: int): seq(uint256) extern;
 
-function wdrs_seq(wdrs: wdrs_t, start: int, end: int): seq(uint256) extern;
 function wmem_seq(wmem: wmem_t, start: int, count: int): seq(uint256) extern;
 
 function bool_to_uint1(i:bool) : uint1 extern;
@@ -81,6 +82,8 @@ function uint256_ls(x: uint256, num_bytes: int): uint256 extern;
 function uint256_rs(x: uint256, num_bytes: int): uint256 extern;
 function uint256_lh(a: uint256): uint128 extern;
 function uint256_uh(a: uint256): uint128 extern;
+
+function uint256_subb(x: uint256, y: uint256, cin: uint1): tuple(uint256, uint1) extern;
 
 function otbn_xor(a: uint256, b: uint256, st: bool, sb: uint32): uint256 extern;
 function otbn_or(a: uint256, b: uint256, st: bool, sb: uint32): uint256 extern;
@@ -206,17 +209,17 @@ operand_type imm128: uint128 := const;
 operand_type imm32: uint32 := const;
 operand_type imm2: uint2 := const;
 
-function Valid32Addr(h: xmem_t, addr: int): bool extern;
-function Valid256Addr(h: wmem_t, addr: int): bool extern;
+function valid_xmem_addr(h: xmem_t, addr: int): bool extern;
+function valid_wmem_addr(h: wmem_t, addr: int): bool extern;
 
 procedure lw(out grd: reg32, in offset: imm32, in grs1: reg32)
     {:instruction Ins32(LW(grd, grs1, offset))}
     reads
         xmem;
     requires
-        Valid32Addr(xmem, grs1 + offset);
+        valid_xmem_addr(xmem, grs1 + offset);
     ensures
-        Valid32Addr(xmem, old(grs1) + offset);
+        valid_xmem_addr(xmem, old(grs1) + offset);
         grd == xmem[old(grs1) + offset];
 {
     assume false;
@@ -228,7 +231,7 @@ procedure sw(in grs2: reg32, in offset: imm32, in grs1: reg32)
     modifies
         xmem;
     requires/ensures
-        Valid32Addr(xmem, grs1 + offset);
+        valid_xmem_addr(xmem, grs1 + offset);
     ensures
         xmem == old(xmem)[grs1 + offset := grs2];
 {
@@ -562,9 +565,9 @@ procedure bn_lid(inout grd: reg32, inline grd_inc: bool, in offset: imm32, inout
     requires
         !(grd_inc && grs_inc);
         grd < 32;
-        Valid256Addr(wmem, grs + offset);
+        valid_wmem_addr(wmem, grs + offset);
     ensures
-        Valid256Addr(wmem, old(grs) + offset);
+        valid_wmem_addr(wmem, old(grs) + offset);
         wdrs == old(wdrs[grd := wmem[grs + offset]]);
         // grd == (if grd_inc then (old(grd) + 1) % 32 else old(grd));
         grd == (if grd_inc then mod_add(old(grd), 1, 32) else old(grd));
@@ -583,9 +586,9 @@ procedure bn_lid_safe(inout grd: reg32, inline grd_inc: bool, in offset: imm32, 
         !(grd_inc && grs_inc);
         if grd_inc then grd < 31 else grd < 32;
         if grs_inc then grs < 0xffffffe0 else grs < 0x1_0000_0000;
-        Valid256Addr(wmem, grs + offset);
+        valid_wmem_addr(wmem, grs + offset);
     ensures
-        Valid256Addr(wmem, old(grs) + offset);
+        valid_wmem_addr(wmem, old(grs) + offset);
         wdrs == old(wdrs[grd := wmem[grs + offset]]);
         grd == (if grd_inc then (old(grd) + 1) else old(grd));
         grs == (if grs_inc then (old(grs) + 32) else old(grs));
@@ -601,10 +604,10 @@ procedure bn_sid(in grs2: reg32, inline grs2_inc: bool, in offset: imm32, in grs
         wmem;
     requires
         !(grs1_inc && grs2_inc);
-        Valid256Addr(wmem, grs1 + offset);
+        valid_wmem_addr(wmem, grs1 + offset);
         grs2 < 32;
     ensures
-        Valid256Addr(wmem, old(grs1) + offset);
+        valid_wmem_addr(wmem, old(grs1) + offset);
         wmem == old(wmem[grs1 + offset := wdrs[grs2]]);
         grs2 == (if grs2_inc then mod_add(old(grs2), 1, 32) else old(grs2));
         grs1 == (if grs1_inc then mod_add(old(grs1), 32, 0x1_0000_0000) else old(grs1));
@@ -619,11 +622,11 @@ procedure bn_sid_safe(in grs2: reg32, inline grs2_inc: bool, in offset: imm32, i
         wmem;
     requires
         !(grs1_inc && grs2_inc);
-        Valid256Addr(wmem, grs1 + offset);
+        valid_wmem_addr(wmem, grs1 + offset);
         if grs1_inc then grs1 < 0xffffffe0 else grs1 < 0x1_0000_0000;
         if grs2_inc then grs2 < 31 else grs2 < 32;
     ensures
-        Valid256Addr(wmem, old(grs1) + offset);
+        valid_wmem_addr(wmem, old(grs1) + offset);
         wmem == old(wmem[grs1 + offset := wdrs[grs2]]);
         grs1 == (if grs1_inc then (old(grs1) + 32) else old(grs1));
         grs2 == (if grs2_inc then (old(grs2) + 1) else old(grs2));
