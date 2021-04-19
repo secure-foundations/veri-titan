@@ -83,11 +83,15 @@ datatype whileCond =
 datatype flags_t = flags_t(cf: bool, msb: bool, lsb: bool, zero: bool)
 datatype fgroups_t = fgroups_t(fg0: flags_t, fg1: flags_t)
 
-type gprs_t = gprs : seq<uint32> | |gprs| == 32 witness *
+type gprs_t = gprs : seq<uint32>  | |gprs| == 32 witness *
 type wdrs_t = wdrs : seq<uint256> | |wdrs| == 32 witness *
+type buff_t = buff : seq<uint256> | |buff| >= 1 witness *
+type wmem_t = map<int, buff_t>
+
+datatype view_t = view_t(base_addr: int, index: nat, buff: buff_t)
 
 datatype state = state(
-    gprs: gprs_t,  // 32-bit registers
+    gprs: gprs_t, // 32-bit registers
     wdrs: wdrs_t, // 256-bit registers
 
     wmod: uint256,
@@ -97,7 +101,7 @@ datatype state = state(
     fgroups: fgroups_t,
 
     xmem: map<int, uint32>,
-    wmem: map<int, uint256>,
+    wmem: wmem_t,
 
     ok: bool)
 
@@ -106,105 +110,32 @@ predicate valid_state(s: state)
     s.ok
 }
 
-function {:opaque} wmem_seq_core(wmem: map<int, uint256>, start: nat, count: nat): (s: seq<uint256>)
-    requires count <= 12 // to prevent use of count as an address
-    requires forall i | 0 <= i < count :: valid_wmem_addr(wmem, start + 32 * i)
-    ensures |s| == count
-    ensures forall i | 0 <= i < |s| :: s[i] == wmem[start + 32 * i];
-    decreases count
-{
-    if count == 0 then []
-    else wmem_seq_core(wmem, start, count - 1) + [wmem[start + 32 * (count - 1)]]
-}
-
-function wmem_seq(wmem: map<int, uint256>, start: nat, count: nat): (s: seq<uint256>)
-    requires count <= 12 // to prevent use of count as an address
-    requires forall i | 0 <= i < count :: valid_wmem_addr(wmem, start + 32 * i)
-    ensures |s| == count
-    ensures forall i | 0 <= i < |s| :: s[i] == wmem[start + 32 * i];
-    ensures count > 0 ==> wmem_seq_core(wmem, start, count - 1) + [wmem[start + 32 * (count-1)]] == wmem_seq_core(wmem, start, count)
-    decreases count
-{
-    wmem_seq_core(wmem, start, count) 
-}
-
-function wdrs_seq(wdrs: wdrs_t, start: reg_index, end: reg_index): (s: seq<uint256>)
-    requires start <= end
-    ensures |s| == end - start
-{
-    wdrs[start..end]
-}
-
-function sub_seq<T>(s: seq<T>, start: int, end: int): seq<T>
-    requires 0 <= start <= end <= |s|
-{
-    s[start..end]
-}
-
-function seq_empty<T>(): seq<T>
-{
-    []
-}
-
-function prefix_seq<T>(s: seq<T>, end: int): seq<T>
-    requires 0 <= end <= |s|
-{
-    s[..end]
-}
-
-function seq_len<T>(s: seq<T>): nat
-{
-    |s|
-}
-
-function seq_concat<T>(x: seq<T>, y: seq<T>): seq<T>
-{
-    x + y
-}
-
-function seq_append<T>(xs: seq<T>, x: T): seq<T>
-{
-    xs + [x]
-}
-
-function seq_subb(x: seq<uint256>, y: seq<uint256>) : (seq<uint256>, uint1)
-    requires |x| == |y|
-    ensures var (z, cout) := seq_subb(x, y);
-        && |z| == |x|
-{
-    if |x| == 0 then ([], 0)
-    else 
-        var idx := |x| - 1;
-        var (zrest, ctmp) := seq_subb(prefix_seq(x, idx), prefix_seq(y, idx));
-        var (z0, cout) := uint256_subb(x[idx], y[idx], ctmp);
-        (zrest + [z0], cout)
-}
-
-lemma lemma_extend_seq_subb(
-        x: seq<uint256>, y: seq<uint256>, z: seq<uint256>, 
-        cin_old:uint1, cin:uint1,
-        new_x:uint256, new_y:uint256, new_z:uint256)
-    requires |x| == |y|
-    requires (z, cin_old) == seq_subb(x, y)
-    requires (new_z, cin) == uint256_subb(new_x, new_y, cin_old)
-    ensures (z + [new_z], cin) == seq_subb(x + [new_x], y + [new_y])
-{
-}
-
-lemma lemma_empty_seq_subb()
-    ensures ([], 0) == seq_subb([], [])
-{
-}
-
 predicate valid_xmem_addr(h: map<int, uint32>, addr:int)
 {
     addr in h
 }
 
-predicate valid_wmem_addr(h: map<int, uint256>, addr:int)
+predicate valid_wmem_addr(wmem: wmem_t, addr:int, view: view_t)
 {
-    addr in h
+    var base_addr := view.base_addr;
+    && base_addr in wmem
+    && wmem[base_addr] == view.buff
+    && view.index < |view.buff|
+
+    && addr == view.base_addr + 32 * view.index
 }
+
+// predicate valid_wmem_addr_fin(wmem: wmem_t, addr:int, view: view_t)
+// {
+//     var base_addr := view.base_addr;
+//     && base_addr in wmem
+//     && wmem[base_addr] == view.buff
+//     && view.index == |view.buff|
+
+//     && addr == view.base_addr + 32 * view.index
+//     && valid_view(wmem, view)
+// }
+
 
 function eval_reg32(s: state, r: reg32_t) : uint32
 {
@@ -360,6 +291,35 @@ function otbn_subb(x: uint256, y: uint256, st: bool, sb : uint32, flgs: flags_t)
     (diff, fg)
 }
 
+function seq_subb(x: seq<uint256>, y: seq<uint256>) : (seq<uint256>, uint1)
+    requires |x| == |y|
+    ensures var (z, cout) := seq_subb(x, y);
+        && |z| == |x|
+{
+    if |x| == 0 then ([], 0)
+    else 
+        var idx := |x| - 1;
+        var (zrest, ctmp) := seq_subb(x[..idx], y[..idx]);
+        var (z0, cout) := uint256_subb(x[idx], y[idx], ctmp);
+        (zrest + [z0], cout)
+}
+
+lemma lemma_extend_seq_subb(
+        x: seq<uint256>, y: seq<uint256>, z: seq<uint256>, 
+        cin_old:uint1, cin:uint1,
+        new_x:uint256, new_y:uint256, new_z:uint256)
+    requires |x| == |y|
+    requires (z, cin_old) == seq_subb(x, y)
+    requires (new_z, cin) == uint256_subb(new_x, new_y, cin_old)
+    ensures (z + [new_z], cin) == seq_subb(x + [new_x], y + [new_y])
+{
+}
+
+lemma lemma_empty_seq_subb()
+    ensures ([], 0) == seq_subb([], [])
+{
+}
+
 function otbn_subbi(x: uint256, imm: uint256) : (uint256, flags_t)
     requires imm < 1024;
     // requires imm < x; //TODO: Is this true?
@@ -370,6 +330,7 @@ function otbn_subbi(x: uint256, imm: uint256) : (uint256, flags_t)
     var fg := flags_t(false, false, false, diff == 0);
     (diff % BASE_256, fg)
 }
+
 
 function otbn_subm(x: uint256, y: uint256, wmod: uint256) : uint256
 {

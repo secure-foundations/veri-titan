@@ -42,7 +42,7 @@ function va_update_xmem(sM: va_state, sK: va_state): va_state
     sK.(xmem := sM.xmem)
 }
 
-function va_get_wmem(s: va_state): map<int, uint256>
+function va_get_wmem(s: va_state): wmem_t
 {
     s.wmem
 }
@@ -102,6 +102,33 @@ type va_operand_imm2 = uint2
 predicate va_is_src_imm2(v:uint2, s: va_state) {true}
 function va_eval_imm2(s: va_state, v:uint2):uint2 {v}
 function method va_const_imm2(v:uint32):uint32 {v}
+
+
+function seq_empty<T>(): seq<T>
+{
+    []
+}
+
+function prefix_seq<T>(s: seq<T>, end: int): seq<T>
+    requires 0 <= end <= |s|
+{
+    s[..end]
+}
+
+function seq_len<T>(s: seq<T>): nat
+{
+    |s|
+}
+
+function seq_concat<T>(x: seq<T>, y: seq<T>): seq<T>
+{
+    x + y
+}
+
+function seq_append<T>(xs: seq<T>, x: T): seq<T>
+{
+    xs + [x]
+}
 
 // reg32
 
