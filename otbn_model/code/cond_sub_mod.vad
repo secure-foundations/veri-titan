@@ -138,8 +138,7 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
         fgroups.fg0.cf == false;
         fgroups.fg1.cf == selection;
 
-        valid_base_addr(wmem, x16);
-        seq_len(wmem[x16]) == num_words;
+        valid_base_addr(wmem, x16, num_words);
 
         w31 == 0;
     reads
@@ -151,13 +150,12 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
         wdrs; w2; w3; w4; w31;
 
     ensures
-        valid_base_addr(wmem, old(x16));
-        seq_len(wmem[old(x16)]) == num_words;
+        valid_base_addr(old(wmem), old(x16), num_words);
 
         selection ==>
             tuple(wdrs[5..5+num_words], bool_to_uint1(fgroups.fg0.cf))
             ==
-            seq_subb(old(wdrs[5..5+num_words]), as_seq(wmem[old(x16)]));
+            seq_subb(old(wdrs[5..5+num_words]), as_seq(old(wmem[x16])));
 
         !selection ==>
             wdrs[5..5+num_words] == old(wdrs)[5..5+num_words];
@@ -199,18 +197,13 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
         invariant !selection ==>
             wdrs[5..x8] == initial_wdrs[5..x8];
 
+        invariant wmem == old(wmem);
         decreases loop_ctr;
     {
         iter := cond_sub_mod_inner(initial_wdrs, selection, iter);
     }
 
-    assert iter.buff == wmem[initial_x16];
-    assert iter.buff[..iter.index] == as_seq(wmem[initial_x16]);
-
-    assert selection ==>
-        tuple(wdrs[5..5 +num_words], bool_to_uint1(fgroups.fg0.cf))
-        ==
-        seq_subb(initial_wdrs[5..5+num_words], as_seq(wmem[initial_x16]));
+    assert iter.buff[..iter.index] == as_seq(iter.buff);
 }
 
 #verbatim

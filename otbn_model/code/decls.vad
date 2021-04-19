@@ -91,7 +91,7 @@ var ok: bool {:state ok()};
 
 var xmem: xmem_t {:state xmem()};
 function valid_xmem_addr(h: xmem_t, addr: int): bool extern;
-function valid_base_addr(wmem: wmem_t, base_addr: int): bool extern;
+function valid_base_addr(wmem: wmem_t, base_addr: int, num_words: int): bool extern;
 
 type iter_t: Type(0) extern;
 function iter_cons(base_addr: int, index: nat, buff: buff_t): iter_t extern;

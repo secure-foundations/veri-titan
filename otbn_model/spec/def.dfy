@@ -121,16 +121,17 @@ predicate valid_xmem_addr(h: map<int, uint32>, addr:int)
     addr in h
 }
 
-predicate valid_base_addr(wmem: wmem_t, base_addr: int)
+predicate valid_base_addr(wmem: wmem_t, base_addr: int, num_words: int)
 {
     && base_addr in wmem
-    && base_addr + |wmem[base_addr]| * 32 <= DMEM_LIMIT
+    && num_words == |wmem[base_addr]|
+    && base_addr + num_words * 32 <= DMEM_LIMIT
 }
 
 predicate valid_iter(wmem: wmem_t, iter: iter_t)
 {
     var base_addr := iter.base_addr;
-    && valid_base_addr(wmem, base_addr)
+    && valid_base_addr(wmem, base_addr, |iter.buff|)
     && wmem[base_addr] == iter.buff
     && iter.index <= |iter.buff|
 }
