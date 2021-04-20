@@ -85,16 +85,10 @@ datatype fgroups_t = fgroups_t(fg0: flags_t, fg1: flags_t)
 
 type gprs_t = gprs : seq<uint32>  | |gprs| == 32 witness *
 type wdrs_t = wdrs : seq<uint256> | |wdrs| == 32 witness *
-type buff_t = buff : seq<uint256> | |buff| >= 1 witness *
 
-function as_seq(buff: buff_t) : seq<uint256>
-{
-    buff
-}
+type wmem_t = map<int, seq<uint256>>
 
-type wmem_t = map<int, buff_t>
-
-datatype iter_t = iter_cons(base_addr: int, index: nat, buff: buff_t)
+datatype iter_t = iter_cons(base_addr: int, index: nat, buff: seq<uint256>)
 
 datatype state = state(
     gprs: gprs_t, // 32-bit registers
@@ -124,7 +118,7 @@ predicate valid_xmem_addr(h: map<int, uint32>, addr:int)
 predicate valid_base_addr(wmem: wmem_t, base_addr: int, num_words: int)
 {
     && base_addr in wmem
-    && num_words == |wmem[base_addr]|
+    && num_words == |wmem[base_addr]| > 0
     && base_addr + num_words * 32 <= DMEM_LIMIT
 }
 
@@ -136,16 +130,11 @@ predicate valid_iter(wmem: wmem_t, iter: iter_t)
     && iter.index <= |iter.buff|
 }
 
-predicate valid_live_iter(wmem: wmem_t, iter: iter_t)
+predicate valid_wmem_addr(wmem: wmem_t, addr:int, iter: iter_t)
 {
     && valid_iter(wmem, iter)
     // tighter constraint
     && iter.index < |iter.buff|
-}
-
-predicate valid_wmem_addr(wmem: wmem_t, addr:int, iter: iter_t)
-{
-    && valid_live_iter(wmem, iter)
     && addr == iter.base_addr + 32 * iter.index
 }
 

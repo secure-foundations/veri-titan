@@ -155,7 +155,7 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
         selection ==>
             tuple(wdrs[5..5+num_words], bool_to_uint1(fgroups.fg0.cf))
             ==
-            seq_subb(old(wdrs[5..5+num_words]), as_seq(old(wmem[x16])));
+            seq_subb(old(wdrs[5..5+num_words]), old(wmem[x16]));
 
         !selection ==>
             wdrs[5..5+num_words] == old(wdrs)[5..5+num_words];
@@ -203,7 +203,7 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
         iter := cond_sub_mod_inner(initial_wdrs, selection, iter);
     }
 
-    assert iter.buff[..iter.index] == as_seq(iter.buff);
+    assert iter.buff[..iter.index] == iter.buff;
 }
 
 #verbatim

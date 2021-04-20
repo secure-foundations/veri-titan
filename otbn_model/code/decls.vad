@@ -42,15 +42,7 @@ type reg32_t: Type(0) extern;
 type reg256_t: Type(0) extern;
 
 type xmem_t: Type(0) := map(int, uint32);
-
-type buff_t: Type(0) extern;
-function operator([]) (s: buff_t, i: int): uint256 extern; 
-function operator([ := ]) (s: buff_t, i: int, v: uint256): buff_t extern;
-function operator([ .. ]) (s: buff_t, begin: int, end: int): seq(uint256) extern;
-function seq_len(s: buff_t): nat extern;
-function as_seq(s: buff_t): seq(uint256) extern;
-
-type wmem_t: Type(0) := map(int, buff_t);
+type wmem_t: Type(0) := map(int, seq(uint256));
 
 type wdrs_t: Type(0) extern;
 function operator([]) (s: wdrs_t, i: int): uint256 extern; 
@@ -94,11 +86,11 @@ function valid_xmem_addr(h: xmem_t, addr: int): bool extern;
 function valid_base_addr(wmem: wmem_t, base_addr: int, num_words: int): bool extern;
 
 type iter_t: Type(0) extern;
-function iter_cons(base_addr: int, index: nat, buff: buff_t): iter_t extern;
+function iter_cons(base_addr: int, index: nat, buff: seq(uint256)): iter_t extern;
 function operator(.base_addr) (iter :iter_t): int extern;
 function operator(.index) (iter :iter_t): int extern;
 function operator(.index := ) (iter: iter_t, i :int): iter_t extern;
-function operator(.buff) (iter :iter_t): buff_t extern;
+function operator(.buff) (iter :iter_t): seq(uint256) extern;
 
 var wmem: wmem_t {:state wmem()};
 function valid_iter(wmem: wmem_t, iter: iter_t): bool extern;
@@ -638,30 +630,30 @@ procedure bn_lid_safe(
     bn_lid(grd, grd_inc, offset, grs, grs_inc, iter);
 }
 
-// procedure bn_sid(
-//     in grs2: reg32, inline grs2_inc: bool, in offset: imm32,
-//     in grs1: reg32, inline grs1_inc: bool,
-//     ghost iter: iter_t)
-//     {:instruction Ins256(BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc))}
-//     requires
-//         !(grs1_inc && grs2_inc);
-//         valid_wmem_addr(wmem, grs1 + offset, iter);
-//         grs2 < 32;
+procedure bn_sid(
+    in grs2: reg32, inline grs2_inc: bool, in offset: imm32,
+    in grs1: reg32, inline grs1_inc: bool,
+    ghost iter: iter_t)
+    {:instruction Ins256(BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc))}
+    requires
+        !(grs1_inc && grs2_inc);
+        valid_wmem_addr(wmem, grs1 + offset, iter);
+        grs2 < 32;
 
-//     reads
-//         wdrs;
+    reads
+        wdrs;
 
-//     modifies
-//         wmem;
+    modifies
+        wmem;
 
-//     ensures
-//         valid_wmem_addr(wmem, old(grs1) + offset, iter);
-//         wmem == old(wmem[iter.base_addr := wmem[iter.base_addr][iter.index := wdrs[grs2]]]);
-//         grs2 == (if grs2_inc then mod_add(old(grs2), 1, 32) else old(grs2));
-//         grs1 == (if grs1_inc then mod_add(old(grs1), 32, 0x1_0000_0000) else old(grs1));
-// {
-//     assume false;
-// }
+    ensures
+        valid_wmem_addr(wmem, old(grs1) + offset, iter);
+        wmem == old(wmem[iter.base_addr := wmem[iter.base_addr][iter.index := wdrs[grs2]]]);
+        grs2 == (if grs2_inc then mod_add(old(grs2), 1, 32) else old(grs2));
+        grs1 == (if grs1_inc then mod_add(old(grs1), 32, 0x1_0000_0000) else old(grs1));
+{
+    assume false;
+}
 
 // procedure bn_sid_safe(
 //     in grs2: reg32, inline grs2_inc: bool, in offset: imm32,
