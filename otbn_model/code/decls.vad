@@ -631,8 +631,8 @@ procedure bn_lid_safe(
 }
 
 procedure bn_sid(
-    in grs2: reg32, inline grs2_inc: bool,
-    in offset: imm32, in grs1: reg32, inline grs1_inc: bool,
+    inout grs2: reg32, inline grs2_inc: bool,
+    in offset: imm32, inout grs1: reg32, inline grs1_inc: bool,
     ghost iter: iter_t)
     {:instruction Ins256(BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc))}
     requires
@@ -655,8 +655,8 @@ procedure bn_sid(
 }
 
 procedure bn_sid_safe(
-    in grs2: reg32, inline grs2_inc: bool,
-    in offset: imm32, in grs1: reg32, inline grs1_inc: bool,
+    inout grs2: reg32, inline grs2_inc: bool,
+    in offset: imm32, inout grs1: reg32, inline grs1_inc: bool,
     ghost iter: iter_t)
     returns (ghost next_iter: iter_t)
 
