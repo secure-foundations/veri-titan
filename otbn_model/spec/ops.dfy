@@ -39,12 +39,12 @@ module ops {
 
 	function method {:opaque} uint32_add(x:uint32, y:uint32):uint32
 	{
-		(x + y) % 0x1_0000_0000
+		(x + y) % BASE_32
 	}
 
 	function method {:opaque} uint32_sub(x:uint32, y:uint32):uint32
 	{
-		(x - y) % 0x1_0000_0000
+		(x - y) % BASE_32
 	}
 
 	function method {:opaque} uint32_se(x:uint32, size:int):uint32

@@ -196,20 +196,19 @@ function mod_add(a: nat, b: nat, m: nat): nat
 
 predicate va_state_eq(s0: va_state, s1: va_state)
 {
-    s0 == s1
+    // s0 == s1
+    && s0.gprs == s1.gprs
+    && s0.wdrs == s1.wdrs
+    && s0.fgroups == s1.fgroups
 
-    // && s0.gprs == s1.gprs
-    // && s0.wdrs == s1.wdrs
-    // && s0.fgroups == s1.fgroups
+    && s0.wmod == s1.wmod
+    && s0.wrnd == s1.wrnd
+    && s0.wacc == s1.wacc
 
-    // && s0.wmod == s1.wmod
-    // && s0.wrnd == s1.wrnd
-    // && s0.wacc == s1.wacc
-
-    // && s0.xmem == s1.xmem
-    // && s0.wmem == s1.wmem
+    && s0.xmem == s1.xmem
+    && s0.wmem == s1.wmem
     
-    // && s0.ok == s1.ok
+    && s0.ok == s1.ok
 }
 
 predicate{:opaque} evalCodeOpaque(c:code, s0:state, sN:state)
