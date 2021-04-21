@@ -83,7 +83,7 @@ var ok: bool {:state ok()};
 
 var xmem: xmem_t {:state xmem()};
 function valid_xmem_addr(h: xmem_t, addr: int): bool extern;
-function valid_base_addr(wmem: wmem_t, base_addr: int, num_words: int): bool extern;
+function valid_buff_addr(wmem: wmem_t, base_addr: int, num_words: int): bool extern;
 
 type iter_t: Type(0) extern;
 function iter_cons(base_addr: int, index: nat, buff: seq(uint256)): iter_t extern;
@@ -91,6 +91,7 @@ function operator(.base_addr) (iter :iter_t): int extern;
 function operator(.index) (iter :iter_t): int extern;
 function operator(.index := ) (iter: iter_t, i :int): iter_t extern;
 function operator(.buff) (iter :iter_t): seq(uint256) extern;
+function operator(.buff := ) (iter :iter_t, buff: seq(uint256)): iter_t extern;
 
 var wmem: wmem_t {:state wmem()};
 function valid_iter(wmem: wmem_t, iter: iter_t): bool extern;
@@ -574,8 +575,8 @@ procedure bn_mulqacc_so_safe(
 function mod_add(a: int, b: int, m: int): int extern;
 
 procedure bn_lid(
-    inout grd: reg32, inline grd_inc: bool, in offset: imm32,
-    inout grs: reg32, inline grs_inc: bool,
+    inout grd: reg32, inline grd_inc: bool,
+    in offset: imm32, inout grs: reg32, inline grs_inc: bool,
     ghost iter: iter_t)
     {:instruction Ins256(BN_LID(grd, grd_inc, offset, grs, grs_inc))}
     requires
@@ -599,8 +600,8 @@ procedure bn_lid(
 }
 
 procedure bn_lid_safe(
-    inout grd: reg32, inline grd_inc: bool, in offset: imm32,
-    inout grs: reg32, inline grs_inc: bool,
+    inout grd: reg32, inline grd_inc: bool,
+    in offset: imm32, inout grs: reg32, inline grs_inc: bool,
     ghost iter: iter_t)
     returns (ghost next_iter: iter_t)
 
@@ -630,14 +631,14 @@ procedure bn_lid_safe(
 }
 
 procedure bn_sid(
-    in grs2: reg32, inline grs2_inc: bool, in offset: imm32,
-    in grs1: reg32, inline grs1_inc: bool,
+    in grs2: reg32, inline grs2_inc: bool,
+    in offset: imm32, in grs1: reg32, inline grs1_inc: bool,
     ghost iter: iter_t)
     {:instruction Ins256(BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc))}
     requires
         !(grs1_inc && grs2_inc);
-        valid_wmem_addr(wmem, grs1 + offset, iter);
         grs2 < 32;
+        valid_wmem_addr(wmem, grs1 + offset, iter);
 
     reads
         wdrs;
@@ -646,7 +647,6 @@ procedure bn_sid(
         wmem;
 
     ensures
-        valid_wmem_addr(wmem, old(grs1) + offset, iter);
         wmem == old(wmem[iter.base_addr := wmem[iter.base_addr][iter.index := wdrs[grs2]]]);
         grs2 == (if grs2_inc then mod_add(old(grs2), 1, 32) else old(grs2));
         grs1 == (if grs1_inc then mod_add(old(grs1), 32, 0x1_0000_0000) else old(grs1));
@@ -654,44 +654,43 @@ procedure bn_sid(
     assume false;
 }
 
-// procedure bn_sid_safe(
-//     in grs2: reg32, inline grs2_inc: bool, in offset: imm32,
-//     in grs1: reg32, inline grs1_inc: bool,
-//     ghost iter: iter_t)
-//     returns (ghost next_iter: iter_t)
+procedure bn_sid_safe(
+    in grs2: reg32, inline grs2_inc: bool,
+    in offset: imm32, in grs1: reg32, inline grs1_inc: bool,
+    ghost iter: iter_t)
+    returns (ghost next_iter: iter_t)
 
-//     requires
-//         !(grs1_inc && grs2_inc);
-//         valid_wmem_addr(wmem, grs1 + offset, iter);
-//         if grs1_inc then grs1 < 0xffffffe0 else grs1 < 0x1_0000_0000;
-//         if grs2_inc then grs2 < 31 else grs2 < 32;
+    requires
+        !(grs1_inc && grs2_inc);
+        if grs2_inc then grs2 < 31 else grs2 < 32;
+        valid_wmem_addr(wmem, grs1 + offset, iter);
 
-//     reads
-//         wdrs;
+    reads
+        wdrs;
 
-//     modifies
-//         wmem;
+    modifies
+        wmem;
 
-//     ensures
-//         valid_wmem_addr(wmem, old(grs1) + offset, iter);
-//         valid_wmem_addr(wmem, grs1 + offset, next_iter);
+    ensures
+        wmem == old(wmem[iter.base_addr := iter.buff[iter.index := wdrs[grs2]]]);
+        admissible_wmem_addr(wmem, grs1 + offset, next_iter);
 
-//         grs1 == (if grs1_inc then (old(grs1) + 32) else old(grs1));
-//         grs2 == (if grs2_inc then (old(grs2) + 1) else old(grs2));
-// {
-//     new_buff := wmem[iter.base_addr][iter.index := wdrs[grs2]];
-//     ghost var new_index := if grs1_inc then iter.index + 1 else iter.index;
-//     next_iter := iter.(index := new_index).(buff := new_buff);
-//     bn_sid(grs2, grs2_inc, offset, grs1, grs1_inc, iter);
-// }
+        grs1 == (if grs1_inc then (old(grs1) + 32) else old(grs1));
+        grs2 == (if grs2_inc then (old(grs2) + 1) else old(grs2));
+{
+    ghost var new_buff := wmem[iter.base_addr][iter.index := wdrs[grs2]];
+    ghost var new_index := if grs1_inc then iter.index + 1 else iter.index;
+    next_iter := iter.(index := new_index).(buff := new_buff);
+    bn_sid(grs2, grs2_inc, offset, grs1, grs1_inc, iter);
+}
 
-// procedure bn_mov(inout dst: reg256, in src: reg256)
-//     {:instruction Ins256(BN_MOV(dst, src))}
-//     ensures
-//         dst == old(src);
-// {
-//     assume false;
-// }
+procedure bn_mov(inout dst: reg256, in src: reg256)
+    {:instruction Ins256(BN_MOV(dst, src))}
+    ensures
+        dst == old(src);
+{
+    assume false;
+}
 
 procedure bn_movr(inout grd: reg32, inline grd_inc: bool, inout grs: reg32, inline grs_inc: bool)
     {:instruction Ins256(BN_MOVR(grd, grd_inc, grs, grs_inc))}

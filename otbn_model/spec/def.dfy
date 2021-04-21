@@ -115,18 +115,26 @@ predicate valid_xmem_addr(h: map<int, uint32>, addr:int)
     addr in h
 }
 
-predicate valid_base_addr(wmem: wmem_t, base_addr: int, num_words: int)
+predicate valid_buff_addr(wmem: wmem_t, base_addr: int, num_words: int)
 {
+    // base_addr maps to some buffer in wmem
     && base_addr in wmem
-    && num_words == |wmem[base_addr]| > 0
+    // the length is correct
+    && num_words == |wmem[base_addr]|
+    // the buffer is not empty
+    && num_words != 0
+    // the buffer doesn't expand beyond memory bound
     && base_addr + num_words * 32 <= DMEM_LIMIT
 }
 
 predicate valid_iter(wmem: wmem_t, iter: iter_t)
 {
     var base_addr := iter.base_addr;
-    && valid_base_addr(wmem, base_addr, |iter.buff|)
+    // base_addr points to a valid buffer
+    && valid_buff_addr(wmem, base_addr, |iter.buff|)
+    // the view is consistent with wmem
     && wmem[base_addr] == iter.buff
+    // the index is within bound (or at end)
     && iter.index <= |iter.buff|
 }
 
@@ -139,7 +147,7 @@ predicate admissible_wmem_addr(wmem: wmem_t, addr:int, iter: iter_t)
 predicate valid_wmem_addr(wmem: wmem_t, addr:int, iter: iter_t)
 {
     && admissible_wmem_addr(wmem, addr, iter)
-    // tighter constraint
+    // tighter constraint so we can dereference
     && iter.index < |iter.buff|
 }
 
