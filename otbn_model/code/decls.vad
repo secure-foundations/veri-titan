@@ -94,6 +94,7 @@ function operator(.buff) (iter :iter_t): seq(uint256) extern;
 
 var wmem: wmem_t {:state wmem()};
 function valid_iter(wmem: wmem_t, iter: iter_t): bool extern;
+function admissible_wmem_addr(h: wmem_t, addr: int, iter: iter_t): bool extern;
 function valid_wmem_addr(h: wmem_t, addr: int, iter: iter_t): bool extern;
 
 var x0: uint32 {:state reg32_t(GPR(0))};
@@ -617,11 +618,9 @@ procedure bn_lid_safe(
     ensures
         wdrs == old(wdrs[grd := iter.buff[iter.index]]);
 
-        valid_iter(wmem, next_iter);
         next_iter == iter.(index := if grs_inc then iter.index + 1 else iter.index);
 
-        next_iter.index < seq_len(iter.buff) ==> 
-            valid_wmem_addr(wmem, grs + offset, next_iter);
+        admissible_wmem_addr(wmem, grs + offset, next_iter);
 
         grd == (if grd_inc then (old(grd) + 1) else old(grd));
         grs == (if grs_inc then (old(grs) + 32) else old(grs));

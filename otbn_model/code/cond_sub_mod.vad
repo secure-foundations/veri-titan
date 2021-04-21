@@ -40,6 +40,7 @@ procedure cond_sub_mod_inner(ghost initial_wdrs: wdrs_t, ghost selection: bool, 
         x10 == 3;
         x11 == 2;
 
+        // this bounds the number of iteration
         seq_len(iter.buff) <= 12;
         valid_wmem_addr(wmem, x16, iter);
 
@@ -71,10 +72,8 @@ procedure cond_sub_mod_inner(ghost initial_wdrs: wdrs_t, ghost selection: bool, 
         next_iter.index == iter.index + 1;
         next_iter.base_addr == iter.base_addr;
         next_iter.buff == iter.buff;
-        valid_iter(wmem, next_iter);
         
-        next_iter.index < seq_len(next_iter.buff) ==>
-            valid_wmem_addr(wmem, x16, next_iter);
+        admissible_wmem_addr(wmem, x16, next_iter);
 
         wdrs[x8..] == initial_wdrs[x8..];
 
@@ -184,8 +183,7 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
         invariant seq_len(iter.buff) == num_words;
         invariant iter.base_addr == initial_x16;
         invariant valid_iter(wmem, iter);
-        invariant iter.index < num_words ==>
-            valid_wmem_addr(wmem, x16, iter);
+        invariant admissible_wmem_addr(wmem, x16, iter);
 
         invariant wdrs[x8..] == initial_wdrs[x8..];
 

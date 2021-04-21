@@ -130,12 +130,17 @@ predicate valid_iter(wmem: wmem_t, iter: iter_t)
     && iter.index <= |iter.buff|
 }
 
-predicate valid_wmem_addr(wmem: wmem_t, addr:int, iter: iter_t)
+predicate admissible_wmem_addr(wmem: wmem_t, addr:int, iter: iter_t)
 {
     && valid_iter(wmem, iter)
+    && addr == iter.base_addr + 32 * iter.index
+}
+
+predicate valid_wmem_addr(wmem: wmem_t, addr:int, iter: iter_t)
+{
+    && admissible_wmem_addr(wmem, addr, iter)
     // tighter constraint
     && iter.index < |iter.buff|
-    && addr == iter.base_addr + 32 * iter.index
 }
 
 function eval_reg32(s: state, r: reg32_t) : uint32
