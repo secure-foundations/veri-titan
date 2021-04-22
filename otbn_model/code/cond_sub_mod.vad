@@ -182,7 +182,6 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
 
         invariant seq_len(iter.buff) == num_words;
         invariant iter.base_addr == initial_x16;
-        invariant valid_iter(wmem, iter);
         invariant admissible_wmem_addr(wmem, x16, iter);
 
         invariant wdrs[x8..] == initial_wdrs[x8..];

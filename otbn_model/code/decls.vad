@@ -214,7 +214,6 @@ function uint256_ls(x: uint256, num_bytes: int): uint256 extern;
 function uint256_rs(x: uint256, num_bytes: int): uint256 extern;
 function uint256_lh(a: uint256): uint128 extern;
 function uint256_uh(a: uint256): uint128 extern;
-
 function uint256_subb(x: uint256, y: uint256, cin: uint1): tuple(uint256, uint1) extern;
 
 function otbn_xor(a: uint256, b: uint256, st: bool, sb: uint32): uint256 extern;
@@ -730,7 +729,7 @@ procedure bn_sel(inout dst: reg256, in src1: reg256, in src2: reg256, inline whi
     reads
         fgroups;
     ensures
-        dst == (if get_flag(fgroups, which_group, flag) then old(src1) else old(src2));
+        dst == (if old(get_flag(fgroups, which_group, flag)) then old(src1) else old(src2));
 {
     assume false;
 }
