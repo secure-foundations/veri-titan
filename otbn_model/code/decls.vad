@@ -5,7 +5,6 @@ include{: verbatim} "../spec/ops.dfy"
 #verbatim
 module bignum_decls {
 
-
 import opened ops
 import opened bignum_vale
 import opened bignum_def
@@ -16,7 +15,6 @@ type seq(a: Type(0)): Type(0) {: primitive} extern;
 function operator([]) #[a: Type(0)](s: seq(a), i: int): a extern; 
 function operator([ := ]) #[a: Type(0)](s: seq(a), i: int, v: a): seq(a) extern;
 function operator([ .. ]) #[a: Type(0)](s: seq(a), begin: int, end: int): seq(a) extern;
-function prefix_seq #[a: Type(0)] (s: seq(a), end: int): seq(a) extern;
 function seq_len #[a: Type(0)] (s: seq(a)): nat extern;
 function seq_concat #[a: Type(0)](x: seq(a), y: seq(a)): seq(a) extern;
 function seq_append #[a: Type(0)](xs: seq(a), x: a): seq(a) extern;
@@ -27,12 +25,17 @@ function operator(?[]) #[a:Type(0), b:Type(0)](m:map(a, b), key:a):bool extern;
 function operator([]) #[a: Type(0), b: Type(0)](m: map(a, b), key: a): b extern;
 function operator([ := ]) #[a: Type(0), b: Type(0)](m: map(a, b), key: a, v: b): map(a, b) extern;
 
-type nat: Type(0) := int_range(0, _);
-type uint1: Type(0) := int_range(0, 1);
-type uint2: Type(0) := int_range(0, 3);
-type uint32: Type(0) := int_range(0, 0xffff_ffff);
-type uint128: Type(0) := int_range(0, 0xffffffffffffffffffffffffffffffff);
+type nat:     Type(0) := int_range(0, _);
+type uint1:   Type(0) := int_range(0, 1);
+type uint2:   Type(0) := int_range(0, 3);
+type uint32:  Type(0) := int_range(0, 0xffffffff);
+type uint128: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff);
 type uint256: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff);
+
+const BASE_32:  int extern;
+const BASE_64:  int extern; 
+const BASE_128: int extern; 
+const BASE_256: int extern; 
 
 type state: Type(0) {: primitive} extern;
 function operator(.ok) (s: state): bool extern;
@@ -594,7 +597,7 @@ procedure bn_lid(
         valid_wmem_addr(wmem, old(grs) + offset, iter);
         wdrs == old(wdrs[grd := wmem[iter.base_addr][iter.index]]);
         grd == (if grd_inc then mod_add(old(grd), 1, 32) else old(grd));
-        grs == (if grs_inc then mod_add(old(grs), 32, 0x1_0000_0000) else old(grs));
+        grs == (if grs_inc then mod_add(old(grs), 32, BASE_32) else old(grs));
 {
     assume false;
 }
@@ -617,14 +620,13 @@ procedure bn_lid_safe(
         wdrs;
 
     ensures
-        wdrs == old(wdrs[grd := iter.buff[iter.index]]);
-
-        next_iter == iter.(index := if grs_inc then iter.index + 1 else iter.index);
-
-        admissible_wmem_addr(wmem, grs + offset, next_iter);
-
         grd == (if grd_inc then (old(grd) + 1) else old(grd));
         grs == (if grs_inc then (old(grs) + 32) else old(grs));
+
+        wdrs == old(wdrs[grd := iter.buff[iter.index]]);
+
+        admissible_wmem_addr(wmem, grs + offset, next_iter);
+        next_iter == iter.(index := if grs_inc then iter.index + 1 else iter.index);
 {
     next_iter := iter.(index := if grs_inc then iter.index + 1 else iter.index);
     bn_lid(grd, grd_inc, offset, grs, grs_inc, iter);
@@ -649,7 +651,7 @@ procedure bn_sid(
     ensures
         wmem == old(wmem[iter.base_addr := wmem[iter.base_addr][iter.index := wdrs[grs2]]]);
         grs2 == (if grs2_inc then mod_add(old(grs2), 1, 32) else old(grs2));
-        grs1 == (if grs1_inc then mod_add(old(grs1), 32, 0x1_0000_0000) else old(grs1));
+        grs1 == (if grs1_inc then mod_add(old(grs1), 32, BASE_32) else old(grs1));
 {
     assume false;
 }
@@ -673,10 +675,14 @@ procedure bn_sid_safe(
 
     ensures
         wmem == old(wmem[iter.base_addr := iter.buff[iter.index := wdrs[grs2]]]);
-        admissible_wmem_addr(wmem, grs1 + offset, next_iter);
-
+        // next_iter == iter.(index := );
         grs1 == (if grs1_inc then (old(grs1) + 32) else old(grs1));
         grs2 == (if grs2_inc then (old(grs2) + 1) else old(grs2));
+
+        admissible_wmem_addr(wmem, grs1 + offset, next_iter);
+        next_iter.base_addr == iter.base_addr;
+        next_iter.index == (if grs1_inc then iter.index + 1 else iter.index);
+        // next_iter.buff == 
 {
     ghost var new_buff := wmem[iter.base_addr][iter.index := wdrs[grs2]];
     ghost var new_index := if grs1_inc then iter.index + 1 else iter.index;
@@ -724,7 +730,7 @@ procedure bn_sel(inout dst: reg256, in src1: reg256, in src2: reg256, inline whi
     reads
         fgroups;
     ensures
-        dst == (if get_flag(old(fgroups), which_group, flag) then src1 else src2);
+        dst == (if get_flag(fgroups, which_group, flag) then old(src1) else old(src2));
 {
     assume false;
 }

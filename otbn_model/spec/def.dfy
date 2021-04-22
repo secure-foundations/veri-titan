@@ -319,13 +319,13 @@ function seq_subb(x: seq<uint256>, y: seq<uint256>) : (seq<uint256>, uint1)
 }
 
 lemma lemma_extend_seq_subb(
-        x: seq<uint256>, y: seq<uint256>, z: seq<uint256>, 
-        cin_old:uint1, cin:uint1,
-        new_x:uint256, new_y:uint256, new_z:uint256)
-    requires |x| == |y|
-    requires (z, cin_old) == seq_subb(x, y)
-    requires (new_z, cin) == uint256_subb(new_x, new_y, cin_old)
-    ensures (z + [new_z], cin) == seq_subb(x + [new_x], y + [new_y])
+        xs: seq<uint256>, ys: seq<uint256>, zs: seq<uint256>, 
+        cin :uint1, cout:uint1,
+        x:uint256, y:uint256, z:uint256)
+    requires |xs| == |ys|
+    requires (zs, cin) == seq_subb(xs, ys)
+    requires (z, cout) == uint256_subb(x, y, cin)
+    ensures (zs + [z], cout) == seq_subb(xs + [x], ys + [y])
 {
 }
 
