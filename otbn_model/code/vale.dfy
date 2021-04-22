@@ -42,7 +42,7 @@ function va_update_xmem(sM: va_state, sK: va_state): va_state
     sK.(xmem := sM.xmem)
 }
 
-function va_get_wmem(s: va_state): map<int, uint256>
+function va_get_wmem(s: va_state): wmem_t
 {
     s.wmem
 }
@@ -102,6 +102,33 @@ type va_operand_imm2 = uint2
 predicate va_is_src_imm2(v:uint2, s: va_state) {true}
 function va_eval_imm2(s: va_state, v:uint2):uint2 {v}
 function method va_const_imm2(v:uint32):uint32 {v}
+
+
+function seq_empty<T>(): seq<T>
+{
+    []
+}
+
+function prefix_seq<T>(s: seq<T>, end: int): seq<T>
+    requires 0 <= end <= |s|
+{
+    s[..end]
+}
+
+function seq_len<T>(s: seq<T>): nat
+{
+    |s|
+}
+
+function seq_concat<T>(x: seq<T>, y: seq<T>): seq<T>
+{
+    x + y
+}
+
+function seq_append<T>(xs: seq<T>, x: T): seq<T>
+{
+    xs + [x]
+}
 
 // reg32
 
@@ -169,20 +196,19 @@ function mod_add(a: nat, b: nat, m: nat): nat
 
 predicate va_state_eq(s0: va_state, s1: va_state)
 {
-    s0 == s1
+    // s0 == s1
+    && s0.gprs == s1.gprs
+    && s0.wdrs == s1.wdrs
+    && s0.fgroups == s1.fgroups
 
-    // && s0.gprs == s1.gprs
-    // && s0.wdrs == s1.wdrs
-    // && s0.fgroups == s1.fgroups
+    && s0.wmod == s1.wmod
+    && s0.wrnd == s1.wrnd
+    && s0.wacc == s1.wacc
 
-    // && s0.wmod == s1.wmod
-    // && s0.wrnd == s1.wrnd
-    // && s0.wacc == s1.wacc
-
-    // && s0.xmem == s1.xmem
-    // && s0.wmem == s1.wmem
+    && s0.xmem == s1.xmem
+    && s0.wmem == s1.wmem
     
-    // && s0.ok == s1.ok
+    && s0.ok == s1.ok
 }
 
 predicate{:opaque} evalCodeOpaque(c:code, s0:state, sN:state)

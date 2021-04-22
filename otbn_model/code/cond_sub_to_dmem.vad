@@ -1,0 +1,251 @@
+include "decls.vad"
+
+#verbatim
+include "../code/vale.dfy"
+
+include "../spec/def.dfy"
+include "../spec/ops.dfy"
+include "../spec/types.dfy"
+
+include "../gen/decls.dfy"
+
+module cond_sub_mod {
+
+import opened bignum_vale
+
+import opened bignum_def
+import opened ops
+import opened types
+
+import opened bignum_decls
+
+#endverbatim
+ 
+function seq_subb(x: seq(uint256), y: seq(uint256)) : tuple(seq(uint256), uint1) extern;
+
+procedure cond_sub_to_dmem_inner(
+    ghost initlal_x8: uint32,
+    ghost initial_buff: seq(uint256),
+    ghost iter: iter_t,
+    ghost num_words: nat,
+    ghost selection: bool)
+
+    returns (ghost next_iter: iter_t)
+
+    requires
+        x8 == initlal_x8 + iter.index;
+        x9 == 3;
+        x11 == 2;
+
+        // TODO: extend to none-aliasing case
+        // for now the use cases suggest they should alias
+        valid_wmem_addr(wmem, x16, iter);
+        valid_wmem_addr(wmem, x21, iter);
+
+        0 < num_words <= 12;
+        seq_len(initial_buff) == num_words;
+        seq_len(iter.buff) == num_words;
+        initial_buff[iter.index..] == iter.buff[iter.index..];
+
+        4 <= x8 < 31;
+        4 <= initlal_x8 < 10;
+
+        selection == fgroups.fg1.cf;
+
+        selection ==>
+            tuple(iter.buff[..iter.index], bool_to_uint1(fgroups.fg0.cf))
+            ==
+            seq_subb(wdrs[initlal_x8..x8], initial_buff[..iter.index]);
+        
+        !selection ==>
+            iter.buff[..iter.index] == wdrs[initlal_x8..x8];
+
+    modifies
+        x8; x9; x11; x16; x21;
+        w2; w3;
+        fgroups; wdrs; wmem;
+
+    ensures
+        x8 == initlal_x8 + next_iter.index;
+        x9 == 3;
+        x11 == 2;
+
+        4 <= x8 < 31;
+
+        seq_len(next_iter.buff) == num_words;
+        admissible_wmem_addr(wmem, x16, next_iter);
+        admissible_wmem_addr(wmem, x21, next_iter);
+
+        next_iter.index == iter.index + 1;
+        next_iter.base_addr == iter.base_addr;
+
+        initial_buff[next_iter.index..] == next_iter.buff[next_iter.index..];
+
+        selection == fgroups.fg1.cf;
+
+        selection ==>
+            tuple(next_iter.buff[..next_iter.index], bool_to_uint1(fgroups.fg0.cf))
+            ==
+            seq_subb(wdrs[initlal_x8..x8], initial_buff[..next_iter.index]);
+
+        !selection ==>
+            next_iter.buff[..next_iter.index] == wdrs[initlal_x8..x8];    
+{
+    ghost var widx := x8;
+    ghost var midx := iter.index;
+
+    /* load limb of subtrahend (input B): w3 = dmem[x16+i] */
+    let _ := bn_lid_safe(x9, false, 0, x16, true, iter);
+
+    /* move limb from bignum bufer to w2 */
+    bn_movr(x11, false, x8, true);
+
+    /* perform subtraction for a limb w3 = w3 - w2 */
+    bn_subb(w3, w2, w3, false, 0, 0);
+
+    /* conditionally select subtraction result or unmodified limb */
+    bn_sel(w2, w3, w2, 1, 0);
+
+    /* store selection result in dmem */
+    next_iter := bn_sid_safe(x11, false, 0, x21, true, iter);
+
+    ghost if (selection) {
+        ghost var x := wdrs[widx];
+        ghost var y := iter.buff[midx];
+        ghost var z := next_iter.buff[midx];
+
+        ghost var xs := wdrs[initlal_x8..widx];
+        ghost var ys := initial_buff[..midx];
+        ghost var zs := iter.buff[..midx];
+
+        assert wdrs[initlal_x8..x8] == seq_append(xs, x);
+        assert initial_buff[..next_iter.index] == seq_append(ys, y);
+        assert next_iter.buff[..next_iter.index] == seq_append(zs, z);
+    } else {
+        calc == {
+            next_iter.buff[..next_iter.index];
+            ==
+            seq_append(next_iter.buff[..midx], next_iter.buff[midx]);
+            ==
+            seq_append(iter.buff[..midx], next_iter.buff[midx]);
+            == { assert iter.buff[..midx] == wdrs[initlal_x8..widx]; }
+            seq_append(wdrs[initlal_x8..widx], next_iter.buff[midx]);
+            == { assert next_iter.buff[midx] == wdrs[widx]; }
+            seq_append(wdrs[initlal_x8..widx], wdrs[widx]);
+            ==
+            wdrs[initlal_x8..widx+1];
+        }
+    }
+
+}
+
+/**
+ * Constant time conditional bigint subtraction
+ *
+ * Returns C = A-x*B
+ *         with A being a bigint of length 256..4096 bit
+ *              B being a bigint of length 256..4096 bit
+ *              C being a bigint of length 256..4096 bit
+ *              x being a boolean value [0,1]
+ *
+ * Depending on state of FG1.C subtracts a bigint B located in dmem from
+ * another bigint A, located in the wide reg file and stores result C in dmem.
+ *
+ * Flags: When leaving this subroutine, flags of FG0 depend on a
+ *        potentially discarded value and therefore are not usable after
+ *        return. FG1 is not modified in this subroutine.
+ *
+ * @param[in]  x16: dmem pointer to first limb of subtrahend (B)
+ * @param[in]  x8: regfile pointer to first limb of minuend (input A)
+ * @param[in]  x21: dmem pointer to first limb of result (C)
+ * @param[in]  x30: N, number of limbs
+ * @param[in]  FG1.C: subtraction condition, subtract if 1 (x)
+ * @param[in]  x9: pointer to temp reg, must be set to 3
+ * @param[in]  x11: pointer to temp reg, must be set to 2
+ * @param[in]  FG0.C: needs to be set to 0
+ *
+ * clobbered registers: x8, x16, x21, w2, w3
+ * clobbered Flag Groups: FG0
+ */
+
+procedure cond_sub_to_dmem(ghost num_words: nat, ghost selection: bool)
+    requires
+        x9 == 3;
+        x11 == 2;
+
+        4 <= x8 < 10;
+
+        x30 == num_words;
+        x30 <= 12;
+
+        fgroups.fg0.cf == false;
+        fgroups.fg1.cf == selection;
+
+        // TODO: extend to none-aliasing case
+        // for now the use cases suggest they should alias
+        x21 == x16;
+        valid_buff_addr(wmem, x16, num_words);
+
+    reads
+        x30;
+
+    modifies
+        x8; x9; x11; x16; x21;
+        w2; w3;
+        fgroups; wdrs; wmem;
+
+    ensures
+        valid_buff_addr(wmem, old(x16), num_words);
+        valid_buff_addr(old(wmem), old(x16), num_words);
+
+        selection ==>
+            tuple(wmem[old(x16)], bool_to_uint1(fgroups.fg0.cf))
+            ==
+            seq_subb(wdrs[old(x8)..old(x8)+num_words], old(wmem[x16]));
+        
+        !selection ==>
+            wmem[old(x16)] == wdrs[old(x8)..old(x8)+num_words];
+{
+    ghost var iter := iter_cons(x16, 0, wmem[x16]);
+    ghost var initlal_x8 := x8;
+    ghost var initial_buff := iter.buff;
+
+    while (Loop(x30))
+        invariant iter.index + loop_ctr == num_words;
+        invariant x8 == initlal_x8 + iter.index;
+        invariant x9 == 3;
+        invariant x11 == 2;
+
+        // TODO: extend to none-aliasing case
+        // for now the use cases suggest they should alias
+        invariant admissible_wmem_addr(wmem, x16, iter);
+        invariant admissible_wmem_addr(wmem, x21, iter);
+        invariant seq_len(iter.buff) == num_words;
+        invariant initial_buff[iter.index..] == iter.buff[iter.index..];
+        invariant iter.base_addr == old(x16);
+
+        invariant 4 <= x8 < 31;
+
+        invariant selection == fgroups.fg1.cf;
+
+        invariant selection ==>
+            tuple(iter.buff[..iter.index], bool_to_uint1(fgroups.fg0.cf))
+            ==
+            seq_subb(wdrs[initlal_x8..x8], initial_buff[..iter.index]);
+        
+        invariant !selection ==>
+            iter.buff[..iter.index] == wdrs[initlal_x8..x8];
+
+        decreases loop_ctr;
+    {
+        iter := cond_sub_to_dmem_inner(initlal_x8, initial_buff, iter, num_words, selection);
+    }
+
+    assert initial_buff[..iter.index] == initial_buff;
+    assert iter.buff[..iter.index] == iter.buff;
+    assert iter.buff == wmem[old(x16)];
+}
+
+#verbatim
+}
+#endverbatim

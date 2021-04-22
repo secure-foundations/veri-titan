@@ -30,36 +30,27 @@ ghost procedure lemma_extend_seq_subb(
 
 ghost procedure lemma_empty_seq_subb() extern;
 
-procedure cond_sub_mod_inner(
-    ghost initial_wdrs: wdrs_t,
-    ghost initial_x16: nat,
-    ghost num_words: nat,
-    ghost selection: bool,
-    ghost i: nat)
+procedure cond_sub_mod_inner(ghost initial_wdrs: wdrs_t, ghost selection: bool, ghost iter: iter_t)
+    returns (ghost next_iter: iter_t)
 
     requires
-        x8 == 5 + i;
+        selection == fgroups.fg1.cf;
+
+        x8 == 5 + iter.index;
         x10 == 3;
         x11 == 2;
-        x16 == initial_x16 + 32 * i;
 
-        initial_x16 < 0xfffffe60;
-        num_words <= 12;
-
-        i < num_words;
+        // this bounds the number of iteration
+        seq_len(iter.buff) <= 12;
+        valid_wmem_addr(wmem, x16, iter);
 
         wdrs[x8..] == initial_wdrs[x8..];
 
-        forall(i:int) 0 <= i < num_words
-            ==> valid_wmem_addr(wmem, initial_x16 + 32 * i);
-
-        selection == get_cf1(fgroups);
-
         selection ==>
-            tuple(wdrs[5..x8], bool_to_uint1(get_cf0(fgroups)))
+            tuple(wdrs[5..x8], bool_to_uint1(fgroups.fg0.cf))
             ==
-            seq_subb(initial_wdrs[5..x8], wmem_seq(wmem, initial_x16, i));
-        
+            seq_subb(initial_wdrs[5..x8], iter.buff[..iter.index]);
+
         !selection ==>
             wdrs[5..x8] == initial_wdrs[5..x8];
 
@@ -72,34 +63,34 @@ procedure cond_sub_mod_inner(
         wdrs; w2; w3; w4;
 
     ensures
-        x8 == 5 + i + 1;
+        fgroups.fg1.cf == selection;
+
+        x8 == 5 + next_iter.index;
         x10 == 3;
         x11 == 2;
-        x16 == initial_x16 + 32 * (i + 1);
+
+        next_iter.index == iter.index + 1;
+        next_iter.base_addr == iter.base_addr;
+        next_iter.buff == iter.buff;
+        
+        admissible_wmem_addr(wmem, x16, next_iter);
 
         wdrs[x8..] == initial_wdrs[x8..];
 
-        selection == get_cf1(fgroups);
-
-        forall(i:int) 0 <= i < num_words
-            ==> valid_wmem_addr(wmem, initial_x16 + 32 * i);
-
         selection ==> 
-            tuple(wdrs[5.. x8], bool_to_uint1(get_cf0(fgroups)))
+            tuple(wdrs[5.. x8], bool_to_uint1(fgroups.fg0.cf))
             ==
-            seq_subb(initial_wdrs[5..x8], wmem_seq(wmem, initial_x16, i+1));
+            seq_subb(initial_wdrs[5..x8], next_iter.buff[..next_iter.index]);
 
         !selection ==>
             wdrs[5..x8] == initial_wdrs[5..x8];
 {
     ghost var widx := x8;
 
-    bn_lid_safe(x10, false, 0, x16, true);
+    next_iter := bn_lid_safe(x10, false, 0, x16, true, iter);
     bn_movr(x11, false, x8, false);
 
-    // ghost var cin := bool_to_uint1(get_cf0(fgroups));
     bn_subb(w4, w2, w3, false, 0, 0);
-    // ghost var cout := bool_to_uint1(get_cf0(fgroups));
 
     bn_sel(w3, w4, w2, 1, 0);
     bn_movr(x8, true, x10, false);
@@ -108,21 +99,18 @@ procedure cond_sub_mod_inner(
 
     ghost if (selection) {
         ghost var x := initial_wdrs[widx];
-        // ghost var y := wmem[initial_x16 + 32 * i];
+        ghost var y := iter.buff[iter.index];
         ghost var z := wdrs[widx];
-
         // assert tuple(z, cout) == uint256_subb(x, y, cin);
 
         ghost var xs := initial_wdrs[5.. widx];
         // ghost var ys := wmem_seq(wmem, initial_x16, i);
         ghost var zs := old(wdrs[5.. x8]);
-
-    //    lemma_extend_seq_subb(
-    //        xs, ys, zs,
-    //        cin, cout, x, y, z);
+        // lemma_extend_seq_subb(xs, ys, zs, cin, cout, x, y, z);
         
         assert initial_wdrs[5.. x8] == seq_append(xs, x);
         assert wdrs[5.. x8] == seq_append(zs, z);
+        assert next_iter.buff[..next_iter.index] == seq_append(iter.buff[..iter.index], y);
     } else {
         assert wdrs[widx] == initial_wdrs[widx];
 
@@ -143,18 +131,15 @@ procedure cond_sub_mod_inner(
 procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
     // {:frame false}
     requires
-        selection == get_cf1(fgroups);
-        num_words == x31;
+        x31 == num_words;
+        num_words <= 12;
 
-        x31 <= 12;
-        x16 < 0xfffffe60;
+        fgroups.fg0.cf == false;
+        fgroups.fg1.cf == selection;
+
+        valid_buff_addr(wmem, x16, num_words);
 
         w31 == 0;
-
-        get_cf0(fgroups) == false;
-
-        forall(i:int) 0 <= i < x31 ==>
-            valid_wmem_addr(wmem, old(x16) + 32 * i);
     reads
         wmem; x31;
 
@@ -164,13 +149,12 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
         wdrs; w2; w3; w4; w31;
 
     ensures
-        forall(i:int) 0 <= i < num_words
-            ==> valid_wmem_addr(wmem, old(x16) + 32 * i);
+        valid_buff_addr(old(wmem), old(x16), num_words);
 
-        selection ==> 
-            tuple(wdrs[5..5+num_words], bool_to_uint1(get_cf0(fgroups)))
+        selection ==>
+            tuple(wdrs[5..5+num_words], bool_to_uint1(fgroups.fg0.cf))
             ==
-            seq_subb(old(wdrs)[5..5+num_words], wmem_seq(wmem, old(x16), num_words));
+            seq_subb(old(wdrs[5..5+num_words]), old(wmem[x16]));
 
         !selection ==>
             wdrs[5..5+num_words] == old(wdrs)[5..5+num_words];
@@ -180,39 +164,43 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
     li(x11, 2);
 
     bn_add(w31, w31, w31, false, 0, 0);
-    ghost var i: nat := 0;
     ghost var initial_wdrs := wdrs;
     ghost var initial_x16 := x16;
+
+    ghost var iter := iter_cons(initial_x16, 0, wmem[x16]);
+    assert valid_wmem_addr(wmem, x16, iter);
 
     lemma_empty_seq_subb();
 
     while (Loop(x31))
-        invariant i + loop_ctr == num_words;
-        invariant x8 == 5 + i;
+        invariant iter.index + loop_ctr == num_words;
+        invariant x8 == 5 + iter.index;
         invariant x10 == 3;
         invariant x11 == 2;
-        invariant x16 == initial_x16 + 32 * i;
 
-        invariant get_cf1(fgroups) == selection;
+        invariant fgroups.fg1.cf == selection;
+
+        invariant seq_len(iter.buff) == num_words;
+        invariant iter.base_addr == initial_x16;
+        invariant admissible_wmem_addr(wmem, x16, iter);
 
         invariant wdrs[x8..] == initial_wdrs[x8..];
 
-        invariant forall(i:int) 0 <= i < num_words
-            ==> valid_wmem_addr(wmem, initial_x16 + 32 * i);
-
         invariant selection ==>
-            tuple(wdrs[5..x8], bool_to_uint1(get_cf0(fgroups)))
+            tuple(wdrs[5..x8], bool_to_uint1(fgroups.fg0.cf))
             ==
-            seq_subb(initial_wdrs[5..x8], wmem_seq(wmem, initial_x16, i));
-        
+            seq_subb(initial_wdrs[5..x8], iter.buff[..iter.index]);
+
         invariant !selection ==>
             wdrs[5..x8] == initial_wdrs[5..x8];
 
+        invariant wmem == old(wmem);
         decreases loop_ctr;
     {
-        cond_sub_mod_inner(initial_wdrs, initial_x16, num_words, selection, i);
-        i := i + 1;
+        iter := cond_sub_mod_inner(initial_wdrs, selection, iter);
     }
+
+    assert iter.buff[..iter.index] == iter.buff;
 }
 
 #verbatim
