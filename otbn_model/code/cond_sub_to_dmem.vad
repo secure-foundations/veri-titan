@@ -135,6 +135,7 @@ procedure cond_sub_to_dmem_inner(
             ==
             wdrs[initlal_x8..widx+1];
         }
+        assert next_iter.buff[..next_iter.index] == wdrs[initlal_x8..x8];    
     }
 
 }
