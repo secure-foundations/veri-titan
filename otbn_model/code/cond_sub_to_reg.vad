@@ -182,6 +182,15 @@ procedure cond_sub_to_reg(ghost num_words: nat, ghost selection: bool)
         fgroups;
         x8; x12; x13; x16;
         wdrs; w24; w29; w30;
+
+    ensures
+        selection ==>
+            tuple(wdrs[old(x8)..old(x8)+num_words], bool_to_uint1(fgroups.fg0.cf))
+            ==
+            seq_subb(old(wdrs[x8..x8+num_words]), old(wmem[x16]));
+
+        !selection ==>
+            wdrs[old(x8)..old(x8)+num_words] == old(wdrs[x8..x8+num_words]);
 {
     /* load pointers to temp regs */
     li(x12, 30);
@@ -223,6 +232,9 @@ procedure cond_sub_to_reg(ghost num_words: nat, ghost selection: bool)
     {
         iter := cond_sub_to_reg_inner(initial_x8, initial_wdrs, selection, num_words, iter);
     }
+
+    assert iter.buff[..iter.index] == iter.buff;
+    assert iter.buff == wmem[old(x16)];
 }
 
 
