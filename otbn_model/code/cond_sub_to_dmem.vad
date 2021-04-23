@@ -83,6 +83,8 @@ procedure cond_sub_to_dmem_inner(
 
         selection == fgroups.fg1.cf;
 
+        wdrs[initial_x8..] == old(wdrs[initial_x8..]);
+
         selection ==>
             tuple(next_iter.buff[..next_iter.index], bool_to_uint1(fgroups.fg0.cf))
             ==
@@ -108,6 +110,8 @@ procedure cond_sub_to_dmem_inner(
 
     /* store selection result in dmem */
     next_iter := bn_sid_safe(x11, false, 0, x21, true, iter);
+
+    assert wdrs[initial_x8..] == old(wdrs[initial_x8..]);
 
     ghost if (selection) {
         ghost var x := wdrs[widx];
@@ -137,7 +141,8 @@ procedure cond_sub_to_dmem_inner(
         }
         assert next_iter.buff[..next_iter.index] == wdrs[initial_x8..x8];    
     }
-
+    
+    assume false;
 }
 
 /**
@@ -202,10 +207,10 @@ procedure cond_sub_to_dmem(ghost num_words: nat, ghost selection: bool)
         selection ==>
             tuple(wmem[old(x16)], bool_to_uint1(fgroups.fg0.cf))
             ==
-            seq_subb(wdrs[old(x8)..old(x8)+num_words], old(wmem[x16]));
+            seq_subb(old(wdrs[x8..x8+num_words]), old(wmem[x16]));
         
         !selection ==>
-            wmem[old(x16)] == wdrs[old(x8)..old(x8)+num_words];
+            wmem[old(x16)] == old(wdrs[x8..x8+num_words]);
 {
     ghost var iter := iter_cons(x16, 0, wmem[x16]);
     ghost var initial_x8 := x8;
@@ -229,6 +234,8 @@ procedure cond_sub_to_dmem(ghost num_words: nat, ghost selection: bool)
 
         invariant selection == fgroups.fg1.cf;
 
+        invariant wdrs[initial_x8..] == old(wdrs[initial_x8..]);
+
         invariant selection ==>
             tuple(iter.buff[..iter.index], bool_to_uint1(fgroups.fg0.cf))
             ==
@@ -245,6 +252,7 @@ procedure cond_sub_to_dmem(ghost num_words: nat, ghost selection: bool)
     assert initial_buff[..iter.index] == initial_buff;
     assert iter.buff[..iter.index] == iter.buff;
     assert iter.buff == wmem[old(x16)];
+    assert old(wdrs[x8..x8+num_words]) == wdrs[initial_x8..initial_x8+num_words];
 }
 
 #verbatim
