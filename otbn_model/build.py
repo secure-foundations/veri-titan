@@ -121,7 +121,8 @@ def generate_dot_dd(dfy_file):
     for (i, include) in enumerate(outputs):
         include = os.path.relpath(include)
         if i == 0:
-            assert include == dfy_file
+            pass
+            # assert include == dfy_file
         else:
             include = get_dot_ver_path(include)
             includes.append(include)
