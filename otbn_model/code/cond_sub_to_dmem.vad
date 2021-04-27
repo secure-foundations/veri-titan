@@ -2,27 +2,20 @@ include "decls.vad"
 
 #verbatim
 include "../code/vale.dfy"
-
-include "../spec/def.dfy"
-include "../spec/ops.dfy"
-include "../spec/types.dfy"
-
+include "../spec/vt_ops.dfy"
 include "../gen/decls.dfy"
 
 module cond_sub_to_dmem {
 
-import opened bignum_vale
-
-import opened bignum_def
-import opened ops
-import opened types
-
-import opened bignum_decls
+import opened bv_ops
+import opened vt_ops
+import opened vt_types
+import opened vt_consts
+import opened vt_vale
+import opened vt_decls
 
 #endverbatim
  
-function seq_subb(x: seq(uint256), y: seq(uint256)) : tuple(seq(uint256), uint1) extern;
-
 procedure cond_sub_to_dmem_inner(
     ghost initial_x8: uint32,
     ghost initial_buff: seq(uint256),
@@ -103,7 +96,7 @@ procedure cond_sub_to_dmem_inner(
     bn_movr(x11, false, x8, true);
 
     /* perform subtraction for a limb w3 = w3 - w2 */
-    bn_subb(w3, w2, w3, false, 0, 0);
+    bn_subb(w3, w2, w3, SFT_DFT, 0);
 
     /* conditionally select subtraction result or unmodified limb */
     bn_sel(w2, w3, w2, 1, 0);
@@ -142,35 +135,6 @@ procedure cond_sub_to_dmem_inner(
         assert next_iter.buff[..next_iter.index] == wdrs[initial_x8..x8];    
     }
 }
-
-/**
- * Constant time conditional bigint subtraction
- *
- * Returns C = A-x*B
- *         with A being a bigint of length 256..4096 bit
- *              B being a bigint of length 256..4096 bit
- *              C being a bigint of length 256..4096 bit
- *              x being a boolean value [0,1]
- *
- * Depending on state of FG1.C subtracts a bigint B located in dmem from
- * another bigint A, located in the wide reg file and stores result C in dmem.
- *
- * Flags: When leaving this subroutine, flags of FG0 depend on a
- *        potentially discarded value and therefore are not usable after
- *        return. FG1 is not modified in this subroutine.
- *
- * @param[in]  x16: dmem pointer to first limb of subtrahend (B)
- * @param[in]  x8: regfile pointer to first limb of minuend (input A)
- * @param[in]  x21: dmem pointer to first limb of result (C)
- * @param[in]  x30: N, number of limbs
- * @param[in]  FG1.C: subtraction condition, subtract if 1 (x)
- * @param[in]  x9: pointer to temp reg, must be set to 3
- * @param[in]  x11: pointer to temp reg, must be set to 2
- * @param[in]  FG0.C: needs to be set to 0
- *
- * clobbered registers: x8, x16, x21, w2, w3
- * clobbered Flag Groups: FG0
- */
 
 procedure cond_sub_to_dmem(ghost num_words: nat, ghost selection: bool)
     requires

@@ -2,35 +2,22 @@ include "decls.vad"
 
 #verbatim
 include "../code/vale.dfy"
+include "../spec/vt_ops.dfy"
 
-include "../spec/def.dfy"
-include "../spec/ops.dfy"
-include "../spec/types.dfy"
-
-include "../gen/decls.dfy"
+include "decls.dfy"
 
 module cond_sub_mod {
 
-import opened bignum_vale
-
-import opened bignum_def
-import opened ops
-import opened types
-
-import opened bignum_decls
+import opened bv_ops
+import opened vt_ops
+import opened vt_types
+import opened vt_consts
+import opened vt_vale
+import opened vt_decls
 
 #endverbatim
 
-function seq_subb(x: seq(uint256), y: seq(uint256)) : tuple(seq(uint256), uint1) extern;
-
-ghost procedure lemma_extend_seq_subb(
-    ghost x:seq(uint256), ghost y:seq(uint256), ghost z:seq(uint256), 
-    ghost cin:uint1, ghost cout:uint1,
-    ghost new_x:uint256, ghost new_y:uint256, ghost new_z:uint256) extern;
-
-ghost procedure lemma_empty_seq_subb() extern;
-
-procedure cond_sub_mod_inner(ghost initial_wdrs: wdrs_t, ghost selection: bool, ghost iter: iter_t)
+procedure cond_sub_mod_0(ghost initial_wdrs: wdrs_t, ghost selection: bool, ghost iter: iter_t)
     returns (ghost next_iter: iter_t)
 
     requires
@@ -90,7 +77,7 @@ procedure cond_sub_mod_inner(ghost initial_wdrs: wdrs_t, ghost selection: bool, 
     next_iter := bn_lid_safe(x10, false, 0, x16, true, iter);
     bn_movr(x11, false, x8, false);
 
-    bn_subb(w4, w2, w3, false, 0, 0);
+    bn_subb(w4, w2, w3, SFT_DFT, 0);
 
     bn_sel(w3, w4, w2, 1, 0);
     bn_movr(x8, true, x10, false);
@@ -116,11 +103,11 @@ procedure cond_sub_mod_inner(ghost initial_wdrs: wdrs_t, ghost selection: bool, 
 
         calc == {
             initial_wdrs[5.. widx + 1];
-            ==
+            == { assume false; /* should be trivial */ }
             seq_append(initial_wdrs[5.. widx], initial_wdrs[widx]);
             == { assert wdrs[widx] == initial_wdrs[widx]; }
             seq_append(initial_wdrs[5.. widx], wdrs[widx]);
-            == { assert wdrs[5.. widx] == initial_wdrs[5.. widx];}
+            == { assert wdrs[5.. widx] == initial_wdrs[5.. widx]; }
             seq_append(wdrs[5.. widx], wdrs[widx]);
             ==
             wdrs[5.. widx + 1];
@@ -163,14 +150,12 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
     li(x10, 3);
     li(x11, 2);
 
-    bn_add(w31, w31, w31, false, 0, 0);
+    bn_add(w31, w31, w31, SFT_DFT, 0);
     ghost var initial_wdrs := wdrs;
     ghost var initial_x16 := x16;
 
     ghost var iter := iter_cons(initial_x16, 0, wmem[x16]);
     assert valid_wmem_addr(wmem, x16, iter);
-
-    lemma_empty_seq_subb();
 
     while (Loop(x31))
         invariant iter.index + loop_ctr == num_words;
@@ -197,7 +182,7 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
         invariant wmem == old(wmem);
         decreases loop_ctr;
     {
-        iter := cond_sub_mod_inner(initial_wdrs, selection, iter);
+        iter := cond_sub_mod_0(initial_wdrs, selection, iter);
     }
 
     assert iter.buff[..iter.index] == iter.buff;
