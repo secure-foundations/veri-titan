@@ -96,7 +96,7 @@ procedure cond_sub_to_dmem_inner(
     bn_movr(x11, false, x8, true);
 
     /* perform subtraction for a limb w3 = w3 - w2 */
-    bn_subb(w3, w2, w3, false, 0, 0);
+    bn_subb(w3, w2, w3, SFT_DFT, 0);
 
     /* conditionally select subtraction result or unmodified limb */
     bn_sel(w2, w3, w2, 1, 0);

@@ -77,7 +77,7 @@ procedure cond_sub_mod_0(ghost initial_wdrs: wdrs_t, ghost selection: bool, ghos
     next_iter := bn_lid_safe(x10, false, 0, x16, true, iter);
     bn_movr(x11, false, x8, false);
 
-    bn_subb(w4, w2, w3, false, 0, 0);
+    bn_subb(w4, w2, w3, SFT_DFT, 0);
 
     bn_sel(w3, w4, w2, 1, 0);
     bn_movr(x8, true, x10, false);
@@ -103,11 +103,11 @@ procedure cond_sub_mod_0(ghost initial_wdrs: wdrs_t, ghost selection: bool, ghos
 
         calc == {
             initial_wdrs[5.. widx + 1];
-            ==
+            == { assume false; /* should be trivial */ }
             seq_append(initial_wdrs[5.. widx], initial_wdrs[widx]);
             == { assert wdrs[widx] == initial_wdrs[widx]; }
             seq_append(initial_wdrs[5.. widx], wdrs[widx]);
-            == { assert wdrs[5.. widx] == initial_wdrs[5.. widx];}
+            == { assert wdrs[5.. widx] == initial_wdrs[5.. widx]; }
             seq_append(wdrs[5.. widx], wdrs[widx]);
             ==
             wdrs[5.. widx + 1];
@@ -150,7 +150,7 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
     li(x10, 3);
     li(x11, 2);
 
-    bn_add(w31, w31, w31, false, 0, 0);
+    bn_add(w31, w31, w31, SFT_DFT, 0);
     ghost var initial_wdrs := wdrs;
     ghost var initial_x16 := x16;
 

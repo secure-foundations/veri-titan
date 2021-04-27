@@ -16,6 +16,10 @@ module bv_ops {
     type uint128 = i :int | 0 <= i < BASE_128
     type uint256 = i :int | 0 <= i < BASE_256
 
+    datatype shift_t = SFT(left: bool, bytes: uint5)
+
+	const SFT_DFT :shift_t := SFT(true, 0);
+
     function bool_to_uint1(i:bool) : uint1
     {
         if i then 1 else 0
@@ -102,29 +106,25 @@ module bv_ops {
 		(x as bv256 | y as bv256) as uint256
 	}
 
-	function method {:opaque} uint256_ls(x: uint256, num_bytes: int): (r: uint256)
-		requires 0 <= num_bytes < 32;
-		ensures (num_bytes == 0) ==> r == x;
+	function method {:opaque} uint256_ls(x: uint256, num_bytes: uint5): (r: uint256)
 		ensures (num_bytes == 8 && x < BASE_192) ==> (r == x * BASE_64);
 	{
 		assume false;
 		(x as bv256 << (num_bytes * 8)) as uint256
 	}
 
-	function method {:opaque} uint256_rs(x: uint256, num_bytes: int): uint256
-		requires 0 <= num_bytes < 32;
-		ensures uint256_rs(x, 0) == x;
+	function method {:opaque} uint256_rs(x: uint256, num_bytes: uint5): uint256
 	{
 		assume false;
 		(x as bv256 >> (num_bytes * 8)) as uint256
 	}
 
-	function method uint256_sb(b:uint256, st: bool, sb: uint32) : uint256
-		requires sb < 32;
+	function method uint256_sb(b: uint256, shift: shift_t) : uint256
 	{	
-		if sb == 0 then b
-		else if st then uint256_ls(b, sb)
-		else uint256_rs(b, sb)
+		var count := shift.bytes;
+		if count == 0 then b
+		else if shift.left then uint256_ls(b, count)
+		else uint256_rs(b, count)
 	}
 
 	function method {:opaque} uint256_lh(x: uint256): uint128

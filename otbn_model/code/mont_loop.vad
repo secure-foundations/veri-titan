@@ -70,15 +70,16 @@ procedure mont_loop_0(ghost num_words: nat)
     mul256_w30xw2();
     assert to_nat(seq(w27, w26)) == #int(w30) * #int(w2);
 
-    /* w24 = w4 = A[0] */
+    /* w24 = w4 = A[0] */ 
     bn_movr(x13, false, x8, true);
     assert wdrs[24] == wdrs[4];
 
-    bn_add(w30, w27, w24, false, 0, 0);
-    bn_addc(w29, w26, w31, false, 0, 0);
+    bn_add(w30, w27, w24, SFT_DFT, 0);
+    bn_addc(w29, w26, w31, SFT_DFT, 0);
 
-    // assert w30 == 
-    
+    // assert fst(otbn_addc(w27, w24, 0, 0, false)) == w30;
+    // assert tuple(w30, bool_to_uint1(fgroups.fg0.cf)) == uint256_addc(w27, w24, 0);
+
     // ghost var cout := bool_to_uint1(fgroups.fg0.cf);
     // assert tuple(seq(w30, w29), cout) == seq_addc(seq(w24, w31), seq(w27, w26));
 }

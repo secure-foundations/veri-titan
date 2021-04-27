@@ -94,7 +94,7 @@ procedure cond_sub_to_reg_inner(
     assert w30 == wdrs[widx];
 
     /* perform subtraction for a limb */
-    bn_subb(w29, w30, w24, false, 0, 0);
+    bn_subb(w29, w30, w24, SFT_DFT, 0);
 
     /* conditionally select subtraction result or unmodified limb */
     bn_sel(w24, w29, w30, 1, 0);

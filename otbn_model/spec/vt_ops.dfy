@@ -107,10 +107,10 @@ module vt_ops {
         if which_group == 0 then fgps.(fg0 := new_flags_t) else fgps.(fg1 := new_flags_t)
     }
 
-    function otbn_addc(x: uint256, y: uint256, st: bool, sb: uint5, carry: bool) : (uint256, flags_t)
+    function otbn_addc(x: uint256, y: uint256, shift: shift_t, carry: bool) : (uint256, flags_t)
     {
         var cin := if carry then 1 else 0;
-        var (sum, cout) := uint256_addc(x, uint256_sb(y, st, sb), cin);
+        var (sum, cout) := uint256_addc(x, uint256_sb(y, shift), cin);
         // TODO: MSB/LSB
         var fg := flags_t(cout == 1, false, false, sum == 0);
         (sum, fg)
@@ -122,10 +122,10 @@ module vt_ops {
     //     if sum >= mod then sum - mod else sum
     // }
 
-    function otbn_subb(x: uint256, y: uint256, st: bool, sb: uint5, borrow: bool) : (uint256, flags_t)
+    function otbn_subb(x: uint256, y: uint256, shift: shift_t, borrow: bool) : (uint256, flags_t)
     {
         var cf := if borrow then 1 else 0;
-        var (diff, cout) := uint256_subb(x, uint256_sb(y, st, sb), cf);
+        var (diff, cout) := uint256_subb(x, uint256_sb(y, shift), cf);
         // TODO: MSB/LSB
         var fg := flags_t(cout == 1, false, false, diff == 0);
         (diff, fg)
@@ -187,19 +187,19 @@ module vt_ops {
         else x * BASE_192
     }
 
-    function otbn_xor(x: uint256, y: uint256, st: bool, sb: uint5) : uint256
+    function otbn_xor(x: uint256, y: uint256, shift: shift_t) : uint256
     {
-        uint256_xor(x, uint256_sb(y, st, sb))
+        uint256_xor(x, uint256_sb(y, shift))
     }
 
-    function otbn_or(x: uint256, y: uint256, st: bool, sb: uint5) : uint256
+    function otbn_or(x: uint256, y: uint256, shift: shift_t) : uint256
     {
-        uint256_or(x, uint256_sb(y, st, sb))
+        uint256_or(x, uint256_sb(y, shift))
     }
             
-    function otbn_and(x: uint256, y: uint256, st: bool, sb: uint5) : uint256
+    function otbn_and(x: uint256, y: uint256, shift: shift_t) : uint256
     {
-        uint256_and(x, uint256_sb(y, st, sb))
+        uint256_and(x, uint256_sb(y, shift))
     }
 
     function otbn_rshi(x: uint256, y: uint256, shift_amt: int) : uint256
