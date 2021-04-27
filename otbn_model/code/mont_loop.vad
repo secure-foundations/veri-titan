@@ -25,12 +25,18 @@ import opened mul256
 // {
 // }
 
-procedure mont_loop_0(ghost num_words: nat)
+ghost procedure seq_addc_len2_lemma(
+    ghost x0: uint256, ghost y0: uint256, ghost z0: uint256, ghost c0: uint1,
+    ghost x1: uint256, ghost y1: uint256, ghost z1: uint256, ghost c1: uint1) extern;
+
+procedure mont_loop_0(
+    ghost num_words: nat,
+    ghost m0': nat)
     requires
-        // valid_buff_addr(wmem, x16, num_words);
         valid_buff_addr(wmem, x19, num_words); // y buffer
         x31 == num_words - 1;
 
+        w3 == m0';
         w31 == 0;
 
     reads
@@ -38,7 +44,7 @@ procedure mont_loop_0(ghost num_words: nat)
 
     modifies
         wmem; wdrs; fgroups;
-        w24; w26; w27; w29; w30;
+        w3; w24; w25; w26; w27; w29; w30;
         x8; x10; x12; x13; x19; x22;
     
     ensures
@@ -67,44 +73,53 @@ procedure mont_loop_0(ghost num_words: nat)
     iter_y := bn_lid_safe(x12, false, 0, x19, true, iter_y);
     assert wdrs[30] == iter_y.buff[0];
 
+    /* [w26, w27] = w30*w2 = y[0]*x_i */
     mul256_w30xw2();
-    assert to_nat(seq(w27, w26)) == #int(w30) * #int(w2);
+    assert to_nat(seq(w27, w26)) == #int(iter_y.buff[0]) * #int(w2);
 
     /* w24 = w4 = A[0] */ 
     bn_movr(x13, false, x8, true);
     assert wdrs[24] == wdrs[4];
 
     bn_add(w30, w27, w24, SFT_DFT, 0);
+    ghost var cin := bool_to_uint1(fgroups.fg0.cf);
     bn_addc(w29, w26, w31, SFT_DFT, 0);
+    ghost var cout := bool_to_uint1(fgroups.fg0.cf);
 
-    // assert fst(otbn_addc(w27, w24, 0, 0, false)) == w30;
-    // assert tuple(w30, bool_to_uint1(fgroups.fg0.cf)) == uint256_addc(w27, w24, 0);
+    seq_addc_len2_lemma(
+        w27, w24, w30, cin,
+        w26, 0, w29, cout);
 
-    // ghost var cout := bool_to_uint1(fgroups.fg0.cf);
-    // assert tuple(seq(w30, w29), cout) == seq_addc(seq(w24, w31), seq(w27, w26));
+    assert tuple(seq(w30, w29), cout) == seq_addc(seq(w24, 0), seq(w27, w26));
+
+    /* w25 = w3 = m0' */
+    bn_mov(w25, w3);
+
+    mul256_w30xw25();
+    assert to_nat(seq(w27, w26)) == #int(w30) * m0';
 }
 
-procedure mont_loop(ghost num_words: nat)
-    // {: frame false}
-    requires
-        valid_buff_addr(wmem, x16, num_words);
-        valid_buff_addr(wmem, x19, num_words); // y buffer
-        x31 == num_words - 1;
+// procedure mont_loop(ghost num_words: nat)
+//     // {: frame false}
+//     requires
+//         valid_buff_addr(wmem, x16, num_words);
+//         valid_buff_addr(wmem, x19, num_words); // y buffer
+//         x31 == num_words - 1;
 
-        w31 == 0;
+//         w31 == 0;
 
-    reads
-        x16; w2; w31;
+//     reads
+//         x16; w2; w31;
 
-    modifies
-        wmem; wdrs; fgroups;
-        w24; w26; w27; w29; w30;
-        x8; x10; x12; x13; x19; x22;
+//     modifies
+//         wmem; wdrs; fgroups;
+//         w24; w26; w27; w29; w30;
+//         x8; x10; x12; x13; x19; x22;
 
-{
+// {
  
 
-}
+// }
 
 #verbatim
 }

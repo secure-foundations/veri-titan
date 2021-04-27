@@ -230,6 +230,25 @@ module vt_ops {
             (zs + [z], cout)
     }
 
+    lemma seq_addc_len1_lemma(
+        x: uint256, y: uint256, z: uint256, c: uint1)
+        requires (z, c) == uint256_addc(x, y, 0);
+        ensures seq_addc([x], [y]) == ([z], c);
+    {
+        assert [] + [z] == [z]; 
+    }
+
+    lemma seq_addc_len2_lemma(
+        x0: uint256, y0: uint256, z0: uint256, c0: uint1,
+        x1: uint256, y1: uint256, z1: uint256, c1: uint1)
+        requires (z0, c0) == uint256_addc(x0, y0, 0);
+        requires (z1, c1) == uint256_addc(x1, y1, c0);
+        ensures seq_addc([x0, x1], [y0, y1]) == ([z0, z1], c1);
+    {
+        seq_addc_len1_lemma(x0, y0, z0, c0);
+        assert [z0] + [z1] == [z0, z1];
+    }
+
     function seq_subb(xs: seq<uint256>, ys: seq<uint256>) : (seq<uint256>, uint1)
         requires |xs| == |ys|
         ensures var (zs, cout) := seq_subb(xs, ys);
@@ -243,6 +262,7 @@ module vt_ops {
             (zs + [z], bout)
     }
 
+/*
     lemma lemma_extend_seq_subb(
             xs: seq<uint256>, ys: seq<uint256>, zs: seq<uint256>, 
             cin :uint1, cout:uint1,
@@ -258,4 +278,6 @@ module vt_ops {
         ensures ([], 0) == seq_subb([], [])
     {
     }
+*/
+
 }
