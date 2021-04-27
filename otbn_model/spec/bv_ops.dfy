@@ -80,6 +80,7 @@ module bv_ops {
 		var sum : int := x + y + cin;
 		var sum_out := if sum < BASE_256 then sum else sum - BASE_256;
 		var cout := if sum  < BASE_256 then 0 else 1;
+		// assert x + y + cin == sum_out + cout * BASE_256;
 		(sum_out, cout)
 	}
 

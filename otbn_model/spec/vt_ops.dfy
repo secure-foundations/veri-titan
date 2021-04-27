@@ -209,12 +209,12 @@ module vt_ops {
         (concat / pow2(shift_amt)) % BASE_256
     }
 
-    function to_nat(x: seq<uint256>): nat
+    function to_nat(xs: seq<uint256>): nat
     {
-        if |x| == 0 then 0
+        if |xs| == 0 then 0
         else
-            var idx := |x| - 1;
-            to_nat(x[..idx]) * BASE_256 + x[idx]
+            var len' := |xs| - 1;
+            to_nat(xs[..len']) + xs[len'] * power(BASE_256, len')
     }
 
     function seq_addc(xs: seq<uint256>, ys: seq<uint256>) : (seq<uint256>, uint1)
@@ -224,10 +224,54 @@ module vt_ops {
     {
         if |xs| == 0 then ([], 0)
         else 
-            var idx := |xs| - 1;
-            var (zs, cin) := seq_addc(xs[..idx], ys[..idx]);
-            var (z, cout) := uint256_addc(xs[idx], ys[idx], cin);
-            (zs + [z], cout)
+            var len' := |xs| - 1;
+            var (zs', cin) := seq_addc(xs[..len'], ys[..len']);
+            var (z, cout) := uint256_addc(xs[len'], ys[len'], cin);
+            (zs' + [z], cout)
+    }
+
+    lemma seq_addc_to_nat_lemma(
+        xs: seq<uint256>, ys: seq<uint256>, zs: seq<uint256>, cout: uint1)
+        requires |xs| == |ys|;
+        requires seq_addc(xs, ys) == (zs, cout);
+        ensures to_nat(zs) + power(BASE_256, |xs|) * cout == to_nat(xs) + to_nat(ys);
+    {
+        if |xs| == 0 {
+            reveal power();
+        } else {
+            var len, len' := |xs|,|xs| - 1;
+            var xs', ys' := xs[..len'], ys[..len'];
+            var x, y := xs[len'], ys[len'];
+    
+            var (zs', cin) := seq_addc(xs', ys');
+            var (z, _) := uint256_addc(x, y, cin);
+
+            var weight' := power(BASE_256, len');
+
+            calc {
+                to_nat(zs) + power(BASE_256, len) * cout;
+                { assert to_nat(zs) == to_nat(zs') + z * weight'; }
+                to_nat(zs') + z * weight' + power(BASE_256, len) * cout;
+                { reveal power(); }
+                to_nat(zs') + z * weight' + weight' * BASE_256 * cout;
+                to_nat(zs') + z * weight' + cout * BASE_256 * weight' ;
+                {
+                   assert x * weight' + y * weight' + cin as int * weight'
+                    == z * weight' + cout * BASE_256 * weight' by {
+    		            assert x + y + cin as int == z + cout * BASE_256;
+                    }
+                }
+                to_nat(zs') + x * weight' + y * weight' + cin as int * weight';
+                {
+                    assert to_nat(zs') + weight' * cin as nat
+                    == to_nat(xs') + to_nat(ys') by {
+                        seq_addc_to_nat_lemma(xs', ys', zs', cin);
+                    }
+                }
+                to_nat(xs') + to_nat(ys')+ x * weight' + y * weight';
+                to_nat(xs) + to_nat(ys);
+            }
+        }
     }
 
     lemma seq_addc_len1_lemma(
@@ -235,7 +279,7 @@ module vt_ops {
         requires (z, c) == uint256_addc(x, y, 0);
         ensures seq_addc([x], [y]) == ([z], c);
     {
-        assert [] + [z] == [z]; 
+        assert [] + [z] == [z];
     }
 
     lemma seq_addc_len2_lemma(
@@ -256,9 +300,9 @@ module vt_ops {
     {
         if |xs| == 0 then ([], 0)
         else 
-            var idx := |xs| - 1;
-            var (zs, bin) := seq_subb(xs[..idx], ys[..idx]);
-            var (z, bout) := uint256_subb(xs[idx], ys[idx], bin);
+            var len' := |xs| - 1;
+            var (zs, bin) := seq_subb(xs[..len'], ys[..len']);
+            var (z, bout) := uint256_subb(xs[len'], ys[len'], bin);
             (zs + [z], bout)
     }
 
