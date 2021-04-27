@@ -2,35 +2,24 @@ include "decls.vad"
 
 #verbatim
 include "../code/vale.dfy"
+include "../spec/vt_ops.dfy"
 
-include "../spec/def.dfy"
-include "../spec/ops.dfy"
-include "../spec/types.dfy"
-
-include "../gen/decls.dfy"
+include "decls.dfy"
 
 module cond_sub_mod {
 
-import opened bignum_vale
-
-import opened bignum_def
-import opened ops
-import opened types
-
-import opened bignum_decls
+import opened bv_ops
+import opened vt_ops
+import opened vt_types
+import opened vt_consts
+import opened vt_vale
+import opened vt_decls
 
 #endverbatim
 
 function seq_subb(x: seq(uint256), y: seq(uint256)) : tuple(seq(uint256), uint1) extern;
 
-ghost procedure lemma_extend_seq_subb(
-    ghost x:seq(uint256), ghost y:seq(uint256), ghost z:seq(uint256), 
-    ghost cin:uint1, ghost cout:uint1,
-    ghost new_x:uint256, ghost new_y:uint256, ghost new_z:uint256) extern;
-
-ghost procedure lemma_empty_seq_subb() extern;
-
-procedure cond_sub_mod_inner(ghost initial_wdrs: wdrs_t, ghost selection: bool, ghost iter: iter_t)
+procedure cond_sub_mod_0(ghost initial_wdrs: wdrs_t, ghost selection: bool, ghost iter: iter_t)
     returns (ghost next_iter: iter_t)
 
     requires
@@ -170,8 +159,6 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
     ghost var iter := iter_cons(initial_x16, 0, wmem[x16]);
     assert valid_wmem_addr(wmem, x16, iter);
 
-    lemma_empty_seq_subb();
-
     while (Loop(x31))
         invariant iter.index + loop_ctr == num_words;
         invariant x8 == 5 + iter.index;
@@ -197,7 +184,7 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
         invariant wmem == old(wmem);
         decreases loop_ctr;
     {
-        iter := cond_sub_mod_inner(initial_wdrs, selection, iter);
+        iter := cond_sub_mod_0(initial_wdrs, selection, iter);
     }
 
     assert iter.buff[..iter.index] == iter.buff;

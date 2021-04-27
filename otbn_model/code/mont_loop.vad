@@ -1,0 +1,108 @@
+include "decls.vad"
+include "mul256.vad"
+
+#verbatim
+include "../code/vale.dfy"
+include "../spec/vt_ops.dfy"
+
+include "decls.dfy"
+include "mul256.dfy"
+
+module mont_loop {
+
+import opened bv_ops
+import opened vt_ops
+import opened vt_types
+import opened vt_consts
+import opened vt_vale
+import opened vt_decls
+
+import opened mul256
+
+#endverbatim
+
+// procedure mont_loop_inner(ghost num_words: nat)
+// {
+// }
+
+procedure mont_loop_0(ghost num_words: nat)
+    requires
+        // valid_buff_addr(wmem, x16, num_words);
+        valid_buff_addr(wmem, x19, num_words); // y buffer
+        x31 == num_words - 1;
+
+        w31 == 0;
+
+    reads
+        x16; w2; w31;
+
+    modifies
+        wmem; wdrs; fgroups;
+        w24; w26; w27; w29; w30;
+        x8; x10; x12; x13; x19; x22;
+    
+    ensures
+        x22 == x16;
+        x12 == 30;
+        x13 == 24;
+        x8 == 5;
+
+        x10 == 4;
+{
+   /* save pointer to modulus */
+    addi(x22, x16, 0);
+
+    /* pointers to temp. wregs */
+    li(x12, 30);
+    li(x13, 24);
+
+    /* buffer read pointer */
+    li(x8, 4);
+
+    /* buffer write pointer */
+    li(x10, 4);
+    
+    ghost var iter_y := iter_cons(x19, 0, wmem[x19]);
+    /* load 1st limb of input y (operand a): w30 = y[0] */
+    iter_y := bn_lid_safe(x12, false, 0, x19, true, iter_y);
+    assert wdrs[30] == iter_y.buff[0];
+
+    mul256_w30xw2();
+    assert to_nat(seq(w27, w26)) == #int(w30) * #int(w2);
+
+    /* w24 = w4 = A[0] */
+    bn_movr(x13, false, x8, true);
+    assert wdrs[24] == wdrs[4];
+
+    bn_add(w30, w27, w24, false, 0, 0);
+    bn_addc(w29, w26, w31, false, 0, 0);
+
+    // assert 
+}
+
+
+procedure mont_loop(ghost num_words: nat)
+    // {: frame false}
+    requires
+        valid_buff_addr(wmem, x16, num_words);
+        valid_buff_addr(wmem, x19, num_words); // y buffer
+        x31 == num_words - 1;
+
+        w31 == 0;
+
+    reads
+        x16; w2; w31;
+
+    modifies
+        wmem; wdrs; fgroups;
+        w24; w26; w27; w29; w30;
+        x8; x10; x12; x13; x19; x22;
+
+{
+ 
+
+}
+
+#verbatim
+}
+#endverbatim

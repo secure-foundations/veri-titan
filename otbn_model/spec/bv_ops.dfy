@@ -1,10 +1,26 @@
-include "types.dfy"
+include "vt_consts.dfy"
 include "../lib/powers.dfy"
 
-module ops {
-	import opened types
+module bv_ops {
+	import opened vt_consts
 	import opened powers
-		
+
+    type uint1   = i :int | 0 <= i < BASE_1
+    type uint2   = i :int | 0 <= i < BASE_2
+    type uint4   = i :int | 0 <= i < BASE_4
+    type uint5   = i :int | 0 <= i < BASE_5
+    type uint8   = i :int | 0 <= i < BASE_8
+    type uint16  = i :int | 0 <= i < BASE_16
+    type uint32  = i :int | 0 <= i < BASE_32
+    type uint64  = i :int | 0 <= i < BASE_64
+    type uint128 = i :int | 0 <= i < BASE_128
+    type uint256 = i :int | 0 <= i < BASE_256
+
+    function bool_to_uint1(i:bool) : uint1
+    {
+        if i then 1 else 0
+    }
+
 	function method {:opaque} uint32_and(x:uint32, y:uint32) : uint32
 	{
         (x as bv32 & y as bv32) as uint32
@@ -55,17 +71,20 @@ module ops {
 		(x * y) % BASE_256
 	}
 
-	function method uint256_add(x: uint256, y: uint256): uint256
+	function method uint256_addc(x: uint256, y: uint256, cin: uint1): (uint256, uint1)
 	{
-		(x + y) % BASE_256
+		var sum : int := x + y + cin;
+		var sum_out := if sum < BASE_256 then sum else sum - BASE_256;
+		var cout := if sum  < BASE_256 then 0 else 1;
+		(sum_out, cout)
 	}
 
-	function method uint256_subb(x: uint256, y: uint256, cin: uint1): (uint256, uint1)
+	function method uint256_subb(x: uint256, y: uint256, bin: uint1): (uint256, uint1)
 	{
-	    var diff : int := x - y - cin;
+	    var diff : int := x - y - bin;
 		var diff_out := if diff >= 0 then diff else diff + BASE_256;
-		var cout := if diff < 0 then 1 else 0;
-		(diff_out, cout)
+		var bout := if diff >= 0 then 0 else 1;
+		(diff_out, bout)
 	}
 
 	function method {:opaque} uint256_xor(x: uint256, y: uint256): uint256
@@ -83,7 +102,7 @@ module ops {
 		(x as bv256 | y as bv256) as uint256
 	}
 
-	function method {:opaque} uint256_ls(x: uint256, num_bytes:int): (r: uint256)
+	function method {:opaque} uint256_ls(x: uint256, num_bytes: int): (r: uint256)
 		requires 0 <= num_bytes < 32;
 		ensures (num_bytes == 0) ==> r == x;
 		ensures (num_bytes == 8 && x < BASE_192) ==> (r == x * BASE_64);
@@ -92,7 +111,7 @@ module ops {
 		(x as bv256 << (num_bytes * 8)) as uint256
 	}
 
-	function method {:opaque} uint256_rs(x: uint256, num_bytes:int): uint256
+	function method {:opaque} uint256_rs(x: uint256, num_bytes: int): uint256
 		requires 0 <= num_bytes < 32;
 		ensures uint256_rs(x, 0) == x;
 	{

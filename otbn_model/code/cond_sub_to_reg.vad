@@ -2,22 +2,17 @@ include "decls.vad"
 
 #verbatim
 include "../code/vale.dfy"
-
-include "../spec/def.dfy"
-include "../spec/ops.dfy"
-include "../spec/types.dfy"
-
-include "../gen/decls.dfy"
+include "../spec/vt_ops.dfy"
+include "decls.dfy"
 
 module cond_sub_to_reg {
 
-import opened bignum_vale
-
-import opened bignum_def
-import opened ops
-import opened types
-
-import opened bignum_decls
+import opened bv_ops
+import opened vt_ops
+import opened vt_types
+import opened vt_consts
+import opened vt_vale
+import opened vt_decls
 
 #endverbatim
 
@@ -139,32 +134,6 @@ procedure cond_sub_to_reg_inner(
 
 }
 
-/**
- * Constant time conditional bigint subtraction
- *
- * Returns C <= C-s*B
- *         with B being a bigint of length 256..4096 bit
- *              C being a bigint of length 256..4096 bit
- *              s being a boolean value [0,1]
- *
- * Depending on state of FG1.C subtracts a bigint B located in dmem from
- * another bigint C, located in the wide reg file and stores result at same
- * position in wide reg file.
- *
- * Flags: When leaving this subroutine, flags of FG0 depend on a
- *        potentially discarded value and therefore are not usable after
- *        return. FG1 is not modified in this subroutine.
- *
- * @param[in]  x16: dmem pointer to first limb of subtrahend (B)
- * @param[in]  x8: regfile pointer to first limb of minuend and result (C)
- * @param[in]  FG.C: s, subtraction flag, subtract if 1
- * @param[in]  x30: number of limbs
- * @param[in]  FG0.C: needs to be set to 0
- *
- * clobbered registers: x8, x16, w24, w29, w30, w[x8] to w[x8+N-1]
- * clobbered Flag Groups: FG0
- */
-
 procedure cond_sub_to_reg(ghost num_words: nat, ghost selection: bool)
     requires
         selection == fgroups.fg1.cf;
@@ -201,11 +170,9 @@ procedure cond_sub_to_reg(ghost num_words: nat, ghost selection: bool)
     ghost var initial_x16 := x16;
     ghost var iter := iter_cons(x16, 0, wmem[x16]);
 
-    // lemma_empty_seq_subb();
-
     /* iterate over all limbs for conditional limb-wise subtraction */
     while (Loop(x30))
-        invariant i + loop_ctr == num_words;
+        invariant iter.index + loop_ctr == num_words;
 
         invariant selection == fgroups.fg1.cf;
 

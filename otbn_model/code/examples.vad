@@ -2,18 +2,15 @@ include "decls.vad"
 
 #verbatim
 include "../code/vale.dfy"
-
-include "../spec/def.dfy"
-include "../spec/ops.dfy"
-include "../spec/types.dfy"
-
+include "../spec/vt_ops.dfy"
 include "../gen/decls.dfy"
 
-import opened bignum_vale
-import opened bignum_def
-import opened ops
-import opened types
-import opened bignum_decls
+import opened bv_ops
+import opened vt_ops
+import opened vt_types
+import opened vt_consts
+import opened vt_vale
+import opened vt_decls
 
 #endverbatim
 

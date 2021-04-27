@@ -1,14 +1,15 @@
 include{: verbatim} "../code/vale.dfy"
-include{: verbatim} "../spec/def.dfy"
-include{: verbatim} "../spec/ops.dfy"
+include{: verbatim} "../spec/vt_ops.dfy"
 
 #verbatim
-module bignum_decls {
+module vt_decls {
 
-import opened ops
-import opened bignum_vale
-import opened bignum_def
-import opened types
+import opened bv_ops
+import opened vt_ops
+import opened vt_types
+import opened vt_consts
+import opened vt_vale
+
 #endverbatim
 
 type seq(a: Type(0)): Type(0) {: primitive} extern;
@@ -18,7 +19,6 @@ function operator([ .. ]) #[a: Type(0)](s: seq(a), begin: int, end: int): seq(a)
 function seq_len #[a: Type(0)] (s: seq(a)): nat extern;
 function seq_concat #[a: Type(0)](x: seq(a), y: seq(a)): seq(a) extern;
 function seq_append #[a: Type(0)](xs: seq(a), x: a): seq(a) extern;
-function seq_empty #[a: Type(0)](): seq(a) extern;
 
 type map(a: Type(0), b: Type(0)): Type(0) extern;
 function operator(?[]) #[a:Type(0), b:Type(0)](m:map(a, b), key:a):bool extern;
@@ -101,6 +101,8 @@ var wmem: wmem_t {:state wmem()};
 function valid_iter(wmem: wmem_t, iter: iter_t): bool extern;
 function admissible_wmem_addr(h: wmem_t, addr: int, iter: iter_t): bool extern;
 function valid_wmem_addr(h: wmem_t, addr: int, iter: iter_t): bool extern;
+
+function to_nat(s: seq(uint256)): nat extern;
 
 var x0: uint32 {:state reg32_t(GPR(0))};
 var x1: uint32 {:state reg32_t(GPR(1))};
@@ -439,31 +441,31 @@ procedure bn_subb(inout dst: reg256, in src1: reg256, in src2: reg256, inline st
     assume false; // TODO
 }
 
-procedure bn_subi(inout dst: reg256, in src1: reg256, in src2: imm128, inline which_group: uint1)
-    {:instruction Ins256(BN_SUBI(dst, src1, src2, which_group))}
-    requires
-        src2 < 1024;
-    modifies
-        fgroups;
-    ensures
-        let result := otbn_subbi(old(src1), src2);
-        dst == fst(result) &&
-        fgroups == update_fgroups(old(fgroups), which_group, snd(result));
-{
-    assume false;
-}
+// procedure bn_subi(inout dst: reg256, in src1: reg256, in src2: imm128, inline which_group: uint1)
+//     {:instruction Ins256(BN_SUBI(dst, src1, src2, which_group))}
+//     requires
+//         src2 < 1024;
+//     modifies
+//         fgroups;
+//     ensures
+//         let result := otbn_subbi(old(src1), src2);
+//         dst == fst(result) &&
+//         fgroups == update_fgroups(old(fgroups), which_group, snd(result));
+// {
+//     assume false;
+// }
 
-procedure bn_subm(inout dst: reg256, in src1: reg256, in src2: reg256)
-    {:instruction Ins256(BN_SUBM(dst, src1, src2))}
-    requires
-        false; // TODO: dst cannot be wmod
-    reads
-        wmod;
-    ensures
-        dst == otbn_subm(old(src1), old(src2), wmod);
-{
-    assume false;
-}
+// procedure bn_subm(inout dst: reg256, in src1: reg256, in src2: reg256)
+//     {:instruction Ins256(BN_SUBM(dst, src1, src2))}
+//     requires
+//         false; // TODO: dst cannot be wmod
+//     reads
+//         wmod;
+//     ensures
+//         dst == otbn_subm(old(src1), old(src2), wmod);
+// {
+//     assume false;
+// }
 
 procedure bn_or(inout dst: reg256, in src1: reg256, in src2: reg256, inline st: bool, inline sb: uint5)
     {:instruction Ins256(BN_OR(dst, src1, src2, st, sb))}
