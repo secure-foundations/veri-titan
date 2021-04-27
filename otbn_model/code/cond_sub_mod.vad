@@ -17,8 +17,6 @@ import opened vt_decls
 
 #endverbatim
 
-function seq_subb(x: seq(uint256), y: seq(uint256)) : tuple(seq(uint256), uint1) extern;
-
 procedure cond_sub_mod_0(ghost initial_wdrs: wdrs_t, ghost selection: bool, ghost iter: iter_t)
     returns (ghost next_iter: iter_t)
 

@@ -16,8 +16,6 @@ import opened vt_decls
 
 #endverbatim
  
-function seq_subb(x: seq(uint256), y: seq(uint256)) : tuple(seq(uint256), uint1) extern;
-
 procedure cond_sub_to_dmem_inner(
     ghost initial_x8: uint32,
     ghost initial_buff: seq(uint256),

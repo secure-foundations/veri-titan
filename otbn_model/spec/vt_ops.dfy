@@ -92,7 +92,6 @@ module vt_ops {
         else select_fgroup(fgps, which_group).zero
     }
 
-
     function get_cf0(fgps: fgroups_t): bool
     {
         select_fgroup(fgps, 0).cf 
@@ -108,61 +107,29 @@ module vt_ops {
         if which_group == 0 then fgps.(fg0 := new_flags_t) else fgps.(fg1 := new_flags_t)
     }
 
-    function otbn_add_carray(x: uint256, y: uint256, carry: bool) : (uint256, flags_t)
+    function otbn_addc(x: uint256, y: uint256, st: bool, sb: uint5, carry: bool) : (uint256, flags_t)
     {
         var cin := if carry then 1 else 0;
-        var (sum, cout) := uint256_addc(x, y, cin);
+        var (sum, cout) := uint256_addc(x, uint256_sb(y, st, sb), cin);
         // TODO: MSB/LSB
         var fg := flags_t(cout == 1, false, false, sum == 0);
         (sum, fg)
     }
 
-    function otbn_add(x: uint256, y: uint256, st: bool, sb: uint5) : (uint256, flags_t)
-    {
-        otbn_add_carray(x, uint256_sb(y, st, sb), false)
-    }
-
-    function otbn_addc(x: uint256, y: uint256, st: bool, sb: uint5, fg: flags_t) : (uint256, flags_t)
-    {
-        otbn_add_carray(x, uint256_sb(y, st, sb), fg.cf)
-    }
-
-    function otbn_addi(x: uint256, imm: uint256) : (uint256, flags_t)
-        requires imm < 1024;
-    {
-        otbn_add_carray(x, imm, false)
-    }
-
-    function otbn_addm(x: uint256, y: uint256, mod: uint256) : uint256
-    {
-        var (sum, _) := otbn_add_carray(x, y, false);
-        if sum >= mod then sum - mod else sum
-    }
-
-    function otbn_sub(x: uint256, y: uint256, st: bool, sb: uint5) : (uint256, flags_t)
-    {
-        var (diff, cout) := uint256_subb(x, uint256_sb(y, st, sb), 0);
-        var fg := flags_t(cout == 1, false, false, diff == 0);
-        (diff, fg)
-    }
-
-    function otbn_subb(x: uint256, y: uint256, st: bool, sb: uint5, flgs: flags_t) : (uint256, flags_t)
-    {
-        var cf := if flgs.cf then 1 else 0;
-        var (diff, cout) := uint256_subb(x, uint256_sb(y, st, sb), cf);
-        var fg := flags_t(cout == 1, false, false, diff == 0);
-        (diff, fg)
-    }
-
-    // function otbn_subbi(x: uint256, imm: uint256) : (uint256, flags_t)
-    //     requires false;
+    // function otbn_addm(x: uint256, y: uint256, mod: uint256) : uint256
     // {
-    //     // FIXME: double check this
-    //     var diff : int := x - imm;
-    //     // FIXME: figure out the flags_t
-    //     var fg := flags_t(false, false, false, diff == 0);
-    //     (diff % BASE_256, fg)
+    //     var (sum, _) := otbn_add_carray(x, y, false);
+    //     if sum >= mod then sum - mod else sum
     // }
+
+    function otbn_subb(x: uint256, y: uint256, st: bool, sb: uint5, borrow: bool) : (uint256, flags_t)
+    {
+        var cf := if borrow then 1 else 0;
+        var (diff, cout) := uint256_subb(x, uint256_sb(y, st, sb), cf);
+        // TODO: MSB/LSB
+        var fg := flags_t(cout == 1, false, false, diff == 0);
+        (diff, fg)
+    }
 
     // function otbn_subm(x: uint256, y: uint256, wmod: uint256) : uint256
     //     requires false;

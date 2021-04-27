@@ -77,9 +77,11 @@ procedure mont_loop_0(ghost num_words: nat)
     bn_add(w30, w27, w24, false, 0, 0);
     bn_addc(w29, w26, w31, false, 0, 0);
 
-    // assert 
+    // assert w30 == 
+    
+    // ghost var cout := bool_to_uint1(fgroups.fg0.cf);
+    // assert tuple(seq(w30, w29), cout) == seq_addc(seq(w24, w31), seq(w27, w26));
 }
-
 
 procedure mont_loop(ghost num_words: nat)
     // {: frame false}
