@@ -136,6 +136,12 @@ module vt_types {
         addr in h
     }
 
+    predicate valid_wdr_slice(wdrs: wdrs_t, slice: seq<uint256>, start: nat)
+        requires start + |slice| <= 32
+    {
+        wdrs[start..start + |slice| ] == slice
+    }
+
     datatype state = state(
         gprs: gprs_t, // 32-bit registers
         wdrs: wdrs_t, // 256-bit registers

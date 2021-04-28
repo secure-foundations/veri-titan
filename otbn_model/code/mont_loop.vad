@@ -36,17 +36,24 @@ ghost procedure seq_addc_to_nat_lemma(
     extern;
 
 ghost procedure to_nat_singleton_lemma(ghost xs: seq(uint256)) extern;
+
 ghost procedure to_nat_pair_lemma(ghost xs: seq(uint256)) extern;
 
 procedure mont_loop_0(
     ghost num_words: nat,
+    ghost a_slice: seq(uint256),
     ghost y_iter: iter_t,
     ghost m0': nat)
     requires
+        num_words <= 12;
+        x31 == num_words - 1;
+
         valid_wmem_addr(wmem, x19, y_iter);
+        seq_len(y_iter.buff) == num_words;
         y_iter.index == 0;
 
-        x31 == num_words - 1;
+        seq_len(a_slice) == num_words;
+        valid_wdr_slice(wdrs, a_slice, 4);
 
         w3 == m0';
         w31 == 0;
@@ -67,7 +74,7 @@ procedure mont_loop_0(
 
         x10 == 4;
 
-        cong(w27, (w24 + y_iter.buff[0] * w2) * m0', BASE_256);
+        // cong(w25, (w24 + y_iter.buff[0] * w2) * m0', BASE_256);
 {
    /* save pointer to modulus */
     addi(x22, x16, 0);
@@ -82,18 +89,17 @@ procedure mont_loop_0(
     /* buffer write pointer */
     li(x10, 4);
     
-    // ghost var y_iter := iter_cons(x19, 0, wmem[x19]);
     /* load 1st limb of input y (operand a): w30 = y[0] */
     let y_next_iter := bn_lid_safe(x12, false, 0, x19, true, y_iter);
-    assert wdrs[30] == y_iter.buff[0];
+    // assert wdrs[30] == y_iter.buff[0];
 
     /* [w26, w27] = w30*w2 = y[0]*x_i */
     mul256_w30xw2();
-    assert to_nat(seq(w27, w26)) == y_iter.buff[0] * w2;
+    // assert to_nat(seq(w27, w26)) == y_iter.buff[0] * w2;
 
     /* w24 = w4 = A[0] */ 
     bn_movr(x13, false, x8, true);
-    assert wdrs[24] == wdrs[4];
+    assert w24 == a_slice[0];
 
     /* add A[0]: [w29, w30] = [w26, w27] + w24 = y[0]*x_i + A[0] */
     bn_add(w30, w27, w24, SFT_DFT, 0);
@@ -102,6 +108,7 @@ procedure mont_loop_0(
     ghost var cout := bool_to_uint1(fgroups.fg0.cf);
 
     calc == {
+        // a_slice[0] + y_iter.buff[0] * w2;
         w24 + y_iter.buff[0] * w2;
         == { to_nat_singleton_lemma(seq(w24)); }
         to_nat(seq(w24)) + y_iter.buff[0] * w2;
@@ -114,19 +121,17 @@ procedure mont_loop_0(
     }
     
     calc ==> {
-        cong(w24 + y_iter.buff[0] * w2, 
-            to_nat(seq(w30, w29)) + power(BASE_256, 2) * cout, BASE_256);
+        cong256(w24 + y_iter.buff[0] * w2, 
+            to_nat(seq(w30, w29)) + power(BASE_256, 2) * cout);
         ==> { reveal cong; }
-        cong(w24 + y_iter.buff[0] * w2, 
-            to_nat(seq(w30, w29)) + power(BASE_256, 2) * cout, BASE_256);
+        cong256(w24 + y_iter.buff[0] * w2, 
+            to_nat(seq(w30, w29)) + power(BASE_256, 2) * cout);
         ==> { assume false; }
-        cong(w24 + y_iter.buff[0] * w2, 
-            to_nat(seq(w30, w29)), BASE_256);
+        cong256(w24 + y_iter.buff[0] * w2, to_nat(seq(w30, w29)));
         ==> { to_nat_pair_lemma(seq(w30, w29)); }
-        cong(w24 + y_iter.buff[0] * w2, 
-            w30 + w29 * BASE_256, BASE_256);
+        cong256(w24 + y_iter.buff[0] * w2, w30 + w29 * BASE_256);
         ==> { assume false; }
-        cong(w24 + y_iter.buff[0] * w2, w30, BASE_256);
+        cong256(w24 + y_iter.buff[0] * w2, w30);
     }
 
     /* w25 = w3 = m0' */
@@ -135,17 +140,29 @@ procedure mont_loop_0(
     /* [_, u_i] = [w26, w27] = w30*w25 = (y[0]*x_i + A[0])*m0'*/
     mul256_w30xw25();
 
+    /* [_, u_i] = [w28, w25] = [w26, w27]  */
+    bn_mov(w25, w27);
+
+    /* TODO: this instruction seems unnecessary */
+    // bn_mov(w28, w26);
+
     calc ==> {
         to_nat(seq(w27, w26)) == w30 * m0';
         ==> { to_nat_pair_lemma(seq(w27, w26)); }
         w27 + w26 * BASE_256 == w30 * m0';
         ==> { reveal cong; }
-        cong(w27 + w26 * BASE_256, w30 * m0', BASE_256);
+        cong256(w27 + w26 * BASE_256, w30 * m0');
         ==> { assume false; }
-        cong(w27, w30 * m0', BASE_256);
+        cong256(w27, w30 * m0');
         ==> { assume false; }
-        cong(w27, (w24 + y_iter.buff[0] * w2) * m0', BASE_256);
+        cong256(w27, (w24 + y_iter.buff[0] * w2) * m0');
+        ==>
+        cong256(w25, (w24 + y_iter.buff[0] * w2) * m0');
     }
+
+    /* w24 = w30 =  y[0]*x_i + A[0] mod b */
+    bn_mov(w24, w30);
+
 }
 
 // procedure mont_loop(ghost num_words: nat)
