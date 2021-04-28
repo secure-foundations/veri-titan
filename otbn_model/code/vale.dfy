@@ -113,6 +113,11 @@ module vt_vale {
         xs + [x]
     }
 
+    function va_mul_nat(a: nat, b: nat): nat
+    {
+        a * b
+    }
+
     // reg32
 
     type va_value_reg32 = uint32

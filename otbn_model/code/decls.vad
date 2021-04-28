@@ -33,6 +33,9 @@ type uint32:  Type(0) := int_range(0, 0xffffffff);
 type uint128: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff);
 type uint256: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff);
 
+function power(b: int, e: nat) : int extern;
+function cong(a: int, b: int, n: int) : bool extern;
+
 const BASE_32:  int extern;
 const BASE_64:  int extern; 
 const BASE_128: int extern; 

@@ -217,6 +217,43 @@ module vt_ops {
             to_nat(xs[..len']) + xs[len'] * power(BASE_256, len')
     }
 
+    lemma to_nat_singleton_lemma(xs: seq<uint256>)
+        requires |xs| == 1
+        ensures to_nat(xs) == xs[0]
+    {
+        reveal power();
+    }
+
+    lemma to_nat_pair_lemma(xs: seq<uint256>)
+        requires |xs| == 2
+        ensures to_nat(xs) == xs[0] + xs[1] * BASE_256
+    {
+        to_nat_singleton_lemma(xs[..1]);
+        reveal power();
+    }
+
+    lemma to_nat_zero_extend_lemma(xs': seq<uint256>, xs: seq<uint256>) 
+        requires |xs'| < |xs|
+        requires var len' := |xs'|;
+            && xs[..len'] == xs'
+            && xs[len'.. ] == seq(|xs| - len', i => 0)
+        ensures to_nat(xs') == to_nat(xs);
+    {
+        var len, len' := |xs|, |xs'|;
+        if len != len' + 1 {
+            var len'' := len-1;
+            calc == {
+                to_nat(xs);
+                to_nat(xs[..len'']) + xs[len''] * power(BASE_256, len'');
+                to_nat(xs[..len'']);
+                {
+                    to_nat_zero_extend_lemma(xs', xs[..len'']);
+                }
+                to_nat(xs');
+            }
+        }
+    }
+
     function seq_addc(xs: seq<uint256>, ys: seq<uint256>) : (seq<uint256>, uint1)
         requires |xs| == |ys|
         ensures var (zs, cout) := seq_addc(xs, ys);
@@ -234,7 +271,7 @@ module vt_ops {
         xs: seq<uint256>, ys: seq<uint256>, zs: seq<uint256>, cout: uint1)
         requires |xs| == |ys|;
         requires seq_addc(xs, ys) == (zs, cout);
-        ensures to_nat(zs) + power(BASE_256, |xs|) * cout == to_nat(xs) + to_nat(ys);
+        ensures to_nat(xs) + to_nat(ys) == to_nat(zs) + power(BASE_256, |xs|) * cout;
     {
         if |xs| == 0 {
             reveal power();
