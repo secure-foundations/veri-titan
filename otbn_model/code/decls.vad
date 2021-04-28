@@ -41,6 +41,7 @@ const BASE_32:  int extern;
 const BASE_64:  int extern; 
 const BASE_128: int extern; 
 const BASE_256: int extern; 
+const NUM_WORDS:int extern;
 
 type state: Type(0) {: primitive} extern;
 function operator(.ok) (s: state): bool extern;

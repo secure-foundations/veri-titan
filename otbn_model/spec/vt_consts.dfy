@@ -12,4 +12,5 @@ module vt_consts {
     const BASE_256: int := 0x1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
 
     const DMEM_LIMIT: int := 0x8000
+    const NUM_WORDS:  int := 12
 }
