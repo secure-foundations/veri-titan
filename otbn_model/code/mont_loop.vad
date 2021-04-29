@@ -72,6 +72,48 @@ procedure addc_512(
         == to_nat(seq(dst1, dst2)) + power(BASE_256, 2) * cout;
 }
 
+procedure addc_512_special(
+    inout dst1: reg256, in src1a: reg256, in src1b: reg256,
+    inout dst2: reg256, in src2a: reg256, in src2b: reg256,
+    ghost left: uint256, ghost right: uint256)
+    requires
+        @dst1 != @dst2;
+        @dst1 != @src2a;
+        @dst1 != @src2b;
+        src2b == 0;
+
+        to_nat(seq(src1a, src2a)) == left * right;
+
+    modifies
+        fgroups;
+
+    ensures
+        left * right + old(src1b)
+            ==
+        to_nat(seq(dst1, dst2));     
+{
+    ghost var s1a := src1a;
+    ghost var s1b := src1b;
+    ghost var s2a := src2a;
+    ghost var s2b := src2b;
+
+    addc_512(dst1, src1a, src1b, dst2, src2a, src2b);
+
+    calc == {
+        left * right + s1b;
+        ==
+        to_nat(seq(s1a, s2a)) + s1b;
+        == { to_nat_singleton_lemma(seq(s1b)); }
+        to_nat(seq(s1a, s2a)) + to_nat(seq(s1b));
+        == { assert to_nat(seq(s1b)) == to_nat(seq(s1b, 0)); }
+        to_nat(seq(s1a, s2a)) + to_nat(seq(s1b, 0));
+        ==
+        to_nat(seq(dst1, dst2)) + power(BASE_256, 2) * bool_to_uint1(fgroups.fg0.cf);
+        == { assume bool_to_uint1(fgroups.fg0.cf) == 0; } // TODO: this should be provable
+        to_nat(seq(dst1, dst2));
+    }
+}
+
 procedure mont_loop_0(
     ghost a_slice: seq(uint256),
     ghost y_iter: iter_t,
@@ -142,32 +184,16 @@ procedure mont_loop_0(
 
     /* w24 = w4 = A[0] */ 
     bn_movr(x13, false, x8, true);
-    assert w24 == a_slice[0];
+    // assert w24 == a_slice[0];
 
     /* add A[0]: [w29, w30] = [w26, w27] + w24 = y[0]*x_i + A[0] */
-    addc_512(w30, w27, w24, w29, w26, w31);
-    ghost var cout := bool_to_uint1(fgroups.fg0.cf);
+    addc_512_special(w30, w27, w24, w29, w26, w31, y_iter.buff[0], x_i);
 
-    calc == {
-        a_slice[0] + y_iter.buff[0] * x_i;
-        == w24 + y_iter.buff[0] * x_i;
-        == { to_nat_singleton_lemma(seq(w24)); }
-        to_nat(seq(w24)) + y_iter.buff[0] * x_i;
-        == { assert to_nat(seq(w24)) == to_nat(seq(w24, 0)); }
-        to_nat(seq(w24, 0)) + y_iter.buff[0] * x_i;
-        == to_nat(seq(w24, 0)) + to_nat(seq(w27, w26));
-        == to_nat(seq(w30, w29)) + power(BASE_256, 2) * cout;
-    }
+    assert to_nat(seq(w30, w29)) == a_slice[0] + y_iter.buff[0] * x_i;
 
     calc ==> {
         true;
         ==> { reveal cong; }
-        cong256(a_slice[0] + y_iter.buff[0] * x_i, 
-            to_nat(seq(w30, w29)) + power(BASE_256, 2) * cout);
-        ==> { reveal cong; }
-        cong256(a_slice[0] + y_iter.buff[0] * x_i, 
-            to_nat(seq(w30, w29)) + power(BASE_256, 2) * cout);
-        ==> { assume false; }
         cong256(a_slice[0] + y_iter.buff[0] * x_i, to_nat(seq(w30, w29)));
         ==> { to_nat_pair_lemma(seq(w30, w29)); }
         cong256(a_slice[0] + y_iter.buff[0] * x_i, w30 + w29 * BASE_256);
@@ -247,17 +273,13 @@ procedure mont_loop_1(
     /* load limb of y (operand a) and mult. with x_i: [w26, w27] <- y[j]*x_i */
     let next_y_iter := bn_lid_safe(x12, false, 0, x19, true, y_iter);
     mul256_w30xw2();
-
     assert to_nat(seq(w27, w26)) == y_iter.buff[j] * x_i;
 
     /* add limb of buffer: [w26, w27] <- [w26,w27] + w24 = y[j]*x_i + A[j] */
     bn_movr(x13, false, x8, true);
     // assert w24 == a_slice[j];
-    addc_512(w27, w27, w24, w26, w26, w31);
 
-    assume bool_to_uint1(fgroups.fg0.cf) == 0; // TODO: this is provable
-    // assert to_nat(seq(x1, x2)) + to_nat(seq(y1, y2))
-    // == to_nat(seq(dst1, dst2));
+    addc_512_special(w27, w27, w24, w26, w26, w31, y_iter.buff[j], x_i);
 }
 
 procedure mont_loop(
@@ -289,6 +311,7 @@ procedure mont_loop(
 {
     ghost var y_iter := iter_cons(x19, 0, wmem[x19]);
     y_iter := mont_loop_0(a_slice, y_iter, x_i, m0');
+    ghost var u_i := w25;
 
     /* load first limb of modulus: w30 = m[0] */
     ghost var m_iter := iter_cons(x16, 0, wmem[x16]);
@@ -297,18 +320,13 @@ procedure mont_loop(
 
     /* [w26, w27] = w30*w25 = m[0]*u_i*/
     mul256_w30xw25();
-
-    ghost var u_i := w25;
-    assert to_nat(seq(w27, w26)) == m_iter.buff[0] * u_i;
+    // assert to_nat(seq(w27, w26)) == m_iter.buff[0] * u_i;
 
     /* [w28, w27] = [w26, w27] + w24 = m[0]*u_i + (y[0]*x_i + A[0] mod b) */
-    // bn_add(w27, w27, w24, SFT_DFT, 0);
     /* this serves as c_m in the first cycle of the loop below */
-    // bn_addc(w28, w26, w31, SFT_DFT, 0);
-    addc_512(w27, w27, w24, w28, w26, w31);
+    addc_512_special(w27, w27, w24, w28, w26, w31, m_iter.buff[0], u_i);
 
-    assume bool_to_uint1(fgroups.fg0.cf) == 0; // TODO: this is provable
-    assert to_nat(seq(w27, w28)) == m_iter.buff[0] * u_i + to_nat(seq(w24, 0));
+    // assert to_nat(seq(w27, w28)) == m_iter.buff[0] * u_i + to_nat(seq(w24, 0));
 
     // while (Loop(x31))
     // {
