@@ -39,6 +39,43 @@ ghost procedure to_nat_singleton_lemma(ghost xs: seq(uint256)) extern;
 
 ghost procedure to_nat_pair_lemma(ghost xs: seq(uint256)) extern;
 
+procedure addc_512(
+    inout dst1: reg256, in src1a: reg256, in src1b: reg256,
+    inout dst2: reg256, in src2a: reg256, in src2b: reg256)
+    requires
+        @dst1 != @dst2;
+        @dst1 != @src2a;
+        @dst1 != @src2b;
+
+    modifies
+        fgroups;
+    
+    ensures
+        to_nat(seq(old(src1a), old(src2a))) + to_nat(seq(old(src1b), old(src2b)))
+            ==
+        to_nat(seq(dst1, dst2)) + power(BASE_256, 2) * bool_to_uint1(fgroups.fg0.cf);
+{
+    ghost var x1 := src1a;
+    ghost var y1 := src1b;
+    ghost var x2 := src2a;
+    ghost var y2 := src2b;
+
+    bn_add(dst1, src1a, src1b, SFT_DFT, 0);
+    ghost var cin := bool_to_uint1(fgroups.fg0.cf);
+    bn_addc(dst2, src2a, src2b, SFT_DFT, 0);
+    ghost var cout := bool_to_uint1(fgroups.fg0.cf);
+
+    assert tuple(dst1, cin) == uint256_addc(x1, y1, 0);
+    assert tuple(dst2, cout) == uint256_addc(x2, y2, cin);
+
+    seq_addc_len2_lemma(x1, y1, dst1, cin, x2, y2, dst2, cout);
+    // assert seq_addc(seq(x1, x2), seq(y1, y2)) == tuple(seq(dst1, dst2), cout);
+    seq_addc_to_nat_lemma(seq(x1, x2), seq(y1, y2), seq(dst1, dst2), cout);
+
+    assert to_nat(seq(x1, x2)) + to_nat(seq(y1, y2)) 
+        == to_nat(seq(dst1, dst2)) + power(BASE_256, 2) * cout;
+}
+
 procedure mont_loop_0(
     ghost a_slice: seq(uint256),
     ghost y_iter: iter_t,
@@ -62,10 +99,10 @@ procedure mont_loop_0(
         w31 == 0;
 
     reads
-        x16; w2; w31;
+        wmem; x16; w2; w31;
 
     modifies
-        wmem; wdrs; fgroups;
+        wdrs; fgroups;
         w3; w24; w25; w26; w27; w29; w30;
         x8; x10; x12; x13; x19; x22;
     
@@ -165,7 +202,8 @@ procedure mont_loop_0(
         cong256(w27 + w26 * BASE_256, w30 * m0');
         ==> { assume false; }
         cong256(w27, w30 * m0');
-        ==> { assume false; }
+        ==> { assert cong256(w30, a_slice[0] + y_iter.buff[0] * x_i);
+            assume false; }
         cong256(w27, (a_slice[0] + y_iter.buff[0] * x_i) * m0');
         ==>
         cong256(w25, (a_slice[0] + y_iter.buff[0] * x_i) * m0');
@@ -178,27 +216,60 @@ procedure mont_loop_0(
     assert cong256(w25, (a_slice[0] + y_iter.buff[0] * x_i) * m0');
 }
 
-// procedure mont_loop(ghost num_words: nat)
-//     // {: frame false}
-//     requires
-//         valid_buff_addr(wmem, x16, num_words);
-//         valid_buff_addr(wmem, x19, num_words); // y buffer
-//         x31 == num_words - 1;
+procedure mont_loop(
+    ghost a_slice: seq(uint256),
+    ghost x_i: uint256,
+    ghost m0': nat)
 
-//         w31 == 0;
+    requires
+        x31 == NUM_WORDS - 1;
 
-//     reads
-//         x16; w2; w31;
+        x16 != x19;
 
-//     modifies
-//         wmem; wdrs; fgroups;
-//         w24; w26; w27; w29; w30;
-//         x8; x10; x12; x13; x19; x22;
+        valid_buff_addr(wmem, x19, NUM_WORDS);
+        valid_buff_addr(wmem, x16, NUM_WORDS);
 
-// {
- 
+        seq_len(a_slice) == NUM_WORDS;
+        valid_wdr_slice(wdrs, a_slice, 4);
 
-// }
+        w2 == x_i;
+        w3 == m0';
+        w31 == 0;
+
+    reads
+        w2; w31;
+
+    modifies
+        wmem; wdrs; fgroups;
+        w3; w24; w25; w26; w27; w29; w30;
+        x8; x10; x12; x13; x16; x19; x22;
+{
+    ghost var y_iter := iter_cons(x19, 0, wmem[x19]);
+    y_iter := mont_loop_0(a_slice, y_iter, x_i, m0');
+
+    /* load first limb of modulus: w30 = m[0] */
+    ghost var m_iter := iter_cons(x16, 0, wmem[x16]);
+    m_iter := bn_lid_safe(x12, false, 0, x16, true, m_iter);
+    assert w30 == m_iter.buff[0];
+
+    /* [w26, w27] = w30*w25 = m[0]*u_i*/
+    mul256_w30xw25();
+    ghost var u_i := w25;
+    assert to_nat(seq(w27, w26)) == m_iter.buff[0] * u_i;
+
+    /* [w28, w27] = [w26, w27] + w24 = m[0]*u_i + (y[0]*x_i + A[0] mod b) */
+
+    // bn_add(w27, w27, w24, SFT_DFT, 0);
+    // /* this serves as c_m in the first cycle of the loop below */
+    // bn_addc(w28, w26, w31, SFT_DFT, 0);
+
+    // calc == {
+    //     == to_nat(seq(w24, 0)) + to_nat(seq(w27, w26));
+    //     // == { seq_addc_len2_lemma(w27, w24, w30, cin, w26, 0, w29, cout);
+    //     //     seq_addc_to_nat_lemma(seq(w24, 0), seq(w27, w26), seq(w30, w29), cout); }
+    //     to_nat(seq(w30, w29)) + power(BASE_256, 2) * cout;
+    // }
+}
 
 #verbatim
 }
