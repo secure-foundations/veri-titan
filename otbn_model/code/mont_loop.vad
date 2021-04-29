@@ -35,7 +35,7 @@ ghost procedure to_nat_singleton_lemma(ghost xs: seq(uint256)) extern;
 
 ghost procedure to_nat_pair_lemma(ghost xs: seq(uint256)) extern;
 
-procedure addc_512(
+procedure seq_addc_512(
     inout dst1: reg256, in src1a: reg256, in src1b: reg256,
     inout dst2: reg256, in src2a: reg256, in src2b: reg256)
     requires
@@ -72,23 +72,22 @@ procedure addc_512(
         == to_nat(seq(dst1, dst2)) + power(BASE_256, 2) * cout;
 }
 
-procedure addc_512_special(
+procedure seq_addc_512_safe(
     inout dst1: reg256, in src1a: reg256, in src1b: reg256,
-    inout dst2: reg256, in src2a: reg256, in src2b: reg256,
-    ghost left: uint256, ghost right: uint256)
+    inout dst2: reg256, in src2a: reg256, in src2b: reg256)
     requires
         @dst1 != @dst2;
         @dst1 != @src2a;
         @dst1 != @src2b;
         src2b == 0;
 
-        to_nat(seq(src1a, src2a)) == left * right;
+        seq_addc_512_is_safe(seq(src1a, src2a), seq(src1b, src2b));
 
     modifies
         fgroups;
 
     ensures
-        left * right + old(src1b)
+        old(to_nat(seq(src1a, src2a))) + old(src1b)
             ==
         to_nat(seq(dst1, dst2));     
 {
@@ -97,11 +96,9 @@ procedure addc_512_special(
     ghost var s2a := src2a;
     ghost var s2b := src2b;
 
-    addc_512(dst1, src1a, src1b, dst2, src2a, src2b);
+    seq_addc_512(dst1, src1a, src1b, dst2, src2a, src2b);
 
     calc == {
-        left * right + s1b;
-        ==
         to_nat(seq(s1a, s2a)) + s1b;
         == { to_nat_singleton_lemma(seq(s1b)); }
         to_nat(seq(s1a, s2a)) + to_nat(seq(s1b));
@@ -109,7 +106,7 @@ procedure addc_512_special(
         to_nat(seq(s1a, s2a)) + to_nat(seq(s1b, 0));
         ==
         to_nat(seq(dst1, dst2)) + power(BASE_256, 2) * bool_to_uint1(fgroups.fg0.cf);
-        == { assume bool_to_uint1(fgroups.fg0.cf) == 0; } // TODO: this should be provable
+        == { assume bool_to_uint1(fgroups.fg0.cf) == 0; } // TODO: this is provable
         to_nat(seq(dst1, dst2));
     }
 }
@@ -128,10 +125,9 @@ procedure mont_loop_0(
         seq_len(y_iter.buff) == NUM_WORDS;
         y_iter.index == 0;
 
-        x_i == w2;
-
         valid_wdr_slice(wdrs, a_slice, 4, NUM_WORDS);
 
+        w2 == x_i;
         w3 == m0';
         w31 == 0;
 
@@ -154,10 +150,12 @@ procedure mont_loop_0(
         valid_wmem_addr(wmem, x19, y_next_iter);
         y_next_iter.index == 1;
 
+        w2 == x_i;
         w31 == 0;
 
-        cong256(w24, a_slice[0] + y_iter.buff[0] * x_i);
         cong256(w25, (a_slice[0] + y_iter.buff[0] * x_i) * m0');
+        cong256(w30, a_slice[0] + y_iter.buff[0] * x_i);
+        to_nat(seq(w30, w29)) == a_slice[0] + y_iter.buff[0] * x_i;
 
         valid_wdr_slice(wdrs, a_slice, 4, NUM_WORDS);
 {
@@ -187,8 +185,8 @@ procedure mont_loop_0(
     // assert w24 == a_slice[0];
 
     /* add A[0]: [w29, w30] = [w26, w27] + w24 = y[0]*x_i + A[0] */
-    addc_512_special(w30, w27, w24, w29, w26, w31, y_iter.buff[0], x_i);
-
+    assume seq_addc_512_is_safe(seq(w27, w26), seq(w24, w31));
+    seq_addc_512_safe(w30, w27, w24, w29, w26, w31);
     assert to_nat(seq(w30, w29)) == a_slice[0] + y_iter.buff[0] * x_i;
 
     calc ==> {
@@ -229,12 +227,6 @@ procedure mont_loop_0(
         ==>
         cong256(w25, (a_slice[0] + y_iter.buff[0] * x_i) * m0');
     }
-
-    /* w24 = w30 =  y[0]*x_i + A[0] mod b */
-    bn_mov(w24, w30);
-
-    assert cong256(w24, a_slice[0] + y_iter.buff[0] * x_i);
-    assert cong256(w25, (a_slice[0] + y_iter.buff[0] * x_i) * m0');
 }
 
 procedure mont_loop_1(
@@ -257,12 +249,12 @@ procedure mont_loop_1(
         valid_wdr_slice(wdrs, a_slice, 4, NUM_WORDS);
 
     reads
-        wmem; x16; w2; w31;
+        wmem; x16; w2;w31;
 
     modifies
         wacc; wdrs; fgroups;
         x8; x12; x13; x19;
-        w24; w26; w27; w30;
+        w24; w26; w27; w29; w30;
 
     ensures
         x12 == 30;
@@ -273,13 +265,19 @@ procedure mont_loop_1(
     /* load limb of y (operand a) and mult. with x_i: [w26, w27] <- y[j]*x_i */
     let next_y_iter := bn_lid_safe(x12, false, 0, x19, true, y_iter);
     mul256_w30xw2();
-    assert to_nat(seq(w27, w26)) == y_iter.buff[j] * x_i;
 
     /* add limb of buffer: [w26, w27] <- [w26,w27] + w24 = y[j]*x_i + A[j] */
     bn_movr(x13, false, x8, true);
-    // assert w24 == a_slice[j];
 
-    addc_512_special(w27, w27, w24, w26, w26, w31, y_iter.buff[j], x_i);
+    assume seq_addc_512_is_safe(seq(w27, w26), seq(w24, w31));
+    seq_addc_512_safe(w27, w27, w24, w26, w26, w31);
+    assert to_nat(seq(w27, w26)) == y_iter.buff[j] * x_i + a_slice[j];
+
+    /* add carry word from previous cycle:
+       [c_xy, a_tmp] = [w29, w24] <- [w26,w27] + w29 = y[j]*x_i + A[j] + c_xy*/
+    assume seq_addc_512_is_safe(seq(w27, w26), seq(w29, w31));
+    seq_addc_512_safe(w24, w27, w29, w29, w26, w31);
+    // assert to_nat(seq(w24, w29)) == y_iter.buff[j] * x_i + a_slice[j] + w29;
 }
 
 procedure mont_loop(
@@ -313,24 +311,32 @@ procedure mont_loop(
     y_iter := mont_loop_0(a_slice, y_iter, x_i, m0');
     ghost var u_i := w25;
 
+    /* w24 = w30 =  y[0]*x_i + A[0] mod b */
+    bn_mov(w24, w30);
+
     /* load first limb of modulus: w30 = m[0] */
     ghost var m_iter := iter_cons(x16, 0, wmem[x16]);
     m_iter := bn_lid_safe(x12, false, 0, x16, true, m_iter);
     // assert w30 == m_iter.buff[0];
 
     /* [w26, w27] = w30*w25 = m[0]*u_i*/
+    // assert to_nat(seq(old_w30, old_w29)) == a_slice[0] + y_iter.buff[0] * x_i;
     mul256_w30xw25();
+
     // assert to_nat(seq(w27, w26)) == m_iter.buff[0] * u_i;
+    // assert to_nat(seq(w30, w29)) == a_slice[0] + y_iter.buff[0] * x_i;
 
     /* [w28, w27] = [w26, w27] + w24 = m[0]*u_i + (y[0]*x_i + A[0] mod b) */
     /* this serves as c_m in the first cycle of the loop below */
-    addc_512_special(w27, w27, w24, w28, w26, w31, m_iter.buff[0], u_i);
+    assume seq_addc_512_is_safe(seq(w27, w26), seq(w24, w31));
+    seq_addc_512_safe(w27, w27, w24, w28, w26, w31);
+
 
     // assert to_nat(seq(w27, w28)) == m_iter.buff[0] * u_i + to_nat(seq(w24, 0));
 
     // while (Loop(x31))
     // {
-    //     mont_loop_1()
+    // mont_loop_1(a_slice, x_i, y_iter);
     // }
 }
 

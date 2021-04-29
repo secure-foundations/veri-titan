@@ -40,7 +40,8 @@ function cong256(a: int, b: int) : bool extern;
 const BASE_32:  nat extern;
 const BASE_64:  nat extern; 
 const BASE_128: nat extern; 
-const BASE_256: nat extern; 
+const BASE_256: nat extern;
+const BASE_512: nat extern;
 const NUM_WORDS:nat extern;
 
 type state: Type(0) {: primitive} extern;
@@ -240,6 +241,8 @@ function otbn_mulqacc(zero: bool, a: uint256, qa: uint32, b: uint256, qb: uint32
 
 function seq_subb(x: seq(uint256), y: seq(uint256)) : tuple(seq(uint256), uint1) extern;
 function seq_addc(x: seq(uint256), y: seq(uint256)) : tuple(seq(uint256), uint1) extern;
+
+function seq_addc_512_is_safe(x: seq(uint256), y: seq(uint256)) : bool extern;
 
 procedure lw(out grd: reg32, in offset: imm32, in grs1: reg32)
     {:instruction Ins32(LW(grd, grs1, offset))}

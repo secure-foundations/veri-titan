@@ -267,6 +267,12 @@ module vt_ops {
             (zs' + [z], cout)
     }
 
+    predicate {:opaque} seq_addc_512_is_safe(xs: seq<uint256>, ys: seq<uint256>)
+        requires |xs| == 2 && |ys| == 2;
+    {
+        to_nat(xs) + to_nat(ys) < BASE_512
+    }
+
     lemma seq_addc_to_nat_lemma(
         xs: seq<uint256>, ys: seq<uint256>, zs: seq<uint256>, cout: uint1)
         requires |xs| == |ys|;

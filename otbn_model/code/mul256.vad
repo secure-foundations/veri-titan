@@ -67,7 +67,7 @@ procedure mul256_w30xw25()
     modifies
         w26; w27;
     ensures
-        to_nat(seq(w27, w26)) == #int(w30) * #int(w25);
+        to_nat(seq(w27, w26)) == w30 * w25;
 {
     assume false;
 }
