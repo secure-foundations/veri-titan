@@ -23,10 +23,6 @@ import opened mul256
 
 #endverbatim
 
-// procedure mont_loop_inner(ghost num_words: nat)
-// {
-// }
-
 ghost procedure seq_addc_len2_lemma(
     ghost x0: uint256, ghost y0: uint256, ghost z0: uint256, ghost c0: uint1,
     ghost x1: uint256, ghost y1: uint256, ghost z1: uint256, ghost c1: uint1) extern;
@@ -51,7 +47,7 @@ procedure addc_512(
         fgroups;
     
     ensures
-        to_nat(seq(old(src1a), old(src2a))) + to_nat(seq(old(src1b), old(src2b)))
+        old(to_nat(seq(src1a, src2a))) + old(to_nat(seq(src1b, src2b)))
             ==
         to_nat(seq(dst1, dst2)) + power(BASE_256, 2) * bool_to_uint1(fgroups.fg0.cf);
 {
@@ -92,8 +88,7 @@ procedure mont_loop_0(
 
         x_i == w2;
 
-        seq_len(a_slice) == NUM_WORDS;
-        valid_wdr_slice(wdrs, a_slice, 4);
+        valid_wdr_slice(wdrs, a_slice, 4, NUM_WORDS);
 
         w3 == m0';
         w31 == 0;
@@ -116,6 +111,8 @@ procedure mont_loop_0(
         y_next_iter.buff == y_iter.buff;
         valid_wmem_addr(wmem, x19, y_next_iter);
         y_next_iter.index == 1;
+
+        w31 == 0;
 
         cong256(w24, a_slice[0] + y_iter.buff[0] * x_i);
         cong256(w25, (a_slice[0] + y_iter.buff[0] * x_i) * m0');
@@ -146,9 +143,7 @@ procedure mont_loop_0(
     assert w24 == a_slice[0];
 
     /* add A[0]: [w29, w30] = [w26, w27] + w24 = y[0]*x_i + A[0] */
-    bn_add(w30, w27, w24, SFT_DFT, 0);
-    ghost var cin := bool_to_uint1(fgroups.fg0.cf);
-    bn_addc(w29, w26, w31, SFT_DFT, 0);
+    addc_512(w30, w27, w24, w29, w26, w31);
     ghost var cout := bool_to_uint1(fgroups.fg0.cf);
 
     calc == {
@@ -159,9 +154,7 @@ procedure mont_loop_0(
         == { assert to_nat(seq(w24)) == to_nat(seq(w24, 0)); }
         to_nat(seq(w24, 0)) + y_iter.buff[0] * x_i;
         == to_nat(seq(w24, 0)) + to_nat(seq(w27, w26));
-        == { seq_addc_len2_lemma(w27, w24, w30, cin, w26, 0, w29, cout);
-            seq_addc_to_nat_lemma(seq(w24, 0), seq(w27, w26), seq(w30, w29), cout); }
-        to_nat(seq(w30, w29)) + power(BASE_256, 2) * cout;
+        == to_nat(seq(w30, w29)) + power(BASE_256, 2) * cout;
     }
 
     calc ==> {
@@ -216,6 +209,48 @@ procedure mont_loop_0(
     assert cong256(w25, (a_slice[0] + y_iter.buff[0] * x_i) * m0');
 }
 
+procedure mont_loop_1(
+    ghost a_slice: seq(uint256),
+    ghost x_i: uint256,
+    ghost y_iter: iter_t)
+
+    requires
+        x8 == 4 + y_iter.index;
+        x12 == 30;
+        x13 == 24;
+
+        valid_wmem_addr(wmem, x19, y_iter);
+        seq_len(y_iter.buff) == NUM_WORDS;
+        y_iter.index >= 1;
+
+        w2 == x_i;
+        w31 == 0;
+
+    reads
+        wmem; x16; w2; w31;
+
+    modifies
+        wdrs; fgroups;
+        x12; x19;
+        w26; w27; w30;
+
+    ensures
+        x12 == 30;
+
+        w31 == 0;
+{
+    ghost var j := y_iter.index;
+    /* load limb of y (operand a) and mult. with x_i: [w26, w27] <- y[j]*x_i */
+    let next_y_iter := bn_lid_safe(x12, false, 0, x19, true, y_iter);
+    mul256_w30xw2();
+
+    assert to_nat(seq(w27, w26)) == y_iter.buff[j] * x_i;
+
+    // bn_movr(x13, x8++
+
+
+}
+
 procedure mont_loop(
     ghost a_slice: seq(uint256),
     ghost x_i: uint256,
@@ -229,8 +264,7 @@ procedure mont_loop(
         valid_buff_addr(wmem, x19, NUM_WORDS);
         valid_buff_addr(wmem, x16, NUM_WORDS);
 
-        seq_len(a_slice) == NUM_WORDS;
-        valid_wdr_slice(wdrs, a_slice, 4);
+        valid_wdr_slice(wdrs, a_slice, 4, NUM_WORDS);
 
         w2 == x_i;
         w3 == m0';
@@ -241,7 +275,7 @@ procedure mont_loop(
 
     modifies
         wmem; wdrs; fgroups;
-        w3; w24; w25; w26; w27; w29; w30;
+        w3; w24; w25; w26; w27; w28; w29; w30;
         x8; x10; x12; x13; x16; x19; x22;
 {
     ghost var y_iter := iter_cons(x19, 0, wmem[x19]);
@@ -250,24 +284,26 @@ procedure mont_loop(
     /* load first limb of modulus: w30 = m[0] */
     ghost var m_iter := iter_cons(x16, 0, wmem[x16]);
     m_iter := bn_lid_safe(x12, false, 0, x16, true, m_iter);
-    assert w30 == m_iter.buff[0];
+    // assert w30 == m_iter.buff[0];
 
     /* [w26, w27] = w30*w25 = m[0]*u_i*/
     mul256_w30xw25();
+
     ghost var u_i := w25;
     assert to_nat(seq(w27, w26)) == m_iter.buff[0] * u_i;
 
     /* [w28, w27] = [w26, w27] + w24 = m[0]*u_i + (y[0]*x_i + A[0] mod b) */
-
     // bn_add(w27, w27, w24, SFT_DFT, 0);
-    // /* this serves as c_m in the first cycle of the loop below */
+    /* this serves as c_m in the first cycle of the loop below */
     // bn_addc(w28, w26, w31, SFT_DFT, 0);
+    addc_512(w27, w27, w24, w28, w26, w31);
 
-    // calc == {
-    //     == to_nat(seq(w24, 0)) + to_nat(seq(w27, w26));
-    //     // == { seq_addc_len2_lemma(w27, w24, w30, cin, w26, 0, w29, cout);
-    //     //     seq_addc_to_nat_lemma(seq(w24, 0), seq(w27, w26), seq(w30, w29), cout); }
-    //     to_nat(seq(w30, w29)) + power(BASE_256, 2) * cout;
+    assume bool_to_uint1(fgroups.fg0.cf) == 0; // TODO: this is provable
+    assert to_nat(seq(w27, w28)) == m_iter.buff[0] * u_i + to_nat(seq(w24, 0));
+
+    // while (Loop(x31))
+    // {
+    //     mont_loop_1()
     // }
 }
 

@@ -37,11 +37,11 @@ function power(b: int, e: nat) : int extern;
 function cong(a: int, b: int, n: int) : bool extern;
 function cong256(a: int, b: int) : bool extern;
 
-const BASE_32:  int extern;
-const BASE_64:  int extern; 
-const BASE_128: int extern; 
-const BASE_256: int extern; 
-const NUM_WORDS:int extern;
+const BASE_32:  nat extern;
+const BASE_64:  nat extern; 
+const BASE_128: nat extern; 
+const BASE_256: nat extern; 
+const NUM_WORDS:nat extern;
 
 type state: Type(0) {: primitive} extern;
 function operator(.ok) (s: state): bool extern;
@@ -67,7 +67,7 @@ function snd #[a: Type(0), b: Type(0)](m: tuple(a, b)): b extern;
 function bool_to_uint1(i:bool) : uint1 extern;
 
 var wdrs: wdrs_t {:state wdrs()};
-function valid_wdr_slice(wdrs: wdrs_t, slice: seq(uint256), start: nat): bool extern;
+function valid_wdr_slice(wdrs: wdrs_t, slice: seq(uint256), start: nat, len: nat): bool extern;
 
 type flags_t: Type(0) extern;
 function operator(.cf) (fg: flags_t): bool extern;

@@ -136,10 +136,11 @@ module vt_types {
         addr in h
     }
 
-    predicate valid_wdr_slice(wdrs: wdrs_t, slice: seq<uint256>, start: nat)
-        requires start + |slice| <= 32
-    {
-        wdrs[start..start + |slice| ] == slice
+    predicate valid_wdr_slice(wdrs: wdrs_t, slice: seq<uint256>, start: nat, len: nat)
+    {   
+        && |slice| == len
+        && start + |slice| <= 32
+        && wdrs[start..start + |slice| ] == slice
     }
 
     datatype state = state(
