@@ -97,7 +97,7 @@ procedure mont_loop_0(
         wmem; x16; w2; w31;
 
     modifies
-        wdrs; fgroups;
+        wacc; wdrs; fgroups;
         w3; w24; w25; w26; w27; w29; w30;
         x8; x10; x12; x13; x19; x22;
     
@@ -116,6 +116,8 @@ procedure mont_loop_0(
 
         cong256(w24, a_slice[0] + y_iter.buff[0] * x_i);
         cong256(w25, (a_slice[0] + y_iter.buff[0] * x_i) * m0');
+
+        valid_wdr_slice(wdrs, a_slice, 4, NUM_WORDS);
 {
    /* save pointer to modulus */
     addi(x22, x16, 0);
@@ -226,13 +228,15 @@ procedure mont_loop_1(
         w2 == x_i;
         w31 == 0;
 
+        valid_wdr_slice(wdrs, a_slice, 4, NUM_WORDS);
+
     reads
         wmem; x16; w2; w31;
 
     modifies
-        wdrs; fgroups;
-        x12; x19;
-        w26; w27; w30;
+        wacc; wdrs; fgroups;
+        x8; x12; x13; x19;
+        w24; w26; w27; w30;
 
     ensures
         x12 == 30;
@@ -246,9 +250,14 @@ procedure mont_loop_1(
 
     assert to_nat(seq(w27, w26)) == y_iter.buff[j] * x_i;
 
-    // bn_movr(x13, x8++
+    /* add limb of buffer: [w26, w27] <- [w26,w27] + w24 = y[j]*x_i + A[j] */
+    bn_movr(x13, false, x8, true);
+    // assert w24 == a_slice[j];
+    addc_512(w27, w27, w24, w26, w26, w31);
 
-
+    assume bool_to_uint1(fgroups.fg0.cf) == 0; // TODO: this is provable
+    // assert to_nat(seq(x1, x2)) + to_nat(seq(y1, y2))
+    // == to_nat(seq(dst1, dst2));
 }
 
 procedure mont_loop(
@@ -274,7 +283,7 @@ procedure mont_loop(
         w2; w31;
 
     modifies
-        wmem; wdrs; fgroups;
+        wacc; wmem; wdrs; fgroups;
         w3; w24; w25; w26; w27; w28; w29; w30;
         x8; x10; x12; x13; x16; x19; x22;
 {

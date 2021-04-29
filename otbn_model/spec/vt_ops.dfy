@@ -148,7 +148,7 @@ module vt_ops {
         acc: uint256) : uint256
     {
         var product := uint256_qmul(x, qx, y, qy);
-        var shift := uint256_ls(product, shift * 8);
+        var shift := uint256_sb(product, SFT(true, shift * 8));
         if zero then shift else (acc + shift) % BASE_256
     }
 

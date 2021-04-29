@@ -219,10 +219,10 @@ function uint256_hwb(x: uint256, v: uint128, lower: bool): uint256 extern;
 function uint256_qmul(x: uint256, qx: uint2, y: uint256, qy: uint2): uint128 extern;
 function uint256_and(x: uint256, y: uint256): uint256 extern;
 function uint256_or(x: uint256, y: uint256): uint256 extern;
-// function uint256_ls(x: uint256, num_bytes: int): uint256 extern;
+function uint256_ls(x: uint256, shift: uint2): uint256 extern;
 // function uint256_rs(x: uint256, num_bytes: int): uint256 extern;
-function uint256_lh(a: uint256): uint128 extern;
-function uint256_uh(a: uint256): uint128 extern;
+function uint256_lh(a: int): uint128 extern;
+function uint256_uh(a: int): uint128 extern;
 function uint256_addc(x: uint256, y: uint256, cin: uint1): tuple(uint256, uint1) extern;
 function uint256_subb(x: uint256, y: uint256, bin: uint1): tuple(uint256, uint1) extern;
 
