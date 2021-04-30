@@ -35,11 +35,6 @@ module vt_vale {
         if a + b > m then a + b - m else a + b
     }
 
-    predicate cong256(a: nat, b: nat)
-    {
-        cong(a, b, BASE_256)
-    }
-
     function va_get_ok(s: va_state): bool
     {
         s.ok

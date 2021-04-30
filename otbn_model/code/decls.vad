@@ -35,7 +35,7 @@ type uint256: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff_ffff
 
 function power(b: int, e: nat) : int extern;
 function cong(a: int, b: int, n: int) : bool extern;
-function cong256(a: int, b: int) : bool extern;
+function cong_B256(a: int, b: int) : bool extern;
 
 const BASE_32:  nat extern;
 const BASE_64:  nat extern; 
@@ -89,6 +89,12 @@ var fgroups: fgroups_t  {:state fgroups()};
 function select_fgroup(fgps: fgroups_t, which_group: uint1): flags_t extern;
 function update_fgroups(fgps: fgroups_t, which_group: uint1, new_flags_t: flags_t) : fgroups_t extern;
 function get_flag(fgps: fgroups_t, which_group: uint1, which_flag: int): bool extern;
+
+type uint512_t: Type(0) extern;
+function uint512_cons(lh: int, uh: int, full: int): uint512_t extern;
+function operator(.lh) (num :uint512_t): int extern;
+function operator(.uh) (num :uint512_t): int extern;
+function operator(.full) (num :uint512_t): int extern;
 
 var ok: bool {:state ok()};
 
@@ -209,6 +215,7 @@ operand_type imm32: uint32 := const;
 type shift_t: Type(0) extern;
 const SFT_DFT: shift_t extern;
 
+
 function uint32_xor(x: uint32, y: uint32): uint32 extern;
 function uint32_or(x: uint32, y: uint32): uint32 extern;
 function uint32_and(x: uint32, y: uint32): uint32 extern;
@@ -226,6 +233,10 @@ function uint256_lh(a: int): uint128 extern;
 function uint256_uh(a: int): uint128 extern;
 function uint256_addc(x: uint256, y: uint256, cin: uint1): tuple(uint256, uint1) extern;
 function uint256_subb(x: uint256, y: uint256, bin: uint1): tuple(uint256, uint1) extern;
+
+function uint512_uh(a: int): uint256 extern;
+function uint512_lh(a: int): uint256 extern;
+function half_splited_uint512(x: int, lh: uint256, uh: uint256): bool extern;
 
 function otbn_xor(a: uint256, b: uint256, shift: shift_t): uint256 extern;
 function otbn_or(a: uint256, b: uint256, shift: shift_t): uint256 extern;

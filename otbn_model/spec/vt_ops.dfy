@@ -209,18 +209,19 @@ module vt_ops {
         (concat / pow2(shift_amt)) % BASE_256
     }
 
-    function to_nat(xs: seq<uint256>): nat
+    function {:opaque} to_nat(xs: seq<uint256>): nat
     {
         if |xs| == 0 then 0
         else
             var len' := |xs| - 1;
-            to_nat(xs[..len']) + xs[len'] * power(BASE_256, len')
+            to_nat(xs[..len']) + xs[len'] * pow_B256(len')
     }
 
     lemma to_nat_singleton_lemma(xs: seq<uint256>)
         requires |xs| == 1
         ensures to_nat(xs) == xs[0]
     {
+        reveal to_nat();
         reveal power();
     }
 
@@ -228,6 +229,7 @@ module vt_ops {
         requires |xs| == 2
         ensures to_nat(xs) == xs[0] + xs[1] * BASE_256
     {
+        reveal to_nat();
         to_nat_singleton_lemma(xs[..1]);
         reveal power();
     }
@@ -240,15 +242,14 @@ module vt_ops {
         ensures to_nat(xs') == to_nat(xs);
     {
         var len, len' := |xs|, |xs'|;
+        reveal to_nat();
         if len != len' + 1 {
             var len'' := len-1;
             calc == {
                 to_nat(xs);
-                to_nat(xs[..len'']) + xs[len''] * power(BASE_256, len'');
+                to_nat(xs[..len'']) + xs[len''] * pow_B256(len'');
                 to_nat(xs[..len'']);
-                {
-                    to_nat_zero_extend_lemma(xs', xs[..len'']);
-                }
+                { to_nat_zero_extend_lemma(xs', xs[..len'']); }
                 to_nat(xs');
             }
         }
@@ -267,54 +268,56 @@ module vt_ops {
             (zs' + [z], cout)
     }
 
-    predicate {:opaque} seq_addc_512_is_safe(xs: seq<uint256>, ys: seq<uint256>)
-        requires |xs| == 2 && |ys| == 2;
-    {
-        to_nat(xs) + to_nat(ys) < BASE_512
-    }
-
-    lemma seq_addc_to_nat_lemma(
-        xs: seq<uint256>, ys: seq<uint256>, zs: seq<uint256>, cout: uint1)
+    lemma seq_addc_lemma(xs: seq<uint256>, ys: seq<uint256>, zs: seq<uint256>, cout: uint1)
         requires |xs| == |ys|;
         requires seq_addc(xs, ys) == (zs, cout);
-        ensures to_nat(xs) + to_nat(ys) == to_nat(zs) + power(BASE_256, |xs|) * cout;
+        ensures to_nat(xs) + to_nat(ys) == to_nat(zs) + cout * pow_B256(|xs|)
     {
+        reveal to_nat();
         if |xs| == 0 {
             reveal power();
         } else {
-            var len, len' := |xs|,|xs| - 1;
-            var xs', ys' := xs[..len'], ys[..len'];
-            var x, y := xs[len'], ys[len'];
-    
-            var (zs', cin) := seq_addc(xs', ys');
-            var (z, _) := uint256_addc(x, y, cin);
+            var len' := |xs| - 1;
+            var (zs', cin) := seq_addc(xs[..len'], ys[..len']);
+            var (z, _) := uint256_addc(xs[len'], ys[len'], cin);
+            assert zs == zs' + [z];
 
-            var weight' := power(BASE_256, len');
+            assert xs[len'] + ys[len'] + cin == z + cout * BASE_256;
 
             calc {
-                to_nat(zs) + power(BASE_256, len) * cout;
-                { assert to_nat(zs) == to_nat(zs') + z * weight'; }
-                to_nat(zs') + z * weight' + power(BASE_256, len) * cout;
+                to_nat(zs);
+                to_nat(zs') + z * pow_B256(len');
+                { seq_addc_lemma(xs[..len'], ys[..len'], zs', cin); }
+                to_nat(xs[..len']) + to_nat(ys[..len']) - cin * pow_B256(len') + z * pow_B256(len');
+                to_nat(xs[..len']) + to_nat(ys[..len']) + xs[len'] * pow_B256(len') + ys[len'] * pow_B256(len') - cout * BASE_256 * pow_B256(len');
+                { reveal to_nat(); }
+                to_nat(xs) + to_nat(ys) - cout * BASE_256 * pow_B256(len');
                 { reveal power(); }
-                to_nat(zs') + z * weight' + weight' * BASE_256 * cout;
-                to_nat(zs') + z * weight' + cout * BASE_256 * weight' ;
-                {
-                   assert x * weight' + y * weight' + cin as int * weight'
-                    == z * weight' + cout * BASE_256 * weight' by {
-    		            assert x + y + cin as int == z + cout * BASE_256;
-                    }
-                }
-                to_nat(zs') + x * weight' + y * weight' + cin as int * weight';
-                {
-                    assert to_nat(zs') + weight' * cin as nat
-                    == to_nat(xs') + to_nat(ys') by {
-                        seq_addc_to_nat_lemma(xs', ys', zs', cin);
-                    }
-                }
-                to_nat(xs') + to_nat(ys')+ x * weight' + y * weight';
-                to_nat(xs) + to_nat(ys);
+                to_nat(xs) + to_nat(ys) - cout * pow_B256(|xs|);
             }
+            assert to_nat(zs) + cout * pow_B256(|xs|) == to_nat(xs) + to_nat(ys);
         }
+    }
+
+    predicate {:opaque} seq_addc_512_is_safe(xs: seq<uint256>, ys: seq<uint256>)
+        requires |xs| == 2 && |ys| == 2;
+    {
+        to_nat(xs) + to_nat(ys) < pow_B256(2)
+    }
+
+    lemma seq_addc_512_is_safe_lemma(
+        xs: seq<uint256>, ys: seq<uint256>, zs: seq<uint256>, cout: uint1)
+        requires |xs| == 2 && |ys| == 2;
+        requires seq_addc(xs, ys) == (zs, cout);
+        requires seq_addc_512_is_safe(xs, ys);
+        ensures to_nat(xs) + to_nat(ys) == to_nat(zs);
+    {
+        reveal seq_addc_512_is_safe();
+        seq_addc_lemma(xs, ys, zs, cout);
+        if cout == 1 {
+            assert false; // prove by contradiction
+        }
+        assert to_nat(xs) + to_nat(ys) == to_nat(zs);
     }
 
     lemma seq_addc_len1_lemma(
