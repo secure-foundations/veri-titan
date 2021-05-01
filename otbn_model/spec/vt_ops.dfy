@@ -234,7 +234,7 @@ module vt_ops {
         reveal power();
     }
 
-	lemma uint512_view_t_lemma(num: uint512_view_t)
+	lemma uint512_view_lemma(num: uint512_view_t)
 		ensures num.full
             == to_nat([num.lh, num.uh])
             == num.lh + num.uh * BASE_256;

@@ -94,12 +94,14 @@ procedure seq_addc_512_safe(
 
         seq_addc_512_is_safe(seq(src1a, src2a), seq(src1b, src2b));
 
+    reads
+        wdrs;
+
     modifies
         fgroups;
 
     ensures
-        sum.lh == dst1;
-        sum.uh == dst2;
+        valid_uint512_view(wdrs, sum, @dst1.index, @dst2.index);
         sum.full == to_nat(seq(old(src1a), old(src2a))) + old(src1b);
 {
     ghost var s1a := src1a;
@@ -128,7 +130,7 @@ procedure seq_addc_512_safe(
     assert value < BASE_512;
     assume dst1 = uint512_lh(value);
     assume dst2 = uint512_uh(value);
-    sum := uint512_cons(@dst1.index, @dst2.index, dst1, dst2, value);
+    sum := uint512_cons(dst1, dst2, value);
 }
 
 #verbatim

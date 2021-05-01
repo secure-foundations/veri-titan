@@ -100,7 +100,6 @@ module vt_types {
     }
 
     datatype uint512_raw = uint512_cons(
-        li: reg_index, ui: reg_index,
         lh: uint256, uh: uint256, full: uint512)
 
 	type uint512_view_t = num: uint512_raw |
@@ -108,10 +107,12 @@ module vt_types {
 		&& num.uh == uint512_uh(num.full)
 		witness *
 
-    predicate valid_uint512_view(wdrs: wdrs_t, num: uint512_view_t) 
+    predicate valid_uint512_view(
+        wdrs: wdrs_t, num: uint512_view_t,
+        li: reg_index, ui: reg_index)
     {
-        && wdrs[num.li] == num.lh
-        && wdrs[num.ui] == num.uh
+        && wdrs[li] == num.lh
+        && wdrs[ui] == num.uh
     }
 
     /* start wmem_t realted */
