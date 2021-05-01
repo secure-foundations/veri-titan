@@ -217,7 +217,7 @@ module vt_ops {
             to_nat(xs[..len']) + xs[len'] * pow_B256(len')
     }
 
-    lemma to_nat_singleton_lemma(xs: seq<uint256>)
+    lemma to_nat_lemma1(xs: seq<uint256>)
         requires |xs| == 1
         ensures to_nat(xs) == xs[0]
     {
@@ -225,14 +225,24 @@ module vt_ops {
         reveal power();
     }
 
-    // lemma to_nat_pair_lemma(xs: seq<uint256>)
-    //     requires |xs| == 2
-    //     ensures to_nat(xs) == xs[0] + xs[1] * BASE_256
-    // {
-    //     reveal to_nat();
-    //     to_nat_singleton_lemma(xs[..1]);
-    //     reveal power();
-    // }
+    lemma to_nat_lemma2(xs: seq<uint256>)
+        requires |xs| == 2
+        ensures to_nat(xs) == xs[0] + xs[1] * BASE_256
+    {
+        reveal to_nat();
+        to_nat_lemma1(xs[..1]);
+        reveal power();
+    }
+
+	lemma uint512_view_t_lemma(num: uint512_view_t)
+		ensures num.full
+            == to_nat([num.lh, num.uh])
+            == num.lh + num.uh * BASE_256;
+	{
+		reveal uint512_lh();
+		reveal uint512_uh();
+        to_nat_lemma2([num.lh, num.uh]);
+	}
 
     lemma to_nat_zero_extend_lemma(xs': seq<uint256>, xs: seq<uint256>) 
         requires |xs'| < |xs|

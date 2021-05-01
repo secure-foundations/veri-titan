@@ -27,7 +27,7 @@ module addc512_lemmas {
         assert [z0] + [z1] == [z0, z1];
     }
 
-    predicate {:opaque} seq_addc_512_is_safe(xs: seq<uint256>, ys: seq<uint256>)
+    predicate seq_addc_512_is_safe(xs: seq<uint256>, ys: seq<uint256>)
         requires |xs| == 2 && |ys| == 2;
     {
         to_nat(xs) + to_nat(ys) < pow_B256(2)
@@ -42,7 +42,6 @@ module addc512_lemmas {
         ensures to_nat(zs) < BASE_512
     {
         assume pow_B256(2) == BASE_512;
-        reveal seq_addc_512_is_safe();
         seq_addc_nat_lemma(xs, ys, zs, cout);
         if cout == 1 {
             assert false; // prove by contradiction

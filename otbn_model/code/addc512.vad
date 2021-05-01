@@ -81,9 +81,12 @@ procedure seq_addc_512(
 procedure seq_addc_512_safe(
     inout dst1: reg256, in src1a: reg256, in src1b: reg256,
     inout dst2: reg256, in src2a: reg256, in src2b: reg256)
-    returns (ghost sum: uint512_t)
+    returns (ghost sum: uint512_view_t)
     
     requires
+        is_wide_data_register(@dst1);
+        is_wide_data_register(@dst2);
+
         @dst1 != @dst2;
         @dst1 != @src2a;
         @dst1 != @src2b;
@@ -125,7 +128,7 @@ procedure seq_addc_512_safe(
     assert value < BASE_512;
     assume dst1 = uint512_lh(value);
     assume dst2 = uint512_uh(value);
-    sum := uint512_cons(dst1, dst2, value);
+    sum := uint512_cons(@dst1.index, @dst2.index, dst1, dst2, value);
 }
 
 #verbatim

@@ -51,6 +51,8 @@ function operator(.ok :=) (s: state, b: bool): state extern;
 
 type reg32_t: Type(0) extern;
 type reg256_t: Type(0) extern;
+function operator(.index) (r :reg256_t): int extern;
+function is_wide_data_register(r: reg256_t): bool extern;
 
 type xmem_t: Type(0) := map(int, uint32);
 type wmem_t: Type(0) := map(int, seq(uint256));
@@ -91,11 +93,11 @@ function select_fgroup(fgps: fgroups_t, which_group: uint1): flags_t extern;
 function update_fgroups(fgps: fgroups_t, which_group: uint1, new_flags_t: flags_t) : fgroups_t extern;
 function get_flag(fgps: fgroups_t, which_group: uint1, which_flag: int): bool extern;
 
-type uint512_t: Type(0) extern;
-function uint512_cons(lh: int, uh: int, full: int): uint512_t extern;
-function operator(.lh) (num :uint512_t): int extern;
-function operator(.uh) (num :uint512_t): int extern;
-function operator(.full) (num :uint512_t): int extern;
+type uint512_view_t: Type(0) extern;
+function uint512_cons(li: int, ui: int, lh: int, uh: int, full: int): uint512_view_t extern;
+function operator(.lh) (num :uint512_view_t): int extern;
+function operator(.uh) (num :uint512_view_t): int extern;
+function operator(.full) (num :uint512_view_t): int extern;
 
 var ok: bool {:state ok()};
 
@@ -105,6 +107,7 @@ function valid_buff_addr(wmem: wmem_t, base_addr: int, num_words: int): bool ext
 
 type iter_t: Type(0) extern;
 function iter_cons(base_addr: int, index: nat, buff: seq(uint256)): iter_t extern;
+function bn_lid_next_iter(iter: iter_t, inc: bool): iter_t extern;
 function operator(.base_addr) (iter :iter_t): int extern;
 function operator(.index) (iter :iter_t): int extern;
 function operator(.index := ) (iter: iter_t, i :int): iter_t extern;
@@ -649,7 +652,7 @@ procedure bn_lid_safe(
         wdrs == old(wdrs[grd := iter.buff[iter.index]]);
 
         admissible_wmem_addr(wmem, grs + offset, next_iter);
-        next_iter == iter.(index := if grs_inc then iter.index + 1 else iter.index);
+        next_iter == bn_lid_next_iter(iter, grs_inc);
 {
     next_iter := iter.(index := if grs_inc then iter.index + 1 else iter.index);
     bn_lid(grd, grd_inc, offset, grs, grs_inc, iter);

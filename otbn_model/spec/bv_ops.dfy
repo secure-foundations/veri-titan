@@ -248,12 +248,4 @@ module bv_ops {
 	{
 		x / BASE_256
 	}
-
-    datatype uint512_raw = uint512_cons(lh: uint256, uh: uint256, full: uint512)
-
-	type uint512_t = num: uint512_raw |
-		&& num.lh == uint512_lh(num.full)
-		&& num.uh == uint512_uh(num.full)
-		witness *
-
 } // end module ops
