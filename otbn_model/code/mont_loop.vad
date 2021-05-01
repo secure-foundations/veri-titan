@@ -61,6 +61,7 @@ procedure mont_loop_0(
         x10 == 4;
         x12 == 30;
         x13 == 24;
+        x16 == old(x16);
         x22 == x16;
 
         y_next_iter == bn_lid_next_iter(y_iter, true);
@@ -73,7 +74,9 @@ procedure mont_loop_0(
         cong_B256(w25, (a_slice[0] + y_iter.buff[0] * x_i) * m0');
         valid_wdr_view(wdrs, a_slice, 4, NUM_WORDS);
         valid_uint512_view(wdrs, c_xy, 30, 29);
-        // c_xy.full == a_slice[0] + y_iter.buff[0] * x_i;
+        c_xy.full == a_slice[0] + y_iter.buff[0] * x_i;
+
+        wmem == old(wmem);
 {
    /* save pointer to modulus */
     addi(x22, x16, 0);
@@ -146,134 +149,131 @@ procedure mont_loop_0(
     }
 }
 
-// // procedure mont_loop_1(
-// //     ghost a_slice: seq(uint256),
-// //     ghost x_i: uint256,
-// //     ghost y_iter: iter_t,
-// //     ghost m_iter: iter_t,
-// //     ghost j: nat)
+procedure mont_loop_1(
+    ghost a_slice: seq(uint256),
+    ghost u_i: uint256,
+    ghost x_i: uint256,
+    ghost y_iter: iter_t,
+    ghost m_iter: iter_t,
+    ghost c_xy: uint512_view_t,
+    ghost c_m: uint512_view_t,
+    ghost j: nat)
 
-// //     requires
-// //         x8 == 4 + y_iter.index;
-// //         x12 == 30;
-// //         x13 == 24;
+    {:frame false}
 
-// //         1 <= j;
-// //         j == y_iter.index;
-// //         y_iter.index == m_iter.index;
-// //         m_iter.base_addr != y_iter.base_addr;
+    requires
+        x8 == 4 + y_iter.index;
+        x12 == 30;
+        x13 == 24;
 
-// //         valid_wmem_addr(wmem, x16, m_iter);
-// //         seq_len(m_iter.buff) == NUM_WORDS;
+        1 <= j;
+        j == y_iter.index;
+        y_iter.index == m_iter.index;
+        m_iter.base_addr != y_iter.base_addr;
 
-// //         valid_wmem_addr(wmem, x19, y_iter);
-// //         seq_len(y_iter.buff) == NUM_WORDS;
+        valid_wmem_addr(wmem, x16, m_iter);
+        seq_len(m_iter.buff) == NUM_WORDS;
 
-// //         valid_wdr_view(wdrs, a_slice, 4, NUM_WORDS);
+        valid_wmem_addr(wmem, x19, y_iter);
+        seq_len(y_iter.buff) == NUM_WORDS;
 
-// //         w2 == x_i;
-// //         // w29 == uint512_uh(a_slice[j-1] + y_iter.buff[j-1] * x_i);
-// //         w31 == 0;
+        valid_wdr_view(wdrs, a_slice, 4, NUM_WORDS);
 
-// //     reads
-// //         wmem; w2;w31;
+        w2 == x_i;
+        w31 == 0;
 
-// //     modifies
-// //         wacc; wdrs; fgroups;
-// //         x8; x12; x13; x16; x19;
-// //         w24; w26; w27; w29; w30;
+        valid_uint512_view(wdrs, c_xy, 24, 29);
+        c_xy.full == a_slice[0] + y_iter.buff[0] * x_i;
 
-// //     ensures
-// //         x12 == 30;
+        valid_uint512_view(wdrs, c_m, 27, 28);
+        c_m.full == m_iter.buff[0] * u_i + w24;
 
-// //         w31 == 0;
-// // {
-// //     ghost var j := y_iter.index;
-// //     // /* load limb of y (operand a) and mult. with x_i: [w26, w27] <- y[j]*x_i */
-// //     let next_y_iter := bn_lid_safe(x12, false, 0, x19, true, y_iter);
-// //     mul256_w30xw2();
+    ensures
+        x12 == 30;
 
-// //     /* add limb of buffer: [w26, w27] <- [w26,w27] + w24 = y[j]*x_i + A[j] */
-// //     bn_movr(x13, false, x8, true);
+        w31 == 0;
+{
+    ghost var j := y_iter.index;
+    // /* load limb of y (operand a) and mult. with x_i: [w26, w27] <- y[j]*x_i */
+    let next_y_iter := bn_lid_safe(x12, false, 0, x19, true, y_iter);
+    mul256_w30xw2();
 
-// //     assume seq_addc_512_is_safe(seq(w27, w26), seq(w24, w31));
-// //     seq_addc_512_safe(w27, w27, w24, w26, w26, w31);
-// //     assert to_nat(seq(w27, w26)) == y_iter.buff[j] * x_i + a_slice[j];
+    /* add limb of buffer: [w26, w27] <- [w26,w27] + w24 = y[j]*x_i + A[j] */
+    bn_movr(x13, false, x8, true);
 
-// //     // /* add carry word from previous cycle:
-// //     //    [c_xy, a_tmp] = [w29, w24] <- [w26,w27] + w29 = y[j]*x_i + A[j] + c_xy*/
-// //     // assume seq_addc_512_is_safe(seq(w27, w26), seq(w29, w31));
-// //     // seq_addc_512_safe(w24, w27, w29, w29, w26, w31);
+    assume seq_addc_512_is_safe(seq(w27, w26), seq(w24, w31));
+    let _ := seq_addc_512_safe(w27, w27, w24, w26, w26, w31);
+    // assert to_nat(seq(w27, w26)) == y_iter.buff[j] * x_i + a_slice[j];
 
-// //     // assert to_nat(seq(w24, w29)) == y_iter.buff[j] * x_i + a_slice[j] + old(w29);
-// //     /* load limb m[j] of modulus and multiply with u_i:
-// //        [w26, w27] = w30*w25 = m[j+1]*u_i */
-// //     // let next_m_iter := bn_lid_safe(x12, false, 0, x16, true, m_iter);
+    /* add carry word from previous cycle:
+    //    [c_xy, a_tmp] = [w29, w24] <- [w26,w27] + w29 = y[j]*x_i + A[j] + c_xy*/
+    // assume seq_addc_512_is_safe(seq(w27, w26), seq(w29, w31));
+    // seq_addc_512_safe(w24, w27, w29, w29, w26, w31);
 
-// //     // jal       x1, mul256_w30xw25
-// // }
+    // assert to_nat(seq(w24, w29)) == y_iter.buff[j] * x_i + a_slice[j] + old(w29);
+    /* load limb m[j] of modulus and multiply with u_i:
+       [w26, w27] = w30*w25 = m[j+1]*u_i */
+    // let next_m_iter := bn_lid_safe(x12, false, 0, x16, true, m_iter);
 
-// // procedure mont_loop(
-// //     ghost a_slice: seq(uint256),
-// //     ghost x_i: uint256,
-// //     ghost m0': nat)
+    // jal       x1, mul256_w30xw25
+}
 
-// //     requires
-// //         x31 == NUM_WORDS - 1;
+procedure mont_loop(
+    ghost a_slice: seq(uint256),
+    ghost x_i: uint256,
+    ghost m0': nat)
 
-// //         x16 != x19;
+    {:frame false}
 
-// //         valid_buff_addr(wmem, x19, NUM_WORDS);
-// //         valid_buff_addr(wmem, x16, NUM_WORDS);
+    requires
+        x31 == NUM_WORDS - 1;
 
-// //         valid_wdr_view(wdrs, a_slice, 4, NUM_WORDS);
+        x16 != x19;
 
-// //         w2 == x_i;
-// //         w3 == m0';
-// //         w31 == 0;
+        valid_buff_addr(wmem, x19, NUM_WORDS);
+        valid_buff_addr(wmem, x16, NUM_WORDS);
 
-// //     reads
-// //         w2; w31;
+        valid_wdr_view(wdrs, a_slice, 4, NUM_WORDS);
 
-// //     modifies
-// //         wacc; wmem; wdrs; fgroups;
-// //         w3; w24; w25; w26; w27; w28; w29; w30;
-// //         x8; x10; x12; x13; x16; x19; x22;
-// // {
-// //     ghost var y_iter := iter_cons(x19, 0, wmem[x19]);
-// //     y_iter := mont_loop_0(a_slice, y_iter, x_i, m0');
-// //     ghost var u_i := w25;
+        w2 == x_i;
+        w3 == m0';
+        w31 == 0;
+{
+    ghost var y_iter := iter_cons(x19, 0, wmem[x19]);
+    ghost var c_xy : uint512_view_t;
+    y_iter, c_xy := mont_loop_0(a_slice, y_iter, x_i, m0');
+    ghost var u_i := w25;
 
-// //     /* w24 = w30 =  y[0]*x_i + A[0] mod b */
-// //     bn_mov(w24, w30);
-// //    // assert to_nat(seq(w30, w29)) == a_slice[0] + y_iter.buff[0] * x_i;
+    /* w24 = w30 =  y[0]*x_i + A[0] mod b */
+    bn_mov(w24, w30);
+    // assert valid_uint512_view(wdrs, c_xy, 24, 29);
+    // assert c_xy.full == a_slice[0] + y_iter.buff[0] * x_i;
 
-// //     /* load first limb of modulus: w30 = m[0] */
-// //     ghost var m_iter := iter_cons(x16, 0, wmem[x16]);
-// //     m_iter := bn_lid_safe(x12, false, 0, x16, true, m_iter);
-// //     // assert w30 == m_iter.buff[0];
+    /* load first limb of modulus: w30 = m[0] */
+    ghost var m_iter := iter_cons(x16, 0, wmem[x16]);
+    m_iter := bn_lid_safe(x12, false, 0, x16, true, m_iter);
+    // assert w30 == m_iter.buff[0];
 
-// //     /* [w26, w27] = w30*w25 = m[0]*u_i*/
-// //     mul256_w30xw25();
+    /* [w26, w27] = w30*w25 = m[0]*u_i*/
+    mul256_w30xw25();
+    // assert to_nat(seq(w27, w26)) == m_iter.buff[0] * u_i;
 
-// //     // assert to_nat(seq(w27, w26)) == m_iter.buff[0] * u_i;
+    /* [w28, w27] = [w26, w27] + w24 = m[0]*u_i + (y[0]*x_i + A[0] mod b) */
+    /* this serves as c_m in the first cycle of the loop below */
+    assume seq_addc_512_is_safe(seq(w27, w26), seq(w24, w31));
+    let c_m := seq_addc_512_safe(w27, w27, w24, w28, w26, w31);
 
-// //     /* [w28, w27] = [w26, w27] + w24 = m[0]*u_i + (y[0]*x_i + A[0] mod b) */
-// //     /* this serves as c_m in the first cycle of the loop below */
-// //     assume seq_addc_512_is_safe(seq(w27, w26), seq(w24, w31));
-// //     seq_addc_512_safe(w27, w27, w24, w28, w26, w31);
+    assert valid_uint512_view(wdrs, c_xy, 24, 29);
+    assert c_xy.full == a_slice[0] + y_iter.buff[0] * x_i;
 
-// //     assert w29 == uint512_uh(a_slice[0] + y_iter.buff[0] * x_i) by {
-// //         reveal half_splited_uint512;
-// //     }
+    assert valid_uint512_view(wdrs, c_m, 27, 28);
+    assert c_m.full == m_iter.buff[0] * u_i + w24;
 
-// //     // assert to_nat(seq(w27, w28)) == m_iter.buff[0] * u_i + to_nat(seq(w24, 0));
-
-// //     // while (Loop(x31))
-// //     // {
-// //     // mont_loop_1(a_slice, x_i, y_iter, m_iter, 1);
-// //     // }
-// // }
+    // while (Loop(x31))
+    // {
+    mont_loop_1(a_slice, u_i, x_i, y_iter, m_iter, c_xy, c_m, 1);
+    // }
+}
 
 #verbatim
 }
