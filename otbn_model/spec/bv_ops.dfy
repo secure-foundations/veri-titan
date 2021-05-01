@@ -256,21 +256,4 @@ module bv_ops {
 		&& num.uh == uint512_uh(num.full)
 		witness *
 
-	// predicate {:opaque} half_splited_uint512(x: nat, lh: uint256, uh: uint256)
-	// {
-	// 	&& x == lh + uh * BASE_256
-	// 	&& cong_B256(x, lh)
-	// 	&& lh == uint512_lh(x)
-	// 	&& uh == uint512_uh(x)
-	// }
-
-	// lemma uint512_half_split_lemma(x: uint512, lh: uint256, uh: uint256)
-	// 	requires half_splited_uint512(x, lh, uh)
-	// 	ensures x == lh + uh * BASE_256;
-	// 	ensures;
-	// {
-	// 	reveal uint512_lh();
-	// 	reveal uint512_uh();
-	// 	assume cong_B256(x, lh);
-	// }
 } // end module ops
