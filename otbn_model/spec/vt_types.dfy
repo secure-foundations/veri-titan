@@ -109,10 +109,12 @@ module vt_types {
 
     predicate valid_uint512_view(
         wdrs: wdrs_t, num: uint512_view_t,
-        li: reg_index, ui: reg_index)
+        li: int, ui: int)
+        requires -1 <= li < BASE_5;
+        requires -1 <= ui < BASE_5;
     {
-        && wdrs[li] == num.lh
-        && wdrs[ui] == num.uh
+        && (li > 0 ==> wdrs[li] == num.lh)
+        && (ui > 0 ==> wdrs[ui] == num.uh)
     }
 
     /* start wmem_t realted */
