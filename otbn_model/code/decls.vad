@@ -221,7 +221,7 @@ operand_type imm32: uint32 := const;
 
 type shift_t: Type(0) extern;
 const SFT_DFT: shift_t extern;
-
+const NA: int extern;
 
 function uint32_xor(x: uint32, y: uint32): uint32 extern;
 function uint32_or(x: uint32, y: uint32): uint32 extern;

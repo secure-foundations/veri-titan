@@ -107,14 +107,17 @@ module vt_types {
 		&& num.uh == uint512_uh(num.full)
 		witness *
 
+    // ignore the mapping
+    const NA :int := -1;
+
     predicate valid_uint512_view(
         wdrs: wdrs_t, num: uint512_view_t,
         li: int, ui: int)
         requires -1 <= li < BASE_5;
         requires -1 <= ui < BASE_5;
     {
-        && (li > 0 ==> wdrs[li] == num.lh)
-        && (ui > 0 ==> wdrs[ui] == num.uh)
+        && (li == NA || wdrs[li] == num.lh)
+        && (ui == NA || wdrs[ui] == num.uh)
     }
 
     /* start wmem_t realted */
