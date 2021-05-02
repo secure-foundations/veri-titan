@@ -150,6 +150,7 @@ procedure mont_loop_0(
 }
 
 procedure mont_loop_1(
+    ghost inital_a_slice: seq(uint256), 
     ghost a_slice: seq(uint256),
     ghost u_i: uint256,
     ghost x_i: uint256,
@@ -174,44 +175,52 @@ procedure mont_loop_1(
         x12 == 30;
         x13 == 24;
 
-        j == y_iter.index;
-        1 <= y_iter.index;
-        y_iter.index == m_iter.index;
-        m_iter.base_addr != y_iter.base_addr;
-
-        valid_wmem_addr(wmem, x16, m_iter);
-        seq_len(m_iter.buff) == NUM_WORDS;
-
-        valid_wmem_addr(wmem, x19, y_iter);
-        seq_len(y_iter.buff) == NUM_WORDS;
-
-        valid_wdr_view(wdrs, a_slice, 4, NUM_WORDS);
-
         w2 == x_i;
         w25 == u_i;
         w31 == 0;
 
         valid_uint512_view(wdrs, p_1, 0-1, 29);
-        p_1.full == a_slice[j-1] + y_iter.buff[j-1] * x_i;
-
         valid_uint512_view(wdrs, p_2, 0-1, 28);
-        p_2.full == m_iter.buff[j-1] * u_i + p_1.lh;
 
+        y_iter.index == j;
+        y_iter.index >= 1;
+        y_iter.index == m_iter.index;
+        m_iter.base_addr != y_iter.base_addr;
+
+        valid_wmem_addr(wmem, x19, y_iter);
+        seq_len(y_iter.buff) == NUM_WORDS;
+        valid_wmem_addr(wmem, x16, m_iter);
+        seq_len(m_iter.buff) == NUM_WORDS;
+        valid_wdr_view(wdrs, a_slice, 4, NUM_WORDS);
+
+        // x_i * to_nat(y_iter.buff[..j]) + u_i * to_nat(m_iter.buff[..j]) + sint(A[..j])
+        //     == 
+        // sint(S) + p_2.uh * pow_B256(j) + p_1.uh * pow_B256(j);
     ensures
-        // x8 == 4 + next_y_iter.index;
-        // x10 == 3 + next_y_iter.index;
-        // x12 == 30;
+        x8 == 4 + j + 1;
+        x10 == 3 + j + 1;
+        x12 == 30;
+        x13 == 24;
 
-        // w31 == 0;
+        w2 == x_i;
+        w25 == u_i;
+        w31 == 0;
 
         valid_uint512_view(wdrs, next_p_1, 0-1, 29);
-        next_p_1.full == p_1.uh + y_iter.buff[j] * x_i + a_slice[j];
-        
+        // next_p_1.full == p_1.uh + y_iter.buff[j] * x_i + a_slice[j];
         valid_uint512_view(wdrs, next_p_2, 0-1, 28);
-        next_p_2.full == m_iter.buff[j] * u_i + next_p_1.lh + p_2.uh;
+        // next_p_2.full == m_iter.buff[j] * u_i + next_p_1.lh + p_2.uh;
+
+        // next_y_iter.index == j + 1;
+        next_y_iter == bn_lid_next_iter(y_iter, true);
+        next_m_iter == bn_lid_next_iter(m_iter, true);
+
+        admissible_wmem_addr(wmem, x19, next_y_iter);
+        admissible_wmem_addr(wmem, x16, next_m_iter);
+        valid_wdr_view(wdrs, next_a_slice, 4, NUM_WORDS);
 {
     ghost var j := y_iter.index;
-    // /* load limb of y (operand a) and mult. with x_i: [w26, w27] <- y[j]*x_i */
+    /* load limb of y (operand a) and mult. with x_i: [w26, w27] <- y[j]*x_i */
     next_y_iter := bn_lid_safe(x12, false, 0, x19, true, y_iter);
     mul256_w30xw2();
 
@@ -220,11 +229,9 @@ procedure mont_loop_1(
 
     assume seq_addc_512_is_safe(seq(w27, w26), seq(w24, w31));
     next_p_1 := seq_addc_512_safe(w27, w27, w24, w26, w26, w31);
-    // assert next_p_1.full == y_iter.buff[j] * x_i + a_slice[j];
-    // assert valid_uint512_view(wdrs, next_p_1, 27, 26);
 
     /* add carry word from previous cycle:
-       [c_xy, a_tmp] = [w29, w24] <= [w26,w27] + w29 = y[j]*x_i + A[j] + c_xy*/
+       [c_xy, a_tmp] = [w29, w24] <- [w26,w27] + w29 = y[j]*x_i + A[j] + c_xy*/
     uint512_view_lemma(next_p_1);
     assume seq_addc_512_is_safe(seq(w27, w26), seq(w29, w31));
     next_p_1 := seq_addc_512_safe(w24, w27, w29, w29, w26, w31);
@@ -233,7 +240,6 @@ procedure mont_loop_1(
        [w26, w27] = w30*w25 = m[j]*u_i */
     next_m_iter := bn_lid_safe(x12, false, 0, x16, true, m_iter);
     mul256_w30xw25();
-    // assert to_nat(seq(w27, w26)) == m_iter.buff[j] * u_i;
 
     assume seq_addc_512_is_safe(seq(w27, w26), seq(w24, w31));
     next_p_2 := seq_addc_512_safe(w27, w27, w24, w26, w26, w31);
