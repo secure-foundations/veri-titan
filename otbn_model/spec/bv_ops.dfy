@@ -4,6 +4,7 @@ include "../lib/powers.dfy"
 module bv_ops {
 	import opened vt_consts
 	import opened powers
+	import opened congruences
 
     type uint1   = i :int | 0 <= i < BASE_1
     type uint2   = i :int | 0 <= i < BASE_2
@@ -15,10 +16,21 @@ module bv_ops {
     type uint64  = i :int | 0 <= i < BASE_64
     type uint128 = i :int | 0 <= i < BASE_128
     type uint256 = i :int | 0 <= i < BASE_256
+	type uint512 = i :int | 0 <= i < BASE_512
 
     datatype shift_t = SFT(left: bool, bytes: uint5)
 
 	const SFT_DFT :shift_t := SFT(true, 0);
+
+    predicate cong_B256(a: nat, b: nat)
+    {
+        cong(a, b, BASE_256)
+    }
+	
+	function pow_B256(e: nat): nat
+	{
+		power(BASE_256, e)
+	}
 
     function bool_to_uint1(i:bool) : uint1
     {
@@ -80,7 +92,15 @@ module bv_ops {
 		var sum : int := x + y + cin;
 		var sum_out := if sum < BASE_256 then sum else sum - BASE_256;
 		var cout := if sum  < BASE_256 then 0 else 1;
+		// assert x + y + cin == sum_out + cout * BASE_256;
 		(sum_out, cout)
+	}
+
+	lemma uint256_addc_cong_lemma(z: uint256, x: uint256, y: uint256)
+		requires uint256_addc(x, y, 0).0 == z;
+		ensures cong_B256(z, x + y);
+	{
+		reveal cong();
 	}
 
 	function method uint256_subb(x: uint256, y: uint256, bin: uint1): (uint256, uint1)
@@ -137,55 +157,18 @@ module bv_ops {
 		x / BASE_128
 	}
 
+	lemma lemma_uint256_half_split(x: uint256)
+		ensures x == uint256_lh(x) + uint256_uh(x) * BASE_128;
+	{
+		reveal uint256_lh();
+		reveal uint256_uh();
+	}
+
 	function method {:opaque} uint256_hwb(x: uint256, v: uint128, lower: bool): (x': uint256)
 		// overwrites the lower half, keeps the higher half
 		ensures lower ==> (uint256_lh(x') == v && uint256_uh(x') == uint256_uh(x));
 		// overwrites the higher half, keeps the lower half
 		ensures !lower ==> (uint256_uh(x') == v && uint256_lh(x') == uint256_lh(x));
-
-	function method {:opaque} uint256_qmul(x: uint256, qx: uint2, y: uint256, qy:uint2): uint128
-	{
-		assume false; // TODO: add a bound proof
-		uint256_qsel(x, qx) * uint256_qsel(y, qy)
-	}
-
-	function method {:opaque} uint256_qsel(x: uint256, qx: uint2): uint64
-	{
-		if qx == 0 then
-			x % BASE_64
-		else if qx == 1 then
-			(x / BASE_64) % BASE_64
-		else if qx == 1 then
-			(x / BASE_128) % BASE_64
-		else
-			(x / BASE_192) % BASE_64
-	}
-
-    lemma {:axiom} and_single_bit_lemma(x': uint256, x: uint256, w0: uint256, i: nat)
-        requires w0 == power(2, i);
-        requires x' == uint256_and(x, w0);
-        ensures x' == power(2, i) || x' == 0;
-
-    lemma {:axiom} or_zero_nop_lemma(x: uint256, z: uint256)
-        requires z == 0;
-        ensures uint256_or(x, z) == x;
-
-    lemma {:axiom} or_single_bit_add_lemma(x': uint256, x: uint256, w0: uint256, i: nat)
-        requires w0 == power(2, i);
-        requires x < power(2, i);
-        requires x' == uint256_or(x, w0);
-        ensures x' == x + w0;
-        ensures x' < power(2, i + 1);
-
-    lemma {:axiom} odd_and_one_lemma(x: uint256) 
-        requires x % 2 == 1;
-        ensures uint256_and(x, 1) == 1;
-
-	lemma lemma_xor_clear(x: uint256)
-	    ensures uint256_xor(x, x) == 0;
-	{
-		reveal uint256_xor();
-	}
 
 	lemma lemma_uint256_hwb(x1: uint256, x2: uint256, x3: uint256, lo: uint128, hi: uint128)
 		requires x2 == uint256_hwb(x1, lo, true);
@@ -209,11 +192,22 @@ module bv_ops {
 		}
 	}
 
-	lemma lemma_uint256_half_split(x: uint256)
-		ensures x == uint256_lh(x) + uint256_uh(x) * BASE_128;
+	function method {:opaque} uint256_qmul(x: uint256, qx: uint2, y: uint256, qy:uint2): uint128
 	{
-		reveal uint256_lh();
-		reveal uint256_uh();
+		assume false; // TODO: add a bound proof
+		uint256_qsel(x, qx) * uint256_qsel(y, qy)
+	}
+
+	function method {:opaque} uint256_qsel(x: uint256, qx: uint2): uint64
+	{
+		if qx == 0 then
+			x % BASE_64
+		else if qx == 1 then
+			(x / BASE_64) % BASE_64
+		else if qx == 1 then
+			(x / BASE_128) % BASE_64
+		else
+			(x / BASE_192) % BASE_64
 	}
 
 	lemma lemma_uint256_quarter_split(x: uint256)
@@ -224,5 +218,41 @@ module bv_ops {
 	{
 		// reveal uint256_qsel(); // TODO: revaling is not sufficient
 		assume false;
+	}
+
+    // lemma {:axiom} and_single_bit_lemma(x': uint256, x: uint256, w0: uint256, i: nat)
+    //     requires w0 == power(2, i);
+    //     requires x' == uint256_and(x, w0);
+    //     ensures x' == power(2, i) || x' == 0;
+
+    // lemma {:axiom} or_zero_nop_lemma(x: uint256, z: uint256)
+    //     requires z == 0;
+    //     ensures uint256_or(x, z) == x;
+
+    // lemma {:axiom} or_single_bit_add_lemma(x': uint256, x: uint256, w0: uint256, i: nat)
+    //     requires w0 == power(2, i);
+    //     requires x < power(2, i);
+    //     requires x' == uint256_or(x, w0);
+    //     ensures x' == x + w0;
+    //     ensures x' < power(2, i + 1);
+
+    // lemma {:axiom} odd_and_one_lemma(x: uint256) 
+    //     requires x % 2 == 1;
+    //     ensures uint256_and(x, 1) == 1;
+
+	// lemma lemma_xor_clear(x: uint256)
+	//     ensures uint256_xor(x, x) == 0;
+	// {
+	// 	reveal uint256_xor();
+	// }
+
+	function method {:opaque} uint512_lh(x: uint512): uint256
+	{
+		x % BASE_256
+	}
+
+	function method {:opaque} uint512_uh(x: uint512): uint256
+	{
+		x / BASE_256
 	}
 } // end module ops

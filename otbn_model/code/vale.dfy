@@ -4,6 +4,8 @@ module vt_vale {
     import opened vt_types
     import opened vt_ops
     import opened bv_ops
+    import opened congruences
+    import opened vt_consts
 
     type va_code = code
     type va_codes = codes
@@ -11,6 +13,27 @@ module vt_vale {
 
     function fst<T,Q>(t:(T, Q)) : T { t.0 }
     function snd<T,Q>(t:(T, Q)) : Q { t.1 }
+
+    function seq_len<T>(s: seq<T>): nat
+    {
+        |s|
+    }
+
+    function seq_concat<T>(x: seq<T>, y: seq<T>): seq<T>
+    {
+        x + y
+    }
+
+    function seq_append<T>(xs: seq<T>, x: T): seq<T>
+    {
+        xs + [x]
+    }
+
+    function mod_add(a: nat, b: nat, m: nat): nat 
+        requires a < m && b < m;
+    {
+        if a + b > m then a + b - m else a + b
+    }
 
     function va_get_ok(s: va_state): bool
     {
@@ -98,19 +121,9 @@ module vt_vale {
     function va_eval_imm32(s: va_state, v:uint32):uint32 { v }
     function method va_const_imm32(n:uint32):uint32 { n }
 
-    function seq_len<T>(s: seq<T>): nat
+    function va_mul_nat(a: nat, b: nat): nat
     {
-        |s|
-    }
-
-    function seq_concat<T>(x: seq<T>, y: seq<T>): seq<T>
-    {
-        x + y
-    }
-
-    function seq_append<T>(xs: seq<T>, x: T): seq<T>
-    {
-        xs + [x]
+        a * b
     }
 
     // reg32
@@ -169,12 +182,6 @@ module vt_vale {
     function va_update_operand_reg256(r :reg256_t, sM: va_state, sK: va_state): va_state
     {
         va_update_reg256_t(r, sM, sK)
-    }
-
-    function mod_add(a: nat, b: nat, m: nat): nat 
-        requires a < m && b < m;
-    {
-        if a + b > m then a + b - m else a + b
     }
 
     predicate va_state_eq(s0: va_state, s1: va_state)

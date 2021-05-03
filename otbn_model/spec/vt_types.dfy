@@ -15,6 +15,11 @@ module vt_types {
         | WRND // Wide random number
         | WACC // Wide accumulator
 
+    predicate is_wide_data_register(r: reg256_t)
+    {
+        r.WDR?
+    }
+
     datatype ins32 =
         | ADD(xrd: reg32_t, xrs1: reg32_t, xrs2: reg32_t)
         | ADDI(xrd: reg32_t, xrs1: reg32_t, imm: uint32)
@@ -87,6 +92,34 @@ module vt_types {
 
     type wdrs_t = wdrs : seq<uint256> | |wdrs| == 32 witness *
 
+    predicate valid_wdr_view(wdrs: wdrs_t, slice: seq<uint256>, start: nat, len: nat)
+    {   
+        && |slice| == len
+        && start + len <= 32
+        && wdrs[start..start+len] == slice
+    }
+
+    datatype uint512_raw = uint512_cons(
+        lh: uint256, uh: uint256, full: uint512)
+
+	type uint512_view_t = num: uint512_raw |
+		&& num.lh == uint512_lh(num.full)
+		&& num.uh == uint512_uh(num.full)
+		witness *
+
+    // ignore the mapping
+    const NA :int := -1;
+
+    predicate valid_uint512_view(
+        wdrs: wdrs_t, num: uint512_view_t,
+        li: int, ui: int)
+        requires -1 <= li < BASE_5;
+        requires -1 <= ui < BASE_5;
+    {
+        && (li == NA || wdrs[li] == num.lh)
+        && (ui == NA || wdrs[ui] == num.uh)
+    }
+
     /* start wmem_t realted */
 
     type wmem_t = map<int, seq<uint256>>
@@ -104,6 +137,11 @@ module vt_types {
     }
 
     datatype iter_t = iter_cons(base_addr: int, index: nat, buff: seq<uint256>)
+
+    function bn_lid_next_iter(iter: iter_t, inc: bool): iter_t
+    {
+        iter.(index := if inc then iter.index + 1 else iter.index)
+    }
 
     predicate valid_iter(wmem: wmem_t, iter: iter_t)
     {

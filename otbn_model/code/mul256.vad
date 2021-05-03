@@ -22,11 +22,43 @@ procedure mul256_w30xw2()
     reads
         w2; w30;
     modifies
-        w26; w27;
+        w26; w27; wacc;
     ensures
-        to_nat(seq(w27, w26)) == #int(w2) * #int(w30);
+        to_nat(seq(w27, w26)) == w2 * w30;
 {
+    bn_mulqacc_z(w30, 0, w2, 0, 0);
+    ghost var p1 := uint256_qmul(w30, 0, w2, 0);
+    assert wacc == p1;
+
+    bn_mulqacc_safe(w30, 1, w2, 0, 1);
+    ghost var p2 := uint256_qmul(w30, 1, w2, 0);
+    assert wacc == p1 + p2 * BASE_64;
+
+    bn_mulqacc_so_safe(w27, true, w30, 0, w2, 1, 1);
+    ghost var p3 := uint256_qmul(w30, 0, w2, 1);
+
+    ghost var r1 := p1 + p2 * BASE_64 + p3 * BASE_64;
+    assert wacc == uint256_uh(r1); 
+    assert w27 == uint256_hwb(old(w27), uint256_lh(r1), true);
+
+    bn_mulqacc_safe(w30, 2, w2, 0, 0);
+
+
     assume false;
+//   bn.mulqacc            w30.1, w2.1,  0
+//   bn.mulqacc            w30.0, w2.2,  0
+//   bn.mulqacc            w30.3, w2.0, 64
+//   bn.mulqacc            w30.2, w2.1, 64
+//   bn.mulqacc            w30.1, w2.2, 64
+//   bn.mulqacc.so  w27.U, w30.0, w2.3, 64
+//   bn.mulqacc            w30.3, w2.1,  0
+//   bn.mulqacc            w30.2, w2.2,  0
+//   bn.mulqacc            w30.1, w2.3,  0
+//   bn.mulqacc            w30.3, w2.2, 64
+//   bn.mulqacc.so  w26.L, w30.2, w2.3, 64
+//   bn.mulqacc.so  w26.U, w30.3, w2.3,  0
+
+    // assume false;
 }
 
 procedure mul256_w30xw25()
@@ -35,7 +67,7 @@ procedure mul256_w30xw25()
     modifies
         w26; w27;
     ensures
-        to_nat(seq(w27, w26)) == #int(w30) * #int(w25);
+        to_nat(seq(w27, w26)) == w30 * w25;
 {
     assume false;
 }
