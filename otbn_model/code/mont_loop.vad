@@ -1,6 +1,7 @@
 include "decls.vad"
 include "mul256.vad"
 include "addc512.vad"
+include "cond_sub_to_reg.vad"
 
 #verbatim
 include "../code/vale.dfy"
@@ -9,6 +10,7 @@ include "../spec/vt_ops.dfy"
 include "decls.dfy"
 include "mul256.dfy"
 include "addc512.dfy"
+include "cond_sub_to_reg.dfy"
 
 module mont_loop {
 
@@ -24,6 +26,7 @@ import opened congruences
 import opened mul256
 import opened addc512
 import opened addc512_lemmas
+import opened cond_sub_to_reg
 
 #endverbatim
 
@@ -34,6 +37,8 @@ ghost procedure to_nat_lemma2(ghost xs: seq(uint256)) extern;
 function seq_addc_512_is_safe(xs: seq(uint256), ys: seq(uint256)): bool extern;
 
 ghost procedure uint512_view_lemma(ghost num: uint512_view_t) extern;
+
+ghost procedure uint256_addc_cong_lemma(ghost z: uint256, ghost x: uint256, ghost y: uint256) extern;
 
 procedure mont_loop_0(
     ghost a_slice: seq(uint256),
@@ -63,6 +68,8 @@ procedure mont_loop_0(
         x13 == 24;
         x16 == old(x16);
         x22 == x16;
+        x30 == old(x30);
+        x31 == old(x31);
 
         y_next_iter == bn_lid_next_iter(y_iter, true);
         valid_wmem_addr(wmem, x19, y_next_iter);
@@ -196,14 +203,20 @@ procedure mont_loop_1(
         seq_len(inital_a_slice) == NUM_WORDS;
         inital_a_slice[j..] == a_slice[j..];
 
-        // x_i * to_nat(y_iter.buff[..j]) + u_i * to_nat(m_iter.buff[..j]) + sint(A[..j])
+        // x_i * to_nat(y_iter.buff[..j])
+        //     + u_i * to_nat(m_iter.buff[..j])
+        //     + to_nat(inital_a_slice[..j]) 
         //     == 
-        // sint(S) + p_2.uh * pow_B256(j) + p_1.uh * pow_B256(j);
+        // to_nat([0] + a_slice[..j]) + p_2.uh * pow_B256(j) + p_1.uh * pow_B256(j);
+
     ensures
         x8 == 4 + j + 1;
         x10 == 3 + j + 1;
         x12 == 30;
         x13 == 24;
+        x22 == old(x22);
+        x30 == old(x30);
+        x31 == old(x31);
 
         w2 == x_i;
         w25 == u_i;
@@ -214,7 +227,6 @@ procedure mont_loop_1(
         valid_uint512_view(wdrs, next_p_2, NA, 28);
         // next_p_2.full == m_iter.buff[j] * u_i + next_p_1.lh + p_2.uh;
 
-        // next_y_iter.index == j + 1;
         next_y_iter == bn_lid_next_iter(y_iter, true);
         next_m_iter == bn_lid_next_iter(m_iter, true);
 
@@ -222,6 +234,8 @@ procedure mont_loop_1(
         admissible_wmem_addr(wmem, x16, next_m_iter);
         valid_wdr_view(wdrs, next_a_slice, 4, NUM_WORDS);
         inital_a_slice[j+1..] == next_a_slice[j+1..];
+
+        wmem == old(wmem);
 {
     ghost var j := y_iter.index;
     /* load limb of y (operand a) and mult. with x_i: [w26, w27] <- y[j]*x_i */
@@ -271,6 +285,7 @@ procedure mont_loop(
     {:frame false}
 
     requires
+        x30 == NUM_WORDS;
         x31 == NUM_WORDS - 1;
 
         x16 != x19;
@@ -311,17 +326,48 @@ procedure mont_loop(
     ghost var p_2 : uint512_view_t;
     p_2 := seq_addc_512_safe(w27, w27, w24, w28, w26, w31);
 
-    assert valid_uint512_view(wdrs, p_1, 24, 29);
-    assert p_1.full == a_slice[0] + y_iter.buff[0] * x_i;
-
-    assert valid_uint512_view(wdrs, p_2, 27, 28);
-    assert p_2.full == m_iter.buff[0] * u_i + w24;
+    // assert valid_uint512_view(wdrs, p_1, 24, 29);
+    // assert p_1.full == a_slice[0] + y_iter.buff[0] * x_i;
+    // assert valid_uint512_view(wdrs, p_2, 27, 28);
+    // assert p_2.full == m_iter.buff[0] * u_i + w24;
 
     ghost var j: nat := 1;
 
-    assume false;
-
     while (Loop(x31))
+        invariant
+            x8 == 4 + j;
+            x10 == 3 + j;
+            x12 == 30;
+            x13 == 24;
+            x30 == NUM_WORDS;
+
+            w2 == x_i;
+            w25 == u_i;
+            w31 == 0;
+
+            valid_uint512_view(wdrs, p_1, NA, 29);
+            valid_uint512_view(wdrs, p_2, NA, 28);
+
+            loop_ctr + j == NUM_WORDS;
+            y_iter.index == j;
+            y_iter.index >= 1;
+            y_iter.index == m_iter.index;
+            m_iter.base_addr != y_iter.base_addr;
+
+            admissible_wmem_addr(wmem, x19, y_iter);
+            seq_len(y_iter.buff) == NUM_WORDS;
+            admissible_wmem_addr(wmem, x16, m_iter);
+            seq_len(m_iter.buff) == NUM_WORDS;
+            
+            valid_buff_addr(wmem, x22, NUM_WORDS); // observe
+
+            valid_wdr_view(wdrs, a_slice, 4, NUM_WORDS);
+            seq_len(inital_a_slice) == NUM_WORDS;
+
+            inital_a_slice[j..] == a_slice[j..];
+
+            wmem == old(wmem);
+
         decreases loop_ctr;
     {
         p_1, p_2, y_iter, m_iter, a_slice := mont_loop_1(
@@ -331,6 +377,32 @@ procedure mont_loop(
             inital_a_slice, a_slice, j);
         j := j + 1;
     }
+
+    /* Most significant limb of A is sum of the carry words of last loop cycle
+        A[N-1] = w24 <- w29 + w28 = c_xy + c_m */
+    // bn.addc   w24, w29, w28, FG1
+    bn_add(w24, w29, w28, SFT_DFT, 1);
+    bn_movr(x10, true, x13, false);
+
+    assert cong_B256(w24, p_1.uh + p_2.uh) by {
+        uint256_addc_cong_lemma(w24, w29, w28);
+    }
+
+    /* restore pointers */
+    addi(x16, x22, 0);
+
+    li(x8, 4);
+    li(x10, 4);
+
+    assume fgroups.fg0.cf == false; // TODO: do we know that this flag is cleared?
+    assert valid_buff_addr(wmem, x16, NUM_WORDS);
+
+    /* This replaces Step 3 of HAC 14.36 and performs conditional constant-time
+     subtraction of the modulus from the output buffer  */
+    cond_sub_to_reg(NUM_WORDS, fgroups.fg1.cf);
+    
+    /* restore pointer */
+    li(x8, 4);
 }
 
 #verbatim

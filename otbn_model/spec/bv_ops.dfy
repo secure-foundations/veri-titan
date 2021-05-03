@@ -96,6 +96,13 @@ module bv_ops {
 		(sum_out, cout)
 	}
 
+	lemma uint256_addc_cong_lemma(z: uint256, x: uint256, y: uint256)
+		requires uint256_addc(x, y, 0).0 == z;
+		ensures cong_B256(z, x + y);
+	{
+		reveal cong();
+	}
+
 	function method uint256_subb(x: uint256, y: uint256, bin: uint1): (uint256, uint1)
 	{
 	    var diff : int := x - y - bin;
