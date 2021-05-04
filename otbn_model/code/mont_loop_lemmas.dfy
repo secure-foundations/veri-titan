@@ -11,7 +11,6 @@ module mont_loop_lemmas {
     predicate mont_loop_inv(
         x_i: uint256,
         u_i: uint256,
-        m_0': uint256,
         p_1: uint512_view_t,
         p_2: uint512_view_t,
         y: seq<uint256>,
@@ -20,7 +19,7 @@ module mont_loop_lemmas {
         a: seq<uint256>,
         j: nat)
     {
-        && |m| == |a| == |y| == |initial_a| == NUM_WORDS;
+        && |m| == |a| == |y| == |initial_a| == NUM_WORDS
         && (1 <= j <= NUM_WORDS)
         && (x_i * to_nat(y[..j]) + u_i * to_nat(m[..j]) + to_nat(initial_a[..j]) 
             == 
@@ -40,7 +39,7 @@ module mont_loop_lemmas {
         requires p_1.full == x_i * y_0 + a_0;
         requires p_2.full == u_i * m_0 + p_1.lh;
         requires cong_B256(m_0' * m_0, BASE_256 - 1);
-        requires cong_B256(u_i, (a_0 + y_0 * x_i) * m_0');
+        requires cong_B256(u_i, p_1.full * m_0');
         ensures p_2.lh == 0;
     {
         assume false; // TODO
@@ -63,7 +62,7 @@ module mont_loop_lemmas {
         requires cong_B256(m_0' * m[0], BASE_256 - 1);
         requires cong_B256(u_i, (a[0] + y[0] * x_i) * m_0');
 
-        ensures mont_loop_inv(x_i, u_i, m_0', p_1, p_2, y, m, a, a, 1)
+        ensures mont_loop_inv(x_i, u_i, p_1, p_2, y, m, a, a, 1)
         {
             mont_loop_divisible_lemma1(x_i, u_i, m_0', p_1, p_2, y[0], m[0], a[0]);
 
@@ -92,4 +91,7 @@ module mont_loop_lemmas {
                 to_nat([0] + a[..0]) + p_2.uh * pow_B256(1) + p_1.uh * pow_B256(1);
             }
         }
+
+
+
 }

@@ -49,6 +49,8 @@ ghost procedure mont_word_mul_add_bound_lemma2(ghost xs: seq(uint256), ghost ys:
 
 ghost procedure mont_loop_inv_lemma1(ghost x_i: uint256, ghost u_i: uint256, ghost m_0': uint256, ghost p_1: uint512_view_t, ghost p_2: uint512_view_t, ghost y:seq(uint256), ghost m:seq(uint256), ghost a:seq(uint256)) extern;
 
+function mont_loop_inv(x_i: uint256, u_i: uint256, p_1: uint512_view_t, p_2: uint512_view_t, y:seq(uint256), m:seq(uint256), initial_a: seq(uint256), a: seq(uint256), j: nat) : bool extern;
+
 procedure mont_loop_0(
     ghost a_slice: seq(uint256),
     ghost y_iter: iter_t,
@@ -212,11 +214,8 @@ procedure mont_loop_1(
         seq_len(inital_a_slice) == NUM_WORDS;
         inital_a_slice[j..] == a_slice[j..];
 
-        // x_i * to_nat(y_iter.buff[..j])
-        //     + u_i * to_nat(m_iter.buff[..j])
-        //     + to_nat(inital_a_slice[..j]) 
-        //     == 
-        // to_nat([0] + a_slice[..j]) + p_2.uh * pow_B256(j) + p_1.uh * pow_B256(j);
+        mont_loop_inv(x_i, u_i, p_1, p_2,
+            y_iter.buff, m_iter.buff, inital_a_slice, a_slice, j);
 
     ensures
         x8 == 4 + j + 1;
@@ -386,6 +385,9 @@ procedure mont_loop(
 
             wmem == old(wmem);
 
+            mont_loop_inv(x_i, u_i, p_1, p_2,
+                y_iter.buff, m_iter.buff, inital_a_slice, a_slice, j);
+
         decreases loop_ctr;
     {
         p_1, p_2, y_iter, m_iter, a_slice := mont_loop_1(
@@ -394,6 +396,8 @@ procedure mont_loop(
             y_iter, m_iter, 
             inital_a_slice, a_slice, j);
         j := j + 1;
+
+        assume false;
     }
 
     /* Most significant limb of A is sum of the carry words of last loop cycle
