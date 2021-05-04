@@ -234,15 +234,15 @@ module vt_ops {
         reveal power();
     }
 
-	lemma uint512_view_lemma(num: uint512_view_t)
-		ensures num.full
+    lemma uint512_view_lemma(num: uint512_view_t)
+        ensures num.full
             == to_nat([num.lh, num.uh])
             == num.lh + num.uh * BASE_256;
-	{
-		reveal uint512_lh();
-		reveal uint512_uh();
+    {
+        reveal uint512_lh();
+        reveal uint512_uh();
         to_nat_lemma2([num.lh, num.uh]);
-	}
+    }
 
     lemma to_nat_zero_extend_lemma(xs': seq<uint256>, xs: seq<uint256>) 
         requires |xs'| < |xs|

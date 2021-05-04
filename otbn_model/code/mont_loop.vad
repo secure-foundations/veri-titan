@@ -40,6 +40,8 @@ ghost procedure uint512_view_lemma(ghost num: uint512_view_t) extern;
 
 ghost procedure uint256_addc_cong_lemma(ghost z: uint256, ghost x: uint256, ghost y: uint256) extern;
 
+ghost procedure mont_single_mul_bound_lemma(ghost xs: seq(uint256), ghost ys: seq(uint256), ghost a: uint256, ghost b: uint256) extern;
+
 procedure mont_loop_0(
     ghost a_slice: seq(uint256),
     ghost y_iter: iter_t,
@@ -322,7 +324,8 @@ procedure mont_loop(
 
     /* [w28, w27] = [w26, w27] + w24 = m[0]*u_i + (y[0]*x_i + A[0] mod b) */
     /* this serves as p_2 in the first cycle of the loop below */
-    assume seq_addc_512_is_safe(seq(w27, w26), seq(w24, w31));
+
+    mont_single_mul_bound_lemma(seq(w27, w26), seq(w24, w31), m_iter.buff[0], u_i);
     ghost var p_2 : uint512_view_t;
     p_2 := seq_addc_512_safe(w27, w27, w24, w28, w26, w31);
 
