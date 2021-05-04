@@ -63,35 +63,137 @@ module mont_loop_lemmas {
         requires cong_B256(u_i, (a[0] + y[0] * x_i) * m_0');
 
         ensures mont_loop_inv(x_i, u_i, p_1, p_2, y, m, a, a, 1)
-        {
-            mont_loop_divisible_lemma1(x_i, u_i, m_0', p_1, p_2, y[0], m[0], a[0]);
+    {
+        mont_loop_divisible_lemma1(x_i, u_i, m_0', p_1, p_2, y[0], m[0], a[0]);
 
-            to_nat_lemma1(y[..1]);
-            to_nat_lemma1(m[..1]);
-            to_nat_lemma1(a[..1]);
+        to_nat_lemma1(y[..1]);
+        to_nat_lemma1(m[..1]);
+        to_nat_lemma1(a[..1]);
 
-            assert p_2.full == p_2.uh * BASE_256 by {
-                uint512_view_lemma(p_2);
-            }
-
-            uint512_view_lemma(p_1);
-
-            calc == {
-                x_i * to_nat(y[..1]) + u_i * to_nat(m[..1]) + to_nat(a[..1]);
-                p_2.uh * pow_B256(1) + p_1.uh * pow_B256(1);
-                {
-                    assert to_nat([0]) == 0 by {
-                        reveal to_nat();
-                    }
-                }
-                to_nat([0]) + p_2.uh * pow_B256(1) + p_1.uh * pow_B256(1);
-                {
-                    assert [0] + a[..0] == [0];
-                }
-                to_nat([0] + a[..0]) + p_2.uh * pow_B256(1) + p_1.uh * pow_B256(1);
-            }
+        assert p_2.full == p_2.uh * BASE_256 by {
+            uint512_view_lemma(p_2);
         }
 
+        uint512_view_lemma(p_1);
 
+        calc == {
+            x_i * to_nat(y[..1]) + u_i * to_nat(m[..1]) + to_nat(a[..1]);
+            p_2.uh * pow_B256(1) + p_1.uh * pow_B256(1);
+            {
+                assert to_nat([0]) == 0 by {
+                    reveal to_nat();
+                }
+            }
+            to_nat([0]) + p_2.uh * pow_B256(1) + p_1.uh * pow_B256(1);
+            {
+                assert [0] + a[..0] == [0];
+            }
+            to_nat([0] + a[..0]) + p_2.uh * pow_B256(1) + p_1.uh * pow_B256(1);
+        }
+    }
 
+    lemma mont_loop_inv_lemma2(
+        x_i: uint256,
+        u_i: uint256,
+        p_1: uint512_view_t,
+        p_2: uint512_view_t,
+        next_p_1: uint512_view_t,
+        next_p_2: uint512_view_t,
+        y: seq<uint256>,
+        m: seq<uint256>,
+        initial_a: seq<uint256>,
+        a: seq<uint256>,
+        next_a: seq<uint256>,
+        j: nat)
+
+        requires 1 <= j < NUM_WORDS; // this is in the loop itself
+        requires mont_loop_inv(x_i, u_i, p_1, p_2, y, m, initial_a, a, j);
+        requires a[j] == initial_a[j];
+        requires |next_a| == NUM_WORDS;
+        requires next_p_1.full == p_1.uh + y[j] * x_i + a[j];
+        requires next_p_2.full == m[j] * u_i + next_p_1.lh + p_2.uh;
+        requires next_a == a[j-1 := next_p_2.lh];
+        ensures mont_loop_inv(x_i, u_i, next_p_1, next_p_2, y, m, initial_a, next_a, j+1);
+    {
+        var y_nat := to_nat(y[..j]);
+        var y_nat' := to_nat(y[..j+1]);
+        var y_j := y[j];
+
+        var m_nat := to_nat(m[..j]);
+        var m_nat' := to_nat(m[..j+1]);
+        var m_j := m[j];
+
+        var ia_nat := to_nat(initial_a[..j]);
+        var ia_nat' := to_nat(initial_a[..j+1]);
+        var a_j := initial_a[j];
+
+        var ea_nat := to_nat([0] + a[..j-1]);
+        var ea_nat' := to_nat([0] + next_a[..j]);
+
+        var pow_B256_j := pow_B256(j);
+        var pow_B256_j' := pow_B256(j+1);
+
+        var p1_uh := p_1.uh;
+        var p2_uh := p_2.uh;
+
+        var next_p_1_lh := next_p_1.lh;
+        var next_p_1_uh := next_p_1.uh;
+
+        var next_p_2_lh := next_p_2.lh;
+        var next_p_2_uh := next_p_2.uh;
+
+        assume pow_B256_j' == pow_B256_j * BASE_256;
+
+        assert x_i * y_nat + u_i * m_nat + ia_nat 
+            == 
+        ea_nat + p2_uh * pow_B256_j +p1_uh * pow_B256_j;
+
+        assert next_p_1_lh + next_p_1_uh * BASE_256 == p1_uh + y_j * x_i + a_j by {
+            uint512_view_lemma(next_p_1);
+        }
+
+        assert next_p_2_lh + next_p_2_uh * BASE_256 == m_j * u_i + next_p_1_lh + p2_uh by {
+            uint512_view_lemma(next_p_2);
+        }
+
+        assert ia_nat' == ia_nat + a_j * pow_B256_j by {
+            assert initial_a[..j+1][..j] == initial_a[..j];
+            reveal to_nat();
+        }
+
+        assert y_nat' == y_nat + y_j * pow_B256_j by {
+            assert y[..j+1][..j] == y[..j];
+            reveal to_nat();
+        }
+
+        assert m_nat' == m_nat + m_j * pow_B256_j by {
+            assert m[..j+1][..j] == m[..j];
+            reveal to_nat();
+        }
+
+        assert ea_nat' == ea_nat + next_p_2_lh * pow_B256_j by {
+            calc == {
+                to_nat(next_a[..j]);
+                {
+                    reveal to_nat();
+                    assert next_a[..j][..j-1] == next_a[..j-1];
+                }
+                to_nat(next_a[..j-1]) + next_p_2_lh * pow_B256(j-1);
+                to_nat(a[..j-1]) + next_p_2_lh * pow_B256(j-1);
+            }
+
+            assert to_nat([0] + a[..j-1]) == to_nat(a[..j-1]) * BASE_256 by {
+                to_nat_zero_prepend_lemma(a[..j-1]);
+            }
+
+            assert to_nat([0] + next_a[..j]) == to_nat(next_a[..j]) * BASE_256 by {
+                to_nat_zero_prepend_lemma(next_a[..j]);
+            }
+            assume pow_B256(j-1) * BASE_256 == pow_B256(j);
+        }
+
+        assert x_i * y_nat' + u_i * m_nat' + ia_nat'
+            == 
+        ea_nat' + next_p_2_uh * pow_B256_j' + next_p_1_uh *pow_B256_j';
+    }
 }

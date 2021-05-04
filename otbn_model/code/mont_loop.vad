@@ -51,6 +51,8 @@ ghost procedure mont_loop_inv_lemma1(ghost x_i: uint256, ghost u_i: uint256, gho
 
 function mont_loop_inv(x_i: uint256, u_i: uint256, p_1: uint512_view_t, p_2: uint512_view_t, y:seq(uint256), m:seq(uint256), initial_a: seq(uint256), a: seq(uint256), j: nat) : bool extern;
 
+ghost procedure mont_loop_inv_lemma2(ghost x_i: uint256, ghost u_i: uint256, ghost p_1: uint512_view_t, ghost p_2: uint512_view_t, ghost next_p_1: uint512_view_t, ghost next_p_2: uint512_view_t, ghost y: seq(uint256), ghost m: seq(uint256), ghost initial_a: seq(uint256), ghost a: seq(uint256), ghost next_a: seq(uint256), ghost j: int) extern;
+
 procedure mont_loop_0(
     ghost a_slice: seq(uint256),
     ghost y_iter: iter_t,
@@ -231,9 +233,7 @@ procedure mont_loop_1(
         w31 == 0;
 
         valid_uint512_view(wdrs, next_p_1, NA, 29);
-        // next_p_1.full == p_1.uh + y_iter.buff[j] * x_i + a_slice[j];
         valid_uint512_view(wdrs, next_p_2, NA, 28);
-        // next_p_2.full == m_iter.buff[j] * u_i + next_p_1.lh + p_2.uh;
 
         next_y_iter == bn_lid_next_iter(y_iter, true);
         next_m_iter == bn_lid_next_iter(m_iter, true);
@@ -242,6 +242,9 @@ procedure mont_loop_1(
         admissible_wmem_addr(wmem, x16, next_m_iter);
         valid_wdr_view(wdrs, next_a_slice, 4, NUM_WORDS);
         inital_a_slice[j+1..] == next_a_slice[j+1..];
+
+        mont_loop_inv(x_i, u_i, next_p_1, next_p_2,
+            next_y_iter.buff, next_m_iter.buff, inital_a_slice, next_a_slice, j+1);
 
         wmem == old(wmem);
 {
@@ -288,6 +291,9 @@ procedure mont_loop_1(
 
     assert valid_uint512_view(wdrs, next_p_2, NA, 28);
     assert next_p_2.full == m_iter.buff[j] * u_i + next_p_1.lh + p_2.uh;
+
+    mont_loop_inv_lemma2(x_i, u_i, p_1, p_2, next_p_1, next_p_2,
+        y_iter.buff, m_iter.buff, inital_a_slice, a_slice, next_a_slice, j);
 }
 
 procedure mont_loop(
@@ -396,8 +402,6 @@ procedure mont_loop(
             y_iter, m_iter, 
             inital_a_slice, a_slice, j);
         j := j + 1;
-
-        assume false;
     }
 
     /* Most significant limb of A is sum of the carry words of last loop cycle

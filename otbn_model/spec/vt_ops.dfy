@@ -234,6 +234,9 @@ module vt_ops {
         reveal power();
     }
 
+    lemma to_nat_zero_prepend_lemma(xs: seq<uint256>)
+        ensures to_nat([0] + xs) == to_nat(xs) * BASE_256
+
     lemma uint512_view_lemma(num: uint512_view_t)
         ensures num.full
             == to_nat([num.lh, num.uh])
