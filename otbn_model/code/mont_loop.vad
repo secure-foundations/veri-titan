@@ -40,7 +40,9 @@ ghost procedure uint512_view_lemma(ghost num: uint512_view_t) extern;
 
 ghost procedure uint256_addc_cong_lemma(ghost z: uint256, ghost x: uint256, ghost y: uint256) extern;
 
-ghost procedure mont_single_mul_bound_lemma(ghost xs: seq(uint256), ghost ys: seq(uint256), ghost a: uint256, ghost b: uint256) extern;
+ghost procedure mont_word_mul_add_bound_lemma1(ghost xs: seq(uint256), ghost ys: seq(uint256), ghost a: uint256, ghost b: uint256) extern;
+
+ghost procedure mont_word_mul_add_bound_lemma2(ghost xs: seq(uint256), ghost ys: seq(uint256), ghost a: uint256, ghost b: uint256, ghost c: uint256) extern;
 
 procedure mont_loop_0(
     ghost a_slice: seq(uint256),
@@ -113,7 +115,7 @@ procedure mont_loop_0(
     // assert w24 == a_slice[0];
 
     /* add A[0]: [w29, w30] = [w26, w27] + w24 = y[0]*x_i + A[0] */
-    assume seq_addc_512_is_safe(seq(w27, w26), seq(w24, w31));
+    mont_word_mul_add_bound_lemma1(seq(w27, w26), seq(w24, w31), y_iter.buff[0], w2);
     p_1 := seq_addc_512_safe(w30, w27, w24, w29, w26, w31);
 
     // assert to_nat(seq(w30, w29)) == a_slice[0] + y_iter.buff[0] * x_i;
@@ -247,13 +249,14 @@ procedure mont_loop_1(
     /* add limb of buffer: [w26, w27] <- [w26,w27] + w24 = y[j]*x_i + A[j] */
     bn_movr(x13, false, x8, true);
 
-    assume seq_addc_512_is_safe(seq(w27, w26), seq(w24, w31));
+    mont_word_mul_add_bound_lemma1(seq(w27, w26), seq(w24, w31), y_iter.buff[j], x_i);
     next_p_1 := seq_addc_512_safe(w27, w27, w24, w26, w26, w31);
 
     /* add carry word from previous cycle:
        [c_xy, a_tmp] = [w29, w24] <- [w26,w27] + w29 = y[j]*x_i + A[j] + c_xy*/
     uint512_view_lemma(next_p_1);
-    assume seq_addc_512_is_safe(seq(w27, w26), seq(w29, w31));
+
+    mont_word_mul_add_bound_lemma2(seq(w27, w26), seq(w29, w31), y_iter.buff[j], x_i, w24);
     next_p_1 := seq_addc_512_safe(w24, w27, w29, w29, w26, w31);
 
     /* load limb m[j] of modulus and multiply with u_i:
@@ -261,11 +264,15 @@ procedure mont_loop_1(
     next_m_iter := bn_lid_safe(x12, false, 0, x16, true, m_iter);
     mul256_w30xw25();
 
-    assume seq_addc_512_is_safe(seq(w27, w26), seq(w24, w31));
+    /* add result from first step
+       [w26, w27] <- [w26,w27] + w24 = m[j]*u_i + a_tmp */
+    mont_word_mul_add_bound_lemma1(seq(w27, w26), seq(w24, w31), m_iter.buff[j], u_i);
     next_p_2 := seq_addc_512_safe(w27, w27, w24, w26, w26, w31);
 
+    /* [c_m, A[j-1]] = [w28, w24] = m[j]*u_i + a_tmp + c_m */
     uint512_view_lemma(next_p_2);
-    assume seq_addc_512_is_safe(seq(w27, w26), seq(w28, w31));
+
+    mont_word_mul_add_bound_lemma2(seq(w27, w26), seq(w28, w31), m_iter.buff[j], u_i, w24);
     next_p_2 := seq_addc_512_safe(w24, w27, w28, w28, w26, w31);
 
     bn_movr(x10, true, x13, false);
@@ -325,7 +332,7 @@ procedure mont_loop(
     /* [w28, w27] = [w26, w27] + w24 = m[0]*u_i + (y[0]*x_i + A[0] mod b) */
     /* this serves as p_2 in the first cycle of the loop below */
 
-    mont_single_mul_bound_lemma(seq(w27, w26), seq(w24, w31), m_iter.buff[0], u_i);
+    mont_word_mul_add_bound_lemma1(seq(w27, w26), seq(w24, w31), m_iter.buff[0], u_i);
     ghost var p_2 : uint512_view_t;
     p_2 := seq_addc_512_safe(w27, w27, w24, w28, w26, w31);
 
