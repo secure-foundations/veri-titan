@@ -76,18 +76,17 @@ module mont_loop_lemmas {
 
         uint512_view_lemma(p_1);
 
-        calc == {
+        calc {
             x_i * to_nat(y[..1]) + u_i * to_nat(m[..1]) + to_nat(a[..1]);
             p_2.uh * pow_B256(1) + p_1.uh * pow_B256(1);
-            {
-                assert to_nat([0]) == 0 by {
+                {
                     reveal to_nat();
+                    assert to_nat([0]) == 0;
                 }
-            }
             to_nat([0]) + p_2.uh * pow_B256(1) + p_1.uh * pow_B256(1);
-            {
-                assert [0] + a[..0] == [0];
-            }
+                {
+                    assert [0] + a[..0] == [0];
+                }
             to_nat([0] + a[..0]) + p_2.uh * pow_B256(1) + p_1.uh * pow_B256(1);
         }
     }
@@ -136,23 +135,17 @@ module mont_loop_lemmas {
         var p1_uh := p_1.uh;
         var p2_uh := p_2.uh;
 
-        var next_p_1_lh := next_p_1.lh;
-        var next_p_1_uh := next_p_1.uh;
-
-        var next_p_2_lh := next_p_2.lh;
-        var next_p_2_uh := next_p_2.uh;
-
         assume pow_B256_j' == pow_B256_j * BASE_256;
 
         assert x_i * y_nat + u_i * m_nat + ia_nat 
             == 
         ea_nat + p2_uh * pow_B256_j +p1_uh * pow_B256_j;
 
-        assert next_p_1_lh + next_p_1_uh * BASE_256 == p1_uh + y_j * x_i + a_j by {
+        assert next_p_1.lh + next_p_1.uh * BASE_256 == p1_uh + y_j * x_i + a_j by {
             uint512_view_lemma(next_p_1);
         }
 
-        assert next_p_2_lh + next_p_2_uh * BASE_256 == m_j * u_i + next_p_1_lh + p2_uh by {
+        assert next_p_2.lh + next_p_2.uh * BASE_256 == m_j * u_i + next_p_1.lh + p2_uh by {
             uint512_view_lemma(next_p_2);
         }
 
@@ -171,15 +164,12 @@ module mont_loop_lemmas {
             reveal to_nat();
         }
 
-        assert ea_nat' == ea_nat + next_p_2_lh * pow_B256_j by {
+        assert ea_nat' == ea_nat + next_p_2.lh * pow_B256_j by {
             calc == {
                 to_nat(next_a[..j]);
-                {
-                    reveal to_nat();
-                    assert next_a[..j][..j-1] == next_a[..j-1];
-                }
-                to_nat(next_a[..j-1]) + next_p_2_lh * pow_B256(j-1);
-                to_nat(a[..j-1]) + next_p_2_lh * pow_B256(j-1);
+                { to_nat_prefix_lemma(next_a, j); }
+                to_nat(next_a[..j-1]) + next_p_2.lh * pow_B256(j-1);
+                to_nat(a[..j-1]) + next_p_2.lh * pow_B256(j-1);
             }
 
             assert to_nat([0] + a[..j-1]) == to_nat(a[..j-1]) * BASE_256 by {
@@ -194,6 +184,108 @@ module mont_loop_lemmas {
 
         assert x_i * y_nat' + u_i * m_nat' + ia_nat'
             == 
-        ea_nat' + next_p_2_uh * pow_B256_j' + next_p_1_uh *pow_B256_j';
+        ea_nat' + next_p_2.uh * pow_B256_j' + next_p_1.uh *pow_B256_j';
     }
+
+    lemma mont_loop_inv_lemma3(
+        x_i: uint256,
+        u_i: uint256,
+        p_1: uint512_view_t,
+        p_2: uint512_view_t,
+        y: seq<uint256>,
+        m: seq<uint256>,
+        initial_a: seq<uint256>,
+        a: seq<uint256>,
+        cout: uint1)
+
+        requires mont_loop_inv(x_i, u_i, p_1, p_2, y, m, initial_a, a, NUM_WORDS);
+        requires uint256_addc(p_1.uh, p_2.uh, 0) == (a[NUM_WORDS-1], cout);
+
+        ensures to_nat(a) * BASE_256 + cout * pow_B256(NUM_WORDS+1)
+            == x_i * to_nat(y) + u_i * to_nat(m) + to_nat(initial_a);
+    {
+        calc {
+            // to_nat([0] + a) + cout * pow_B256(NUM_WORDS+1);
+            //     { to_nat_zero_prepend_lemma(a); }
+            to_nat(a) * BASE_256 + cout * pow_B256(NUM_WORDS+1);
+                { reveal to_nat(); }
+            (to_nat(a[..NUM_WORDS-1]) + a[NUM_WORDS-1] * pow_B256(NUM_WORDS-1)) * BASE_256 + cout * pow_B256(NUM_WORDS+1);
+            to_nat(a[..NUM_WORDS-1]) * BASE_256 + a[NUM_WORDS-1] * pow_B256(NUM_WORDS-1) * BASE_256 + cout * pow_B256(NUM_WORDS+1);
+                { reveal power(); }
+            to_nat(a[..NUM_WORDS-1]) * BASE_256 + a[NUM_WORDS-1] * pow_B256(NUM_WORDS) + cout * pow_B256(NUM_WORDS+1);
+                { reveal power(); }
+            to_nat(a[..NUM_WORDS-1]) * BASE_256 + a[NUM_WORDS-1] * pow_B256(NUM_WORDS) + cout * BASE_256 * pow_B256(NUM_WORDS);
+            to_nat(a[..NUM_WORDS-1]) * BASE_256 + p_2.uh * pow_B256(NUM_WORDS) + p_1.uh * pow_B256(NUM_WORDS);
+                { to_nat_zero_prepend_lemma(a[..NUM_WORDS-1]); }
+            to_nat([0] + a[..NUM_WORDS-1]) + p_2.uh * pow_B256(NUM_WORDS) + p_1.uh * pow_B256(NUM_WORDS);
+                {
+                    assert y == y[..NUM_WORDS];
+                    assert m == m[..NUM_WORDS];
+                    assert initial_a == initial_a[..NUM_WORDS];
+                }
+            x_i * to_nat(y) + u_i * to_nat(m) + to_nat(initial_a);
+        }
+    }
+
+        // requires pub_key_valid(key);
+        // requires (higher as nat * key.R + sint(A')) * BASE == 
+        //     x_i as nat * sint(y) + u_i as nat * key.n_val + sint(A);
+        // ensures (cout * pow_B256(NUM_WORDS) + sint(A')) < (sint(y) + key.n_val);
+        // ensures (higher == 1 ==> sint(A') < key.n_val);
+
+    lemma mont_loop_bound_lemma(
+        x_i: uint256,
+        u_i: uint256,
+        y: seq<uint256>,
+        m: seq<uint256>,
+        initial_a: seq<uint256>,
+        a: seq<uint256>,
+        cout: uint1)
+
+        requires to_nat(initial_a) < to_nat(m) + to_nat(y);
+        requires to_nat(a) * BASE_256 + cout * pow_B256(NUM_WORDS+1)
+            == x_i * to_nat(y) + u_i * to_nat(m) + to_nat(initial_a);
+
+        ensures to_nat(a) + cout * pow_B256(NUM_WORDS) < to_nat(y) + to_nat(m);
+    {
+        calc {
+            (to_nat(a) + cout * pow_B256(NUM_WORDS)) * BASE_256;
+            to_nat(a) * BASE_256 + cout * pow_B256(NUM_WORDS) * BASE_256;
+                { reveal power(); }
+            to_nat(a) * BASE_256 + cout * pow_B256(NUM_WORDS+1);
+            x_i * to_nat(y) + u_i * to_nat(m) + to_nat(initial_a);
+        <
+            x_i * to_nat(y) + u_i * to_nat(m) + to_nat(m) + to_nat(y);
+            (x_i + 1) * to_nat(y) + (u_i + 1) * to_nat(m);
+        <=
+                {
+                    assert x_i + 1 <= BASE_256;
+                    assert u_i + 1 <= BASE_256;
+                    assume false; // TODO
+                }
+            to_nat(y) * BASE_256 + to_nat(m) * BASE_256;
+            (to_nat(y) + to_nat(m)) * BASE_256;
+        }
+
+        assert (to_nat(a) + cout * pow_B256(NUM_WORDS)) * BASE_256
+            < (to_nat(y) + to_nat(m)) * BASE_256;
+
+        assert to_nat(a) + cout * pow_B256(NUM_WORDS) < to_nat(y) + to_nat(m);
+    }
+
 }
+
+            // x_i * to_nat(y) + u_i * to_nat(m) + to_nat(m) + to_nat(y);
+            // (x_i + 1) * to_nat(y) + (u_i + 1) * to_nat(m);
+
+            // <=
+            //     {
+            //         to_nat_bound_lemma(y);
+            //         to_nat_bound_lemma(m);
+            //     }
+            // BASE_256 * pow_B256(NUM_WORDS) + BASE_256 * pow_B256(NUM_WORDS);
+            // 2 * BASE_256 * pow_B256(NUM_WORDS);
+            // {
+            //     reveal power();
+            // }
+            // 2 * pow_B256(NUM_WORDS+1);

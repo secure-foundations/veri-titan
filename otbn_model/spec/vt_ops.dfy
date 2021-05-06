@@ -234,8 +234,26 @@ module vt_ops {
         reveal power();
     }
 
+    lemma to_nat_bound_lemma(x: seq<uint256>)
+        ensures to_nat(x) < pow_B256(|x|)
+    {
+        if |x| == 0 {
+            reveal to_nat();
+        } else {
+            assume false;
+        }
+    }
+
     lemma to_nat_zero_prepend_lemma(xs: seq<uint256>)
         ensures to_nat([0] + xs) == to_nat(xs) * BASE_256
+
+    lemma to_nat_prefix_lemma(xs: seq<uint256>, i: nat)
+        requires 1 <= i < |xs|;
+        ensures to_nat(xs[..i]) == to_nat(xs[..i-1]) + xs[i-1] * pow_B256(i-1);
+    {
+        assert xs[..i][..i-1] == xs[..i-1];
+        reveal to_nat();
+    }
 
     lemma uint512_view_lemma(num: uint512_view_t)
         ensures num.full
@@ -293,19 +311,17 @@ module vt_ops {
             var len' := |xs| - 1;
             var (zs', cin) := seq_addc(xs[..len'], ys[..len']);
             var (z, _) := uint256_addc(xs[len'], ys[len'], cin);
-            assert zs == zs' + [z];
-
             assert xs[len'] + ys[len'] + cin == z + cout * BASE_256;
 
             calc {
                 to_nat(zs);
                 to_nat(zs') + z * pow_B256(len');
-                { seq_addc_nat_lemma(xs[..len'], ys[..len'], zs', cin); }
+                    { seq_addc_nat_lemma(xs[..len'], ys[..len'], zs', cin); }
                 to_nat(xs[..len']) + to_nat(ys[..len']) - cin * pow_B256(len') + z * pow_B256(len');
                 to_nat(xs[..len']) + to_nat(ys[..len']) + xs[len'] * pow_B256(len') + ys[len'] * pow_B256(len') - cout * BASE_256 * pow_B256(len');
-                { reveal to_nat(); }
+                    { reveal to_nat(); }
                 to_nat(xs) + to_nat(ys) - cout * BASE_256 * pow_B256(len');
-                { reveal power(); }
+                    { reveal power(); }
                 to_nat(xs) + to_nat(ys) - cout * pow_B256(|xs|);
             }
             assert to_nat(zs) + cout * pow_B256(|xs|) == to_nat(xs) + to_nat(ys);
@@ -314,7 +330,7 @@ module vt_ops {
 
     function seq_subb(xs: seq<uint256>, ys: seq<uint256>) : (seq<uint256>, uint1)
         requires |xs| == |ys|
-        ensures var (zs, cout) := seq_subb(xs, ys);
+        ensures var (zs, bout) := seq_subb(xs, ys);
             && |zs| == |xs|
     {
         if |xs| == 0 then ([], 0)
@@ -323,6 +339,51 @@ module vt_ops {
             var (zs, bin) := seq_subb(xs[..len'], ys[..len']);
             var (z, bout) := uint256_subb(xs[len'], ys[len'], bin);
             (zs + [z], bout)
+    }
+
+    lemma seq_subb_nat_lemma(xs: seq<uint256>, ys: seq<uint256>, zs: seq<uint256>, bout: uint1)
+        requires |xs| == |ys|
+        requires seq_subb(xs, ys) == (zs, bout);
+        ensures to_nat(xs) - to_nat(ys) + bout * pow_B256(|xs|) == to_nat(zs)
+    {
+        reveal to_nat();
+        if |xs| == 0 {
+            reveal power();
+        } else {
+            var len' := |xs| - 1;
+            var (zs', bin) := seq_subb(xs[..len'], ys[..len']);
+            var (z, _) := uint256_subb(xs[len'], ys[len'], bin);
+            assert bout * BASE_256 + xs[len'] - bin - ys[len'] == z;
+            
+            calc {
+                to_nat(zs);
+                to_nat(zs') + z * pow_B256(len');
+                    { seq_subb_nat_lemma(xs[..len'], ys[..len'], zs', bin); }
+                to_nat(xs[..len']) - to_nat(ys[..len']) + bin * pow_B256(len') + z * pow_B256(len');
+                to_nat(xs[..len']) - to_nat(ys[..len']) + xs[len'] * pow_B256(len') - ys[len'] * pow_B256(len') + bout * BASE_256 * pow_B256(len');
+                    { reveal to_nat(); }
+                to_nat(xs) - to_nat(ys) + bout * BASE_256 * pow_B256(len');
+                    { reveal power(); }
+                to_nat(xs) - to_nat(ys) + bout * pow_B256(|xs|);
+            }
+        }
+    }
+
+    lemma seq_subb_safe_nat_lemma(xs: seq<uint256>, ys: seq<uint256>)
+        requires |xs| == |ys|
+        requires to_nat(xs) >= to_nat(ys)
+        ensures seq_subb(xs, ys).1 == 0
+    {
+        var (zs, bout) := seq_subb(xs, ys);
+        seq_subb_nat_lemma(xs, ys, zs, bout);
+
+        if bout == 1 {
+            assert to_nat(xs) - to_nat(ys) + pow_B256(|xs|) == to_nat(zs);
+            to_nat_bound_lemma(xs);
+            to_nat_bound_lemma(ys);
+            to_nat_bound_lemma(zs);
+            assert false;
+        }
     }
 
 /*

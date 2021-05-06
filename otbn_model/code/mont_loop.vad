@@ -53,6 +53,8 @@ function mont_loop_inv(x_i: uint256, u_i: uint256, p_1: uint512_view_t, p_2: uin
 
 ghost procedure mont_loop_inv_lemma2(ghost x_i: uint256, ghost u_i: uint256, ghost p_1: uint512_view_t, ghost p_2: uint512_view_t, ghost next_p_1: uint512_view_t, ghost next_p_2: uint512_view_t, ghost y: seq(uint256), ghost m: seq(uint256), ghost initial_a: seq(uint256), ghost a: seq(uint256), ghost next_a: seq(uint256), ghost j: int) extern;
 
+ghost procedure mont_loop_inv_lemma3(ghost x_i: uint256, ghost u_i: uint256, ghost p_1: uint512_view_t, ghost p_2: uint512_view_t, ghost y: seq(uint256), ghost m: seq(uint256), ghost initial_a: seq(uint256), ghost a: seq(uint256), ghost cout: uint1) extern;
+
 procedure mont_loop_0(
     ghost a_slice: seq(uint256),
     ghost y_iter: iter_t,
@@ -330,8 +332,6 @@ procedure mont_loop(
 
     /* w24 = w30 =  y[0]*x_i + A[0] mod b */
     bn_mov(w24, w30);
-    // assert valid_uint512_view(wdrs, p_1, 24, 29);
-    // assert p_1.full == a_slice[0] + y_iter.buff[0] * x_i;
 
     /* load first limb of modulus: w30 = m[0] */
     ghost var m_iter := iter_cons(x16, 0, wmem[x16]);
@@ -406,17 +406,20 @@ procedure mont_loop(
 
     /* Most significant limb of A is sum of the carry words of last loop cycle
         A[N-1] = w24 <- w29 + w28 = c_xy + c_m */
+
     // bn.addc   w24, w29, w28, FG1
     bn_add(w24, w29, w28, SFT_DFT, 1);
     bn_movr(x10, true, x13, false);
 
-    assert cong_B256(w24, p_1.uh + p_2.uh) by {
-        uint256_addc_cong_lemma(w24, w29, w28);
-    }
+    a_slice := a_slice[NUM_WORDS-1 := w24];
+    assert valid_wdr_view(wdrs, a_slice, 4, NUM_WORDS);
+
+    ghost var subtract := fgroups.fg1.cf;
+    mont_loop_inv_lemma3(x_i, u_i, p_1, p_2,
+        y_iter.buff, m_iter.buff, inital_a_slice, a_slice, bool_to_uint1(subtract));
 
     /* restore pointers */
     addi(x16, x22, 0);
-
     li(x8, 4);
     li(x10, 4);
 
@@ -426,6 +429,12 @@ procedure mont_loop(
     /* This replaces Step 3 of HAC 14.36 and performs conditional constant-time
      subtraction of the modulus from the output buffer  */
     cond_sub_to_reg(NUM_WORDS, fgroups.fg1.cf);
+
+    // ghost if (subtract) {
+    //     assert to_nat(wdrs[4..4+NUM_WORDS]) - pow_B256(NUM_WORDS) * bool_to_uint1(fgroups.fg0.cf) == to_nat(a_slice) - to_nat(m_iter.buff);
+    // } else {
+    //     assert to_nat(wdrs[4..4+NUM_WORDS]) == to_nat(a_slice);
+    // }
     
     /* restore pointer */
     li(x8, 4);
