@@ -152,8 +152,6 @@ procedure cond_sub_to_reg(
         iter.index == 0;
         seq_len(iter.buff) == NUM_WORDS;
 
-        selection ==>
-            to_nat(iter.buff) < to_nat(initial_a_slice);
     reads
         x30; wmem;
 
