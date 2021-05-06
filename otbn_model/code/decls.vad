@@ -122,6 +122,15 @@ function valid_iter(wmem: wmem_t, iter: iter_t): bool extern;
 function admissible_wmem_addr(h: wmem_t, addr: int, iter: iter_t): bool extern;
 function valid_wmem_addr(h: wmem_t, addr: int, iter: iter_t): bool extern;
 
+type pub_key: Type(0) extern;
+function operator(.e) (key: pub_key): nat extern;
+function operator(.m) (key: pub_key): seq(uint256) extern;
+function operator(.m_0') (key: pub_key): uint256 extern;
+function operator(.B256_INV) (key: pub_key): nat extern;
+function operator(.R) (key: pub_key): nat extern;
+function operator(.RR) (key: pub_key): seq(uint256) extern;
+function operator(.R_INV) (key: pub_key): nat extern;
+
 function to_nat(s: seq(uint256)): nat extern;
 
 var x0: uint32 {:state reg32_t(GPR(0))};

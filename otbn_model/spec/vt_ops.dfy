@@ -2,12 +2,14 @@ include "vt_types.dfy"
 include "vt_consts.dfy"
 include "bv_ops.dfy"
 include "../lib/powers.dfy"
+include "../lib/congruences.dfy"
 
 module vt_ops {
     import opened vt_types
     import opened bv_ops
     import opened vt_consts
     import opened powers
+    import opened congruences
 
     function eval_reg32(s: state, r: reg32_t) : uint32
     {
@@ -386,22 +388,27 @@ module vt_ops {
         }
     }
 
-/*
-    lemma lemma_extend_seq_subb(
-            xs: seq<uint256>, ys: seq<uint256>, zs: seq<uint256>, 
-            cin :uint1, cout:uint1,
-            x:uint256, y:uint256, z:uint256)
-        requires |xs| == |ys|
-        requires (zs, cin) == seq_subb(xs, ys)
-        requires (z, cout) == uint256_subb(x, y, cin)
-        ensures (zs + [z], cout) == seq_subb(xs + [x], ys + [y])
+    predicate cong_m(a: int, b: int, key: pub_key)
+        requires to_nat(key.m) != 0
     {
+        cong(a, b, to_nat(key.m))
     }
 
-    lemma lemma_empty_seq_subb()
-        ensures ([], 0) == seq_subb([], [])
+    predicate wf_pub_key(key: pub_key)
     {
-    }
-*/
+        && |key.m| == |key.RR| == NUM_WORDS
 
+        && to_nat(key.m) != 0
+        && cong_B256(key.m_0' * key.m[0], BASE_256-1)
+
+        && cong_m(BASE_256 * key.B256_INV, 1, key)
+
+        && key.R == power(BASE_256, NUM_WORDS)
+
+        && to_nat(key.RR) < to_nat(key.m)
+        && cong_m(to_nat(key.RR), key.R * key.R, key)
+
+        && key.R_INV == power(key.B256_INV, NUM_WORDS)
+        && cong(key.R_INV * key.R, 1, NUM_WORDS)
+    }
 }

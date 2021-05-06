@@ -193,4 +193,13 @@ module vt_types {
     {
         s.ok
     }
+
+    datatype pub_key = pub_key_cons(
+        e: nat, 
+        m: seq<uint256>,
+        m_0': uint256,
+        B256_INV: nat,
+        R: nat,
+        RR: seq<uint256>,
+        R_INV: nat)
 }

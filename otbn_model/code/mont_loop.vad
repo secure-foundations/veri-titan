@@ -302,7 +302,7 @@ procedure mont_loop_1(
 
 procedure mont_loop(
     ghost x_i: uint256,
-    ghost m_0': uint256,
+    ghost key: pub_key,
     ghost inital_a_slice: seq(uint256))
 
     {:frame false}
@@ -317,10 +317,10 @@ procedure mont_loop(
         valid_buff_addr(wmem, x19, NUM_WORDS);
         valid_buff_addr(wmem, x16, NUM_WORDS);
 
-        cong_B256(m_0' * wmem[x16][0], BASE_256 - 1);
+        cong_B256(key.m_0' * wmem[x16][0], BASE_256 - 1);
 
         w2 == x_i;
-        w3 == m_0';
+        w3 == key.m_0';
         w31 == 0;
 
         valid_wdr_view(wdrs, inital_a_slice, 4, NUM_WORDS);
@@ -331,7 +331,7 @@ procedure mont_loop(
 
     ghost var y_iter := iter_cons(x19, 0, wmem[x19]);
     ghost var p_1: uint512_view_t;
-    y_iter, p_1 := mont_loop_0(a_slice, y_iter, x_i, m_0');
+    y_iter, p_1 := mont_loop_0(a_slice, y_iter, x_i, key.m_0');
     ghost var u_i := w25;
 
     /* w24 = w30 =  y[0]*x_i + A[0] mod b */
@@ -354,7 +354,7 @@ procedure mont_loop(
     // assert valid_uint512_view(wdrs, p_1, 24, 29) && p_1.full == a_slice[0] + y_iter.buff[0] * x_i;
     // assert valid_uint512_view(wdrs, p_2, 27, 28) && p_2.full == m_iter.buff[0] * u_i + w24;
 
-    mont_loop_inv_lemma1(x_i, u_i, m_0', p_1, p_2, y_iter.buff, m_iter.buff, a_slice);
+    mont_loop_inv_lemma1(x_i, u_i, key.m_0', p_1, p_2, y_iter.buff, m_iter.buff, a_slice);
 
     ghost var j: nat := 1;
 
@@ -433,12 +433,6 @@ procedure mont_loop(
      subtraction of the modulus from the output buffer  */
     m_iter := iter_cons(x16, 0, wmem[x16]);
     let next_a_slice := cond_sub_to_reg(a_slice, m_iter, fgroups.fg1.cf);
-
-    ghost if (bout == 1) {
-        // assert to_nat(next_a_slice) - pow_B256(NUM_WORDS) * bool_to_uint1(fgroups.fg0.cf) == to_nat(a_slice) - to_nat(m_iter.buff);
-    } else {
-        assert to_nat(next_a_slice) == to_nat(a_slice);
-    }
 
     assume to_nat(m_iter.buff) != 0; // TODO
 

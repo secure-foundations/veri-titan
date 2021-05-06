@@ -308,6 +308,4 @@ module mont_loop_lemmas {
                 x_i * to_nat(y) + u_i * to_nat(m) + to_nat(initial_a), to_nat(m));
         }
     }
-
-
 }
