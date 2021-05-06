@@ -55,7 +55,7 @@ ghost procedure mont_loop_inv_lemma2(ghost x_i: uint256, ghost u_i: uint256, gho
 
 ghost procedure mont_loop_inv_lemma3(ghost x_i: uint256, ghost u_i: uint256, ghost p_1: uint512_view_t, ghost p_2: uint512_view_t, ghost y: seq(uint256), ghost m: seq(uint256), ghost initial_a: seq(uint256), ghost a: seq(uint256), ghost bout: uint1) extern;
 
-ghost procedure mont_loop_bound_lemma(ghost x_i: uint256, ghost u_i: uint256, ghost y: seq(uint256), ghost m: seq(uint256), ghost initial_a: seq(uint256), ghost a: seq(uint256), ghost next_a: seq(uint256), ghost bout: uint1, ghost next_bout: uint1) extern;
+ghost procedure mont_loop_cond_sub_lemma(ghost x_i: uint256, ghost u_i: uint256, ghost y: seq(uint256), ghost m: seq(uint256), ghost initial_a: seq(uint256), ghost a: seq(uint256), ghost next_a: seq(uint256), ghost bout: uint1, ghost next_bout: uint1) extern;
 
 procedure mont_loop_0(
     ghost a_slice: seq(uint256),
@@ -440,11 +440,11 @@ procedure mont_loop(
         assert to_nat(next_a_slice) == to_nat(a_slice);
     }
 
+    assume to_nat(m_iter.buff) != 0; // TODO
+
     // assert to_nat(inital_a_slice) < to_nat(m_iter.buff) + to_nat(y_iter.buff);
-    mont_loop_bound_lemma(x_i, u_i, y_iter.buff, m_iter.buff,
+    mont_loop_cond_sub_lemma(x_i, u_i, y_iter.buff, m_iter.buff,
         inital_a_slice, a_slice, next_a_slice, bout, bool_to_uint1(fgroups.fg0.cf));
-
-
     
     /* restore pointer */
     li(x8, 4);

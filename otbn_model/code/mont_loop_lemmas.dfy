@@ -227,7 +227,7 @@ module mont_loop_lemmas {
         }
     }
 
-    lemma mont_loop_bound_lemma(
+    lemma mont_loop_cond_sub_lemma(
         x_i: uint256,
         u_i: uint256,
         y: seq<uint256>,
@@ -238,6 +238,7 @@ module mont_loop_lemmas {
         bout: uint1,
         next_bout: uint1)
 
+        requires to_nat(m) != 0; // TODO
         requires |next_a| == |y| == NUM_WORDS;
         requires to_nat(initial_a) < to_nat(m) + to_nat(y);
         requires to_nat(a) * BASE_256 + bout * pow_B256(NUM_WORDS+1)
@@ -249,31 +250,30 @@ module mont_loop_lemmas {
                 ==
             to_nat(a) - to_nat(m);
 
-        // ensures to_nat(a) + bout * pow_B256(NUM_WORDS) < to_nat(y) + to_nat(m);
+        ensures to_nat(next_a) < to_nat(m) + to_nat(y);
+        ensures cong(to_nat(next_a) * BASE_256,
+                x_i * to_nat(y) + u_i * to_nat(m) + to_nat(initial_a), to_nat(m));
     {
-        calc {
-            (to_nat(a) + bout * pow_B256(NUM_WORDS)) * BASE_256;
-            to_nat(a) * BASE_256 + bout * pow_B256(NUM_WORDS) * BASE_256;
-                { reveal power(); }
-            to_nat(a) * BASE_256 + bout * pow_B256(NUM_WORDS+1);
-            x_i * to_nat(y) + u_i * to_nat(m) + to_nat(initial_a);
-        <
-            x_i * to_nat(y) + u_i * to_nat(m) + to_nat(m) + to_nat(y);
-            (x_i + 1) * to_nat(y) + (u_i + 1) * to_nat(m);
-        <=
-                {
-                    assert x_i + 1 <= BASE_256;
-                    assert u_i + 1 <= BASE_256;
-                    assume false; // TODO
-                }
-            to_nat(y) * BASE_256 + to_nat(m) * BASE_256;
-            (to_nat(y) + to_nat(m)) * BASE_256;
+        assert to_nat(a) + bout * pow_B256(NUM_WORDS) < to_nat(y) + to_nat(m) by {
+            calc {
+                (to_nat(a) + bout * pow_B256(NUM_WORDS)) * BASE_256;
+                to_nat(a) * BASE_256 + bout * pow_B256(NUM_WORDS) * BASE_256;
+                    { reveal power(); }
+                to_nat(a) * BASE_256 + bout * pow_B256(NUM_WORDS+1);
+                x_i * to_nat(y) + u_i * to_nat(m) + to_nat(initial_a);
+            <
+                x_i * to_nat(y) + u_i * to_nat(m) + to_nat(m) + to_nat(y);
+                (x_i + 1) * to_nat(y) + (u_i + 1) * to_nat(m);
+            <=
+                    {
+                        assert x_i + 1 <= BASE_256;
+                        assert u_i + 1 <= BASE_256;
+                        assume false; // TODO
+                    }
+                to_nat(y) * BASE_256 + to_nat(m) * BASE_256;
+                (to_nat(y) + to_nat(m)) * BASE_256;
+            }
         }
-
-        assert (to_nat(a) + bout * pow_B256(NUM_WORDS)) * BASE_256
-            < (to_nat(y) + to_nat(m)) * BASE_256;
-
-        assert to_nat(a) + bout * pow_B256(NUM_WORDS) < to_nat(y) + to_nat(m);
 
         if bout == 1 {
             if to_nat(a) >= to_nat(m) {
@@ -281,24 +281,33 @@ module mont_loop_lemmas {
                 assert to_nat(a) + pow_B256(NUM_WORDS) < to_nat(y) + to_nat(m);
                 assert false; // prove by contradiction
             }
-            
-            assert to_nat(next_a) - pow_B256(NUM_WORDS) * next_bout < 0;
-            to_nat_bound_lemma(next_a);
-
+            // assert to_nat(next_a) - pow_B256(NUM_WORDS) * next_bout < 0;
             if next_bout != 1 {
+                to_nat_bound_lemma(next_a);
                 assert false; // prove by contradiction
             }
-            // assert to_nat(next_a) == to_nat(a) + pow_B256(NUM_WORDS) - to_nat(m);
+
             calc {
                 to_nat(next_a) * BASE_256;
                 to_nat(a) * BASE_256 + pow_B256(NUM_WORDS) * BASE_256 - to_nat(m) * BASE_256;
-                { reveal power(); }
+                    { reveal power(); }
                 to_nat(a) * BASE_256 + pow_B256(NUM_WORDS+1) - to_nat(m) * BASE_256;
                 x_i * to_nat(y) + u_i * to_nat(m) + to_nat(initial_a) - to_nat(m) * BASE_256;
             }
+
+            assert cong(to_nat(next_a) * BASE_256,
+                x_i * to_nat(y) + u_i * to_nat(m) + to_nat(initial_a), to_nat(m)) by {
+                cong_add_lemma_4(x_i * to_nat(y) + u_i * to_nat(m) + to_nat(initial_a), -BASE_256, to_nat(m));
+                reveal cong();
+                assert cong(to_nat(next_a) * BASE_256,
+                    x_i * to_nat(y) + u_i * to_nat(m) + to_nat(initial_a), to_nat(m));
+            }
         } else {
-            assert to_nat(next_a) * BASE_256 == x_i * to_nat(y) + u_i * to_nat(m) + to_nat(initial_a);
+            reveal cong();
+            assert cong(to_nat(next_a) * BASE_256,
+                x_i * to_nat(y) + u_i * to_nat(m) + to_nat(initial_a), to_nat(m));
         }
     }
+
 
 }
