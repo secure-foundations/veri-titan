@@ -8,6 +8,7 @@ module powers
         decreases e;
         ensures e == 0 ==> r == 1;
         ensures e == 1 ==> r == b;
+        ensures b != 0 ==> r != 0;
         // ensures b == 0 && e != 0 ==> power(b, e) == 0;
     {
         if (e == 0) then 1

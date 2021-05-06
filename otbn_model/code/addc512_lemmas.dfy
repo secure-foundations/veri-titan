@@ -28,9 +28,29 @@ module addc512_lemmas {
     }
 
     predicate seq_addc_512_is_safe(xs: seq<uint256>, ys: seq<uint256>)
-        requires |xs| == 2 && |ys| == 2;
+        requires |xs| == |ys| == 2;
     {
         to_nat(xs) + to_nat(ys) < pow_B256(2)
+    }
+
+    lemma mont_word_mul_add_bound_lemma1(
+        xs: seq<uint256>, ys: seq<uint256>, a: uint256, b: uint256)
+        requires |xs| == |ys| == 2;
+        requires to_nat(xs) == a * b;
+        requires ys[1] == 0;
+        ensures seq_addc_512_is_safe(xs, ys);
+    {
+        assume false;
+    }
+
+    lemma mont_word_mul_add_bound_lemma2(
+        xs: seq<uint256>, ys: seq<uint256>, a: uint256, b: uint256, c: uint256)
+        requires |xs| == |ys| == 2;
+        requires to_nat(xs) == a * b + c;
+        requires ys[1] == 0;
+        ensures seq_addc_512_is_safe(xs, ys);
+    {
+        assume false;
     }
 
     lemma seq_addc_512_safe_nat_lemma(

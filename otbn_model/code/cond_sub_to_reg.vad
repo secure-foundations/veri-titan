@@ -16,11 +16,12 @@ import opened vt_decls
 
 #endverbatim
 
+ghost procedure seq_subb_nat_lemma(ghost xs: seq(uint256), ghost ys: seq(uint256), ghost zs: seq(uint256), ghost bout: uint1) extern;
+
 procedure cond_sub_to_reg_inner(
     ghost initial_x8: uint32,
     ghost initial_wdrs: wdrs_t,
     ghost selection: bool,
-    ghost num_words: int,
     ghost iter: iter_t)
 
     returns (ghost next_iter: iter_t)
@@ -34,13 +35,11 @@ procedure cond_sub_to_reg_inner(
         x12 == 30;
         x13 == 24;
 
-        num_words <= 12;
-
         valid_wmem_addr(wmem, x16, iter);
-        seq_len(iter.buff) == num_words;
+        seq_len(iter.buff) == NUM_WORDS;
 
-        wdrs[x8..initial_x8+num_words] ==
-            initial_wdrs[x8..initial_x8+num_words];
+        wdrs[x8..initial_x8+NUM_WORDS] ==
+            initial_wdrs[x8..initial_x8+NUM_WORDS];
 
         selection ==>
             tuple(wdrs[initial_x8..x8], bool_to_uint1(fgroups.fg0.cf))
@@ -66,10 +65,10 @@ procedure cond_sub_to_reg_inner(
         x13 == 24;
 
         admissible_wmem_addr(wmem, x16, next_iter);
-        seq_len(next_iter.buff) == num_words;
+        seq_len(next_iter.buff) == NUM_WORDS;
 
-        wdrs[x8..initial_x8+num_words] ==
-            initial_wdrs[x8..initial_x8+num_words];
+        wdrs[x8..initial_x8+NUM_WORDS] ==
+            initial_wdrs[x8..initial_x8+NUM_WORDS];
 
         next_iter.base_addr == iter.base_addr;
         next_iter.index == iter.index + 1;
@@ -134,15 +133,24 @@ procedure cond_sub_to_reg_inner(
 
 }
 
-procedure cond_sub_to_reg(ghost num_words: nat, ghost selection: bool)
-    requires
-        selection == fgroups.fg1.cf;
-        num_words == x30;
-        num_words <= 12;
-        x8 < 12;
+procedure cond_sub_to_reg(
+    ghost initial_a_slice: seq(uint256),
+    ghost iter: iter_t,
+    ghost selection: bool)
+    returns (ghost a_slice: seq(uint256))
 
-        valid_buff_addr(wmem, x16, num_words);
+    requires
+        x8 == 4;
+        x30 == NUM_WORDS;
+
+        fgroups.fg1.cf == selection;
         fgroups.fg0.cf == false;
+
+        valid_wdr_view(wdrs, initial_a_slice, 4, NUM_WORDS);
+        
+        valid_wmem_addr(wmem, x16, iter);
+        iter.index == 0;
+        seq_len(iter.buff) == NUM_WORDS;
 
     reads
         x30; wmem;
@@ -153,13 +161,15 @@ procedure cond_sub_to_reg(ghost num_words: nat, ghost selection: bool)
         wdrs; w24; w29; w30;
 
     ensures
+        valid_wdr_view(wdrs, a_slice, 4, NUM_WORDS);
+
         selection ==>
-            tuple(wdrs[old(x8)..old(x8)+num_words], bool_to_uint1(fgroups.fg0.cf))
+            to_nat(a_slice) - pow_B256(NUM_WORDS) * bool_to_uint1(fgroups.fg0.cf)
             ==
-            seq_subb(old(wdrs[x8..x8+num_words]), old(wmem[x16]));
+            to_nat(initial_a_slice) - to_nat(iter.buff);
 
         !selection ==>
-            wdrs[old(x8)..old(x8)+num_words] == old(wdrs[x8..x8+num_words]);
+            to_nat(a_slice) == to_nat(initial_a_slice);
 {
     /* load pointers to temp regs */
     li(x12, 30);
@@ -172,7 +182,7 @@ procedure cond_sub_to_reg(ghost num_words: nat, ghost selection: bool)
 
     /* iterate over all limbs for conditional limb-wise subtraction */
     while (Loop(x30))
-        invariant iter.index + loop_ctr == num_words;
+        invariant iter.index + loop_ctr == NUM_WORDS;
 
         invariant selection == fgroups.fg1.cf;
 
@@ -181,11 +191,11 @@ procedure cond_sub_to_reg(ghost num_words: nat, ghost selection: bool)
         invariant x13 == 24;
 
         invariant admissible_wmem_addr(wmem, x16, iter);
-        invariant seq_len(iter.buff) == num_words;
+        invariant seq_len(iter.buff) == NUM_WORDS;
         invariant iter.base_addr == initial_x16;
 
-        invariant wdrs[x8..initial_x8+num_words]
-            == initial_wdrs[x8..initial_x8+num_words];
+        invariant wdrs[x8..initial_x8+NUM_WORDS]
+            == initial_wdrs[x8..initial_x8+NUM_WORDS];
 
         selection ==>
             tuple(wdrs[initial_x8..x8], bool_to_uint1(fgroups.fg0.cf))
@@ -197,11 +207,17 @@ procedure cond_sub_to_reg(ghost num_words: nat, ghost selection: bool)
 
         decreases loop_ctr;
     {
-        iter := cond_sub_to_reg_inner(initial_x8, initial_wdrs, selection, num_words, iter);
+        iter := cond_sub_to_reg_inner(initial_x8, initial_wdrs, selection, iter);
     }
 
     assert iter.buff[..iter.index] == iter.buff;
     assert iter.buff == wmem[old(x16)];
+
+    ghost if (selection) {
+        seq_subb_nat_lemma(old(wdrs[x8..x8+NUM_WORDS]),old(wmem[x16]),
+            wdrs[old(x8)..old(x8)+NUM_WORDS], bool_to_uint1(fgroups.fg0.cf));
+    }
+    a_slice := wdrs[old(x8)..old(x8)+NUM_WORDS];
 }
 
 
