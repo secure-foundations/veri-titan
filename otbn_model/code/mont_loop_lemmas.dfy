@@ -227,12 +227,6 @@ module mont_loop_lemmas {
         }
     }
 
-        // requires pub_key_valid(key);
-        // requires (higher as nat * key.R + sint(A')) * BASE == 
-        //     x_i as nat * sint(y) + u_i as nat * key.n_val + sint(A);
-        // ensures (cout * pow_B256(NUM_WORDS) + sint(A')) < (sint(y) + key.n_val);
-        // ensures (higher == 1 ==> sint(A') < key.n_val);
-
     lemma mont_loop_bound_lemma(
         x_i: uint256,
         u_i: uint256,
@@ -242,11 +236,13 @@ module mont_loop_lemmas {
         a: seq<uint256>,
         cout: uint1)
 
+        requires |y| == NUM_WORDS;
         requires to_nat(initial_a) < to_nat(m) + to_nat(y);
         requires to_nat(a) * BASE_256 + cout * pow_B256(NUM_WORDS+1)
             == x_i * to_nat(y) + u_i * to_nat(m) + to_nat(initial_a);
 
         ensures to_nat(a) + cout * pow_B256(NUM_WORDS) < to_nat(y) + to_nat(m);
+        ensures cout == 1 ==> to_nat(a) < to_nat(m);
     {
         calc {
             (to_nat(a) + cout * pow_B256(NUM_WORDS)) * BASE_256;
@@ -271,21 +267,12 @@ module mont_loop_lemmas {
             < (to_nat(y) + to_nat(m)) * BASE_256;
 
         assert to_nat(a) + cout * pow_B256(NUM_WORDS) < to_nat(y) + to_nat(m);
+
+        if cout == 1 && to_nat(a) >= to_nat(m) {
+            to_nat_bound_lemma(y);
+            assert to_nat(a) + pow_B256(NUM_WORDS) < to_nat(y) + to_nat(m);
+            assert false; // prove by contradiction
+        }
     }
 
 }
-
-            // x_i * to_nat(y) + u_i * to_nat(m) + to_nat(m) + to_nat(y);
-            // (x_i + 1) * to_nat(y) + (u_i + 1) * to_nat(m);
-
-            // <=
-            //     {
-            //         to_nat_bound_lemma(y);
-            //         to_nat_bound_lemma(m);
-            //     }
-            // BASE_256 * pow_B256(NUM_WORDS) + BASE_256 * pow_B256(NUM_WORDS);
-            // 2 * BASE_256 * pow_B256(NUM_WORDS);
-            // {
-            //     reveal power();
-            // }
-            // 2 * pow_B256(NUM_WORDS+1);
