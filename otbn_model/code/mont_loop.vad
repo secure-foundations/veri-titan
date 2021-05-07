@@ -340,9 +340,9 @@ procedure mont_loop(
         valid_wdr_view(wdrs, initial_a_slice, 4, NUM_WORDS);
 
         montmul_inv(initial_a_slice, x_iter.buff, x_iter.index, initial_y_iter.buff, key);
-    
-    // ensures
-    //     montmul_inv(next_a_slice, x_iter.buff, x_iter.index+1, initial_y_iter.buff, key);
+
+    ensures
+        montmul_inv(next_a_slice, x_iter.buff, x_iter.index+1, initial_y_iter.buff, key);
 {
     ghost var a_slice := initial_a_slice;
 
