@@ -309,6 +309,47 @@ module mont_loop_lemmas {
         }
     }
 
+    predicate montmul_inv(
+        a: seq<uint256>,
+        x: seq<uint256>, 
+        i: nat,
+        y: seq<uint256>, 
+        key: pub_key)
+    {
+        && |a| == |y| == |x| == NUM_WORDS
+        && i <= |x|
+        && valid_pub_key(key)
+        && to_nat(a) < to_nat(key.m) + to_nat(y)
+        && cong_m(to_nat(a), to_nat(x[..i]) * to_nat(y) * power(key.B256_INV, i), key)
+    }
 
-    predicate montmul_inv()
+    lemma montmul_inv_lemma(
+        initial_a: seq<uint256>,
+        a: seq<uint256>,
+        x: seq<uint256>, 
+        i: nat,
+        u_i: uint256,
+        y: seq<uint256>, 
+        key: pub_key)
+
+        requires montmul_inv(initial_a, x, i, y, key);
+        requires i < |x|;
+        requires to_nat(a) < to_nat(key.m) + to_nat(y);
+        requires cong_m(to_nat(a) * BASE_256,
+                x[i] * to_nat(y) + u_i * to_nat(key.m) + to_nat(initial_a), key);
+        ensures montmul_inv(a, x, i+1, y, key);
+    {
+        // assert cong_m(to_nat(initial_a), to_nat(x[..i]) * to_nat(y) * power(key.B256_INV, i), key);
+        // assume cong_m(to_nat(a) * BASE_256, x[i] * to_nat(y) + to_nat(initial_a), key);
+        // assert cong_m(to_nat(a) * BASE_256, (x[i] + to_nat(x[..i]) * power(key.B256_INV, i)) * to_nat(y), key);
+
+        // assert to_nat(x[..i+1]) == to_nat(x[..i]) + x[i] * pow_B256(i) by {
+        //     assert x[..i+1][..i] == x[..i];
+        //     reveal to_nat();
+        // }
+
+        // assume cong_m(to_nat(a) * pow_B256(i+1), (x[i] * pow_B256(i) + to_nat(x[..i])) * to_nat(y), key);
+        // assert cong_m(to_nat(a) * pow_B256(i+1), to_nat(x[..i+1]) * to_nat(y), key);
+        assume false;
+    }
 }
