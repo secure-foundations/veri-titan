@@ -124,7 +124,7 @@ module vt_types {
 
     type wmem_t = map<int, seq<uint256>>
 
-    predicate valid_buff_addr(wmem: wmem_t, base_addr: int, num_words: int)
+    predicate valid_base_addr(wmem: wmem_t, base_addr: int, num_words: int)
     {
         // base_addr maps to some buffer in wmem
         && base_addr in wmem
@@ -147,7 +147,7 @@ module vt_types {
     {
         var base_addr := iter.base_addr;
         // base_addr points to a valid buffer
-        && valid_buff_addr(wmem, base_addr, |iter.buff|)
+        && valid_base_addr(wmem, base_addr, |iter.buff|)
         // the view is consistent with wmem
         && wmem[base_addr] == iter.buff
         // the index is within bound (or at end)
@@ -194,7 +194,7 @@ module vt_types {
         s.ok
     }
 
-    datatype pub_key = pub_key_cons(
+    datatype pub_key = pub_key(
         e: nat, 
         m: seq<uint256>,
         m_0': uint256,

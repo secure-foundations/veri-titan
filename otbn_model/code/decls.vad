@@ -106,7 +106,7 @@ var ok: bool {:state ok()};
 
 var xmem: xmem_t {:state xmem()};
 function valid_xmem_addr(h: xmem_t, addr: int): bool extern;
-function valid_buff_addr(wmem: wmem_t, base_addr: int, num_words: int): bool extern;
+function valid_base_addr(wmem: wmem_t, base_addr: int, num_words: int): bool extern;
 
 type iter_t: Type(0) extern;
 function iter_cons(base_addr: int, index: nat, buff: seq(uint256)): iter_t extern;
@@ -118,7 +118,7 @@ function operator(.buff) (iter :iter_t): seq(uint256) extern;
 function operator(.buff := ) (iter :iter_t, buff: seq(uint256)): iter_t extern;
 
 var wmem: wmem_t {:state wmem()};
-function valid_iter(wmem: wmem_t, iter: iter_t): bool extern;
+// function valid_iter(wmem: wmem_t, iter: iter_t): bool extern;
 function admissible_wmem_addr(h: wmem_t, addr: int, iter: iter_t): bool extern;
 function valid_wmem_addr(h: wmem_t, addr: int, iter: iter_t): bool extern;
 
@@ -130,6 +130,7 @@ function operator(.B256_INV) (key: pub_key): nat extern;
 function operator(.R) (key: pub_key): nat extern;
 function operator(.RR) (key: pub_key): seq(uint256) extern;
 function operator(.R_INV) (key: pub_key): nat extern;
+function valid_pub_key(key: pub_key): bool extern;
 
 function to_nat(s: seq(uint256)): nat extern;
 

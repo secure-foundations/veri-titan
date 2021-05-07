@@ -394,7 +394,7 @@ module vt_ops {
         cong(a, b, to_nat(key.m))
     }
 
-    predicate wf_pub_key(key: pub_key)
+    predicate valid_pub_key(key: pub_key)
     {
         && |key.m| == |key.RR| == NUM_WORDS
 

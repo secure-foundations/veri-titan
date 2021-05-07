@@ -124,7 +124,7 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
         fgroups.fg0.cf == false;
         fgroups.fg1.cf == selection;
 
-        valid_buff_addr(wmem, x16, num_words);
+        valid_base_addr(wmem, x16, num_words);
 
         w31 == 0;
     reads
@@ -136,7 +136,7 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
         wdrs; w2; w3; w4; w31;
 
     ensures
-        valid_buff_addr(old(wmem), old(x16), num_words);
+        valid_base_addr(old(wmem), old(x16), num_words);
 
         selection ==>
             tuple(wdrs[5..5+num_words], bool_to_uint1(fgroups.fg0.cf))

@@ -180,7 +180,7 @@ procedure mont_loop_1(
         ghost p_2: uint512_view_t,
         ghost y_iter: iter_t,
         ghost m_iter: iter_t,
-        ghost inital_a_slice: seq(uint256), 
+        ghost initial_a_slice: seq(uint256), 
         ghost a_slice: seq(uint256),
         ghost j: nat)
 
@@ -217,11 +217,11 @@ procedure mont_loop_1(
         seq_len(m_iter.buff) == NUM_WORDS;
 
         valid_wdr_view(wdrs, a_slice, 4, NUM_WORDS);
-        seq_len(inital_a_slice) == NUM_WORDS;
-        inital_a_slice[j..] == a_slice[j..];
+        seq_len(initial_a_slice) == NUM_WORDS;
+        initial_a_slice[j..] == a_slice[j..];
 
         mont_loop_inv(x_i, u_i, p_1, p_2,
-            y_iter.buff, m_iter.buff, inital_a_slice, a_slice, j);
+            y_iter.buff, m_iter.buff, initial_a_slice, a_slice, j);
 
     ensures
         x8 == 4 + j + 1;
@@ -245,10 +245,10 @@ procedure mont_loop_1(
         admissible_wmem_addr(wmem, x19, next_y_iter);
         admissible_wmem_addr(wmem, x16, next_m_iter);
         valid_wdr_view(wdrs, next_a_slice, 4, NUM_WORDS);
-        inital_a_slice[j+1..] == next_a_slice[j+1..];
+        initial_a_slice[j+1..] == next_a_slice[j+1..];
 
         mont_loop_inv(x_i, u_i, next_p_1, next_p_2,
-            next_y_iter.buff, next_m_iter.buff, inital_a_slice, next_a_slice, j+1);
+            next_y_iter.buff, next_m_iter.buff, initial_a_slice, next_a_slice, j+1);
 
         wmem == old(wmem);
 {
@@ -297,49 +297,57 @@ procedure mont_loop_1(
     assert next_p_2.full == m_iter.buff[j] * u_i + next_p_1.lh + p_2.uh;
 
     mont_loop_inv_lemma2(x_i, u_i, p_1, p_2, next_p_1, next_p_2,
-        y_iter.buff, m_iter.buff, inital_a_slice, a_slice, next_a_slice, j);
+        y_iter.buff, m_iter.buff, initial_a_slice, a_slice, next_a_slice, j);
 }
 
 procedure mont_loop(
     ghost x_i: uint256,
-    ghost key: pub_key,
-    ghost inital_a_slice: seq(uint256))
+    ghost initial_y_iter: iter_t,
+    ghost initial_m_iter: iter_t,
+    ghost initial_a_slice: seq(uint256),
+    ghost key: pub_key)
 
     {:frame false}
 
     requires
+        valid_pub_key(key);
 
         x30 == NUM_WORDS;
         x31 == NUM_WORDS - 1;
 
         x16 != x19;
 
-        valid_buff_addr(wmem, x19, NUM_WORDS);
-        valid_buff_addr(wmem, x16, NUM_WORDS);
+        valid_wmem_addr(wmem, x19, initial_y_iter);
+        seq_len(initial_y_iter.buff) == NUM_WORDS;
+        initial_y_iter.index == 0;
 
-        cong_B256(key.m_0' * wmem[x16][0], BASE_256 - 1);
+        valid_wmem_addr(wmem, x16, initial_m_iter);
+        initial_m_iter.buff == key.m;
+        initial_m_iter.index == 0;
 
         w2 == x_i;
         w3 == key.m_0';
         w31 == 0;
 
-        valid_wdr_view(wdrs, inital_a_slice, 4, NUM_WORDS);
+        valid_wdr_view(wdrs, initial_a_slice, 4, NUM_WORDS);
 
-        to_nat(inital_a_slice) < to_nat(wmem[x16]) + to_nat(wmem[x19]);
+        to_nat(initial_a_slice) < to_nat(wmem[x16]) + to_nat(wmem[x19]);
 {
-    ghost var a_slice := inital_a_slice;
+    ghost var a_slice := initial_a_slice;
 
-    ghost var y_iter := iter_cons(x19, 0, wmem[x19]);
     ghost var p_1: uint512_view_t;
-    y_iter, p_1 := mont_loop_0(a_slice, y_iter, x_i, key.m_0');
+    ghost var p_2 : uint512_view_t;
+    ghost var y_iter : iter_t;
+    ghost var m_iter : iter_t;
+
+    y_iter, p_1 := mont_loop_0(a_slice, initial_y_iter, x_i, key.m_0');
     ghost var u_i := w25;
 
     /* w24 = w30 =  y[0]*x_i + A[0] mod b */
     bn_mov(w24, w30);
 
     /* load first limb of modulus: w30 = m[0] */
-    ghost var m_iter := iter_cons(x16, 0, wmem[x16]);
-    m_iter := bn_lid_safe(x12, false, 0, x16, true, m_iter);
+    m_iter := bn_lid_safe(x12, false, 0, x16, true, initial_m_iter);
     // assert w30 == m_iter.buff[0];
 
     /* [w26, w27] = w30*w25 = m[0]*u_i*/
@@ -348,7 +356,6 @@ procedure mont_loop(
 
     /* [w28, w27] = [w26, w27] + w24 = m[0]*u_i + (y[0]*x_i + A[0] mod b) */
     mont_word_mul_add_bound_lemma1(seq(w27, w26), seq(w24, w31), m_iter.buff[0], u_i);
-    ghost var p_2 : uint512_view_t;
     p_2 := seq_addc_512_safe(w27, w27, w24, w28, w26, w31);
 
     // assert valid_uint512_view(wdrs, p_1, 24, 29) && p_1.full == a_slice[0] + y_iter.buff[0] * x_i;
@@ -385,19 +392,19 @@ procedure mont_loop(
             seq_len(m_iter.buff) == NUM_WORDS;
             
             m_iter.base_addr == x22;
-            valid_buff_addr(wmem, x22, NUM_WORDS); // observe
+            valid_base_addr(wmem, x22, NUM_WORDS); // observe
 
             valid_wdr_view(wdrs, a_slice, 4, NUM_WORDS);
-            seq_len(inital_a_slice) == NUM_WORDS;
+            seq_len(initial_a_slice) == NUM_WORDS;
 
-            inital_a_slice[j..] == a_slice[j..];
+            initial_a_slice[j..] == a_slice[j..];
 
             wmem == old(wmem);
             
-            to_nat(inital_a_slice) < to_nat(m_iter.buff) + to_nat(y_iter.buff);
+            to_nat(initial_a_slice) < to_nat(m_iter.buff) + to_nat(y_iter.buff);
 
             mont_loop_inv(x_i, u_i, p_1, p_2,
-                y_iter.buff, m_iter.buff, inital_a_slice, a_slice, j);
+                y_iter.buff, m_iter.buff, initial_a_slice, a_slice, j);
 
         decreases loop_ctr;
     {
@@ -405,7 +412,7 @@ procedure mont_loop(
             u_i, x_i,
             p_1, p_2,
             y_iter, m_iter, 
-            inital_a_slice, a_slice, j);
+            initial_a_slice, a_slice, j);
         j := j + 1;
     }
 
@@ -420,7 +427,7 @@ procedure mont_loop(
 
     ghost var bout := bool_to_uint1(fgroups.fg1.cf);
     mont_loop_inv_lemma3(x_i, u_i, p_1, p_2,
-        y_iter.buff, m_iter.buff, inital_a_slice, a_slice, bout);
+        y_iter.buff, m_iter.buff, initial_a_slice, a_slice, bout);
 
     /* restore pointers */
     addi(x16, x22, 0);
@@ -436,9 +443,9 @@ procedure mont_loop(
 
     assume to_nat(m_iter.buff) != 0; // TODO
 
-    // assert to_nat(inital_a_slice) < to_nat(m_iter.buff) + to_nat(y_iter.buff);
+    // assert to_nat(initial_a_slice) < to_nat(m_iter.buff) + to_nat(y_iter.buff);
     mont_loop_cond_sub_lemma(x_i, u_i, y_iter.buff, m_iter.buff,
-        inital_a_slice, a_slice, next_a_slice, bout, bool_to_uint1(fgroups.fg0.cf));
+        initial_a_slice, a_slice, next_a_slice, bout, bool_to_uint1(fgroups.fg0.cf));
     
     /* restore pointer */
     li(x8, 4);
