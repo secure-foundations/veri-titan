@@ -78,7 +78,7 @@ procedure mont_loop_0(
 
         valid_wdr_view(wdrs, a_slice, 4, NUM_WORDS);
 
-        valid_wmem_addr(wmem, x19, y_iter);
+        iter_safe(wmem, x19, y_iter);
         seq_len(y_iter.buff) == NUM_WORDS;
         y_iter.index == 0;
 
@@ -93,7 +93,7 @@ procedure mont_loop_0(
         x31 == old(x31);
 
         y_next_iter == bn_lid_next_iter(y_iter, true);
-        valid_wmem_addr(wmem, x19, y_next_iter);
+        iter_safe(wmem, x19, y_next_iter);
 
         w2 == x_i;
         w3 == m_0';
@@ -214,9 +214,9 @@ procedure mont_loop_1(
         y_iter.index >= 1;
         y_iter.index == m_iter.index;
 
-        valid_wmem_addr(wmem, x19, y_iter);
+        iter_safe(wmem, x19, y_iter);
         seq_len(y_iter.buff) == NUM_WORDS;
-        valid_wmem_addr(wmem, x16, m_iter);
+        iter_safe(wmem, x16, m_iter);
         seq_len(m_iter.buff) == NUM_WORDS;
 
         valid_wdr_view(wdrs, a_slice, 4, NUM_WORDS);
@@ -245,8 +245,8 @@ procedure mont_loop_1(
         next_y_iter == bn_lid_next_iter(y_iter, true);
         next_m_iter == bn_lid_next_iter(m_iter, true);
 
-        admissible_wmem_addr(wmem, x19, next_y_iter);
-        admissible_wmem_addr(wmem, x16, next_m_iter);
+        iter_inv(wmem, x19, next_y_iter);
+        iter_inv(wmem, x16, next_m_iter);
         valid_wdr_view(wdrs, next_a_slice, 4, NUM_WORDS);
         initial_a_slice[j+1..] == next_a_slice[j+1..];
 
@@ -321,15 +321,15 @@ procedure mont_loop(
         x30 == NUM_WORDS;
         x31 == NUM_WORDS - 1;
 
-        valid_wmem_addr(wmem, x20, x_iter);
+        iter_safe(wmem, x20, x_iter);
         seq_len(x_iter.buff) == NUM_WORDS;
         x_iter.buff[x_iter.index] == x_i;
 
-        valid_wmem_addr(wmem, x19, initial_y_iter);
+        iter_safe(wmem, x19, initial_y_iter);
         seq_len(initial_y_iter.buff) == NUM_WORDS;
         initial_y_iter.index == 0;
 
-        valid_wmem_addr(wmem, x16, initial_m_iter);
+        iter_safe(wmem, x16, initial_m_iter);
         initial_m_iter.buff == key.m;
         initial_m_iter.index == 0;
 
@@ -396,10 +396,10 @@ procedure mont_loop(
             y_iter.index >= 1;
             y_iter.index == m_iter.index;
 
-            admissible_wmem_addr(wmem, x19, y_iter);
+            iter_inv(wmem, x19, y_iter);
             y_iter.buff == initial_y_iter.buff;
 
-            admissible_wmem_addr(wmem, x16, m_iter);
+            iter_inv(wmem, x16, m_iter);
             m_iter.buff == key.m;
             m_iter.base_addr == x22;
 

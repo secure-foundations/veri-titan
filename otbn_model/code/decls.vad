@@ -119,8 +119,8 @@ function operator(.buff := ) (iter :iter_t, buff: seq(uint256)): iter_t extern;
 
 var wmem: wmem_t {:state wmem()};
 // function valid_iter(wmem: wmem_t, iter: iter_t): bool extern;
-function admissible_wmem_addr(h: wmem_t, addr: int, iter: iter_t): bool extern;
-function valid_wmem_addr(h: wmem_t, addr: int, iter: iter_t): bool extern;
+function iter_inv(h: wmem_t, addr: int, iter: iter_t): bool extern;
+function iter_safe(h: wmem_t, addr: int, iter: iter_t): bool extern;
 
 type pub_key: Type(0) extern;
 function operator(.e) (key: pub_key): nat extern;
@@ -623,7 +623,7 @@ procedure bn_lid(
     requires
         !(grd_inc && grs_inc);
         grd < 32;
-        valid_wmem_addr(wmem, grs + offset, iter);
+        iter_safe(wmem, grs + offset, iter);
 
     reads
         wmem;
@@ -632,7 +632,7 @@ procedure bn_lid(
         wdrs;
 
     ensures
-        valid_wmem_addr(wmem, old(grs) + offset, iter);
+        iter_safe(wmem, old(grs) + offset, iter);
         wdrs == old(wdrs[grd := wmem[iter.base_addr][iter.index]]);
         grd == (if grd_inc then mod_add(old(grd), 1, 32) else old(grd));
         grs == (if grs_inc then mod_add(old(grs), 32, BASE_32) else old(grs));
@@ -650,7 +650,7 @@ procedure bn_lid_safe(
     requires
         !(grd_inc && grs_inc);
         if grd_inc then grd < 31 else grd < 32;
-        valid_wmem_addr(wmem, grs + offset, iter);
+        iter_safe(wmem, grs + offset, iter);
 
     reads
         wmem;
@@ -664,7 +664,7 @@ procedure bn_lid_safe(
 
         wdrs == old(wdrs[grd := iter.buff[iter.index]]);
 
-        admissible_wmem_addr(wmem, grs + offset, next_iter);
+        iter_inv(wmem, grs + offset, next_iter);
         next_iter == bn_lid_next_iter(iter, grs_inc);
 {
     next_iter := iter.(index := if grs_inc then iter.index + 1 else iter.index);
@@ -680,7 +680,7 @@ procedure bn_sid(
     requires
         !(grs1_inc && grs2_inc);
         grs2 < 32;
-        valid_wmem_addr(wmem, grs1 + offset, iter);
+        iter_safe(wmem, grs1 + offset, iter);
 
     reads
         wdrs;
@@ -706,7 +706,7 @@ procedure bn_sid_safe(
     requires
         !(grs1_inc && grs2_inc);
         if grs2_inc then grs2 < 31 else grs2 < 32;
-        valid_wmem_addr(wmem, grs1 + offset, iter);
+        iter_safe(wmem, grs1 + offset, iter);
 
     reads
         wdrs;
@@ -720,7 +720,7 @@ procedure bn_sid_safe(
         grs1 == (if grs1_inc then (old(grs1) + 32) else old(grs1));
         grs2 == (if grs2_inc then (old(grs2) + 1) else old(grs2));
 
-        admissible_wmem_addr(wmem, grs1 + offset, next_iter);
+        iter_inv(wmem, grs1 + offset, next_iter);
         next_iter.base_addr == iter.base_addr;
         next_iter.index == (if grs1_inc then iter.index + 1 else iter.index);
         // next_iter.buff == 

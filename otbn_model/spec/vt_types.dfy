@@ -143,7 +143,7 @@ module vt_types {
         iter.(index := if inc then iter.index + 1 else iter.index)
     }
 
-    predicate admissible_wmem_addr(wmem: wmem_t, addr:int, iter: iter_t)
+    predicate iter_inv(wmem: wmem_t, addr:int, iter: iter_t)
     {
         var base_addr := iter.base_addr;
         // base_addr points to a valid buffer
@@ -156,9 +156,9 @@ module vt_types {
         && addr == base_addr + 32 * iter.index
     }
 
-    predicate valid_wmem_addr(wmem: wmem_t, addr:int, iter: iter_t)
+    predicate iter_safe(wmem: wmem_t, addr:int, iter: iter_t)
     {
-        && admissible_wmem_addr(wmem, addr, iter)
+        && iter_inv(wmem, addr, iter)
         // tighter constraint so we can dereference
         && iter.index < |iter.buff|
     }
@@ -190,19 +190,5 @@ module vt_types {
         s.ok
     }
 
-    datatype pub_key = pub_key(
-        e: nat, 
-        m: seq<uint256>,
-        m_0': uint256,
-        B256_INV: nat,
-        R: nat,
-        RR: nat,
-        R_INV: nat)
-
-    // TODO: move m to here 
-    datatype mm_params = mm_params(
-        x_iter: iter_t,
-        y_iter: iter_t,
-        rr_iter: iter_t
-    )
+ 
 }

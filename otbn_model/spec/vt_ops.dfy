@@ -388,6 +388,15 @@ module vt_ops {
         }
     }
 
+   datatype pub_key = pub_key(
+        e: nat, 
+        m: seq<uint256>,
+        m_0': uint256,
+        B256_INV: nat,
+        R: nat,
+        RR: nat,
+        R_INV: nat)
+
     predicate cong_m(a: int, b: int, key: pub_key)
         requires to_nat(key.m) != 0
     {
@@ -411,4 +420,19 @@ module vt_ops {
         && key.R_INV == power(key.B256_INV, NUM_WORDS)
         && cong(key.R_INV * key.R, 1, NUM_WORDS)
     }
+
+    // TODO: move m to here 
+    datatype mm_params = mm_params(
+        x_iter: iter_t,
+        y_iter: iter_t,
+        rr_iter: iter_t,
+        key: pub_key)
+
+    // predicate mm_params_inv()
+    // {
+
+
+    // }
+
+
 }
