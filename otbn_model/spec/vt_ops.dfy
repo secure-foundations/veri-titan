@@ -396,7 +396,7 @@ module vt_ops {
 
     predicate valid_pub_key(key: pub_key)
     {
-        && |key.m| == |key.RR| == NUM_WORDS
+        && |key.m| == NUM_WORDS
 
         && to_nat(key.m) != 0
         && cong_B256(key.m_0' * key.m[0], BASE_256-1)
@@ -405,8 +405,8 @@ module vt_ops {
 
         && key.R == power(BASE_256, NUM_WORDS)
 
-        && to_nat(key.RR) < to_nat(key.m)
-        && cong_m(to_nat(key.RR), key.R * key.R, key)
+        && key.RR < to_nat(key.m)
+        && cong_m(key.RR, key.R * key.R, key)
 
         && key.R_INV == power(key.B256_INV, NUM_WORDS)
         && cong(key.R_INV * key.R, 1, NUM_WORDS)
