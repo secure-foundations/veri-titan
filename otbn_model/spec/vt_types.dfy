@@ -124,7 +124,7 @@ module vt_types {
 
     type wmem_t = map<int, seq<uint256>>
 
-    predicate valid_buff_addr(wmem: wmem_t, base_addr: int, num_words: int)
+    predicate valid_base_addr(wmem: wmem_t, base_addr: int, num_words: int)
     {
         // base_addr maps to some buffer in wmem
         && base_addr in wmem
@@ -143,27 +143,23 @@ module vt_types {
         iter.(index := if inc then iter.index + 1 else iter.index)
     }
 
-    predicate valid_iter(wmem: wmem_t, iter: iter_t)
+    predicate iter_inv(wmem: wmem_t, addr:int, iter: iter_t)
     {
         var base_addr := iter.base_addr;
         // base_addr points to a valid buffer
-        && valid_buff_addr(wmem, base_addr, |iter.buff|)
+        && valid_base_addr(wmem, base_addr, |iter.buff|)
         // the view is consistent with wmem
         && wmem[base_addr] == iter.buff
         // the index is within bound (or at end)
         && iter.index <= |iter.buff|
+        // address is correct
+        && addr == base_addr + 32 * iter.index
     }
 
-    predicate admissible_wmem_addr(wmem: wmem_t, addr:int, iter: iter_t)
+    predicate iter_safe(wmem: wmem_t, addr:int, iter: iter_t)
     {
-        && valid_iter(wmem, iter)
-        && addr == iter.base_addr + 32 * iter.index
-    }
-
-    predicate valid_wmem_addr(wmem: wmem_t, addr:int, iter: iter_t)
-    {
-        && admissible_wmem_addr(wmem, addr, iter)
-        // tighter constraint so we can dereference
+        && iter_inv(wmem, addr, iter)
+        // stronger constraint so we can dereference
         && iter.index < |iter.buff|
     }
 

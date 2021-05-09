@@ -199,7 +199,7 @@ module RSAE3 {
             assert sint(A) == sint(x[..i]) * sint(y) * power(key.BASE_INV, i);
             reveal cong();
         }
-        
+
         while i != key.len
             decreases key.len - i;
             invariant i <= |x|;

@@ -309,5 +309,56 @@ module mont_loop_lemmas {
         }
     }
 
+    predicate montmul_inv(
+        a: seq<uint256>,
+        x: seq<uint256>, 
+        i: nat,
+        y: seq<uint256>, 
+        key: pub_key)
+    {
+        && |a| == |y| == |x| == NUM_WORDS
+        && i <= |x|
+        && pub_key_inv(key)
+        && to_nat(a) < to_nat(key.m) + to_nat(y)
+        && cong_m(to_nat(a) * pow_B256(i), to_nat(x[..i]) * to_nat(y), key)
+    }
 
+    lemma montmul_inv_lemma(
+        initial_a: seq<uint256>,
+        a: seq<uint256>,
+        x: seq<uint256>, 
+        i: nat,
+        u_i: uint256,
+        y: seq<uint256>, 
+        key: pub_key)
+
+        requires montmul_inv(initial_a, x, i, y, key);
+        requires |a| == NUM_WORDS;
+        requires i < |x|;
+        requires to_nat(a) < to_nat(key.m) + to_nat(y);
+        requires cong_m(to_nat(a) * pow_B256(1),
+                x[i] * to_nat(y) + u_i * to_nat(key.m) + to_nat(initial_a), key);
+        ensures montmul_inv(a, x, i+1, y, key);
+    {
+        calc ==> {
+            cong_m(to_nat(a) * pow_B256(1), x[i] * to_nat(y) + u_i * to_nat(key.m) + to_nat(initial_a), key);
+                { assume false; }
+            cong_m(to_nat(a) * pow_B256(1), x[i] * to_nat(y) + to_nat(initial_a), key);
+                { assume false; }
+            cong_m(to_nat(a) * pow_B256(1+i), x[i] * to_nat(y) * pow_B256(i) + to_nat(initial_a) * pow_B256(1+i), key);
+                {
+                    assert cong_m(to_nat(initial_a) * pow_B256(i), to_nat(x[..i]) * to_nat(y), key);
+                    assume false;
+                }
+            cong_m(to_nat(a) * pow_B256(1+i), x[i] * to_nat(y) * pow_B256(i) + to_nat(x[..i]) * to_nat(y), key);
+            cong_m(to_nat(a) * pow_B256(1+i), (x[i] * pow_B256(i) + to_nat(x[..i])) * to_nat(y), key);
+                {
+                    assert x[..i+1][..i] == x[..i];
+                    reveal to_nat();
+                }
+            cong_m(to_nat(a) * pow_B256(1+i), to_nat(x[..i+1]) * to_nat(y), key);
+        }
+
+        assert cong_m(to_nat(a) * pow_B256(1+i), to_nat(x[..i+1]) * to_nat(y), key);
+    }
 }

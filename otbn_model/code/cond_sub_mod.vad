@@ -29,7 +29,7 @@ procedure cond_sub_mod_0(ghost initial_wdrs: wdrs_t, ghost selection: bool, ghos
 
         // this bounds the number of iteration
         seq_len(iter.buff) <= 12;
-        valid_wmem_addr(wmem, x16, iter);
+        iter_safe(wmem, x16, iter);
 
         wdrs[x8..] == initial_wdrs[x8..];
 
@@ -60,7 +60,7 @@ procedure cond_sub_mod_0(ghost initial_wdrs: wdrs_t, ghost selection: bool, ghos
         next_iter.base_addr == iter.base_addr;
         next_iter.buff == iter.buff;
         
-        admissible_wmem_addr(wmem, x16, next_iter);
+        iter_inv(wmem, x16, next_iter);
 
         wdrs[x8..] == initial_wdrs[x8..];
 
@@ -124,7 +124,7 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
         fgroups.fg0.cf == false;
         fgroups.fg1.cf == selection;
 
-        valid_buff_addr(wmem, x16, num_words);
+        valid_base_addr(wmem, x16, num_words);
 
         w31 == 0;
     reads
@@ -136,7 +136,7 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
         wdrs; w2; w3; w4; w31;
 
     ensures
-        valid_buff_addr(old(wmem), old(x16), num_words);
+        valid_base_addr(old(wmem), old(x16), num_words);
 
         selection ==>
             tuple(wdrs[5..5+num_words], bool_to_uint1(fgroups.fg0.cf))
@@ -155,7 +155,7 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
     ghost var initial_x16 := x16;
 
     ghost var iter := iter_cons(initial_x16, 0, wmem[x16]);
-    assert valid_wmem_addr(wmem, x16, iter);
+    assert iter_safe(wmem, x16, iter);
 
     while (Loop(x31))
         invariant iter.index + loop_ctr == num_words;
@@ -167,7 +167,7 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
 
         invariant seq_len(iter.buff) == num_words;
         invariant iter.base_addr == initial_x16;
-        invariant admissible_wmem_addr(wmem, x16, iter);
+        invariant iter_inv(wmem, x16, iter);
 
         invariant wdrs[x8..] == initial_wdrs[x8..];
 

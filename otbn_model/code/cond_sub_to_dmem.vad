@@ -32,8 +32,8 @@ procedure cond_sub_to_dmem_inner(
 
         // TODO: extend to none-aliasing case
         // for now the use cases suggest they should alias
-        valid_wmem_addr(wmem, x16, iter);
-        valid_wmem_addr(wmem, x21, iter);
+        iter_safe(wmem, x16, iter);
+        iter_safe(wmem, x21, iter);
 
         0 < num_words <= 12;
         seq_len(initial_buff) == num_words;
@@ -66,8 +66,8 @@ procedure cond_sub_to_dmem_inner(
         4 <= x8 < 31;
 
         seq_len(next_iter.buff) == num_words;
-        admissible_wmem_addr(wmem, x16, next_iter);
-        admissible_wmem_addr(wmem, x21, next_iter);
+        iter_inv(wmem, x16, next_iter);
+        iter_inv(wmem, x21, next_iter);
 
         next_iter.index == iter.index + 1;
         next_iter.base_addr == iter.base_addr;
@@ -152,7 +152,7 @@ procedure cond_sub_to_dmem(ghost num_words: nat, ghost selection: bool)
         // TODO: extend to none-aliasing case
         // for now the use cases suggest they should alias
         x21 == x16;
-        valid_buff_addr(wmem, x16, num_words);
+        valid_base_addr(wmem, x16, num_words);
 
     reads
         x30;
@@ -163,8 +163,8 @@ procedure cond_sub_to_dmem(ghost num_words: nat, ghost selection: bool)
         fgroups; wdrs; wmem;
 
     ensures
-        valid_buff_addr(wmem, old(x16), num_words);
-        valid_buff_addr(old(wmem), old(x16), num_words);
+        valid_base_addr(wmem, old(x16), num_words);
+        valid_base_addr(old(wmem), old(x16), num_words);
 
         selection ==>
             tuple(wmem[old(x16)], bool_to_uint1(fgroups.fg0.cf))
@@ -186,8 +186,8 @@ procedure cond_sub_to_dmem(ghost num_words: nat, ghost selection: bool)
 
         // TODO: extend to none-aliasing case
         // for now the use cases suggest they should alias
-        invariant admissible_wmem_addr(wmem, x16, iter);
-        invariant admissible_wmem_addr(wmem, x21, iter);
+        invariant iter_inv(wmem, x16, iter);
+        invariant iter_inv(wmem, x21, iter);
         invariant seq_len(iter.buff) == num_words;
         invariant initial_buff[iter.index..] == iter.buff[iter.index..];
         invariant iter.base_addr == old(x16);

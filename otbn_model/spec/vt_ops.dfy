@@ -2,12 +2,14 @@ include "vt_types.dfy"
 include "vt_consts.dfy"
 include "bv_ops.dfy"
 include "../lib/powers.dfy"
+include "../lib/congruences.dfy"
 
 module vt_ops {
     import opened vt_types
     import opened bv_ops
     import opened vt_consts
     import opened powers
+    import opened congruences
 
     function eval_reg32(s: state, r: reg32_t) : uint32
     {
@@ -386,22 +388,85 @@ module vt_ops {
         }
     }
 
-/*
-    lemma lemma_extend_seq_subb(
-            xs: seq<uint256>, ys: seq<uint256>, zs: seq<uint256>, 
-            cin :uint1, cout:uint1,
-            x:uint256, y:uint256, z:uint256)
-        requires |xs| == |ys|
-        requires (zs, cin) == seq_subb(xs, ys)
-        requires (z, cout) == uint256_subb(x, y, cin)
-        ensures (zs + [z], cout) == seq_subb(xs + [x], ys + [y])
+   datatype pub_key = pub_key(
+        e: nat, 
+        m: seq<uint256>,
+        m0d: uint256,
+        B256_INV: nat,
+        R: nat,
+        RR: nat,
+        R_INV: nat)
+
+    predicate cong_m(a: int, b: int, key: pub_key)
+        requires to_nat(key.m) != 0
     {
+        cong(a, b, to_nat(key.m))
     }
 
-    lemma lemma_empty_seq_subb()
-        ensures ([], 0) == seq_subb([], [])
+    predicate pub_key_inv(key: pub_key)
     {
-    }
-*/
+        && |key.m| == NUM_WORDS
 
+        && to_nat(key.m) != 0
+        && cong_B256(key.m0d * key.m[0], BASE_256-1)
+
+        && cong_m(BASE_256 * key.B256_INV, 1, key)
+
+        && key.R == power(BASE_256, NUM_WORDS)
+
+        && key.RR < to_nat(key.m)
+        && cong_m(key.RR, key.R * key.R, key)
+
+        && key.R_INV == power(key.B256_INV, NUM_WORDS)
+        && cong(key.R_INV * key.R, 1, NUM_WORDS)
+    }
+
+    // TODO: move m to here 
+    datatype mm_vars = mm_vars(
+        x_iter: iter_t,
+        y_iter: iter_t,
+        m_iter: iter_t,
+        rr_iter: iter_t,
+        m0d_iter: iter_t,
+        key: pub_key)
+
+    predicate mm_iter_inv(iter: iter_t, wmem: wmem_t, addr: int)
+    {
+        addr == NA ||
+        (
+            && iter_inv(wmem, addr, iter)
+            && iter.index == 0
+            && |iter.buff| == NUM_WORDS
+        )
+    }
+
+    predicate m0d_iter_inv(iter: iter_t, wmem: wmem_t, addr: int, m0d: uint256)
+    {
+        addr == NA ||
+        (
+            && iter_inv(wmem, addr, iter)
+            && iter.index == 0
+            && |iter.buff| == 1
+            && iter.buff[0] == m0d
+        )
+    }
+
+    predicate mm_vars_inv(
+        vars: mm_vars,
+        wmem: wmem_t,
+        x_addr: int,
+        y_addr: int,
+        m_addr: int,
+        rr_addr: int,
+        m0d_addr: int)
+    {
+        && pub_key_inv(vars.key)
+
+        && mm_iter_inv(vars.x_iter, wmem, x_addr)
+        && mm_iter_inv(vars.y_iter, wmem, y_addr)
+        && mm_iter_inv(vars.m_iter, wmem, m_addr)
+        && vars.m_iter.buff == vars.key.m
+        && mm_iter_inv(vars.rr_iter, wmem, rr_addr)
+        && m0d_iter_inv(vars.m0d_iter, wmem, m0d_addr, vars.key.m0d)
+    }
 }
