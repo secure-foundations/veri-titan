@@ -83,11 +83,16 @@ procedure mont_loop_0(
         y_iter.index == 0;
 
     ensures
+        x6 == old(x6);
+        x7 == old(x7);
         x8 == 5;
         x10 == 4;
+        x11 == old(x11);
         x12 == 30;
         x13 == 24;
         x16 == old(x16);
+        x17 == old(x17);
+        x20 == old(x20);
         x22 == x16;
         x30 == old(x30);
         x31 == old(x31);
@@ -96,7 +101,7 @@ procedure mont_loop_0(
         iter_safe(wmem, x19, y_next_iter);
 
         w2 == x_i;
-        w3 == m0d;
+        w3 == old(w3);
         w31 == 0;
 
         cong_B256(w25, (a_slice[0] + y_iter.buff[0] * x_i) * m0d);
@@ -227,15 +232,21 @@ procedure mont_loop_1(
             y_iter.buff, m_iter.buff, initial_a_slice, a_slice, j);
 
     ensures
+        x6 == old(x6);
+        x7 == old(x7);
         x8 == 4 + j + 1;
         x10 == 3 + j + 1;
+        x11 == old(x11);
         x12 == 30;
         x13 == 24;
+        x17 == old(x17);
+        x20 == old(x20);
         x22 == old(x22);
         x30 == old(x30);
         x31 == old(x31);
 
         w2 == x_i;
+        w3 == old(w3);
         w25 == u_i;
         w31 == 0;
 
@@ -321,9 +332,10 @@ procedure mont_loop(
         x30 == NUM_WORDS;
         x31 == NUM_WORDS - 1;
 
-        iter_safe(wmem, x20, x_iter);
+        iter_inv(wmem, x20, x_iter);
         seq_len(x_iter.buff) == NUM_WORDS;
-        x_iter.buff[x_iter.index] == x_i;
+        x_iter.index >= 1;
+        x_iter.buff[x_iter.index-1] == x_i;
 
         iter_safe(wmem, x19, initial_y_iter);
         seq_len(initial_y_iter.buff) == NUM_WORDS;
@@ -339,10 +351,25 @@ procedure mont_loop(
 
         valid_wdr_view(wdrs, initial_a_slice, 4, NUM_WORDS);
 
-        montmul_inv(initial_a_slice, x_iter.buff, x_iter.index, initial_y_iter.buff, key);
+        montmul_inv(initial_a_slice, x_iter.buff, x_iter.index-1, initial_y_iter.buff, key);
 
     ensures
-        montmul_inv(next_a_slice, x_iter.buff, x_iter.index+1, initial_y_iter.buff, key);
+        x6 == old(x6);
+        x7 == old(x7);
+        x11 == old(x11);
+        x17 == old(x17);
+        x20 == old(x20);
+        x30 == old(x30);
+        x31 == old(x31);
+
+        w3 == old(w3);
+        w31 == old(w31);
+
+        valid_wdr_view(wdrs, next_a_slice, 4, NUM_WORDS);
+
+        montmul_inv(next_a_slice, x_iter.buff, x_iter.index, initial_y_iter.buff, key);
+
+        wmem == old(wmem);
 {
     ghost var a_slice := initial_a_slice;
 
@@ -378,13 +405,20 @@ procedure mont_loop(
 
     while (Loop(x31))
         invariant
+            x6 == old(x6);
+            x7 == old(x7);
             x8 == 4 + j;
             x10 == 3 + j;
+            x11 == old(x11);
             x12 == 30;
             x13 == 24;
+            x17 == old(x17);
+            x20 == old(x20);
             x30 == NUM_WORDS;
+            x31 == NUM_WORDS - 1;
 
             w2 == x_i;
+            w3 == old(w3);
             w25 == u_i;
             w31 == 0;
 
@@ -413,7 +447,7 @@ procedure mont_loop(
             mont_loop_inv(x_i, u_i, p_1, p_2,
                 y_iter.buff, m_iter.buff, initial_a_slice, a_slice, j);
             
-            montmul_inv(initial_a_slice, x_iter.buff, x_iter.index, y_iter.buff, key);
+            montmul_inv(initial_a_slice, x_iter.buff, x_iter.index-1, y_iter.buff, key);
 
         decreases loop_ctr;
     {
@@ -458,7 +492,7 @@ procedure mont_loop(
     li(x8, 4);
 
     // assert montmul_inv(initial_a_slice, x_iter.buff, x_iter.index, y_iter.buff, key);
-    montmul_inv_lemma(initial_a_slice, next_a_slice, x_iter.buff, x_iter.index, u_i, y_iter.buff, key);
+    montmul_inv_lemma(initial_a_slice, next_a_slice, x_iter.buff, x_iter.index-1, u_i, y_iter.buff, key);
 }
 
 #verbatim

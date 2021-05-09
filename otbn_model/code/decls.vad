@@ -135,10 +135,11 @@ function pub_key_inv(key: pub_key): bool extern;
 type mm_vars: Type(0) extern;
 function operator(.x_iter) (vars: mm_vars): iter_t extern;
 function operator(.y_iter) (vars: mm_vars): iter_t extern;
+function operator(.m_iter) (vars: mm_vars): iter_t extern;
 function operator(.rr_iter) (vars: mm_vars): iter_t extern;
 function operator(.m0d_iter) (vars: mm_vars): iter_t extern;
 function operator(.key) (vars: mm_vars): pub_key extern;
-function mm_vars_inv(vars: mm_vars, wmem: wmem_t, wdrs: wdrs_t, x_addr: int,y_addr: int, rr_addr: int, m0d_addr: int): bool extern;
+function mm_vars_inv(vars: mm_vars, wmem: wmem_t, x_addr: int, y_addr: int, m_addr: int, rr_addr: int, m0d_addr: int): bool extern;
 
 function to_nat(s: seq(uint256)): nat extern;
 

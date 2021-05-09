@@ -425,6 +425,7 @@ module vt_ops {
     datatype mm_vars = mm_vars(
         x_iter: iter_t,
         y_iter: iter_t,
+        m_iter: iter_t,
         rr_iter: iter_t,
         m0d_iter: iter_t,
         key: pub_key)
@@ -453,9 +454,9 @@ module vt_ops {
     predicate mm_vars_inv(
         vars: mm_vars,
         wmem: wmem_t,
-        wdrs: wdrs_t,
         x_addr: int,
         y_addr: int,
+        m_addr: int,
         rr_addr: int,
         m0d_addr: int)
     {
@@ -463,6 +464,8 @@ module vt_ops {
 
         && mm_iter_inv(vars.x_iter, wmem, x_addr)
         && mm_iter_inv(vars.y_iter, wmem, y_addr)
+        && mm_iter_inv(vars.m_iter, wmem, m_addr)
+        && vars.m_iter.buff == vars.key.m
         && mm_iter_inv(vars.rr_iter, wmem, rr_addr)
         && m0d_iter_inv(vars.m0d_iter, wmem, m0d_addr, vars.key.m0d)
     }
