@@ -159,7 +159,7 @@ module vt_types {
     predicate iter_safe(wmem: wmem_t, addr:int, iter: iter_t)
     {
         && iter_inv(wmem, addr, iter)
-        // tighter constraint so we can dereference
+        // stronger constraint so we can dereference
         && iter.index < |iter.buff|
     }
 
@@ -189,6 +189,4 @@ module vt_types {
     {
         s.ok
     }
-
- 
 }

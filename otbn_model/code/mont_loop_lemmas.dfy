@@ -318,7 +318,7 @@ module mont_loop_lemmas {
     {
         && |a| == |y| == |x| == NUM_WORDS
         && i <= |x|
-        && valid_pub_key(key)
+        && pub_key_inv(key)
         && to_nat(a) < to_nat(key.m) + to_nat(y)
         && cong_m(to_nat(a) * pow_B256(i), to_nat(x[..i]) * to_nat(y), key)
     }

@@ -125,12 +125,20 @@ function iter_safe(h: wmem_t, addr: int, iter: iter_t): bool extern;
 type pub_key: Type(0) extern;
 function operator(.e) (key: pub_key): nat extern;
 function operator(.m) (key: pub_key): seq(uint256) extern;
-function operator(.m_0') (key: pub_key): uint256 extern;
+function operator(.m0d) (key: pub_key): uint256 extern;
 function operator(.B256_INV) (key: pub_key): nat extern;
 function operator(.R) (key: pub_key): nat extern;
 function operator(.RR) (key: pub_key): seq(uint256) extern;
 function operator(.R_INV) (key: pub_key): nat extern;
-function valid_pub_key(key: pub_key): bool extern;
+function pub_key_inv(key: pub_key): bool extern;
+
+type mm_vars: Type(0) extern;
+function operator(.x_iter) (vars: mm_vars): iter_t extern;
+function operator(.y_iter) (vars: mm_vars): iter_t extern;
+function operator(.rr_iter) (vars: mm_vars): iter_t extern;
+function operator(.m0d_iter) (vars: mm_vars): iter_t extern;
+function operator(.key) (vars: mm_vars): pub_key extern;
+function mm_vars_inv(vars: mm_vars, wmem: wmem_t, wdrs: wdrs_t, x_addr: int,y_addr: int, rr_addr: int, m0d_addr: int): bool extern;
 
 function to_nat(s: seq(uint256)): nat extern;
 

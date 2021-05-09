@@ -391,7 +391,7 @@ module vt_ops {
    datatype pub_key = pub_key(
         e: nat, 
         m: seq<uint256>,
-        m_0': uint256,
+        m0d: uint256,
         B256_INV: nat,
         R: nat,
         RR: nat,
@@ -403,12 +403,12 @@ module vt_ops {
         cong(a, b, to_nat(key.m))
     }
 
-    predicate valid_pub_key(key: pub_key)
+    predicate pub_key_inv(key: pub_key)
     {
         && |key.m| == NUM_WORDS
 
         && to_nat(key.m) != 0
-        && cong_B256(key.m_0' * key.m[0], BASE_256-1)
+        && cong_B256(key.m0d * key.m[0], BASE_256-1)
 
         && cong_m(BASE_256 * key.B256_INV, 1, key)
 
@@ -422,17 +422,48 @@ module vt_ops {
     }
 
     // TODO: move m to here 
-    datatype mm_params = mm_params(
+    datatype mm_vars = mm_vars(
         x_iter: iter_t,
         y_iter: iter_t,
         rr_iter: iter_t,
+        m0d_iter: iter_t,
         key: pub_key)
 
-    // predicate mm_params_inv()
-    // {
+    predicate mm_iter_inv(iter: iter_t, wmem: wmem_t, addr: int)
+    {
+        addr == NA ||
+        (
+            && iter_inv(wmem, addr, iter)
+            && iter.index == 0
+            && |iter.buff| == NUM_WORDS
+        )
+    }
 
+    predicate m0d_iter_inv(iter: iter_t, wmem: wmem_t, addr: int, m0d: uint256)
+    {
+        addr == NA ||
+        (
+            && iter_inv(wmem, addr, iter)
+            && iter.index == 0
+            && |iter.buff| == 1
+            && iter.buff[0] == m0d
+        )
+    }
 
-    // }
+    predicate mm_vars_inv(
+        vars: mm_vars,
+        wmem: wmem_t,
+        wdrs: wdrs_t,
+        x_addr: int,
+        y_addr: int,
+        rr_addr: int,
+        m0d_addr: int)
+    {
+        && pub_key_inv(vars.key)
 
-
+        && mm_iter_inv(vars.x_iter, wmem, x_addr)
+        && mm_iter_inv(vars.y_iter, wmem, y_addr)
+        && mm_iter_inv(vars.rr_iter, wmem, rr_addr)
+        && m0d_iter_inv(vars.m0d_iter, wmem, m0d_addr, vars.key.m0d)
+    }
 }
