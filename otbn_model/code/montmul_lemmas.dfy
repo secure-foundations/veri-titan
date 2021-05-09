@@ -10,7 +10,7 @@ module montmul_lemmas {
     import opened congruences
     import opened mont_loop_lemmas
 
-    lemma montmul_inv_lemma0(
+    lemma montmul_inv_lemma_0(
         a: seq<uint256>,
         x: seq<uint256>, 
         i: nat,
@@ -30,6 +30,4 @@ module montmul_lemmas {
         reveal cong();
         assert montmul_inv(a, x, i, y, key);
     }
-
-
 }

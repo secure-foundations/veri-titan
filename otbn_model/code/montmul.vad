@@ -1,7 +1,7 @@
 include "decls.vad"
 include "mont_loop.vad"
 
-ghost procedure montmul_inv_lemma0(
+ghost procedure montmul_inv_lemma_0(
        ghost a: seq(uint256),
        ghost x: seq(uint256), 
        ghost i: int,
@@ -28,10 +28,6 @@ import opened vt_decls
 import opened powers
 import opened congruences
 
-// import opened mul256
-// import opened addc512
-// import opened addc512_lemmas
-// import opened cond_sub_to_reg
 import opened mont_loop
 import opened mont_loop_lemmas
 import opened montmul_lemmas
@@ -99,6 +95,8 @@ procedure montmul_0(ghost vars: mm_vars)
 }
 
 procedure montmul(ghost vars: mm_vars)
+    returns (ghost a_slice: seq(uint256))
+
     {:frame false}
 
     requires
@@ -112,16 +110,17 @@ procedure montmul(ghost vars: mm_vars)
         mm_vars_inv(vars, wmem, x20, x19, x16, NA, x17);
 
         w31 == 0;
+    
+    ensures
+       montmul_inv(a_slice, vars.x_iter.buff, NUM_WORDS, vars.y_iter.buff, vars.key);
 {
-    ghost var a_slice: seq(uint256);
-
     a_slice := montmul_0(vars);
     assume to_nat(a_slice) == 0;
 
     ghost var x_iter := vars.x_iter;
 
     assert montmul_inv(a_slice, x_iter.buff, x_iter.index, vars.y_iter.buff, vars.key) by {
-        montmul_inv_lemma0(a_slice, x_iter.buff, x_iter.index, vars.y_iter.buff, vars.key);
+        montmul_inv_lemma_0(a_slice, x_iter.buff, x_iter.index, vars.y_iter.buff, vars.key);
     }
 
     while (Loop(x30))
@@ -142,6 +141,7 @@ procedure montmul(ghost vars: mm_vars)
             montmul_inv(a_slice, x_iter.buff, x_iter.index, vars.y_iter.buff, vars.key);
 
             valid_wdr_view(wdrs, a_slice, 4, NUM_WORDS);
+            vars.x_iter.buff == x_iter.buff;
 
             wmem == old(wmem);
 
@@ -156,6 +156,9 @@ procedure montmul(ghost vars: mm_vars)
         addi(x16, x6, 0);
         addi(x19, x7, 0);
     }
+    /* restore pointers */
+    li(x8, 4);
+    li(x10, 4);
 }
 
 
