@@ -390,7 +390,7 @@ module vt_ops {
 
    datatype pub_key = pub_key(
         e: nat, 
-        m: seq<uint256>,
+        m: nat,
         m0d: uint256,
         B256_INV: nat,
         R: nat,
@@ -398,23 +398,21 @@ module vt_ops {
         R_INV: nat)
 
     predicate cong_m(a: int, b: int, key: pub_key)
-        requires to_nat(key.m) != 0
+        requires key.m != 0
     {
-        cong(a, b, to_nat(key.m))
+        cong(a, b, key.m)
     }
 
     predicate pub_key_inv(key: pub_key)
     {
-        && |key.m| == NUM_WORDS
-
-        && to_nat(key.m) != 0
-        && cong_B256(key.m0d * key.m[0], BASE_256-1)
+        && key.m != 0
+        && cong_B256(key.m0d * key.m, BASE_256-1)
 
         && cong_m(BASE_256 * key.B256_INV, 1, key)
 
         && key.R == power(BASE_256, NUM_WORDS)
 
-        && key.RR < to_nat(key.m)
+        && key.RR < key.m
         && cong_m(key.RR, key.R * key.R, key)
 
         && key.R_INV == power(key.B256_INV, NUM_WORDS)
@@ -464,9 +462,14 @@ module vt_ops {
 
         && mm_iter_inv(vars.x_iter, wmem, x_addr)
         && mm_iter_inv(vars.y_iter, wmem, y_addr)
+
         && mm_iter_inv(vars.m_iter, wmem, m_addr)
-        && vars.m_iter.buff == vars.key.m
+        && to_nat(vars.m_iter.buff) == vars.key.m
+        // && cong_B256(vars.key.m0d * vars.m_iter.buff[0], BASE_256-1) // provable
+
         && mm_iter_inv(vars.rr_iter, wmem, rr_addr)
+        && to_nat(vars.rr_iter.buff) == vars.key.RR
+
         && m0d_iter_inv(vars.m0d_iter, wmem, m0d_addr, vars.key.m0d)
     }
 }

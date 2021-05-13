@@ -29,7 +29,7 @@ module mont_loop_lemmas {
     lemma mont_loop_divisible_lemma1
         (x_i: uint256,
         u_i: uint256,
-        m_0': uint256,
+        m0d: uint256,
         p_1: uint512_view_t,
         p_2: uint512_view_t,
         y_0: uint256,
@@ -38,8 +38,8 @@ module mont_loop_lemmas {
 
         requires p_1.full == x_i * y_0 + a_0;
         requires p_2.full == u_i * m_0 + p_1.lh;
-        requires cong_B256(m_0' * m_0, BASE_256 - 1);
-        requires cong_B256(u_i, p_1.full * m_0');
+        requires cong_B256(m0d * m_0, BASE_256 - 1);
+        requires cong_B256(u_i, p_1.full * m0d);
         ensures p_2.lh == 0;
     {
         assume false; // TODO
@@ -48,7 +48,7 @@ module mont_loop_lemmas {
     lemma mont_loop_inv_lemma1(
         x_i: uint256,
         u_i: uint256,
-        m_0': uint256,
+        m0d: uint256,
         p_1: uint512_view_t,
         p_2: uint512_view_t,
         y: seq<uint256>,
@@ -56,15 +56,15 @@ module mont_loop_lemmas {
         a: seq<uint256>)
 
         requires |m| == |a| == |y| == NUM_WORDS;
-        requires cong_B256(m_0' * m[0], BASE_256 - 1);
         requires p_1.full == x_i * y[0] + a[0];
         requires p_2.full == u_i * m[0] + p_1.lh;
-        requires cong_B256(m_0' * m[0], BASE_256 - 1);
-        requires cong_B256(u_i, (a[0] + y[0] * x_i) * m_0');
+        requires cong_B256(m0d * to_nat(m), BASE_256 - 1);
+        requires cong_B256(u_i, (a[0] + y[0] * x_i) * m0d);
 
         ensures mont_loop_inv(x_i, u_i, p_1, p_2, y, m, a, a, 1)
     {
-        mont_loop_divisible_lemma1(x_i, u_i, m_0', p_1, p_2, y[0], m[0], a[0]);
+        assume cong_B256(m0d * m[0], BASE_256 - 1);
+        mont_loop_divisible_lemma1(x_i, u_i, m0d, p_1, p_2, y[0], m[0], a[0]);
 
         to_nat_lemma1(y[..1]);
         to_nat_lemma1(m[..1]);
@@ -291,6 +291,7 @@ module mont_loop_lemmas {
                 assert false; // prove by contradiction
             }
 
+
             calc {
                 to_nat(next_a) * BASE_256;
                 to_nat(a) * BASE_256 + pow_B256(NUM_WORDS) * BASE_256 - to_nat(m) * BASE_256;
@@ -323,7 +324,7 @@ module mont_loop_lemmas {
         && |a| == |y| == |x| == NUM_WORDS
         && i <= |x|
         && pub_key_inv(key)
-        && to_nat(a) < to_nat(key.m) + to_nat(y)
+        && to_nat(a) < key.m + to_nat(y)
         && cong_m(to_nat(a) * pow_B256(i), to_nat(x[..i]) * to_nat(y), key)
     }
 
@@ -339,13 +340,13 @@ module mont_loop_lemmas {
         requires montmul_inv(initial_a, x, i, y, key);
         requires |a| == NUM_WORDS;
         requires i < |x|;
-        requires to_nat(a) < to_nat(key.m) + to_nat(y);
+        requires to_nat(a) < key.m + to_nat(y);
         requires cong_m(to_nat(a) * pow_B256(1),
-                x[i] * to_nat(y) + u_i * to_nat(key.m) + to_nat(initial_a), key);
+                x[i] * to_nat(y) + u_i * key.m + to_nat(initial_a), key);
         ensures montmul_inv(a, x, i+1, y, key);
     {
         calc ==> {
-            cong_m(to_nat(a) * pow_B256(1), x[i] * to_nat(y) + u_i * to_nat(key.m) + to_nat(initial_a), key);
+            cong_m(to_nat(a) * pow_B256(1), x[i] * to_nat(y) + u_i * key.m + to_nat(initial_a), key);
                 { assume false; }
             cong_m(to_nat(a) * pow_B256(1), x[i] * to_nat(y) + to_nat(initial_a), key);
                 { assume false; }
