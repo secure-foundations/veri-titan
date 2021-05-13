@@ -156,7 +156,7 @@ procedure montmul(ghost vars: mm_vars)
         addi(x6, x16, 0);
         addi(x7, x19, 0);
 
-        a_slice := mont_loop(x_iter, w2, vars.y_iter, vars.m_iter, a_slice, vars.key);
+        a_slice := mont_loop(x_iter, w2, vars, a_slice);
 
         addi(x16, x6, 0);
         addi(x19, x7, 0);
