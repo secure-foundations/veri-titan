@@ -397,29 +397,22 @@ module vt_ops {
         RR: nat,
         R_INV: nat)
 
-    predicate cong_m(a: int, b: int, key: pub_key)
-        requires key.m != 0
-    {
-        cong(a, b, key.m)
-    }
-
     predicate pub_key_inv(key: pub_key)
     {
         && key.m != 0
         && cong_B256(key.m0d * key.m, BASE_256-1)
 
-        && cong_m(BASE_256 * key.B256_INV, 1, key)
+        && cong(BASE_256 * key.B256_INV, 1, key.m)
 
         && key.R == power(BASE_256, NUM_WORDS)
 
         && key.RR < key.m
-        && cong_m(key.RR, key.R * key.R, key)
+        && cong(key.RR, key.R * key.R, key.m)
 
         && key.R_INV == power(key.B256_INV, NUM_WORDS)
-        && cong(key.R_INV * key.R, 1, NUM_WORDS)
+        && cong(key.R_INV * key.R, 1, key.m)
     }
 
-    // TODO: move m to here 
     datatype mm_vars = mm_vars(
         x_iter: iter_t,
         y_iter: iter_t,
