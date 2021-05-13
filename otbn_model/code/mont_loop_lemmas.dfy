@@ -135,7 +135,9 @@ module mont_loop_lemmas {
         var p1_uh := p_1.uh;
         var p2_uh := p_2.uh;
 
-        assume pow_B256_j' == pow_B256_j * BASE_256;
+        assert pow_B256_j' == pow_B256_j * BASE_256 by {
+            reveal power();
+        }
 
         assert x_i * y_nat + u_i * m_nat + ia_nat 
             == 
@@ -179,7 +181,9 @@ module mont_loop_lemmas {
             assert to_nat([0] + next_a[..j]) == to_nat(next_a[..j]) * BASE_256 by {
                 to_nat_zero_prepend_lemma(next_a[..j]);
             }
-            assume pow_B256(j-1) * BASE_256 == pow_B256(j);
+            assert pow_B256(j-1) * BASE_256 == pow_B256(j) by {
+                reveal power();
+            }
         }
 
         assert x_i * y_nat' + u_i * m_nat' + ia_nat'
