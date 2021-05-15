@@ -134,7 +134,7 @@ procedure montmul(ghost vars: mm_vars)
             x30 == NUM_WORDS;
             x31 == NUM_WORDS - 1;
 
-            iter_inv(wmem, x20, x_iter);
+            iter_inv(x_iter, wmem, x20);
             x_iter.index + loop_ctr == NUM_WORDS;
             x_iter.base_addr == vars.x_iter.base_addr;
             x_iter.buff == vars.x_iter.buff;

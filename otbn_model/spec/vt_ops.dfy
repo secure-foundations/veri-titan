@@ -421,25 +421,18 @@ module vt_ops {
         m0d_iter: iter_t,
         key: pub_key)
 
-    predicate mm_iter_inv(iter: iter_t, wmem: wmem_t, addr: int)
+    predicate mm_iter_inv(iter: iter_t, wmem: wmem_t, address: int)
     {
-        addr == NA ||
-        (
-            && iter_inv(wmem, addr, iter)
-            && iter.index == 0
-            && |iter.buff| == NUM_WORDS
-        )
+        && iter_inv(iter, wmem, address)
+        && iter.index == 0
+        && |iter.buff| == NUM_WORDS
     }
 
-    predicate m0d_iter_inv(iter: iter_t, wmem: wmem_t, addr: int, m0d: uint256)
+    predicate m0d_iter_inv(iter: iter_t, wmem: wmem_t, address: int)
     {
-        addr == NA ||
-        (
-            && iter_inv(wmem, addr, iter)
-            && iter.index == 0
-            && |iter.buff| == 1
-            && iter.buff[0] == m0d
-        )
+        && iter_inv(iter, wmem, address)
+        && iter.index == 0
+        && |iter.buff| == 1
     }
 
     predicate mm_vars_inv(
@@ -458,11 +451,11 @@ module vt_ops {
 
         && mm_iter_inv(vars.m_iter, wmem, m_addr)
         && to_nat(vars.m_iter.buff) == vars.key.m
-        // && cong_B256(vars.key.m0d * vars.m_iter.buff[0], BASE_256-1) // provable
 
         && mm_iter_inv(vars.rr_iter, wmem, rr_addr)
         && to_nat(vars.rr_iter.buff) == vars.key.RR
 
-        && m0d_iter_inv(vars.m0d_iter, wmem, m0d_addr, vars.key.m0d)
+        && m0d_iter_inv(vars.m0d_iter, wmem, m0d_addr)
+        && vars.m0d_iter.buff[0] == vars.key.m0d
     }
 }

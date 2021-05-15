@@ -124,18 +124,6 @@ module vt_types {
 
     type wmem_t = map<int, seq<uint256>>
 
-    predicate valid_base_addr(wmem: wmem_t, base_addr: int, num_words: int)
-    {
-        // base_addr maps to some buffer in wmem
-        && base_addr in wmem
-        // the length is correct
-        && num_words == |wmem[base_addr]|
-        // the buffer is not empty
-        && num_words != 0
-        // the buffer doesn't expand beyond memory bound
-        && base_addr + num_words * 32 <= DMEM_LIMIT
-    }
-
     datatype iter_t = iter_cons(base_addr: int, index: nat, buff: seq<uint256>)
 
     function bn_lid_next_iter(iter: iter_t, inc: bool): iter_t
@@ -143,22 +131,32 @@ module vt_types {
         iter.(index := if inc then iter.index + 1 else iter.index)
     }
 
-    predicate iter_inv(wmem: wmem_t, addr:int, iter: iter_t)
+    predicate iter_mapped(iter: iter_t, address: int)
+    {   
+        // we choose to ingore
+        || (address == NA)
+        // address is correct
+        || (address == iter.base_addr + 32 * iter.index)
+    }
+
+    predicate iter_inv(iter: iter_t, wmem: wmem_t, address: int)
     {
         var base_addr := iter.base_addr;
         // base_addr points to a valid buffer
-        && valid_base_addr(wmem, base_addr, |iter.buff|)
+        && base_addr in wmem
         // the view is consistent with wmem
         && wmem[base_addr] == iter.buff
+        // buff does not extend beyond mem limit
+        && base_addr + 32 * |iter.buff| <= DMEM_LIMIT
         // the index is within bound (or at end)
-        && iter.index <= |iter.buff|
+        && iter.index <= |iter.buff| != 0
         // address is correct
-        && addr == base_addr + 32 * iter.index
+        && iter_mapped(iter, address)
     }
 
-    predicate iter_safe(wmem: wmem_t, addr:int, iter: iter_t)
+    predicate iter_safe(iter: iter_t, wmem: wmem_t, address: int)
     {
-        && iter_inv(wmem, addr, iter)
+        && iter_inv(iter, wmem, address)
         // stronger constraint so we can dereference
         && iter.index < |iter.buff|
     }

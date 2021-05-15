@@ -26,8 +26,7 @@ module mont_loop_lemmas {
         to_nat([0] + a[..j-1]) + p_2.uh * pow_B256(j) + p_1.uh * pow_B256(j))
     }
 
-    lemma mont_loop_divisible_lemma1
-        (x_i: uint256,
+    lemma mont_loop_divisible_lemma1(x_i: uint256,
         u_i: uint256,
         m0d: uint256,
         p_1: uint512_view_t,
@@ -290,7 +289,6 @@ module mont_loop_lemmas {
                 to_nat_bound_lemma(next_a);
                 assert false; // prove by contradiction
             }
-
 
             calc {
                 to_nat(next_a) * BASE_256;
