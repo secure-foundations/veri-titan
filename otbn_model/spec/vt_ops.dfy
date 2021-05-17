@@ -32,6 +32,78 @@ module vt_ops {
 
     type wdrs_t = wdrs : seq<uint256> | |wdrs| == 32 witness *
 
+    /* flags definions */
+
+    // datatype flag = CF | MSB | LSB | ZERO
+    datatype flags_t = flags_t(cf: bool, msb: bool, lsb: bool, zero: bool)
+
+    datatype fgroups_t = fgroups_t(fg0: flags_t, fg1: flags_t)
+
+    function select_fgroup(fgps: fgroups_t, which: uint1): flags_t
+    {
+        if which == 0 then fgps.fg0 else fgps.fg1
+    }
+
+    function get_flag(fgps: fgroups_t, which_group: uint1, which_flag: uint2) : bool
+    {
+        if which_flag == 0 then select_fgroup(fgps, which_group).cf 
+        else if which_flag == 1 then select_fgroup(fgps, which_group).msb
+        else if which_flag == 2 then select_fgroup(fgps, which_group).lsb
+        else select_fgroup(fgps, which_group).zero
+    }
+
+    function update_fgroups(fgps: fgroups_t, which_group: uint1, new_flags_t: flags_t) : fgroups_t
+    {
+        if which_group == 0 then fgps.(fg0 := new_flags_t) else fgps.(fg1 := new_flags_t)
+    }
+
+    /* memory definions */
+
+    type wmem_t = map<int, seq<uint256>>
+
+    predicate valid_xmem_addr(h: map<int, uint32>, addr:int)
+    {
+        addr in h
+    }
+
+    /* state definions */
+
+    datatype state = state(
+        gprs: gprs_t, // 32-bit registers
+        wdrs: wdrs_t, // 256-bit registers
+
+        wmod: uint256,
+        wrnd: uint256,
+        wacc: uint256,
+
+        fgroups: fgroups_t,
+
+        xmem: map<int, uint32>,
+        wmem: wmem_t,
+
+        ok: bool)
+    {
+        function eval_reg32(r: reg32_t) : uint32
+        {
+            gprs[r.index]
+        }
+
+        function eval_reg256(r: reg256_t) : uint256
+        {
+            match r {
+                case WDR(index) => wdrs[r.index]
+                case WMOD => wmod
+                case WRND => wrnd
+                case WACC => wacc
+            }
+        }
+    }
+
+    predicate valid_state(s: state)
+    {
+        s.ok
+    }
+
     /* instruction definions */
 
     datatype ins32 =
@@ -83,6 +155,24 @@ module vt_ops {
         | BN_WSRRS // TODO
         | BN_WSRRW // TODO
 
+    predicate eval_ins32(xins: ins32, s: state, r: state)
+    {
+        if !s.ok then
+            !r.ok
+        else
+            r.ok && (valid_state(s) ==> valid_state(r))
+    }
+
+    predicate eval_ins256(wins: ins256, s: state, r: state)
+    {
+        if !s.ok then
+            !r.ok
+        else
+            r.ok && (valid_state(s) ==> valid_state(r))
+    }
+
+    /* control flow definions */
+
     datatype code =
         | Ins32(ins: ins32)
         | Ins256(bn_ins: ins256)
@@ -97,42 +187,43 @@ module vt_ops {
         | RegCond(r: reg32_t)
         | ImmCond(c: uint32)
 
-    /* flags definions */
-
-    // datatype flag = CF | MSB | LSB | ZERO
-    datatype flags_t = flags_t(cf: bool, msb: bool, lsb: bool, zero: bool)
-
-    datatype fgroups_t = fgroups_t(fg0: flags_t, fg1: flags_t)
-
-    /* memory definions */
-
-    type wmem_t = map<int, seq<uint256>>
-
-    predicate valid_xmem_addr(h: map<int, uint32>, addr:int)
+    predicate eval_block(block: codes, s: state, r: state)
     {
-        addr in h
+        if block.CNil? then
+            r == s
+        else
+            exists r': state :: eval_code(block.hd, s, r') && eval_block(block.tl, r', r)
     }
 
-    /* state definions */
-
-    datatype state = state(
-        gprs: gprs_t, // 32-bit registers
-        wdrs: wdrs_t, // 256-bit registers
-
-        wmod: uint256,
-        wrnd: uint256,
-        wacc: uint256,
-
-        fgroups: fgroups_t,
-
-        xmem: map<int, uint32>,
-        wmem: wmem_t,
-
-        ok: bool)
-
-    predicate valid_state(s: state)
+    function eval_cond(s: state, wc: whileCond): nat
     {
-        s.ok
+        match wc 
+            case RegCond(r) => s.eval_reg32(r)
+            case ImmCond(c) => c
+    }
+
+    predicate eval_while(c: code, n: nat, s: state, r: state)
+        decreases c, n
+    {
+        if s.ok then
+            if n == 0 then
+                s == r
+            else
+                exists loop_body_end: state :: eval_code(c, s, loop_body_end)
+                    && eval_while(c, n - 1, loop_body_end, r)
+        else
+            !r.ok
+    }
+
+    predicate eval_code(c: code, s: state, r: state)
+        decreases c, 0
+    {
+        match c
+            case Ins32(ins) => eval_ins32(ins, s, r)
+            case Ins256(ins) => eval_ins256(ins, s, r)
+            case Block(block) => eval_block(block, s, r)
+            //case IfElse(cond, ifT, ifF) => evalIfElse(cond, ifT, ifF, s, r)
+            case While(cond, body) => eval_while(body, eval_cond(s, cond), s, r)
     }
 
     /* auxiliary datatype definions */
@@ -197,104 +288,6 @@ module vt_ops {
         && iter_inv(iter, wmem, address)
         // stronger constraint so we can dereference
         && iter.index < |iter.buff|
-    }
-
-    function eval_reg32(s: state, r: reg32_t) : uint32
-    {
-        s.gprs[r.index]
-    }
-
-    predicate evalIns32(xins: ins32, s: state, r: state)
-    {
-        if !s.ok then
-            !r.ok
-        else
-            r.ok && (valid_state(s) ==> valid_state(r))
-    }
-
-    function eval_reg256(s: state, r: reg256_t) : uint256
-    {
-        match r {
-            case WDR(index) => s.wdrs[r.index]
-            case WMOD => s.wmod
-            case WRND => s.wrnd
-            case WACC => s.wacc
-        }
-    }
-
-    predicate eval_ins256(wins: ins256, s: state, r: state)
-    {
-        if !s.ok then
-            !r.ok
-        else
-            r.ok && (valid_state(s) ==> valid_state(r))
-    }
-
-    predicate evalBlock(block: codes, s: state, r: state)
-    {
-        if block.CNil? then
-            r == s
-        else
-            exists r': state :: evalCode(block.hd, s, r') && evalBlock(block.tl, r', r)
-    }
-
-    function eval_cond(s: state, wc: whileCond): nat
-    {
-        match wc 
-            case RegCond(r) => eval_reg32(s, r)
-            case ImmCond(c) => c
-    }
-
-    predicate evalWhile(c: code, n: nat, s: state, r: state)
-        decreases c, n
-    {
-        if s.ok then
-            if n == 0 then
-                s == r
-            else
-                exists loop_body_end: state :: evalCode(c, s, loop_body_end)
-                    && evalWhile(c, n - 1, loop_body_end, r)
-        else
-            !r.ok
-    }
-
-    predicate evalCode(c: code, s: state, r: state)
-        decreases c, 0
-    {
-        match c
-            case Ins32(ins) => evalIns32(ins, s, r)
-            case Ins256(ins) => eval_ins256(ins, s, r)
-            case Block(block) => evalBlock(block, s, r)
-            //case IfElse(cond, ifT, ifF) => evalIfElse(cond, ifT, ifF, s, r)
-            case While(cond, body) => evalWhile(body, eval_cond(s, cond), s, r)
-    }
-
-    function select_fgroup(fgps: fgroups_t, which: uint1): flags_t
-    {
-        if which == 0 then fgps.fg0 else fgps.fg1
-    }
-
-    function get_flag(fgps: fgroups_t, which_group: uint1, which_flag: uint2) : bool
-    {
-        if which_flag == 0 then select_fgroup(fgps, which_group).cf 
-        else if which_flag == 1 then select_fgroup(fgps, which_group).msb
-        else if which_flag == 2 then select_fgroup(fgps, which_group).lsb
-        else select_fgroup(fgps, which_group).zero
-    }
-
-    function get_cf0(fgps: fgroups_t): bool
-    {
-        select_fgroup(fgps, 0).cf 
-    }
-
-    function get_cf1(fgps: fgroups_t): bool
-    {
-        select_fgroup(fgps, 1).cf 
-    }
-
-    function update_fgroups(fgps: fgroups_t, which_group: uint1, new_flags_t: flags_t) : fgroups_t
-    {
-        if which_group == 0 then fgps.(fg0 := new_flags_t) else fgps.(fg1 := new_flags_t)
     }
 
     function otbn_addc(x: uint256, y: uint256, shift: shift_t, carry: bool) : (uint256, flags_t)
