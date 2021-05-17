@@ -11,6 +11,8 @@ module rsa_ops {
     import opened powers
     import opened congruences
 
+/* to_nat definions & lemmas */
+
     function {:opaque} to_nat(xs: seq<uint256>): nat
     {
         if |xs| == 0 then 0
@@ -19,7 +21,7 @@ module rsa_ops {
             to_nat(xs[..len']) + xs[len'] * pow_B256(len')
     }
 
-    lemma to_nat_lemma1(xs: seq<uint256>)
+    lemma to_nat_lemma_1(xs: seq<uint256>)
         requires |xs| == 1
         ensures to_nat(xs) == xs[0]
     {
@@ -27,13 +29,23 @@ module rsa_ops {
         reveal power();
     }
 
-    lemma to_nat_lemma2(xs: seq<uint256>)
+    lemma to_nat_lemma_2(xs: seq<uint256>)
         requires |xs| == 2
         ensures to_nat(xs) == xs[0] + xs[1] * BASE_256
     {
         reveal to_nat();
-        to_nat_lemma1(xs[..1]);
+        to_nat_lemma_1(xs[..1]);
         reveal power();
+    }
+
+    lemma uint512_view_lemma(num: uint512_view_t)
+        ensures num.full
+            == to_nat([num.lh, num.uh])
+            == num.lh + num.uh * BASE_256;
+    {
+        reveal uint512_lh();
+        reveal uint512_uh();
+        to_nat_lemma_2([num.lh, num.uh]);
     }
 
     lemma to_nat_bound_lemma(x: seq<uint256>)
@@ -55,16 +67,6 @@ module rsa_ops {
     {
         assert xs[..i][..i-1] == xs[..i-1];
         reveal to_nat();
-    }
-
-    lemma uint512_view_lemma(num: uint512_view_t)
-        ensures num.full
-            == to_nat([num.lh, num.uh])
-            == num.lh + num.uh * BASE_256;
-    {
-        reveal uint512_lh();
-        reveal uint512_uh();
-        to_nat_lemma2([num.lh, num.uh]);
     }
 
     lemma to_nat_zero_extend_lemma(xs': seq<uint256>, xs: seq<uint256>) 
@@ -189,6 +191,8 @@ module rsa_ops {
             assert false;
         }
     }
+
+/* rsa/mm definions & lemmas */
 
    datatype pub_key = pub_key(
         e: nat, 

@@ -33,9 +33,9 @@ import opened mont_loop_lemmas
 
 #endverbatim
 
-ghost procedure to_nat_lemma1(ghost xs: seq(uint256)) extern;
+ghost procedure to_nat_lemma_1(ghost xs: seq(uint256)) extern;
 
-ghost procedure to_nat_lemma2(ghost xs: seq(uint256)) extern;
+ghost procedure to_nat_lemma_2(ghost xs: seq(uint256)) extern;
 
 function seq_addc_512_is_safe(xs: seq(uint256), ys: seq(uint256)): bool extern;
 
@@ -168,7 +168,7 @@ procedure mont_loop_0(
 
     calc ==> {
         to_nat(seq(w27, w26)) == w30 * m0d;
-        ==> { to_nat_lemma2(seq(w27, w26)); }
+        ==> { to_nat_lemma_2(seq(w27, w26)); }
         w27 + w26 * BASE_256 == w30 * m0d;
         ==> { reveal cong; }
         cong_B256(w27 + w26 * BASE_256, w30 * m0d);
