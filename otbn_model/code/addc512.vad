@@ -2,7 +2,7 @@ include "decls.vad"
 
 #verbatim
 include "../code/vale.dfy"
-include "../spec/vt_ops.dfy"
+include "../spec/rsa_ops.dfy"
 include "decls.dfy"
 
 include "../code/addc512_lemmas.dfy"
@@ -11,6 +11,7 @@ module addc512 {
 
 import opened bv_ops
 import opened vt_ops
+import opened rsa_ops
 import opened vt_consts
 import opened vt_vale
 import opened vt_decls

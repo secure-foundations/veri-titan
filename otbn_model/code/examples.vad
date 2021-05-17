@@ -2,7 +2,7 @@ include "decls.vad"
 
 #verbatim
 include "../code/vale.dfy"
-include "../spec/vt_ops.dfy"
+include "../spec/rsa_ops.dfy"
 include "../gen/decls.dfy"
 
 import opened bv_ops

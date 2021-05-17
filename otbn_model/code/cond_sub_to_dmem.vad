@@ -2,13 +2,14 @@
 
 // #verbatim
 // include "../code/vale.dfy"
-// include "../spec/vt_ops.dfy"
+// include "../spec/rsa_ops.dfy"
 // include "../gen/decls.dfy"
 
 // module cond_sub_to_dmem {
 
 // import opened bv_ops
 // import opened vt_ops
+// import opened rsa_ops
 // import opened vt_consts
 // import opened vt_vale
 // import opened vt_decls

@@ -1,8 +1,9 @@
-include "../spec/vt_ops.dfy"
+include "../spec/rsa_ops.dfy"
 
 module mont_loop_lemmas {
     import opened bv_ops
     import opened vt_ops
+    import opened rsa_ops
     import opened vt_consts
     import opened powers
     import opened congruences
