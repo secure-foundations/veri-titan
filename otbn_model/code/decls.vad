@@ -6,7 +6,6 @@ module vt_decls {
 
 import opened bv_ops
 import opened vt_ops
-import opened vt_types
 import opened vt_consts
 import opened vt_vale
 

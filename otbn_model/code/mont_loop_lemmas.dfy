@@ -3,7 +3,6 @@ include "../spec/vt_ops.dfy"
 module mont_loop_lemmas {
     import opened bv_ops
     import opened vt_ops
-    import opened vt_types
     import opened vt_consts
     import opened powers
     import opened congruences
@@ -314,9 +313,9 @@ module mont_loop_lemmas {
 
     predicate montmul_inv(
         a: seq<uint256>,
-        x: seq<uint256>, 
+        x: seq<uint256>,
         i: nat,
-        y: seq<uint256>, 
+        y: seq<uint256>,
         key: pub_key)
     {
         && |a| == |y| == |x| == NUM_WORDS
@@ -325,6 +324,13 @@ module mont_loop_lemmas {
         && to_nat(a) < key.m + to_nat(y)
         && cong(to_nat(a) * pow_B256(i), to_nat(x[..i]) * to_nat(y), key.m)
     }
+
+    // predicate montmul_inv2(vars: mm_vars, i: nat)
+    // {
+    //     && mm_vars_inv(vars, wmem, NA, NA, NA, NA, NA)
+    //     && i <= NUM_WORDS
+    //     && to_nat(a) < key.m + to_nat(y)
+    // }
 
     lemma montmul_inv_lemma(
         initial_a: seq<uint256>,

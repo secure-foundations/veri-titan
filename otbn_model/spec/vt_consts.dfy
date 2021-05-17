@@ -15,4 +15,7 @@ module vt_consts {
 
     const DMEM_LIMIT: int := 0x8000
     const NUM_WORDS:  int := 12
+
+    // ignore the mapping
+    const NA :int := -1;
 }

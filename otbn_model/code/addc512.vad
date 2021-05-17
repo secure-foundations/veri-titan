@@ -11,7 +11,6 @@ module addc512 {
 
 import opened bv_ops
 import opened vt_ops
-import opened vt_types
 import opened vt_consts
 import opened vt_vale
 import opened vt_decls

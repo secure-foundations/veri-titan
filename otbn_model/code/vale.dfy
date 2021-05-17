@@ -1,7 +1,6 @@
 include "../spec/vt_ops.dfy"
 
 module vt_vale {
-    import opened vt_types
     import opened vt_ops
     import opened bv_ops
     import opened congruences
