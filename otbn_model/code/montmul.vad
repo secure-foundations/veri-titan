@@ -10,7 +10,7 @@ ghost procedure montmul_inv_lemma_0(
 
 #verbatim
 include "../code/vale.dfy"
-include "../spec/vt_ops.dfy"
+include "../spec/rsa_ops.dfy"
 include "decls.dfy"
 
 include "mont_loop.dfy"
@@ -21,7 +21,7 @@ module montmul {
 
 import opened bv_ops
 import opened vt_ops
-import opened vt_types
+import opened rsa_ops
 import opened vt_consts
 import opened vt_vale
 import opened vt_decls
@@ -33,6 +33,10 @@ import opened mont_loop_lemmas
 import opened montmul_lemmas
 
 #endverbatim
+
+function seq_zero(len: int): seq(uint256) extern;
+
+ghost procedure seq_zero_to_nat_lemma(ghost len: int) extern;
 
 procedure montmul_0(ghost vars: mm_vars)
     returns (ghost a_slice: seq(uint256))
@@ -51,7 +55,7 @@ procedure montmul_0(ghost vars: mm_vars)
     ensures
         x11 == 2;
         x20 == old(x20);
-        x30 == NUM_WORDS;
+        x30 == old(x30);
         x31 == old(x31);
 
         w3 == vars.key.m0d;
@@ -60,6 +64,7 @@ procedure montmul_0(ghost vars: mm_vars)
         wmem == old(wmem);
 
         valid_wdr_view(wdrs, a_slice, 4, NUM_WORDS);
+        to_nat(a_slice) == 0;
         mm_vars_inv(vars, wmem, x20, x19, x16, NA, x17);
 {
     let _ := bn_lid_safe(x9, false, 0, x17, false, vars.m0d_iter);
@@ -81,17 +86,18 @@ procedure montmul_0(ghost vars: mm_vars)
 
             mm_vars_inv(vars, wmem, x20, x19, x16, NA, x17);
             valid_wdr_view(wdrs, a_slice, 4, NUM_WORDS);
-            
+            a_slice[..x10 - 4] == seq_zero(x10 - 4);
+
             wmem == old(wmem);
 
         decreases loop_ctr;
     {
         let index := x10 - 4;
         a_slice := a_slice[index := 0];
-        let prev_wdrs := wdrs;
         bn_movr(x10, true, x11, false);
-        assert wdrs == prev_wdrs[4 + index := 0];
     }
+    assert a_slice == seq_zero(NUM_WORDS);
+    seq_zero_to_nat_lemma(NUM_WORDS);
 }
 
 procedure montmul(ghost vars: mm_vars)
@@ -115,7 +121,6 @@ procedure montmul(ghost vars: mm_vars)
        montmul_inv(a_slice, vars.x_iter.buff, NUM_WORDS, vars.y_iter.buff, vars.key);
 {
     a_slice := montmul_0(vars);
-    assume to_nat(a_slice) == 0;
 
     ghost var x_iter := vars.x_iter;
 
@@ -129,19 +134,19 @@ procedure montmul(ghost vars: mm_vars)
             x30 == NUM_WORDS;
             x31 == NUM_WORDS - 1;
 
-            iter_inv(wmem, x20, x_iter);
-            // seq_len(x_iter.buff) == NUM_WORDS;
+            iter_inv(x_iter, wmem, x20);
             x_iter.index + loop_ctr == NUM_WORDS;
             x_iter.base_addr == vars.x_iter.base_addr;
+            x_iter.buff == vars.x_iter.buff;
 
             w3 == vars.key.m0d;
             w31 == 0;
     
             mm_vars_inv(vars, wmem, NA, x19, x16, NA, x17);
+
             montmul_inv(a_slice, x_iter.buff, x_iter.index, vars.y_iter.buff, vars.key);
 
             valid_wdr_view(wdrs, a_slice, 4, NUM_WORDS);
-            vars.x_iter.buff == x_iter.buff;
 
             wmem == old(wmem);
 
@@ -151,7 +156,7 @@ procedure montmul(ghost vars: mm_vars)
         addi(x6, x16, 0);
         addi(x7, x19, 0);
 
-        a_slice := mont_loop(x_iter, w2, vars.y_iter, vars.m_iter, a_slice, vars.key);
+        a_slice := mont_loop(x_iter, w2, vars, a_slice);
 
         addi(x16, x6, 0);
         addi(x19, x7, 0);

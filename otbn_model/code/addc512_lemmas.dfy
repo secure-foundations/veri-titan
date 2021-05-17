@@ -1,9 +1,9 @@
-include "../spec/vt_ops.dfy"
+include "../spec/rsa_ops.dfy"
 
 module addc512_lemmas {
     import opened bv_ops
     import opened vt_ops
-    import opened vt_types
+    import opened rsa_ops
     import opened vt_consts
     import opened powers
     import opened congruences

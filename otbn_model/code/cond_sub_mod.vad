@@ -2,7 +2,7 @@ include "decls.vad"
 
 #verbatim
 include "../code/vale.dfy"
-include "../spec/vt_ops.dfy"
+include "../spec/rsa_ops.dfy"
 
 include "decls.dfy"
 
@@ -10,7 +10,7 @@ module cond_sub_mod {
 
 import opened bv_ops
 import opened vt_ops
-import opened vt_types
+import opened rsa_ops
 import opened vt_consts
 import opened vt_vale
 import opened vt_decls
@@ -29,7 +29,7 @@ procedure cond_sub_mod_0(ghost initial_wdrs: wdrs_t, ghost selection: bool, ghos
 
         // this bounds the number of iteration
         seq_len(iter.buff) <= 12;
-        iter_safe(wmem, x16, iter);
+        iter_safe(iter, wmem, x16);
 
         wdrs[x8..] == initial_wdrs[x8..];
 
@@ -60,7 +60,7 @@ procedure cond_sub_mod_0(ghost initial_wdrs: wdrs_t, ghost selection: bool, ghos
         next_iter.base_addr == iter.base_addr;
         next_iter.buff == iter.buff;
         
-        iter_inv(wmem, x16, next_iter);
+        iter_inv(next_iter, wmem, x16);
 
         wdrs[x8..] == initial_wdrs[x8..];
 
@@ -115,18 +115,22 @@ procedure cond_sub_mod_0(ghost initial_wdrs: wdrs_t, ghost selection: bool, ghos
     }
 }
 
-procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
+procedure cond_sub_mod(
+    ghost m_iter: iter_t,
+    ghost selection: bool)
     // {:frame false}
     requires
-        x31 == num_words;
-        num_words <= 12;
+        x31 == NUM_WORDS;
 
         fgroups.fg0.cf == false;
         fgroups.fg1.cf == selection;
 
-        valid_base_addr(wmem, x16, num_words);
+        iter_safe(m_iter, wmem, x16);
+        m_iter.index == 0;
+        seq_len(m_iter.buff) == NUM_WORDS;
 
         w31 == 0;
+
     reads
         wmem; x31;
 
@@ -136,15 +140,15 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
         wdrs; w2; w3; w4; w31;
 
     ensures
-        valid_base_addr(old(wmem), old(x16), num_words);
+        iter_safe(m_iter, wmem, old(x16));
 
         selection ==>
-            tuple(wdrs[5..5+num_words], bool_to_uint1(fgroups.fg0.cf))
+            tuple(wdrs[5..5+NUM_WORDS], bool_to_uint1(fgroups.fg0.cf))
             ==
-            seq_subb(old(wdrs[5..5+num_words]), old(wmem[x16]));
+            seq_subb(old(wdrs[5..5+NUM_WORDS]), m_iter.buff);
 
         !selection ==>
-            wdrs[5..5+num_words] == old(wdrs)[5..5+num_words];
+            wdrs[5..5+NUM_WORDS] == old(wdrs)[5..5+NUM_WORDS];
 {
     li(x8, 5);
     li(x10, 3);
@@ -154,20 +158,19 @@ procedure cond_sub_mod(ghost num_words: nat, ghost selection: bool)
     ghost var initial_wdrs := wdrs;
     ghost var initial_x16 := x16;
 
-    ghost var iter := iter_cons(initial_x16, 0, wmem[x16]);
-    assert iter_safe(wmem, x16, iter);
+    ghost var iter := m_iter;
 
     while (Loop(x31))
-        invariant iter.index + loop_ctr == num_words;
+        invariant iter.index + loop_ctr == NUM_WORDS;
         invariant x8 == 5 + iter.index;
         invariant x10 == 3;
         invariant x11 == 2;
 
         invariant fgroups.fg1.cf == selection;
 
-        invariant seq_len(iter.buff) == num_words;
+        invariant iter_inv(iter, wmem, x16);
+        invariant seq_len(iter.buff) == NUM_WORDS;
         invariant iter.base_addr == initial_x16;
-        invariant iter_inv(wmem, x16, iter);
 
         invariant wdrs[x8..] == initial_wdrs[x8..];
 
