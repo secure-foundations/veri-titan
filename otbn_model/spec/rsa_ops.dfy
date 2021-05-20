@@ -254,6 +254,23 @@ module rsa_ops {
         && |iter.buff| == 1
     }
 
+    predicate mm_vars_safe(
+        vars: mm_vars,
+        wmem: wmem_t,
+        x_addr: int,
+        y_addr: int,
+        m_addr: int,
+        rr_addr: int,
+        m0d_addr: int)
+    {
+        && mm_iter_inv(vars.x_iter, wmem, x_addr)
+        && mm_iter_inv(vars.y_iter, wmem, y_addr)
+
+        && mm_iter_inv(vars.m_iter, wmem, m_addr)
+        && mm_iter_inv(vars.rr_iter, wmem, rr_addr)
+        && m0d_iter_inv(vars.m0d_iter, wmem, m0d_addr)
+    }
+
     predicate mm_vars_inv(
         vars: mm_vars,
         wmem: wmem_t,
@@ -264,17 +281,9 @@ module rsa_ops {
         m0d_addr: int)
     {
         && pub_key_inv(vars.key)
-
-        && mm_iter_inv(vars.x_iter, wmem, x_addr)
-        && mm_iter_inv(vars.y_iter, wmem, y_addr)
-
-        && mm_iter_inv(vars.m_iter, wmem, m_addr)
+        && mm_vars_safe(vars, wmem, x_addr, y_addr, m_addr, rr_addr,m0d_addr)
         && to_nat(vars.m_iter.buff) == vars.key.m
-
-        && mm_iter_inv(vars.rr_iter, wmem, rr_addr)
         && to_nat(vars.rr_iter.buff) == vars.key.RR
-
-        && m0d_iter_inv(vars.m0d_iter, wmem, m0d_addr)
         && vars.m0d_iter.buff[0] == vars.key.m0d
     }
 }

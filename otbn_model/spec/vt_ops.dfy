@@ -123,15 +123,14 @@ module vt_ops {
     predicate iter_inv(iter: iter_t, wmem: wmem_t, address: int)
     {
         var base_addr := iter.base_addr;
+        // address is correct
+        && iter_mapped(iter, address)
         // base_addr points to a valid buffer
         && valid_wmem_base_addr(wmem, base_addr, |iter.buff|)
         // the view is consistent with wmem
         && wmem[base_addr] == iter.buff
-
         // the index is within bound (or at end)
         && iter.index <= |iter.buff|
-        // address is correct
-        && iter_mapped(iter, address)
     }
 
     predicate iter_safe(iter: iter_t, wmem: wmem_t, address: int)
