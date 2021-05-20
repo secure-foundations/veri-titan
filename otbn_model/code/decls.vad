@@ -57,6 +57,8 @@ function is_wide_data_register(r: reg256_t): bool extern;
 type xmem_t: Type(0) := map(int, uint32);
 type wmem_t: Type(0) := map(int, seq(uint256));
 
+function valid_wmem_base_addr(wmem: wmem_t, addr: int, size: nat): bool extern;
+
 type wdrs_t: Type(0) extern;
 function operator([]) (s: wdrs_t, i: int): uint256 extern; 
 function operator([ := ]) (s: wdrs_t, i: int, v: uint256): wdrs_t extern;
@@ -133,7 +135,9 @@ function pub_key_inv(key: pub_key): bool extern;
 
 type mm_vars: Type(0) extern;
 function operator(.x_iter) (vars: mm_vars): iter_t extern;
+function operator(.x_iter := ) (vars: mm_vars, it: iter_t): mm_vars extern;
 function operator(.y_iter) (vars: mm_vars): iter_t extern;
+function operator(.y_iter := ) (vars: mm_vars, it: iter_t): mm_vars extern;
 function operator(.m_iter) (vars: mm_vars): iter_t extern;
 function operator(.rr_iter) (vars: mm_vars): iter_t extern;
 function operator(.m0d_iter) (vars: mm_vars): iter_t extern;

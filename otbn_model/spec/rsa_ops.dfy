@@ -48,6 +48,19 @@ module rsa_ops {
         to_nat_lemma_2([num.lh, num.uh]);
     }
 
+    function seq_zero(len: nat): (zs: seq<uint256>)
+        ensures |zs| == len
+    {
+        if len == 0 then []
+        else seq_zero(len - 1) + [0]
+    }
+
+    lemma seq_zero_to_nat_lemma(len: nat)
+        ensures to_nat(seq_zero(len)) == 0
+    {
+        reveal to_nat();
+    }
+
     lemma to_nat_bound_lemma(x: seq<uint256>)
         ensures to_nat(x) < pow_B256(|x|)
     {

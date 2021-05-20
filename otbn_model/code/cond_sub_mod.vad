@@ -76,10 +76,17 @@ procedure cond_sub_mod_0(ghost initial_wdrs: wdrs_t, ghost selection: bool, ghos
 
     next_iter := bn_lid_safe(x10, false, 0, x16, true, iter);
     bn_movr(x11, false, x8, false);
+    assert initial_wdrs[widx] == w2;
 
     bn_subb(w4, w2, w3, SFT_DFT, 0);
-
     bn_sel(w3, w4, w2, 1, 0);
+
+    ghost if (selection) {
+        assert w3 == w4;
+    } else {
+        assert w3 == w2;
+    }
+
     bn_movr(x8, true, x10, false);
 
     assert wdrs[x8..] == initial_wdrs[x8..];
