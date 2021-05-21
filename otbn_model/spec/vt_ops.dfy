@@ -112,6 +112,13 @@ module vt_ops {
         iter.(index := if inc then iter.index + 1 else iter.index)
     }
 
+    function bn_sid_next_iter(iter: iter_t, value: uint256, inc: bool): iter_t
+        requires exists addr: int, wmem: wmem_t :: iter_safe(iter, wmem, addr);
+    {
+        iter.(index := if inc then iter.index + 1 else iter.index)
+            .(buff := iter.buff[iter.index := value])
+    }
+
     predicate iter_mapped(iter: iter_t, address: int)
     {   
         // we choose to ingore

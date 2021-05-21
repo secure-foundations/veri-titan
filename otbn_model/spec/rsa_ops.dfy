@@ -263,6 +263,8 @@ module rsa_ops {
         rr_addr: int,
         m0d_addr: int)
     {
+        && pub_key_inv(vars.key)
+
         && mm_iter_inv(vars.x_iter, wmem, x_addr)
         && mm_iter_inv(vars.y_iter, wmem, y_addr)
 
@@ -280,7 +282,6 @@ module rsa_ops {
         rr_addr: int,
         m0d_addr: int)
     {
-        && pub_key_inv(vars.key)
         && mm_vars_safe(vars, wmem, x_addr, y_addr, m_addr, rr_addr,m0d_addr)
         && to_nat(vars.m_iter.buff) == vars.key.m
         && to_nat(vars.rr_iter.buff) == vars.key.RR
