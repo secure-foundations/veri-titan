@@ -727,12 +727,12 @@ procedure bn_sid_safe(
         wmem;
 
     ensures
-        wmem == old(wmem[iter.base_addr := iter.buff[iter.index := wdrs[grs2]]]);
         grs1 == (if grs1_inc then (old(grs1) + 32) else old(grs1));
         grs2 == (if grs2_inc then (old(grs2) + 1) else old(grs2));
+        wmem == old(wmem)[iter.base_addr := next_iter.buff];
 
         iter_inv(next_iter, wmem, grs1 + offset);
-        next_iter == bn_sid_next_iter(iter, old(wdrs[grs2]), grs1_inc);
+        next_iter == bn_sid_next_iter(iter, wdrs[old(grs2)], grs1_inc);
 {
     ghost var new_buff := wmem[iter.base_addr][iter.index := wdrs[grs2]];
     ghost var new_index := if grs1_inc then iter.index + 1 else iter.index;

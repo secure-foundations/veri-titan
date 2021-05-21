@@ -113,7 +113,7 @@ module vt_ops {
     }
 
     function bn_sid_next_iter(iter: iter_t, value: uint256, inc: bool): iter_t
-        requires exists addr: int, wmem: wmem_t :: iter_safe(iter, wmem, addr);
+        requires iter.index < |iter.buff|
     {
         iter.(index := if inc then iter.index + 1 else iter.index)
             .(buff := iter.buff[iter.index := value])
