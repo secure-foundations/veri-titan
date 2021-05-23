@@ -86,6 +86,7 @@ procedure mont_loop_0(
         x6 == old(x6);
         x7 == old(x7);
         x8 == 5;
+        x9 == old(x9);
         x10 == 4;
         x11 == old(x11);
         x12 == 30;
@@ -95,6 +96,7 @@ procedure mont_loop_0(
         x20 == old(x20);
         x21 == old(x21);
         x22 == x16;
+        x29 == old(x29);
         x30 == old(x30);
         x31 == old(x31);
 
@@ -237,6 +239,7 @@ procedure mont_loop_1(
         x6 == old(x6);
         x7 == old(x7);
         x8 == 4 + j + 1;
+        x9 == old(x9);
         x10 == 3 + j + 1;
         x11 == old(x11);
         x12 == 30;
@@ -245,6 +248,7 @@ procedure mont_loop_1(
         x20 == old(x20);
         x21 == old(x21);
         x22 == old(x22);
+        x29 == old(x29);
         x30 == old(x30);
         x31 == old(x31);
 
@@ -352,10 +356,12 @@ procedure mont_loop(
     ensures
         x6 == old(x6);
         x7 == old(x7);
+        x9 == old(x9);
         x11 == old(x11);
         x17 == old(x17);
         x20 == old(x20);
         x21 == old(x21);
+        x29 == old(x29);
         x30 == old(x30);
         x31 == old(x31);
 
@@ -405,6 +411,7 @@ procedure mont_loop(
             x6 == old(x6);
             x7 == old(x7);
             x8 == 4 + j;
+            x9 == old(x9);
             x10 == 3 + j;
             x11 == old(x11);
             x12 == 30;
@@ -412,6 +419,7 @@ procedure mont_loop(
             x17 == old(x17);
             x20 == old(x20);
             x21 == old(x21);
+            x29 == old(x29);
             x30 == NUM_WORDS;
             x31 == NUM_WORDS - 1;
 
