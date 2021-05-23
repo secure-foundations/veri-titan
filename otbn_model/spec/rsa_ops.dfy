@@ -242,9 +242,10 @@ module rsa_ops {
 
     predicate mm_iter_inv(iter: iter_t, wmem: wmem_t, address: int)
     {
-        && iter_inv(iter, wmem, address)
-        && iter.index == 0
-        && |iter.buff| == NUM_WORDS
+        || address == NA
+        || (&& iter_inv(iter, wmem, address)
+            && iter.index == 0
+            && |iter.buff| == NUM_WORDS)
     }
 
     predicate m0d_iter_inv(iter: iter_t, wmem: wmem_t, address: int)
@@ -282,9 +283,9 @@ module rsa_ops {
         rr_addr: int,
         m0d_addr: int)
     {
-        && mm_vars_safe(vars, wmem, x_addr, y_addr, m_addr, rr_addr,m0d_addr)
+        && mm_vars_safe(vars, wmem, x_addr, y_addr, m_addr, rr_addr, m0d_addr)
         && to_nat(vars.m_iter.buff) == vars.key.m
-        && to_nat(vars.rr_iter.buff) == vars.key.RR
+        && (rr_addr == NA ||to_nat(vars.rr_iter.buff) == vars.key.RR)
         && vars.m0d_iter.buff[0] == vars.key.m0d
     }
 }

@@ -89,9 +89,10 @@ procedure cond_sub_mod_0(ghost initial_wdrs: wdrs_t, ghost selection: bool, ghos
 
     bn_movr(x8, true, x10, false);
 
+    assume false; // TODO: unstable
+
     assert wdrs[x8..] == initial_wdrs[x8..]; 
 
-    assume false; // TODO: unstable
 
     ghost if (selection) {
         ghost var x := initial_wdrs[widx];
