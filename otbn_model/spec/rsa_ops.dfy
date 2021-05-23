@@ -208,7 +208,8 @@ module rsa_ops {
 /* rsa/mm definions & lemmas */
 
    datatype pub_key = pub_key(
-        e: nat, 
+        e': nat, // e == 2 ** (e' + 1)
+        e: nat,
         m: nat,
         m0d: uint256,
         B256_INV: nat,
@@ -218,6 +219,8 @@ module rsa_ops {
 
     predicate pub_key_inv(key: pub_key)
     {
+        && key.e == power(2, key.e') + 1
+
         && key.m != 0
         && cong_B256(key.m0d * key.m, BASE_256-1)
 
@@ -242,7 +245,7 @@ module rsa_ops {
 
     predicate mm_iter_inv(iter: iter_t, wmem: wmem_t, address: int)
     {
-        || address == NA
+        || address == NA // TODO: make iter provide its own address in this case
         || (&& iter_inv(iter, wmem, address)
             && iter.index == 0
             && |iter.buff| == NUM_WORDS)

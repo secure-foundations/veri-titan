@@ -93,7 +93,6 @@ procedure cond_sub_mod_0(ghost initial_wdrs: wdrs_t, ghost selection: bool, ghos
 
     assert wdrs[x8..] == initial_wdrs[x8..]; 
 
-
     ghost if (selection) {
         ghost var x := initial_wdrs[widx];
         ghost var y := iter.buff[iter.index];

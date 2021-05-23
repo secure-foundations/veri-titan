@@ -123,9 +123,10 @@ function operator(.buff := ) (iter :iter_t, buff: seq(uint256)): iter_t extern;
 var wmem: wmem_t {:state wmem()};
 function iter_inv(iter: iter_t, h: wmem_t, addr: int): bool extern;
 function iter_safe(iter: iter_t, h: wmem_t, addr: int): bool extern;
+function mm_iter_inv(iter: iter_t, h: wmem_t, addr: int): bool extern;
 
 type pub_key: Type(0) extern;
-function operator(.e) (key: pub_key): nat extern;
+function operator(.e') (key: pub_key): nat extern;
 function operator(.m) (key: pub_key): nat extern;
 function operator(.m0d) (key: pub_key): uint256 extern;
 function operator(.B256_INV) (key: pub_key): nat extern;
