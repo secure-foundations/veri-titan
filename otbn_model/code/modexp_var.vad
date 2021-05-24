@@ -38,6 +38,12 @@ ghost procedure modexp_var_inv_lemma_1(
     ghost i: nat,
     ghost key: pub_key) extern;
 
+ghost procedure modexp_var_inv_lemma_2(
+    ghost a_slice: seq(uint256),
+    ghost next_a_slice: seq(uint256),
+    ghost sig: seq(uint256),
+    ghost key: pub_key)  extern;
+
 procedure compute_m0inv(ghost vars: mm_vars)
     requires
         mm_vars_safe(vars, wmem, NA, NA, NA, NA, x17);
@@ -326,8 +332,7 @@ procedure modexp_var(
     vars := vars.(x_iter := out_iter).(y_iter := sig_iter);
     a_slice := montmul(vars);
 
-    
-
+    modexp_var_inv_lemma_2(prev_a_slice, a_slice, sig_iter.buff, vars.key);
 }
 
 
