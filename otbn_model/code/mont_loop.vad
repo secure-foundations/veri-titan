@@ -86,6 +86,7 @@ procedure mont_loop_0(
         x6 == old(x6);
         x7 == old(x7);
         x8 == 5;
+        x9 == old(x9);
         x10 == 4;
         x11 == old(x11);
         x12 == 30;
@@ -93,7 +94,9 @@ procedure mont_loop_0(
         x16 == old(x16);
         x17 == old(x17);
         x20 == old(x20);
+        x21 == old(x21);
         x22 == x16;
+        x29 == old(x29);
         x30 == old(x30);
         x31 == old(x31);
 
@@ -110,6 +113,7 @@ procedure mont_loop_0(
         p_1.full == a_slice[0] + y_iter.buff[0] * x_i;
 
         wmem == old(wmem);
+        xmem == old(xmem);
 {
    /* save pointer to modulus */
     addi(x22, x16, 0);
@@ -235,13 +239,16 @@ procedure mont_loop_1(
         x6 == old(x6);
         x7 == old(x7);
         x8 == 4 + j + 1;
+        x9 == old(x9);
         x10 == 3 + j + 1;
         x11 == old(x11);
         x12 == 30;
         x13 == 24;
         x17 == old(x17);
         x20 == old(x20);
+        x21 == old(x21);
         x22 == old(x22);
+        x29 == old(x29);
         x30 == old(x30);
         x31 == old(x31);
 
@@ -265,6 +272,7 @@ procedure mont_loop_1(
             next_y_iter.buff, next_m_iter.buff, initial_a_slice, next_a_slice, j+1);
 
         wmem == old(wmem);
+        xmem == old(xmem);
 {
     ghost var j := y_iter.index;
     /* load limb of y (operand a) and mult. with x_i: [w26, w27] <- y[j]*x_i */
@@ -348,9 +356,12 @@ procedure mont_loop(
     ensures
         x6 == old(x6);
         x7 == old(x7);
+        x9 == old(x9);
         x11 == old(x11);
         x17 == old(x17);
         x20 == old(x20);
+        x21 == old(x21);
+        x29 == old(x29);
         x30 == old(x30);
         x31 == old(x31);
 
@@ -362,6 +373,7 @@ procedure mont_loop(
         montmul_inv(next_a_slice, x_iter.buff, x_iter.index, vars.y_iter.buff, vars.key);
 
         wmem == old(wmem);
+        xmem == old(xmem);
 {
     ghost var a_slice := initial_a_slice;
     ghost var p_1: uint512_view_t;
@@ -399,12 +411,15 @@ procedure mont_loop(
             x6 == old(x6);
             x7 == old(x7);
             x8 == 4 + j;
+            x9 == old(x9);
             x10 == 3 + j;
             x11 == old(x11);
             x12 == 30;
             x13 == 24;
             x17 == old(x17);
             x20 == old(x20);
+            x21 == old(x21);
+            x29 == old(x29);
             x30 == NUM_WORDS;
             x31 == NUM_WORDS - 1;
 
@@ -434,7 +449,8 @@ procedure mont_loop(
             initial_a_slice[j..] == a_slice[j..];
 
             wmem == old(wmem);
-            
+            xmem == old(xmem);
+
             mont_loop_inv(x_i, u_i, p_1, p_2,
                 y_iter.buff, m_iter.buff, initial_a_slice, a_slice, j);
             

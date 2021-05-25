@@ -48,6 +48,19 @@ module rsa_ops {
         to_nat_lemma_2([num.lh, num.uh]);
     }
 
+    function seq_zero(len: nat): (zs: seq<uint256>)
+        ensures |zs| == len
+    {
+        if len == 0 then []
+        else seq_zero(len - 1) + [0]
+    }
+
+    lemma seq_zero_to_nat_lemma(len: nat)
+        ensures to_nat(seq_zero(len)) == 0
+    {
+        reveal to_nat();
+    }
+
     lemma to_nat_bound_lemma(x: seq<uint256>)
         ensures to_nat(x) < pow_B256(|x|)
     {
@@ -195,8 +208,10 @@ module rsa_ops {
 /* rsa/mm definions & lemmas */
 
    datatype pub_key = pub_key(
-        e: nat, 
+        e': nat, // e == 2 ** (e' + 1)
+        e: nat,
         m: nat,
+        sig: nat,
         m0d: uint256,
         B256_INV: nat,
         R: nat,
@@ -205,10 +220,14 @@ module rsa_ops {
 
     predicate pub_key_inv(key: pub_key)
     {
+        && key.e == power(2, key.e') + 1
+
         && key.m != 0
         && cong_B256(key.m0d * key.m, BASE_256-1)
 
         && cong(BASE_256 * key.B256_INV, 1, key.m)
+
+        && key.sig < key.m
 
         && key.R == power(BASE_256, NUM_WORDS)
 
@@ -229,9 +248,10 @@ module rsa_ops {
 
     predicate mm_iter_inv(iter: iter_t, wmem: wmem_t, address: int)
     {
-        && iter_inv(iter, wmem, address)
-        && iter.index == 0
-        && |iter.buff| == NUM_WORDS
+        || address == NA // TODO: make iter provide its own address in this case
+        || (&& iter_inv(iter, wmem, address)
+            && iter.index == 0
+            && |iter.buff| == NUM_WORDS)
     }
 
     predicate m0d_iter_inv(iter: iter_t, wmem: wmem_t, address: int)
@@ -241,7 +261,7 @@ module rsa_ops {
         && |iter.buff| == 1
     }
 
-    predicate mm_vars_inv(
+    predicate mm_vars_safe(
         vars: mm_vars,
         wmem: wmem_t,
         x_addr: int,
@@ -256,12 +276,22 @@ module rsa_ops {
         && mm_iter_inv(vars.y_iter, wmem, y_addr)
 
         && mm_iter_inv(vars.m_iter, wmem, m_addr)
-        && to_nat(vars.m_iter.buff) == vars.key.m
-
         && mm_iter_inv(vars.rr_iter, wmem, rr_addr)
-        && to_nat(vars.rr_iter.buff) == vars.key.RR
-
         && m0d_iter_inv(vars.m0d_iter, wmem, m0d_addr)
+    }
+
+    predicate mm_vars_inv(
+        vars: mm_vars,
+        wmem: wmem_t,
+        x_addr: int,
+        y_addr: int,
+        m_addr: int,
+        rr_addr: int,
+        m0d_addr: int)
+    {
+        && mm_vars_safe(vars, wmem, x_addr, y_addr, m_addr, rr_addr, m0d_addr)
+        && to_nat(vars.m_iter.buff) == vars.key.m
+        && (rr_addr == NA ||to_nat(vars.rr_iter.buff) == vars.key.RR)
         && vars.m0d_iter.buff[0] == vars.key.m0d
     }
 }
