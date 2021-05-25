@@ -207,7 +207,7 @@ module rsa_ops {
 
 /* rsa/mm definions & lemmas */
 
-   datatype pub_key = pub_key(
+   datatype rsa_params = rsa_params(
         e': nat, // e == 2 ** (e' + 1)
         e: nat,
         m: nat,
@@ -218,24 +218,24 @@ module rsa_ops {
         RR: nat,
         R_INV: nat)
 
-    predicate pub_key_inv(key: pub_key)
+    predicate rsa_params_inv(rsa: rsa_params)
     {
-        && key.e == power(2, key.e') + 1
+        && rsa.e == power(2, rsa.e') + 1
 
-        && key.m != 0
-        && cong_B256(key.m0d * key.m, BASE_256-1)
+        && rsa.m != 0
+        && cong_B256(rsa.m0d * rsa.m, BASE_256-1)
 
-        && cong(BASE_256 * key.B256_INV, 1, key.m)
+        && cong(BASE_256 * rsa.B256_INV, 1, rsa.m)
 
-        && key.sig < key.m
+        && rsa.sig < rsa.m
 
-        && key.R == power(BASE_256, NUM_WORDS)
+        && rsa.R == power(BASE_256, NUM_WORDS)
 
-        && key.RR < key.m
-        && cong(key.RR, key.R * key.R, key.m)
+        && rsa.RR < rsa.m
+        && cong(rsa.RR, rsa.R * rsa.R, rsa.m)
 
-        && key.R_INV == power(key.B256_INV, NUM_WORDS)
-        && cong(key.R_INV * key.R, 1, key.m)
+        && rsa.R_INV == power(rsa.B256_INV, NUM_WORDS)
+        && cong(rsa.R_INV * rsa.R, 1, rsa.m)
     }
 
     datatype mm_vars = mm_vars(
@@ -244,7 +244,7 @@ module rsa_ops {
         m_iter: iter_t,
         rr_iter: iter_t,
         m0d_iter: iter_t,
-        key: pub_key)
+        rsa: rsa_params)
 
     predicate mm_iter_inv(iter: iter_t, wmem: wmem_t, address: int)
     {
@@ -270,7 +270,7 @@ module rsa_ops {
         rr_addr: int,
         m0d_addr: int)
     {
-        && pub_key_inv(vars.key)
+        && rsa_params_inv(vars.rsa)
 
         && mm_iter_inv(vars.x_iter, wmem, x_addr)
         && mm_iter_inv(vars.y_iter, wmem, y_addr)
@@ -290,8 +290,8 @@ module rsa_ops {
         m0d_addr: int)
     {
         && mm_vars_safe(vars, wmem, x_addr, y_addr, m_addr, rr_addr, m0d_addr)
-        && to_nat(vars.m_iter.buff) == vars.key.m
-        && (rr_addr == NA ||to_nat(vars.rr_iter.buff) == vars.key.RR)
-        && vars.m0d_iter.buff[0] == vars.key.m0d
+        && to_nat(vars.m_iter.buff) == vars.rsa.m
+        && (rr_addr == NA ||to_nat(vars.rr_iter.buff) == vars.rsa.RR)
+        && vars.m0d_iter.buff[0] == vars.rsa.m0d
     }
 }

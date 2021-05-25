@@ -47,19 +47,19 @@ ghost procedure mont_word_mul_add_bound_lemma1(ghost xs: seq(uint256), ghost ys:
 
 ghost procedure mont_word_mul_add_bound_lemma2(ghost xs: seq(uint256), ghost ys: seq(uint256), ghost a: uint256, ghost b: uint256, ghost c: uint256) extern;
 
-ghost procedure mont_loop_inv_lemma1(ghost x_i: uint256, ghost u_i: uint256, ghost m0d: uint256, ghost p_1: uint512_view_t, ghost p_2: uint512_view_t, ghost y:seq(uint256), ghost m:seq(uint256), ghost a:seq(uint256)) extern;
+ghost procedure mont_loop_inv_pre_lemma(ghost x_i: uint256, ghost u_i: uint256, ghost m0d: uint256, ghost p_1: uint512_view_t, ghost p_2: uint512_view_t, ghost y:seq(uint256), ghost m:seq(uint256), ghost a:seq(uint256)) extern;
 
 function mont_loop_inv(x_i: uint256, u_i: uint256, p_1: uint512_view_t, p_2: uint512_view_t, y:seq(uint256), m:seq(uint256), initial_a: seq(uint256), a: seq(uint256), j: nat) : bool extern;
 
-ghost procedure mont_loop_inv_lemma2(ghost x_i: uint256, ghost u_i: uint256, ghost p_1: uint512_view_t, ghost p_2: uint512_view_t, ghost next_p_1: uint512_view_t, ghost next_p_2: uint512_view_t, ghost y: seq(uint256), ghost m: seq(uint256), ghost initial_a: seq(uint256), ghost a: seq(uint256), ghost next_a: seq(uint256), ghost j: int) extern;
+ghost procedure mont_loop_inv_peri_lemma(ghost x_i: uint256, ghost u_i: uint256, ghost p_1: uint512_view_t, ghost p_2: uint512_view_t, ghost next_p_1: uint512_view_t, ghost next_p_2: uint512_view_t, ghost y: seq(uint256), ghost m: seq(uint256), ghost initial_a: seq(uint256), ghost a: seq(uint256), ghost next_a: seq(uint256), ghost j: int) extern;
 
-ghost procedure mont_loop_inv_lemma3(ghost x_i: uint256, ghost u_i: uint256, ghost p_1: uint512_view_t, ghost p_2: uint512_view_t, ghost y: seq(uint256), ghost m: seq(uint256), ghost initial_a: seq(uint256), ghost a: seq(uint256), ghost bout: uint1) extern;
+ghost procedure mont_loop_inv_post_lemma(ghost x_i: uint256, ghost u_i: uint256, ghost p_1: uint512_view_t, ghost p_2: uint512_view_t, ghost y: seq(uint256), ghost m: seq(uint256), ghost initial_a: seq(uint256), ghost a: seq(uint256), ghost bout: uint1) extern;
 
-ghost procedure mont_loop_cond_sub_lemma(ghost x_i: uint256, ghost u_i: uint256, ghost y: seq(uint256), ghost m: seq(uint256), ghost initial_a: seq(uint256), ghost a: seq(uint256), ghost next_a: seq(uint256), ghost bout: uint1, ghost next_bout: uint1) extern;
+ghost procedure mont_loop_cond_sub_lemma(ghost x_i: uint256, ghost u_i: uint256, ghost y: seq(uint256), ghost m: nat, ghost initial_a: seq(uint256), ghost a: seq(uint256), ghost next_a: seq(uint256), ghost bout: uint1, ghost next_bout: uint1) extern;
 
-function montmul_inv(a: seq(uint256), x: seq(uint256), i: int, y: seq(uint256), key: pub_key) : bool extern;
+function montmul_inv(a: seq(uint256), x: seq(uint256), i: int, y: seq(uint256), rsa: rsa_params) : bool extern;
 
-ghost procedure montmul_inv_lemma(ghost initial_a: seq(uint256), ghost a: seq(uint256), ghost x: seq(uint256), ghost i: int, ghost u_i: uint256, ghost y: seq(uint256), ghost key: pub_key) extern;
+ghost procedure montmul_inv_lemma(ghost initial_a: seq(uint256), ghost a: seq(uint256), ghost x: seq(uint256), ghost i: int, ghost u_i: uint256, ghost y: seq(uint256), ghost rsa: rsa_params) extern;
     
 procedure mont_loop_0(
     ghost a_slice: seq(uint256),
@@ -318,7 +318,7 @@ procedure mont_loop_1(
     assert valid_uint512_view(wdrs, next_p_2, NA, 28);
     assert next_p_2.full == m_iter.buff[j] * u_i + next_p_1.lh + p_2.uh;
 
-    mont_loop_inv_lemma2(x_i, u_i, p_1, p_2, next_p_1, next_p_2,
+    mont_loop_inv_peri_lemma(x_i, u_i, p_1, p_2, next_p_1, next_p_2,
         y_iter.buff, m_iter.buff, initial_a_slice, a_slice, next_a_slice, j);
 }
 
@@ -346,12 +346,12 @@ procedure mont_loop(
         mm_vars_inv(vars, wmem, NA, x19, x16, NA, NA);
 
         w2 == x_i;
-        w3 == vars.key.m0d;
+        w3 == vars.rsa.m0d;
         w31 == 0;
 
         valid_wdr_view(wdrs, initial_a_slice, 4, NUM_WORDS);
 
-        montmul_inv(initial_a_slice, x_iter.buff, x_iter.index-1, vars.y_iter.buff, vars.key);
+        montmul_inv(initial_a_slice, x_iter.buff, x_iter.index-1, vars.y_iter.buff, vars.rsa);
 
     ensures
         x6 == old(x6);
@@ -370,7 +370,7 @@ procedure mont_loop(
 
         valid_wdr_view(wdrs, next_a_slice, 4, NUM_WORDS);
 
-        montmul_inv(next_a_slice, x_iter.buff, x_iter.index, vars.y_iter.buff, vars.key);
+        montmul_inv(next_a_slice, x_iter.buff, x_iter.index, vars.y_iter.buff, vars.rsa);
 
         wmem == old(wmem);
         xmem == old(xmem);
@@ -381,7 +381,7 @@ procedure mont_loop(
     ghost var y_iter : iter_t;
     ghost var m_iter : iter_t;
 
-    y_iter, p_1 := mont_loop_0(a_slice, vars.y_iter, x_i, vars.key.m0d);
+    y_iter, p_1 := mont_loop_0(a_slice, vars.y_iter, x_i, vars.rsa.m0d);
     ghost var u_i := w25;
 
     /* w24 = w30 =  y[0]*x_i + A[0] mod b */
@@ -389,7 +389,6 @@ procedure mont_loop(
 
     /* load first limb of modulus: w30 = m[0] */
     m_iter := bn_lid_safe(x12, false, 0, x16, true, vars.m_iter);
-    // assert w30 == m_iter.buff[0];
 
     /* [w26, w27] = w30*w25 = m[0]*u_i*/
     mul256_w30xw25();
@@ -402,7 +401,7 @@ procedure mont_loop(
     // assert valid_uint512_view(wdrs, p_1, 24, 29) && p_1.full == a_slice[0] + y_iter.buff[0] * x_i;
     // assert valid_uint512_view(wdrs, p_2, 27, 28) && p_2.full == m_iter.buff[0] * u_i + w24;
 
-    mont_loop_inv_lemma1(x_i, u_i, vars.key.m0d, p_1, p_2, y_iter.buff, m_iter.buff, a_slice);
+    mont_loop_inv_pre_lemma(x_i, u_i, vars.rsa.m0d, p_1, p_2, y_iter.buff, m_iter.buff, a_slice);
 
     ghost var j: nat := 1;
 
@@ -454,7 +453,7 @@ procedure mont_loop(
             mont_loop_inv(x_i, u_i, p_1, p_2,
                 y_iter.buff, m_iter.buff, initial_a_slice, a_slice, j);
             
-            montmul_inv(initial_a_slice, x_iter.buff, x_iter.index-1, y_iter.buff, vars.key);
+            montmul_inv(initial_a_slice, x_iter.buff, x_iter.index-1, y_iter.buff, vars.rsa);
 
         decreases loop_ctr;
     {
@@ -476,7 +475,7 @@ procedure mont_loop(
     a_slice := a_slice[NUM_WORDS-1 := w24];
 
     ghost var bout := bool_to_uint1(fgroups.fg1.cf);
-    mont_loop_inv_lemma3(x_i, u_i, p_1, p_2,
+    mont_loop_inv_post_lemma(x_i, u_i, p_1, p_2,
         y_iter.buff, m_iter.buff, initial_a_slice, a_slice, bout);
 
     /* restore pointers */
@@ -491,15 +490,14 @@ procedure mont_loop(
     m_iter := iter_cons(x16, 0, wmem[x16]);
     next_a_slice := cond_sub_to_reg(a_slice, m_iter, fgroups.fg1.cf);
 
-    // assert to_nat(initial_a_slice) < to_nat(m_iter.buff) + to_nat(y_iter.buff);
-    mont_loop_cond_sub_lemma(x_i, u_i, y_iter.buff, m_iter.buff,
+    mont_loop_cond_sub_lemma(x_i, u_i, y_iter.buff, to_nat(m_iter.buff),
         initial_a_slice, a_slice, next_a_slice, bout, bool_to_uint1(fgroups.fg0.cf));
     
     /* restore pointer */
     li(x8, 4);
 
-    // assert montmul_inv(initial_a_slice, x_iter.buff, x_iter.index, y_iter.buff, key);
-    montmul_inv_lemma(initial_a_slice, next_a_slice, x_iter.buff, x_iter.index-1, u_i, y_iter.buff, vars.key);
+    // assert montmul_inv(initial_a_slice, x_iter.buff, x_iter.index, y_iter.buff, rsa);
+    montmul_inv_lemma(initial_a_slice, next_a_slice, x_iter.buff, x_iter.index-1, u_i, y_iter.buff, vars.rsa);
 }
 
 #verbatim

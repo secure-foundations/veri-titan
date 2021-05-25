@@ -6,7 +6,7 @@ ghost procedure montmul_inv_lemma_0(
        ghost x: seq(uint256), 
        ghost i: int,
        ghost y: seq(uint256), 
-       ghost key: pub_key) extern;
+       ghost rsa: rsa_params) extern;
 
 #verbatim
 include "../code/vale.dfy"
@@ -61,7 +61,7 @@ procedure montmul_0(ghost vars: mm_vars)
         x30 == old(x30);
         x31 == old(x31);
 
-        w3 == vars.key.m0d;
+        w3 == vars.rsa.m0d;
         w31 == 0;
 
         wmem == old(wmem);
@@ -88,7 +88,7 @@ procedure montmul_0(ghost vars: mm_vars)
             x31 == old(x31);
 
             w2 == 0;
-            w3 == vars.key.m0d;
+            w3 == vars.rsa.m0d;
             w31 == 0;
 
             mm_vars_inv(vars, wmem, x20, x19, x16, NA, x17);
@@ -144,14 +144,14 @@ procedure montmul(ghost vars: mm_vars)
         valid_wdr_view(wdrs, a_slice, 4, NUM_WORDS);
         mm_vars_inv(vars, wmem, NA, x19, x16, NA, x17);
 
-        montmul_inv(a_slice, vars.x_iter.buff, NUM_WORDS, vars.y_iter.buff, vars.key);
+        montmul_inv(a_slice, vars.x_iter.buff, NUM_WORDS, vars.y_iter.buff, vars.rsa);
 {
     a_slice := montmul_0(vars);
 
     ghost var x_iter := vars.x_iter;
 
-    assert montmul_inv(a_slice, x_iter.buff, x_iter.index, vars.y_iter.buff, vars.key) by {
-        montmul_inv_lemma_0(a_slice, x_iter.buff, x_iter.index, vars.y_iter.buff, vars.key);
+    assert montmul_inv(a_slice, x_iter.buff, x_iter.index, vars.y_iter.buff, vars.rsa) by {
+        montmul_inv_lemma_0(a_slice, x_iter.buff, x_iter.index, vars.y_iter.buff, vars.rsa);
     }
 
     while (Loop(x30))
@@ -168,12 +168,12 @@ procedure montmul(ghost vars: mm_vars)
             x_iter.base_addr == vars.x_iter.base_addr;
             x_iter.buff == vars.x_iter.buff;
 
-            w3 == vars.key.m0d;
+            w3 == vars.rsa.m0d;
             w31 == 0;
     
             mm_vars_inv(vars, wmem, NA, x19, x16, NA, x17);
 
-            montmul_inv(a_slice, x_iter.buff, x_iter.index, vars.y_iter.buff, vars.key);
+            montmul_inv(a_slice, x_iter.buff, x_iter.index, vars.y_iter.buff, vars.rsa);
 
             valid_wdr_view(wdrs, a_slice, 4, NUM_WORDS);
 
