@@ -127,7 +127,9 @@ function mm_iter_inv(iter: iter_t, h: wmem_t, addr: int): bool extern;
 
 type pub_key: Type(0) extern;
 function operator(.e') (key: pub_key): nat extern;
+function operator(.e) (key: pub_key): nat extern;
 function operator(.m) (key: pub_key): nat extern;
+function operator(.sig) (key: pub_key): nat extern;
 function operator(.m0d) (key: pub_key): uint256 extern;
 function operator(.B256_INV) (key: pub_key): nat extern;
 function operator(.R) (key: pub_key): nat extern;

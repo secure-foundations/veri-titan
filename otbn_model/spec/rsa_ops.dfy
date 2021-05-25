@@ -211,6 +211,7 @@ module rsa_ops {
         e': nat, // e == 2 ** (e' + 1)
         e: nat,
         m: nat,
+        sig: nat,
         m0d: uint256,
         B256_INV: nat,
         R: nat,
@@ -225,6 +226,8 @@ module rsa_ops {
         && cong_B256(key.m0d * key.m, BASE_256-1)
 
         && cong(BASE_256 * key.B256_INV, 1, key.m)
+
+        && key.sig < key.m
 
         && key.R == power(BASE_256, NUM_WORDS)
 
