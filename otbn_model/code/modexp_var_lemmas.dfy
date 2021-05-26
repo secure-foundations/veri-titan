@@ -81,17 +81,17 @@ module modexp_var_lemmas {
     }
 
     lemma modexp_var_inv_lemma_0(
-        a_slice: seq<uint256>,
+        a_view: seq<uint256>,
         rr: seq<uint256>,
         sig: seq<uint256>,
         rsa: rsa_params)
 
-    requires montmul_inv(a_slice, rr, NUM_WORDS, sig, rsa);
+    requires montmul_inv(a_view, rr, NUM_WORDS, sig, rsa);
     requires to_nat(rr) == rsa.RR;
-    ensures modexp_var_inv(to_nat(a_slice), to_nat(sig), 0, rsa);
+    ensures modexp_var_inv(to_nat(a_view), to_nat(sig), 0, rsa);
     {
         var m := rsa.m;
-        var a := to_nat(a_slice);
+        var a := to_nat(a_view);
         var s := to_nat(sig);
 
         assert cong(rsa.RR * rsa.R_INV, rsa.R, m) by {
@@ -110,7 +110,7 @@ module modexp_var_lemmas {
                 cong_mul_lemma_1(rsa.RR * rsa.R_INV, rsa.R, s, m);
             }
             assert cong(a, rsa.RR * rsa.R_INV * s, m) by {
-                montmul_inv_lemma_1(a_slice, rr, sig, rsa);
+                montmul_inv_lemma_1(a_view, rr, sig, rsa);
             }
             reveal cong();
         }
@@ -119,19 +119,19 @@ module modexp_var_lemmas {
     }
 
     lemma modexp_var_inv_lemma_1(
-        a_slice: seq<uint256>,
-        next_a_slice: seq<uint256>,
+        a_view: seq<uint256>,
+        next_a_view: seq<uint256>,
         sig: nat,
         i: nat,
         rsa: rsa_params)
 
-        requires montmul_inv(next_a_slice, a_slice, NUM_WORDS, a_slice, rsa);
-        requires modexp_var_inv(to_nat(a_slice), sig, i, rsa);
-        ensures modexp_var_inv(to_nat(next_a_slice), sig, i + 1, rsa);
+        requires montmul_inv(next_a_view, a_view, NUM_WORDS, a_view, rsa);
+        requires modexp_var_inv(to_nat(a_view), sig, i, rsa);
+        ensures modexp_var_inv(to_nat(next_a_view), sig, i + 1, rsa);
     {
         var m := rsa.m;
-        var a := to_nat(a_slice);
-        var next_a := to_nat(next_a_slice);
+        var a := to_nat(a_view);
+        var next_a := to_nat(next_a_view);
         var next_goal := power(sig, power(2, i + 1)) * rsa.R;
 
         assert cong(a, power(sig, power(2, i)) * rsa.R, m);
@@ -150,7 +150,7 @@ module modexp_var_lemmas {
             cong(a * a * rsa.R_INV, next_goal * rsa.R * rsa.R_INV, m);
                 {
                     assert cong(next_a, a * a * rsa.R_INV, m) by {
-                        montmul_inv_lemma_1(next_a_slice, a_slice, a_slice, rsa);
+                        montmul_inv_lemma_1(next_a_view, a_view, a_view, rsa);
                     }
                     cong_trans_lemma(next_a, a * a * rsa.R_INV, next_goal * rsa.R * rsa.R_INV, m);
                 }
@@ -162,18 +162,18 @@ module modexp_var_lemmas {
     }
 
     lemma modexp_var_inv_lemma_2(
-        a_slice: seq<uint256>,
-        next_a_slice: seq<uint256>,
+        a_view: seq<uint256>,
+        next_a_view: seq<uint256>,
         sig: seq<uint256>,
         rsa: rsa_params)
 
-        requires montmul_inv(next_a_slice, a_slice, NUM_WORDS, sig, rsa);
-        requires modexp_var_inv(to_nat(a_slice), to_nat(sig), rsa.e', rsa);
-        ensures cong(to_nat(next_a_slice), power(to_nat(sig), rsa.e), rsa.m);
+        requires montmul_inv(next_a_view, a_view, NUM_WORDS, sig, rsa);
+        requires modexp_var_inv(to_nat(a_view), to_nat(sig), rsa.e', rsa);
+        ensures cong(to_nat(next_a_view), power(to_nat(sig), rsa.e), rsa.m);
     {
         var m := rsa.m;
-        var a := to_nat(a_slice);
-        var next_a := to_nat(next_a_slice);
+        var a := to_nat(a_view);
+        var next_a := to_nat(next_a_view);
         var s := to_nat(sig);
         var cur := power(s, power(2, rsa.e'));
 
@@ -190,7 +190,7 @@ module modexp_var_lemmas {
             cong(a * s * rsa.R_INV, cur * rsa.R * s * rsa.R_INV, m);
                 {
                     assert cong(next_a, a * s * rsa.R_INV, m) by {
-                        montmul_inv_lemma_1(next_a_slice, a_slice, sig, rsa);
+                        montmul_inv_lemma_1(next_a_view, a_view, sig, rsa);
                     }
                     cong_trans_lemma(next_a, a * s * rsa.R_INV, cur * rsa.R * s * rsa.R_INV, m);
                 }
@@ -200,7 +200,7 @@ module modexp_var_lemmas {
                 { power_add_one_lemma(s, power(2, rsa.e')); }
             cong(next_a, power(s, power(2, rsa.e') + 1), m);
             cong(next_a, power(s, rsa.e), m);
-            cong(to_nat(next_a_slice), power(to_nat(sig), rsa.e), m);
+            cong(to_nat(next_a_view), power(to_nat(sig), rsa.e), m);
         }
 
     }

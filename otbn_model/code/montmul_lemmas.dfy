@@ -49,16 +49,16 @@ module montmul_lemmas {
         reveal cong();
     }
 
-    lemma montmul_inv_lemma_1(a_slice: seq<uint256>,
+    lemma montmul_inv_lemma_1(a_view: seq<uint256>,
         x: seq<uint256>,
         y: seq<uint256>,
         rsa: rsa_params)
     
-        requires montmul_inv(a_slice, x, NUM_WORDS, y, rsa);
-        ensures cong(to_nat(a_slice), to_nat(x) * to_nat(y) * rsa.R_INV, rsa.m);
+        requires montmul_inv(a_view, x, NUM_WORDS, y, rsa);
+        ensures cong(to_nat(a_view), to_nat(x) * to_nat(y) * rsa.R_INV, rsa.m);
     {
         var m := rsa.m;
-        var a := to_nat(a_slice);
+        var a := to_nat(a_view);
         assert x[..NUM_WORDS] == x;
 
         calc ==> {

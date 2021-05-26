@@ -239,8 +239,8 @@ module rsa_ops {
     }
 
     datatype mm_vars = mm_vars(
-        x_iter: iter_t,
-        y_iter: iter_t,
+        x_it: iter_t,
+        y_it: iter_t,
         m_iter: iter_t,
         rr_iter: iter_t,
         m0d_iter: iter_t,
@@ -272,8 +272,8 @@ module rsa_ops {
     {
         && rsa_params_inv(vars.rsa)
 
-        && mm_iter_inv(vars.x_iter, wmem, x_addr)
-        && mm_iter_inv(vars.y_iter, wmem, y_addr)
+        && mm_iter_inv(vars.x_it, wmem, x_addr)
+        && mm_iter_inv(vars.y_it, wmem, y_addr)
 
         && mm_iter_inv(vars.m_iter, wmem, m_addr)
         && mm_iter_inv(vars.rr_iter, wmem, rr_addr)

@@ -52,11 +52,11 @@ module vt_ops {
         && (ui == NA || wdrs[ui] == num.uh)
     }
 
-    predicate valid_wdr_view(wdrs: wdrs_t, slice: seq<uint256>, start: nat, len: nat)
+    predicate valid_wdr_view(wdrs: wdrs_t, view: seq<uint256>, start: nat, len: nat)
     {   
-        && |slice| == len
+        && |view| == len
         && start + len <= 32
-        && wdrs[start..start+len] == slice
+        && wdrs[start..start+len] == view
     }
 
 /* flags definions */

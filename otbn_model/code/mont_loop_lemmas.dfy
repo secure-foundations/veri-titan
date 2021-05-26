@@ -254,8 +254,7 @@ module mont_loop_lemmas {
             to_nat(a) - m;
 
         ensures to_nat(next_a) < m + to_nat(y);
-        ensures cong(to_nat(next_a) * BASE_256,
-                x_i * to_nat(y) + u_i * m + to_nat(initial_a), m);
+        ensures cong(to_nat(next_a) * BASE_256, x_i * to_nat(y) + u_i * m + to_nat(initial_a), m);
     {
         assert to_nat(a) + bout * pow_B256(NUM_WORDS) < to_nat(y) + m by {
             calc {

@@ -26,21 +26,21 @@ import opened modexp_var_lemmas
 function modexp_var_inv(a: nat, sig: nat, i: nat, rsa: rsa_params): bool extern;
 
 ghost procedure modexp_var_inv_lemma_0(
-    ghost a_slice: seq(uint256),
+    ghost a_view: seq(uint256),
     ghost rr: seq(uint256),
     ghost sig: seq(uint256),
     ghost rsa: rsa_params) extern;
 
 ghost procedure modexp_var_inv_lemma_1(
-    ghost a_slice: seq(uint256),
-    ghost next_a_slice: seq(uint256),
+    ghost a_view: seq(uint256),
+    ghost next_a_view: seq(uint256),
     ghost sig: nat,
     ghost i: nat,
     ghost rsa: rsa_params) extern;
 
 ghost procedure modexp_var_inv_lemma_2(
-    ghost a_slice: seq(uint256),
-    ghost next_a_slice: seq(uint256),
+    ghost a_view: seq(uint256),
+    ghost next_a_view: seq(uint256),
     ghost sig: seq(uint256),
     ghost rsa: rsa_params) extern;
 
@@ -227,9 +227,9 @@ procedure write_to_dmem(ghost iter: iter_t)
 }
 
 procedure sub_mod(
-    ghost raw_slice: seq(uint256),
+    ghost raw_view: seq(uint256),
     ghost initial_m_iter: iter_t)
-    returns (ghost adjusted_slice: seq(uint256))
+    returns (ghost adjusted_view: seq(uint256))
 
     requires
         x8 == 4;
@@ -240,7 +240,7 @@ procedure sub_mod(
         w31 == 0;
 
         mm_iter_inv(initial_m_iter, wmem, x16);
-        valid_wdr_view(wdrs, raw_slice, 4, NUM_WORDS);
+        valid_wdr_view(wdrs, raw_view, 4, NUM_WORDS);
 
     reads
         x30;
@@ -252,18 +252,18 @@ procedure sub_mod(
         fgroups; wdrs;
     
     ensures
-        valid_wdr_view(wdrs, raw_slice, 4, NUM_WORDS);
-        valid_wdr_view(wdrs, adjusted_slice, 16, NUM_WORDS);
+        valid_wdr_view(wdrs, raw_view, 4, NUM_WORDS);
+        valid_wdr_view(wdrs, adjusted_view, 16, NUM_WORDS);
 
-        !fgroups.fg0.cf ==> to_nat(raw_slice) - to_nat(initial_m_iter.buff) == to_nat(adjusted_slice);
-        fgroups.fg0.cf ==> to_nat(raw_slice) < to_nat(initial_m_iter.buff);
+        !fgroups.fg0.cf ==> to_nat(raw_view) - to_nat(initial_m_iter.buff) == to_nat(adjusted_view);
+        fgroups.fg0.cf ==> to_nat(raw_view) < to_nat(initial_m_iter.buff);
 {
     bn_add(w31, w31, w31, SFT_DFT, 0);
     assert fgroups.fg0.cf == false;
 
     li(x17, 16);
     ghost var m_iter := initial_m_iter;
-    adjusted_slice := wdrs[16..16+NUM_WORDS];
+    adjusted_view := wdrs[16..16+NUM_WORDS];
 
     while (Loop(x30))
         invariant
@@ -277,11 +277,11 @@ procedure sub_mod(
             x8 == 4 + m_iter.index;
             x17 == 16 + m_iter.index;
 
-            valid_wdr_view(wdrs, raw_slice, 4, NUM_WORDS);
-            valid_wdr_view(wdrs, adjusted_slice, 16, NUM_WORDS);
+            valid_wdr_view(wdrs, raw_view, 4, NUM_WORDS);
+            valid_wdr_view(wdrs, adjusted_view, 16, NUM_WORDS);
 
-            subb_inv(adjusted_slice, bool_to_uint1(fgroups.fg0.cf),
-                raw_slice, m_iter.buff, m_iter.index);
+            subb_inv(adjusted_view, bool_to_uint1(fgroups.fg0.cf),
+                raw_view, m_iter.buff, m_iter.index);
 
         decreases
             loop_ctr;
@@ -296,21 +296,21 @@ procedure sub_mod(
         let new_carry := bool_to_uint1(fgroups.fg0.cf);
 
         bn_movr(x17, true, x11, false);
-        adjusted_slice := adjusted_slice[index := w2];
+        adjusted_view := adjusted_view[index := w2];
 
         assert tuple(w2, new_carry) ==
-            uint256_subb(raw_slice[index], m_iter.buff[index], old_carry);
+            uint256_subb(raw_view[index], m_iter.buff[index], old_carry);
 
-        subb_inv_peri_lemma(adjusted_slice, new_carry, raw_slice, m_iter.buff, old_carry, index);
+        subb_inv_peri_lemma(adjusted_view, new_carry, raw_view, m_iter.buff, old_carry, index);
     }
     
     let new_carry := bool_to_uint1(fgroups.fg0.cf);
-    subb_inv_post_lemma(adjusted_slice, new_carry, raw_slice, m_iter.buff);
+    subb_inv_post_lemma(adjusted_view, new_carry, raw_view, m_iter.buff);
 }
 
 ghost procedure modexp_var_correct_lemma(
-    ghost raw_slice: nat,
-    ghost adjusted_slice: nat,
+    ghost raw_view: nat,
+    ghost adjusted_view: nat,
     ghost carry: bool,
     ghost sig: nat,
     ghost rsa: rsa_params) extern;
@@ -318,8 +318,8 @@ ghost procedure modexp_var_correct_lemma(
 function mod(a: int, n: int): int extern;
 
 procedure modexp_write_ouput(
-    ghost raw_slice: seq(uint256),
-    ghost adjusted_slice: seq(uint256),
+    ghost raw_view: seq(uint256),
+    ghost adjusted_view: seq(uint256),
     ghost carry: bool,
     ghost sig: nat,
     ghost rsa: rsa_params)
@@ -335,12 +335,12 @@ returns (ghost out_iter: iter_t)
 
         rsa_params_inv(rsa);
 
-        valid_wdr_view(wdrs, raw_slice, 4, NUM_WORDS);
-        valid_wdr_view(wdrs, adjusted_slice, 16, NUM_WORDS);
+        valid_wdr_view(wdrs, raw_view, 4, NUM_WORDS);
+        valid_wdr_view(wdrs, adjusted_view, 16, NUM_WORDS);
 
         carry == fgroups.fg0.cf;
-        carry ==> to_nat(raw_slice) == mod(power(sig, rsa.e), rsa.m);
-        !carry ==> to_nat(adjusted_slice) == mod(power(sig, rsa.e), rsa.m);
+        carry ==> to_nat(raw_view) == mod(power(sig, rsa.e), rsa.m);
+        !carry ==> to_nat(adjusted_view) == mod(power(sig, rsa.e), rsa.m);
     
     ensures
         iter_inv(out_iter, wmem, x21);
@@ -366,34 +366,34 @@ returns (ghost out_iter: iter_t)
             out_iter.index + loop_ctr == NUM_WORDS;
             seq_len(out_iter.buff) == NUM_WORDS;
 
-            valid_wdr_view(wdrs, raw_slice, 4, NUM_WORDS);
-            valid_wdr_view(wdrs, adjusted_slice, 16, NUM_WORDS);
+            valid_wdr_view(wdrs, raw_view, 4, NUM_WORDS);
+            valid_wdr_view(wdrs, adjusted_view, 16, NUM_WORDS);
 
-            carry ==> out_iter.buff[..out_iter.index] == raw_slice[..out_iter.index];
-            !carry ==> out_iter.buff[..out_iter.index] == adjusted_slice[..out_iter.index];
+            carry ==> out_iter.buff[..out_iter.index] == raw_view[..out_iter.index];
+            !carry ==> out_iter.buff[..out_iter.index] == adjusted_view[..out_iter.index];
 
         decreases
             loop_ctr;
     {
         let index := out_iter.index;
         bn_movr(x9, false, x8, true);
-        assert w2 == raw_slice[index];
+        assert w2 == raw_view[index];
 
         bn_movr(x10, false, x17, true);
-        assert w3 == adjusted_slice[index];
+        assert w3 == adjusted_view[index];
    
         bn_sel(w2, w2, w3, 0, 0);
         ghost if (carry) {
-            assert w2 == raw_slice[index];
+            assert w2 == raw_view[index];
         } else {
-            assert w2 == adjusted_slice[index];
+            assert w2 == adjusted_view[index];
         }
         out_iter := bn_sid_safe(x9, false, 0, x21, true, out_iter);
     }
 
     assert out_iter.buff == out_iter.buff[..NUM_WORDS];
-    assert raw_slice == raw_slice[..out_iter.index];
-    assert adjusted_slice == adjusted_slice[..out_iter.index];
+    assert raw_view == raw_view[..out_iter.index];
+    assert adjusted_view == adjusted_view[..out_iter.index];
 }
 
 procedure modexp_var(
@@ -439,7 +439,7 @@ procedure modexp_var(
         let rsa := initial_vars.rsa in 
         to_nat(out_iter.buff) == mod(power(rsa.sig, rsa.e), rsa.m);
 {
-    ghost var a_slice: seq(uint256);
+    ghost var a_view: seq(uint256);
     
     modexp_var_0(initial_vars);
 
@@ -455,16 +455,16 @@ procedure modexp_var(
     let sig_iter := iter_cons(x19, 0, wmem[x19]);
     let rr_iter := iter_cons(x20, 0, wmem[x20]);
 
-    ghost var vars := initial_vars.(x_iter := rr_iter).(y_iter := sig_iter);
-    a_slice := montmul(vars);
+    ghost var vars := initial_vars.(x_it := rr_iter).(y_it := sig_iter);
+    a_view := montmul(vars);
 
     let out_addr := xmem[28];
     out_iter := iter_cons(out_addr, 0, wmem[out_addr]);
     out_iter := write_to_dmem(out_iter);
 
-    vars := vars.(x_iter := out_iter).(y_iter := out_iter);
+    vars := vars.(x_it := out_iter).(y_it := out_iter);
 
-    modexp_var_inv_lemma_0(a_slice, rr_iter.buff, sig_iter.buff, vars.rsa);
+    modexp_var_inv_lemma_0(a_view, rr_iter.buff, sig_iter.buff, vars.rsa);
 
     ghost var i : nat := 0;
 
@@ -491,11 +491,11 @@ procedure modexp_var(
             iter_safe(out_iter, wmem, out_addr);
             seq_len(out_iter.buff) == NUM_WORDS;
             out_iter.index == 0;
-            out_iter.buff == a_slice;
+            out_iter.buff == a_view;
 
             mm_vars_inv(vars, wmem, out_addr, out_addr, x16, NA, x17);
             to_nat(sig_iter.buff) == vars.rsa.sig;
-            modexp_var_inv(to_nat(a_slice), vars.rsa.sig, i, vars.rsa);
+            modexp_var_inv(to_nat(a_view), vars.rsa.sig, i, vars.rsa);
 
             out_addr != x16;
             out_addr != x17;
@@ -509,14 +509,14 @@ procedure modexp_var(
         lw(x20, 28, x0);
         lw(x21, 28, x0);
 
-        let prev_a_slice := a_slice;
-        a_slice := montmul(vars);
+        let prev_a_view := a_view;
+        a_view := montmul(vars);
 
         out_iter := write_to_dmem(out_iter);
         
-        vars := vars.(x_iter := out_iter).(y_iter := out_iter);
+        vars := vars.(x_it := out_iter).(y_it := out_iter);
 
-        modexp_var_inv_lemma_1(prev_a_slice, a_slice, vars.rsa.sig, i, vars.rsa);
+        modexp_var_inv_lemma_1(prev_a_view, a_view, vars.rsa.sig, i, vars.rsa);
     
         i := i + 1;
     }
@@ -524,21 +524,21 @@ procedure modexp_var(
     lw(x19, 20, x0);
     lw(x20, 28, x0);
     lw(x21, 28, x0);
-    let prev_a_slice := a_slice;
+    let prev_a_view := a_view;
 
-    vars := vars.(x_iter := out_iter).(y_iter := sig_iter);
-    a_slice := montmul(vars);
+    vars := vars.(x_it := out_iter).(y_it := sig_iter);
+    a_view := montmul(vars);
 
-    modexp_var_inv_lemma_2(prev_a_slice, a_slice, sig_iter.buff, vars.rsa);
+    modexp_var_inv_lemma_2(prev_a_view, a_view, sig_iter.buff, vars.rsa);
 
-    ghost var raw_slice := wdrs[4..4+NUM_WORDS];
-    let adjusted_slice := sub_mod(raw_slice, vars.m_iter);
+    ghost var raw_view := wdrs[4..4+NUM_WORDS];
+    let adjusted_view := sub_mod(raw_view, vars.m_iter);
     
     let carry := fgroups.fg0.cf;
-    modexp_var_correct_lemma(to_nat(raw_slice), to_nat(adjusted_slice), carry,
+    modexp_var_correct_lemma(to_nat(raw_view), to_nat(adjusted_view), carry,
         vars.rsa.sig, vars.rsa);
 
-    out_iter := modexp_write_ouput(raw_slice, adjusted_slice, carry, vars.rsa.sig, vars.rsa);
+    out_iter := modexp_write_ouput(raw_view, adjusted_view, carry, vars.rsa.sig, vars.rsa);
 }
 
 
