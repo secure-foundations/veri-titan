@@ -123,7 +123,7 @@ function operator(.buff := ) (iter :iter_t, buff: seq(uint256)): iter_t extern;
 var wmem: wmem_t {:state wmem()};
 function iter_inv(iter: iter_t, h: wmem_t, addr: int): bool extern;
 function iter_safe(iter: iter_t, h: wmem_t, addr: int): bool extern;
-function mm_iter_inv(iter: iter_t, h: wmem_t, addr: int): bool extern;
+function mm_it_inv(iter: iter_t, h: wmem_t, addr: int): bool extern;
 
 type rsa_params: Type(0) extern;
 function operator(.e') (rsa: rsa_params): nat extern;
@@ -142,7 +142,7 @@ function operator(.x_it) (vars: mm_vars): iter_t extern;
 function operator(.x_it := ) (vars: mm_vars, it: iter_t): mm_vars extern;
 function operator(.y_it) (vars: mm_vars): iter_t extern;
 function operator(.y_it := ) (vars: mm_vars, it: iter_t): mm_vars extern;
-function operator(.m_iter) (vars: mm_vars): iter_t extern;
+function operator(.m_it) (vars: mm_vars): iter_t extern;
 function operator(.rr_iter) (vars: mm_vars): iter_t extern;
 function operator(.m0d_iter) (vars: mm_vars): iter_t extern;
 function operator(.rsa) (vars: mm_vars): rsa_params extern;

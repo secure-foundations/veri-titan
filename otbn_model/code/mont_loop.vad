@@ -33,46 +33,118 @@ import opened mont_loop_lemmas
 
 #endverbatim
 
-ghost procedure to_nat_lemma_1(ghost xs: seq(uint256)) extern;
+ghost procedure uint512_view_lemma(ghost num: uint512_view_t) extern;
 
 ghost procedure to_nat_lemma_2(ghost xs: seq(uint256)) extern;
 
-function seq_addc_512_is_safe(xs: seq(uint256), ys: seq(uint256)): bool extern;
+ghost procedure mont_word_mul_add_bound_lemma_0(
+    ghost xs: seq(uint256),
+    ghost ys: seq(uint256),
+    ghost a: uint256,
+    ghost b: uint256) extern;
 
-ghost procedure uint512_view_lemma(ghost num: uint512_view_t) extern;
+ghost procedure mont_word_mul_add_bound_lemma_1(
+    ghost xs: seq(uint256),
+    ghost ys: seq(uint256),
+    ghost a: uint256,
+    ghost b: uint256,
+    ghost c: uint256) extern;
 
-ghost procedure uint256_addc_cong_lemma(ghost z: uint256, ghost x: uint256, ghost y: uint256) extern;
+function montmul_inv(
+    a: seq(uint256),
+    x: seq(uint256),
+    i: int,
+    y: seq(uint256),
+    rsa: rsa_params) : bool extern;
 
-ghost procedure mont_word_mul_add_bound_lemma1(ghost xs: seq(uint256), ghost ys: seq(uint256), ghost a: uint256, ghost b: uint256) extern;
+ghost procedure mont_loop_inv_pre_lemma(
+    ghost xi: uint256,
+    ghost ui: uint256,
+    ghost m0d: uint256,
+    ghost p1: uint512_view_t,
+    ghost p2: uint512_view_t,
+    ghost y: seq(uint256),
+    ghost m:seq(uint256),
+    ghost a:seq(uint256)) extern;
 
-ghost procedure mont_word_mul_add_bound_lemma2(ghost xs: seq(uint256), ghost ys: seq(uint256), ghost a: uint256, ghost b: uint256, ghost c: uint256) extern;
+function mont_loop_inv(
+    xi: uint256,
+    ui: uint256,
+    p1: uint512_view_t,
+    p2: uint512_view_t,
+    y: seq(uint256),
+    m: seq(uint256),
+    prev_a: seq(uint256),
+    next_a: seq(uint256),
+    j: nat) : bool extern;
 
-ghost procedure mont_loop_inv_pre_lemma(ghost x_i: uint256, ghost ui: uint256, ghost m0d: uint256, ghost p1: uint512_view_t, ghost p2: uint512_view_t, ghost y:seq(uint256), ghost m:seq(uint256), ghost a:seq(uint256)) extern;
+ghost procedure mont_loop_inv_peri_lemma(
+    ghost xi: uint256,
+    ghost ui: uint256,
+    ghost p1: uint512_view_t,
+    ghost p2: uint512_view_t,
+    ghost next_p1: uint512_view_t,
+    ghost next_p2: uint512_view_t,
+    ghost y: seq(uint256),
+    ghost m: seq(uint256),
+    ghost prev_a: seq(uint256),
+    ghost curr_a: seq(uint256),
+    ghost next_a: seq(uint256),
+    ghost j: int) extern;
 
-function mont_loop_inv(x_i: uint256, ui: uint256, p1: uint512_view_t, p2: uint512_view_t, y:seq(uint256), m:seq(uint256), initial_a: seq(uint256), a: seq(uint256), j: nat) : bool extern;
+ghost procedure mont_loop_inv_post_lemma(
+    ghost xi: uint256,
+    ghost ui: uint256,
+    ghost p1: uint512_view_t,
+    ghost p2: uint512_view_t,
+    ghost y: seq(uint256),
+    ghost m: seq(uint256),
+    ghost prev_a: seq(uint256),
+    ghost curr_a: seq(uint256),
+    ghost bout: uint1) extern;
 
-ghost procedure mont_loop_inv_peri_lemma(ghost x_i: uint256, ghost ui: uint256, ghost p1: uint512_view_t, ghost p2: uint512_view_t, ghost next_p1: uint512_view_t, ghost next_p2: uint512_view_t, ghost y: seq(uint256), ghost m: seq(uint256), ghost initial_a: seq(uint256), ghost a: seq(uint256), ghost next_a: seq(uint256), ghost j: int) extern;
+ghost procedure mont_loop_cond_sub_lemma(
+    ghost xi: uint256,
+    ghost ui: uint256,
+    ghost y: seq(uint256),
+    ghost m: nat,
+    ghost prev_a: seq(uint256),
+    ghost curr_a: seq(uint256),
+    ghost next_a: seq(uint256),
+    ghost bout: uint1,
+    ghost next_bout: uint1) extern;
 
-ghost procedure mont_loop_inv_post_lemma(ghost x_i: uint256, ghost ui: uint256, ghost p1: uint512_view_t, ghost p2: uint512_view_t, ghost y: seq(uint256), ghost m: seq(uint256), ghost initial_a: seq(uint256), ghost a: seq(uint256), ghost bout: uint1) extern;
+ghost procedure montmul_inv_lemma(
+    ghost prev_a: seq(uint256),
+    ghost curr_a: seq(uint256),
+    ghost x: seq(uint256),
+    ghost i: int,
+    ghost ui: uint256,
+    ghost y: seq(uint256),
+    ghost rsa: rsa_params) extern;
 
-ghost procedure mont_loop_cond_sub_lemma(ghost x_i: uint256, ghost ui: uint256, ghost y: seq(uint256), ghost m: nat, ghost initial_a: seq(uint256), ghost a: seq(uint256), ghost next_a: seq(uint256), ghost bout: uint1, ghost next_bout: uint1) extern;
+ghost procedure mont_loop_cong_lemma(
+    ghost p1: uint512_view_t,
+    ghost a0: uint256,
+    ghost y0: uint256,
+    ghost xi: uint256,
+    ghost w25: uint256,
+    ghost w26: uint256,
+    ghost m0d: nat) extern;
 
-function montmul_inv(a: seq(uint256), x: seq(uint256), i: int, y: seq(uint256), rsa: rsa_params) : bool extern;
-
-ghost procedure montmul_inv_lemma(ghost initial_a: seq(uint256), ghost a: seq(uint256), ghost x: seq(uint256), ghost i: int, ghost ui: uint256, ghost y: seq(uint256), ghost rsa: rsa_params) extern;
-    
 procedure mont_loop_0(
     ghost curr_view: seq(uint256),
     ghost y_it: iter_t,
-    ghost x_i: uint256,
+    ghost xi: uint256,
     ghost m0d: nat)
-    returns (ghost y_next_iter: iter_t,
+
+    returns (ghost next_y_it: iter_t,
         ghost p1: uint512_view_t)
 
     {:frame false}
 
     requires
-        w2 == x_i;
+        w2 == xi;
         w3 == m0d;
         w31 == 0;
 
@@ -100,20 +172,22 @@ procedure mont_loop_0(
         x30 == old(x30);
         x31 == old(x31);
 
-        y_next_iter == bn_lid_next_iter(y_it, true);
-        iter_safe(y_next_iter, wmem, x19);
-
-        w2 == x_i;
+        w2 == xi;
         w3 == old(w3);
         w31 == 0;
 
-        cong_B256(w25, (curr_view[0] + y_it.buff[0] * x_i) * m0d);
-        valid_wdr_view(wdrs, curr_view, 4, NUM_WORDS);
-        valid_uint512_view(wdrs, p1, 30, 29);
-        p1.full == curr_view[0] + y_it.buff[0] * x_i;
-
         wmem == old(wmem);
         xmem == old(xmem);
+
+        valid_wdr_view(wdrs, curr_view, 4, NUM_WORDS);
+
+        valid_uint512_view(wdrs, p1, 30, 29);
+
+        p1.full == curr_view[0] + y_it.buff[0] * xi;
+        cong_B256(w25, p1.full * m0d);
+
+        next_y_it == bn_lid_next_iter(y_it, true);
+        iter_safe(next_y_it, wmem, x19);
 {
    /* save pointer to modulus */
     addi(x22, x16, 0);
@@ -129,70 +203,39 @@ procedure mont_loop_0(
     li(x10, 4);
     
     /* load 1st limb of input y (operand a): w30 = y[0] */
-    y_next_iter := bn_lid_safe(x12, false, 0, x19, true, y_it);
+    next_y_it := bn_lid_safe(x12, false, 0, x19, true, y_it);
     // assert wdrs[30] == y_it.buff[0];
 
-    /* [w26, w27] = w30*w2 = y[0]*x_i */
+    /* [w26, w27] = w30*w2 = y[0]*xi */
     mul256_w30xw2();
     // assert to_nat(seq(w27, w26)) == y_it.buff[0] * w2;
 
     /* w24 = w4 = A[0] */ 
     bn_movr(x13, false, x8, true);
-    // assert w24 == curr_view[0];
 
-    /* add A[0]: [w29, w30] = [w26, w27] + w24 = y[0]*x_i + A[0] */
-    mont_word_mul_add_bound_lemma1(seq(w27, w26), seq(w24, w31), y_it.buff[0], w2);
+    /* add A[0]: [w29, w30] = [w26, w27] + w24 = y[0]*xi + A[0] */
+    mont_word_mul_add_bound_lemma_0(seq(w27, w26), seq(w24, w31), y_it.buff[0], w2);
     p1 := seq_addc_512_safe(w30, w27, w24, w29, w26, w31);
-
-    // assert to_nat(seq(w30, w29)) == curr_view[0] + y_it.buff[0] * x_i;
-
-    calc ==> {
-        true;
-        ==> { reveal cong; }
-        cong_B256(curr_view[0] + y_it.buff[0] * x_i, p1.full);
-        ==> { uint512_view_lemma(p1); }
-        cong_B256(curr_view[0] + y_it.buff[0] * x_i, w30 + w29 * BASE_256);
-        ==> { assume false; }
-        cong_B256(curr_view[0] + y_it.buff[0] * x_i, w30);
-        ==> { reveal cong; }
-        cong_B256(w30, curr_view[0] + y_it.buff[0] * x_i);
-    }
 
     /* w25 = w3 = m0d */
     bn_mov(w25, w3);
 
-    /* [_, ui] = [w26, w27] = w30*w25 = (y[0]*x_i + A[0])*m0d*/
+    /* [_, ui] = [w26, w27] = w30*w25 = (y[0]*xi + A[0])*m0d*/
     mul256_w30xw25();
 
     /* [_, ui] = [w28, w25] = [w26, w27]  */
     bn_mov(w25, w27);
 
-    /* TODO: this instruction seems unnecessary */
-    // bn_mov(w28, w26);
-
-    calc ==> {
-        to_nat(seq(w27, w26)) == w30 * m0d;
-        ==> { to_nat_lemma_2(seq(w27, w26)); }
-        w27 + w26 * BASE_256 == w30 * m0d;
-        ==> { reveal cong; }
-        cong_B256(w27 + w26 * BASE_256, w30 * m0d);
-        ==> { assume false; }
-        cong_B256(w27, w30 * m0d);
-        ==> { assert cong_B256(w30, curr_view[0] + y_it.buff[0] * x_i);
-            assume false; }
-        cong_B256(w27, (curr_view[0] + y_it.buff[0] * x_i) * m0d);
-        ==>
-        cong_B256(w25, (curr_view[0] + y_it.buff[0] * x_i) * m0d);
-    }
+    mont_loop_cong_lemma(p1, curr_view[0], y_it.buff[0], xi, w25, w26, m0d);
 }
 
-procedure mont_loop1(
+procedure mont_loop_1(
     ghost ui: uint256,
     ghost xi: uint256,
     ghost p1: uint512_view_t,
     ghost p2: uint512_view_t,
     ghost y_it: iter_t,
-    ghost m_iter: iter_t,
+    ghost m_it: iter_t,
     ghost prev_view: seq(uint256), 
     ghost curr_view: seq(uint256),
     ghost j: nat)
@@ -201,7 +244,7 @@ procedure mont_loop1(
         ghost next_p1: uint512_view_t,
         ghost next_p2: uint512_view_t,
         ghost next_y_it: iter_t,
-        ghost next_m_iter: iter_t,
+        ghost next_m_it: iter_t,
         ghost next_view: seq(uint256))
 
     {:frame false}
@@ -221,19 +264,19 @@ procedure mont_loop1(
 
         y_it.index == j;
         y_it.index >= 1;
-        y_it.index == m_iter.index;
+        y_it.index == m_it.index;
 
         iter_safe(y_it, wmem, x19);
         seq_len(y_it.buff) == NUM_WORDS;
-        iter_safe(m_iter, wmem, x16);
-        seq_len(m_iter.buff) == NUM_WORDS;
+        iter_safe(m_it, wmem, x16);
+        seq_len(m_it.buff) == NUM_WORDS;
 
         valid_wdr_view(wdrs, curr_view, 4, NUM_WORDS);
         seq_len(prev_view) == NUM_WORDS;
         prev_view[j..] == curr_view[j..];
 
         mont_loop_inv(xi, ui, p1, p2,
-            y_it.buff, m_iter.buff, prev_view, curr_view, j);
+            y_it.buff, m_it.buff, prev_view, curr_view, j);
 
     ensures
         x6 == old(x6);
@@ -257,22 +300,23 @@ procedure mont_loop1(
         w25 == ui;
         w31 == 0;
 
+        wmem == old(wmem);
+        xmem == old(xmem);
+
         valid_uint512_view(wdrs, next_p1, NA, 29);
         valid_uint512_view(wdrs, next_p2, NA, 28);
 
         next_y_it == bn_lid_next_iter(y_it, true);
-        next_m_iter == bn_lid_next_iter(m_iter, true);
-
         iter_inv(next_y_it, wmem, x19);
-        iter_inv(next_m_iter, wmem, x16);
+
+        next_m_it == bn_lid_next_iter(m_it, true);
+        iter_inv(next_m_it, wmem, x16);
+
         valid_wdr_view(wdrs, next_view, 4, NUM_WORDS);
         prev_view[j+1..] == next_view[j+1..];
 
         mont_loop_inv(xi, ui, next_p1, next_p2,
-            next_y_it.buff, next_m_iter.buff, prev_view, next_view, j+1);
-
-        wmem == old(wmem);
-        xmem == old(xmem);
+            next_y_it.buff, next_m_it.buff, prev_view, next_view, j+1);
 {
     ghost var j := y_it.index;
     /* load limb of y (operand a) and mult. with xi: [w26, w27] <- y[j]*xi */
@@ -282,30 +326,30 @@ procedure mont_loop1(
     /* add limb of buffer: [w26, w27] <- [w26,w27] + w24 = y[j]*xi + A[j] */
     bn_movr(x13, false, x8, true);
 
-    mont_word_mul_add_bound_lemma1(seq(w27, w26), seq(w24, w31), y_it.buff[j], xi);
+    mont_word_mul_add_bound_lemma_0(seq(w27, w26), seq(w24, w31), y_it.buff[j], xi);
     next_p1 := seq_addc_512_safe(w27, w27, w24, w26, w26, w31);
 
     /* add carry word from previous cycle:
        [c_xy, a_tmp] = [w29, w24] <- [w26,w27] + w29 = y[j]*xi + A[j] + c_xy*/
     uint512_view_lemma(next_p1);
 
-    mont_word_mul_add_bound_lemma2(seq(w27, w26), seq(w29, w31), y_it.buff[j], xi, w24);
+    mont_word_mul_add_bound_lemma_1(seq(w27, w26), seq(w29, w31), y_it.buff[j], xi, w24);
     next_p1 := seq_addc_512_safe(w24, w27, w29, w29, w26, w31);
 
     /* load limb m[j] of modulus and multiply with ui:
        [w26, w27] = w30*w25 = m[j]*ui */
-    next_m_iter := bn_lid_safe(x12, false, 0, x16, true, m_iter);
+    next_m_it := bn_lid_safe(x12, false, 0, x16, true, m_it);
     mul256_w30xw25();
 
     /* add result from first step
        [w26, w27] <- [w26,w27] + w24 = m[j]*ui + a_tmp */
-    mont_word_mul_add_bound_lemma1(seq(w27, w26), seq(w24, w31), m_iter.buff[j], ui);
+    mont_word_mul_add_bound_lemma_0(seq(w27, w26), seq(w24, w31), m_it.buff[j], ui);
     next_p2 := seq_addc_512_safe(w27, w27, w24, w26, w26, w31);
 
     /* [c_m, A[j-1]] = [w28, w24] = m[j]*ui + a_tmp + c_m */
     uint512_view_lemma(next_p2);
 
-    mont_word_mul_add_bound_lemma2(seq(w27, w26), seq(w28, w31), m_iter.buff[j], ui, w24);
+    mont_word_mul_add_bound_lemma_1(seq(w27, w26), seq(w28, w31), m_it.buff[j], ui, w24);
     next_p2 := seq_addc_512_safe(w24, w27, w28, w28, w26, w31);
 
     bn_movr(x10, true, x13, false);
@@ -315,10 +359,10 @@ procedure mont_loop1(
     // assert valid_uint512_view(wdrs, next_p1, NA, 29);
     // assert next_p1.full == p1.uh + y_it.buff[j] * xi + curr_view[j];
     // assert valid_uint512_view(wdrs, next_p2, NA, 28);
-    // assert next_p2.full == m_iter.buff[j] * ui + next_p1.lh + p2.uh;
+    // assert next_p2.full == m_it.buff[j] * ui + next_p1.lh + p2.uh;
 
     mont_loop_inv_peri_lemma(xi, ui, p1, p2, next_p1, next_p2,
-        y_it.buff, m_iter.buff, prev_view, curr_view, next_view, j);
+        y_it.buff, m_it.buff, prev_view, curr_view, next_view, j);
 }
 
 procedure mont_loop(
@@ -326,7 +370,8 @@ procedure mont_loop(
     ghost xi: uint256,
     ghost vars: mm_vars,
     ghost prev_view: seq(uint256))
-returns (ghost next_view: seq(uint256))
+
+    returns (ghost next_view: seq(uint256))
 
     {:frame false}
 
@@ -334,16 +379,16 @@ returns (ghost next_view: seq(uint256))
         x30 == NUM_WORDS;
         x31 == NUM_WORDS - 1;
 
+        w2 == xi;
+        w3 == vars.rsa.m0d;
+        w31 == 0;
+
         iter_inv(x_it, wmem, x20);
         seq_len(x_it.buff) == NUM_WORDS;
         x_it.index >= 1;
         x_it.buff[x_it.index-1] == xi;
 
         mm_vars_inv(vars, wmem, NA, x19, x16, NA, NA);
-
-        w2 == xi;
-        w3 == vars.rsa.m0d;
-        w31 == 0;
 
         valid_wdr_view(wdrs, prev_view, 4, NUM_WORDS);
 
@@ -375,7 +420,7 @@ returns (ghost next_view: seq(uint256))
     ghost var p1: uint512_view_t;
     ghost var p2 : uint512_view_t;
     ghost var y_it : iter_t;
-    ghost var m_iter : iter_t;
+    ghost var m_it : iter_t;
 
     y_it, p1 := mont_loop_0(curr_view, vars.y_it, xi, vars.rsa.m0d);
     ghost var ui := w25;
@@ -384,17 +429,17 @@ returns (ghost next_view: seq(uint256))
     bn_mov(w24, w30);
 
     /* load first limb of modulus: w30 = m[0] */
-    m_iter := bn_lid_safe(x12, false, 0, x16, true, vars.m_iter);
+    m_it := bn_lid_safe(x12, false, 0, x16, true, vars.m_it);
 
     /* [w26, w27] = w30*w25 = m[0]*ui*/
     mul256_w30xw25();
-    // assert to_nat(seq(w27, w26)) == m_iter.buff[0] * ui;
+    // assert to_nat(seq(w27, w26)) == m_it.buff[0] * ui;
 
     /* [w28, w27] = [w26, w27] + w24 = m[0]*ui + (y[0]*xi + A[0] mod b) */
-    mont_word_mul_add_bound_lemma1(seq(w27, w26), seq(w24, w31), m_iter.buff[0], ui);
+    mont_word_mul_add_bound_lemma_0(seq(w27, w26), seq(w24, w31), m_it.buff[0], ui);
     p2 := seq_addc_512_safe(w27, w27, w24, w28, w26, w31);
 
-    mont_loop_inv_pre_lemma(xi, ui, vars.rsa.m0d, p1, p2, y_it.buff, m_iter.buff, curr_view);
+    mont_loop_inv_pre_lemma(xi, ui, vars.rsa.m0d, p1, p2, y_it.buff, m_it.buff, curr_view);
 
     ghost var j: nat := 1;
 
@@ -420,39 +465,36 @@ returns (ghost next_view: seq(uint256))
             w25 == ui;
             w31 == 0;
 
+            wmem == old(wmem);
+            xmem == old(xmem);
+
             valid_uint512_view(wdrs, p1, NA, 29);
             valid_uint512_view(wdrs, p2, NA, 28);
 
             loop_ctr + j == NUM_WORDS;
             y_it.index == j;
             y_it.index >= 1;
-            y_it.index == m_iter.index;
+            y_it.index == m_it.index;
 
             iter_inv(y_it, wmem, x19);
             y_it.buff == vars.y_it.buff;
 
-            iter_inv(m_iter, wmem, x16);
-            m_iter.buff == vars.m_iter.buff;
-            m_iter.base_addr == x22;
+            iter_inv(m_it, wmem, x16);
+            m_it.buff == vars.m_it.buff;
+            m_it.base_addr == x22;
 
             valid_wdr_view(wdrs, curr_view, 4, NUM_WORDS);
             seq_len(prev_view) == NUM_WORDS;
 
             prev_view[j..] == curr_view[j..];
 
-            wmem == old(wmem);
-            xmem == old(xmem);
-
             mont_loop_inv(xi, ui, p1, p2,
-                y_it.buff, m_iter.buff, prev_view, curr_view, j);
+                y_it.buff, m_it.buff, prev_view, curr_view, j);
 
         decreases loop_ctr;
     {
-        p1, p2, y_it, m_iter, curr_view := mont_loop1(
-            ui, xi,
-            p1, p2,
-            y_it, m_iter, 
-            prev_view, curr_view, j);
+        p1, p2, y_it, m_it, curr_view := mont_loop_1(
+            ui, xi, p1, p2, y_it, m_it, prev_view, curr_view, j);
         j := j + 1;
     }
 
@@ -466,8 +508,9 @@ returns (ghost next_view: seq(uint256))
     curr_view := curr_view[NUM_WORDS-1 := w24];
 
     ghost var bout := bool_to_uint1(fgroups.fg1.cf);
+
     mont_loop_inv_post_lemma(xi, ui, p1, p2,
-        y_it.buff, m_iter.buff, prev_view, curr_view, bout);
+        y_it.buff, m_it.buff, prev_view, curr_view, bout);
 
     /* restore pointers */
     addi(x16, x22, 0);
@@ -478,10 +521,10 @@ returns (ghost next_view: seq(uint256))
 
     /* This replaces Step 3 of HAC 14.36 and performs conditional constant-time
      subtraction of the modulus from the output buffer  */
-    m_iter := iter_cons(x16, 0, wmem[x16]);
-    next_view := cond_sub_to_reg(curr_view, m_iter, fgroups.fg1.cf);
+    m_it := iter_cons(x16, 0, wmem[x16]);
+    next_view := cond_sub_to_reg(curr_view, m_it, fgroups.fg1.cf);
 
-    mont_loop_cond_sub_lemma(xi, ui, y_it.buff, to_nat(m_iter.buff),
+    mont_loop_cond_sub_lemma(xi, ui, y_it.buff, to_nat(m_it.buff),
         prev_view, curr_view, next_view, bout, bool_to_uint1(fgroups.fg0.cf));
     
     /* restore pointer */

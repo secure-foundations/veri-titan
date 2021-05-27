@@ -241,12 +241,12 @@ module rsa_ops {
     datatype mm_vars = mm_vars(
         x_it: iter_t,
         y_it: iter_t,
-        m_iter: iter_t,
+        m_it: iter_t,
         rr_iter: iter_t,
         m0d_iter: iter_t,
         rsa: rsa_params)
 
-    predicate mm_iter_inv(iter: iter_t, wmem: wmem_t, address: int)
+    predicate mm_it_inv(iter: iter_t, wmem: wmem_t, address: int)
     {
         || address == NA // TODO: make iter provide its own address in this case
         || (&& iter_inv(iter, wmem, address)
@@ -272,11 +272,11 @@ module rsa_ops {
     {
         && rsa_params_inv(vars.rsa)
 
-        && mm_iter_inv(vars.x_it, wmem, x_addr)
-        && mm_iter_inv(vars.y_it, wmem, y_addr)
+        && mm_it_inv(vars.x_it, wmem, x_addr)
+        && mm_it_inv(vars.y_it, wmem, y_addr)
 
-        && mm_iter_inv(vars.m_iter, wmem, m_addr)
-        && mm_iter_inv(vars.rr_iter, wmem, rr_addr)
+        && mm_it_inv(vars.m_it, wmem, m_addr)
+        && mm_it_inv(vars.rr_iter, wmem, rr_addr)
         && m0d_iter_inv(vars.m0d_iter, wmem, m0d_addr)
     }
 
@@ -290,7 +290,7 @@ module rsa_ops {
         m0d_addr: int)
     {
         && mm_vars_safe(vars, wmem, x_addr, y_addr, m_addr, rr_addr, m0d_addr)
-        && to_nat(vars.m_iter.buff) == vars.rsa.m
+        && to_nat(vars.m_it.buff) == vars.rsa.m
         && (rr_addr == NA ||to_nat(vars.rr_iter.buff) == vars.rsa.RR)
         && vars.m0d_iter.buff[0] == vars.rsa.m0d
     }

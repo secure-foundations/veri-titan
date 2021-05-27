@@ -125,7 +125,7 @@ procedure cond_sub_mod_0(ghost initial_wdrs: wdrs_t, ghost selection: bool, ghos
 }
 
 procedure cond_sub_mod(
-    ghost m_iter: iter_t,
+    ghost m_it: iter_t,
     ghost selection: bool)
     // {:frame false}
     requires
@@ -134,9 +134,9 @@ procedure cond_sub_mod(
         fgroups.fg0.cf == false;
         fgroups.fg1.cf == selection;
 
-        iter_safe(m_iter, wmem, x16);
-        m_iter.index == 0;
-        seq_len(m_iter.buff) == NUM_WORDS;
+        iter_safe(m_it, wmem, x16);
+        m_it.index == 0;
+        seq_len(m_it.buff) == NUM_WORDS;
 
         w31 == 0;
 
@@ -149,12 +149,12 @@ procedure cond_sub_mod(
         wdrs; w2; w3; w4; w31;
 
     ensures
-        iter_safe(m_iter, wmem, old(x16));
+        iter_safe(m_it, wmem, old(x16));
 
         selection ==>
             tuple(wdrs[5..5+NUM_WORDS], bool_to_uint1(fgroups.fg0.cf))
             ==
-            seq_subb(old(wdrs[5..5+NUM_WORDS]), m_iter.buff);
+            seq_subb(old(wdrs[5..5+NUM_WORDS]), m_it.buff);
 
         !selection ==>
             wdrs[5..5+NUM_WORDS] == old(wdrs)[5..5+NUM_WORDS];
@@ -167,7 +167,7 @@ procedure cond_sub_mod(
     ghost var initial_wdrs := wdrs;
     ghost var initial_x16 := x16;
 
-    ghost var iter := m_iter;
+    ghost var iter := m_it;
 
     while (Loop(x31))
         invariant iter.index + loop_ctr == NUM_WORDS;

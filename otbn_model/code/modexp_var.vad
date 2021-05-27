@@ -84,7 +84,7 @@ procedure compute_rr(ghost vars: mm_vars)
 
     requires
         mm_vars_safe(vars, wmem, NA, NA, x16, x18, x17);
-        to_nat(vars.m_iter.buff) == vars.rsa.m;
+        to_nat(vars.m_it.buff) == vars.rsa.m;
         vars.m0d_iter.buff[0] == vars.rsa.m0d;
 
     ensures
@@ -98,7 +98,7 @@ procedure compute_rr(ghost vars: mm_vars)
         w31 == old(w31);
 
         mm_vars_safe(vars, wmem, NA, NA, x16, x18, x17);
-        to_nat(vars.m_iter.buff) == vars.rsa.m;
+        to_nat(vars.m_it.buff) == vars.rsa.m;
         to_nat(vars.m0d_iter.buff) == vars.rsa.m0d;
         to_nat(vars.rr_iter.buff) == vars.rsa.RR;
 
@@ -126,7 +126,7 @@ procedure modexp_var_0(ghost vars: mm_vars)
         valid_xmem_addr(xmem, 20); // sig
 
         mm_vars_safe(vars, wmem, NA, xmem[20], xmem[16], xmem[12], xmem[8]);
-        to_nat(vars.m_iter.buff) == vars.rsa.m;
+        to_nat(vars.m_it.buff) == vars.rsa.m;
 
         xmem[20] != xmem[8];
         xmem[20] != xmem[12];
@@ -228,7 +228,7 @@ procedure write_to_dmem(ghost iter: iter_t)
 
 procedure sub_mod(
     ghost raw_view: seq(uint256),
-    ghost initial_m_iter: iter_t)
+    ghost initial_m_it: iter_t)
     returns (ghost adjusted_view: seq(uint256))
 
     requires
@@ -239,7 +239,7 @@ procedure sub_mod(
 
         w31 == 0;
 
-        mm_iter_inv(initial_m_iter, wmem, x16);
+        mm_it_inv(initial_m_it, wmem, x16);
         valid_wdr_view(wdrs, raw_view, 4, NUM_WORDS);
 
     reads
@@ -255,41 +255,41 @@ procedure sub_mod(
         valid_wdr_view(wdrs, raw_view, 4, NUM_WORDS);
         valid_wdr_view(wdrs, adjusted_view, 16, NUM_WORDS);
 
-        !fgroups.fg0.cf ==> to_nat(raw_view) - to_nat(initial_m_iter.buff) == to_nat(adjusted_view);
-        fgroups.fg0.cf ==> to_nat(raw_view) < to_nat(initial_m_iter.buff);
+        !fgroups.fg0.cf ==> to_nat(raw_view) - to_nat(initial_m_it.buff) == to_nat(adjusted_view);
+        fgroups.fg0.cf ==> to_nat(raw_view) < to_nat(initial_m_it.buff);
 {
     bn_add(w31, w31, w31, SFT_DFT, 0);
     assert fgroups.fg0.cf == false;
 
     li(x17, 16);
-    ghost var m_iter := initial_m_iter;
+    ghost var m_it := initial_m_it;
     adjusted_view := wdrs[16..16+NUM_WORDS];
 
     while (Loop(x30))
         invariant
-            iter_inv(m_iter, wmem, x16);
-            m_iter.base_addr == initial_m_iter.base_addr;
-            m_iter.index == NUM_WORDS - loop_ctr;
-            seq_len(m_iter.buff) == NUM_WORDS;
+            iter_inv(m_it, wmem, x16);
+            m_it.base_addr == initial_m_it.base_addr;
+            m_it.index == NUM_WORDS - loop_ctr;
+            seq_len(m_it.buff) == NUM_WORDS;
 
             x9 == 3;
             x11 == 2;
-            x8 == 4 + m_iter.index;
-            x17 == 16 + m_iter.index;
+            x8 == 4 + m_it.index;
+            x17 == 16 + m_it.index;
 
             valid_wdr_view(wdrs, raw_view, 4, NUM_WORDS);
             valid_wdr_view(wdrs, adjusted_view, 16, NUM_WORDS);
 
             subb_inv(adjusted_view, bool_to_uint1(fgroups.fg0.cf),
-                raw_view, m_iter.buff, m_iter.index);
+                raw_view, m_it.buff, m_it.index);
 
         decreases
             loop_ctr;
     {
-        ghost var index := m_iter.index;
+        ghost var index := m_it.index;
         bn_movr(x11, false, x8, true);
 
-        m_iter := bn_lid_safe(x9, false, 0, x16, true, m_iter);
+        m_it := bn_lid_safe(x9, false, 0, x16, true, m_it);
 
         let old_carry := bool_to_uint1(fgroups.fg0.cf);
         bn_subb(w2, w2, w3, SFT_DFT, 0);
@@ -299,13 +299,13 @@ procedure sub_mod(
         adjusted_view := adjusted_view[index := w2];
 
         assert tuple(w2, new_carry) ==
-            uint256_subb(raw_view[index], m_iter.buff[index], old_carry);
+            uint256_subb(raw_view[index], m_it.buff[index], old_carry);
 
-        subb_inv_peri_lemma(adjusted_view, new_carry, raw_view, m_iter.buff, old_carry, index);
+        subb_inv_peri_lemma(adjusted_view, new_carry, raw_view, m_it.buff, old_carry, index);
     }
     
     let new_carry := bool_to_uint1(fgroups.fg0.cf);
-    subb_inv_post_lemma(adjusted_view, new_carry, raw_view, m_iter.buff);
+    subb_inv_post_lemma(adjusted_view, new_carry, raw_view, m_it.buff);
 }
 
 ghost procedure modexp_var_correct_lemma(
@@ -422,7 +422,7 @@ procedure modexp_var(
 
         valid_wmem_base_addr(wmem, xmem[28], NUM_WORDS);
 
-        to_nat(initial_vars.m_iter.buff) == initial_vars.rsa.m;
+        to_nat(initial_vars.m_it.buff) == initial_vars.rsa.m;
 
         xmem[20] != xmem[8];
         xmem[20] != xmem[12];
@@ -481,7 +481,7 @@ procedure modexp_var(
 
             initial_vars.rsa == vars.rsa;
 
-            mm_iter_inv(sig_iter, wmem, sig_iter.base_addr);
+            mm_it_inv(sig_iter, wmem, sig_iter.base_addr);
             valid_xmem_addr(xmem, 20);
             xmem[20] == sig_iter.base_addr;
 
@@ -532,7 +532,7 @@ procedure modexp_var(
     modexp_var_inv_lemma_2(prev_a_view, a_view, sig_iter.buff, vars.rsa);
 
     ghost var raw_view := wdrs[4..4+NUM_WORDS];
-    let adjusted_view := sub_mod(raw_view, vars.m_iter);
+    let adjusted_view := sub_mod(raw_view, vars.m_it);
     
     let carry := fgroups.fg0.cf;
     modexp_var_correct_lemma(to_nat(raw_view), to_nat(adjusted_view), carry,

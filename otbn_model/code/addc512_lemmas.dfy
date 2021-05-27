@@ -33,7 +33,7 @@ module addc512_lemmas {
         to_nat(xs) + to_nat(ys) < pow_B256(2)
     }
 
-    lemma mont_word_mul_add_bound_lemma1(
+    lemma mont_word_mul_add_bound_lemma_0(
         xs: seq<uint256>, ys: seq<uint256>, a: uint256, b: uint256)
         requires |xs| == |ys| == 2;
         requires to_nat(xs) == a * b;
@@ -43,7 +43,7 @@ module addc512_lemmas {
         assume false;
     }
 
-    lemma mont_word_mul_add_bound_lemma2(
+    lemma mont_word_mul_add_bound_lemma_1(
         xs: seq<uint256>, ys: seq<uint256>, a: uint256, b: uint256, c: uint256)
         requires |xs| == |ys| == 2;
         requires to_nat(xs) == a * b + c;
