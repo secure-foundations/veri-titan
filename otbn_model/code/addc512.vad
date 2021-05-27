@@ -128,8 +128,13 @@ procedure seq_addc_512_safe(
     }
 
     assert value < BASE_512;
-    assume dst1 = uint512_lh(value);
-    assume dst2 = uint512_uh(value);
+    to_nat_lemma_2(seq(dst1, dst2));
+    assert dst1 = uint512_lh(value) by {
+        reveal uint512_lh;
+    }
+    assert dst2 = uint512_uh(value) by {
+        reveal uint512_uh;
+    }
     sum := uint512_cons(dst1, dst2, value);
 }
 

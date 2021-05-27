@@ -35,8 +35,6 @@ import opened mont_loop_lemmas
 
 ghost procedure uint512_view_lemma(ghost num: uint512_view_t) extern;
 
-ghost procedure to_nat_lemma_2(ghost xs: seq(uint256)) extern;
-
 ghost procedure mont_word_mul_add_bound_lemma_0(
     ghost xs: seq(uint256),
     ghost ys: seq(uint256),
