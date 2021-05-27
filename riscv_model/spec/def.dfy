@@ -10,35 +10,34 @@ import opened powers
 
 type reg_index = i: int | 0 <= i < 32
 datatype Reg32 =
-| Gpr(r: reg_index) // 32 32-bit registers, r0 is always zero
+| Gpr(r: reg_index) // 32 32-bit registers, x0 is always zero
 
 // base integer instruction set, 32-bit
 datatype ins32I =
-| RV_LB(rd: Reg32, rs1: Reg32, oimm12: MachineInt)
-| RV_LH (rd: Reg32, rs1: Reg32, oimm12: MachineInt)
-| RV_LW (rd: Reg32, rs1: Reg32, oimm12: MachineInt)
-| RV_LBU (rd: Reg32, rs1: Reg32, oimm12: MachineInt)
-| RV_LHU (rd: Reg32, rs1: Reg32, oimm12: MachineInt)
+| RV_LB(rd: Reg32, rs1: Reg32, oimm12: uint32)
+| RV_LH (rd: Reg32, rs1: Reg32, oimm12: uint32)
+| RV_LW (rd: Reg32, rs1: Reg32, oimm12: uint32)
+| RV_LBU (rd: Reg32, rs1: Reg32, oimm12: uint32)
+| RV_LHU (rd: Reg32, rs1: Reg32, oimm12: uint32)
 
-| RV_FENCE (pred: MachineInt, succ: MachineInt)
+| RV_FENCE (pred: uint32, succ: uint32)
 | RV_FENCE_I
 
-| RV_ADDI (rd: Reg32, rs1: Reg32, imm12: MachineInt) // sign extends, ignore overflow
-| RV_SLLI (rd: Reg32, rs1: Reg32, shamt6: Int) // logical left shift
-| RV_SLTI (rd: Reg32, rs1: Reg32, imm12: MachineInt) // sign extend, 1 if rs1 (signed) < imm, else 0
-| RV_SLTIU (rd: Reg32, rs1: Reg32, imm12: MachineInt) // compare both vals as unsigned.
-  // Note: sltiu rd, rs1, 1 sets rd to 1 if rs1 == 0 ??? p.14
-| RV_XORI (rd: Reg32, rs1: Reg32, imm12: MachineInt)
-| RV_ORI (rd: Reg32, rs1: Reg32, imm12: MachineInt)
-| RV_ANDI (rd: Reg32, rs1: Reg32, imm12: MachineInt)
-| RV_SRLI (rd: Reg32, rs1: Reg32, shamt6: Int) // logical right shift
-| RV_SRAI (rd: Reg32, rs1: Reg32, shamt6: Int) // arithmetic right shift
+| RV_ADDI (rd: Reg32, rs1: Reg32, imm12: uint32) // sign extends, ignore overflow
+| RV_SLLI (rd: Reg32, rs1: Reg32, shamt6: uint32) // logical left shift
+| RV_SLTI (rd: Reg32, rs1: Reg32, imm12: uint32) // sign extend, 1 if rs1 (signed) < imm, else 0
+| RV_SLTIU (rd: Reg32, rs1: Reg32, imm12: uint32) // compare both vals as unsigned.
+| RV_XORI (rd: Reg32, rs1: Reg32, imm12: uint32)
+| RV_ORI (rd: Reg32, rs1: Reg32, imm12: uint32)
+| RV_ANDI (rd: Reg32, rs1: Reg32, imm12: uint32)
+| RV_SRLI (rd: Reg32, rs1: Reg32, shamt6: uint32) // logical right shift
+| RV_SRAI (rd: Reg32, rs1: Reg32, shamt6: uint32) // arithmetic right shift
 
-| RV_AUIPC (rd: Reg32, oimm20: MachineInt)
+| RV_AUIPC (rd: Reg32, oimm20: uint32)
 
-| RV_SB (rs1: Reg32, rs2: Reg32, simm12: MachineInt)
-| RV_SH (rs1: Reg32, rs2: Reg32, simm12: MachineInt)
-| RV_SW (rs1: Reg32, rs2: Reg32, simm12: MachineInt)
+| RV_SB (rs1: Reg32, rs2: Reg32, simm12: uint32)
+| RV_SH (rs1: Reg32, rs2: Reg32, simm12: uint32)
+| RV_SW (rs1: Reg32, rs2: Reg32, simm12: uint32)
 
 | RV_ADD (rd: Reg32, rs1: Reg32, rs2: Reg32) // ignore overflow
 | RV_SUB (rd: Reg32, rs1: Reg32, rs2: Reg32) // ignore overflow
@@ -51,20 +50,20 @@ datatype ins32I =
 | RV_OR (rd: Reg32, rs1: Reg32, rs2: Reg32) // bitwise
 | RV_AND (rd: Reg32, rs1: Reg32, rs2: Reg32) // bitwise
 
-| RV_LUI (rd: Reg32, imm20: MachineInt)
+| RV_LUI (rd: Reg32, imm20: uint32)
 
-| RV_BEQ (rs1: Reg32, rs2: Reg32, sbimm12: MachineInt)
-| RV_BNE (rs1: Reg32, rs2: Reg32, sbimm12: MachineInt)
-| RV_BLT (rs1: Reg32, rs2: Reg32, sbimm12: MachineInt)
-| RV_BGE (rs1: Reg32, rs2: Reg32, sbimm12: MachineInt)
-| RV_BLTU (rs1: Reg32, rs2: Reg32, sbimm12: MachineInt)
-| RV_BGEU (rs1: Reg32, rs2: Reg32, sbimm12: MachineInt)
-
-| RV_JALR (rd: Reg32, rs1: Reg32, oimm12: MachineInt)
-| RV_JAL (rd: Reg32, jimm20: MachineInt)
+// | RV_BEQ (rs1: Reg32, rs2: Reg32, sbimm12: uint32)
+// | RV_BNE (rs1: Reg32, rs2: Reg32, sbimm12: uint32)
+// | RV_BLT (rs1: Reg32, rs2: Reg32, sbimm12: uint32)
+// | RV_BGE (rs1: Reg32, rs2: Reg32, sbimm12: uint32)
+// | RV_BLTU (rs1: Reg32, rs2: Reg32, sbimm12: uint32)
+// | RV_BGEU (rs1: Reg32, rs2: Reg32, sbimm12: uint32)
+// 
+// | RV_JALR (rd: Reg32, rs1: Reg32, oimm12: uint32)
+// | RV_JAL (rd: Reg32, jimm20: uint32)
 
 // standard extension for integer mult and div, 32-bit
-datatype rv_ins32M =
+datatype ins32M =
 | RV_MUL (rd: Reg32, rs1: Reg32, rs2: Reg32)
 | RV_MULH (rd: Reg32, rs1: Reg32, rs2: Reg32)
 | RV_MULHSU (rd: Reg32, rs1: Reg32, rs2: Reg32)
@@ -83,18 +82,19 @@ datatype ins32CSR =
 | RISC_MRET
 | RISC_WFI
 | RISC_SFENCE_VMA (rs1: Reg32, rs2: Reg32)
-| RISC_CSRRW (rd: Reg32, rs1: Reg32, csr12: MachineInt)
-| RISC_CSRRS (rd: Reg32, rs1: Reg32, csr12: MachineInt)
-| RISC_CSRRC (rd: Reg32, rs1: Reg32, csr12: MachineInt)
-| RISC_CSRRWI (rd: Reg32, zimm: MachineInt, csr12: MachineInt)
-| RISC_CSRRSI (rd: Reg32, zimm: MachineInt, csr12: MachineInt)
-| RISC_CSRRCI (rd: Reg32, zimm: MachineInt, csr12: MachineInt)
+| RISC_CSRRW (rd: Reg32, rs1: Reg32, csr12: uint32)
+| RISC_CSRRS (rd: Reg32, rs1: Reg32, csr12: uint32)
+| RISC_CSRRC (rd: Reg32, rs1: Reg32, csr12: uint32)
+| RISC_CSRRWI (rd: Reg32, zimm: uint32, csr12: uint32)
+| RISC_CSRRSI (rd: Reg32, zimm: uint32, csr12: uint32)
+| RISC_CSRRCI (rd: Reg32, zimm: uint32, csr12: uint32)
 
 datatype rv_ins32 = ins32I(ins: ins32I)| ins32M(ins: ins32M) | ins32CSR(ins: ins32CSR)
 
 datatype code =
 | Ins32(ins: rv_ins32)
 | Block(block: codes)
+// | IfElse(ifCond: ifCond, ifTrue:code, ifFalse:code)
 | While(whileCond: whileCond, whileBody: code)
 
 datatype codes = CNil | va_CCons(hd: code, tl: codes)
@@ -107,7 +107,6 @@ datatype whileCond =
 datatype state = state(
     regs: map<Reg32, uint32>, // 32-bit registers
     mem: map<int, uint32>,
-    pc: uint32,
     ok: bool)
 
 predicate valid_state(s: state)

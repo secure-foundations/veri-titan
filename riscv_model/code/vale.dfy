@@ -36,6 +36,16 @@ function va_update_mem(sM: va_state, sK: va_state): va_state
     sK.(mem := sM.mem)
 }
 
+function va_get_pc(s: va_state): map<int, uint32>
+{
+    s.pc
+}
+
+function va_update_pc(sM: va_state, sK: va_state): va_state
+{
+    sK.(pc := sM.pc)
+}
+
 function va_update_ok(sM: va_state, sK: va_state): va_state
 {
     sK.(ok := sM.ok)
@@ -115,7 +125,7 @@ predicate va_require(b0:codes, c1:code, s0: va_state, sN: va_state)
 {
     && cHeadIs(b0, c1)
     && eval_code(Block(b0), s0, sN)
-    && BN_ValidState(s0)
+    && RV_ValidState(s0)
 }
 
 // Weaker form of eval_code that we can actually ensure generically in instructions
@@ -129,7 +139,7 @@ predicate va_ensure(b0:codes, b1:codes, s0: va_state, s1: va_state, sN: va_state
     && cTailIs(b0, b1)
     && eval_weak(b0.hd, s0, s1)
     && eval_code(Block(b1), s1, sN)
-    && BN_ValidState(s1)
+    && RV_ValidState(s1)
 }
 
 lemma va_ins_lemma(b0:code, s0: va_state)
@@ -293,7 +303,7 @@ predicate evalWhileLax(w:whileCond, c:code, n:nat, s:state, r:state)
 
 predicate va_whileInv(w:whileCond, c:code, n:int, r1: va_state, r2: va_state)
 {
-    n >= 0 && BN_ValidState(r1) && evalWhileLax(w, c, n, r1, r2)
+    n >= 0 && RV_ValidState(r1) && evalWhileLax(w, c, n, r1, r2)
 }
 
 lemma va_lemma_while(w:whileCond, c:code, s: va_state, r: va_state) returns(n:nat, r': va_state)
@@ -337,7 +347,7 @@ lemma va_lemma_whileTrue(w:whileCond, c:code, n:nat, s: va_state, r: va_state) r
 {
     reveal_evalCodeOpaque();
     reveal_evalWhileOpaque();
-    reveal_BN_ValidState();
+    reveal_RV_ValidState();
 
     if !s.ok {
         s' := s;
@@ -346,7 +356,7 @@ lemma va_lemma_whileTrue(w:whileCond, c:code, n:nat, s: va_state, r: va_state) r
     }
     assert evalWhile(c, n, s, r); // TODO: Dafny reveal/opaque issue
 
-    if BN_ValidState(s) {
+    if RV_ValidState(s) {
         var r'':state :| evalCode(c, s, r'') && evalWhile( c, n - 1, r'', r);
         s' := s;
         r' := r'';
@@ -363,7 +373,7 @@ lemma va_lemma_whileFalse(w:whileCond, c:code, s: va_state, r: va_state) returns
     requires evalWhileLax(w, c, 0, s, r)
     ensures  if s.ok then
                 (if RV_ValidState(s) then
-                    (r'.ok ==> BN_ValidState(r'))
+                    (r'.ok ==> RV_ValidState(r'))
                 //  && BN_branchRelation(s, r', false)
                 //  && eval_cond(s, w) == 0
                 && s == r
