@@ -20,6 +20,9 @@ module NativeTypes {
  	const INT64_MAX : int64 := 0x7fffffffffffffff;
  	const INT64_MIN : int64 := -0x7fffffffffffffff; // what?
 
+ 	const BASE_256 :int := UINT256_MAX + 1;
+
+
  	type uint128 = i:int | 0 <= i < 0x100000000000000000000000000000000
  	type uint256 = i:int | 0 <= i < 0x10000000000000000000000000000000000000000000000000000000000000000
  	const UINT128_MAX :uint128 := 0xffffffffffffffffffffffffffffffff;

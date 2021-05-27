@@ -201,9 +201,10 @@ module ops {
 		(x as bv256 | y as bv256) as uint256
 	}
 
-	function {:opaque} uint256_ls(x: uint256, num_bytes:int): uint256
+	function {:opaque} uint256_ls(x: uint256, num_bytes:int): (r: uint256)
 		requires 0 <= num_bytes < 32;
-		ensures uint256_ls(x, 0) == x;
+		ensures (num_bytes == 0) ==> r == x;
+		ensures (num_bytes == 8 && x < BASE_192) ==> (r == x * BASE_64);
 	{
 		// assume false;
 		(x as bv256 << (num_bytes * 8)) as uint256

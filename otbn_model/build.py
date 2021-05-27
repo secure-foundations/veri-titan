@@ -1,5 +1,5 @@
 import sys, os, subprocess
-from subprocess import PIPE
+from subprocess import PIPE, Popen
 
 rules = """
 rule dafny
@@ -93,5 +93,7 @@ elif option == "proc":
     for dfy_file in outputs.splitlines():
         print("verify %s in %s" % (proc, dfy_file))
         command = "time -p dafny /compile:0 /nologo /proc:*%s " % proc + dfy_file
-        r = subprocess.check_output(command, shell=True).decode("utf-8")
-        print(r)
+        # r = subprocess.check_output(command, shell=True).decode("utf-8")
+        process = Popen(command, shell=True, stdout=PIPE)
+        output = process.communicate()[0].decode("utf-8")
+        print(output)

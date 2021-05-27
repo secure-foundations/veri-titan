@@ -13,6 +13,11 @@ module powers
         else b * power(b, e - 1)
     }
 
+    function method pow2(n: nat) : nat
+    {
+        power(2, n)
+    }
+
     lemma {:induction e} power_base_one_lemma(e: nat) 
         ensures power(1, e) == 1;
     {

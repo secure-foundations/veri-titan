@@ -378,6 +378,41 @@ function mulqacc256(
 	if zero then shift else (acc + shift) % BASE_256
 }
 
+predicate bn_mulqacc_is_safe(shift: uint2, acc: uint256)
+{
+    // make sure no overflow from shift (product is assumed to be 128 bits)
+    && (shift <= 2) 
+    // make sure no overflow from addtion
+    && (acc + bn_qshift_safe(BASE_128 - 1, shift) < BASE_256)
+}
+
+// mulquacc but no overflow
+function bn_mulqacc_safe(
+    zero: bool,
+	x:uint256, qx: uint2,
+	y:uint256, qy: uint2,
+	shift: uint2,
+	acc: uint256) : uint256
+
+    requires bn_mulqacc_is_safe(shift, acc);
+{
+	var product := uint256_qmul(x, qx, y, qy);
+	var shift := bn_qshift_safe(product, shift);
+	if zero then shift else acc + shift
+}
+
+// quater shift but no overflow
+function bn_qshift_safe(x: uint256, q: uint2): (r: uint256)
+    requires (q == 1) ==> (x < BASE_192);
+    requires (q == 2) ==> (x < BASE_128);
+    requires (q == 3) ==> (x < BASE_64);
+{
+    if q == 0 then x
+    else if q == 1 then x * BASE_64
+    else if q == 2 then x * BASE_128
+    else x * BASE_192
+}
+
 function xor256(x:Bignum, y:Bignum, st:bool, sb:uint32) : Bignum
 	requires sb < 32;
 {

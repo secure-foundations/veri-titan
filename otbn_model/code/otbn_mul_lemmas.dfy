@@ -30,6 +30,7 @@ module otbn_mul_lemmas {
 		wacc_g7: uint256,
 		wacc_g8: uint256,
 		wacc_g9: uint256,
+        wacc: uint256,
 		w1_g1: uint256,
 		w1_g2: uint256,
 		result_g1: uint256,
@@ -50,6 +51,7 @@ module otbn_mul_lemmas {
 		requires pc8: wacc_g8 == mulqacc256(false, w28, 2, w29, 1, 1, wacc_g7);
 		requires pc9: wacc_g9 == mulqacc256(false, w28, 1, w29, 2, 1, wacc_g8);
 		requires pc10: result_g2 == mulqacc256(false, w28, 0, w29, 3, 1, wacc_g9)
+			&& wacc == uint256_uh(result_g2)
 			&& w1 == uint256_hwb(w1_g2, uint256_lh(result_g2), false);
 		ensures half_product(w1, w28, w29);
 	{
@@ -66,12 +68,10 @@ module otbn_mul_lemmas {
 
 		assert wacc_g1 == p1 by {
 			reveal pc1;
-			// lemma_sb_nop(p1);
 		}
 
 		assert wacc_g2 == wacc_g1 + p2 * BASE_64 by {
 			reveal pc2;
-			lemma_ls_mul(p2);
 		}
 
 		assert result_g1 == wacc_g2 + p3 * BASE_64
@@ -79,9 +79,7 @@ module otbn_mul_lemmas {
 			&& w1_g2 == uint256_hwb(w1_g1, uint256_lh(result_g1), true)
 		by {
 			reveal pc3;
-			assert result_g1 == wacc_g2 + p3 * BASE_64 by {
-				lemma_ls_mul(p3);
-			}
+			assert result_g1 == wacc_g2 + p3 * BASE_64;
 		}
 
 		assert wacc_g4 == wacc_g3 + p4 by {
@@ -98,25 +96,20 @@ module otbn_mul_lemmas {
 
 		assert wacc_g7 == wacc_g6 + p7 * BASE_64 by {
 			reveal pc7;
-			lemma_ls_mul(p7);
 		}
 
 		assert wacc_g8 == wacc_g7 + p8 * BASE_64 by {
 			reveal pc8;
-			lemma_ls_mul(p8);
 		}
 
 		assert wacc_g9 == wacc_g8 + p9 * BASE_64 by {
 			reveal pc9;
-			lemma_ls_mul(p9);
 		}
 
 		assert result_g2 == wacc_g9 + p10 * BASE_64
 			&& w1 == uint256_hwb(w1_g2, uint256_lh(wacc_g9 + p10 * BASE_64), false) by {
 			reveal pc10;
-			assert result_g2 == wacc_g9 + p10 * BASE_64 by {
-				lemma_ls_mul(p10);
-			}
+			assert result_g2 == wacc_g9 + p10 * BASE_64;
 		}
 
 		var lo := uint256_lh(result_g1);
