@@ -130,16 +130,16 @@ module bv_ops {
 
 	function method {:opaque} uint256_ls(x: uint256, num_bytes: uint5): (r: uint256)
 		ensures (num_bytes == 8 && x < BASE_192) ==> (r == x * BASE_64);
-	{
-		assume false;
-		(x as bv256 << (num_bytes * 8)) as uint256
-	}
+	// {
+	// 	assume false;
+	// 	(x as bv256 << (num_bytes * 8)) as uint256
+	// }
 
 	function method {:opaque} uint256_rs(x: uint256, num_bytes: uint5): uint256
-	{
-		assume false;
-		(x as bv256 >> (num_bytes * 8)) as uint256
-	}
+	// {
+	// 	assume false;
+	// 	(x as bv256 >> (num_bytes * 8)) as uint256
+	// }
 
 	function method uint256_sb(b: uint256, shift: shift_t) : uint256
 	{	
@@ -179,17 +179,11 @@ module bv_ops {
 	{
 		calc == {
 			x3;
-			{
-				lemma_uint256_half_split(x3);
-			}
+				{ lemma_uint256_half_split(x3); }
 			uint256_lh(x3) + uint256_uh(x3) * BASE_128;
-			{
-				assert uint256_uh(x3) == hi && uint256_lh(x3) == uint256_lh(x2);
-			}
+				{ assert uint256_uh(x3) == hi && uint256_lh(x3) == uint256_lh(x2); }
 			uint256_lh(x2) + hi * BASE_128;
-			{
-				assert uint256_lh(x2) == lo;
-			}
+				{ assert uint256_lh(x2) == lo; }
 			lo + hi * BASE_128;
 		}
 	}

@@ -188,23 +188,6 @@ module rsa_ops {
         }
     }
 
-    lemma seq_subb_safe_nat_lemma(xs: seq<uint256>, ys: seq<uint256>)
-        requires |xs| == |ys|
-        requires to_nat(xs) >= to_nat(ys)
-        ensures seq_subb(xs, ys).1 == 0
-    {
-        var (zs, bout) := seq_subb(xs, ys);
-        seq_subb_nat_lemma(xs, ys, zs, bout);
-
-        if bout == 1 {
-            assert to_nat(xs) - to_nat(ys) + pow_B256(|xs|) == to_nat(zs);
-            to_nat_bound_lemma(xs);
-            to_nat_bound_lemma(ys);
-            to_nat_bound_lemma(zs);
-            assert false;
-        }
-    }
-
 /* rsa/mm definions & lemmas */
 
    datatype rsa_params = rsa_params(

@@ -20,6 +20,7 @@ import opened mont_loop
 import opened montmul
 import opened mont_loop_lemmas
 import opened modexp_var_lemmas
+import opened subb_lemmas
 
 #endverbatim
 
@@ -44,7 +45,11 @@ ghost procedure modexp_var_inv_lemma_2(
     ghost sig: seq(uint256),
     ghost rsa: rsa_params) extern;
 
-function subb_inv(dst: seq(uint256), carry: uint1, src1: seq(uint256), src2: seq(uint256), index: int) : bool extern;
+function subb_inv(dst: seq(uint256),
+    carry: uint1,
+    src1: seq(uint256),
+    src2: seq(uint256),
+    index: int) : bool extern;
 
 ghost procedure subb_inv_peri_lemma(
     ghost dst: seq(uint256),
