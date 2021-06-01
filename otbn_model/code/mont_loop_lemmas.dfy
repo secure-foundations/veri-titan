@@ -148,7 +148,12 @@ module mont_loop_lemmas {
 
         ensures mont_loop_inv(xi, ui, p1, p2, y, m, a, a, 1)
     {
-        assume cong_B256(m0d * m[0], -1);
+        assert cong_B256(m0d * m[0], -1) by {
+            lsw_cong_lemma(m);
+            cong_mul_lemma_1(to_nat(m), m[0], m0d, BASE_256);
+            reveal cong();
+        }
+
         mont_loop_divisible_lemma(ui, m0d, p1, p2, m[0]);
 
         to_nat_lemma_0(y[..1]);

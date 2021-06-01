@@ -38,6 +38,44 @@ module rsa_ops {
         reveal power();
     }
 
+    // unstable
+    lemma lsw_cong_lemma(xs: seq<uint256>)
+        requires |xs| >= 1;
+        ensures cong_B256(to_nat(xs), xs[0]);
+    {
+        if |xs| == 1 {
+            to_nat_lemma_0(xs);
+            reveal cong();
+        } else {
+            assert cong_B256(to_nat(xs), xs[0]) by {
+                var len' := |xs| - 1;
+                var xs' := xs[..len'];
+
+                assert cong_B256(xs[len'] * pow_B256(len'), 0) by {
+                    reveal cong();
+                    power_mod_lemma_1(BASE_256, len');
+                    cong_mul_lemma_1(pow_B256(len'), 0, xs[len'], BASE_256);
+                }
+
+                calc ==> {
+                    true;
+                        { reveal to_nat(); reveal cong(); }
+                    cong_B256(to_nat(xs), to_nat(xs') + xs[len'] * pow_B256(len'));
+                        { cong_add_compose_lemma(to_nat(xs), to_nat(xs'), xs[len'] * pow_B256(len'), 0, BASE_256); }
+                    cong_B256(to_nat(xs), to_nat(xs'));
+                        {
+                           lsw_cong_lemma(xs');
+                           assert xs'[0] == xs[0];
+                           reveal cong();
+                        }
+                    cong_B256(to_nat(xs), xs[0]);
+                }
+                assert cong_B256(to_nat(xs), xs[0]);
+            }
+        }
+
+    }
+
     lemma uint512_view_lemma(num: uint512_view_t)
         ensures num.full
             == to_nat([num.lh, num.uh])

@@ -291,6 +291,4 @@ module congruences {
         cong_add_lemma_1(c, d, b, n);
         reveal cong();
     }
-
-
 }
