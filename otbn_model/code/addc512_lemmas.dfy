@@ -8,6 +8,48 @@ module addc512_lemmas {
     import opened powers
     import opened congruences
 
+    lemma single_digit_lemma_0(a: nat, b: nat, u: nat)
+        requires a <= u;
+        requires b <= u;
+        ensures a * b <= u * u;
+    {
+        assert true;
+    }
+
+    lemma single_digit_lemma_1(a: nat, b: nat, c: nat, u: nat)
+        requires a <= u;
+        requires b <= u;
+        requires c <= u;
+        ensures a * b + c < (u + 1) * (u + 1);
+    {
+        calc <= {
+            a * b + c;
+            { single_digit_lemma_0(a, b, u); }
+            u * u + c;
+            u * u + u;
+            u * (u + 1);
+            (u + 1) * (u + 1);
+        }
+    }
+
+    lemma single_digit_lemma_2(a: nat, b: nat, c: nat, d: nat, u: nat)
+        requires a <= u;
+        requires b <= u;
+        requires c <= u;
+        requires d <= u;
+        ensures a * b + c + d < (u + 1) * (u + 1);
+    {
+        calc <= {
+            a * b + c + d;
+            { single_digit_lemma_0(a, b, u); }
+            u * u + c + d;
+            u * u + u + u;
+            u * u + 2 * u;
+            u * u + 2 * u + 1;
+            (u + 1) * (u + 1);
+        }
+    }
+
     lemma addc_256_op_lemma(
         x: uint256, y: uint256, z: uint256, c: uint1)
         requires (z, c) == uint256_addc(x, y, 0);
@@ -33,24 +75,42 @@ module addc512_lemmas {
         to_nat(xs) + to_nat(ys) < pow_B256(2)
     }
 
-    lemma mont_word_mul_add_bound_lemma1(
+    lemma mont_word_mul_add_bound_lemma_0(
         xs: seq<uint256>, ys: seq<uint256>, a: uint256, b: uint256)
         requires |xs| == |ys| == 2;
         requires to_nat(xs) == a * b;
         requires ys[1] == 0;
         ensures seq_addc_512_is_safe(xs, ys);
     {
-        assume false;
+        var c := ys[0];
+        calc {
+            to_nat(xs) + to_nat(ys);
+            == { to_nat_lemma_1(ys); }
+            a * b + c;
+            < { single_digit_lemma_1(a, b, c, BASE_256 - 1); }
+            BASE_256 * BASE_256;
+            == { reveal power(); }
+            pow_B256(2);
+        }
     }
 
-    lemma mont_word_mul_add_bound_lemma2(
+    lemma mont_word_mul_add_bound_lemma_1(
         xs: seq<uint256>, ys: seq<uint256>, a: uint256, b: uint256, c: uint256)
         requires |xs| == |ys| == 2;
         requires to_nat(xs) == a * b + c;
         requires ys[1] == 0;
         ensures seq_addc_512_is_safe(xs, ys);
     {
-        assume false;
+        var d := ys[0];
+        calc {
+            to_nat(xs) + to_nat(ys);
+            == { to_nat_lemma_1(ys); }
+            a * b + c + d;
+            < { single_digit_lemma_2(a, b, c, d, BASE_256 - 1); }
+            BASE_256 * BASE_256;
+            == { reveal power(); }
+            pow_B256(2);
+        }
     }
 
     lemma seq_addc_512_safe_nat_lemma(
@@ -61,7 +121,9 @@ module addc512_lemmas {
         ensures to_nat(xs) + to_nat(ys) == to_nat(zs);
         ensures to_nat(zs) < BASE_512
     {
-        assume pow_B256(2) == BASE_512;
+        assert pow_B256(2) == BASE_512 by {
+            reveal power();
+        }
         seq_addc_nat_lemma(xs, ys, zs, cout);
         if cout == 1 {
             assert false; // prove by contradiction

@@ -263,12 +263,32 @@ module congruences {
         reveal cong();
         cong_add_lemma_2(a, a, 0, m, n);
     }
-
+  
     lemma cong_add_lemma_4(a: int, b: int, n: int)
         requires n != 0;
         ensures cong(a, a + b * n, n);
     {
         mod_mul_lemma(b, n, n);
         cong_add_lemma_3(a, b * n, n);
+    }
+
+    lemma cong_add_lemma_5(a: int, b: int, c: int, n: int)
+        requires n != 0;
+        requires cong(a, b, n);
+        ensures cong(a, b + c * n, n);
+    {
+        cong_add_lemma_4(b, c, n);
+        cong_add_lemma_4(a, c, n);
+        reveal cong();
+    }
+
+    lemma cong_add_compose_lemma(a: int, b: int, c: int, d: int, n: int)
+        requires n != 0;
+        requires cong(a, b + c, n);
+        requires cong(c, d, n);
+        ensures cong(a, b + d, n);
+    {
+        cong_add_lemma_1(c, d, b, n);
+        reveal cong();
     }
 }

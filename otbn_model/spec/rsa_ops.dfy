@@ -21,7 +21,7 @@ module rsa_ops {
             to_nat(xs[..len']) + xs[len'] * pow_B256(len')
     }
 
-    lemma to_nat_lemma_1(xs: seq<uint256>)
+    lemma to_nat_lemma_0(xs: seq<uint256>)
         requires |xs| == 1
         ensures to_nat(xs) == xs[0]
     {
@@ -29,13 +29,51 @@ module rsa_ops {
         reveal power();
     }
 
-    lemma to_nat_lemma_2(xs: seq<uint256>)
+    lemma to_nat_lemma_1(xs: seq<uint256>)
         requires |xs| == 2
         ensures to_nat(xs) == xs[0] + xs[1] * BASE_256
     {
         reveal to_nat();
-        to_nat_lemma_1(xs[..1]);
+        to_nat_lemma_0(xs[..1]);
         reveal power();
+    }
+
+    // unstable
+    lemma lsw_cong_lemma(xs: seq<uint256>)
+        requires |xs| >= 1;
+        ensures cong_B256(to_nat(xs), xs[0]);
+    {
+        if |xs| == 1 {
+            to_nat_lemma_0(xs);
+            reveal cong();
+        } else {
+            assert cong_B256(to_nat(xs), xs[0]) by {
+                var len' := |xs| - 1;
+                var xs' := xs[..len'];
+
+                assert cong_B256(xs[len'] * pow_B256(len'), 0) by {
+                    reveal cong();
+                    power_mod_lemma_1(BASE_256, len');
+                    cong_mul_lemma_1(pow_B256(len'), 0, xs[len'], BASE_256);
+                }
+
+                calc ==> {
+                    true;
+                        { reveal to_nat(); reveal cong(); }
+                    cong_B256(to_nat(xs), to_nat(xs') + xs[len'] * pow_B256(len'));
+                        { cong_add_compose_lemma(to_nat(xs), to_nat(xs'), xs[len'] * pow_B256(len'), 0, BASE_256); }
+                    cong_B256(to_nat(xs), to_nat(xs'));
+                        {
+                           lsw_cong_lemma(xs');
+                           assert xs'[0] == xs[0];
+                           reveal cong();
+                        }
+                    cong_B256(to_nat(xs), xs[0]);
+                }
+                assert cong_B256(to_nat(xs), xs[0]);
+            }
+        }
+
     }
 
     lemma uint512_view_lemma(num: uint512_view_t)
@@ -45,7 +83,7 @@ module rsa_ops {
     {
         reveal uint512_lh();
         reveal uint512_uh();
-        to_nat_lemma_2([num.lh, num.uh]);
+        to_nat_lemma_1([num.lh, num.uh]);
     }
 
     function seq_zero(len: nat): (zs: seq<uint256>)
@@ -188,26 +226,9 @@ module rsa_ops {
         }
     }
 
-    lemma seq_subb_safe_nat_lemma(xs: seq<uint256>, ys: seq<uint256>)
-        requires |xs| == |ys|
-        requires to_nat(xs) >= to_nat(ys)
-        ensures seq_subb(xs, ys).1 == 0
-    {
-        var (zs, bout) := seq_subb(xs, ys);
-        seq_subb_nat_lemma(xs, ys, zs, bout);
-
-        if bout == 1 {
-            assert to_nat(xs) - to_nat(ys) + pow_B256(|xs|) == to_nat(zs);
-            to_nat_bound_lemma(xs);
-            to_nat_bound_lemma(ys);
-            to_nat_bound_lemma(zs);
-            assert false;
-        }
-    }
-
 /* rsa/mm definions & lemmas */
 
-   datatype pub_key = pub_key(
+   datatype rsa_params = rsa_params(
         e': nat, // e == 2 ** (e' + 1)
         e: nat,
         m: nat,
@@ -218,35 +239,35 @@ module rsa_ops {
         RR: nat,
         R_INV: nat)
 
-    predicate pub_key_inv(key: pub_key)
+    predicate rsa_params_inv(rsa: rsa_params)
     {
-        && key.e == power(2, key.e') + 1
+        && rsa.e == power(2, rsa.e') + 1
 
-        && key.m != 0
-        && cong_B256(key.m0d * key.m, BASE_256-1)
+        && rsa.m != 0
+        && cong_B256(rsa.m0d * rsa.m, -1)
 
-        && cong(BASE_256 * key.B256_INV, 1, key.m)
+        && cong(BASE_256 * rsa.B256_INV, 1, rsa.m)
 
-        && key.sig < key.m
+        && rsa.sig < rsa.m
 
-        && key.R == power(BASE_256, NUM_WORDS)
+        && rsa.R == power(BASE_256, NUM_WORDS)
 
-        && key.RR < key.m
-        && cong(key.RR, key.R * key.R, key.m)
+        && rsa.RR < rsa.m
+        && cong(rsa.RR, rsa.R * rsa.R, rsa.m)
 
-        && key.R_INV == power(key.B256_INV, NUM_WORDS)
-        && cong(key.R_INV * key.R, 1, key.m)
+        && rsa.R_INV == power(rsa.B256_INV, NUM_WORDS)
+        && cong(rsa.R_INV * rsa.R, 1, rsa.m)
     }
 
     datatype mm_vars = mm_vars(
-        x_iter: iter_t,
-        y_iter: iter_t,
-        m_iter: iter_t,
+        x_it: iter_t,
+        y_it: iter_t,
+        m_it: iter_t,
         rr_iter: iter_t,
         m0d_iter: iter_t,
-        key: pub_key)
+        rsa: rsa_params)
 
-    predicate mm_iter_inv(iter: iter_t, wmem: wmem_t, address: int)
+    predicate mm_it_inv(iter: iter_t, wmem: wmem_t, address: int)
     {
         || address == NA // TODO: make iter provide its own address in this case
         || (&& iter_inv(iter, wmem, address)
@@ -270,13 +291,13 @@ module rsa_ops {
         rr_addr: int,
         m0d_addr: int)
     {
-        && pub_key_inv(vars.key)
+        && rsa_params_inv(vars.rsa)
 
-        && mm_iter_inv(vars.x_iter, wmem, x_addr)
-        && mm_iter_inv(vars.y_iter, wmem, y_addr)
+        && mm_it_inv(vars.x_it, wmem, x_addr)
+        && mm_it_inv(vars.y_it, wmem, y_addr)
 
-        && mm_iter_inv(vars.m_iter, wmem, m_addr)
-        && mm_iter_inv(vars.rr_iter, wmem, rr_addr)
+        && mm_it_inv(vars.m_it, wmem, m_addr)
+        && mm_it_inv(vars.rr_iter, wmem, rr_addr)
         && m0d_iter_inv(vars.m0d_iter, wmem, m0d_addr)
     }
 
@@ -290,8 +311,8 @@ module rsa_ops {
         m0d_addr: int)
     {
         && mm_vars_safe(vars, wmem, x_addr, y_addr, m_addr, rr_addr, m0d_addr)
-        && to_nat(vars.m_iter.buff) == vars.key.m
-        && (rr_addr == NA ||to_nat(vars.rr_iter.buff) == vars.key.RR)
-        && vars.m0d_iter.buff[0] == vars.key.m0d
+        && to_nat(vars.m_it.buff) == vars.rsa.m
+        && (rr_addr == NA ||to_nat(vars.rr_iter.buff) == vars.rsa.RR)
+        && vars.m0d_iter.buff[0] == vars.rsa.m0d
     }
 }
