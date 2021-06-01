@@ -121,7 +121,9 @@ module addc512_lemmas {
         ensures to_nat(xs) + to_nat(ys) == to_nat(zs);
         ensures to_nat(zs) < BASE_512
     {
-        assume pow_B256(2) == BASE_512;
+        assert pow_B256(2) == BASE_512 by {
+            reveal power();
+        }
         seq_addc_nat_lemma(xs, ys, zs, cout);
         if cout == 1 {
             assert false; // prove by contradiction

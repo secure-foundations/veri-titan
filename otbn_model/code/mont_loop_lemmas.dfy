@@ -55,22 +55,61 @@ module mont_loop_lemmas {
         }
     }
 
-    lemma mont_loop_divisible_lemma(xi: uint256,
-        ui: uint256,
-        m0d: uint256,
+    lemma mont_loop_divisible_lemma(
+        ui: int,
+        m0d: int,
         p1: uint512_view_t,
         p2: uint512_view_t,
-        y0: uint256,
-        m0: uint256,
-        a0: uint256)
+        m0: int)
 
-        requires p1.full == xi * y0 + a0;
         requires p2.full == ui * m0 + p1.lh;
-        requires cong_B256(m0d * m0, BASE_256 - 1);
+        requires cong_B256(m0d * m0, -1);
         requires cong_B256(ui, p1.full * m0d);
         ensures p2.lh == 0;
     {
-        assume false; // TODO
+        var p1_full := p1.full as int;
+
+        assert cong_B256(ui * m0, -p1_full) by {
+            assert cong_B256(m0d * m0 * p1.full, -p1_full) by {
+                cong_mul_lemma_1(m0d * m0, -1, p1.full, BASE_256);
+            }
+            assert cong_B256(ui * m0, p1.full * m0d * m0) by {
+                cong_mul_lemma_1(ui, p1.full * m0d, m0, BASE_256);
+            }
+            reveal cong(); 
+        }
+
+        calc ==> {
+            cong_B256(ui * m0, -p1_full);
+            { cong_add_lemma_1(ui * m0, - p1_full, p1.lh, BASE_256); }
+            cong_B256(ui * m0 + p1.lh , - p1_full + p1.lh);
+            { lemma_uint512_half_split(p1.full); }
+            cong_B256(ui * m0 + p1.lh, - (p1.uh as int * BASE_256 + p1.lh) + p1.lh);
+            cong_B256(ui * m0 + p1.lh, - (p1.uh as int) * BASE_256);
+            {
+                reveal cong();
+                assert cong_B256(- (p1.uh as int) * BASE_256, 0);
+            }
+            cong_B256(ui * m0 + p1.lh, 0);
+        }
+
+        calc ==> {
+            p2.full == ui * m0 + p1.lh;
+            { lemma_uint512_half_split(p2.full); }
+            p2.lh + p2.uh * BASE_256 == ui * m0 + p1.lh;
+            { reveal cong(); }
+            cong_B256(p2.lh + p2.uh * BASE_256, ui * m0 + p1.lh);
+            {
+                cong_add_lemma_4(p2.lh, p2.uh, BASE_256);
+                reveal cong();
+            }
+            cong_B256(p2.lh, ui * m0 + p1.lh);
+            { cong_trans_lemma(p2.lh, ui * m0 + p1.lh, 0, BASE_256); }
+            cong_B256(p2.lh, 0);
+        }
+
+        assert cong_B256(p2.lh, 0);
+        cong_residual_lemma(p2.lh, 0, BASE_256)
     }
 
     predicate mont_loop_inv(
@@ -104,13 +143,13 @@ module mont_loop_lemmas {
         requires |m| == |a| == |y| == NUM_WORDS;
         requires p1.full == xi * y[0] + a[0];
         requires p2.full == ui * m[0] + p1.lh;
-        requires cong_B256(m0d * to_nat(m), BASE_256 - 1);
+        requires cong_B256(m0d * to_nat(m), -1);
         requires cong_B256(ui, (a[0] + y[0] * xi) * m0d);
 
         ensures mont_loop_inv(xi, ui, p1, p2, y, m, a, a, 1)
     {
-        assume cong_B256(m0d * m[0], BASE_256 - 1);
-        mont_loop_divisible_lemma(xi, ui, m0d, p1, p2, y[0], m[0], a[0]);
+        assume cong_B256(m0d * m[0], -1);
+        mont_loop_divisible_lemma(ui, m0d, p1, p2, m[0]);
 
         to_nat_lemma_0(y[..1]);
         to_nat_lemma_0(m[..1]);

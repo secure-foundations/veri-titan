@@ -24,7 +24,7 @@ module bv_ops {
 
 	const SFT_DFT :shift_t := SFT(true, 0);
 
-    predicate cong_B256(a: nat, b: nat)
+    predicate cong_B256(a: int, b: int)
     {
         cong(a, b, BASE_256)
     }
@@ -250,5 +250,12 @@ module bv_ops {
 	function method {:opaque} uint512_uh(x: uint512): uint256
 	{
 		x / BASE_256
+	}
+
+	lemma lemma_uint512_half_split(x: uint512)
+		ensures x == uint512_lh(x) + uint512_uh(x) * BASE_256;
+	{
+		reveal uint512_lh();
+		reveal uint512_uh();
 	}
 } // end module ops

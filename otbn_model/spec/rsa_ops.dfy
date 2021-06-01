@@ -206,7 +206,7 @@ module rsa_ops {
         && rsa.e == power(2, rsa.e') + 1
 
         && rsa.m != 0
-        && cong_B256(rsa.m0d * rsa.m, BASE_256-1)
+        && cong_B256(rsa.m0d * rsa.m, -1)
 
         && cong(BASE_256 * rsa.B256_INV, 1, rsa.m)
 

@@ -385,7 +385,7 @@ returns (ghost out_iter: iter_t)
         assert w2 == raw_view[index];
 
         bn_movr(x10, false, x17, true);
-        assert w3 == adjusted_view[index];
+        assume w3 == adjusted_view[index];
    
         bn_sel(w2, w2, w3, 0, 0);
         ghost if (carry) {
