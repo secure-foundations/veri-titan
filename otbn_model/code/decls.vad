@@ -150,7 +150,7 @@ function mm_vars_safe(vars: mm_vars, wmem: wmem_t, x_addr: int, y_addr: int, m_a
 function mm_vars_inv(vars: mm_vars, wmem: wmem_t, x_addr: int, y_addr: int, m_addr: int, rr_addr: int, m0d_addr: int): bool extern;
 
 function to_nat(s: seq(uint256)): nat extern;
-ghost procedure to_nat_lemma_2(ghost xs: seq(uint256)) extern;
+ghost procedure to_nat_lemma_1(ghost xs: seq(uint256)) extern;
 
 var x0: uint32 {:state reg32_t(GPR(0))};
 var x1: uint32 {:state reg32_t(GPR(1))};

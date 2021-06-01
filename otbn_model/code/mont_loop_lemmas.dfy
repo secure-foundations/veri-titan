@@ -40,7 +40,7 @@ module mont_loop_lemmas {
 
         calc ==> {
             true;
-                { to_nat_lemma_2([w25, w26]); }
+                { to_nat_lemma_1([w25, w26]); }
             w25 + w26 * BASE_256 == p1.lh * m0d;
                 { reveal cong();}
             cong_B256(w25 + w26 * BASE_256, p1.lh * m0d);
@@ -112,9 +112,9 @@ module mont_loop_lemmas {
         assume cong_B256(m0d * m[0], BASE_256 - 1);
         mont_loop_divisible_lemma(xi, ui, m0d, p1, p2, y[0], m[0], a[0]);
 
-        to_nat_lemma_1(y[..1]);
-        to_nat_lemma_1(m[..1]);
-        to_nat_lemma_1(a[..1]);
+        to_nat_lemma_0(y[..1]);
+        to_nat_lemma_0(m[..1]);
+        to_nat_lemma_0(a[..1]);
 
         assert p2.full == p2.uh * BASE_256 by {
             uint512_view_lemma(p2);

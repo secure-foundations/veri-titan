@@ -21,7 +21,7 @@ module rsa_ops {
             to_nat(xs[..len']) + xs[len'] * pow_B256(len')
     }
 
-    lemma to_nat_lemma_1(xs: seq<uint256>)
+    lemma to_nat_lemma_0(xs: seq<uint256>)
         requires |xs| == 1
         ensures to_nat(xs) == xs[0]
     {
@@ -29,12 +29,12 @@ module rsa_ops {
         reveal power();
     }
 
-    lemma to_nat_lemma_2(xs: seq<uint256>)
+    lemma to_nat_lemma_1(xs: seq<uint256>)
         requires |xs| == 2
         ensures to_nat(xs) == xs[0] + xs[1] * BASE_256
     {
         reveal to_nat();
-        to_nat_lemma_1(xs[..1]);
+        to_nat_lemma_0(xs[..1]);
         reveal power();
     }
 
@@ -45,7 +45,7 @@ module rsa_ops {
     {
         reveal uint512_lh();
         reveal uint512_uh();
-        to_nat_lemma_2([num.lh, num.uh]);
+        to_nat_lemma_1([num.lh, num.uh]);
     }
 
     function seq_zero(len: nat): (zs: seq<uint256>)
