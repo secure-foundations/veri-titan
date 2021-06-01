@@ -106,7 +106,7 @@ ghost procedure mont_loop_cond_sub_lemma(
     ghost ui: uint256,
     ghost y: seq(uint256),
     ghost m: nat,
-    ghost prev_a: seq(uint256),
+    ghost prev_a: nat,
     ghost curr_a: seq(uint256),
     ghost next_a: seq(uint256),
     ghost bout: uint1,
@@ -523,7 +523,7 @@ procedure mont_loop(
     next_view := cond_sub_to_reg(curr_view, m_it, fgroups.fg1.cf);
 
     mont_loop_cond_sub_lemma(xi, ui, y_it.buff, to_nat(m_it.buff),
-        prev_view, curr_view, next_view, bout, bool_to_uint1(fgroups.fg0.cf));
+        to_nat(prev_view), curr_view, next_view, bout, bool_to_uint1(fgroups.fg0.cf));
     
     /* restore pointer */
     li(x8, 4);
