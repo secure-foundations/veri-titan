@@ -23,7 +23,7 @@ module modexp_var_lemmas {
         cong(a, power(sig, power(2, i)) * rsa.R, rsa.m)
     }
 
-    lemma modexp_var_inv_lemma_0(
+    lemma modexp_var_inv_pre_lemma(
         a_view: seq<uint256>,
         rr: seq<uint256>,
         sig: seq<uint256>,
@@ -61,7 +61,7 @@ module modexp_var_lemmas {
         reveal power();
     }
 
-    lemma modexp_var_inv_lemma_1(
+    lemma modexp_var_inv_peri_lemma(
         a_view: seq<uint256>,
         next_a_view: seq<uint256>,
         sig: nat,
@@ -104,7 +104,7 @@ module modexp_var_lemmas {
 
     }
 
-    lemma modexp_var_inv_lemma_2(
+    lemma modexp_var_inv_post_lemma(
         a_view: seq<uint256>,
         next_a_view: seq<uint256>,
         sig: seq<uint256>,
@@ -158,34 +158,32 @@ module modexp_var_lemmas {
         raw_val: nat,
         adjusted_val: nat,
         carry: bool,
-        sig: nat,
         rsa: rsa_params)
 
     requires rsa_params_inv(rsa);
-    requires raw_val < sig + rsa.m;
-    requires cong(raw_val, power(sig, rsa.e), rsa.m);
+    requires raw_val < rsa.sig + rsa.m;
+    requires cong(raw_val, power(rsa.sig, rsa.e), rsa.m);
     requires carry ==> raw_val < rsa.m;
     requires !carry ==> raw_val - rsa.m == adjusted_val;
 
-    ensures carry ==> raw_val == power(sig, rsa.e) % rsa.m;
-    ensures !carry ==> adjusted_val == power(sig, rsa.e) % rsa.m;
+    ensures carry ==> raw_val == power(rsa.sig, rsa.e) % rsa.m;
+    ensures !carry ==> adjusted_val == power(rsa.sig, rsa.e) % rsa.m;
     {
         if carry {
-            cong_remainder_lemma(raw_val, power(sig, rsa.e), rsa.m);
-            assert raw_val == power(sig, rsa.e) % rsa.m;
+            cong_remainder_lemma(raw_val, power(rsa.sig, rsa.e), rsa.m);
+            assert raw_val == power(rsa.sig, rsa.e) % rsa.m;
         } else {
-            assume sig < rsa.m; // TODO: fix this
             calc ==> {
                 true;
                     { cong_add_lemma_3(raw_val, -(rsa.m as int), rsa.m); }
                 cong(raw_val, adjusted_val, rsa.m);
                     {
-                        cong_trans_lemma(adjusted_val, raw_val, power(sig, rsa.e), rsa.m);
+                        cong_trans_lemma(adjusted_val, raw_val, power(rsa.sig, rsa.e), rsa.m);
                     }
-                cong(adjusted_val, power(sig, rsa.e), rsa.m);
+                cong(adjusted_val, power(rsa.sig, rsa.e), rsa.m);
             }
 
-            cong_remainder_lemma(adjusted_val, power(sig, rsa.e), rsa.m);
+            cong_remainder_lemma(adjusted_val, power(rsa.sig, rsa.e), rsa.m);
         }
     }
 }

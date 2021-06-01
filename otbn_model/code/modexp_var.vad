@@ -26,20 +26,20 @@ import opened subb_lemmas
 
 function modexp_var_inv(a: nat, sig: nat, i: nat, rsa: rsa_params): bool extern;
 
-ghost procedure modexp_var_inv_lemma_0(
+ghost procedure modexp_var_inv_pre_lemma(
     ghost a_view: seq(uint256),
     ghost rr: seq(uint256),
     ghost sig: seq(uint256),
     ghost rsa: rsa_params) extern;
 
-ghost procedure modexp_var_inv_lemma_1(
+ghost procedure modexp_var_inv_peri_lemma(
     ghost a_view: seq(uint256),
     ghost next_a_view: seq(uint256),
     ghost sig: nat,
     ghost i: nat,
     ghost rsa: rsa_params) extern;
 
-ghost procedure modexp_var_inv_lemma_2(
+ghost procedure modexp_var_inv_post_lemma(
     ghost a_view: seq(uint256),
     ghost next_a_view: seq(uint256),
     ghost sig: seq(uint256),
@@ -234,6 +234,7 @@ procedure write_to_dmem(ghost iter: iter_t)
 procedure sub_mod(
     ghost raw_view: seq(uint256),
     ghost initial_m_it: iter_t)
+
     returns (ghost adjusted_view: seq(uint256))
 
     requires
@@ -317,7 +318,6 @@ ghost procedure modexp_var_correct_lemma(
     ghost raw_view: nat,
     ghost adjusted_view: nat,
     ghost carry: bool,
-    ghost sig: nat,
     ghost rsa: rsa_params) extern;
 
 function mod(a: int, n: int): int extern;
@@ -469,7 +469,7 @@ procedure modexp_var(
 
     vars := vars.(x_it := out_iter).(y_it := out_iter);
 
-    modexp_var_inv_lemma_0(a_view, rr_iter.buff, sig_iter.buff, vars.rsa);
+    modexp_var_inv_pre_lemma(a_view, rr_iter.buff, sig_iter.buff, vars.rsa);
 
     ghost var i : nat := 0;
 
@@ -521,7 +521,7 @@ procedure modexp_var(
         
         vars := vars.(x_it := out_iter).(y_it := out_iter);
 
-        modexp_var_inv_lemma_1(prev_a_view, a_view, vars.rsa.sig, i, vars.rsa);
+        modexp_var_inv_peri_lemma(prev_a_view, a_view, vars.rsa.sig, i, vars.rsa);
     
         i := i + 1;
     }
@@ -534,14 +534,13 @@ procedure modexp_var(
     vars := vars.(x_it := out_iter).(y_it := sig_iter);
     a_view := montmul(vars);
 
-    modexp_var_inv_lemma_2(prev_a_view, a_view, sig_iter.buff, vars.rsa);
+    modexp_var_inv_post_lemma(prev_a_view, a_view, sig_iter.buff, vars.rsa);
 
     ghost var raw_view := wdrs[4..4+NUM_WORDS];
     let adjusted_view := sub_mod(raw_view, vars.m_it);
     
     let carry := fgroups.fg0.cf;
-    modexp_var_correct_lemma(to_nat(raw_view), to_nat(adjusted_view), carry,
-        vars.rsa.sig, vars.rsa);
+    modexp_var_correct_lemma(to_nat(raw_view), to_nat(adjusted_view), carry, vars.rsa);
 
     out_iter := modexp_write_ouput(raw_view, adjusted_view, carry, vars.rsa.sig, vars.rsa);
 }
