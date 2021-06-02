@@ -18,8 +18,8 @@ module d0inv_lemmas {
     import opened otbn_mul_lemmas
 
 	lemma lemma_d0inv_pre_loop(w0_g1: uint256, w0_g2: uint256, w0: uint256, w29: uint256)
-		requires w0_g2 == xor256(w0_g1, w0_g1, false, 0);
-		requires w0 == fst(addi256(w0_g2, 1));
+		requires w0_g2 == bn_xor(w0_g1, w0_g1, false, 0);
+		requires w0 == fst(bn_addi(w0_g2, 1));
 		requires w29 == w0;
 		ensures w0 == power(2, 0) && w29 == 1;
 	{
@@ -58,9 +58,9 @@ module d0inv_lemmas {
 		requires invariant_d0inv(i, w28, w29_g1, w0_g1);
 		requires i < 256;
 		requires half_product(w1_g1, w28, w29_g1);
-		requires w1_g2 == and256(w1_g1, w0_g1, false, 0);
-		requires w29 == or256(w29_g1, w1_g2, false, 0);
-		requires w0 == fst(add256(w0_g1, w0_g1, false, 0));
+		requires w1_g2 == bn_and(w1_g1, w0_g1, false, 0);
+		requires w29 == bn_or(w29_g1, w1_g2, false, 0);
+		requires w0 == fst(bn_add(w0_g1, w0_g1, false, 0));
 
 		ensures invariant_d0inv(i + 1, w28, w29, w0);
 	{
@@ -126,7 +126,7 @@ module d0inv_lemmas {
 		w31: uint256
 	)
 		requires w31 == 0;
-		requires w29 == fst(sub256(w31, w29_g2, false, 0));
+		requires w29 == fst(bn_sub(w31, w29_g2, false, 0));
 		requires (w29_g2 * w28) % power(2, 256) == 1;
 		ensures d0inv_256(w29, w28);
 	{

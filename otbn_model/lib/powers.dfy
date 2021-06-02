@@ -4,19 +4,22 @@ module powers
 {
     import opened congruences
 
-    function method {:opaque} power(b:int, e:nat) : int
+    function method {:opaque} power(b: nat, e: nat) : (r: nat)
         decreases e;
-        ensures b > 0 ==> power(b, e) > 0;
-        ensures b == 0 && e != 0 ==> power(b, e) == 0;
+        ensures e == 0 ==> r == 1;
+        ensures e == 1 ==> r == b;
+        ensures b != 0 ==> r != 0;
+        // ensures b == 0 && e != 0 ==> power(b, e) == 0;
     {
         if (e == 0) then 1
         else b * power(b, e - 1)
     }
 
-    function method pow2(n: nat) : nat
+    function {:opaque} pow2(e: nat) : (r : nat)
+        ensures r != 0;
     {
-        power(2, n)
-    }
+		if e == 0 then 1 else 2 * pow2(e - 1)
+	}
 
     lemma {:induction e} power_base_one_lemma(e: nat) 
         ensures power(1, e) == 1;
@@ -24,13 +27,13 @@ module powers
         reveal power();
     }
 
-    lemma {:induction e} power_add_one_lemma(b:int, e:nat)
+    lemma {:induction e} power_add_one_lemma(b: nat, e: nat)
         ensures power(b, e) * b == power(b, e + 1);
     {
         reveal power();
     }
 
-    lemma {:induction e} power_sub_one_lemma(b:int, e:nat)
+    lemma {:induction e} power_sub_one_lemma(b: nat, e: nat)
         requires e != 0 && b != 0;
         ensures power(b, e) / b == power(b, e - 1);
     {
@@ -40,7 +43,7 @@ module powers
         power_add_one_lemma(b, e - 1);
     }
 
-    lemma {:induction e} power_same_exp_lemma(a: int, b: int, e: nat)
+    lemma {:induction e} power_same_exp_lemma(a: nat, b: nat, e: nat)
         ensures power(a, e) * power(b, e) == power(a * b, e);
     {
         if e == 0 {
@@ -63,7 +66,7 @@ module powers
         }
     }
 
-    lemma {:induction e} power_mod_lemma_1(b: int, e: nat) 
+    lemma {:induction e} power_mod_lemma_1(b: nat, e: nat) 
         requires e != 0 && b != 0;
         ensures power(b, e) % b == 0;
     {
@@ -77,7 +80,7 @@ module powers
         }
     }
 
-    lemma {:induction e} cong_power_lemma(a: int, b: int, e: nat, n: int)
+    lemma {:induction e} cong_power_lemma(a: nat, b: nat, e: nat, n: int)
         requires n != 0;
         requires cong(a, b, n);
         ensures cong(power(a, e), power(b, e), n);
@@ -105,7 +108,7 @@ module powers
         }
     }
 
-    lemma {:induction e2} power_same_base_lemma(a: int, e1: nat, e2: nat)
+    lemma {:induction e2} power_same_base_lemma(a: nat, e1: nat, e2: nat)
         ensures power(a, e1) * power(a, e2) == power(a, e1 + e2);
     {
         if e2 == 0 {
@@ -135,7 +138,7 @@ module powers
         }
     }
 
-    lemma {:inudction e2} power_power_lemma(b: int, e1: nat, e2: nat)
+    lemma {:inudction e2} power_power_lemma(b: nat, e1: nat, e2: nat)
         ensures power(power(b, e1), e2) == power(b, e1 * e2);
     {
         if e2 == 0 {
@@ -156,7 +159,7 @@ module powers
         }
     }
 
-    lemma {:induction e} power_mod_lemma_2(b: int, e: nat, n: int)
+    lemma {:induction e} power_mod_lemma_2(b: nat, e: nat, n: int)
         requires n != 0;
         ensures power(b % n, e) % n == power(b, e) % n;
     {

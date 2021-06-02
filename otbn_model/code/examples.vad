@@ -2,33 +2,18 @@ include "decls.vad"
 
 #verbatim
 include "../code/vale.dfy"
-
-include "../spec/def.dfy"
-include "../spec/ops.dfy"
-include "../spec/types.dfy"
-
+include "../spec/rsa_ops.dfy"
 include "../gen/decls.dfy"
 
-module examples {
-
-import opened bignum_vale
-import opened bignum_def
-import opened ops
-import opened types
-import opened bignum_decls
+import opened bv_ops
+import opened vt_ops
+import opened vt_consts
+import opened vt_vale
+import opened vt_decls
 
 #endverbatim
-
-procedure DoubleExample32(inout dst:reg32, in src:reg32)
-    requires
-        src + src < 0x1_0000_0000;
-    ensures
-        dst = old(src) + old(src);
-{
-    Add32(dst, src, src);
-}
-
-procedure DoubleRegExample32()
+    
+procedure double()
     requires
         x2 + x2 < 0x1_0000_0000;
     ensures
@@ -36,41 +21,48 @@ procedure DoubleRegExample32()
     modifies
         x2;
 {
-    Add32(x2, x2, x2);
+    add(x2, x2, x2);
 }
 
-procedure DoubleRegExample256()
+procedure double_reg(inout dst:reg32, in src:reg32)
     requires
-        w2 + w2 < 0x1_0000_0000;
+        src + src < 0x1_0000_0000;
     ensures
-        w2 = old(w2) + old(w2);
-    modifies
-        w2; flags; wacc; w8; w11;
+        dst = old(src) + old(src);
 {
-    BN_ADD(w2, w2, w2, false, 0, false);
-    BN_MULQACC(w8, 0, w11, 0, 0);
+    add(dst, src, src);
 }
 
-procedure Increment(inout dst:reg32)
-    ensures
-        dst == old(dst) + 1;
-{
-    Addi32(dst, dst, 1);
-}
-
-procedure LoopExample(inout dst:reg32)
+procedure loop_imm(inout dst:reg32)
     requires
         dst == 0;
-    ensures
-        dst == 3;
     modifies
-        flags;
+        fgroups;
+    ensures
+        dst == 6;
 {
-    while (dst < 3)
-        invariant 0 <= dst <= 3;
-        decreases 3 - dst;
+    while (LoopImm(3))
+        invariant dst == (3 - loop_ctr) * 2;
+        decreases loop_ctr;
     {
-        Increment(dst);
+        addi(dst, dst, 2);
+    }
+}
+
+procedure loop_reg(inout dst:reg32, in cnt:reg32)
+    requires
+        dst == 0;
+        cnt == 3;
+    modifies
+        fgroups;
+    ensures
+        dst == 6;
+{
+    while (Loop(cnt))
+        invariant dst == (3 - loop_ctr) * 2;
+        decreases loop_ctr;
+    {
+        addi(dst, dst, 2);
     }
 }
 
@@ -80,45 +72,58 @@ procedure barrett384()
     modifies
         w8; w9; w10; w11; w16; w17; w18; w19; 
         w20; w21; w22; w23; w24; w25; w29; w30; 
-        flags; wacc;
+        fgroups; wacc;
 {
 
-    BN_SUBI(w30, w31, 1, false);
-    BN_RSHI(w30, w30, w31, 127);
+    // bn_subi(w30, w31, 1, 0);
+    bn_rshi(w30, w30, w31, 127);
 
-    BN_SEL(w24, w14, w31, false, 2); 
-    BN_SEL(w25, w16, w31, false, 2); 
+    bn_sel(w24, w14, w31, 0, 2); 
+    bn_sel(w25, w16, w31, 0, 2); 
 
-    BN_MOV(w21, w16);
-    BN_AND(w22, w17, w30, false, 0);
+    bn_mov(w21, w16);
+    bn_and(w22, w17, w30, SFT_DFT);
 
-    BN_RSHI(w9, w18, w31, 127);
-    BN_RSHI(w8, w17, w18, 127);
+    bn_rshi(w9, w18, w31, 127);
+    bn_rshi(w8, w17, w18, 127);
 
-    BN_MOV(w10, w14);
-    BN_MOV(w11, w15);
+    bn_mov(w10, w14);
+    bn_mov(w11, w15);
 
-    BN_RSHI(w20, w18, w31, 128);
-    BN_RSHI(w19, w17, w18, 128);
-    BN_ADD(w19, w19, w8, false, 0, false);
-    BN_ADDC(w20, w20, w9, false, 0, false);
-    BN_ADD(w19, w19, w24, false, 0, false);
-    BN_ADDC(w20, w20, w25, false, 0, false);
-    BN_RSHI(w9, w20, w31, 1);
-    BN_RSHI(w8, w19, w20, 1);
+    bn_rshi(w20, w18, w31, 128);
+    bn_rshi(w19, w17, w18, 128);
+    bn_add(w19, w19, w8, SFT_DFT, 0);
+    bn_addc(w20, w20, w9, SFT_DFT, 0);
+    bn_add(w19, w19, w24, SFT_DFT, 0);
+    bn_addc(w20, w20, w25, SFT_DFT, 0);
+    bn_rshi(w9, w20, w31, 1);
+    bn_rshi(w8, w19, w20, 1);
 
-    BN_MOV(w10, w12);
-    BN_MOV(w11, w13);
-    BN_AND(w17, w17, w30, false, 0);
-    BN_SUB(w21, w21, w16, false, 0, false);
-    BN_SUBB(w22, w22, w17, false, 0, false);
+    bn_mov(w10, w12);
+    bn_mov(w11, w13);
+    bn_and(w17, w17, w30, SFT_DFT);
+    bn_sub(w21, w21, w16, SFT_DFT, 0);
+    bn_subb(w22, w22, w17, SFT_DFT, 0);
 
-    BN_ADDI(w30, w30, 1, false);
-    BN_ADD(w30, w30, w22, false, 0, false);
-    BN_SEL(w22, w30, w22, false, 3);
+    // bn_addi(w30, w30, 1, 0);
+    bn_add(w30, w30, w22, SFT_DFT, 0);
+    bn_sel(w22, w30, w22, 0, 3);
 }
 
 
-#verbatim
+procedure copy()
+    requires
+        valid_xmem_addr(xmem, x0 + 0);
+        valid_xmem_addr(xmem, x0 + 4);
+    reads
+        x0;
+    ensures
+        valid_xmem_addr(xmem, x0 + 0);
+        valid_xmem_addr(xmem, x0 + 4);
+        xmem == old(xmem[x0 + 4 := xmem[x0 + 0]]);
+    modifies
+        xmem; x2;
+{
+    lw(x2, 0, x0);
+    sw(x2, 4, x0);
 }
-#endverbatim

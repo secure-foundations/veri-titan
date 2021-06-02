@@ -1,54 +1,57 @@
 include "../gen/examples.dfy"
-include "def.dfy"
-include "types.dfy"
+include "bv_ops.dfy"
+include "vt_ops.dfy"
 
-module bignum_print {
+module otbn_printer {
 
-	import opened examples
-	import opened bignum_def
+  import opened bv_ops
+	import opened vt_ops
+  
 		
-method printReg32(r:Reg32)
+method printReg32(r:reg32_t)
 {
   match r
-		    case Gpr(x) => print("x"); print(x);
-				case Rnd => print("ERROR: rnd");
+		    case GPR(x) => print("x"); print(x);
+				// case RND => print("ERROR: rnd"); // TODO: Are we no longer modeling RND?
 }
 
- method printReg256(r:Reg256)
+ method printReg256(r:reg256_t)
  {
    match r
- 		    case Wdr(w) => print("w"); print(w);
+ 		    case WDR(w) => print("w"); print(w);
 			  case _ => print("TODO");
  }
 
 method printIns32(ins:ins32)
 {
     match ins
-      case ADD32(dst, src1, src2) => print ("  add "); printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
+      case ADD(dst, src1, src2) => print ("  add "); printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
 			case _ => print("TODO");
 }
 
-method printShiftType(st:bool)
+method printShift(shift:shift_t)
 {
-	match st
-		case false => print("<<");
-		case true => print(">>");
+	match shift
+    case SFT(left, bytes) =>
+      match left
+		    case true => print("<< ", bytes);
+		    case false => print(">> ", bytes);
 }
 
-method printFlags(fg:bool)
+method printFlags(fg:uint1)
 {
   match fg
-		case false => print("FG0");
-		case true => print("FG1");
+		case 0 => print("FG0");
+		case 1 => print("FG1");
 }
 
-method printFlag(flag:int)
+method printFlag(flag:flags_t)
 {
   match flag
-		case 0 => print("Z");
-		case 1 => print("L");
-		case 2 => print("M");
-		case 3 => print("C");
+		case zero => print("Z");
+		case lsb => print("L");
+		case msb => print("M");
+		case cf => print("C");
 	  case _ => print("ERROR: Invalid flag.");
 }
 
@@ -65,71 +68,71 @@ method printAccShift(shift:int)
 method printIns256(ins:ins256)
 {
     match ins
-      case ADD256(dst, src1, src2, st, sb, fg) =>
+      case BN_ADD(dst, src1, src2, shift, fg) =>
 				print("  bn.add ");
 				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" "); 
-				printShiftType(st); print(" "); print(sb); print(", "); printFlags(fg);
+				printShift(shift); print(" "); print(", "); printFlags(fg);
 				print("\n");
 
-      case ADDC256(dst, src1, src2, st, sb, fg) =>
+      case BN_ADDC(dst, src1, src2, shift, fg) =>
 				print("  bn.addc ");
 				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" "); 
-				printShiftType(st); print(" "); print(sb); print(", "); printFlags(fg);
+				printShift(shift); print(" "); print(", "); printFlags(fg);
 				print("\n");
 
-      case ADDI256(dst, src, imm, fg) =>
+      case BN_ADDI(dst, src, imm, fg) =>
 				print("  bn.addi ");
 				printReg256(dst); print(", "); printReg256(src); print(", "); print(imm);
 				print(", "); printFlags(fg); print("\n");
 
-		  case MULQACC256(zero, src1, qwsel1, src2, qwsel2, shift) =>
+		  case BN_MULQACC(zero, src1, qwsel1, src2, qwsel2, shift) =>
 				if zero { print("  bn.mulqacc "); } else { print("  bn.mulquacc.z "); }
 				printReg256(src1); print("."); print(qwsel1); print(", "); 
 				printReg256(src2); print("."); print(qwsel2); print(", ");
 				printAccShift(shift); print("\n");
 				
-		  case MULQACCSO256(zero, dst, hwsel, src1, qwsel1, src2, qwsel2, shift) =>
-				if zero { print("  bn.mulqacc.so "); } else { print("  bn.mulquacc.so.z "); }
-				printReg256(dst); if hwsel { print(".U "); } else { print(".L "); }
-				printReg256(src1); print("."); print(qwsel1); print(", "); 
-				printReg256(src2); print("."); print(qwsel2); print(", ");
-				printAccShift(shift); print("\n");
+		  // case BN_MULQACCSO(zero, dst, hwsel, src1, qwsel1, src2, qwsel2, shift) =>
+			// 	if zero { print("  bn.mulqacc.so "); } else { print("  bn.mulquacc.so.z "); }
+			// 	printReg256(dst); if hwsel { print(".U "); } else { print(".L "); }
+			// 	printReg256(src1); print("."); print(qwsel1); print(", "); 
+			// 	printReg256(src2); print("."); print(qwsel2); print(", ");
+			// 	printAccShift(shift); print("\n");
 
-			case SUBI256(dst, src1, src2, fg) =>
+			case BN_SUBI(dst, src1, src2, fg) =>
 				print("  bn.subi ");
 				printReg256(dst); print(", "); printReg256(src1); print(", "); print(src2); print(", ");
 				printFlags(fg); print("\n");
 
-			case SUBB256(dst, src1, src2, st, sb, fg) =>
+			case BN_SUBB(dst, src1, src2, shift, fg) =>
 				print("  bn.subb ");
 				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" "); 
-				printShiftType(st); print(" "); print(sb); print(", "); printFlags(fg);
+				printShift(shift); print(" "); print(", "); printFlags(fg);
 				print("\n");
 
-			case SUB256(dst, src1, src2, st, sb, fg) =>
+			case BN_SUB(dst, src1, src2, shift, fg) =>
 				print("  bn.sub ");
 				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" "); 
-				printShiftType(st); print(" "); print(sb); print(", "); printFlags(fg);
+				printShift(shift); print(" "); print(", "); printFlags(fg);
 				print("\n");
 
-			case RSHI256(dst, src1, src2, imm) =>
+			case BN_RSHI(dst, src1, src2, imm) =>
 				print("  bn.rshi ");
 				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" >> "); print(imm);
 				print("\n");
 			
-			case SEL256(dst, src1, src2, fg, flag) =>
+			case BN_SEL(dst, src1, src2, fg) =>
 				print("  bn.sel ");
 				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(", ");
-				printFlags(fg); print("."); printFlag(flag); print("\n");
+				printFlags(fg); print("."); print("\n");
 
-			case MOV256(dst, src) =>
+			case BN_MOV(dst, src) =>
 				print("  bn.mov ");
 				printReg256(dst); print(", "); printReg256(src); print("\n");
 		
-			case AND256(dst, src1, src2, st, sb) =>
+			case BN_AND(dst, src1, src2, shift) =>
 				print("  bn.and ");
 				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" "); 
-				printShiftType(st); print(" "); print(sb); print("\n");
+				printShift(shift); print(" "); print("\n");
 				
 			case _ => print("TODO");
 }
@@ -181,8 +184,7 @@ function method procName(proc_name:seq<char>, suffix:seq<char>, asm:AsmTarget, p
 method PrintDemo(asm:AsmTarget,
                  platform:PlatformTarget)
 {
-    printProc("demo", va_code_DoubleRegExample256(), 0, 0);
-    printProc("demo", va_code_barrett384(), 0, 0);
+    printProc("demo", va_code_double(), 0, 0);
 }
 
 method Main()
