@@ -18,7 +18,7 @@ module bv_ops {
     type uint256 = i :int | 0 <= i < BASE_256
     type uint512 = i :int | 0 <= i < BASE_512
 
-    type int12     = i :int | -2048 <= i <= 2047
+    type int12   = i :int | -2048 <= i <= 2047
 
     datatype shift_t = SFT(left: bool, bytes: uint5)
 
@@ -130,16 +130,8 @@ module bv_ops {
 
     function method {:opaque} uint256_ls(x: uint256, num_bytes: uint5): (r: uint256)
         ensures (num_bytes == 8 && x < BASE_192) ==> (r == x * BASE_64);
-    // {
-    //     assume false;
-    //     (x as bv256 << (num_bytes * 8)) as uint256
-    // }
 
     function method {:opaque} uint256_rs(x: uint256, num_bytes: uint5): uint256
-    // {
-    //     assume false;
-    //     (x as bv256 >> (num_bytes * 8)) as uint256
-    // }
 
     function method uint256_sb(b: uint256, shift: shift_t) : uint256
     {    
@@ -188,22 +180,66 @@ module bv_ops {
         }
     }
 
-    function method {:opaque} uint256_qmul(x: uint256, qx: uint2, y: uint256, qy:uint2): uint128
+    lemma single_digit_lemma_0(a: nat, b: nat, u: nat)
+        requires a <= u;
+        requires b <= u;
+        ensures a * b <= u * u;
     {
-        assume false; // TODO: add a bound proof
-        uint256_qsel(x, qx) * uint256_qsel(y, qy)
+        assert true;
+    }
+
+    lemma single_digit_lemma_1(a: nat, b: nat, c: nat, u: nat)
+        requires a <= u;
+        requires b <= u;
+        requires c <= u;
+        ensures a * b + c < (u + 1) * (u + 1);
+    {
+        calc {
+            a * b + c;
+            <= { single_digit_lemma_0(a, b, u); }
+            u * u + c;
+            <= u * u + u;
+            u * (u + 1);
+            < (u + 1) * (u + 1);
+        }
+    }
+
+    lemma single_digit_lemma_2(a: nat, b: nat, c: nat, d: nat, u: nat)
+        requires a <= u;
+        requires b <= u;
+        requires c <= u;
+        requires d <= u;
+        ensures a * b + c + d < (u + 1) * (u + 1);
+    {
+        calc {
+            a * b + c + d;
+            <={ single_digit_lemma_0(a, b, u); }
+            u * u + c + d;
+            <= u * u + u + u;
+            u * u + 2 * u;
+            < u * u + 2 * u + 1;
+            (u + 1) * (u + 1);
+        }
+    }
+
+    function method {:opaque} uint256_qmul(x: uint256, qx: uint2, y: uint256, qy: uint2): uint128
+    {
+		var src1 := uint256_qsel(x, qx);
+		var src2 := uint256_qsel(y, qy);
+		single_digit_lemma_0(src1, src2, BASE_64-1);
+        src1 as uint128 * src2 as uint128
     }
 
     function method {:opaque} uint256_qsel(x: uint256, qx: uint2): uint64
     {
         if qx == 0 then
-            x % BASE_64
+            uint256_lh(x) % BASE_64
         else if qx == 1 then
-            (x / BASE_64) % BASE_64
-        else if qx == 1 then
-            (x / BASE_128) % BASE_64
+            uint256_lh(x) / BASE_64
+        else if qx == 2 then
+            uint256_uh(x) % BASE_64
         else
-            (x / BASE_192) % BASE_64
+            uint256_uh(x) / BASE_64
     }
 
     lemma lemma_uint256_quarter_split(x: uint256)
@@ -212,8 +248,18 @@ module bv_ops {
             uint256_qsel(x, 2) * BASE_128 + 
             uint256_qsel(x, 3) * BASE_192;
     {
-        // reveal uint256_qsel(); // TODO: not sufficient
-        assume false;
+        reveal uint256_qsel();
+		assert uint256_qsel(x, 0) + uint256_qsel(x, 1) * BASE_64 == uint256_lh(x);
+		assert uint256_qsel(x, 2) + uint256_qsel(x, 3) * BASE_64 == uint256_uh(x);
+
+		calc == {
+			uint256_qsel(x, 0) + uint256_qsel(x, 1) * BASE_64 + uint256_qsel(x, 2) * BASE_128 + uint256_qsel(x, 3) * BASE_192;
+			 uint256_lh(x) + uint256_qsel(x, 2) * BASE_128 + uint256_qsel(x, 3) * BASE_192;
+			 uint256_lh(x) + (uint256_qsel(x, 2) + uint256_qsel(x, 3) * BASE_64) * BASE_128;
+			 uint256_lh(x) + uint256_uh(x) * BASE_128;
+			 	{ reveal uint256_lh(); reveal uint256_uh(); }
+			x;
+		}
     }
 
     // lemma {:axiom} and_single_bit_lemma(x': uint256, x: uint256, w0: uint256, i: nat)
