@@ -24,6 +24,8 @@ import opened subb_lemmas
 
 #endverbatim
 
+ghost procedure xor_clear_lemma(ghost x: uint256) extern;
+
 function modexp_var_inv(a: nat, sig: nat, i: nat, rsa: rsa_params): bool extern;
 
 ghost procedure modexp_var_inv_pre_lemma(
@@ -118,7 +120,6 @@ procedure modexp_var_0(ghost vars: mm_vars)
     {:frame false}
 
     requires
-
         valid_xmem_addr(xmem, 0);  // e'
         xmem[0] == vars.rsa.e';
 
@@ -137,7 +138,6 @@ procedure modexp_var_0(ghost vars: mm_vars)
         xmem[20] != xmem[12];
 
     ensures
-    
         x29 == vars.rsa.e';
         x30 == NUM_WORDS;
         x31 == NUM_WORDS - 1;
@@ -148,8 +148,8 @@ procedure modexp_var_0(ghost vars: mm_vars)
         mm_vars_inv(vars, wmem, NA, xmem[20], x16, x18, x17);
         wmem == old(wmem)[x17 := seq(vars.rsa.m0d)][x18 := wmem[x18]];
 {
+    xor_clear_lemma(w31);
     bn_xor(w31, w31, w31, SFT_DFT);
-    assume w31 == 0;
 
     lw(x30, 4, x0);
 

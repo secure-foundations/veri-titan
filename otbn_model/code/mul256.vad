@@ -43,7 +43,6 @@ procedure mul256_w30xw2()
 
     bn_mulqacc_safe(w30, 2, w2, 0, 0);
 
-
     assume false;
 //   bn.mulqacc            w30.1, w2.1,  0
 //   bn.mulqacc            w30.0, w2.2,  0
