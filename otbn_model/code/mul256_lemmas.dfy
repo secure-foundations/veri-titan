@@ -41,12 +41,12 @@ module mul256_lemmas {
         x: uint256,
         y: uint256,
 
-        w27_0: uint256,
-        w27_1: uint256,
-        w27_2: uint256,
-        w26_0: uint256,
-        w26_1: uint256,
-        w26_2: uint256,
+        t0: uint256,
+        t1: uint256,
+        t2: uint256,
+        u0: uint256,
+        u1: uint256,
+        u2: uint256,
         wacc: uint256)
 
         requires
@@ -70,21 +70,21 @@ module mul256_lemmas {
             && r1 == uint256_uh(r0) + p3 + p4 + p5 + (p6 + p7 + p8 + p9) * B
             && r2 == uint256_uh(r1) + p10 + p11 + p12 + (p13 + p14) * B
             && r3 == uint256_uh(r2) + p15
-            && w27_1 == uint256_hwb(w27_0, uint256_lh(r0), true)
-            && w27_2 == uint256_hwb(w27_1, uint256_lh(r1), false)
-            && w26_1 == uint256_hwb(w26_0, uint256_lh(r2), true)
-            && w26_2 == uint256_hwb(w26_1, uint256_lh(r3), false)
+            && t1 == uint256_hwb(t0, uint256_lh(r0), true)
+            && t2 == uint256_hwb(t1, uint256_lh(r1), false)
+            && u1 == uint256_hwb(u0, uint256_lh(r2), true)
+            && u2 == uint256_hwb(u1, uint256_lh(r3), false)
             && wacc == uint256_uh(r3)
-        
+
         ensures
-            to_nat([w27_2, w26_2]) == x * y;
+            to_nat([t2, u2]) == x * y;
     {
-        assert w27_2 == uint256_lh(r0) + uint256_lh(r1) * B2 by {
-            uint256_hwb_lemma(w27_0, w27_1, w27_2, uint256_lh(r0), uint256_lh(r1));
+        assert t2 == uint256_lh(r0) + uint256_lh(r1) * B2 by {
+            uint256_hwb_lemma(t0, t1, t2, uint256_lh(r0), uint256_lh(r1));
         }
 
-        assert w26_2 == uint256_lh(r2) + uint256_lh(r3) * B2 by {
-            uint256_hwb_lemma(w26_0, w26_1, w26_2, uint256_lh(r2), uint256_lh(r3));
+        assert u2 == uint256_lh(r2) + uint256_lh(r3) * B2 by {
+            uint256_hwb_lemma(u0, u1, u2, uint256_lh(r2), uint256_lh(r3));
         }
 
         assert x == uint256_qsel(x, 0) + uint256_qsel(x, 1) * B + uint256_qsel(x, 2) * B2 + uint256_qsel(x, 3) * B3 by {
@@ -96,9 +96,9 @@ module mul256_lemmas {
         }
 
         calc {
-            w27_2 + w26_2 * B4 + wacc * B8;
+            t2 + u2 * B4 + wacc * B8;
                 { uint256_half_split_lemma(r3); }
-            w27_2 + (uint256_lh(r2) + r3 * B2) * B4;
+            t2 + (uint256_lh(r2) + r3 * B2) * B4;
                 { uint256_half_split_lemma(r2); }
             uint256_lh(r0) + uint256_lh(r1) * B2 + r2 * B4 + p15 * B6;
                 { uint256_half_split_lemma(r1); }
@@ -114,8 +114,8 @@ module mul256_lemmas {
             assert x * y <= B8;
         }
 
-        assert to_nat([w27_2, w26_2]) == x * y by {
-            to_nat_lemma_1([w27_2, w26_2]);
+        assert to_nat([t2, u2]) == x * y by {
+            to_nat_lemma_1([t2, u2]);
         }
     }
 }

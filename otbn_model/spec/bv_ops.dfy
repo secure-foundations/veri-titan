@@ -171,7 +171,7 @@ module bv_ops {
     {
         calc == {
             x3;
-                { lemma_uint256_half_split(x3); }
+                { uint256_half_split_lemma(x3); }
             uint256_lh(x3) + uint256_uh(x3) * BASE_128;
                 { assert uint256_uh(x3) == hi && uint256_lh(x3) == uint256_lh(x2); }
             uint256_lh(x2) + hi * BASE_128;
