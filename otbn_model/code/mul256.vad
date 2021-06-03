@@ -20,6 +20,37 @@ import opened mul256_lemmas
 
 #endverbatim
 
+ghost procedure mul256_correct_lemma(
+    ghost p0: uint256,
+    ghost p1: uint256,
+    ghost p2: uint256,
+    ghost p3: uint256,
+    ghost p4: uint256,
+    ghost p5: uint256,
+    ghost p6: uint256,
+    ghost p7: uint256,
+    ghost p8: uint256,
+    ghost p9: uint256,
+    ghost p10: uint256,
+    ghost p11: uint256,
+    ghost p12: uint256,
+    ghost p13: uint256,
+    ghost p14: uint256,
+    ghost p15: uint256,
+    ghost r0: int,
+    ghost r1: int,
+    ghost r2: int,
+    ghost r3: int,
+    ghost x: uint256,
+    ghost y: uint256,
+    ghost w27_0: uint256,
+    ghost w27_1: uint256,
+    ghost w27_2: uint256,
+    ghost w26_0: uint256,
+    ghost w26_1: uint256,
+    ghost w26_2: uint256,
+    ghost wacc: uint256) extern;
+
 procedure mul256_w30xw2()
     reads
         w2; w30;
@@ -90,7 +121,9 @@ procedure mul256_w30xw2()
     assert wacc == uint256_uh(r3);
     assert w26_2 == uint256_hwb(w26_1, uint256_lh(r3), false);
 
-    assume false;
+    mul256_correct_lemma(
+        p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15,
+        r0, r1, r2, r3, w30, w2, w27_0, w27_1, w27_2, w26_0, w26_1, w26_2, wacc);
 }
 
 procedure mul256_w30xw25()

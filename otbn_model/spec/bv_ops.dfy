@@ -151,7 +151,7 @@ module bv_ops {
         x / BASE_128
     }
 
-    lemma lemma_uint256_half_split(x: uint256)
+    lemma uint256_half_split_lemma(x: uint256)
         ensures x == uint256_lh(x) + uint256_uh(x) * BASE_128;
     {
         reveal uint256_lh();
@@ -164,7 +164,7 @@ module bv_ops {
         // overwrites the higher half, keeps the lower half
         ensures !lower ==> (uint256_uh(x') == v && uint256_lh(x') == uint256_lh(x));
 
-    lemma lemma_uint256_hwb(x1: uint256, x2: uint256, x3: uint256, lo: uint128, hi: uint128)
+    lemma uint256_hwb_lemma(x1: uint256, x2: uint256, x3: uint256, lo: uint128, hi: uint128)
         requires x2 == uint256_hwb(x1, lo, true);
         requires x3 == uint256_hwb(x2, hi, false);
         ensures x3 == lo + hi * BASE_128;
@@ -222,14 +222,6 @@ module bv_ops {
         }
     }
 
-    function method {:opaque} uint256_qmul(x: uint256, qx: uint2, y: uint256, qy: uint2): uint128
-    {
-		var src1 := uint256_qsel(x, qx);
-		var src2 := uint256_qsel(y, qy);
-		single_digit_lemma_0(src1, src2, BASE_64-1);
-        src1 as uint128 * src2 as uint128
-    }
-
     function method {:opaque} uint256_qsel(x: uint256, qx: uint2): uint64
     {
         if qx == 0 then
@@ -242,7 +234,15 @@ module bv_ops {
             uint256_uh(x) / BASE_64
     }
 
-    lemma lemma_uint256_quarter_split(x: uint256)
+    function method {:opaque} uint256_qmul(x: uint256, qx: uint2, y: uint256, qy: uint2): uint128
+    {
+		var src1 := uint256_qsel(x, qx);
+		var src2 := uint256_qsel(y, qy);
+		single_digit_lemma_0(src1, src2, BASE_64-1);
+        src1 as uint128 * src2 as uint128
+    }
+
+    lemma uint256_quarter_split_lemma(x: uint256)
         ensures x == uint256_qsel(x, 0) +
             uint256_qsel(x, 1) * BASE_64 + 
             uint256_qsel(x, 2) * BASE_128 + 
