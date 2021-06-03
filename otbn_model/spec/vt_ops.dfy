@@ -212,15 +212,6 @@ module vt_ops {
         (diff, fg)
     }
 
-    // function otbn_subm(x: uint256, y: uint256, wmod: uint256) : uint256
-    //     requires false;
-    // {
-    //     // FIXME: some bound checking?
-    //     assume false;
-    //     var result := (x as bv256 - y as bv256) as uint256;
-    //     if result >= wmod then (result as bv256 - wmod as bv256) as uint256 else result
-    // }
-
     function otbn_mulqacc(
         zero: bool,
         x: uint256, qx: uint2,
@@ -235,7 +226,7 @@ module vt_ops {
 
     predicate otbn_mulqacc_is_safe(shift: uint2, acc: uint256)
     {
-        // make sure no overflow from shift (product is assumed to be 128 bits)
+        // make sure no overflow from shift (product needs to be 128 bits)
         && (shift <= 2) 
         // make sure no overflow from addtion
         && (acc + otbn_qshift_safe(BASE_128 - 1, shift) < BASE_256)

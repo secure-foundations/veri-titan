@@ -99,13 +99,23 @@ module rsa_ops {
         reveal to_nat();
     }
 
-    lemma to_nat_bound_lemma(x: seq<uint256>)
-        ensures to_nat(x) < pow_B256(|x|)
+    lemma to_nat_bound_lemma(xs: seq<uint256>)
+        ensures to_nat(xs) < pow_B256(|xs|)
     {
-        if |x| == 0 {
-            reveal to_nat();
-        } else {
-            assume false;
+        reveal to_nat();
+        if |xs| != 0 {
+            var len' := |xs| - 1;
+            calc {
+                to_nat(xs);
+                to_nat(xs[..len']) + xs[len'] * pow_B256(len');
+                < { to_nat_bound_lemma(xs[..len']); }
+                pow_B256(len') + xs[len'] * pow_B256(len');
+                <= { assert xs[len'] <= BASE_256 - 1; }
+                pow_B256(len') + (BASE_256 - 1) * pow_B256(len');
+                BASE_256 * pow_B256(len');
+                == { power_add_one_lemma(BASE_256, len'); }
+                pow_B256(len' + 1);
+            }
         }
     }
 

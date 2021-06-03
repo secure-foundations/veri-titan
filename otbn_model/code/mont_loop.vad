@@ -515,7 +515,8 @@ procedure mont_loop(
     li(x8, 4);
     li(x10, 4);
 
-    assume fgroups.fg0.cf == false; // TODO: do we know that this flag is cleared?
+    // clear flag group 0
+    bn_add(w31, w31, w31, SFT_DFT, 0);
 
     /* This replaces Step 3 of HAC 14.36 and performs conditional constant-time
      subtraction of the modulus from the output buffer  */
