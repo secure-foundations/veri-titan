@@ -83,6 +83,12 @@ module bv_ops {
 
 	function method {:opaque} uint32_se(x:uint32, size:int):uint32
 		requires 0 <= size < 32;
+  {
+    var sign : bv32 := (x as bv32 >> (size - 1));
+    var ext := if y = 1 then (y << (32 - (size + 1))) - 1 else 0;
+    (x as bv32 | ext)
+    
+  }
 
 	function method uint256_mul(x: uint256, y: uint256): uint256
 	{
@@ -107,7 +113,7 @@ module bv_ops {
 
 	function method uint256_subb(x: uint256, y: uint256, bin: uint1): (uint256, uint1)
 	{
-	    var diff : int := x - y - bin;
+	  var diff : int := x - y - bin;
 		var diff_out := if diff >= 0 then diff else diff + BASE_256;
 		var bout := if diff >= 0 then 0 else 1;
 		(diff_out, bout)
