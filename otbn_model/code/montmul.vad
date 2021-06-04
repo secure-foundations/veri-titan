@@ -71,7 +71,7 @@ procedure montmul_0(ghost vars: mm_vars)
         to_nat(a_view) == 0;
         mm_vars_inv(vars, wmem, x20, x19, x16, NA, x17);
 {
-    let _ := bn_lid_safe(x9, false, 0, x17, false, vars.m0d_iter);
+    let _ := bn_lid_safe(x9, false, 0, x17, false, vars.m0d_it);
     bn_mov(w2, w31);
 
     a_view := wdrs[4..4+NUM_WORDS];

@@ -93,6 +93,12 @@ module vt_ops {
         && addr in xmem
     }
 
+    predicate valid_xmem_addr2(xmem: xmem_t, addr: int, value: uint32)
+    {
+        && addr in xmem
+        && xmem[addr] == value
+    }
+
     type wmem_t = map<int, seq<uint256>>
 
     predicate valid_wmem_base_addr(wmem: wmem_t, addr: int, size: nat)

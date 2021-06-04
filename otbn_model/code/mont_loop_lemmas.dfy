@@ -361,7 +361,7 @@ module mont_loop_lemmas {
                 (to_nat(y) + m) * BASE_256;
             }
         }
-
+        
         if bout == 1 {
             if to_nat(a) >= m {
                 to_nat_bound_lemma(y);
@@ -376,17 +376,20 @@ module mont_loop_lemmas {
             calc {
                 to_nat(next_a) * BASE_256;
                 to_nat(a) * BASE_256 + pow_B256(NUM_WORDS) * BASE_256 - m * BASE_256;
-                    { reveal power(); }
+                    { power_add_one_lemma(BASE_256, NUM_WORDS); }
                 to_nat(a) * BASE_256 + pow_B256(NUM_WORDS+1) - m * BASE_256;
                 xi * to_nat(y) + ui * m + prev_a - m * BASE_256;
             }
 
-            assert cong(to_nat(next_a) * BASE_256,
-                xi * to_nat(y) + ui * m + prev_a, m) by {
-                cong_add_lemma_4(xi * to_nat(y) + ui * m + prev_a, -BASE_256, m);
-                reveal cong();
-                assert cong(to_nat(next_a) * BASE_256,
-                    xi * to_nat(y) + ui * m + prev_a, m);
+            calc ==> {
+                true;
+                    { reveal cong(); }
+                cong(to_nat(next_a) * BASE_256, xi * to_nat(y) + ui * m + prev_a - m * BASE_256, m);
+                    {
+                        cong_add_lemma_5(to_nat(next_a) * BASE_256,
+                            xi * to_nat(y) + ui * m + prev_a - m * BASE_256, BASE_256, m);
+                    }
+                cong(to_nat(next_a) * BASE_256, xi * to_nat(y) + ui * m + prev_a, m);
             }
         } else {
             reveal cong();
