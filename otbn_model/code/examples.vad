@@ -68,13 +68,13 @@ procedure loop_reg(inout dst:reg32, in cnt:reg32)
 
 procedure copy()
     requires
-        valid_xmem_addr(xmem, x0 + 0);
-        valid_xmem_addr(xmem, x0 + 4);
+        xmem_addr_valid(xmem, x0 + 0);
+        xmem_addr_valid(xmem, x0 + 4);
     reads
         x0;
     ensures
-        valid_xmem_addr(xmem, x0 + 0);
-        valid_xmem_addr(xmem, x0 + 4);
+        xmem_addr_valid(xmem, x0 + 0);
+        xmem_addr_valid(xmem, x0 + 4);
         xmem == old(xmem[x0 + 4 := xmem[x0 + 0]]);
     modifies
         xmem; x2;

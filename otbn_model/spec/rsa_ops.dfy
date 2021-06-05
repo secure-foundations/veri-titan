@@ -284,19 +284,13 @@ module rsa_ops {
         sig_it: iter_t,
         rsa: rsa_params)
 
-    // predicate vars_iter_inv(iter: iter_t, wmem: wmem_t, address: int)
-    // {
-    //     || address == NA // TODO: make iter provide its own address in this case
-    //     || (&& iter_inv(iter, wmem, address)
-    //         && |iter.buff| == NUM_WORDS)
-    // }
 
-    predicate mm_it_inv(iter: iter_t, wmem: wmem_t, address: int)
+    predicate mm_iter_init(iter: iter_t, wmem: wmem_t, address: int, value: int)
     {
-        || address == NA // TODO: make iter provide its own address in this case
-        || (&& iter_inv(iter, wmem, address)
-            && iter.index == 0
-            && |iter.buff| == NUM_WORDS)
+        && (address != NA ==> iter_inv(iter, wmem, address))
+        && (value != NA ==> to_nat(iter.buff) == value)
+        && iter.index == 0
+        && |iter.buff| == NUM_WORDS
     }
 
     predicate m0d_it_inv(iter: iter_t, wmem: wmem_t, address: int)
@@ -320,18 +314,11 @@ module rsa_ops {
     {
         && rsa_params_inv(vars.rsa)
 
-        && mm_it_inv(vars.x_it, wmem, x_ptr)
-
-        && mm_it_inv(vars.y_it, wmem, y_ptr)
-
-        && mm_it_inv(vars.sig_it, wmem, sig_ptr)
-        && to_nat(vars.sig_it.buff) == vars.rsa.SIG
-        
-        && mm_it_inv(vars.m_it, wmem, m_ptr)
-        && to_nat(vars.m_it.buff) == vars.rsa.M
-
-        && mm_it_inv(vars.rr_it, wmem, rr_ptr)
-        && to_nat(vars.rr_it.buff) == vars.rsa.RR
+        && mm_iter_init(vars.x_it, wmem, x_ptr, NA)
+        && mm_iter_init(vars.y_it, wmem, y_ptr, NA)
+        && mm_iter_init(vars.sig_it, wmem, sig_ptr, vars.rsa.SIG)
+        && mm_iter_init(vars.m_it, wmem, m_ptr, vars.rsa.M)
+        && mm_iter_init(vars.rr_it, wmem, rr_ptr, vars.rsa.RR)
 
         && m0d_it_inv(vars.m0d_it, wmem, m0d_ptr)
         && vars.m0d_it.buff[0] == vars.rsa.M0D
@@ -349,17 +336,16 @@ module rsa_ops {
     {
         && rsa_params_inv(vars.rsa)
 
-        && valid_xmem_addr2(xmem, 0, vars.rsa.E0)
-        && valid_xmem_addr2(xmem, 4, NUM_WORDS)
-        && valid_xmem_addr2(xmem, 16, m_ptr)
-        && valid_xmem_addr2(xmem, 8, m0d_ptr)
-        && valid_xmem_addr2(xmem, 12, rr_ptr)
-        && valid_xmem_addr2(xmem, 20, sig_ptr)
+        && xmem_addr_mapped(xmem, 0, vars.rsa.E0)
+        && xmem_addr_mapped(xmem, 4, NUM_WORDS)
+        && xmem_addr_mapped(xmem, 16, m_ptr)
+        && xmem_addr_mapped(xmem, 8, m0d_ptr)
+        && xmem_addr_mapped(xmem, 12, rr_ptr)
+        && xmem_addr_mapped(xmem, 20, sig_ptr)
+        && xmem_addr_mapped(xmem, 28, out_ptr)
 
         && mm_vars_inv(vars, wmem, NA, NA, m_ptr, m0d_ptr, rr_ptr, sig_ptr)
-
-        && valid_xmem_addr2(xmem, 28, out_ptr)
-        && valid_wmem_base_ptr(wmem, out_ptr, NUM_WORDS)
+        && wmem_base_addr_valid(wmem, out_ptr, NUM_WORDS)
 
         && out_ptr != m0d_ptr
         && out_ptr != rr_ptr

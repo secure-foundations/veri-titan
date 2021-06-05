@@ -88,30 +88,31 @@ module vt_ops {
 
     type xmem_t = map<int, uint32>
 
-    predicate valid_xmem_addr(xmem: xmem_t, ptr:int)
+    predicate xmem_addr_valid(xmem: xmem_t, addr: int)
     {
-        && ptr in xmem
+        && addr in xmem
     }
 
-    predicate valid_xmem_addr2(xmem: xmem_t, ptr: int, value: uint32)
+    predicate xmem_addr_mapped(xmem: xmem_t, addr: int, value: uint32)
     {
-        && ptr in xmem
-        && xmem[ptr] == value
+        && xmem_addr_valid(xmem, addr)
+        && xmem[addr] == value
     }
 
     type wmem_t = map<int, seq<uint256>>
 
-    predicate valid_wmem_base_ptr(wmem: wmem_t, ptr: int, size: nat)
+    predicate wmem_base_addr_valid(wmem: wmem_t, addr: int, size: nat)
     {
-        && ptr in wmem
-        && |wmem[ptr]| == size != 0
+        && addr in wmem
+        // buff is not empty
+        && |wmem[addr]| == size != 0
         // buff does not extend beyond mem limit
-        && ptr + 32 * size <= DMEM_LIMIT
+        && addr + 32 * size <= DMEM_LIMIT
     }
 
 /* iter_t definion (SHADOW) */
 
-    datatype iter_t = iter_cons(base_ptr: int, index: nat, buff: seq<uint256>)
+    datatype iter_t = iter_cons(base_addr: int, index: nat, buff: seq<uint256>)
 
     function bn_lid_next_iter(iter: iter_t, inc: bool): iter_t
     {
@@ -125,30 +126,22 @@ module vt_ops {
             .(buff := iter.buff[iter.index := value])
     }
 
-    predicate iter_mapped(iter: iter_t, ptress: int)
-    {   
-        // we choose to ingore
-        || (ptress == NA)
-        // ptress is correct
-        || (ptress == iter.base_ptr + 32 * iter.index)
-    }
-
-    predicate iter_inv(iter: iter_t, wmem: wmem_t, ptress: int)
+    predicate iter_inv(iter: iter_t, wmem: wmem_t, address: int)
     {
-        var base_ptr := iter.base_ptr;
-        // ptress is correct
-        && iter_mapped(iter, ptress)
-        // base_ptr points to a valid buffer
-        && valid_wmem_base_ptr(wmem, base_ptr, |iter.buff|)
+        var base_addr := iter.base_addr;
+        // address is correct
+        && (address != NA ==> address == iter.base_addr + 32 * iter.index)
+        // base_addr points to a valid buffer
+        && wmem_base_addr_valid(wmem, base_addr, |iter.buff|)
         // the view is consistent with wmem
-        && wmem[base_ptr] == iter.buff
+        && wmem[base_addr] == iter.buff
         // the index is within bound (or at end)
         && iter.index <= |iter.buff|
     }
 
-    predicate iter_safe(iter: iter_t, wmem: wmem_t, ptress: int)
+    predicate iter_safe(iter: iter_t, wmem: wmem_t, address: int)
     {
-        && iter_inv(iter, wmem, ptress)
+        && iter_inv(iter, wmem, address)
         // stronger constraint so we can dereference
         && iter.index < |iter.buff|
     }

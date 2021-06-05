@@ -165,7 +165,7 @@ procedure montmul(ghost vars: mm_vars)
 
             iter_inv(x_it, wmem, x20);
             x_it.index + loop_ctr == NUM_WORDS;
-            x_it.base_ptr == vars.x_it.base_ptr;
+            x_it.base_addr == vars.x_it.base_addr;
             x_it.buff == vars.x_it.buff;
 
             w3 == vars.rsa.M0D;

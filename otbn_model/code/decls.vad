@@ -57,7 +57,7 @@ function is_wide_data_register(r: reg256_t): bool extern;
 type xmem_t: Type(0) := map(int, uint32);
 type wmem_t: Type(0) := map(int, seq(uint256));
 
-function valid_wmem_base_ptr(wmem: wmem_t, ptr: int, size: nat): bool extern;
+function wmem_base_addr_valid(wmem: wmem_t, ptr: int, size: nat): bool extern;
 
 type wdrs_t: Type(0) extern;
 function operator([]) (s: wdrs_t, i: int): uint256 extern; 
@@ -107,14 +107,14 @@ function operator(.full) (num: uint512_view_t): int extern;
 var ok: bool {:state ok()};
 
 var xmem: xmem_t {:state xmem()};
-function valid_xmem_addr(h: xmem_t, ptr: int): bool extern;
-function valid_base_ptr(wmem: wmem_t, base_ptr: int, num_words: int): bool extern;
+function xmem_addr_valid(h: xmem_t, ptr: int): bool extern;
+function valid_base_addr(wmem: wmem_t, base_addr: int, num_words: int): bool extern;
 
 type iter_t: Type(0) extern;
-function iter_cons(base_ptr: int, index: nat, buff: seq(uint256)): iter_t extern;
+function iter_cons(base_addr: int, index: nat, buff: seq(uint256)): iter_t extern;
 function bn_lid_next_iter(iter: iter_t, inc: bool): iter_t extern;
 function bn_sid_next_iter(iter: iter_t, value: uint256, inc: bool): iter_t extern;
-function operator(.base_ptr) (iter :iter_t): int extern;
+function operator(.base_addr) (iter :iter_t): int extern;
 function operator(.index) (iter :iter_t): int extern;
 function operator(.index := ) (iter: iter_t, i :int): iter_t extern;
 function operator(.buff) (iter :iter_t): seq(uint256) extern;
@@ -123,7 +123,7 @@ function operator(.buff := ) (iter :iter_t, buff: seq(uint256)): iter_t extern;
 var wmem: wmem_t {:state wmem()};
 function iter_inv(iter: iter_t, h: wmem_t, ptr: int): bool extern;
 function iter_safe(iter: iter_t, h: wmem_t, ptr: int): bool extern;
-function mm_it_inv(iter: iter_t, h: wmem_t, ptr: int): bool extern;
+function mm_iter_init(iter: iter_t, h: wmem_t, ptr: int, value: int): bool extern;
 
 type rsa_params: Type(0) extern;
 function operator(.E0) (rsa: rsa_params): nat extern;
@@ -296,9 +296,9 @@ procedure lw(out grd: reg32, in offset: imm32, in grs1: reg32)
     reads
         xmem;
     requires
-        valid_xmem_addr(xmem, grs1 + offset);
+        xmem_addr_valid(xmem, grs1 + offset);
     ensures
-        valid_xmem_addr(xmem, old(grs1) + offset);
+        xmem_addr_valid(xmem, old(grs1) + offset);
         grd == xmem[old(grs1) + offset];
 {
     assume false;
@@ -309,7 +309,7 @@ procedure sw(in grs2: reg32, in offset: imm32, in grs1: reg32)
     modifies
         xmem;
     requires/ensures
-        valid_xmem_addr(xmem, grs1 + offset);
+        xmem_addr_valid(xmem, grs1 + offset);
     ensures
         xmem == old(xmem)[grs1 + offset := grs2];
 {
@@ -651,7 +651,7 @@ procedure bn_lid(
         wdrs;
 
     ensures
-        wdrs == old(wdrs[grd := wmem[iter.base_ptr][iter.index]]);
+        wdrs == old(wdrs[grd := wmem[iter.base_addr][iter.index]]);
         grd == (if grd_inc then mod_add(old(grd), 1, 32) else old(grd));
         grs == (if grs_inc then mod_add(old(grs), 32, BASE_32) else old(grs));
 {
@@ -706,7 +706,7 @@ procedure bn_sid(
         wmem;
 
     ensures
-        wmem == old(wmem[iter.base_ptr := wmem[iter.base_ptr][iter.index := wdrs[grs2]]]);
+        wmem == old(wmem[iter.base_addr := wmem[iter.base_addr][iter.index := wdrs[grs2]]]);
         grs2 == (if grs2_inc then mod_add(old(grs2), 1, 32) else old(grs2));
         grs1 == (if grs1_inc then mod_add(old(grs1), 32, BASE_32) else old(grs1));
 {
@@ -734,12 +734,12 @@ procedure bn_sid_safe(
     ensures
         grs1 == (if grs1_inc then (old(grs1) + 32) else old(grs1));
         grs2 == (if grs2_inc then (old(grs2) + 1) else old(grs2));
-        wmem == old(wmem)[iter.base_ptr := next_iter.buff];
+        wmem == old(wmem)[iter.base_addr := next_iter.buff];
 
         iter_inv(next_iter, wmem, grs1 + offset);
         next_iter == bn_sid_next_iter(iter, wdrs[old(grs2)], grs1_inc);
 {
-    ghost var new_buff := wmem[iter.base_ptr][iter.index := wdrs[grs2]];
+    ghost var new_buff := wmem[iter.base_addr][iter.index := wdrs[grs2]];
     ghost var new_index := if grs1_inc then iter.index + 1 else iter.index;
     next_iter := iter.(index := new_index).(buff := new_buff);
     bn_sid(grs2, grs2_inc, offset, grs1, grs1_inc, iter);
