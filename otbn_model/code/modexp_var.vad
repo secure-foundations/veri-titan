@@ -75,19 +75,26 @@ ghost procedure modexp_var_correct_lemma(
 
 function mod(a: int, n: int): int extern;
 
-procedure modexp_var_0(ghost init_vars: mm_vars)
+function mm_vars_init(
+    vars: mm_vars,
+    xmem: xmem_t,
+    wmem: wmem_t,
+    m_ptr: uint32,
+    m0d_ptr: uint32,
+    rr_ptr: uint32,
+    sig_ptr: uint32,
+    out_ptr: uint32) : bool extern;
+
+procedure modexp_var_0(
+    ghost init_vars: mm_vars,
+    ghost m_ptr: uint32,
+    ghost m0d_ptr: uint32,
+    ghost rr_ptr: uint32,
+    ghost sig_ptr: uint32,
+    ghost out_ptr: uint32)
+
     requires
-        valid_xmem_addr(xmem, 4);
-        xmem[4] == NUM_WORDS;
-
-        valid_xmem_addr(xmem, 0);  // e'
-        xmem[0] == init_vars.rsa.e';
-
-        valid_xmem_addr(xmem, 8);  // m0d
-        valid_xmem_addr(xmem, 16); // m
-        valid_xmem_addr(xmem, 12); // rr
-    
-        mm_vars_inv(init_vars, wmem, NA, NA, xmem[16], xmem[12], xmem[8]);
+        mm_vars_init(init_vars, xmem, wmem, m_ptr, m0d_ptr, rr_ptr, sig_ptr, out_ptr);
 
     reads
         x0;
@@ -102,13 +109,13 @@ procedure modexp_var_0(ghost init_vars: mm_vars)
         x9 == 3;
         x10 == 4;
         x11 == 2;
-        x29 == init_vars.rsa.e';
+        x29 == init_vars.rsa.E0;
         x30 == NUM_WORDS;
         x31 == NUM_WORDS - 1;
 
         w31 == 0;
 
-        mm_vars_inv(init_vars, wmem, NA, NA, x16, x18, x17);
+        mm_vars_inv(init_vars, wmem, NA, NA, x16, x17, x18, NA);
 {
     xor_clear_lemma(w31);
     bn_xor(w31, w31, w31, SFT_DFT);
@@ -172,7 +179,7 @@ procedure sub_mod(
     while (Loop(x30))
         invariant
             iter_inv(m_it, wmem, x16);
-            m_it.base_addr == initial_m_it.base_addr;
+            m_it.base_ptr == initial_m_it.base_ptr;
             m_it.index == NUM_WORDS - loop_ctr;
             seq_len(m_it.buff) == NUM_WORDS;
 
@@ -230,13 +237,13 @@ procedure write_to_dmem(ghost iter: iter_t)
         x30; wdrs;
 
     ensures
-        iter_inv(next_iter, wmem, iter.base_addr);
-        next_iter.base_addr == iter.base_addr;
+        iter_inv(next_iter, wmem, iter.base_ptr);
+        next_iter.base_ptr == iter.base_ptr;
         seq_len(next_iter.buff) == NUM_WORDS;
         next_iter.buff == wdrs[4..4+NUM_WORDS];
         iter.index == 0;
 
-        wmem == old(wmem)[next_iter.base_addr := next_iter.buff];
+        wmem == old(wmem)[next_iter.base_ptr := next_iter.buff];
 {
     next_iter := iter;
 
@@ -251,8 +258,8 @@ procedure write_to_dmem(ghost iter: iter_t)
             next_iter.buff[..next_iter.index] == wdrs[4..4+next_iter.index];
             wdrs == old(wdrs);
 
-            next_iter.base_addr == iter.base_addr;
-            wmem == old(wmem)[next_iter.base_addr := next_iter.buff];
+            next_iter.base_ptr == iter.base_ptr;
+            wmem == old(wmem)[next_iter.base_ptr := next_iter.buff];
 
         decreases
             loop_ctr;
@@ -281,7 +288,7 @@ returns (ghost out_iter: iter_t)
 
     requires
         valid_xmem_addr(xmem, 28); // out
-        valid_wmem_base_addr(wmem, xmem[28], NUM_WORDS);
+        valid_wmem_base_ptr(wmem, xmem[28], NUM_WORDS);
 
         NUM_WORDS == x30;
 
@@ -291,12 +298,12 @@ returns (ghost out_iter: iter_t)
         valid_wdr_view(wdrs, adjusted_view, 16, NUM_WORDS);
 
         carry == fgroups.fg0.cf;
-        carry ==> to_nat(raw_view) == mod(power(sig, rsa.e), rsa.m);
-        !carry ==> to_nat(adjusted_view) == mod(power(sig, rsa.e), rsa.m);
+        carry ==> to_nat(raw_view) == mod(power(sig, rsa.E), rsa.M);
+        !carry ==> to_nat(adjusted_view) == mod(power(sig, rsa.E), rsa.M);
     
     ensures
         iter_inv(out_iter, wmem, x21);
-        to_nat(out_iter.buff) == mod(power(sig, rsa.e), rsa.m);
+        to_nat(out_iter.buff) == mod(power(sig, rsa.E), rsa.M);
 {
     lw(x21, 28, x0);
     li(x8, 4);
@@ -348,49 +355,39 @@ returns (ghost out_iter: iter_t)
     assert adjusted_view == adjusted_view[..out_iter.index];
 }
 
-function valid_xmem_addr2(xmem: xmem_t, addr: int, value: uint32): bool extern;
-
-    function mm_vars_init(
-        vars: mm_vars,
-        xmem: xmem_t,
-        wmem: wmem_t,
-        m0d_ptr: uint32,
-        rr_ptr: uint32,
-        m_ptr: uint32,
-        sig_ptr: uint32,
-        out_ptr: uint32) : bool extern;
-
 procedure modexp_var(
     ghost init_vars: mm_vars,
-    ghost sig_ptr: uint32,
-    ghost out_ptr: uint32,
     ghost m_ptr: uint32,
+    ghost m0d_ptr: uint32,
     ghost rr_ptr: uint32,
-    ghost m0d_ptr: uint32)
+    ghost sig_ptr: uint32,
+    ghost out_ptr: uint32)
 
     returns (ghost out_iter: iter_t)
 
     {:frame false}
     
     requires
-        mm_vars_init(init_vars, xmem, wmem, m0d_ptr, rr_ptr, m_ptr, sig_ptr, out_ptr);
+        mm_vars_init(init_vars, xmem, wmem,
+            m_ptr, m0d_ptr, rr_ptr, sig_ptr, out_ptr);
 
     ensures
         // out_iter contains a valid view of memory
         iter_inv(out_iter, wmem, x21);
         // out_iter contains the right value
         let rsa := init_vars.rsa in 
-        to_nat(out_iter.buff) == mod(power(rsa.sig, rsa.e), rsa.m);
+        to_nat(out_iter.buff) == mod(power(rsa.SIG, rsa.E), rsa.M);
 {
     ghost var a_view: seq(uint256);
-    modexp_var_0(init_vars);
+    modexp_var_0(init_vars, m_ptr, m0d_ptr, rr_ptr, sig_ptr, out_ptr);
 
     lw(x19, 20, x0);
     addi(x20, x18, 0);
     lw(x21, 28, x0);
 
-    let sig_iter := iter_cons(x19, 0, wmem[sig_ptr]);
-    let rr_iter := iter_cons(x20, 0, wmem[rr_ptr]);
+    let sig_iter := init_vars.sig_it;
+    let rr_iter := init_vars.rr_it;
+
     ghost var vars := init_vars.(x_it := rr_iter).(y_it := sig_iter);
     a_view := montmul(vars);
 
@@ -413,30 +410,28 @@ procedure modexp_var(
             w31 == 0;
 
             init_vars.rsa == vars.rsa;
-
-            mm_it_inv(sig_iter, wmem, sig_iter.base_addr);
+            init_vars.sig_it== vars.sig_it;
 
             iter_safe(out_iter, wmem, out_ptr);
             seq_len(out_iter.buff) == NUM_WORDS;
             out_iter.index == 0;
             out_iter.buff == a_view;
 
-            mm_vars_inv(vars, wmem, out_ptr, out_ptr, x16, rr_ptr, x17);
-            to_nat(sig_iter.buff) == vars.rsa.sig;
-            modexp_var_inv(to_nat(a_view), vars.rsa.sig, i, vars.rsa);
+            mm_vars_inv(vars, wmem, out_ptr, out_ptr, x16, x17, rr_ptr, sig_ptr);
+            modexp_var_inv(to_nat(a_view), vars.rsa.SIG, i, vars.rsa);
 
             out_ptr != x16;
             out_ptr != x17;
 
-            i + loop_ctr == vars.rsa.e'; 
+            i + loop_ctr == vars.rsa.E0; 
 
             xmem == old(xmem);
 
         decreases
             loop_ctr;
     {
-        lw(x19, 28, x0);
         lw(x20, 28, x0);
+        lw(x19, 28, x0);
         lw(x21, 28, x0);
 
         let prev_a_view := a_view;
@@ -446,7 +441,7 @@ procedure modexp_var(
         
         vars := vars.(x_it := out_iter).(y_it := out_iter);
 
-        modexp_var_inv_peri_lemma(prev_a_view, a_view, vars.rsa.sig, i, vars.rsa);
+        modexp_var_inv_peri_lemma(prev_a_view, a_view, vars.rsa.SIG, i, vars.rsa);
     
         i := i + 1;
     }
@@ -467,7 +462,7 @@ procedure modexp_var(
     let carry := fgroups.fg0.cf;
     modexp_var_correct_lemma(to_nat(raw_view), to_nat(adjusted_view), carry, vars.rsa);
 
-    out_iter := modexp_var_1(raw_view, adjusted_view, carry, vars.rsa.sig, vars.rsa);
+    out_iter := modexp_var_1(raw_view, adjusted_view, carry, vars.rsa.SIG, vars.rsa);
 }
 
 

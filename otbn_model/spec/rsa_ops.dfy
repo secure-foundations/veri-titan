@@ -239,44 +239,57 @@ module rsa_ops {
 /* rsa/mm definions & lemmas */
 
    datatype rsa_params = rsa_params(
-        e': uint32, 
-        e: nat,
-        m: nat,
-        sig: nat,
-        m0d: uint256,
-        B256_INV: nat,
+        M: nat,
+        M0D: uint256,
+
         R: nat,
         RR: nat,
+
+        E: nat,
+        E0: uint32,
+
+        SIG: nat,
+
+        B256_INV: nat,
+
         R_INV: nat)
 
     predicate rsa_params_inv(rsa: rsa_params)
     {
-        && rsa.e == power(2, rsa.e') + 1
+        && rsa.E == power(2, rsa.E0) + 1
 
-        && rsa.m != 0
-        && cong_B256(rsa.m0d * rsa.m, -1)
+        && rsa.M != 0
+        && cong_B256(rsa.M0D * rsa.M, -1)
 
-        && cong(BASE_256 * rsa.B256_INV, 1, rsa.m)
+        && cong(BASE_256 * rsa.B256_INV, 1, rsa.M)
 
-        && rsa.sig < rsa.m
+        && rsa.SIG < rsa.M
 
         && rsa.R == power(BASE_256, NUM_WORDS)
 
-        && rsa.RR < rsa.m
-        && cong(rsa.RR, rsa.R * rsa.R, rsa.m)
+        && rsa.RR < rsa.M
+        && cong(rsa.RR, rsa.R * rsa.R, rsa.M)
 
         && rsa.R_INV == power(rsa.B256_INV, NUM_WORDS)
-        && cong(rsa.R_INV * rsa.R, 1, rsa.m)
+        && cong(rsa.R_INV * rsa.R, 1, rsa.M)
     }
 
     datatype mm_vars = mm_vars(
         x_it: iter_t,
         y_it: iter_t,
+
         m_it: iter_t,
-        rr_it: iter_t,
         m0d_it: iter_t,
+        rr_it: iter_t,
         sig_it: iter_t,
         rsa: rsa_params)
+
+    // predicate vars_iter_inv(iter: iter_t, wmem: wmem_t, address: int)
+    // {
+    //     || address == NA // TODO: make iter provide its own address in this case
+    //     || (&& iter_inv(iter, wmem, address)
+    //         && |iter.buff| == NUM_WORDS)
+    // }
 
     predicate mm_it_inv(iter: iter_t, wmem: wmem_t, address: int)
     {
@@ -296,58 +309,57 @@ module rsa_ops {
     predicate mm_vars_inv(
         vars: mm_vars,
         wmem: wmem_t,
-        x_addr: int,
-        y_addr: int,
-        m_addr: int,
-        rr_addr: int,
-        m0d_addr: int)
+
+        x_ptr: int,
+        y_ptr: int,
+
+        m_ptr: int,
+        m0d_ptr: int,
+        rr_ptr: int,
+        sig_ptr: int)
     {
         && rsa_params_inv(vars.rsa)
 
-        && mm_it_inv(vars.x_it, wmem, x_addr)
+        && mm_it_inv(vars.x_it, wmem, x_ptr)
 
-        && mm_it_inv(vars.y_it, wmem, y_addr)
+        && mm_it_inv(vars.y_it, wmem, y_ptr)
 
-        && mm_it_inv(vars.m_it, wmem, m_addr)
-        && to_nat(vars.m_it.buff) == vars.rsa.m
+        && mm_it_inv(vars.sig_it, wmem, sig_ptr)
+        && to_nat(vars.sig_it.buff) == vars.rsa.SIG
+        
+        && mm_it_inv(vars.m_it, wmem, m_ptr)
+        && to_nat(vars.m_it.buff) == vars.rsa.M
 
-        && mm_it_inv(vars.rr_it, wmem, rr_addr)
+        && mm_it_inv(vars.rr_it, wmem, rr_ptr)
         && to_nat(vars.rr_it.buff) == vars.rsa.RR
 
-        && m0d_it_inv(vars.m0d_it, wmem, m0d_addr)
-        && vars.m0d_it.buff[0] == vars.rsa.m0d
+        && m0d_it_inv(vars.m0d_it, wmem, m0d_ptr)
+        && vars.m0d_it.buff[0] == vars.rsa.M0D
     }
 
     predicate mm_vars_init(
         vars: mm_vars,
         xmem: xmem_t,
         wmem: wmem_t,
+        m_ptr: uint32,
         m0d_ptr: uint32,
         rr_ptr: uint32,
-        m_ptr: uint32,
         sig_ptr: uint32,
         out_ptr: uint32)
     {
         && rsa_params_inv(vars.rsa)
 
-        && valid_xmem_addr2(xmem, 0, vars.rsa.e')
-
+        && valid_xmem_addr2(xmem, 0, vars.rsa.E0)
         && valid_xmem_addr2(xmem, 4, NUM_WORDS)
-    
-        && valid_xmem_addr2(xmem, 8, m0d_ptr)
-
-        && valid_xmem_addr2(xmem, 12, rr_ptr)
-
         && valid_xmem_addr2(xmem, 16, m_ptr)
-
-        && mm_vars_inv(vars, wmem, NA, NA, m_ptr, rr_ptr, m0d_ptr)
-    
+        && valid_xmem_addr2(xmem, 8, m0d_ptr)
+        && valid_xmem_addr2(xmem, 12, rr_ptr)
         && valid_xmem_addr2(xmem, 20, sig_ptr)
-        && mm_it_inv(vars.sig_it, wmem, sig_ptr)
-        && to_nat(vars.sig_it.buff) == vars.rsa.sig
+
+        && mm_vars_inv(vars, wmem, NA, NA, m_ptr, m0d_ptr, rr_ptr, sig_ptr)
 
         && valid_xmem_addr2(xmem, 28, out_ptr)
-        && valid_wmem_base_addr(wmem, out_ptr, NUM_WORDS)
+        && valid_wmem_base_ptr(wmem, out_ptr, NUM_WORDS)
 
         && out_ptr != m0d_ptr
         && out_ptr != rr_ptr

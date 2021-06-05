@@ -378,7 +378,7 @@ procedure mont_loop(
         x31 == NUM_WORDS - 1;
 
         w2 == xi;
-        w3 == vars.rsa.m0d;
+        w3 == vars.rsa.M0D;
         w31 == 0;
 
         iter_inv(x_it, wmem, x20);
@@ -386,7 +386,7 @@ procedure mont_loop(
         x_it.index >= 1;
         x_it.buff[x_it.index-1] == xi;
 
-        mm_vars_inv(vars, wmem, NA, x19, x16, NA, NA);
+        mm_vars_inv(vars, wmem, NA, x19, x16, NA, NA, NA);
 
         valid_wdr_view(wdrs, prev_view, 4, NUM_WORDS);
 
@@ -420,7 +420,7 @@ procedure mont_loop(
     ghost var y_it : iter_t;
     ghost var m_it : iter_t;
 
-    y_it, p1 := mont_loop_0(curr_view, vars.y_it, xi, vars.rsa.m0d);
+    y_it, p1 := mont_loop_0(curr_view, vars.y_it, xi, vars.rsa.M0D);
     ghost var ui := w25;
 
     /* w24 = w30 =  y[0]*xi + A[0] mod b */
@@ -437,7 +437,7 @@ procedure mont_loop(
     mont_word_mul_add_bound_lemma_0(seq(w27, w26), seq(w24, w31), m_it.buff[0], ui);
     p2 := seq_addc_512_safe(w27, w27, w24, w28, w26, w31);
 
-    mont_loop_inv_pre_lemma(xi, ui, vars.rsa.m0d, p1, p2, y_it.buff, m_it.buff, curr_view);
+    mont_loop_inv_pre_lemma(xi, ui, vars.rsa.M0D, p1, p2, y_it.buff, m_it.buff, curr_view);
 
     ghost var j: nat := 1;
 
@@ -479,7 +479,7 @@ procedure mont_loop(
 
             iter_inv(m_it, wmem, x16);
             m_it.buff == vars.m_it.buff;
-            m_it.base_addr == x22;
+            m_it.base_ptr == x22;
 
             valid_wdr_view(wdrs, curr_view, 4, NUM_WORDS);
             seq_len(prev_view) == NUM_WORDS;
