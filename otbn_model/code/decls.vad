@@ -123,7 +123,7 @@ function operator(.buff := ) (iter :iter_t, buff: seq(uint256)): iter_t extern;
 var wmem: wmem_t {:state wmem()};
 function iter_inv(iter: iter_t, h: wmem_t, ptr: int): bool extern;
 function iter_safe(iter: iter_t, h: wmem_t, ptr: int): bool extern;
-function mm_iter_init(iter: iter_t, h: wmem_t, ptr: int, value: int): bool extern;
+function mvars_iter_init(iter: iter_t, h: wmem_t, ptr: int, value: int): bool extern;
 
 type rsa_params: Type(0) extern;
 function operator(.E0) (rsa: rsa_params): nat extern;
@@ -137,17 +137,17 @@ function operator(.RR) (rsa: rsa_params): nat extern;
 function operator(.R_INV) (rsa: rsa_params): nat extern;
 function rsa_params_inv(rsa: rsa_params): bool extern;
 
-type mm_vars: Type(0) extern;
-function operator(.x_it) (vars: mm_vars): iter_t extern;
-function operator(.x_it := ) (vars: mm_vars, it: iter_t): mm_vars extern;
-function operator(.y_it) (vars: mm_vars): iter_t extern;
-function operator(.y_it := ) (vars: mm_vars, it: iter_t): mm_vars extern;
-function operator(.sig_it) (vars: mm_vars): iter_t extern;
-function operator(.m_it) (vars: mm_vars): iter_t extern;
-function operator(.rr_it) (vars: mm_vars): iter_t extern;
-function operator(.m0d_it) (vars: mm_vars): iter_t extern;
-function operator(.rsa) (vars: mm_vars): rsa_params extern;
-function mm_vars_inv(vars: mm_vars, wmem: wmem_t, x_ptr: int, y_ptr: int,
+type mvars: Type(0) extern;
+function operator(.x_it) (vars: mvars): iter_t extern;
+function operator(.x_it := ) (vars: mvars, it: iter_t): mvars extern;
+function operator(.y_it) (vars: mvars): iter_t extern;
+function operator(.y_it := ) (vars: mvars, it: iter_t): mvars extern;
+function operator(.sig_it) (vars: mvars): iter_t extern;
+function operator(.m_it) (vars: mvars): iter_t extern;
+function operator(.rr_it) (vars: mvars): iter_t extern;
+function operator(.m0d_it) (vars: mvars): iter_t extern;
+function operator(.rsa) (vars: mvars): rsa_params extern;
+function mvars_inv(vars: mvars, wmem: wmem_t, x_ptr: int, y_ptr: int,
     m_ptr: int, rr_ptr: int, m0d_ptr: int, sig_ptr: int): bool extern;
 
 function to_nat(s: seq(uint256)): nat extern;

@@ -139,8 +139,6 @@ procedure mont_loop_0(
     returns (ghost next_y_it: iter_t,
         ghost p1: uint512_view_t)
 
-    {:frame false}
-
     requires
         w2 == xi;
         w3 == m0d;
@@ -152,30 +150,37 @@ procedure mont_loop_0(
         seq_len(y_it.buff) == NUM_WORDS;
         y_it.index == 0;
 
+    reads
+        x16;
+        w3; w31;
+        wmem; xmem;
+
+    modifies
+        x8; x10; x12; x13; x19; x22;
+        w2; w24; w25; w26; w27; w29; w30; wacc;
+        fgroups; wdrs;
+
     ensures
-        x6 == old(x6);
-        x7 == old(x7);
+        // x6 == old(x6);
+        // x7 == old(x7);
         x8 == 5;
-        x9 == old(x9);
+        // x9 == old(x9);
         x10 == 4;
-        x11 == old(x11);
+        // x11 == old(x11);
         x12 == 30;
         x13 == 24;
-        x16 == old(x16);
-        x17 == old(x17);
-        x20 == old(x20);
-        x21 == old(x21);
+        // x16 == old(x16);
+        // x17 == old(x17);
+        // x20 == old(x20);
+        // x21 == old(x21);
         x22 == x16;
-        x29 == old(x29);
-        x30 == old(x30);
-        x31 == old(x31);
+        // x29 == old(x29);
+        // x30 == old(x30);
+        // x31 == old(x31);
 
         w2 == xi;
         w3 == old(w3);
         w31 == 0;
-
-        wmem == old(wmem);
-        xmem == old(xmem);
 
         valid_wdr_view(wdrs, curr_view, 4, NUM_WORDS);
 
@@ -366,7 +371,7 @@ procedure mont_loop_1(
 procedure mont_loop(
     ghost x_it: iter_t,
     ghost xi: uint256,
-    ghost vars: mm_vars,
+    ghost vars: mvars,
     ghost prev_view: seq(uint256))
 
     returns (ghost next_view: seq(uint256))
@@ -386,10 +391,8 @@ procedure mont_loop(
         x_it.index >= 1;
         x_it.buff[x_it.index-1] == xi;
 
-        mm_vars_inv(vars, wmem, NA, x19, x16, NA, NA, NA);
-
         valid_wdr_view(wdrs, prev_view, 4, NUM_WORDS);
-
+        mvars_inv(vars, wmem, NA, x19, x16, NA, NA, NA);
         montmul_inv(prev_view, x_it.buff, x_it.index-1, vars.y_it.buff, vars.rsa);
 
     ensures

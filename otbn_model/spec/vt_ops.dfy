@@ -130,7 +130,7 @@ module vt_ops {
     {
         var base_addr := iter.base_addr;
         // address is correct
-        && (address != NA ==> address == iter.base_addr + 32 * iter.index)
+        && address == base_addr + 32 * iter.index
         // base_addr points to a valid buffer
         && wmem_base_addr_valid(wmem, base_addr, |iter.buff|)
         // the view is consistent with wmem
@@ -142,7 +142,7 @@ module vt_ops {
     predicate iter_safe(iter: iter_t, wmem: wmem_t, address: int)
     {
         && iter_inv(iter, wmem, address)
-        // stronger constraint so we can dereference
+        // tighter constraint so we can dereference
         && iter.index < |iter.buff|
     }
 
@@ -401,7 +401,4 @@ module vt_ops {
             //case IfElse(cond, ifT, ifF) => evalIfElse(cond, ifT, ifF, s, r)
             case While(cond, body) => eval_while(body, eval_cond(s, cond), s, r)
     }
-
-
-
 }

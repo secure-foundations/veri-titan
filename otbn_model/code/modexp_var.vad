@@ -75,8 +75,8 @@ ghost procedure modexp_var_correct_lemma(
 
 function mod(a: int, n: int): int extern;
 
-function mm_vars_init(
-    vars: mm_vars,
+function mvars_init(
+    vars: mvars,
     xmem: xmem_t,
     wmem: wmem_t,
     m_ptr: uint32,
@@ -86,7 +86,7 @@ function mm_vars_init(
     out_ptr: uint32) : bool extern;
 
 procedure modexp_var_0(
-    ghost init_vars: mm_vars,
+    ghost init_vars: mvars,
     ghost m_ptr: uint32,
     ghost m0d_ptr: uint32,
     ghost rr_ptr: uint32,
@@ -94,7 +94,8 @@ procedure modexp_var_0(
     ghost out_ptr: uint32)
 
     requires
-        mm_vars_init(init_vars, xmem, wmem, m_ptr, m0d_ptr, rr_ptr, sig_ptr, out_ptr);
+        mvars_init(init_vars, xmem, wmem,
+            m_ptr, m0d_ptr, rr_ptr, sig_ptr, out_ptr);
 
     reads
         x0;
@@ -115,7 +116,7 @@ procedure modexp_var_0(
 
         w31 == 0;
 
-        mm_vars_inv(init_vars, wmem, NA, NA, x16, x17, x18, NA);
+        mvars_inv(init_vars, wmem, NA, NA, x16, x17, x18, NA);
 {
     xor_clear_lemma(w31);
     bn_xor(w31, w31, w31, SFT_DFT);
@@ -150,7 +151,7 @@ procedure sub_mod(
 
         w31 == 0;
 
-        mm_iter_init(initial_m_it, wmem, x16, NA);
+        mvars_iter_init(initial_m_it, wmem, x16, NA);
         valid_wdr_view(wdrs, raw_view, 4, NUM_WORDS);
 
     reads
@@ -356,7 +357,7 @@ returns (ghost out_iter: iter_t)
 }
 
 procedure modexp_var(
-    ghost init_vars: mm_vars,
+    ghost init_vars: mvars,
     ghost m_ptr: uint32,
     ghost m0d_ptr: uint32,
     ghost rr_ptr: uint32,
@@ -368,7 +369,7 @@ procedure modexp_var(
     {:frame false}
 
     requires
-        mm_vars_init(init_vars, xmem, wmem,
+        mvars_init(init_vars, xmem, wmem,
             m_ptr, m0d_ptr, rr_ptr, sig_ptr, out_ptr);
 
     ensures
@@ -412,12 +413,10 @@ procedure modexp_var(
             init_vars.rsa == vars.rsa;
             init_vars.sig_it== vars.sig_it;
 
-            iter_safe(out_iter, wmem, out_ptr);
-            seq_len(out_iter.buff) == NUM_WORDS;
-            out_iter.index == 0;
+            mvars_iter_init(out_iter, wmem, out_ptr, NA);
             out_iter.buff == a_view;
 
-            mm_vars_inv(vars, wmem, out_ptr, out_ptr, x16, x17, rr_ptr, sig_ptr);
+            mvars_inv(vars, wmem, out_ptr, out_ptr, x16, x17, rr_ptr, sig_ptr);
             modexp_var_inv(to_nat(a_view), vars.rsa.SIG, i, vars.rsa);
 
             out_ptr != x16;

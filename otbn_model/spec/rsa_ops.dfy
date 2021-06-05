@@ -239,7 +239,7 @@ module rsa_ops {
 /* rsa/mm definions & lemmas */
 
    datatype rsa_params = rsa_params(
-        M: nat,
+        M: nat, 
         M0D: uint256,
 
         R: nat,
@@ -256,13 +256,16 @@ module rsa_ops {
 
     predicate rsa_params_inv(rsa: rsa_params)
     {
+        // E0 is derived from the exponent E
         && rsa.E == power(2, rsa.E0) + 1
-
+        
+        // modulo is none zero
         && rsa.M != 0
         && cong_B256(rsa.M0D * rsa.M, -1)
 
         && cong(BASE_256 * rsa.B256_INV, 1, rsa.M)
 
+        // signature
         && rsa.SIG < rsa.M
 
         && rsa.R == power(BASE_256, NUM_WORDS)
@@ -274,7 +277,7 @@ module rsa_ops {
         && cong(rsa.R_INV * rsa.R, 1, rsa.M)
     }
 
-    datatype mm_vars = mm_vars(
+    datatype mvars = mvars(
         x_it: iter_t,
         y_it: iter_t,
 
@@ -284,8 +287,7 @@ module rsa_ops {
         sig_it: iter_t,
         rsa: rsa_params)
 
-
-    predicate mm_iter_init(iter: iter_t, wmem: wmem_t, address: int, value: int)
+    predicate mvars_iter_init(iter: iter_t, wmem: wmem_t, address: int, value: int)
     {
         && (address != NA ==> iter_inv(iter, wmem, address))
         && (value != NA ==> to_nat(iter.buff) == value)
@@ -295,18 +297,16 @@ module rsa_ops {
 
     predicate m0d_it_inv(iter: iter_t, wmem: wmem_t, address: int)
     {
-        && iter_inv(iter, wmem, address)
+        && (address != NA ==> iter_inv(iter, wmem, address))
         && iter.index == 0
         && |iter.buff| == 1
     }
 
-    predicate mm_vars_inv(
-        vars: mm_vars,
+    predicate mvars_inv(
+        vars: mvars,
         wmem: wmem_t,
-
         x_ptr: int,
         y_ptr: int,
-
         m_ptr: int,
         m0d_ptr: int,
         rr_ptr: int,
@@ -314,18 +314,18 @@ module rsa_ops {
     {
         && rsa_params_inv(vars.rsa)
 
-        && mm_iter_init(vars.x_it, wmem, x_ptr, NA)
-        && mm_iter_init(vars.y_it, wmem, y_ptr, NA)
-        && mm_iter_init(vars.sig_it, wmem, sig_ptr, vars.rsa.SIG)
-        && mm_iter_init(vars.m_it, wmem, m_ptr, vars.rsa.M)
-        && mm_iter_init(vars.rr_it, wmem, rr_ptr, vars.rsa.RR)
+        && mvars_iter_init(vars.x_it, wmem, x_ptr, NA)
+        && mvars_iter_init(vars.y_it, wmem, y_ptr, NA)
+        && mvars_iter_init(vars.sig_it, wmem, sig_ptr, vars.rsa.SIG)
+        && mvars_iter_init(vars.m_it, wmem, m_ptr, vars.rsa.M)
+        && mvars_iter_init(vars.rr_it, wmem, rr_ptr, vars.rsa.RR)
 
         && m0d_it_inv(vars.m0d_it, wmem, m0d_ptr)
         && vars.m0d_it.buff[0] == vars.rsa.M0D
     }
 
-    predicate mm_vars_init(
-        vars: mm_vars,
+    predicate mvars_init(
+        vars: mvars,
         xmem: xmem_t,
         wmem: wmem_t,
         m_ptr: uint32,
@@ -344,7 +344,7 @@ module rsa_ops {
         && xmem_addr_mapped(xmem, 20, sig_ptr)
         && xmem_addr_mapped(xmem, 28, out_ptr)
 
-        && mm_vars_inv(vars, wmem, NA, NA, m_ptr, m0d_ptr, rr_ptr, sig_ptr)
+        && mvars_inv(vars, wmem, NA, NA, m_ptr, m0d_ptr, rr_ptr, sig_ptr)
         && wmem_base_addr_valid(wmem, out_ptr, NUM_WORDS)
 
         && out_ptr != m0d_ptr
