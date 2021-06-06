@@ -37,15 +37,12 @@ module modexp_var_lemmas {
         var a := to_nat(a_view);
         var s := to_nat(sig);
 
-        assert cong(rsa.RR * rsa.R_INV, rsa.R, m) by {
-            assert cong(rsa.R * rsa.R * rsa.R_INV, rsa.R, m) by {
-                r_r_inv_cancel_lemma(rsa.R, rsa);
-            }
-            assert cong(rsa.RR * rsa.R_INV, rsa.R * rsa.R * rsa.R_INV, m) by {
-                assert cong(rsa.RR, rsa.R * rsa.R, m);
-                cong_mul_lemma_1(rsa.RR, rsa.R * rsa.R, rsa.R_INV, m);
-            }
-            reveal cong();
+        calc ==> {
+            true;
+                { cong_mul_lemma_1(rsa.RR, rsa.R * rsa.R, rsa.R_INV, m); }
+            cong(rsa.RR * rsa.R_INV, rsa.R * rsa.R * rsa.R_INV, m);
+                { r_r_inv_cancel_lemma(rsa.RR * rsa.R_INV, rsa.R, rsa); }
+            cong(rsa.RR * rsa.R_INV, rsa.R, m);
         }
 
         assert cong(a, s * rsa.R, m) by {
@@ -98,7 +95,7 @@ module modexp_var_lemmas {
                     cong_trans_lemma(next_a, a * a * rsa.R_INV, next_goal * rsa.R * rsa.R_INV, m);
                 }
             cong(next_a, next_goal * rsa.R_INV * rsa.R, m);
-                { r_r_inv_cancel_lemma_2(next_a, next_goal, rsa); }
+                { r_r_inv_cancel_lemma(next_a, next_goal, rsa); }
             cong(next_a, next_goal, m);
         }
 
@@ -138,7 +135,7 @@ module modexp_var_lemmas {
                     cong_trans_lemma(next_a, a * s * rsa.R_INV, cur * rsa.R * s * rsa.R_INV, m);
                 }
             cong(next_a, cur * rsa.R * s * rsa.R_INV, m);
-                { r_r_inv_cancel_lemma_2(next_a, cur * s, rsa); }
+                { r_r_inv_cancel_lemma(next_a, cur * s, rsa); }
             cong(next_a, cur * s, m);
                 { power_add_one_lemma(s, power(2, rsa.E0)); }
             cong(next_a, power(s, power(2, rsa.E0) + 1), m);

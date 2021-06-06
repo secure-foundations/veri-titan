@@ -241,18 +241,13 @@ module rsa_ops {
    datatype rsa_params = rsa_params(
         M: nat, 
         M0D: uint256,
-
         R: nat,
         RR: nat,
-
+        R_INV: nat,
         E: nat,
         E0: uint32,
-
         SIG: nat,
-
-        B256_INV: nat,
-
-        R_INV: nat)
+        B256_INV: nat)
 
     predicate rsa_params_inv(rsa: rsa_params)
     {
@@ -262,8 +257,6 @@ module rsa_ops {
         // modulo is none zero
         && rsa.M != 0
         && cong_B256(rsa.M0D * rsa.M, -1)
-
-        && cong(BASE_256 * rsa.B256_INV, 1, rsa.M)
 
         // signature
         && rsa.SIG < rsa.M
@@ -275,6 +268,8 @@ module rsa_ops {
 
         && rsa.R_INV == power(rsa.B256_INV, NUM_WORDS)
         && cong(rsa.R_INV * rsa.R, 1, rsa.M)
+
+        && cong(BASE_256 * rsa.B256_INV, 1, rsa.M)
     }
 
     datatype mvars = mvars(

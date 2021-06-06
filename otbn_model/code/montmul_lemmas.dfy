@@ -30,21 +30,14 @@ module montmul_lemmas {
         assert montmul_inv(a, x, i, y, rsa);
     }
 
-    lemma r_r_inv_cancel_lemma(a: nat, rsa: rsa_params)
-        requires rsa_params_inv(rsa);
-        ensures cong(a * rsa.R_INV * rsa.R, a, rsa.M);
-    {
-        assert cong(rsa.R_INV * rsa.R, 1, rsa.M);
-        cong_mul_lemma_1(rsa.R_INV * rsa.R, 1, a, rsa.M);
-    }
-    
-    lemma r_r_inv_cancel_lemma_2(a: nat, b : nat, rsa: rsa_params)
+    lemma r_r_inv_cancel_lemma(a: nat, b : nat, rsa: rsa_params)
         requires rsa_params_inv(rsa);
         requires cong(a, b * rsa.R_INV * rsa.R, rsa.M);
         ensures cong(a, b, rsa.M);
     {
         assert cong(b * rsa.R_INV * rsa.R, b, rsa.M) by {
-            r_r_inv_cancel_lemma(b, rsa);
+            assert cong(rsa.R_INV * rsa.R, 1, rsa.M);
+            cong_mul_lemma_1(rsa.R_INV * rsa.R, 1, b, rsa.M);
         }
         reveal cong();
     }
@@ -68,7 +61,7 @@ module montmul_lemmas {
             cong(a * rsa.R * rsa.R_INV, to_nat(x) * to_nat(y) * rsa.R_INV, m);
                 { reveal cong(); }
             cong(to_nat(x) * to_nat(y) * rsa.R_INV, a * rsa.R * rsa.R_INV, m);
-                { r_r_inv_cancel_lemma_2(to_nat(x) * to_nat(y) * rsa.R_INV, a, rsa); }
+                { r_r_inv_cancel_lemma(to_nat(x) * to_nat(y) * rsa.R_INV, a, rsa); }
             cong(to_nat(x) * to_nat(y) * rsa.R_INV, a, m);
                 { reveal cong(); }
             cong(a, to_nat(x) * to_nat(y) * rsa.R_INV, m);
