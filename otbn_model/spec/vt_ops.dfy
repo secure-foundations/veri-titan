@@ -216,7 +216,7 @@ module vt_ops {
         requires false;
     {
         // FIXME: some bound checking?
-        assume false;
+        // assume false;
         var result := (x as bv256 - y as bv256) as uint256;
         if result >= wmod then (result as bv256 - wmod as bv256) as uint256 else result
     }

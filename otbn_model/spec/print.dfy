@@ -1,4 +1,4 @@
-include "../gen/code/examples.dfy"
+include "../gen/examples.dfy"
 include "bv_ops.dfy"
 include "vt_ops.dfy"
 include "../code/vale.dfy"
@@ -7,6 +7,7 @@ module otbn_printer {
 
   import opened bv_ops
 	import opened vt_ops
+  import opened examples
   
 		
 method printReg32(r:reg32_t)

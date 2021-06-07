@@ -81,14 +81,14 @@ module bv_ops {
 		(x - y) % BASE_32
 	}
 
-	function method {:opaque} uint32_se(x:uint32, size:int):uint32
-		requires 0 <= size < 32;
-  {
-    var sign : bv32 := (x as bv32 >> (size - 1));
-    var ext := if y = 1 then (y << (32 - (size + 1))) - 1 else 0;
-    (x as bv32 | ext)
-    
-  }
+	function {:extern} uint32_se(x:uint32, size:int):uint32
+	// 	requires 0 < size < 32;
+  // {
+  //   var sign : bv32 := (x as bv32 >> (size - 1));
+  //   var ext := if sign == 0 then 0 else (sign << (32 - (size + 1))) - 1;
+  //   (x as bv32 | ext) as uint32
+  //   
+  // }
 
 	function method uint256_mul(x: uint256, y: uint256): uint256
 	{
@@ -137,13 +137,13 @@ module bv_ops {
 	function method {:opaque} uint256_ls(x: uint256, num_bytes: uint5): (r: uint256)
 		ensures (num_bytes == 8 && x < BASE_192) ==> (r == x * BASE_64);
 	{
-		assume false;
+		//assume false;
 		(x as bv256 << (num_bytes * 8)) as uint256
 	}
 
 	function method {:opaque} uint256_rs(x: uint256, num_bytes: uint5): uint256
 	{
-		assume false;
+		// assume false;
 		(x as bv256 >> (num_bytes * 8)) as uint256
 	}
 
@@ -172,7 +172,7 @@ module bv_ops {
 		reveal uint256_uh();
 	}
 
-	function method {:opaque} uint256_hwb(x: uint256, v: uint128, lower: bool): (x': uint256)
+	function method {:extern} uint256_hwb(x: uint256, v: uint128, lower: bool): (x': uint256)
 		// overwrites the lower half, keeps the higher half
 		ensures lower ==> (uint256_lh(x') == v && uint256_uh(x') == uint256_uh(x));
 		// overwrites the higher half, keeps the lower half
@@ -202,7 +202,7 @@ module bv_ops {
 
 	function method {:opaque} uint256_qmul(x: uint256, qx: uint2, y: uint256, qy:uint2): uint128
 	{
-		assume false; // TODO: add a bound proof
+		// assume false; // TODO: add a bound proof
 		uint256_qsel(x, qx) * uint256_qsel(y, qy)
 	}
 

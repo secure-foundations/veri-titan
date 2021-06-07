@@ -5,6 +5,8 @@ include "../code/vale.dfy"
 include "../spec/rsa_ops.dfy"
 include "../gen/decls.dfy"
 
+module examples {
+
 import opened bv_ops
 import opened vt_ops
 import opened vt_consts
@@ -127,3 +129,7 @@ procedure copy()
     lw(x2, 0, x0);
     sw(x2, 4, x0);
 }
+
+#verbatim
+}
+#endverbatim
