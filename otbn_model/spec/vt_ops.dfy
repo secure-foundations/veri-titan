@@ -37,10 +37,10 @@ module vt_ops {
     datatype uint512_raw = uint512_cons(
         lh: uint256, uh: uint256, full: uint512)
 
-	type uint512_view_t = num: uint512_raw |
-		&& num.lh == uint512_lh(num.full)
-		&& num.uh == uint512_uh(num.full)
-		witness *
+    type uint512_view_t = num: uint512_raw |
+        && num.lh == uint512_lh(num.full)
+        && num.uh == uint512_uh(num.full)
+        witness *
 
     predicate valid_uint512_view(
         wdrs: wdrs_t, num: uint512_view_t,
@@ -88,16 +88,23 @@ module vt_ops {
 
     type xmem_t = map<int, uint32>
 
-    predicate valid_xmem_addr(xmem: xmem_t, addr:int)
+    predicate xmem_addr_valid(xmem: xmem_t, addr: int)
     {
         && addr in xmem
     }
 
+    predicate xmem_addr_mapped(xmem: xmem_t, addr: int, value: uint32)
+    {
+        && xmem_addr_valid(xmem, addr)
+        && xmem[addr] == value
+    }
+
     type wmem_t = map<int, seq<uint256>>
 
-    predicate valid_wmem_base_addr(wmem: wmem_t, addr: int, size: nat)
+    predicate wmem_base_addr_valid(wmem: wmem_t, addr: int, size: nat)
     {
         && addr in wmem
+        // buff is not empty
         && |wmem[addr]| == size != 0
         // buff does not extend beyond mem limit
         && addr + 32 * size <= DMEM_LIMIT
@@ -119,21 +126,13 @@ module vt_ops {
             .(buff := iter.buff[iter.index := value])
     }
 
-    predicate iter_mapped(iter: iter_t, address: int)
-    {   
-        // we choose to ingore
-        || (address == NA)
-        // address is correct
-        || (address == iter.base_addr + 32 * iter.index)
-    }
-
     predicate iter_inv(iter: iter_t, wmem: wmem_t, address: int)
     {
         var base_addr := iter.base_addr;
         // address is correct
-        && iter_mapped(iter, address)
+        && address == base_addr + 32 * iter.index
         // base_addr points to a valid buffer
-        && valid_wmem_base_addr(wmem, base_addr, |iter.buff|)
+        && wmem_base_addr_valid(wmem, base_addr, |iter.buff|)
         // the view is consistent with wmem
         && wmem[base_addr] == iter.buff
         // the index is within bound (or at end)
@@ -143,7 +142,7 @@ module vt_ops {
     predicate iter_safe(iter: iter_t, wmem: wmem_t, address: int)
     {
         && iter_inv(iter, wmem, address)
-        // stronger constraint so we can dereference
+        // tighter constraint so we can dereference
         && iter.index < |iter.buff|
     }
 
@@ -214,12 +213,12 @@ module vt_ops {
 
     function otbn_subm(x: uint256, y: uint256, wmod: uint256) : uint256
         requires false;
-    {
-        // FIXME: some bound checking?
-        // assume false;
-        var result := (x as bv256 - y as bv256) as uint256;
-        if result >= wmod then (result as bv256 - wmod as bv256) as uint256 else result
-    }
+    // {
+    //     // FIXME: some bound checking?
+    //     // assume false;
+    //     var result := (x as bv256 - y as bv256) as uint256;
+    //     if result >= wmod then (result as bv256 - wmod as bv256) as uint256 else result
+    // }
 
     function otbn_mulqacc(
         zero: bool,
@@ -235,7 +234,7 @@ module vt_ops {
 
     predicate otbn_mulqacc_is_safe(shift: uint2, acc: uint256)
     {
-        // make sure no overflow from shift (product is assumed to be 128 bits)
+        // make sure no overflow from shift (product needs to be 128 bits)
         && (shift <= 2) 
         // make sure no overflow from addtion
         && (acc + otbn_qshift_safe(BASE_128 - 1, shift) < BASE_256)
@@ -411,7 +410,4 @@ module vt_ops {
             //case IfElse(cond, ifT, ifF) => evalIfElse(cond, ifT, ifF, s, r)
             case While(cond, body) => eval_while(body, eval_cond(s, cond), s, r)
     }
-
-
-
 }

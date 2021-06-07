@@ -128,7 +128,7 @@ procedure seq_addc_512_safe(
     }
 
     assert value < BASE_512;
-    to_nat_lemma_2(seq(dst1, dst2));
+    to_nat_lemma_1(seq(dst1, dst2));
     assert dst1 = uint512_lh(value) by {
         reveal uint512_lh;
     }

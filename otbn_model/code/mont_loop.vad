@@ -106,7 +106,7 @@ ghost procedure mont_loop_cond_sub_lemma(
     ghost ui: uint256,
     ghost y: seq(uint256),
     ghost m: nat,
-    ghost prev_a: seq(uint256),
+    ghost prev_a: nat,
     ghost curr_a: seq(uint256),
     ghost next_a: seq(uint256),
     ghost bout: uint1,
@@ -139,8 +139,6 @@ procedure mont_loop_0(
     returns (ghost next_y_it: iter_t,
         ghost p1: uint512_view_t)
 
-    {:frame false}
-
     requires
         w2 == xi;
         w3 == m0d;
@@ -152,30 +150,37 @@ procedure mont_loop_0(
         seq_len(y_it.buff) == NUM_WORDS;
         y_it.index == 0;
 
+    reads
+        x16;
+        w3; w31;
+        wmem; xmem;
+
+    modifies
+        x8; x10; x12; x13; x19; x22;
+        w2; w24; w25; w26; w27; w29; w30; wacc;
+        fgroups; wdrs;
+
     ensures
-        x6 == old(x6);
-        x7 == old(x7);
+        // x6 == old(x6);
+        // x7 == old(x7);
         x8 == 5;
-        x9 == old(x9);
+        // x9 == old(x9);
         x10 == 4;
-        x11 == old(x11);
+        // x11 == old(x11);
         x12 == 30;
         x13 == 24;
-        x16 == old(x16);
-        x17 == old(x17);
-        x20 == old(x20);
-        x21 == old(x21);
+        // x16 == old(x16);
+        // x17 == old(x17);
+        // x20 == old(x20);
+        // x21 == old(x21);
         x22 == x16;
-        x29 == old(x29);
-        x30 == old(x30);
-        x31 == old(x31);
+        // x29 == old(x29);
+        // x30 == old(x30);
+        // x31 == old(x31);
 
         w2 == xi;
         w3 == old(w3);
         w31 == 0;
-
-        wmem == old(wmem);
-        xmem == old(xmem);
 
         valid_wdr_view(wdrs, curr_view, 4, NUM_WORDS);
 
@@ -366,7 +371,7 @@ procedure mont_loop_1(
 procedure mont_loop(
     ghost x_it: iter_t,
     ghost xi: uint256,
-    ghost vars: mm_vars,
+    ghost vars: mvars,
     ghost prev_view: seq(uint256))
 
     returns (ghost next_view: seq(uint256))
@@ -378,7 +383,7 @@ procedure mont_loop(
         x31 == NUM_WORDS - 1;
 
         w2 == xi;
-        w3 == vars.rsa.m0d;
+        w3 == vars.rsa.M0D;
         w31 == 0;
 
         iter_inv(x_it, wmem, x20);
@@ -386,10 +391,8 @@ procedure mont_loop(
         x_it.index >= 1;
         x_it.buff[x_it.index-1] == xi;
 
-        mm_vars_inv(vars, wmem, NA, x19, x16, NA, NA);
-
         valid_wdr_view(wdrs, prev_view, 4, NUM_WORDS);
-
+        mvars_inv(vars, wmem, NA, x19, x16, NA, NA, NA);
         montmul_inv(prev_view, x_it.buff, x_it.index-1, vars.y_it.buff, vars.rsa);
 
     ensures
@@ -420,7 +423,7 @@ procedure mont_loop(
     ghost var y_it : iter_t;
     ghost var m_it : iter_t;
 
-    y_it, p1 := mont_loop_0(curr_view, vars.y_it, xi, vars.rsa.m0d);
+    y_it, p1 := mont_loop_0(curr_view, vars.y_it, xi, vars.rsa.M0D);
     ghost var ui := w25;
 
     /* w24 = w30 =  y[0]*xi + A[0] mod b */
@@ -437,7 +440,7 @@ procedure mont_loop(
     mont_word_mul_add_bound_lemma_0(seq(w27, w26), seq(w24, w31), m_it.buff[0], ui);
     p2 := seq_addc_512_safe(w27, w27, w24, w28, w26, w31);
 
-    mont_loop_inv_pre_lemma(xi, ui, vars.rsa.m0d, p1, p2, y_it.buff, m_it.buff, curr_view);
+    mont_loop_inv_pre_lemma(xi, ui, vars.rsa.M0D, p1, p2, y_it.buff, m_it.buff, curr_view);
 
     ghost var j: nat := 1;
 
@@ -515,7 +518,8 @@ procedure mont_loop(
     li(x8, 4);
     li(x10, 4);
 
-    assume fgroups.fg0.cf == false; // TODO: do we know that this flag is cleared?
+    // clear flag group 0
+    bn_add(w31, w31, w31, SFT_DFT, 0);
 
     /* This replaces Step 3 of HAC 14.36 and performs conditional constant-time
      subtraction of the modulus from the output buffer  */
@@ -523,7 +527,7 @@ procedure mont_loop(
     next_view := cond_sub_to_reg(curr_view, m_it, fgroups.fg1.cf);
 
     mont_loop_cond_sub_lemma(xi, ui, y_it.buff, to_nat(m_it.buff),
-        prev_view, curr_view, next_view, bout, bool_to_uint1(fgroups.fg0.cf));
+        to_nat(prev_view), curr_view, next_view, bout, bool_to_uint1(fgroups.fg0.cf));
     
     /* restore pointer */
     li(x8, 4);

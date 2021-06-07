@@ -57,7 +57,7 @@ function is_wide_data_register(r: reg256_t): bool extern;
 type xmem_t: Type(0) := map(int, uint32);
 type wmem_t: Type(0) := map(int, seq(uint256));
 
-function valid_wmem_base_addr(wmem: wmem_t, addr: int, size: nat): bool extern;
+function wmem_base_addr_valid(wmem: wmem_t, ptr: int, size: nat): bool extern;
 
 type wdrs_t: Type(0) extern;
 function operator([]) (s: wdrs_t, i: int): uint256 extern; 
@@ -107,7 +107,7 @@ function operator(.full) (num: uint512_view_t): int extern;
 var ok: bool {:state ok()};
 
 var xmem: xmem_t {:state xmem()};
-function valid_xmem_addr(h: xmem_t, addr: int): bool extern;
+function xmem_addr_valid(h: xmem_t, ptr: int): bool extern;
 function valid_base_addr(wmem: wmem_t, base_addr: int, num_words: int): bool extern;
 
 type iter_t: Type(0) extern;
@@ -121,36 +121,37 @@ function operator(.buff) (iter :iter_t): seq(uint256) extern;
 function operator(.buff := ) (iter :iter_t, buff: seq(uint256)): iter_t extern;
 
 var wmem: wmem_t {:state wmem()};
-function iter_inv(iter: iter_t, h: wmem_t, addr: int): bool extern;
-function iter_safe(iter: iter_t, h: wmem_t, addr: int): bool extern;
-function mm_it_inv(iter: iter_t, h: wmem_t, addr: int): bool extern;
+function iter_inv(iter: iter_t, h: wmem_t, ptr: int): bool extern;
+function iter_safe(iter: iter_t, h: wmem_t, ptr: int): bool extern;
+function mvars_iter_init(iter: iter_t, h: wmem_t, ptr: int, value: int): bool extern;
 
 type rsa_params: Type(0) extern;
-function operator(.e') (rsa: rsa_params): nat extern;
-function operator(.e) (rsa: rsa_params): nat extern;
-function operator(.m) (rsa: rsa_params): nat extern;
-function operator(.sig) (rsa: rsa_params): nat extern;
-function operator(.m0d) (rsa: rsa_params): uint256 extern;
+function operator(.E0) (rsa: rsa_params): nat extern;
+function operator(.E) (rsa: rsa_params): nat extern;
+function operator(.M) (rsa: rsa_params): nat extern;
+function operator(.SIG) (rsa: rsa_params): nat extern;
+function operator(.M0D) (rsa: rsa_params): uint256 extern;
 function operator(.B256_INV) (rsa: rsa_params): nat extern;
 function operator(.R) (rsa: rsa_params): nat extern;
 function operator(.RR) (rsa: rsa_params): nat extern;
 function operator(.R_INV) (rsa: rsa_params): nat extern;
 function rsa_params_inv(rsa: rsa_params): bool extern;
 
-type mm_vars: Type(0) extern;
-function operator(.x_it) (vars: mm_vars): iter_t extern;
-function operator(.x_it := ) (vars: mm_vars, it: iter_t): mm_vars extern;
-function operator(.y_it) (vars: mm_vars): iter_t extern;
-function operator(.y_it := ) (vars: mm_vars, it: iter_t): mm_vars extern;
-function operator(.m_it) (vars: mm_vars): iter_t extern;
-function operator(.rr_iter) (vars: mm_vars): iter_t extern;
-function operator(.m0d_iter) (vars: mm_vars): iter_t extern;
-function operator(.rsa) (vars: mm_vars): rsa_params extern;
-function mm_vars_safe(vars: mm_vars, wmem: wmem_t, x_addr: int, y_addr: int, m_addr: int, rr_addr: int, m0d_addr: int): bool extern;
-function mm_vars_inv(vars: mm_vars, wmem: wmem_t, x_addr: int, y_addr: int, m_addr: int, rr_addr: int, m0d_addr: int): bool extern;
+type mvars: Type(0) extern;
+function operator(.x_it) (vars: mvars): iter_t extern;
+function operator(.x_it := ) (vars: mvars, it: iter_t): mvars extern;
+function operator(.y_it) (vars: mvars): iter_t extern;
+function operator(.y_it := ) (vars: mvars, it: iter_t): mvars extern;
+function operator(.sig_it) (vars: mvars): iter_t extern;
+function operator(.m_it) (vars: mvars): iter_t extern;
+function operator(.rr_it) (vars: mvars): iter_t extern;
+function operator(.m0d_it) (vars: mvars): iter_t extern;
+function operator(.rsa) (vars: mvars): rsa_params extern;
+function mvars_inv(vars: mvars, wmem: wmem_t, x_ptr: int, y_ptr: int,
+    m_ptr: int, rr_ptr: int, m0d_ptr: int, sig_ptr: int): bool extern;
 
 function to_nat(s: seq(uint256)): nat extern;
-ghost procedure to_nat_lemma_2(ghost xs: seq(uint256)) extern;
+ghost procedure to_nat_lemma_1(ghost xs: seq(uint256)) extern;
 
 var x0: uint32 {:state reg32_t(GPR(0))};
 var x1: uint32 {:state reg32_t(GPR(1))};
@@ -295,9 +296,9 @@ procedure lw(out grd: reg32, in offset: imm32, in grs1: reg32)
     reads
         xmem;
     requires
-        valid_xmem_addr(xmem, grs1 + offset);
+        xmem_addr_valid(xmem, grs1 + offset);
     ensures
-        valid_xmem_addr(xmem, old(grs1) + offset);
+        xmem_addr_valid(xmem, old(grs1) + offset);
         grd == xmem[old(grs1) + offset];
 {
     assume false;
@@ -308,7 +309,7 @@ procedure sw(in grs2: reg32, in offset: imm32, in grs1: reg32)
     modifies
         xmem;
     requires/ensures
-        valid_xmem_addr(xmem, grs1 + offset);
+        xmem_addr_valid(xmem, grs1 + offset);
     ensures
         xmem == old(xmem)[grs1 + offset := grs2];
 {
