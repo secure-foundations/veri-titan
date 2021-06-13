@@ -43,8 +43,8 @@ method printShift(shift:shift_t)
 method printFlags(fg:uint1)
 {
   match fg
-		case 0 => print("FG0");
-		case 1 => print("FG1");
+		case 0 => print("0");
+		case 1 => print("1");
 }
 
 method printFlag(flag:flags_t)
@@ -70,6 +70,13 @@ method printAccShift(shift:int)
 method printIns256(ins:ins256)
 {
     match ins
+
+      case BN_XOR(dst, src1, src2, shift) =>
+				print("  bn.xor ");
+				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" "); 
+				printShift(shift);
+				print("\n");
+        
       case BN_ADD(dst, src1, src2, shift, fg) =>
 				print("  bn.add ");
 				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" "); 
@@ -87,19 +94,15 @@ method printIns256(ins:ins256)
 				printReg256(dst); print(", "); printReg256(src); print(", "); print(imm);
 				print(", "); printFlags(fg); print("\n");
 
+      // todo
+      // handles mulqacc, mulqacc_safe, mulqacc_so and mulqacc_z
 		  case BN_MULQACC(zero, src1, qwsel1, src2, qwsel2, shift) =>
 				if zero { print("  bn.mulqacc "); } else { print("  bn.mulquacc.z "); }
 				printReg256(src1); print("."); print(qwsel1); print(", "); 
 				printReg256(src2); print("."); print(qwsel2); print(", ");
 				printAccShift(shift); print("\n");
 				
-		  // case BN_MULQACCSO(zero, dst, hwsel, src1, qwsel1, src2, qwsel2, shift) =>
-			// 	if zero { print("  bn.mulqacc.so "); } else { print("  bn.mulquacc.so.z "); }
-			// 	printReg256(dst); if hwsel { print(".U "); } else { print(".L "); }
-			// 	printReg256(src1); print("."); print(qwsel1); print(", "); 
-			// 	printReg256(src2); print("."); print(qwsel2); print(", ");
-			// 	printAccShift(shift); print("\n");
-
+      // todo
 			case BN_SUBI(dst, src1, src2, fg) =>
 				print("  bn.subi ");
 				printReg256(dst); print(", "); printReg256(src1); print(", "); print(src2); print(", ");
@@ -117,24 +120,44 @@ method printIns256(ins:ins256)
 				printShift(shift); print(" "); print(", "); printFlags(fg);
 				print("\n");
 
-			case BN_RSHI(dst, src1, src2, imm) =>
-				print("  bn.rshi ");
-				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" >> "); print(imm);
+      // TODO: fix otbn_subm in vt_ops file
+			case BN_SUBM(dst, src1, src2) =>
+				print("  bn.subm ");
+				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2);
 				print("\n");
-			
-			case BN_SEL(dst, src1, src2, fg) =>
-				print("  bn.sel ");
-				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(", ");
-				printFlags(fg); print("."); print("\n");
+        
+			case BN_OR(dst, src1, src2, shift) =>
+				print("  bn.or ");
+				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" "); 
+				printShift(shift);
+				print("\n");
 
-			case BN_MOV(dst, src) =>
-				print("  bn.mov ");
-				printReg256(dst); print(", "); printReg256(src); print("\n");
-		
 			case BN_AND(dst, src1, src2, shift) =>
 				print("  bn.and ");
 				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" "); 
 				printShift(shift); print(" "); print("\n");
+
+			case BN_LID(grd, grd_inc, offset, grs, grs_inc) =>
+				print("  bn.lid ");
+				printReg32(grd); if grd_inc { print("++"); } print(", ");
+        print(offset); print("(");
+        printReg32(grs); if grs_inc { print("++"); }
+        print(")"); print("\n");
+        
+			case BN_RSHI(dst, src1, src2, imm) =>
+				print("  bn.rshi ");
+				printReg256(dst); print(", "); printReg256(src1); print(", ");
+        printReg256(src2); print(" >> "); print(imm);
+				print("\n");
+			
+			case BN_SEL(dst, src1, src2, fg, flag) =>
+				print("  bn.sel ");
+				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(", ");
+				printFlags(fg); print("."); printFlag(flag); print("\n");
+
+			case BN_MOV(dst, src) =>
+				print("  bn.mov ");
+				printReg256(dst); print(", "); printReg256(src); print("\n");
 				
 			case _ => print("TODO");
 }
@@ -186,7 +209,7 @@ function method procName(proc_name:seq<char>, suffix:seq<char>, asm:AsmTarget, p
 method PrintDemo(asm:AsmTarget,
                  platform:PlatformTarget)
 {
-    printProc("demo", va_code_double(), 0, 0);
+    printProc("demo", va_code_barrett384(), 0, 0);
 }
 
 method Main()
