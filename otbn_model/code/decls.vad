@@ -413,6 +413,7 @@ procedure lui32(inout dst: reg32, in src: imm32)
 // procedure csrrw(inout dst: reg32, inout csr: reg32, in src: reg32)
 
 procedure li(inout dst: reg32, in imm: imm32)
+    {:instruction Ins32(LI(dst, imm))}
     ensures
         dst == imm;
 {
@@ -781,7 +782,7 @@ procedure bn_rshi(inout dst: reg256, in src1: reg256, in src2: reg256, in imm: i
 }
 
 procedure bn_sel(inout dst: reg256, in src1: reg256, in src2: reg256, inline which_group: uint1, inline flag: uint2)
-    {:instruction Ins256(BN_SEL(dst, src1, src2, which_group))} 
+    {:instruction Ins256(BN_SEL(dst, src1, src2, which_group, flag))} 
     // TODO: sort out fg/flag
     reads
         fgroups;

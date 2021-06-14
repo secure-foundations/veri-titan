@@ -1,4 +1,5 @@
 include "../gen/examples.dfy"
+include "../gen/mont_loop.dfy"
 include "bv_ops.dfy"
 include "vt_ops.dfy"
 include "../code/vale.dfy"
@@ -8,6 +9,7 @@ module otbn_printer {
   import opened bv_ops
 	import opened vt_ops
   import opened examples
+  import opened mont_loop
   
 		
 method printReg32(r:reg32_t)
@@ -27,8 +29,73 @@ method printReg32(r:reg32_t)
 method printIns32(ins:ins32)
 {
     match ins
-      case ADD(dst, src1, src2) => print ("  add "); printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
-			case _ => print("TODO");
+      case LW(grd, grs1, offset) =>
+        print ("  lw ");
+        printReg32(grd); print(", "); print(offset); print("("); printReg32(grs1); print(")");
+        print("\n");
+
+      case SW(grs2, grs1, offset) =>
+        print ("  sw ");
+        printReg32(grs2); print(", "); print(offset); print("("); printReg32(grs1); print(")");
+        print("\n");
+
+      case ADD(dst, src1, src2) =>
+        print ("  add ");
+        printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
+        print("\n");
+
+      case ADDI(dst, src1, src2) =>
+        print ("  addi ");
+        printReg32(dst); print(", "); printReg32(src1); print(", "); print(src2);
+        print("\n");
+
+      case SUB(dst, src1, src2) =>
+        print ("  sub ");
+        printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
+        print("\n");
+        
+      case AND(dst, src1, src2) =>
+        print ("  and ");
+        printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
+        print("\n");
+
+      case ANDI(dst, src1, src2) =>
+        print ("  andi ");
+        printReg32(dst); print(", "); printReg32(src1); print(", "); print(src2);
+        print("\n");
+      
+      case OR(dst, src1, src2) =>
+        print ("  or ");
+        printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
+        print("\n");
+
+      case ORI(dst, src1, src2) =>
+        print ("  ori ");
+        printReg32(dst); print(", "); printReg32(src1); print(", "); print(src2);
+        print("\n");
+
+      case XOR(dst, src1, src2) =>
+        print ("  xor ");
+        printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
+        print("\n");
+
+      case XORI(dst, src1, src2) =>
+        print ("  xori ");
+        printReg32(dst); print(", "); printReg32(src1); print(", "); print(src2);
+        print("\n");
+        
+      case LUI(dst, src) =>
+        print ("  lui ");
+        printReg32(dst); print(", "); print(src);
+        print("\n");
+
+      // TODO: this is case-by-case combo of addi and lui, should we print that instead?
+      case LI(dst, src) =>
+        print ("  li ");
+        printReg32(dst); print(", "); print(src);
+        print("\n");
+
+			case _ => print("TODO32 "); print(ins);
 }
 
 method printShift(shift:shift_t)
@@ -36,8 +103,8 @@ method printShift(shift:shift_t)
 	match shift
     case SFT(left, bytes) =>
       match left
-		    case true => print("<< ", bytes);
-		    case false => print(">> ", bytes);
+		    case true => print("<< "); print(bytes);
+		    case false => print(">> "); print(bytes);
 }
 
 method printFlags(fg:uint1)
@@ -47,13 +114,13 @@ method printFlags(fg:uint1)
 		case 1 => print("1");
 }
 
-method printFlag(flag:flags_t)
+method printFlag(flag:uint2)
 {
   match flag
-		case zero => print("Z");
-		case lsb => print("L");
-		case msb => print("M");
-		case cf => print("C");
+		case 0 => print("C");
+		case 1 => print("M");
+		case 2 => print("L");
+		case 3 => print("Z");
 	  case _ => print("ERROR: Invalid flag.");
 }
 
@@ -80,13 +147,13 @@ method printIns256(ins:ins256)
       case BN_ADD(dst, src1, src2, shift, fg) =>
 				print("  bn.add ");
 				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" "); 
-				printShift(shift); print(" "); print(", "); printFlags(fg);
+				printShift(shift); print(", "); printFlags(fg);
 				print("\n");
 
       case BN_ADDC(dst, src1, src2, shift, fg) =>
 				print("  bn.addc ");
 				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" "); 
-				printShift(shift); print(" "); print(", "); printFlags(fg);
+				printShift(shift); print(", "); printFlags(fg);
 				print("\n");
 
       case BN_ADDI(dst, src, imm, fg) =>
@@ -94,10 +161,9 @@ method printIns256(ins:ins256)
 				printReg256(dst); print(", "); printReg256(src); print(", "); print(imm);
 				print(", "); printFlags(fg); print("\n");
 
-      // todo
-      // handles mulqacc, mulqacc_safe, mulqacc_so and mulqacc_z
+      // todo: mulqacc should be its own instruction
 		  case BN_MULQACC(zero, src1, qwsel1, src2, qwsel2, shift) =>
-				if zero { print("  bn.mulqacc "); } else { print("  bn.mulquacc.z "); }
+				if zero { print("  bn.mulqacc.z "); } else { print("  bn.mulquacc "); }
 				printReg256(src1); print("."); print(qwsel1); print(", "); 
 				printReg256(src2); print("."); print(qwsel2); print(", ");
 				printAccShift(shift); print("\n");
@@ -111,13 +177,13 @@ method printIns256(ins:ins256)
 			case BN_SUBB(dst, src1, src2, shift, fg) =>
 				print("  bn.subb ");
 				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" "); 
-				printShift(shift); print(" "); print(", "); printFlags(fg);
+				printShift(shift); print(", "); printFlags(fg);
 				print("\n");
 
 			case BN_SUB(dst, src1, src2, shift, fg) =>
 				print("  bn.sub ");
 				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" "); 
-				printShift(shift); print(" "); print(", "); printFlags(fg);
+				printShift(shift); print(", "); printFlags(fg);
 				print("\n");
 
       // TODO: fix otbn_subm in vt_ops file
@@ -155,11 +221,24 @@ method printIns256(ins:ins256)
 				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(", ");
 				printFlags(fg); print("."); printFlag(flag); print("\n");
 
+			case BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc) =>
+				print("  bn.sid ");
+				printReg32(grs2); if grs2_inc { print("++"); } print(", ");
+        print(offset); print("(");
+        printReg32(grs1); if grs1_inc { print("++"); }
+        print(")"); print("\n");
+
 			case BN_MOV(dst, src) =>
 				print("  bn.mov ");
 				printReg256(dst); print(", "); printReg256(src); print("\n");
-				
-			case _ => print("TODO");
+
+      case BN_MOVR(grd, grd_inc, grs, grs_inc) =>
+        print("  bn.movr ");  
+				printReg32(grd); if grd_inc { print("++"); } print(", ");
+        printReg32(grs); if grs_inc { print("++"); }
+        print("\n");
+
+			case _ => print("TODO256 "); print(ins); 
 }
 
 method printBlock(b:codes, n:int) returns(n':int)
@@ -174,14 +253,40 @@ method printBlock(b:codes, n:int) returns(n':int)
     }
 }
 
+method printWhileCond(wcond: whileCond)
+{
+  match wcond
+    case RegCond(r) => printReg32(r);
+    case ImmCond(imm) => print(imm);
+}
+
+function method blockSize(b: codes) : int
+{
+  match b
+    case CNil => 0
+    case va_CCons(hd, tl) => 1 + blockSize(tl)
+}
+
+method printCodeSize(c: code)
+{
+  match c
+    case Block(block) => print(blockSize(block));
+    case _ => print("Error: Not a loop");
+}
+
 method printCode(c:code, n:int) returns(n':int)
 {
     match c
         case Ins32(ins) => printIns32(ins); n' := n;
         case Ins256(ins) => printIns256(ins); n' := n;
         case Block(block) => n' := printBlock(block, n);
-				case While(wcond, wbody) => print("TODO: While");
-				
+        case While(wcond, wbody) =>
+        {
+          n' := n;
+          print("  loop "); printWhileCond(wcond); print(", ");
+          printCodeSize(wbody); print("\n");
+          n' := printCode(wbody, n);
+        }
 }
 
 method printProc(proc_name:seq<char>, code:code, n:int, ret_count:int)
@@ -209,7 +314,7 @@ function method procName(proc_name:seq<char>, suffix:seq<char>, asm:AsmTarget, p
 method PrintDemo(asm:AsmTarget,
                  platform:PlatformTarget)
 {
-    printProc("demo", va_code_barrett384(), 0, 0);
+    printProc("demo", va_code_mont_loop(), 0, 0);
 }
 
 method Main()

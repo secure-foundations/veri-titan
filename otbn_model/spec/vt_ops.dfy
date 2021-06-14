@@ -213,12 +213,12 @@ module vt_ops {
 
     function otbn_subm(x: uint256, y: uint256, wmod: uint256) : uint256
         requires false;
-    // {
+    {
     //     // FIXME: some bound checking?
     //     // assume false;
-    //     var result := (x as bv256 - y as bv256) as uint256;
-    //     if result >= wmod then (result as bv256 - wmod as bv256) as uint256 else result
-    // }
+        var result := (x as bv256 - y as bv256) as uint256;
+        if result >= wmod then (result as bv256 - wmod as bv256) as uint256 else result
+    }
 
     function otbn_mulqacc(
         zero: bool,
@@ -313,6 +313,7 @@ module vt_ops {
         | CSRRS(xrd: reg32_t, csr: reg32_t, xrs2: reg32_t)
         | CSRRW(xrd: reg32_t, csr: reg32_t, xrs2: reg32_t)
         | ECALL // TODO
+        | LI(xrd: reg32_t, imm: uint32)
 
     datatype ins256 =
         | BN_ADD(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
@@ -330,7 +331,7 @@ module vt_ops {
         | BN_NOT(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t)
         | BN_XOR(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t)
         | BN_RSHI(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, imm: uint256)
-        | BN_SEL(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, fg: uint1)
+        | BN_SEL(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, fg: uint1, flag:uint2)
         | BN_CMP(wrs1: reg256_t, wrs2: reg256_t, fg: uint1)
         | BN_CMPB(wrs1: reg256_t, wrs2: reg256_t, fg: uint1)
         | BN_LID(grd: reg32_t, grd_inc: bool, offset: uint32, grs: reg32_t, grs_inc: bool)
