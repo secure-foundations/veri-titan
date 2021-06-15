@@ -256,22 +256,22 @@ method printBlock(b:codes, n:int) returns(n':int)
 method printWhileCond(wcond: whileCond)
 {
   match wcond
-    case RegCond(r) => printReg32(r);
-    case ImmCond(imm) => print(imm);
+    case RegCond(r) => print("  loop "); printReg32(r);
+    case ImmCond(imm) => print("  loopi "); print(imm);
 }
 
 function method blockSize(b: codes) : int
 {
   match b
     case CNil => 0
-    case va_CCons(hd, tl) => 1 + blockSize(tl)
+    case va_CCons(hd, tl) => codeSize(hd) + blockSize(tl)
 }
 
-method printCodeSize(c: code)
+function method codeSize(c: code) : int
 {
   match c
-    case Block(block) => print(blockSize(block));
-    case _ => print("Error: Not a loop");
+    case Block(block) => blockSize(block)
+    case _ => 1
 }
 
 method printCode(c:code, n:int) returns(n':int)
@@ -283,9 +283,11 @@ method printCode(c:code, n:int) returns(n':int)
         case While(wcond, wbody) =>
         {
           n' := n;
-          print("  loop "); printWhileCond(wcond); print(", ");
-          printCodeSize(wbody); print("\n");
+          print("\n");
+          printWhileCond(wcond); print(", ");
+          print(codeSize(wbody)); print("\n");
           n' := printCode(wbody, n);
+          print("\n");
         }
 }
 
