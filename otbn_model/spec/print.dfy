@@ -10,8 +10,8 @@ module otbn_printer {
 	import opened vt_ops
   import opened examples
   import opened mont_loop
-  
-		
+
+
 method printReg32(r:reg32_t)
 {
   match r
@@ -53,7 +53,7 @@ method printIns32(ins:ins32)
         print ("  sub ");
         printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
         print("\n");
-        
+
       case AND(dst, src1, src2) =>
         print ("  and ");
         printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
@@ -63,7 +63,7 @@ method printIns32(ins:ins32)
         print ("  andi ");
         printReg32(dst); print(", "); printReg32(src1); print(", "); print(src2);
         print("\n");
-      
+
       case OR(dst, src1, src2) =>
         print ("  or ");
         printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
@@ -83,7 +83,7 @@ method printIns32(ins:ins32)
         print ("  xori ");
         printReg32(dst); print(", "); printReg32(src1); print(", "); print(src2);
         print("\n");
-        
+
       case LUI(dst, src) =>
         print ("  lui ");
         printReg32(dst); print(", "); print(src);
@@ -140,19 +140,19 @@ method printIns256(ins:ins256)
 
       case BN_XOR(dst, src1, src2, shift) =>
 				print("  bn.xor ");
-				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" "); 
+				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" ");
 				printShift(shift);
 				print("\n");
-        
+
       case BN_ADD(dst, src1, src2, shift, fg) =>
 				print("  bn.add ");
-				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" "); 
+				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" ");
 				printShift(shift); print(", "); printFlags(fg);
 				print("\n");
 
       case BN_ADDC(dst, src1, src2, shift, fg) =>
 				print("  bn.addc ");
-				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" "); 
+				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" ");
 				printShift(shift); print(", "); printFlags(fg);
 				print("\n");
 
@@ -164,10 +164,10 @@ method printIns256(ins:ins256)
       // todo: mulqacc should be its own instruction
 		  case BN_MULQACC(zero, src1, qwsel1, src2, qwsel2, shift) =>
 				if zero { print("  bn.mulqacc.z "); } else { print("  bn.mulquacc "); }
-				printReg256(src1); print("."); print(qwsel1); print(", "); 
+				printReg256(src1); print("."); print(qwsel1); print(", ");
 				printReg256(src2); print("."); print(qwsel2); print(", ");
 				printAccShift(shift); print("\n");
-				
+
       // todo
 			case BN_SUBI(dst, src1, src2, fg) =>
 				print("  bn.subi ");
@@ -176,13 +176,13 @@ method printIns256(ins:ins256)
 
 			case BN_SUBB(dst, src1, src2, shift, fg) =>
 				print("  bn.subb ");
-				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" "); 
+				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" ");
 				printShift(shift); print(", "); printFlags(fg);
 				print("\n");
 
 			case BN_SUB(dst, src1, src2, shift, fg) =>
 				print("  bn.sub ");
-				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" "); 
+				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" ");
 				printShift(shift); print(", "); printFlags(fg);
 				print("\n");
 
@@ -191,16 +191,16 @@ method printIns256(ins:ins256)
 				print("  bn.subm ");
 				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2);
 				print("\n");
-        
+
 			case BN_OR(dst, src1, src2, shift) =>
 				print("  bn.or ");
-				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" "); 
+				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" ");
 				printShift(shift);
 				print("\n");
 
 			case BN_AND(dst, src1, src2, shift) =>
 				print("  bn.and ");
-				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" "); 
+				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" ");
 				printShift(shift); print(" "); print("\n");
 
 			case BN_LID(grd, grd_inc, offset, grs, grs_inc) =>
@@ -209,13 +209,13 @@ method printIns256(ins:ins256)
         print(offset); print("(");
         printReg32(grs); if grs_inc { print("++"); }
         print(")"); print("\n");
-        
+
 			case BN_RSHI(dst, src1, src2, imm) =>
 				print("  bn.rshi ");
 				printReg256(dst); print(", "); printReg256(src1); print(", ");
         printReg256(src2); print(" >> "); print(imm);
 				print("\n");
-			
+
 			case BN_SEL(dst, src1, src2, fg, flag) =>
 				print("  bn.sel ");
 				printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(", ");
@@ -233,12 +233,12 @@ method printIns256(ins:ins256)
 				printReg256(dst); print(", "); printReg256(src); print("\n");
 
       case BN_MOVR(grd, grd_inc, grs, grs_inc) =>
-        print("  bn.movr ");  
+        print("  bn.movr ");
 				printReg32(grd); if grd_inc { print("++"); } print(", ");
         printReg32(grs); if grs_inc { print("++"); }
         print("\n");
 
-			case _ => print("TODO256 "); print(ins); 
+			case _ => print("TODO256 "); print(ins);
 }
 
 method printBlock(b:codes, n:int) returns(n':int)
@@ -313,8 +313,7 @@ function method procName(proc_name:seq<char>, suffix:seq<char>, asm:AsmTarget, p
         case MacOS => "_" + proc_name
 }
 
-method PrintDemo(asm:AsmTarget,
-                 platform:PlatformTarget)
+method PrintDemo(asm:AsmTarget, platform:PlatformTarget)
 {
     printProc("demo", va_code_mont_loop(), 0, 0);
 }
