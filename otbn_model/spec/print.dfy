@@ -1,5 +1,6 @@
 include "../gen/examples.dfy"
 include "../gen/mont_loop.dfy"
+include "../gen/modexp_var.dfy"
 include "bv_ops.dfy"
 include "vt_ops.dfy"
 include "../code/vale.dfy"
@@ -10,6 +11,7 @@ module otbn_printer {
 	import opened vt_ops
   import opened examples
   import opened mont_loop
+  import opened modexp_var
 
 
 method printReg32(r:reg32_t)
@@ -271,7 +273,10 @@ function method codeSize(c: code) : int
 {
   match c
     case Block(block) => blockSize(block)
-    case _ => 1
+    case While(wcond, wbody) => codeSize(wbody) + 2 // +1 for inner loop and +1 for inner loop's nop
+    case Ins32(ins) => 1
+    case Ins256(bn_ins) => 1
+    case Comment(com) => 0
 }
 
 method printCode(c:code, n:int) returns(n':int)
@@ -285,10 +290,12 @@ method printCode(c:code, n:int) returns(n':int)
           n' := n;
           print("\n");
           printWhileCond(wcond); print(", ");
-          print(codeSize(wbody)); print("\n");
+          print(codeSize(wbody) + 1); print("\n"); // + 1 for nop instruction
           n' := printCode(wbody, n);
+          print("  nop\n"); // ensures different end addrs for nested loops
           print("\n");
         }
+        case Comment(com) => print(com);
 }
 
 method printProc(proc_name:seq<char>, code:code, n:int, ret_count:int)

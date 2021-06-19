@@ -152,6 +152,8 @@ function mvars_inv(vars: mvars, wmem: wmem_t, x_ptr: int, y_ptr: int,
 
 function to_nat(s: seq(uint256)): nat extern;
 ghost procedure to_nat_lemma_1(ghost xs: seq(uint256)) extern;
+    
+type string: Type(0) extern;
 
 var x0: uint32 {:state reg32_t(GPR(0))};
 var x1: uint32 {:state reg32_t(GPR(1))};
@@ -789,6 +791,12 @@ procedure bn_sel(inout dst: reg256, in src1: reg256, in src2: reg256, inline whi
 
     ensures
         dst == (if old(get_flag(fgroups, which_group, flag)) then old(src1) else old(src2));
+{
+    assume false;
+}
+    
+procedure comment(inline comment: string)
+    {:instruction Comment(comment)}
 {
     assume false;
 }

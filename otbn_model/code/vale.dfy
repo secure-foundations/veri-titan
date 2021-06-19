@@ -280,6 +280,9 @@ module vt_vale {
             case Ins32(i) => {
                 var r' :| eval_code(c, s, r');
             }
+            case Comment(com) => {
+                var r' :| eval_code(c, s, r');
+            }
         }
     }
 
@@ -330,6 +333,7 @@ module vt_vale {
                 var n:nat :| eval_while(c.whileBody, n, s, r);
                 eval_while_validity(c.whileCond, c.whileBody, n, s, r);
                 assert valid_state(r);
+            } else if c.Comment? {
             }
         } 
     }

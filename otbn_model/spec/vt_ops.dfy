@@ -364,6 +364,7 @@ module vt_ops {
         | Ins256(bn_ins: ins256)
         | Block(block: codes)
         | While(whileCond: whileCond, whileBody: code)
+        | Comment(com: string)
 
     datatype codes = 
         | CNil
@@ -410,5 +411,6 @@ module vt_ops {
             case Block(block) => eval_block(block, s, r)
             //case IfElse(cond, ifT, ifF) => evalIfElse(cond, ifT, ifF, s, r)
             case While(cond, body) => eval_while(body, eval_cond(s, cond), s, r)
+            case Comment(com) => s == r
     }
 }
