@@ -163,9 +163,14 @@ method printIns256(ins:ins256)
 				printReg256(dst); print(", "); printReg256(src); print(", "); print(imm);
 				print(", "); printFlags(fg); print("\n");
 
-      // todo: mulqacc should be its own instruction
 		  case BN_MULQACC(zero, src1, qwsel1, src2, qwsel2, shift) =>
-				if zero { print("  bn.mulqacc.z "); } else { print("  bn.mulquacc "); }
+				if zero { print("  bn.mulqacc.z "); } else { print("  bn.mulqacc "); }
+				printReg256(src1); print("."); print(qwsel1); print(", ");
+				printReg256(src2); print("."); print(qwsel2); print(", ");
+				printAccShift(shift); print("\n");
+
+		  case BN_MULQACC_SO(zero, src1, qwsel1, src2, qwsel2, shift) =>
+				if zero { print("  bn.mulqacc.so.z "); } else { print("  bn.mulqacc.so "); }
 				printReg256(src1); print("."); print(qwsel1); print(", ");
 				printReg256(src2); print("."); print(qwsel2); print(", ");
 				printAccShift(shift); print("\n");
