@@ -1,4 +1,4 @@
-include "vt_consts.dfy"
+include "rv_consts.dfy"
 include "../lib/powers.dfy"
 
 module bv_ops {

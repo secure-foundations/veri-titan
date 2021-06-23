@@ -1,22 +1,19 @@
 include "decls.vad"
-
+    
 #verbatim
 include "../code/vale.dfy"
-
-include "../spec/def.dfy"
-include "../spec/ops.dfy"
-include "../spec/types.dfy"
-
 include "../gen/decls.dfy"
 
-import opened riscv_vale
-import opened riscv_def
-import opened ops
-import opened types
-import opened riscv_decls
+module examples {
+
+import opened bv_ops
+import opened rv_ops
+import opened rv_consts
+import opened rv_vale
+import opened rv_decls
 
 #endverbatim
-
+    
 procedure double()
     requires
         x2 + x2 < 0x1_0000_0000;
@@ -37,52 +34,6 @@ procedure double_reg(inout dst:reg32, in src:reg32)
     add(dst, src, src);
 }
 
-// procedure loop_imm(inout dst:reg32)
-//     requires
-//         dst == 0;
-//     modifies
-//         fgroups;
-//     ensures
-//         dst == 6;
-// {
-//     while (LoopImm(3))
-//         invariant dst == (3 - loop_ctr) * 2;
-//         decreases loop_ctr;
-//     {
-//         addi(dst, dst, 2);
-//     }
-// }
-// 
-// procedure loop_reg(inout dst:reg32, in cnt:reg32)
-//     requires
-//         dst == 0;
-//         cnt == 3;
-//     modifies
-//         fgroups;
-//     ensures
-//         dst == 6;
-// {
-//     while (Loop(cnt))
-//         invariant dst == (3 - loop_ctr) * 2;
-//         decreases loop_ctr;
-//     {
-//         addi(dst, dst, 2);
-//     }
-// }
-// 
-// procedure copy()
-//     requires
-//         Valid32Addr(xmem, x0 + 0);
-//         Valid32Addr(xmem, x0 + 4);
-//     reads
-//         x0;
-//     ensures
-//         Valid32Addr(xmem, x0 + 0);
-//         Valid32Addr(xmem, x0 + 4);
-//         xmem == old(xmem[x0 + 4 := xmem[x0 + 0]]);
-//     modifies
-//         xmem; x2;
-// {
-//     lw(x2, 0, x0);
-//     sw(x2, 4, x0);
-// }
+#verbatim
+}
+#endverbatim

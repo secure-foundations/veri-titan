@@ -1,92 +1,105 @@
 include{: verbatim} "../code/vale.dfy"
-include{: verbatim} "../spec/def.dfy"
-include{: verbatim} "../spec/ops.dfy"
 
 #verbatim
-module riscv_decls {
-
-import opened ops
-import opened riscv_vale
-import opened riscv_def
-import opened types
+module rv_decls {
+import opened bv_ops
+import opened rv_ops
+import opened rv_consts
+import opened rv_vale
 #endverbatim
 
-type state: Type(0) {: primitive} extern;
-
-type uint1: Type(0) := int_range(0, 1);
-type uint2: Type(0) := int_range(0, 3);
-type uint32: Type(0) := int_range(0, 0xffff_ffff);
-
 type seq(a: Type(0)): Type(0) {: primitive} extern;
-type map(a: Type(0), b: Type(0)): Type(0) extern;
-type Mem: Type(0) := map(int, uint32);
-type Regs: Type(0) := map(Reg32, uint32);
+function operator([]) #[a: Type(0)](s: seq(a), i: int): a extern; 
+function operator([ := ]) #[a: Type(0)](s: seq(a), i: int, v: a): seq(a) extern;
+function operator([ .. ]) #[a: Type(0)](s: seq(a), begin: int, end: int): seq(a) extern;
+function seq_len #[a: Type(0)] (s: seq(a)): nat extern;
+function seq_concat #[a: Type(0)](x: seq(a), y: seq(a)): seq(a) extern;
+function seq_append #[a: Type(0)](xs: seq(a), x: a): seq(a) extern;
 
-type Reg32: Type(0) extern;
-type Pc: Type(0) extern;
+type map(a: Type(0), b: Type(0)): Type(0) extern;
+function operator(?[]) #[a:Type(0), b:Type(0)](m:map(a, b), rsa:a):bool extern;
+function operator([]) #[a: Type(0), b: Type(0)](m: map(a, b), rsa: a): b extern;
+function operator([ := ]) #[a: Type(0), b: Type(0)](m: map(a, b), rsa: a, v: b): map(a, b) extern;
+
+type nat:     Type(0) := int_range(0, _);
+type uint1:   Type(0) := int_range(0, 1);
+type uint2:   Type(0) := int_range(0, 3);
+type uint5:   Type(0) := int_range(0, 31);
+type uint32:  Type(0) := int_range(0, 0xffffffff);
+type uint128: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff);
+type uint256: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff);
+
+function power(b: int, e: nat) : int extern;
+function cong(a: int, b: int, n: int) : bool extern;
+
+const BASE_32:  nat extern;
+const BASE_64:  nat extern; 
+const BASE_128: nat extern; 
+const BASE_256: nat extern;
+const BASE_512: nat extern;
+const NUM_WORDS:nat extern;
+
+type state: Type(0) {: primitive} extern;
+function operator(.ok) (s: state): bool extern;
+function operator(.ok :=) (s: state, b: bool): state extern;
+
+type reg32_t: Type(0) extern;
+
+type mem_t: Type(0) := map(int, uint32);
 
 function Loop(u: uint32) : bool extern;
 function LoopImm(u: uint32) : bool extern;
 
-function operator(.ok) (s: state): bool extern;
-function operator(.ok :=) (s: state, b: bool): state extern;
-
-function operator([]) #[a: Type(0)](s: seq(a), i: int): a extern; // TODO: requires clause
-function operator([ := ]) #[a: Type(0)](s: seq(a), i: int, v: a): seq(a) extern; // TODO: requires clause
-function operator([]) #[a: Type(0), b: Type(0)](m: map(a, b), key: a): b extern; // TODO: requires clause
-function operator([ := ]) #[a: Type(0), b: Type(0)](m: map(a, b), key: a, v: b): map(a, b) extern;
-
 function fst #[a: Type(0), b: Type(0)](m: tuple(a, b)): a extern;
 function snd #[a: Type(0), b: Type(0)](m: tuple(a, b)): b extern;
 
-function uint32_xor(x: uint32, y: uint32): uint32 extern;
-function uint32_or(x: uint32, y: uint32): uint32 extern;
-function uint32_and(x: uint32, y: uint32): uint32 extern;
-function uint32_mul(x: uint32, y: uint32): uint32 extern;
-function uint32_mulhu(x: uint32, y: uint32): uint32 extern;
-function uint32_not(x: uint32): uint32 extern;
-function uint32_ls(x: uint32, amount: uint32): uint32 extern;
-function uint32_se(x: uint32): uint32 extern;
+function bool_to_uint1(i:bool) : uint1 extern;
+
+var gprs: gprs_t {:state gprs()};
 
 var ok: bool {:state ok()};
-var mem: Mem {:state mem()};
-var pc: Pc {:state pc()};
-var regs: Regs {:state regs()};
+    
+var mem: mem_t {:state mem()};
+function mem_addr_valid(h: mem_t, ptr: int): bool extern;
 
-var x0: uint32 {:state reg32(Gpr(0))};
-var x1: uint32 {:state reg32(Gpr(1))};
-var x2: uint32 {:state reg32(Gpr(2))};
-var x3: uint32 {:state reg32(Gpr(3))};
-var x4: uint32 {:state reg32(Gpr(4))};
-var x5: uint32 {:state reg32(Gpr(5))};
-var x6: uint32 {:state reg32(Gpr(6))};
-var x7: uint32 {:state reg32(Gpr(7))};
-var x8: uint32 {:state reg32(Gpr(8))};
-var x9: uint32 {:state reg32(Gpr(9))};
-var x10: uint32 {:state reg32(Gpr(10))};
-var x11: uint32 {:state reg32(Gpr(11))};
-var x12: uint32 {:state reg32(Gpr(12))};
-var x13: uint32 {:state reg32(Gpr(13))};
-var x14: uint32 {:state reg32(Gpr(14))};
-var x15: uint32 {:state reg32(Gpr(15))};
-var x16: uint32 {:state reg32(Gpr(16))};
-var x17: uint32 {:state reg32(Gpr(17))};
-var x18: uint32 {:state reg32(Gpr(18))};
-var x19: uint32 {:state reg32(Gpr(19))};
-var x20: uint32 {:state reg32(Gpr(20))};
-var x21: uint32 {:state reg32(Gpr(21))};
-var x22: uint32 {:state reg32(Gpr(22))};
-var x23: uint32 {:state reg32(Gpr(23))};
-var x24: uint32 {:state reg32(Gpr(24))};
-var x25: uint32 {:state reg32(Gpr(25))};
-var x26: uint32 {:state reg32(Gpr(26))};
-var x27: uint32 {:state reg32(Gpr(27))};
-var x28: uint32 {:state reg32(Gpr(28))};
-var x29: uint32 {:state reg32(Gpr(29))};
-var x30: uint32 {:state reg32(Gpr(30))};
-var x31: uint32 {:state reg32(Gpr(31))};
+type iter_t: Type(0) extern;
+ 
+type string: Type(0) extern;
 
-operand_type reg32: uint32 @ Reg32 :=
+var x0: uint32 {:state reg32_t(GPR(0))};
+var x1: uint32 {:state reg32_t(GPR(1))};
+var x2: uint32 {:state reg32_t(GPR(2))};
+var x3: uint32 {:state reg32_t(GPR(3))};
+var x4: uint32 {:state reg32_t(GPR(4))};
+var x5: uint32 {:state reg32_t(GPR(5))};
+var x6: uint32 {:state reg32_t(GPR(6))};
+var x7: uint32 {:state reg32_t(GPR(7))};
+var x8: uint32 {:state reg32_t(GPR(8))};
+var x9: uint32 {:state reg32_t(GPR(9))};
+var x10: uint32 {:state reg32_t(GPR(10))};
+var x11: uint32 {:state reg32_t(GPR(11))};
+var x12: uint32 {:state reg32_t(GPR(12))};
+var x13: uint32 {:state reg32_t(GPR(13))};
+var x14: uint32 {:state reg32_t(GPR(14))};
+var x15: uint32 {:state reg32_t(GPR(15))};
+var x16: uint32 {:state reg32_t(GPR(16))};
+var x17: uint32 {:state reg32_t(GPR(17))};
+var x18: uint32 {:state reg32_t(GPR(18))};
+var x19: uint32 {:state reg32_t(GPR(19))};
+var x20: uint32 {:state reg32_t(GPR(20))};
+var x21: uint32 {:state reg32_t(GPR(21))};
+var x22: uint32 {:state reg32_t(GPR(22))};
+var x23: uint32 {:state reg32_t(GPR(23))};
+var x24: uint32 {:state reg32_t(GPR(24))};
+var x25: uint32 {:state reg32_t(GPR(25))};
+var x26: uint32 {:state reg32_t(GPR(26))};
+var x27: uint32 {:state reg32_t(GPR(27))};
+var x28: uint32 {:state reg32_t(GPR(28))};
+var x29: uint32 {:state reg32_t(GPR(29))};
+var x30: uint32 {:state reg32_t(GPR(30))};
+var x31: uint32 {:state reg32_t(GPR(31))};
+
+operand_type reg32: uint32 @ reg32_t :=
 | inout x0 | inout x1 | inout x2 | inout x3
 | inout x4 | inout x5 | inout x6 | inout x7
 | inout x8 | inout x9 | inout x10 | inout x11
@@ -100,7 +113,17 @@ operand_type imm128: uint128 := const;
 operand_type imm32: uint32 := const;
 operand_type imm2: uint2 := const;
 
-function Valid32Addr(h: Mem, addr: int): bool extern;
+function uint32_xor(x: uint32, y: uint32): uint32 extern;
+function uint32_or(x: uint32, y: uint32): uint32 extern;
+function uint32_and(x: uint32, y: uint32): uint32 extern;
+function uint32_mul(x: uint32, y: uint32): uint32 extern;
+function uint32_mulhu(x: uint32, y: uint32): uint32 extern;
+function uint32_not(x: uint32): uint32 extern;
+function uint32_ls(x: uint32, amount: uint32): uint32 extern;
+function uint32_se(x: uint32): uint32 extern;
+function uint32_rs(x: uint32, y: uint32): uint32 extern;
+function uint32_arith_rs(x: uint32, y: uint32): uint32 extern;
+
 
 // --------------------------------------------------------------
 // Base Integer Instructions
@@ -117,7 +140,7 @@ procedure lw(inout dst: reg32, in src1: reg32, in src2: imm32)
         // TODO: valid address check
     ensures
         // mem location = src + sign-extended immediate
-        dst == mem[old(src) + uint32_se(old(src2))];
+        dst == mem[old(src1) + uint32_se(old(src2))];
 {
     assume false;
 }
@@ -132,7 +155,7 @@ procedure lh(inout dst: reg32, in src1: reg32, in src2: imm32)
         // TODO: valid address check
     ensures
         // mem location = sign-extended src + sign-extended immediate
-        dst == mem[uint32_se(old(src)) + uint32_se(old(src2))];
+        dst == mem[uint32_se(old(src1)) + uint32_se(old(src2))];
 {
     assume false;
 }
@@ -147,7 +170,7 @@ procedure lhu(inout dst: reg32, in src1: reg32, in src2: imm32)
         // TODO: valid address check
     ensures
         // mem location = zero-extended src + zero-extended immediate
-        dst == mem[old(src) + old(src2)];
+        dst == mem[old(src1) + old(src2)];
 {
     assume false;
 }
@@ -162,7 +185,7 @@ procedure lb(inout dst: reg32, in src1: reg32, in src2: imm32)
         // TODO: valid address check
     ensures
         // mem location = sign-extended src + sign-extended immediate
-        dst == mem[uint32_se(old(src)) + uint32_se(old(src2))];
+        dst == mem[uint32_se(old(src1)) + uint32_se(old(src2))];
 {
     assume false;
 }
@@ -177,7 +200,7 @@ procedure lbu(inout dst: reg32, in src1: reg32, in src2: imm32)
         // TODO: valid address check
     ensures
         // mem location = zero-extended src + zero-extended immediate
-        dst == mem[old(src) + old(src2)];
+        dst == mem[old(src1) + old(src2)];
 {
     assume false;
 }
@@ -217,7 +240,8 @@ procedure slti(inout dst: reg32, in src1: reg32, in src2: imm32)
     requires
         src2 < 0x1000;
     ensures
-    dst == 1 if uint32_se(old(src1)) < uint32_se(old(src2)) else 0;
+    // TODO: implement as function
+    // dst == 1 if uint32_se(old(src1)) < uint32_se(old(src2)) else 0;
 {
     assume false;
 }
@@ -227,7 +251,8 @@ procedure sltiu(inout dst: reg32, in src1: reg32, in src2: imm32)
     requires
         src2 < 0x1000;
     ensures
-    dst == 1 if old(src1) < old(src2) else 0;
+    // TODO: implement as function
+    // dst == 1 if old(src1) < old(src2) else 0;
 {
     assume false;
 }
@@ -306,7 +331,7 @@ procedure srai(inout dst: reg32, in src1: reg32, in src2: imm32)
 // store instructions
     
 procedure sw(inout src1: reg32, in src2: reg32, in offset: imm32)
-    {:instruction Ins32(RV_LW(dst, src1, src2))}
+    {:instruction Ins32(RV_SW(dst, src1, src2))}
     modifies
         mem;
     requires
@@ -395,7 +420,8 @@ procedure slt(inout dst: reg32, in src1: reg32, in src2: reg32)
     {:instruction Ins32(RV_SLT(dst, src1, src2))}
     ensures
         // < comparison as signed ints
-        dst == 1 if uint32_se(old(src1)) < uint32_se(old(src2)) else 0;
+        // TODO: implement as function
+        // dst == 1 if uint32_se(old(src1)) < uint32_se(old(src2)) else 0;
 {
     assume false;
 }
@@ -404,7 +430,8 @@ procedure sltu(inout dst: reg32, in src1: reg32, in src2: reg32)
     {:instruction Ins32(RV_SLTU(dst, src1, src2))}
     ensures
         // < comparison as unsigned ints
-        dst == 1 if old(src1) < old(src2) else 0;
+        // TODO: implement as function
+        // dst == 1 if old(src1) < old(src2) else 0;
 {
     assume false;
 }
