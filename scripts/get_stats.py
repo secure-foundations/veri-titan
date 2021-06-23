@@ -40,18 +40,21 @@ def build_call_graph(path):
     callees = dict()
     cur_set = None
 
-    pattern = re.compile("^(JAL|BNE) (.+), ([^\s-]+)")
+    pattern = re.compile("^jal (.+), ([^\s-]+)")
+    funciton_pattern = re.compile("^([a-z0-9A-Z_]+):")
 
     for line in source.readlines():
         line = line.strip()
-        if line.endswith(":"):
-            cur_func = line[:-1]
+        match = re.match(funciton_pattern, line)
+
+        if match:
+            cur_func = match.group(1)
             callees[cur_func] = set()
             cur_set = callees[cur_func]
 
         match = re.match(pattern, line)
         if match:
-            callee = match.group(3)
+            callee = match.group(2)
             cur_set.add(callee)
     source.close()
 

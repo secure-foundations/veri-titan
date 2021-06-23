@@ -1,0 +1,143 @@
+include "decls.vad"
+
+#verbatim
+include "../code/vale.dfy"
+include "../spec/rsa_ops.dfy"
+include "decls.dfy"
+
+include "../code/addc512_lemmas.dfy"
+
+module addc512 {
+
+import opened bv_ops
+import opened vt_ops
+import opened rsa_ops
+import opened vt_consts
+import opened vt_vale
+import opened vt_decls
+import opened powers
+import opened congruences
+import opened addc512_lemmas
+
+#endverbatim
+
+ghost procedure addc_512_op_lemma(
+    ghost x0: uint256, ghost y0: uint256, ghost z0: uint256, ghost c0: uint1,
+    ghost x1: uint256, ghost y1: uint256, ghost z1: uint256, ghost c1: uint1) extern;
+
+ghost procedure seq_addc_nat_lemma(
+    ghost xs: seq(uint256), ghost ys: seq(uint256), ghost zs: seq(uint256),
+    ghost cout: uint1) extern;
+
+ghost procedure seq_addc_512_safe_nat_lemma(
+    ghost xs: seq(uint256), ghost ys: seq(uint256), ghost zs: seq(uint256),
+    ghost cout: uint1) extern;
+
+ghost procedure to_nat_zero_extend_lemma(
+    ghost xs': seq(uint256), ghost xs: seq(uint256)) extern;
+
+procedure seq_addc_512(
+    inout dst1: reg256, in src1a: reg256, in src1b: reg256,
+    inout dst2: reg256, in src2a: reg256, in src2b: reg256)
+
+    requires
+        @dst1 != @dst2;
+        @dst1 != @src2a;
+        @dst1 != @src2b;
+
+    modifies
+        fgroups;
+    
+    ensures
+        to_nat(seq(old(src1a), old(src2a))) + to_nat(seq(old(src1b), old(src2b)))
+            ==
+        to_nat(seq(dst1, dst2)) + pow_B256(2) * bool_to_uint1(fgroups.fg0.cf);
+
+        seq_addc(seq(old(src1a), old(src2a)), seq(old(src1b), old(src2b)))
+            ==
+        tuple(seq(dst1, dst2), bool_to_uint1(fgroups.fg0.cf));
+{
+    ghost var x1 := src1a;
+    ghost var y1 := src1b;
+    ghost var x2 := src2a;
+    ghost var y2 := src2b;
+
+    bn_add(dst1, src1a, src1b, SFT_DFT, 0);
+    ghost var cin := bool_to_uint1(fgroups.fg0.cf);
+    bn_addc(dst2, src2a, src2b, SFT_DFT, 0);
+    ghost var cout := bool_to_uint1(fgroups.fg0.cf);
+
+    assert tuple(dst1, cin) == uint256_addc(x1, y1, 0);
+    assert tuple(dst2, cout) == uint256_addc(x2, y2, cin);
+
+    addc_512_op_lemma(x1, y1, dst1, cin, x2, y2, dst2, cout);
+
+    seq_addc_nat_lemma(seq(x1, x2), seq(y1, y2), seq(dst1, dst2), cout);
+
+    assert to_nat(seq(x1, x2)) + to_nat(seq(y1, y2)) 
+        == to_nat(seq(dst1, dst2)) + pow_B256(2) * cout;
+}
+
+procedure seq_addc_512_safe(
+    inout dst1: reg256, in src1a: reg256, in src1b: reg256,
+    inout dst2: reg256, in src2a: reg256, in src2b: reg256)
+    returns (ghost sum: uint512_view_t)
+    
+    requires
+        is_wide_data_register(@dst1);
+        is_wide_data_register(@dst2);
+
+        @dst1 != @dst2;
+        @dst1 != @src2a;
+        @dst1 != @src2b;
+        src2b == 0;
+
+        seq_addc_512_is_safe(seq(src1a, src2a), seq(src1b, src2b));
+
+    reads
+        wdrs;
+
+    modifies
+        fgroups;
+
+    ensures
+        valid_uint512_view(wdrs, sum, @dst1.index, @dst2.index);
+        sum.full == to_nat(seq(old(src1a), old(src2a))) + old(src1b);
+{
+    ghost var s1a := src1a;
+    ghost var s1b := src1b;
+    ghost var s2a := src2a;
+    ghost var s2b := src2b;
+
+    seq_addc_512(dst1, src1a, src1b, dst2, src2a, src2b);
+
+    seq_addc_512_safe_nat_lemma(
+        seq(s1a, s2a), seq(s1b, s2b), seq(dst1, dst2),
+        bool_to_uint1(fgroups.fg0.cf));
+    ghost var value := to_nat(seq(dst1, dst2));
+    calc == {
+        value;
+        ==
+        to_nat(seq(s1a, s2a)) + to_nat(seq(s1b, s2b));
+        ==
+        to_nat(seq(s1a, s2a)) + to_nat(seq(s1b, 0));
+        == { to_nat_zero_extend_lemma(seq(s1b), seq(s1b, 0)); }
+        to_nat(seq(s1a, s2a)) + to_nat(seq(s1b));
+        == { reveal to_nat; reveal power; }
+        to_nat(seq(s1a, s2a)) + s1b;
+    }
+
+    assert value < BASE_512;
+    to_nat_lemma_1(seq(dst1, dst2));
+    assert dst1 = uint512_lh(value) by {
+        reveal uint512_lh;
+    }
+    assert dst2 = uint512_uh(value) by {
+        reveal uint512_uh;
+    }
+    sum := uint512_cons(dst1, dst2, value);
+}
+
+#verbatim
+}
+#endverbatim
