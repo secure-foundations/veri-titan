@@ -1,16 +1,13 @@
-include "../gen/examples.dfy"
-include "../gen/mont_loop.dfy"
-include "../gen/modexp_var.dfy"
-include "bv_ops.dfy"
-include "vt_ops.dfy"
-include "../code/vale.dfy"
+// include "../gen/mont_loop.dfy"
+include "gen/modexp_var.dfy"
+include "spec/bv_ops.dfy"
+include "spec/vt_ops.dfy"
+include "code/vale.dfy"
 
 module otbn_printer {
 
   import opened bv_ops
 	import opened vt_ops
-  import opened examples
-  import opened mont_loop
   import opened modexp_var
 
 
@@ -112,8 +109,8 @@ method printShift(shift:shift_t)
 method printFlags(fg:uint1)
 {
   match fg
-		case 0 => print("0");
-		case 1 => print("1");
+		case 0 => print("FG0");
+		case 1 => print("FG1");
 }
 
 method printFlag(flag:uint2)
@@ -169,8 +166,9 @@ method printIns256(ins:ins256)
 				printReg256(src2); print("."); print(qwsel2); print(", ");
 				printAccShift(shift); print("\n");
 
-		  case BN_MULQACC_SO(zero, src1, qwsel1, src2, qwsel2, shift) =>
+		  case BN_MULQACC_SO(zero, dst, lower, src1, qwsel1, src2, qwsel2, shift) =>
 				if zero { print("  bn.mulqacc.so.z "); } else { print("  bn.mulqacc.so "); }
+                printReg256(dst); print("."); if lower { print("L"); } else { print("U"); } print(", ");
 				printReg256(src1); print("."); print(qwsel1); print(", ");
 				printReg256(src2); print("."); print(qwsel2); print(", ");
 				printAccShift(shift); print("\n");
@@ -284,7 +282,7 @@ function method codeSize(c: code) : int
     case Comment(com) => 0
 }
 
-method printCode(c:code, n:int) returns(n':int)
+method printCode(c:code, n:int) returns(n': int)
 {
     match c
         case Ins32(ins) => printIns32(ins); n' := n;
@@ -303,16 +301,15 @@ method printCode(c:code, n:int) returns(n':int)
         case Comment(com) => print(com);
 }
 
-method printProc(proc_name:seq<char>, code:code, n:int, ret_count:int)
+method printProc(proc_name:seq<char>, code:code, n:int)
 {
-  print(proc_name);
-  print(" proc\n");
+  // print(proc_name);
+  // print(" proc\n");
   var _ := printCode(code, n);
   print("  ret ");
-  print(ret_count);
   print("\n");
-  print(proc_name);
-  print(" end\n\n");
+  // print(proc_name);
+  // print(" end\n\n");
 }
 
 datatype AsmTarget = OTBN
@@ -327,12 +324,12 @@ function method procName(proc_name:seq<char>, suffix:seq<char>, asm:AsmTarget, p
 
 method PrintDemo(asm:AsmTarget, platform:PlatformTarget)
 {
-    printProc("demo", va_code_mont_loop(), 0, 0);
+    printProc("demo", va_code_modexp_var(), 0);
 }
 
 method Main()
 {
-    PrintDemo(OTBN, MacOS);
+    PrintDemo(OTBN, Linux);
 }
 
 }
