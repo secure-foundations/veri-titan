@@ -24,10 +24,6 @@ OUTPUT_ASM_PATH = "output.s"
 NINJA_PATH = "build.ninja"
 CODE_DIR = "code"
 
-ninja_content = [rules]
-
-## START main command (build everything)
-
 # convert path
 
 def get_ver_path(dfy_path):
@@ -95,7 +91,7 @@ def list_dfy_deps(dfy_file):
             includes.append(include)
     return " ".join(includes)
 
-# generate rule
+## main command (build)
 
 def get_dfy_files(include_gen):
     dfy_files = list()
@@ -111,52 +107,58 @@ def get_dfy_files(include_gen):
                 dfy_files.append(dfy_path)
     return dfy_files
 
-def add_vad_rules(vad_path):
-    dfy_path = get_gen_dfy_path(vad_path)
-    vad_deps = list_vad_deps(vad_path)
-    ninja_content.append(f"build {dfy_path}: vale {vad_path} | {vad_deps}\n")
-    return dfy_path
+class Generator():
+    def __init__(self):
+        version = subprocess.run("ninja --version", shell=True, stdout=PIPE).stdout
+        version = version.decode("utf-8").strip()
+        if version != "1.10.1":
+            print("[WARNING] ninja not found or uexpected version: " + version)
 
-def add_dfy_rules(dfy_file):
-    ver_path = get_ver_path(dfy_file)
-    dd_path = get_dd_path(dfy_file)
+        self.content = [rules]
+        # collect none generated .dfy first
+        self.dfy_files =get_dfy_files(False)
 
-    ninja_content.append(f"build {dd_path}: dfydep {dfy_file}\n")
-    ninja_content.append(f"build {ver_path}: dafny {dfy_file} || {dd_path}")
-    ninja_content.append(f"    dyndep = {dd_path}\n")
+        self.generate_rules()
+        self.write_ninja()
 
-def add_pinter_rules():
-    printer_deps = list_dfy_deps(PRINTER_DFY_PATH)
-    ninja_content.append(f"build {PRINTER_DLL_PATH}: compile {PRINTER_DFY_PATH} | {printer_deps}\n")
-    ninja_content.append(f"build {OUTPUT_ASM_PATH}: print {PRINTER_DLL_PATH} \n")
+    def generate_vad_rules(self, vad_path):
+        dfy_path = get_gen_dfy_path(vad_path)
+        vad_deps = list_vad_deps(vad_path)
+        self.content.append(f"build {dfy_path}: vale {vad_path} | {vad_deps}\n")
+        # need to add this generated file as well
+        self.dfy_files.append(dfy_path)
 
-def generate_dot_ninja():
-    version = subprocess.run("ninja --version", shell=True, stdout=PIPE).stdout
-    version = version.decode("utf-8").strip()
-    if version != "1.10.1":
-        print("[WARNING] ninja not found or uexpected version: " + version)
+    def generate_dfy_rules(self, dfy_file):
+        ver_path = get_ver_path(dfy_file)
+        dd_path = get_dd_path(dfy_file)
 
-    # collect none generated .dfy
-    dfy_files = get_dfy_files(False)
+        self.content.append(f"build {dd_path}: dfydep {dfy_file}\n")
+        self.content.append(f"build {ver_path}: dafny {dfy_file} || {dd_path}")
+        self.content.append(f"    dyndep = {dd_path}\n")
 
-    # build .dfy from .vad 
-    for file in os.listdir(CODE_DIR):
-        if file.endswith(".vad"):
-            vad_path = os.path.join(CODE_DIR, file)
-            dfy_path = add_vad_rules(vad_path)
-            dfy_files.append(dfy_path)
+    def generate_pinter_rules(self):
+        printer_deps = list_dfy_deps(PRINTER_DFY_PATH)
+        self.content.append(f"build {PRINTER_DLL_PATH}: compile {PRINTER_DFY_PATH} | {printer_deps}\n")
+        self.content.append(f"build {OUTPUT_ASM_PATH}: print {PRINTER_DLL_PATH} \n")
 
-    # build .ver from .dfy
-    for dfy_file in dfy_files:
-        add_dfy_rules(dfy_file)
+    def generate_rules(self):
+        # rules to build .dfy from .vad 
+        for file in os.listdir(CODE_DIR):
+            if file.endswith(".vad"):
+                vad_path = os.path.join(CODE_DIR, file)
+                self.generate_vad_rules(vad_path)
 
-    add_pinter_rules()
+        # rules to build .ver from .dfy
+        for dfy_file in self.dfy_files:
+            self.generate_dfy_rules(dfy_file)
 
-    with open(NINJA_PATH, "w") as f:
-        for line in ninja_content:
-            f.write(line + "\n")
+        # rules for the printer
+        self.generate_pinter_rules()
 
-## END main command
+    def write_ninja(self):
+        with open(NINJA_PATH, "w") as f:
+            for line in self.content:
+                f.write(line + "\n")
 
 ## separate command: dfydep
 
@@ -206,11 +208,13 @@ def verify_single_file(target):
         # print(target)
         os.system("ninja -v " + target)
 
+## command line interface
+
 def main():
     # build everything
     if len(sys.argv) == 1:
-        generate_dot_ninja()
-        # os.system("ninja -v -j 4")
+        g = Generator()
+        os.system("ninja -v -j 4")
         return
 
     option = sys.argv[1]
