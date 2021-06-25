@@ -91,7 +91,7 @@ def list_dfy_deps(dfy_file):
             includes.append(include)
     return " ".join(includes)
 
-## main command (build)
+# list files
 
 def get_dfy_files(include_gen):
     dfy_files = list()
@@ -106,6 +106,8 @@ def get_dfy_files(include_gen):
                 dfy_path = os.path.relpath(os.path.join(root, file))
                 dfy_files.append(dfy_path)
     return dfy_files
+
+## main command (build)
 
 class Generator():
     def __init__(self):

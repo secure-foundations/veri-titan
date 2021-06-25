@@ -243,14 +243,13 @@ method printIns256(ins:ins256)
         case _ => print("TODO256 "); print(ins);
 }
 
-method printBlock(b:codes, n:int) returns(n':int)
+method printBlock(b: codes, depth: int)
 {
-    n' := n;
     var i := b;
     while (i.va_CCons?)
         decreases i
     {
-        n' := printCode(i.hd, n');
+        printCode(i.hd, depth);
         i := i.tl;
     }
 }
@@ -279,34 +278,37 @@ function method codeSize(c: code) : int
         case Comment(com) => 0
 }
 
-method printCode(c:code, n:int) returns(n': int)
+method printIndent(depth: int)
+{
+    var i := 0;
+    while i < depth
+    {
+        print("  ");
+        i := i + 1;
+    }
+}
+
+method printCode(c: code, depth: int)
 {
     match c
-        case Ins32(ins) => printIns32(ins); n' := n;
-        case Ins256(ins) => printIns256(ins); n' := n;
-        case Block(block) => n' := printBlock(block, n);
+        case Ins32(ins) => printIndent(depth); printIns32(ins);
+        case Ins256(ins) => printIndent(depth); printIns256(ins);
+        case Block(block) => printBlock(block, depth);
         case While(wcond, wbody) =>
         {
-          n' := n;
-          print("\n");
-          printWhileCond(wcond); print(", ");
-          print(codeSize(wbody) + 1); print("\n"); // + 1 for nop instruction
-          n' := printCode(wbody, n);
-          print("  nop\n"); // ensures different end addrs for nested loops
-          print("\n");
+            printIndent(depth); printWhileCond(wcond); print(", ");
+            print(codeSize(wbody) + 1); print("\n"); // + 1 for nop instruction
+            printCode(wbody, depth + 1);
+            printIndent(depth+1); print("  nop\n"); // ensures different end addrs for nested loops
         }
         case Comment(com) => print(com);
 }
 
-method printProc(proc_name:seq<char>, code:code, n:int)
+method printProc(proc_name:seq<char>, code:code)
 {
     // print(proc_name);
-    // print(" proc\n");
-    var _ := printCode(code, n);
-    print("  ret ");
-    print("\n");
-    // print(proc_name);
-    // print(" end\n\n");
+    printCode(code, 0);
+    print("  ret\n");
 }
 
 datatype AsmTarget = OTBN
@@ -321,7 +323,7 @@ function method procName(proc_name:seq<char>, suffix:seq<char>, asm:AsmTarget, p
 
 method PrintDemo(asm:AsmTarget, platform:PlatformTarget)
 {
-    printProc("demo", va_code_modexp_var(), 0);
+    printProc("demo", va_code_modexp_var());
 }
 
 method Main()
