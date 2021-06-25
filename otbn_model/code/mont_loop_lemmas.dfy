@@ -360,7 +360,7 @@ module mont_loop_lemmas {
                 (to_nat(y) + m) * BASE_256;
             }
         }
-        
+
         if bout == 1 {
             if to_nat(a) >= m {
                 to_nat_bound_lemma(y);
@@ -371,6 +371,8 @@ module mont_loop_lemmas {
                 to_nat_bound_lemma(next_a);
                 assert false; // prove by contradiction
             }
+            
+            assert next_bout == 1;
 
             calc {
                 to_nat(next_a) * BASE_256;
@@ -379,7 +381,7 @@ module mont_loop_lemmas {
                 to_nat(a) * BASE_256 + pow_B256(NUM_WORDS+1) - m * BASE_256;
                 xi * to_nat(y) + ui * m + prev_a - m * BASE_256;
             }
-
+            
             calc ==> {
                 true;
                     { reveal cong(); }
@@ -387,6 +389,8 @@ module mont_loop_lemmas {
                     {
                         cong_add_lemma_5(to_nat(next_a) * BASE_256,
                             xi * to_nat(y) + ui * m + prev_a - m * BASE_256, BASE_256, m);
+                        assert xi * to_nat(y) + ui * m + prev_a - m * BASE_256 + BASE_256 * m == 
+                            xi * to_nat(y) + ui * m + prev_a;
                     }
                 cong(to_nat(next_a) * BASE_256, xi * to_nat(y) + ui * m + prev_a, m);
             }

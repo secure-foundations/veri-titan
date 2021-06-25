@@ -3,7 +3,6 @@ dfy_model/.depend
 otbn_impl/cg.dot
 otbn_impl/cg.png
 gen/
-.sconsign.dblite
 docs/*.pdf
 docs/*.aux
 docs/*.fdb_latexmk
@@ -11,4 +10,8 @@ docs/*.fls
 docs/*.log
 docs/*.synctex.gz
 .ninja_log
+.ninja_deps
 build.ninja
+output.s
+*.dll
+*.runtimeconfig.json
