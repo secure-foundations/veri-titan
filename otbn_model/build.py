@@ -8,21 +8,40 @@ rule dafny
 rule vale
     command = vale -dafnyText -in $in -out $out
 
-rule dfydep
-    command = python3 build.py dfydep $in > $out
+rule dd-gen
+    command = python3 build.py dd-gen $in > $out
 
-rule compile
-    command = dafny $in /compile:1 /vcsCores:2 /out:$out
+rule dll-gen
+    command = python3 build.py dll-gen $in
 
-rule print
+rule dll-run
     command = dotnet $in > $out
+
+rule otbn-as
+    command = otbn-as $in -o $out
+
+rule otbn-ld
+    command = otbn-ld $in -o $out
 """
 
 PRINTER_DFY_PATH = "print.dfy"
-PRINTER_DLL_PATH = "print.dll"
-OUTPUT_ASM_PATH = "output.s"
+PRINTER_DLL_PATH = "gen/print.dll"
+PRINTER_CONFIG_PATH = "gen/print.runtimeconfig.json"
+
+OUTPUT_ASM_PATH = "gen/output.s"
+TEST_ASM_PATH = "run_modexp.s"
+OUTPUT_ELF_PATH = "gen/run_modexp.elf"
+
 NINJA_PATH = "build.ninja"
 CODE_DIR = "code"
+
+## misc utils
+
+# run command
+
+def os_system(command):
+    print(command)
+    os.system(command)
 
 # convert path
 
@@ -47,6 +66,13 @@ def get_gen_dfy_path(vad_path):
     assert vad_path.startswith("code")
     dfy_path = vad_path.replace("code", "gen")
     return dfy_path.replace(".vad", ".dfy")
+
+def get_o_path(asm_path):
+    asm_path = os.path.relpath(asm_path)
+    assert asm_path.endswith(".s")
+    if not asm_path.startswith("gen"):
+        asm_path = "gen/" + asm_path
+    return asm_path.replace(".s", ".o")
 
 # list dependecy 
 
@@ -91,7 +117,7 @@ def list_dfy_deps(dfy_file):
             includes.append(include)
     return " ".join(includes)
 
-## main command (build)
+# list files
 
 def get_dfy_files(include_gen):
     dfy_files = list()
@@ -106,6 +132,8 @@ def get_dfy_files(include_gen):
                 dfy_path = os.path.relpath(os.path.join(root, file))
                 dfy_files.append(dfy_path)
     return dfy_files
+
+## main command (build)
 
 class Generator():
     def __init__(self):
@@ -132,14 +160,21 @@ class Generator():
         ver_path = get_ver_path(dfy_file)
         dd_path = get_dd_path(dfy_file)
 
-        self.content.append(f"build {dd_path}: dfydep {dfy_file}\n")
+        self.content.append(f"build {dd_path}: dd-gen {dfy_file}\n")
         self.content.append(f"build {ver_path}: dafny {dfy_file} || {dd_path}")
         self.content.append(f"    dyndep = {dd_path}\n")
 
     def generate_pinter_rules(self):
         printer_deps = list_dfy_deps(PRINTER_DFY_PATH)
-        self.content.append(f"build {PRINTER_DLL_PATH}: compile {PRINTER_DFY_PATH} | {printer_deps}\n")
-        self.content.append(f"build {OUTPUT_ASM_PATH}: print {PRINTER_DLL_PATH} \n")
+        self.content.append(f"build {PRINTER_DLL_PATH}: dll-gen {PRINTER_DFY_PATH} | {printer_deps}\n")
+        self.content.append(f"build {OUTPUT_ASM_PATH}: dll-run {PRINTER_DLL_PATH} \n")
+
+    def generate_elf_rules(self):
+        output_o_path = get_o_path(OUTPUT_ASM_PATH)
+        self.content.append(f"build {output_o_path}: otbn-as {OUTPUT_ASM_PATH}\n")
+        test_o_path = get_o_path(TEST_ASM_PATH)
+        self.content.append(f"build {test_o_path}: otbn-as {TEST_ASM_PATH}\n")
+        self.content.append(f"build {OUTPUT_ELF_PATH}: otbn-ld {test_o_path} {output_o_path}\n")
 
     def generate_rules(self):
         # rules to build .dfy from .vad 
@@ -155,12 +190,15 @@ class Generator():
         # rules for the printer
         self.generate_pinter_rules()
 
+        # rules for the elf
+        self.generate_elf_rules()
+
     def write_ninja(self):
         with open(NINJA_PATH, "w") as f:
             for line in self.content:
                 f.write(line + "\n")
 
-## separate command: dfydep
+## separate command: dd-gen
 
 def generate_dd(dfy_file):
     dfy_file = os.path.relpath(dfy_file)
@@ -208,22 +246,44 @@ def verify_single_file(target):
         # print(target)
         os.system("ninja -v " + target)
 
+## separate command: dll-gen
+
+def generate_print_dll(dfy_path):
+    # ninja sanity check
+    assert dfy_path == PRINTER_DFY_PATH 
+    command = f"dafny {PRINTER_DFY_PATH} /compile:1 /vcsCores:2 /out:temp.dll"
+    command += f" && mv temp.dll {PRINTER_DLL_PATH} && mv temp.runtimeconfig.json {PRINTER_CONFIG_PATH}"
+    os_system(command)
+
+## separate command: elf-gen
+def generate_elf(asm_path):
+    # ninja sanity check
+    assert asm_path == OUTPUT_ASM_PATH
+    command()
+    # command = f"dafny {PRINTER_DFY_PATH} /compile:1 /vcsCores:2 /out:temp.dll"
+    # print(command)
+    # os_system(command)
+# TEST_ASM_PATH
+
+
 ## command line interface
 
 def main():
     # build everything
     if len(sys.argv) == 1:
         g = Generator()
-        os.system("ninja -v -j 4")
+        # os.system("ninja -v -j 4")
         return
 
     option = sys.argv[1]
     if option == "ver":
         verify_single_file(sys.argv[2])
-    elif option == "dfydep":
-        generate_dd(sys.argv[2])
     elif option == "proc":
         verify_dafny_proc(sys.argv[2])
+    elif option == "dd-gen":
+        generate_dd(sys.argv[2])
+    elif option == "dll-gen":
+        generate_print_dll(sys.argv[2])
     elif option == "clean":
         os.system("rm -r ./gen")
         os.system("rm " + NINJA_PATH)
