@@ -306,7 +306,8 @@ method printCode(c: code, depth: int)
 
 method printProc(proc_name:seq<char>, code:code)
 {
-    // print(proc_name);
+    print(".globl "); print(proc_name); print("\n");
+    print(proc_name); print(":\n");
     printCode(code, 0);
     print("  ret\n");
 }
@@ -323,7 +324,7 @@ function method procName(proc_name:seq<char>, suffix:seq<char>, asm:AsmTarget, p
 
 method PrintDemo(asm:AsmTarget, platform:PlatformTarget)
 {
-    printProc("demo", va_code_modexp_var());
+    printProc("modexp_var", va_code_modexp_var());
 }
 
 method Main()
