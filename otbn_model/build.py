@@ -1,12 +1,16 @@
 import sys, os, subprocess,re
 from subprocess import PIPE, Popen
 
-rules = """
+TOOLS_DIR = "./tools"
+DAFNY_PATH = "./tools/dafny/dafny"
+VALE_PATH = "./tools/vale/bin/vale"
+
+rules = f"""
 rule dafny
-    command = dafny $in /compile:0 /timeLimit:20 /vcsCores:2 && touch $out
+    command = {DAFNY_PATH} $in /compile:0 /timeLimit:20 /vcsCores:2 && touch $out
 
 rule vale
-    command = vale -dafnyText -in $in -out $out
+    command = {VALE_PATH} -dafnyText -in $in -out $out
 
 rule dd-gen
     command = python3 build.py dd-gen $in > $out
@@ -23,6 +27,7 @@ rule otbn-as
 rule otbn-ld
     command = otbn-ld $in -o $out
 """
+
 
 PRINTER_DFY_PATH = "print.dfy"
 PRINTER_DLL_PATH = "gen/print.dll"
@@ -42,6 +47,11 @@ CODE_DIR = "code"
 def os_system(command):
     print(command)
     os.system(command)
+
+def subprocess_run(command):
+    # print(command)
+    output = subprocess.run(command, shell=True, stdout=PIPE).stdout
+    return output.decode("utf-8").strip()
 
 # convert path
 
@@ -73,6 +83,39 @@ def get_o_path(asm_path):
     if not asm_path.startswith("gen"):
         asm_path = "gen/" + asm_path
     return asm_path.replace(".s", ".o")
+
+## separate command: setup
+
+def check_packages():
+    # ninja
+    version = subprocess_run("ninja --version")
+    if version != "1.10.1":
+        print("[WARN] ninja not found or uexpected version: " + version)
+
+    # dotnet
+    version = subprocess_run("dotnet --list-sdks")
+    if "5.0" not in version:
+        print("[WARN] dotnet not found or uexpected version: " + version)
+    else:
+        print("[INFO] dotnet version: " + version)
+
+def setup_tools():
+    if not os.path.exists(TOOLS_DIR):
+        os.makedirs(TOOLS_DIR)
+
+    if os.path.exists(DAFNY_PATH):
+        print("[INFO] dafny binary already exists")
+    else:
+        os.system("wget https://github.com/dafny-lang/dafny/releases/download/v3.0.0/dafny-3.0.0-x64-ubuntu-16.04.zip")
+        os.system(f"unzip dafny-3.0.0-x64-ubuntu-16.04.zip -d {TOOLS_DIR}")
+        os.system(f"rm dafny-3.0.0-x64-ubuntu-16.04.zip")
+
+    if os.path.exists(VALE_PATH):
+        print("[INFO] vale binary already exists")
+    else:
+        os.system("cd tools && git clone git@github.com:project-everest/vale.git")
+        os.system("cd tools/vale && git checkout otbn-custom && ./run_scons.sh")
+        os.system("mv tools/vale/bin/vale.exe tools/vale/bin/vale")
 
 # list dependecy 
 
@@ -122,8 +165,10 @@ def list_dfy_deps(dfy_file):
 def get_dfy_files(include_gen):
     dfy_files = list()
     for root, _, files in os.walk("."):
+        if root.startswith(TOOLS_DIR):
+            continue
         # do not include files in ./gen unless specified
-        if  root.startswith("./gen") and not include_gen:
+        if root.startswith("./gen") and not include_gen:
             continue
         for file in files:
             if file.endswith(".dfy"):
@@ -137,11 +182,6 @@ def get_dfy_files(include_gen):
 
 class Generator():
     def __init__(self):
-        version = subprocess.run("ninja --version", shell=True, stdout=PIPE).stdout
-        version = version.decode("utf-8").strip()
-        if version != "1.10.1":
-            print("[WARNING] ninja not found or uexpected version: " + version)
-
         self.content = [rules]
         # collect none generated .dfy first
         self.dfy_files =get_dfy_files(False)
@@ -224,7 +264,7 @@ def verify_dafny_proc(proc):
 
     for dfy_file in outputs.splitlines():
         print("verify %s in %s" % (proc, dfy_file))
-        command = "time -p dafny /trace /timeLimit:20 /compile:0 /proc:*%s " % proc + dfy_file
+        command = f"time -p {DAFNY_PATH} /trace /timeLimit:20 /compile:0 /proc:*%s " % proc + dfy_file
         # r = subprocess.check_output(command, shell=True).decode("utf-8")
         process = Popen(command, shell=True, stdout=PIPE)
         output = process.communicate()[0].decode("utf-8")
@@ -255,20 +295,11 @@ def generate_print_dll(dfy_path):
     command += f" && mv temp.dll {PRINTER_DLL_PATH} && mv temp.runtimeconfig.json {PRINTER_CONFIG_PATH}"
     os_system(command)
 
-## separate command: elf-gen
-def generate_elf(asm_path):
-    # ninja sanity check
-    assert asm_path == OUTPUT_ASM_PATH
-    command()
-    # command = f"dafny {PRINTER_DFY_PATH} /compile:1 /vcsCores:2 /out:temp.dll"
-    # print(command)
-    # os_system(command)
-# TEST_ASM_PATH
-
-
 ## command line interface
 
 def main():
+    check_packages()
+
     # build everything
     if len(sys.argv) == 1:
         g = Generator()
@@ -287,6 +318,8 @@ def main():
     elif option == "clean":
         os.system("rm -r ./gen")
         os.system("rm " + NINJA_PATH)
+    elif option == "setup":
+        setup_tools()
 
 if __name__ == "__main__":
     main()
