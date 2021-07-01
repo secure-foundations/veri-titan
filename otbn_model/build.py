@@ -106,6 +106,20 @@ def setup_tools():
     else:
         print("[INFO] nuget version: " + version)
 
+    path = subprocess_run("which otbn-as")
+
+    if "otbn-as" not in path:
+        print("[WARN] otbn-as not found")
+    else:
+        print("[INFO] otbn-as found")
+
+    path = subprocess_run("which otbn-ld")
+
+    if "otbn-ld" not in path:
+        print("[WARN] otbn-ld not found")
+    else:
+        print("[INFO] otbn-ld found")
+
     while 1:
         print("confrim dependecies are installed [y/n] ", end='')
         choice = input().lower()
