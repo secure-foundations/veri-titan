@@ -155,7 +155,7 @@ def list_vad_deps(vad_path):
     return " ".join(vad_dependencies)
 
 def list_dfy_deps(dfy_file):
-    command = "dafny /printIncludes:Immediate %s" % dfy_file
+    command = f"{DAFNY_PATH} /printIncludes:Immediate %s" % dfy_file
     outputs = subprocess.run(command, shell=True, stdout=PIPE).stdout
     outputs = outputs.decode("utf-8")
 
@@ -215,7 +215,7 @@ class Generator():
         dd_path = get_dd_path(dfy_file)
 
         self.content.append(f"build {dd_path}: dd-gen {dfy_file}\n")
-        self.content.append(f"build {ver_path}: {DAFNY_PATH} {dfy_file} || {dd_path}")
+        self.content.append(f"build {ver_path}: dafny {dfy_file} || {dd_path}")
         self.content.append(f"    dyndep = {dd_path}\n")
 
     def generate_pinter_rules(self):
