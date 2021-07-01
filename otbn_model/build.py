@@ -1,4 +1,4 @@
-import sys, os, subprocess,re
+import sys, os, subprocess, re
 from subprocess import PIPE, Popen
 
 TOOLS_DIR = "./tools"
@@ -86,7 +86,7 @@ def get_o_path(asm_path):
 
 ## separate command: setup
 
-def check_packages():
+def setup_tools():
     # ninja
     version = subprocess_run("ninja --version")
     if version != "1.10.1":
@@ -99,7 +99,21 @@ def check_packages():
     else:
         print("[INFO] dotnet version: " + version)
 
-def setup_tools():
+    # nuget
+    version = subprocess_run("nuget help | grep Version")
+    if "5.5" not in version:
+        print("[WARN] nuget not found or uexpected version: " + version)
+    else:
+        print("[INFO] nuget version: " + version)
+
+    while 1:
+        print("confrim dependecies are installed [y/n] ", end='')
+        choice = input().lower()
+        if choice == "n":
+            return
+        elif choice == "y":
+            break
+
     if not os.path.exists(TOOLS_DIR):
         os.makedirs(TOOLS_DIR)
 
@@ -201,7 +215,7 @@ class Generator():
         dd_path = get_dd_path(dfy_file)
 
         self.content.append(f"build {dd_path}: dd-gen {dfy_file}\n")
-        self.content.append(f"build {ver_path}: dafny {dfy_file} || {dd_path}")
+        self.content.append(f"build {ver_path}: {DAFNY_PATH} {dfy_file} || {dd_path}")
         self.content.append(f"    dyndep = {dd_path}\n")
 
     def generate_pinter_rules(self):
@@ -298,8 +312,6 @@ def generate_print_dll(dfy_path):
 ## command line interface
 
 def main():
-    check_packages()
-
     # build everything
     if len(sys.argv) == 1:
         g = Generator()
