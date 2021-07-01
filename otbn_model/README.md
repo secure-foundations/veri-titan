@@ -4,4 +4,4 @@ Run `python3 build.py build` to generate the ninja file.
 
 Run `ninja -v -j4` to build. If everything works, there should be a file named `gen/run_modexp.elf` as the output.
 
-Tested with `ninja` version `1.10.1`. Older version seems to silently fail, when `dyndep` is actually not supported.
+Tested with `ninja` version `1.10.1`. Older version might silently fail, when `dyndep` is actually not supported.
