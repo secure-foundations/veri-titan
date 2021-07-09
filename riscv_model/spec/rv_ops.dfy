@@ -1,5 +1,6 @@
 include "rv_consts.dfy"
 include "bv_ops.dfy"
+
 include "../lib/powers.dfy"
 include "../lib/congruences.dfy"
 
@@ -14,11 +15,11 @@ module rv_ops {
     /* registers definitions */
     type reg_index = uint5 // 32 registers
       
-    datatype reg32_t = | Gpr(r: reg_index) // 32 32-bit registers, x0 is always zero
+    datatype reg32_t = | GPR(index: reg_index) // 32 32-bit registers, x0 is always zero
 
     type gprs_t = gprs : seq<uint32> | |gprs| == 32 witness *
 
-      type mem_t = map<int, uint32>
+    type mem_t = map<int, uint32>
 
     predicate mem_addr_valid(mem: mem_t, addr: int)
     {
@@ -49,7 +50,7 @@ module rv_ops {
     }
     
     // base integer instruction set, 32-bit
-    datatype ins32I =
+    datatype ins32 =
     | RV_LB(rd: reg32_t, rs1: reg32_t, oimm12: uint32)
     | RV_LH (rd: reg32_t, rs1: reg32_t, oimm12: uint32)
     | RV_LW (rd: reg32_t, rs1: reg32_t, oimm12: uint32)
@@ -99,7 +100,6 @@ module rv_ops {
     // | RV_JAL (rd: reg32_t, jimm20: uint32)
 
     // standard extension for integer mult and div, 32-bit
-    datatype ins32M =
     | RV_MUL (rd: reg32_t, rs1: reg32_t, rs2: reg32_t)
     | RV_MULH (rd: reg32_t, rs1: reg32_t, rs2: reg32_t)
     | RV_MULHSU (rd: reg32_t, rs1: reg32_t, rs2: reg32_t)
@@ -110,7 +110,6 @@ module rv_ops {
     | RV_REMU (rd: reg32_t, rs1: reg32_t, rs2: reg32_t)
 
     // control and status register extension
-    datatype ins32CSR =
     | RISC_ECALL
     | RISC_EBREAK
     | RISC_URET
@@ -125,9 +124,7 @@ module rv_ops {
     | RISC_CSRRSI (rd: reg32_t, zimm: uint32, csr12: uint32)
     | RISC_CSRRCI (rd: reg32_t, zimm: uint32, csr12: uint32)
 
-    datatype rv_ins32 = ins32I(ins: ins32I)| ins32M(ins: ins32M) | ins32CSR(ins: ins32CSR)
-
-    predicate eval_ins32(xins: ins32, s: state, r: state)
+    predicate eval_ins32(ins: ins32, s: state, r: state)
         {
             if !s.ok then
                 !r.ok
@@ -138,7 +135,7 @@ module rv_ops {
     /* control flow definitions */
 
     datatype code =
-    | Ins32(ins: rv_ins32)
+    | Ins32(ins: ins32)
     | Block(block: codes)
     | While(whileCond: whileCond, whileBody: code)
     | Comment(com: string)
@@ -186,7 +183,6 @@ predicate eval_block(block: codes, s: state, r: state)
     {
         match c
             case Ins32(ins) => eval_ins32(ins, s, r)
-            case Ins256(ins) => eval_ins256(ins, s, r)
             case Block(block) => eval_block(block, s, r)
             case While(cond, body) => eval_while(body, eval_cond(s, cond), s, r)
             case Comment(com) => s == r

@@ -113,6 +113,8 @@ operand_type imm128: uint128 := const;
 operand_type imm32: uint32 := const;
 operand_type imm2: uint2 := const;
 
+function uint32_gt(x: uint32, y: uint32): uint32 extern;
+    
 function uint32_xor(x: uint32, y: uint32): uint32 extern;
 function uint32_or(x: uint32, y: uint32): uint32 extern;
 function uint32_and(x: uint32, y: uint32): uint32 extern;
@@ -137,9 +139,10 @@ procedure lw(inout dst: reg32, in src1: reg32, in src2: imm32)
     reads
         mem;
     requires
-        src2 < 0x1000;
-        // TODO: valid address check
+        mem_addr_valid(mem, src1 + src2);
+        src2 < 0x1000; // 12-bit
     ensures
+        mem_addr_valid(mem, old(src1) + old(src2));
         // mem location = src + sign-extended immediate
         dst == mem[old(src1) + old(src2)];
 {
@@ -151,10 +154,11 @@ procedure lh(inout dst: reg32, in src1: reg32, in src2: imm32)
     reads
         mem;
     requires
+        mem_addr_valid(mem, src1 + src2);
         src1 < 0x10000; // 16-bit
         src2 < 0x1000;  // 12-bit
-        // TODO: valid address check
     ensures
+        mem_addr_valid(mem, old(src1) + old(src2));
         // mem location = sign-extended src + sign-extended immediate
         dst == mem[old(src1) + old(src2)];
 {
@@ -166,10 +170,11 @@ procedure lhu(inout dst: reg32, in src1: reg32, in src2: imm32)
     reads
         mem;
     requires
+        mem_addr_valid(mem, src1 + src2);
         src1 < 0x10000; // 16-bit
         src2 < 0x1000;  // 12-bit
-        // TODO: valid address check
     ensures
+        mem_addr_valid(mem, old(src1) + old(src2));
         // mem location = zero-extended src + zero-extended immediate
         dst == mem[old(src1) + old(src2)];
 {
@@ -181,10 +186,11 @@ procedure lb(inout dst: reg32, in src1: reg32, in src2: imm32)
     reads
         mem;
     requires
+        mem_addr_valid(mem, src1 + src2);
         src1 < 0x100; // 8-bit
         src2 < 0x1000;  // 12-bit
-        // TODO: valid address check
     ensures
+        mem_addr_valid(mem, old(src1) + old(src2));
         // mem location = sign-extended src + sign-extended immediate
         dst == mem[old(src1) + old(src2)];
 {
@@ -196,10 +202,11 @@ procedure lbu(inout dst: reg32, in src1: reg32, in src2: imm32)
     reads
         mem;
     requires
+        mem_addr_valid(mem, src1 + src2);
         src1 < 0x100; // 8-bit
         src2 < 0x1000;  // 12-bit
-        // TODO: valid address check
     ensures
+        mem_addr_valid(mem, old(src1) + old(src2));
         // mem location = zero-extended src + zero-extended immediate
         dst == mem[old(src1) + old(src2)];
 {
@@ -228,7 +235,7 @@ procedure addi(inout dst: reg32, in src1: reg32, in src2: imm32)
 procedure slli(inout dst: reg32, in src1: reg32, in src2: imm32)
     {:instruction Ins32(RV_SLLI(dst, src1, src2))}
     requires
-        src2 < 0x1000;
+        src2 < 32;
     ensures
         // left shift src1 by amount in lowest 5 bits of src2
         dst == uint32_ls(old(src1), old(src2) % 32);
@@ -241,8 +248,7 @@ procedure slti(inout dst: reg32, in src1: reg32, in src2: imm32)
     requires
         src2 < 0x1000;
     ensures
-    // TODO: implement as function
-    // dst == 1 if old(src1) < old(src2) else 0;
+    dst == uint32_gt(old(src1), old(src2));
 {
     assume false;
 }
@@ -252,8 +258,7 @@ procedure sltiu(inout dst: reg32, in src1: reg32, in src2: imm32)
     requires
         src2 < 0x1000;
     ensures
-    // TODO: implement as function
-    // dst == 1 if old(src1) < old(src2) else 0;
+       dst == uint32_gt(old(src1), old(src2));
 {
     assume false;
 }
@@ -281,7 +286,7 @@ procedure ori(inout dst: reg32, in src1: reg32, in src2: imm32)
 procedure andi(inout dst: reg32, in src1: reg32, in src2: imm32)
     {:instruction Ins32(RV_ANDI(dst, src1, src2))}
     requires
-        src2 < 0x1000;
+        src2 < 32;
     ensures
         dst == uint32_and(old(src1), old(src2));
 {
@@ -292,7 +297,7 @@ procedure andi(inout dst: reg32, in src1: reg32, in src2: imm32)
 procedure srli(inout dst: reg32, in src1: reg32, in src2: imm32)
     {:instruction Ins32(RV_SRLI(dst, src1, src2))}
     requires
-        src2 < 0x1000;
+        0 <= src2 < 31;
     ensures
         dst == uint32_rs(old(src1), old(src2));
 {
@@ -302,9 +307,10 @@ procedure srli(inout dst: reg32, in src1: reg32, in src2: imm32)
 procedure srai(inout dst: reg32, in src1: reg32, in src2: imm32)
     {:instruction Ins32(RV_SRAI(dst, src1, src2))}
     requires
-        src2 < 0x1000;
+        // limit to non-negative values for our use case
+        0 <= src2 < 31;
     ensures
-        dst == uint32_arith_rs(old(src1), old(src2));
+        dst == uint32_rs(old(src1), old(src2));
 {
     assume false;
 }
@@ -336,9 +342,10 @@ procedure sw(inout src1: reg32, in src2: reg32, in offset: imm32)
     modifies
         mem;
     requires
+        mem_addr_valid(mem, src1 + offset);
         offset < 0x1000;
-        // TODO: valid address check
     ensures
+        mem_addr_valid(mem, old(src1) + offset);
         // mem location = src1 + sign-extended offset, store src2 value at mem location
         mem[old(src1) + offset] == old(src2);
 {
@@ -350,10 +357,11 @@ procedure sh(inout src1: reg32, in src2: reg32, in offset: imm32)
     reads
         mem;
     requires
+        mem_addr_valid(mem, src1 + offset);
         src2 < 0x10000; // 16-bit
         offset < 0x1000; // 12-bit
-        // TODO: valid address check
     ensures
+        mem_addr_valid(mem, old(src1) + offset);
         // mem location = src1 + sign-extended offset, store signed src2 value at mem location
         mem[old(src1) + offset] == old(src2);
 {
@@ -365,10 +373,11 @@ procedure sb(inout src1: reg32, in src2: reg32, in offset: imm32)
     reads
         mem;
     requires
+        mem_addr_valid(mem, src1 + offset);
         src2 < 0x100; // 8-bit
         offset < 0x1000; // 12-bit
-        // TODO: valid address check
     ensures
+        mem_addr_valid(mem, old(src1) + offset);
         // mem location = src1 + sign-extended offset, store signed src2 value at mem location
         mem[old(src1) + offset] == old(src2);
 {
@@ -421,8 +430,7 @@ procedure slt(inout dst: reg32, in src1: reg32, in src2: reg32)
     {:instruction Ins32(RV_SLT(dst, src1, src2))}
     ensures
         // < comparison as signed ints
-        // TODO: implement as function
-        // dst == 1 if old(src1) < old(src2) else 0;
+        dst == uint32_gt(old(src1), old(src2));
 {
     assume false;
 }
@@ -431,8 +439,7 @@ procedure sltu(inout dst: reg32, in src1: reg32, in src2: reg32)
     {:instruction Ins32(RV_SLTU(dst, src1, src2))}
     ensures
         // < comparison as unsigned ints
-        // TODO: implement as function
-        // dst == 1 if old(src1) < old(src2) else 0;
+        dst == uint32_gt(old(src1), old(src2));
 {
     assume false;
 }
@@ -447,6 +454,9 @@ procedure xor(inout dst: reg32, in src1: reg32, in src2: reg32)
 
 procedure srl(inout dst: reg32, in src1: reg32, in src2: reg32)
     {:instruction Ins32(RV_SRL(dst, src1, src2))}
+    requires
+        // limit to non-negative values for our use case
+        0 <= src2 < 31;
     ensures
         // right logical shift by lowest 5 bits of src2
         dst == uint32_rs(old(src1), old(src2));
@@ -456,9 +466,11 @@ procedure srl(inout dst: reg32, in src1: reg32, in src2: reg32)
 
 procedure sra(inout dst: reg32, in src1: reg32, in src2: reg32)
     {:instruction Ins32(RV_SRA(dst, src1, src2))}
+    requires
+         0 <= src2 < 31;
     ensures
         // right arithmetic shift by lowest 5 bits of src2
-        dst == uint32_arith_rs(old(src1), old(src2));
+        dst == uint32_rs(old(src1), old(src2));
 {
     assume false;
 }

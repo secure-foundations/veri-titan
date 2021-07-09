@@ -1,4 +1,9 @@
+include "../spec/rv_ops.dfy"
+include "../lib/powers.dfy"
+include "../lib/congruences.dfy"
+
 module rv_vale {
+  
     import opened rv_ops
     import opened bv_ops
     import opened congruences

@@ -67,14 +67,26 @@ module bv_ops {
         (x + y) % BASE_32
     }
 
-    function method {:opaque} uint32_sub(x:uint32, y:uint32):uint32
+    function method {:opaque} uint32_sub(x:uint32, y:uint32) : uint32
     {
         (x - y) % BASE_32
     }
 
-    function method {:opaque} uint32_se(x:uint32, size:int):uint32
-        requires 0 <= size < 32;
+    function method {:opaque} uint32_mul(x:uint32, y:uint32) : uint32
+    {
+        (x * y) % BASE_32
+    }
 
+    function method {:opaque} uint32_mulhu(x:uint32, y:uint32) : uint32
+    {
+        ((((x * y) % BASE_64) as bv64) >> 32) as uint32
+    }
+
+    function uint32_gt(x:uint32, y:uint32) : uint32
+    {
+        if x < y then 1 else 0
+    }
+    
     lemma single_digit_lemma_0(a: nat, b: nat, u: nat)
         requires a <= u;
         requires b <= u;
