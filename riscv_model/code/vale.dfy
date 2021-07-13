@@ -159,15 +159,19 @@ module rv_vale {
     function method va_const_cmp(n:uint32):uint32 { n }
     function method va_coerce_reg32_to_cmp(r: reg32_t): reg32_t { r }
 
-    function method va_cmp_LoopImm(u:uint32):whileCond { ImmCond(u) }
-    function method va_cmp_Loop(r: reg32_t):whileCond { RegCond(r) }
+    function method va_cmp_eq(r1:reg32_t, r2:reg32_t):cond { Cmp(Eq, r1, r2) }
+    function method va_cmp_neq(r1:reg32_t, r2:reg32_t):cond { Cmp(Neq, r1, r2) }
+    function method va_cmp_le(r1:reg32_t, r2:reg32_t):cond { Cmp(Le, r1, r2) }
+    function method va_cmp_ge(r1:reg32_t, r2:reg32_t):cond { Cmp(Ge, r1, r2) }
+    function method va_cmp_lt(r1:reg32_t, r2:reg32_t):cond { Cmp(Lt, r1, r2) }
+    function method va_cmp_gt(r1:reg32_t, r2:reg32_t):cond { Cmp(Gt, r1, r2) }
 
     function method va_op_reg32_reg32_t(r: reg32_t): reg32_t { r }
     function method va_Block(block:codes):code { Block(block) }
-    function method va_While(wcond:whileCond, wcode:code):code { While(wcond, wcode) }
+    function method va_While(wcond:cond, wcode:code):code { While(wcond, wcode) }
 
     function method va_get_block(c:code):codes requires c.Block? { c.block }
-    function method va_get_whileCond(c:code):whileCond requires c.While? {c.whileCond }
+    function method va_get_whileCond(c:code):cond requires c.While? {c.whileCond }
     function method va_get_whileBody(c:code):code requires c.While? { c.whileBody }
 
     lemma lemma_FailurePreservedByBlock(block:codes, s:state, r:state)
@@ -192,7 +196,7 @@ module rv_vale {
                 lemma_FailurePreservedByBlock(b, s, r);
             }
             case While(c, b) => {
-                var n :| eval_while(b, n, s, r);
+                var n :| eval_while(c, b, n, s, r);
             }
             case Ins32(i) => {
                 var r' :| eval_code(c, s, r');
@@ -220,13 +224,13 @@ module rv_vale {
         }
     }
 
-    lemma eval_while_validity(w:whileCond, c:code, n:nat, s:state, r:state)
-        requires eval_while(c, n, s, r);
+    lemma eval_while_validity(w:cond, c:code, n:nat, s:state, r:state)
+        requires eval_while(w, c, n, s, r);
         decreases c, 1, n;
         ensures valid_state(s) && r.ok ==> valid_state(r);
     {
         if valid_state(s) && r.ok && n > 0 {
-            var r' :| eval_code(c, s, r') && eval_while(c, n - 1, r', r);
+            var r' :| eval_code(c, s, r') && eval_while(w, c, n - 1, r', r);
             code_state_validity(c, s, r');
             eval_while_validity(w, c, n - 1, r', r);
             assert valid_state(r);
@@ -245,7 +249,7 @@ module rv_vale {
             } else if c.Block? {
                 block_state_validity(c.block, s, r);
             } else if c.While? {
-                var n:nat :| eval_while(c.whileBody, n, s, r);
+                var n:nat :| eval_while(c.whileCond, c.whileBody, n, s, r);
                 eval_while_validity(c.whileCond, c.whileBody, n, s, r);
                 assert valid_state(r);
             } else if c.Comment? {
@@ -298,42 +302,42 @@ module rv_vale {
         }
     }
 
-    predicate {:opaque} eval_while_opaque(w:whileCond, c:code, n:nat, s:state, r:state)
+    predicate {:opaque} eval_while_opaque(w:cond, c:code, n:nat, s:state, r:state)
     {
-        eval_while(c, n, s, r)
+        eval_while(w, c, n, s, r)
     }
 
-    predicate eval_while_lax(w:whileCond, c:code, n:nat, s:state, r:state)
+    predicate eval_while_lax(w:cond, c:code, n:nat, s:state, r:state)
     {
         s.ok ==> eval_while_opaque(w, c, n, s, r)
     }
 
-    predicate va_whileInv(w:whileCond, c:code, n:int, r1: va_state, r2: va_state)
+    predicate va_whileInv(w:cond, c:code, n:int, r1: va_state, r2: va_state)
     {
         n >= 0 && valid_state_opaque(r1) && eval_while_lax(w, c, n, r1, r2)
     }
 
-    lemma va_lemma_while(w:whileCond, c:code, s: va_state, r: va_state) returns(n:nat, r': va_state)
+    lemma va_lemma_while(w:cond, c:code, s: va_state, r: va_state) returns(n:nat, r': va_state)
         requires valid_state_opaque(s);
         requires eval_code_lax(While(w, c), s, r)
         ensures  eval_while_lax(w, c, n, r', r)
-        ensures s.ok ==> (n == eval_cond(s, w));
         ensures  valid_state_opaque(r');
         ensures r' == s
+        ensures  forall c', t, t' :: eval_code(c', t, t') == (t.ok ==> eval_code(c', t, t'));
     {
         reveal_eval_code_opaque();
         reveal_valid_state_opaque();
         reveal_eval_while_opaque();
         if s.ok {
             assert eval_code(While(w, c), s, r);
-            n := eval_cond(s, w);
+            n :| eval_while(w, c, n, s, r);
         } else {
             n := 0;
         }
         r' := s;
     }
 
-    lemma va_lemma_whileTrue(w:whileCond, c:code, n:nat, s: va_state, r: va_state) returns(s': va_state, r': va_state)
+    lemma va_lemma_whileTrue(w:cond, c:code, n:nat, s: va_state, r: va_state) returns(s': va_state, r': va_state)
         requires n > 0
         requires eval_while_lax(w, c, n, s, r)
         ensures  valid_state_opaque(s) ==> valid_state_opaque(s');
@@ -354,10 +358,10 @@ module rv_vale {
             r' := s;
             return;
         }
-        assert eval_while(c, n, s, r); // TODO: Dafny reveal/opaque issue
+        assert eval_while(w, c, n, s, r); // TODO: Dafny reveal/opaque issue
 
         if valid_state_opaque(s) {
-            var r'':state :| eval_code(c, s, r'') && eval_while( c, n - 1, r'', r);
+            var r'':state :| eval_code(c, s, r'') && eval_while(w, c, n - 1, r'', r);
             s' := s;
             r' := r'';
             code_state_validity(c, s', r'');
@@ -367,7 +371,7 @@ module rv_vale {
         }
     }
 
-    lemma va_lemma_whileFalse(w:whileCond, c:code, s: va_state, r: va_state) returns(r': va_state)
+    lemma va_lemma_whileFalse(w:cond, c:code, s: va_state, r: va_state) returns(r': va_state)
         requires eval_while_lax(w, c, 0, s, r)
         ensures  if s.ok then
                     (if valid_state_opaque(s) then

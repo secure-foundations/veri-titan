@@ -622,7 +622,7 @@ procedure mul(inout dst: reg32, in src1: reg32, in src2: reg32)
 procedure mulhu(inout dst: reg32, in src1: reg32, in src2: reg32)
     {:instruction Ins32(RV_MULHU(dst, src1, src2))}
     ensures
-        dst == uint32_mulhu(old(src1), old(src2)); // TODO: helper function
+        dst == uint32_mulhu(old(src1), old(src2));
 {
     assume false;
 }

@@ -134,21 +134,19 @@ module rv_ops {
 
     /* control flow definitions */
 
+    datatype cmp = Eq | Neq | Le | Ge | Lt | Gt
+    
+    datatype cond = Cmp(op:cmp, r1:reg32_t, r2:reg32_t)
+
     datatype code =
     | Ins32(ins: ins32)
     | Block(block: codes)
-    | While(whileCond: whileCond, whileBody: code)
+    | While(whileCond: cond, whileBody: code)
     | Comment(com: string)
 
     datatype codes =
       | CNil
       | va_CCons(hd: code, tl: codes)
-
-    // todo
-    datatype whileCond =
-        | RegCond(r: reg32_t)
-        | ImmCond(c: uint32)
-
 
 predicate eval_block(block: codes, s: state, r: state)
     {
@@ -158,22 +156,32 @@ predicate eval_block(block: codes, s: state, r: state)
             exists r': state :: eval_code(block.hd, s, r') && eval_block(block.tl, r', r)
     }
 
-    function eval_cond(s: state, wc: whileCond): nat
+    function eval_cmp(s:state, c:cmp, r1:reg32_t, r2:reg32_t):bool
     {
-        match wc 
-            case RegCond(r) => s.eval_reg32(r)
-            case ImmCond(c) => c
+        match c
+          case Eq  => s.eval_reg32(r1) == s.eval_reg32(r2)
+          case Neq => s.eval_reg32(r1) != s.eval_reg32(r2)
+          case Le  => s.eval_reg32(r1) <= s.eval_reg32(r2)
+          case Ge  => s.eval_reg32(r1) >= s.eval_reg32(r2)
+          case Lt  => s.eval_reg32(r1) < s.eval_reg32(r2)
+          case Gt  => s.eval_reg32(r1) > s.eval_reg32(r2)
     }
 
-    predicate eval_while(c: code, n: nat, s: state, r: state)
-        decreases c, n
+    function eval_cond(s:state, c:cond):bool
+    {
+        eval_cmp(s, c.op, c.r1, c.r2)
+    }
+
+    predicate eval_while(condition:cond, body:code, n: nat, s: state, r: state)
+        decreases body, n
     {
         if s.ok then
             if n == 0 then
-                s == r
+                !eval_cond(s, condition) && (s == r)
             else
-                exists loop_body_end: state :: eval_code(c, s, loop_body_end)
-                    && eval_while(c, n - 1, loop_body_end, r)
+              exists loop_start: state, loop_end: state :: eval_cond(s, condition)
+                      && eval_code(body, loop_start, loop_end)
+                      && eval_while(condition, body, n - 1, loop_end, r)
         else
             !r.ok
     }
@@ -184,7 +192,7 @@ predicate eval_block(block: codes, s: state, r: state)
         match c
             case Ins32(ins) => eval_ins32(ins, s, r)
             case Block(block) => eval_block(block, s, r)
-            case While(cond, body) => eval_while(body, eval_cond(s, cond), s, r)
+            case While(condition, body) => exists n:nat :: eval_while(condition, body, n, s, r)
             case Comment(com) => s == r
     }
 }
