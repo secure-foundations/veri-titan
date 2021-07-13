@@ -323,7 +323,7 @@ module rv_vale {
         ensures  eval_while_lax(w, c, n, r', r)
         ensures  valid_state_opaque(r');
         ensures r' == s
-        ensures  forall c', t, t' :: eval_code(c', t, t') == (t.ok ==> eval_code(c', t, t'));
+        //ensures  forall c', t, t' :: eval_code(c', t, t') == (t.ok ==> eval_code(c', t, t'));
     {
         reveal_eval_code_opaque();
         reveal_valid_state_opaque();

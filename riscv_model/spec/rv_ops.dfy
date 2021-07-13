@@ -179,9 +179,9 @@ predicate eval_block(block: codes, s: state, r: state)
             if n == 0 then
                 !eval_cond(s, condition) && (s == r)
             else
-              exists loop_start: state, loop_end: state :: eval_cond(s, condition)
-                      && eval_code(body, loop_start, loop_end)
-                      && eval_while(condition, body, n - 1, loop_end, r)
+              exists s': state :: eval_cond(s, condition)
+                      && eval_code(body, s, s')
+                      && eval_while(condition, body, n - 1, s', r)
         else
             !r.ok
     }

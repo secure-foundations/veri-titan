@@ -34,6 +34,22 @@ procedure double_reg(inout dst:reg32, in src:reg32)
     add(dst, src, src);
 }
 
+procedure loop_reg(inout src1:reg32, in src2:reg32)
+    requires
+        src1 == 0;
+        src2 == 3;
+    ensures
+        src1 == 3;
+{
+    while (src1 < src2)
+        invariant src1 <= src2;
+        decreases src2 - src1;
+    {
+        addi(src1, src1, 1);
+    }
+}
+
+
 #verbatim
 }
 #endverbatim
