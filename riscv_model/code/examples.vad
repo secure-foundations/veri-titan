@@ -13,7 +13,7 @@ import opened rv_vale
 import opened rv_decls
 
 #endverbatim
-    
+
 procedure double()
     requires
         x2 + x2 < 0x1_0000_0000;

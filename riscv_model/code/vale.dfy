@@ -346,6 +346,7 @@ module rv_vale {
         ensures  if s.ok && valid_state_opaque(s) then
                     && s'.ok
                     && s == s'
+                    && eval_cond(s, w)
                 else
                     true; //!r.ok;
     {
@@ -377,6 +378,7 @@ module rv_vale {
                     (if valid_state_opaque(s) then
                         (r'.ok ==> valid_state_opaque(r'))
                     && s == r
+                    && !eval_cond(s, w)
                     && r.ok
                     else
                         true)
