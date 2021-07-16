@@ -48,6 +48,26 @@ procedure loop_reg(inout src1:reg32, in src2:reg32)
         addi(src1, src1, 1);
     }
 }
+    
+procedure loop_sub_mul(inout dst:reg32, inout src1:reg32, in src2:reg32)
+    requires
+        src1 == 3;
+        src2 == 1;
+        dst == 0;
+    ensures
+        src1 == 0;
+        src2 == 1;
+        dst == 0;
+{
+    while (src1 >= src2)
+        invariant (src1 >= 0);
+        decreases src1;
+    {
+        sub(src1, src1, src2);
+        mul(dst, src1, src2);
+    }
+}
+
 
 
 #verbatim

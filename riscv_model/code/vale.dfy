@@ -160,7 +160,7 @@ module rv_vale {
     function method va_coerce_reg32_to_cmp(r: reg32_t): reg32_t { r }
 
     function method va_cmp_eq(r1:reg32_t, r2:reg32_t):cond { Cmp(Eq, r1, r2) }
-    function method va_cmp_neq(r1:reg32_t, r2:reg32_t):cond { Cmp(Neq, r1, r2) }
+    function method va_cmp_ne(r1:reg32_t, r2:reg32_t):cond { Cmp(Ne, r1, r2) }
     function method va_cmp_le(r1:reg32_t, r2:reg32_t):cond { Cmp(Le, r1, r2) }
     function method va_cmp_ge(r1:reg32_t, r2:reg32_t):cond { Cmp(Ge, r1, r2) }
     function method va_cmp_lt(r1:reg32_t, r2:reg32_t):cond { Cmp(Lt, r1, r2) }

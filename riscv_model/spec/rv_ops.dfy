@@ -134,7 +134,7 @@ module rv_ops {
 
     /* control flow definitions */
 
-    datatype cmp = Eq | Neq | Le | Ge | Lt | Gt
+    datatype cmp = Eq | Ne | Le | Ge | Lt | Gt
     
     datatype cond = Cmp(op:cmp, r1:reg32_t, r2:reg32_t)
 
@@ -142,6 +142,7 @@ module rv_ops {
     | Ins32(ins: ins32)
     | Block(block: codes)
     | While(whileCond: cond, whileBody: code)
+    // | Procedure(proc: codes, name: string) // TODO: direct call semantics
     | Comment(com: string)
 
     datatype codes =
@@ -160,7 +161,7 @@ predicate eval_block(block: codes, s: state, r: state)
     {
         match c
           case Eq  => s.eval_reg32(r1) == s.eval_reg32(r2)
-          case Neq => s.eval_reg32(r1) != s.eval_reg32(r2)
+          case Ne => s.eval_reg32(r1) != s.eval_reg32(r2)
           case Le  => s.eval_reg32(r1) <= s.eval_reg32(r2)
           case Ge  => s.eval_reg32(r1) >= s.eval_reg32(r2)
           case Lt  => s.eval_reg32(r1) < s.eval_reg32(r2)
