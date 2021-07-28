@@ -1,10 +1,17 @@
 include "vt_consts.dfy"
-include "../lib/powers.dfy"
+include "../dafny_library/NonlinearArithmetic/DivMod.dfy"
+include "../dafny_library/NonlinearArithmetic/Power.dfy"
+include "../dafny_library/NonlinearArithmetic/Mul.dfy"
+
+// include "../lib/powers.dfy"
 
 module bv_ops {
+    import opened NativeTypes
+    import opened Power
+    import opened DivMod
+    import opened Mul
+
     import opened vt_consts
-    import opened powers
-    import opened congruences
 
     type uint1   = i :int | 0 <= i < BASE_1
     type uint2   = i :int | 0 <= i < BASE_2
@@ -24,6 +31,13 @@ module bv_ops {
 
     const SFT_DFT :shift_t := SFT(true, 0);
 
+
+    predicate {:opaque} cong(a: int, b: int, n: int)
+        requires n > 0
+    {
+        is_mod_equivalent(a, b, n)
+    }
+
     predicate cong_B256(a: int, b: int)
     {
         cong(a, b, BASE_256)
@@ -31,6 +45,7 @@ module bv_ops {
     
     function pow_B256(e: nat): nat
     {
+        lemma_power_positive(BASE_256, e);
         power(BASE_256, e)
     }
 
@@ -198,9 +213,9 @@ module bv_ops {
         requires a <= u;
         requires b <= u;
         ensures a * b <= u * u;
-            {
-        assert true;
-            }
+    {
+        lemma_mul_upper_bound(a, u, b, u);
+    }
 
     lemma single_digit_lemma_1(a: nat, b: nat, c: nat, u: nat)
         requires a <= u;
