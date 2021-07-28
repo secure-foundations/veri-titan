@@ -227,9 +227,10 @@ module bv_ops {
             a * b + c;
             <= { single_digit_lemma_0(a, b, u); }
             u * u + c;
-            <= u * u + u;
-            u * (u + 1);
-            < (u + 1) * (u + 1);
+            <= u * u + u; {lemma_mul_is_distributive_add(u, u, 1);}
+            u * (u + 1); 
+            < {lemma_mul_left_inequality(u + 1, u, u + 1);}
+            (u + 1) * (u + 1); 
         }
     }
 
@@ -246,8 +247,14 @@ module bv_ops {
             u * u + c + d;
             <= u * u + u + u;
             u * u + 2 * u;
-            < u * u + 2 * u + 1;
-            (u + 1) * (u + 1);
+            < (u * u) + (2 * u) + 1;
+        }
+
+        calc {
+            (u + 1) * (u + 1); {lemma_mul_is_distributive_add(u + 1, u, 1);}
+            (u + 1) * u + (u + 1) * 1; 
+            u * (u + 1) + u + 1; {lemma_mul_is_distributive_add(u, u, 1);}
+            (u * u) + (2 * u) + 1;
         }
     }
 
@@ -268,6 +275,7 @@ module bv_ops {
         var src1 := uint256_qsel(x, qx);
         var src2 := uint256_qsel(y, qy);
         single_digit_lemma_0(src1, src2, BASE_64-1);
+        lemma_mul_strictly_increases_auto();
         src1 as uint128 * src2 as uint128
     }
 
