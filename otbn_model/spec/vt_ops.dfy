@@ -1,13 +1,13 @@
 include "vt_consts.dfy"
 include "bv_ops.dfy"
-include "../lib/powers.dfy"
-include "../lib/congruences.dfy"
+include "../dafny_library/NonlinearArithmetic/Power2.dfy"
+
 
 module vt_ops {
     import opened bv_ops
     import opened vt_consts
-    import opened powers
-    import opened congruences
+    import opened Power2
+    import NT = NativeTypes
 
 /* registers definions */
 
@@ -45,8 +45,8 @@ module vt_ops {
     predicate valid_uint512_view(
         wdrs: wdrs_t, num: uint512_view_t,
         li: int, ui: int)
-        requires -1 <= li < BASE_5;
-        requires -1 <= ui < BASE_5;
+        requires -1 <= li < NT.BASE_5;
+        requires -1 <= ui < NT.BASE_5;
     {
         && (li == NA || wdrs[li] == num.lh)
         && (ui == NA || wdrs[ui] == num.uh)
@@ -200,7 +200,7 @@ module vt_ops {
             write_reg32(xrd, sum)
         }
 
-        function eval_LUI(xrd: reg32_t, imm: uint32)
+        // function eval_LUI(xrd: reg32_t, imm: uint32) : 
     }
 
     predicate valid_state(s: state)
@@ -252,7 +252,7 @@ module vt_ops {
     {
         var product := uint256_qmul(x, qx, y, qy);
         var shift := uint256_sb(product, SFT(true, shift * 8));
-        if zero then shift else (acc + shift) % BASE_256
+        if zero then shift else (acc + shift) % NT.BASE_256
     }
 
     predicate otbn_mulqacc_is_safe(shift: uint2, acc: uint256)
@@ -260,7 +260,7 @@ module vt_ops {
         // make sure no overflow from shift (product needs to be 128 bits)
         && (shift <= 2) 
         // make sure no overflow from addtion
-        && (acc + otbn_qshift_safe(BASE_128 - 1, shift) < BASE_256)
+        && (acc + otbn_qshift_safe(NT.BASE_128 - 1, shift) < NT.BASE_256)
     }
 
     // mulquacc but no overflow
@@ -281,12 +281,12 @@ module vt_ops {
     // quater shift but no overflow
     function otbn_qshift_safe(x: uint256, q: uint2): (r: uint256)
         requires (q == 1) ==> (x < BASE_192);
-        requires (q == 2) ==> (x < BASE_128);
-        requires (q == 3) ==> (x < BASE_64);
+        requires (q == 2) ==> (x < NT.BASE_128);
+        requires (q == 3) ==> (x < NT.BASE_64);
     {
         if q == 0 then x
-        else if q == 1 then x * BASE_64
-        else if q == 2 then x * BASE_128
+        else if q == 1 then x * NT.BASE_64
+        else if q == 2 then x * NT.BASE_128
         else x * BASE_192
     }
 
@@ -308,8 +308,8 @@ module vt_ops {
     function otbn_rshi(x: uint256, y: uint256, shift_amt: int) : uint256
         requires 0 <= shift_amt < 256;
     {
-        var concat : int := x * BASE_256 + y;
-        (concat / pow2(shift_amt)) % BASE_256
+        var concat : int := x * NT.BASE_256 + y;
+        (concat / power2(shift_amt)) % NT.BASE_256
     }
 
 /* instruction definions (THESE ARE NOT CONNECTED TO ABOVE YET) */

@@ -3,8 +3,6 @@ include "../dafny_library/NonlinearArithmetic/DivMod.dfy"
 include "../dafny_library/NonlinearArithmetic/Power.dfy"
 include "../dafny_library/NonlinearArithmetic/Mul.dfy"
 
-// include "../lib/powers.dfy"
-
 module bv_ops {
     import opened NativeTypes
     import opened Power
