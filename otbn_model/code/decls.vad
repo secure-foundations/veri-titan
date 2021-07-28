@@ -333,7 +333,7 @@ procedure addi(inout dst: reg32, in src1: reg32, in src2: imm32)
     requires
        src1 + src2 < BASE_32;
     ensures
-        dst = old(src1) + old(src2);
+        dst == old(src1) + old(src2);
 {
     assume false;
 }

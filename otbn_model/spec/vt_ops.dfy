@@ -178,6 +178,29 @@ module vt_ops {
                 case WACC => wacc
             }
         }
+
+        function write_reg32(r: reg32_t, v: uint32) : state
+        {
+            if r.index == 0 then this
+            else this.(gprs := gprs[r.index := v])
+        }
+
+        function eval_ADD(xrd: reg32_t, xrs1: reg32_t, xrs2: reg32_t): state
+        {
+            var v1 := eval_reg32(xrs1);
+            var v2 := eval_reg32(xrs2);
+            var sum := uint32_add(v1, v2);
+            write_reg32(xrd, sum)
+        }
+        
+        function eval_ADDI(xrd: reg32_t, xrs1: reg32_t, imm: uint32): state
+        {
+            var v1 := eval_reg32(xrs1);
+            var sum := uint32_add(v1, imm);
+            write_reg32(xrd, sum)
+        }
+
+        function eval_LUI(xrd: reg32_t, imm: uint32)
     }
 
     predicate valid_state(s: state)
@@ -340,6 +363,7 @@ module vt_ops {
         | BN_MOVR(grd: reg32_t, grd_inc: bool, grs: reg32_t, grs_inc: bool)
         | BN_WSRRS // TODO
         | BN_WSRRW // TODO
+
 
     predicate eval_ins32(xins: ins32, s: state, r: state)
     {
