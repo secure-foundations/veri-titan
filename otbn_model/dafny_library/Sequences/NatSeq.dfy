@@ -1,6 +1,6 @@
-include "../Nonlinear_Arithmetic/DivMod.dfy"
-include "../Nonlinear_Arithmetic/Mul.dfy"
-include "../Nonlinear_Arithmetic/Power.dfy"
+include "../NonlinearArithmetic/DivMod.dfy"
+include "../NonlinearArithmetic/Mul.dfy"
+include "../NonlinearArithmetic/Power.dfy"
 include "Seq.dfy"
 
 abstract module NatSeq {

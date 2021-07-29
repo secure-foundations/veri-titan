@@ -1,15 +1,21 @@
 include "vt_consts.dfy"
 include "bv_ops.dfy"
 include "vt_ops.dfy"
-include "../lib/powers.dfy"
-include "../lib/congruences.dfy"
+include "../dafny_library/NonlinearArithmetic/Power.dfy"
+include "../dafny_library/NonlinearArithmetic/DivMod.dfy"
+include "../dafny_library/NonlinearArithmetic/Mul.dfy"
+// include "../dafny_library/Sequences/NatSeq.dfy"
 
 module rsa_ops {
     import opened vt_consts
     import opened bv_ops
     import opened vt_ops
-    import opened powers
-    import opened congruences
+    import opened Power
+    import opened DivMod
+    import opened Mul
+    import NT = NativeTypes
+    // import N = NatSeq
+
 
 /* to_nat definions & lemmas */
 
@@ -27,11 +33,12 @@ module rsa_ops {
     {
         reveal to_nat();
         reveal power();
+        lemma_seq_len_1(xs);
     }
 
     lemma to_nat_lemma_1(xs: seq<uint256>)
         requires |xs| == 2
-        ensures to_nat(xs) == xs[0] + xs[1] * BASE_256
+        ensures to_nat(xs) == xs[0] + xs[1] * NT.BASE_256
     {
         reveal to_nat();
         to_nat_lemma_0(xs[..1]);
@@ -51,17 +58,22 @@ module rsa_ops {
                 var len' := |xs| - 1;
                 var xs' := xs[..len'];
 
-                assert cong_B256(xs[len'] * pow_B256(len'), 0) by {
                     reveal cong();
-                    power_mod_lemma_1(BASE_256, len');
-                    cong_mul_lemma_1(pow_B256(len'), 0, xs[len'], BASE_256);
-                }
+                    lemma_power_mod(NT.BASE_256, len');
+                    calc ==> {
+                        pow_B256(len') % NT.BASE_256 == 0 % NT.BASE_256;
+                        { lemma_mod_equivalence(pow_B256(len'), 0, NT.BASE_256); }
+                        pow_B256(len') % NT.BASE_256 == 0;
+                        {lemma_mul_mod_noop_general_auto();}
+                        pow_B256(len') * xs[len'] % NT.BASE_256 == 0;
+                        cong_B256(xs[len'] * pow_B256(len'), 0);
+                    }
+                    lemma_mod_equivalence(pow_B256(len') * xs[len'], 0 * xs[len'], NT.BASE_256);
 
                 calc ==> {
                     true;
                         { reveal to_nat(); reveal cong(); }
                     cong_B256(to_nat(xs), to_nat(xs') + xs[len'] * pow_B256(len'));
-                        { cong_add_compose_lemma(to_nat(xs), to_nat(xs'), xs[len'] * pow_B256(len'), 0, BASE_256); }
                     cong_B256(to_nat(xs), to_nat(xs'));
                         {
                            lsw_cong_lemma(xs');
@@ -79,7 +91,7 @@ module rsa_ops {
     lemma uint512_view_lemma(num: uint512_view_t)
         ensures num.full
             == to_nat([num.lh, num.uh])
-            == num.lh + num.uh * BASE_256;
+            == num.lh + num.uh * NT.BASE_256;
     {
         reveal uint512_lh();
         reveal uint512_uh();
@@ -110,17 +122,17 @@ module rsa_ops {
                 to_nat(xs[..len']) + xs[len'] * pow_B256(len');
                 < { to_nat_bound_lemma(xs[..len']); }
                 pow_B256(len') + xs[len'] * pow_B256(len');
-                <= { assert xs[len'] <= BASE_256 - 1; }
-                pow_B256(len') + (BASE_256 - 1) * pow_B256(len');
-                BASE_256 * pow_B256(len');
-                == { power_add_one_lemma(BASE_256, len'); }
+                <= { assert xs[len'] <= NT.BASE_256 - 1; }
+                pow_B256(len') + (NT.BASE_256 - 1) * pow_B256(len');
+                NT.BASE_256 * pow_B256(len');
+                == { lemma_power_adds(NT.BASE_256, len', 1); }
                 pow_B256(len' + 1);
             }
         }
     }
 
     lemma to_nat_zero_prepend_lemma (xs: seq<uint256>)
-      ensures to_nat([0] + xs) == to_nat(xs) * BASE_256
+      ensures to_nat([0] + xs) == to_nat(xs) * NT.BASE_256
     {
         assume false;
     }
@@ -179,7 +191,7 @@ module rsa_ops {
             var len' := |xs| - 1;
             var (zs', cin) := seq_addc(xs[..len'], ys[..len']);
             var (z, _) := uint256_addc(xs[len'], ys[len'], cin);
-            assert xs[len'] + ys[len'] + cin == z + cout * BASE_256;
+            assert xs[len'] + ys[len'] + cin == z + cout * NT.BASE_256;
 
             calc {
                 to_nat(zs);
@@ -187,9 +199,9 @@ module rsa_ops {
                     { seq_addc_nat_lemma(xs[..len'], ys[..len'], zs', cin); }
                 to_nat(xs[..len']) + to_nat(ys[..len']) - cin * pow_B256(len') + z * pow_B256(len');
                 to_nat(xs[..len']) + to_nat(ys[..len']) + xs[len'] * pow_B256(len') 
-                    + ys[len'] * pow_B256(len') - cout * BASE_256 * pow_B256(len');
+                    + ys[len'] * pow_B256(len') - cout * NT.BASE_256 * pow_B256(len');
                     { reveal to_nat(); }
-                to_nat(xs) + to_nat(ys) - cout * BASE_256 * pow_B256(len');
+                to_nat(xs) + to_nat(ys) - cout * NT.BASE_256 * pow_B256(len');
                     { reveal power(); }
                 to_nat(xs) + to_nat(ys) - cout * pow_B256(|xs|);
             }
@@ -222,7 +234,7 @@ module rsa_ops {
             var len' := |xs| - 1;
             var (zs', bin) := seq_subb(xs[..len'], ys[..len']);
             var (z, _) := uint256_subb(xs[len'], ys[len'], bin);
-            assert bout * BASE_256 + xs[len'] - bin - ys[len'] == z;
+            assert bout * NT.BASE_256 + xs[len'] - bin - ys[len'] == z;
             
             calc {
                 to_nat(zs);
@@ -230,9 +242,11 @@ module rsa_ops {
                     { seq_subb_nat_lemma(xs[..len'], ys[..len'], zs', bin); }
                 to_nat(xs[..len']) - to_nat(ys[..len']) + bin * pow_B256(len') + z * pow_B256(len');
                 to_nat(xs[..len']) - to_nat(ys[..len']) + xs[len'] * pow_B256(len')
-                    - ys[len'] * pow_B256(len') + bout * BASE_256 * pow_B256(len');
+                    - ys[len'] * pow_B256(len') + bout * NT.BASE_256 * pow_B256(len');
                     { reveal to_nat(); }
-                to_nat(xs) - to_nat(ys) + bout * BASE_256 * pow_B256(len');
+                to_nat(xs) - to_nat(ys) + bout * NT.BASE_256 * pow_B256(len');
+                {lemma_power_1(NT.BASE_256);}
+                to_nat(xs) - to_nat(ys) + bout * power(NT.BASE_256, 1) * pow_B256(len');             
                     { reveal power(); }
                 to_nat(xs) - to_nat(ys) + bout * pow_B256(|xs|);
             }
@@ -264,7 +278,7 @@ module rsa_ops {
         // signature
         && rsa.SIG < rsa.M
 
-        && rsa.R == power(BASE_256, NUM_WORDS)
+        && rsa.R == power(NT.BASE_256, NUM_WORDS)
 
         && rsa.RR < rsa.M
         && cong(rsa.RR, rsa.R * rsa.R, rsa.M)
@@ -272,7 +286,7 @@ module rsa_ops {
         && rsa.R_INV == power(rsa.B256_INV, NUM_WORDS)
         && cong(rsa.R_INV * rsa.R, 1, rsa.M)
 
-        && cong(BASE_256 * rsa.B256_INV, 1, rsa.M)
+        && cong(NT.BASE_256 * rsa.B256_INV, 1, rsa.M)
     }
 
     datatype mvars = mvars(
