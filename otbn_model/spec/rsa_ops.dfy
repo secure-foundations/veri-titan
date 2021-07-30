@@ -139,26 +139,27 @@ module rsa_ops {
         ensures to_nat(xs) < pow_B256(|xs|)
     {
             reveal to_nat();
-        if |xs| != 0 {
-            var len' := |xs| - 1;
-            calc {
-                to_nat(xs); 
-                { lemma_seq_prefix(xs, len'); }
-                to_nat(xs[..len']) + to_nat(xs[len'..]) * pow_B256(len');
-                < { lemma_seq_nat_bound(xs[..len']); }
-                pow_B256(len') + to_nat(xs[len'..]) * pow_B256(len');
-                <= {
-                    to_nat_lemma_0(xs[len'..]); assert to_nat(xs[len'..]) <= NT.BASE_256 - 1;
-                    lemma_mul_inequality(to_nat(xs[len'..]), NT.BASE_256 - 1, pow_B256(len'));
-                }
-                pow_B256(len') + (NT.BASE_256 - 1) * pow_B256(len');
-                NT.BASE_256 * pow_B256(len');
-                == {lemma_power_1(NT.BASE_256);}
-                pow_B256(1) * pow_B256(len');
-                == { lemma_power_adds(NT.BASE_256, 1, len'); }
-                pow_B256(1 + len');
-            }
-        }
+            lemma_seq_nat_bound(xs);
+        // if |xs| != 0 {
+        //     var len' := |xs| - 1;
+        //     calc {
+        //         to_nat(xs); 
+        //         { lemma_seq_prefix(xs, len'); }
+        //         to_nat(xs[..len']) + to_nat(xs[len'..]) * pow_B256(len');
+        //         < { lemma_seq_nat_bound(xs[..len']); }
+        //         pow_B256(len') + to_nat(xs[len'..]) * pow_B256(len');
+        //         <= {
+        //             to_nat_lemma_0(xs[len'..]); assert to_nat(xs[len'..]) <= NT.BASE_256 - 1;
+        //             lemma_mul_inequality(to_nat(xs[len'..]), NT.BASE_256 - 1, pow_B256(len'));
+        //         }
+        //         pow_B256(len') + (NT.BASE_256 - 1) * pow_B256(len');
+        //         NT.BASE_256 * pow_B256(len');
+        //         == {lemma_power_1(NT.BASE_256);}
+        //         pow_B256(1) * pow_B256(len');
+        //         == { lemma_power_adds(NT.BASE_256, 1, len'); }
+        //         pow_B256(1 + len');
+        //     }
+        // }
     }
 
     lemma to_nat_zero_prepend_lemma (xs: seq<uint>)
