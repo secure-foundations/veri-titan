@@ -23,7 +23,7 @@ module rsa_ops {
     import opened Mul
     import NT = NativeTypes
     import opened refining_NatSeq
-    // import opened Seq
+    import opened Seq
 
 
 /* to_nat definions & lemmas */
@@ -39,7 +39,7 @@ module rsa_ops {
 
     lemma to_nat_lemma_0(xs: seq<uint>)
         requires |xs| == 1
-        ensures to_nat(xs) == xs[0]
+        ensures to_nat(xs) == first(xs);
     {
         reveal to_nat();
         reveal power();
@@ -48,15 +48,14 @@ module rsa_ops {
 
     lemma to_nat_lemma_1(xs: seq<uint>)
         requires |xs| == 2
-        ensures to_nat(xs) == xs[0] + xs[1] * NT.BASE_256
+        ensures to_nat(xs) == first(xs) + last(xs) * NT.BASE_256
     {
         reveal to_nat();
-        to_nat_lemma_0(xs[..1]);
+        to_nat_lemma_0(drop_first(xs));
         reveal power();
         lemma_seq_len_2(xs);
     }
 
-    // unstable
     lemma lsw_cong_lemma(xs: seq<uint>)
         requires |xs| >= 1;
         ensures cong_B256(to_nat(xs), xs[0]);
@@ -84,8 +83,17 @@ module rsa_ops {
                 calc ==> {
                     true;
                         { 
-                            reveal to_nat(); reveal cong(); 
-                            lemma_mod_equivalence(to_nat(xs), to_nat(xs') + xs[len'] * pow_B256(len'), NT.BASE_256);
+                            reveal to_nat(); reveal cong();
+                            calc ==> {
+                                xs == xs' + [xs[len']];
+                                {lemma_seq_eq(xs, xs' + [xs[len']]);}
+                                to_nat(xs) == to_nat(xs' + [xs[len']]);
+                                {lemma_seq_prefix(xs' + [xs[len']], len');}
+                                to_nat(xs) == to_nat(xs') + to_nat([xs[len']]) * pow_B256(len'); 
+                                { lemma_nat_seq_nat(xs[len']); to_nat_lemma_0([xs[len']]);
+                                    lemma_mod_equivalence(to_nat(xs), to_nat(xs') + xs[len'] * pow_B256(len'), NT.BASE_256);}
+                                is_mod_equivalent(to_nat(xs), to_nat(xs') + xs[len'] * pow_B256(len'), NT.BASE_256);
+                            }
                         }
                     cong_B256(to_nat(xs), to_nat(xs') + xs[len'] * pow_B256(len'));
                     cong_B256(to_nat(xs), to_nat(xs'));
