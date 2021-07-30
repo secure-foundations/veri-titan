@@ -79,7 +79,10 @@ module bv_ops {
 
     function method {:opaque} uint32_mulhu(x:uint32, y:uint32) : uint32
     {
-        ((((x * y) % BASE_64) as bv64) >> 32) as uint32
+      single_digit_lemma_0(x, y, BASE_32-1);
+      var r := x as int *y as int;
+      assert 0 <= r <= (BASE_32-1) *(BASE_32-1) < BASE_64;
+      uint64_uh(r)
     }
 
     function uint32_gt(x:uint32, y:uint32) : uint32
@@ -128,4 +131,22 @@ module bv_ops {
             (u + 1) * (u + 1);
         }
     }
+
+    function method {:opaque} uint64_lh(x: uint64): uint32
+    {
+        x % BASE_32
+    }
+
+    function method {:opaque} uint64_uh(x: uint64): uint32
+    {
+        x / BASE_32
+    }
+
+    lemma lemma_uint64_half_split(x: uint64)
+        ensures x == uint64_lh(x) + uint64_uh(x) * BASE_32;
+    {
+        reveal uint64_lh();
+        reveal uint64_uh();
+    }
+    
 } // end module ops

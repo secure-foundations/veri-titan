@@ -1,0 +1,52 @@
+include "decls.vad"
+
+#verbatim
+include "../code/vale.dfy"
+include "../gen/decls.dfy"
+include "../spec/rsa_ops.dfy"
+
+module mul256 {
+
+import opened bv_ops
+import opened rv_ops
+import opened rsa_ops
+import opened rv_consts
+import opened rv_decls
+import opened rv_vale
+
+#endverbatim
+
+ghost procedure lemma_uint64_half_split(ghost x: nat) extern;
+
+procedure mul32()
+    modifies
+        x10; x11; x15;
+    ensures
+        to_nat(seq(x11, x10)) == old(x11) * old(x10);
+{
+    ghost var v10_0 := x10;
+    ghost var v11_0 := x11;
+
+    ghost var r0 := v11_0 * v10_0;
+
+    // move starting x11 into x15
+    mv(x15, x11);
+    assert(x15 == v11_0);
+
+    // put upper-half of multiplication of x11 and x10 into x11
+    mulhu(x11, x10, x15);
+    reveal uint32_mulhu;
+
+    // put lower-half of x11 and x10 into x10
+    mul(x10, x10, x15);
+    reveal uint32_mul;
+
+    // end result: x10 * x11 in x11-x10, x15 has old(x11)
+    lemma_uint64_half_split(r0);
+    
+    to_nat_lemma_1(seq(x11, x10));
+}
+        
+#verbatim
+}
+#endverbatim

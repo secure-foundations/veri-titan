@@ -18,4 +18,4 @@ module rv_consts {
 
     // ignore the mapping
     const NA :int := -1;
-}
+} // end module ops

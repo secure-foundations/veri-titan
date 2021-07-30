@@ -1,9 +1,11 @@
 include{: verbatim} "../code/vale.dfy"
+include{: verbatim} "../spec/rsa_ops.dfy"
 
 #verbatim
 module rv_decls {
 import opened bv_ops
 import opened rv_ops
+import opened rsa_ops
 import opened rv_consts
 import opened rv_vale
 #endverbatim
@@ -45,7 +47,14 @@ function operator(.ok :=) (s: state, b: bool): state extern;
 
 type reg32_t: Type(0) extern;
 
-type mem_t: Type(0) := map(int, uint32);
+type mem_t: Type(0) := map(int, seq(uint32));
+    
+function mem_base_addr_valid(wmem: mem_t, ptr: int, size: nat): bool extern;
+
+type gprs_t: Type(0) extern;
+function operator([]) (s: gprs_t, i: int): uint32 extern; 
+function operator([ := ]) (s: gprs_t, i: int, v: uint32): gprs_t extern;
+function operator([ .. ]) (s: gprs_t, begin: int, end: int): seq(uint32) extern;
 
 function Loop(u: uint32) : bool extern;
 function LoopImm(u: uint32) : bool extern;
@@ -63,6 +72,20 @@ var mem: mem_t {:state mem()};
 function mem_addr_valid(h: mem_t, ptr: int): bool extern;
 
 type iter_t: Type(0) extern;
+function iter_inv(iter: iter_t, h: mem_t, ptr: int): bool extern;
+function iter_safe(iter: iter_t, h: mem_t, ptr: int): bool extern;
+    
+function iter_cons(base_addr: int, index: nat, buff: seq(uint32)): iter_t extern;
+function lw_next_iter(iter: iter_t): iter_t extern;
+function sw_next_iter(iter: iter_t, value: uint32): iter_t extern;
+function operator(.base_addr) (iter :iter_t): int extern;
+function operator(.index) (iter :iter_t): int extern;
+function operator(.index := ) (iter: iter_t, i :int): iter_t extern;
+function operator(.buff) (iter :iter_t): seq(uint32) extern;
+function operator(.buff := ) (iter :iter_t, buff: seq(uint32)): iter_t extern;
+
+function to_nat(s: seq(uint32)): nat extern;
+ghost procedure to_nat_lemma_1(ghost xs: seq(uint32)) extern;
  
 type string: Type(0) extern;
 
@@ -134,85 +157,101 @@ function uint32_mulhu(x: uint32, y: uint32): uint32 extern;
     
 // load instructions
     
-procedure lw(inout dst: reg32, in src1: reg32, in src2: imm32)
+procedure lw(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
     {:instruction Ins32(RV_LW(dst, src1, src2))}
     reads
         mem;
     requires
-        mem_addr_valid(mem, src1 + src2);
         src2 < 0x1000; // 12-bit
+        iter_safe(iter, mem, src1 + src2);
     ensures
-        mem_addr_valid(mem, old(src1) + old(src2));
         // mem location = src + sign-extended immediate
-        dst == mem[old(src1) + old(src2)];
+        dst == old(mem[iter.base_addr][iter.index]);
 {
     assume false;
 }
 
-procedure lh(inout dst: reg32, in src1: reg32, in src2: imm32)
-    {:instruction Ins32(RV_LH(dst, src1, src2))}
+procedure lw_safe(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
+    returns (ghost next_iter: iter_t)
     reads
         mem;
     requires
-        mem_addr_valid(mem, src1 + src2);
-        src1 < 0x10000; // 16-bit
-        src2 < 0x1000;  // 12-bit
+        src2 < 0x1000; // 12-bit
+        iter_safe(iter, mem, src1 + src2);
     ensures
-        mem_addr_valid(mem, old(src1) + old(src2));
-        // mem location = sign-extended src + sign-extended immediate
-        dst == mem[old(src1) + old(src2)];
+        // mem location = src + sign-extended immediate
+        dst == old(mem[iter.base_addr][iter.index]);
+        iter_inv(next_iter, mem, old(src1) + old(src2) + 4);
+        next_iter == lw_next_iter(iter);
 {
-    assume false;
+    next_iter := iter.(index := iter.index + 1);
+    lw(dst, src1, src2, iter);
 }
 
-procedure lhu(inout dst: reg32, in src1: reg32, in src2: imm32)
-    {:instruction Ins32(RV_LHU(dst, src1, src2))}
-    reads
-        mem;
-    requires
-        mem_addr_valid(mem, src1 + src2);
-        src1 < 0x10000; // 16-bit
-        src2 < 0x1000;  // 12-bit
-    ensures
-        mem_addr_valid(mem, old(src1) + old(src2));
-        // mem location = zero-extended src + zero-extended immediate
-        dst == mem[old(src1) + old(src2)];
-{
-    assume false;
-}
-
-procedure lb(inout dst: reg32, in src1: reg32, in src2: imm32)
-    {:instruction Ins32(RV_LB(dst, src1, src2))}
-    reads
-        mem;
-    requires
-        mem_addr_valid(mem, src1 + src2);
-        src1 < 0x100; // 8-bit
-        src2 < 0x1000;  // 12-bit
-    ensures
-        mem_addr_valid(mem, old(src1) + old(src2));
-        // mem location = sign-extended src + sign-extended immediate
-        dst == mem[old(src1) + old(src2)];
-{
-    assume false;
-}
-
-procedure lbu(inout dst: reg32, in src1: reg32, in src2: imm32)
-    {:instruction Ins32(RV_LBU(dst, src1, src2))}
-    reads
-        mem;
-    requires
-        mem_addr_valid(mem, src1 + src2);
-        src1 < 0x100; // 8-bit
-        src2 < 0x1000;  // 12-bit
-    ensures
-        mem_addr_valid(mem, old(src1) + old(src2));
-        // mem location = zero-extended src + zero-extended immediate
-        dst == mem[old(src1) + old(src2)];
-{
-    assume false;
-}
-
+// procedure lh(inout dst: reg32, in src1: reg32, in src2: imm32)
+    // {:instruction Ins32(RV_LH(dst, src1, src2))}
+    // reads
+        // mem;
+    // requires
+        // mem_addr_valid(mem, src1 + src2);
+        // src1 < 0x10000; // 16-bit
+        // src2 < 0x1000;  // 12-bit
+    // ensures
+        // mem_addr_valid(mem, old(src1) + old(src2));
+        // // mem location = sign-extended src + sign-extended immediate
+        // dst == mem[old(src1) + old(src2)];
+// {
+    // assume false;
+// }
+// 
+// procedure lhu(inout dst: reg32, in src1: reg32, in src2: imm32)
+    // {:instruction Ins32(RV_LHU(dst, src1, src2))}
+    // reads
+        // mem;
+    // requires
+        // mem_addr_valid(mem, src1 + src2);
+        // src1 < 0x10000; // 16-bit
+        // src2 < 0x1000;  // 12-bit
+    // ensures
+        // mem_addr_valid(mem, old(src1) + old(src2));
+        // // mem location = zero-extended src + zero-extended immediate
+        // dst == mem[old(src1) + old(src2)];
+// {
+    // assume false;
+// }
+// 
+// procedure lb(inout dst: reg32, in src1: reg32, in src2: imm32)
+    // {:instruction Ins32(RV_LB(dst, src1, src2))}
+    // reads
+        // mem;
+    // requires
+        // mem_addr_valid(mem, src1 + src2);
+        // src1 < 0x100; // 8-bit
+        // src2 < 0x1000;  // 12-bit
+    // ensures
+        // mem_addr_valid(mem, old(src1) + old(src2));
+        // // mem location = sign-extended src + sign-extended immediate
+        // dst == mem[old(src1) + old(src2)];
+// {
+    // assume false;
+// }
+// 
+// procedure lbu(inout dst: reg32, in src1: reg32, in src2: imm32)
+    // {:instruction Ins32(RV_LBU(dst, src1, src2))}
+    // reads
+        // mem;
+    // requires
+        // mem_addr_valid(mem, src1 + src2);
+        // src1 < 0x100; // 8-bit
+        // src2 < 0x1000;  // 12-bit
+    // ensures
+        // mem_addr_valid(mem, old(src1) + old(src2));
+        // // mem location = zero-extended src + zero-extended immediate
+        // dst == mem[old(src1) + old(src2)];
+// {
+    // assume false;
+// }
+// 
 // --------------------------------------------------------------
 
 // todo(?): fence fencei
@@ -221,13 +260,21 @@ procedure lbu(inout dst: reg32, in src1: reg32, in src2: imm32)
 
 // immediate instructions
     
-// addi implements mv
 procedure addi(inout dst: reg32, in src1: reg32, in src2: imm32)
     {:instruction Ins32(RV_ADDI(dst, src1, src2))}
     requires
        src1 + src2 < 0xffff_ffff;
     ensures
         dst == old(src1) + old(src2);
+{
+    assume false;
+}
+    
+// pseudo-instruction: mv dst src is addi dst src 0
+procedure mv(inout dst: reg32, in src: reg32)
+    {:instruction Ins32(RV_ADDI(dst, src, 0))}
+    ensures
+        dst == old(src);
 {
     assume false;
 }
@@ -286,7 +333,7 @@ procedure ori(inout dst: reg32, in src1: reg32, in src2: imm32)
 procedure andi(inout dst: reg32, in src1: reg32, in src2: imm32)
     {:instruction Ins32(RV_ANDI(dst, src1, src2))}
     requires
-        src2 < 32;
+        src2 < 0x1000;
     ensures
         dst == uint32_and(old(src1), old(src2));
 {
@@ -337,53 +384,55 @@ procedure srai(inout dst: reg32, in src1: reg32, in src2: imm32)
     
 // store instructions
     
-procedure sw(inout src1: reg32, in src2: reg32, in offset: imm32)
+procedure sw(in src1: reg32, in src2: reg32, in offset: imm32, ghost iter: iter_t)
+    returns (ghost next_iter: iter_t)
     {:instruction Ins32(RV_SW(src1, src2, offset))}
     modifies
         mem;
     requires
-        mem_addr_valid(mem, src1 + offset);
+        iter_safe(iter, mem, src1 + offset);
         offset < 0x1000;
     ensures
-        mem_addr_valid(mem, old(src1) + offset);
         // mem location = src1 + sign-extended offset, store src2 value at mem location
-        mem[old(src1) + offset] == old(src2);
+        mem == old(mem[iter.base_addr := mem[iter.base_addr][iter.index := src2]]);
+        iter_inv(next_iter, mem, src1 + offset + 4);
+        next_iter == sw_next_iter(iter, src2);
 {
     assume false;
 }
 
-procedure sh(inout src1: reg32, in src2: reg32, in offset: imm32)
-    {:instruction Ins32(RV_SH(src1, src2, offset))}
-    reads
-        mem;
-    requires
-        mem_addr_valid(mem, src1 + offset);
-        src2 < 0x10000; // 16-bit
-        offset < 0x1000; // 12-bit
-    ensures
-        mem_addr_valid(mem, old(src1) + offset);
-        // mem location = src1 + sign-extended offset, store signed src2 value at mem location
-        mem[old(src1) + offset] == old(src2);
-{
-    assume false;
-}
-
-procedure sb(inout src1: reg32, in src2: reg32, in offset: imm32)
-    {:instruction Ins32(RV_SB(src1, src2, offset))}
-    reads
-        mem;
-    requires
-        mem_addr_valid(mem, src1 + offset);
-        src2 < 0x100; // 8-bit
-        offset < 0x1000; // 12-bit
-    ensures
-        mem_addr_valid(mem, old(src1) + offset);
-        // mem location = src1 + sign-extended offset, store signed src2 value at mem location
-        mem[old(src1) + offset] == old(src2);
-{
-    assume false;
-}
-
+// procedure sh(inout src1: reg32, in src2: reg32, in offset: imm32)
+    // {:instruction Ins32(RV_SH(src1, src2, offset))}
+    // reads
+        // mem;
+    // requires
+        // mem_addr_valid(mem, src1 + offset);
+        // src2 < 0x10000; // 16-bit
+        // offset < 0x1000; // 12-bit
+    // ensures
+        // mem_addr_valid(mem, old(src1) + offset);
+        // // mem location = src1 + sign-extended offset, store signed src2 value at mem location
+        // mem[old(src1) + offset] == old(src2);
+// {
+    // assume false;
+// }
+// 
+// procedure sb(inout src1: reg32, in src2: reg32, in offset: imm32)
+    // {:instruction Ins32(RV_SB(src1, src2, offset))}
+    // reads
+        // mem;
+    // requires
+        // mem_addr_valid(mem, src1 + offset);
+        // src2 < 0x100; // 8-bit
+        // offset < 0x1000; // 12-bit
+    // ensures
+        // mem_addr_valid(mem, old(src1) + offset);
+        // // mem location = src1 + sign-extended offset, store signed src2 value at mem location
+        // mem[old(src1) + offset] == old(src2);
+// {
+    // assume false;
+// }
+// 
 // --------------------------------------------------------------
 
 // register-register operations

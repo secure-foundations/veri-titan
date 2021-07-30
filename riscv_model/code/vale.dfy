@@ -1,11 +1,9 @@
-include "../spec/rv_ops.dfy"
-include "../lib/powers.dfy"
-include "../lib/congruences.dfy"
+include "../spec/rsa_ops.dfy"
 
 module rv_vale {
-  
     import opened rv_ops
     import opened bv_ops
+    import opened rsa_ops
     import opened congruences
     import opened rv_consts
 
@@ -47,7 +45,7 @@ module rv_vale {
         s.eval_reg32(r)
     }
 
-    function va_get_mem(s: va_state): map<int, uint32>
+    function va_get_mem(s: va_state): mem_t
     {
         s.mem
     }

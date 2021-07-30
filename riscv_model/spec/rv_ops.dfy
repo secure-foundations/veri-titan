@@ -1,6 +1,5 @@
 include "rv_consts.dfy"
 include "bv_ops.dfy"
-
 include "../lib/powers.dfy"
 include "../lib/congruences.dfy"
 
@@ -19,18 +18,86 @@ module rv_ops {
 
     type gprs_t = gprs : seq<uint32> | |gprs| == 32 witness *
 
-    type mem_t = map<int, uint32>
+    
+    /* gpr_view definion */
 
-    predicate mem_addr_valid(mem: mem_t, addr: int)
+    datatype uint64_raw = uint64_cons(
+        lh: uint32, uh: uint32, full: uint64)
+
+    type uint64_view_t = num: uint64_raw |
+        && num.lh == uint64_lh(num.full)
+        && num.uh == uint64_uh(num.full)
+        witness *
+
+    predicate valid_uint64_view(
+        wdrs: gprs_t, num: uint64_view_t,
+        li: int, ui: int)
+        requires -1 <= li < BASE_5;
+        requires -1 <= ui < BASE_5;
+    {
+        && (li == NA || wdrs[li] == num.lh)
+        && (ui == NA || wdrs[ui] == num.uh)
+    }
+
+    predicate valid_gpr_view(gprs: gprs_t, view: seq<uint32>, start: nat, len: nat)
+    {   
+        && |view| == len
+        && start + len <= 32
+        && gprs[start..start+len] == view
+    }
+
+    
+   /* memory definitions */ 
+
+    type mem_t = map<int, seq<uint32>>
+
+    predicate mem_base_addr_valid(mem: mem_t, addr: int, size: nat)
     {
         && addr in mem
+        // buff is not empty
+        && |mem[addr]| == size != 0
+        // buff does not extend beyond mem limit
+        && addr + 4 * size <= DMEM_LIMIT
     }
 
-    predicate mem_addr_mapped(mem: mem_t, addr: int, value: uint32)
+    /* iter_t definion */
+
+    datatype iter_t = iter_cons(base_addr: int, index: nat, buff: seq<uint32>)
+
+    function lw_next_iter(iter: iter_t): iter_t
     {
-        && mem_addr_valid(mem, addr)
-        && mem[addr] == value
+        iter.(index := iter.index + 1)
     }
+
+    function sw_next_iter(iter: iter_t, value: uint32): iter_t
+        requires iter.index < |iter.buff|
+    {
+        iter.(index := iter.index + 1)
+            .(buff := iter.buff[iter.index := value])
+    }
+
+    predicate iter_inv(iter: iter_t, mem: mem_t, address: int)
+    {
+        var base_addr := iter.base_addr;
+        // address is correct
+        && address == base_addr + 4 * iter.index
+        // base_addr points to a valid buffer
+        && mem_base_addr_valid(mem, base_addr, |iter.buff|)
+        // the view is consistent with mem
+        && mem[base_addr] == iter.buff
+        // the index is within bound (or at end)
+        && iter.index <= |iter.buff|
+    }
+
+    predicate iter_safe(iter: iter_t, mem: mem_t, address: int)
+    {
+        && iter_inv(iter, mem, address)
+        // tighter constraint so we can dereference
+        && iter.index < |iter.buff|
+    }
+
+
+    /* state definition */
 
     datatype state = state(
         gprs: gprs_t, // 32-bit registers
