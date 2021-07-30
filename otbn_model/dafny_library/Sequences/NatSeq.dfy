@@ -214,13 +214,15 @@ abstract module NatSeq {
     }
   }
 
-  /* If two sequences are not equal, their nat representations are not equal. */
-  lemma lemma_seq_neq(xs: seq<uint>, ys: seq<uint>, n: nat)
-    requires |xs| == |ys| == n
+  // 
+   /* If two sequences of the same length are not equal, their nat
+  representations are not equal. */
+  lemma lemma_seq_neq(xs: seq<uint>, ys: seq<uint>)
+    requires |xs| == |ys|
     requires xs != ys
     ensures to_nat(xs) != to_nat(ys)
   {
-    ghost var i: nat := 0;
+    ghost var i: nat, n: nat := 0, |xs|;
 
     while i < n
       invariant 0 <= i < n
@@ -242,6 +244,20 @@ abstract module NatSeq {
     lemma_to_nat_eq_to_nat_rev_auto();
 
     lemma_seq_prefix_neq(xs, ys, i+1);
+  }
+  /* If the nat representations of two sequences of the same length are equal
+  to each other, the sequences are the same. */
+  lemma lemma_seq_eq(xs: seq<uint>, ys: seq<uint>)
+    requires |xs| == |ys|
+    requires to_nat(xs) == to_nat(ys)
+    ensures xs == ys
+  {
+    calc ==> {
+      xs != ys;
+        { lemma_seq_neq(xs, ys); }
+      to_nat(xs) != to_nat(ys);
+      false;
+    }
   }
 
   /* Proves mod equivalence between the nat representation of a sequence and
