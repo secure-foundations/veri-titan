@@ -72,17 +72,21 @@ module bv_ops {
         (x - y) % BASE_32
     }
 
-    function method {:opaque} uint32_mul(x:uint32, y:uint32) : uint32
+    function method uint32_full_mul(x:uint32, y:uint32): (r: uint64)
+        ensures r == x * y
     {
-        (x * y) % BASE_32
+        single_digit_lemma_0(x, y, BASE_32-1);
+        x * y
     }
 
-    function method {:opaque} uint32_mulhu(x:uint32, y:uint32) : uint32
+    function method uint32_mul(x:uint32, y:uint32) : uint32
     {
-      single_digit_lemma_0(x, y, BASE_32-1);
-      var r := x as int *y as int;
-      assert 0 <= r <= (BASE_32-1) *(BASE_32-1) < BASE_64;
-      uint64_uh(r)
+      uint64_lh(uint32_full_mul(x, y))
+    }
+
+    function method uint32_mulhu(x:uint32, y:uint32) : uint32
+    {
+      uint64_uh(uint32_full_mul(x, y))
     }
 
     function uint32_gt(x:uint32, y:uint32) : uint32
