@@ -62,7 +62,7 @@ module bv_ops {
         (x as bv32 << amount) as uint32
     }
 
-    function method {:opaque} uint32_add(x:uint32, y:uint32):uint32
+    function method uint32_add(x:uint32, y:uint32):uint32
     {
         var r := x as int + y as int;
         if r >= BASE_32 then (r - BASE_32) else r
