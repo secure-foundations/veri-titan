@@ -42,12 +42,17 @@ module vt_vale {
 
     function va_get_reg32_t(r : reg32_t, s: va_state): uint32
     {
-        s.eval_reg32(r)
+        s.read_reg32(r)
     }
 
     function va_get_reg256_t(r :reg256_t, s: va_state): uint256
     {
-        s.eval_reg256(r)
+        s.read_reg256(r)
+    }
+
+    function va_eval_reg256(s: va_state, r :reg256_t): uint256
+    {
+        s.read_reg256(r)
     }
 
     function va_get_fgroups(s: va_state): fgroups_t
@@ -93,7 +98,8 @@ module vt_vale {
     function va_update_reg32_t(r: reg32_t, sM: va_state, sK: va_state): va_state
     {
         var index := r.index;
-        sK.(gprs := sK.gprs[index := sM.gprs[index]])
+        sK.write_reg32(r, sM.read_reg32(r))
+        // sK.(gprs := sK.gprs[index := sM.gprs[index]])
     }
 
     function va_update_reg256_t(r :reg256_t, sM: va_state, sK: va_state): va_state
@@ -139,7 +145,7 @@ module vt_vale {
 
     function va_eval_reg32(s: va_state, r : reg32_t):uint32
     {
-        s.eval_reg32(r)
+        s.read_reg32(r)
     }
 
     function va_update_operand_reg32(r: reg32_t, sM: va_state, sK: va_state): va_state
@@ -168,10 +174,10 @@ module vt_vale {
         !r.WRND?
     }
 
-    function va_eval_reg256(s: va_state, r :reg256_t):uint256
+    function va_read_reg256(s: va_state, r :reg256_t):uint256
         requires va_is_src_reg256(r, s);
     {
-        s.eval_reg256(r)
+        s.read_reg256(r)
     }
 
     function va_update_operand_reg256(r :reg256_t, sM: va_state, sK: va_state): va_state

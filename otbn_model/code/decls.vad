@@ -33,6 +33,8 @@ type uint32:  Type(0) := int_range(0, 0xffffffff);
 type uint128: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff);
 type uint256: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff);
 
+type int12:  Type(0) := int_range((-2048), 2047);
+
 function power(b: int, e: nat) : int extern;
 function cong(a: int, b: int, n: int) : bool extern;
 function cong_B256(a: int, b: int) : bool extern;
@@ -276,11 +278,9 @@ function uint512_uh(a: int): uint256 extern;
 function uint512_lh(a: int): uint256 extern;
 function half_splited_uint512(x: int, lh: uint256, uh: uint256): bool extern;
 
-function otbn_xor(a: uint256, b: uint256, shift: shift_t): uint256 extern;
-function otbn_or(a: uint256, b: uint256, shift: shift_t): uint256 extern;
-function otbn_and(a: uint256, b: uint256, shift: shift_t): uint256 extern;
-function otbn_addc(a: uint256, b: uint256, shift: shift_t, carry: bool): tuple(uint256, flags_t) extern;
-function otbn_subb(a: uint256, b: uint256, shift: shift_t, carry: bool): tuple(uint256, flags_t) extern;
+function otbn_xor(a: uint256, b: uint256, shift: shift_t, cin: bool): tuple(uint256, flags_t) extern;
+function otbn_addc(a: uint256, b: uint256, shift: shift_t, cin: bool): tuple(uint256, flags_t) extern;
+function otbn_subb(a: uint256, b: uint256, shift: shift_t, bin: bool): tuple(uint256, flags_t) extern;
 function otbn_subbi(a: uint256, b: uint256): tuple(uint256, flags_t) extern;
 function otbn_subm(a: uint256, b: uint256, mod: uint256): uint256 extern;
 function otbn_rshi(src1: uint256, src2: uint256, imm: uint32): uint256 extern;
@@ -293,11 +293,12 @@ function seq_addc(x: seq(uint256), y: seq(uint256)) : tuple(seq(uint256), uint1)
 
 function seq_addc_512_is_safe(x: seq(uint256), y: seq(uint256)) : bool extern;
 
-procedure lw(out grd: reg32, in offset: imm32, in grs1: reg32)
+procedure lw(out grd: reg32, inline offset: int12, in grs1: reg32)
     {:instruction Ins32(LW(grd, grs1, offset))}
     reads
         xmem;
     requires
+        offset > 0;
         xmem_addr_valid(xmem, grs1 + offset);
     ensures
         xmem_addr_valid(xmem, old(grs1) + offset);
@@ -306,10 +307,12 @@ procedure lw(out grd: reg32, in offset: imm32, in grs1: reg32)
     assume false;
 }
 
-procedure sw(in grs2: reg32, in offset: imm32, in grs1: reg32)
+procedure sw(in grs2: reg32, inline offset: int12, in grs1: reg32)
     {:instruction Ins32(SW(grs2, grs1, offset))}
     modifies
         xmem;
+    requires
+        offset > 0;
     requires/ensures
         xmem_addr_valid(xmem, grs1 + offset);
     ensures
@@ -325,96 +328,22 @@ procedure add(inout dst: reg32, in src1: reg32, in src2: reg32)
     ensures
         dst == old(src1) + old(src2);
 {
-    assume false;
+    reveal eval_code_opaque;
+    reveal uint32_add;
 }
 
-procedure addi(inout dst: reg32, in src1: reg32, in src2: imm32)
-    {:instruction Ins32(ADDI(dst, src1, src2))}
+procedure addi(inout dst: reg32, in src1: reg32, inline imm: int12)
+    {:instruction Ins32(ADDI(dst, src1, imm))}
     requires
-       src1 + src2 < BASE_32;
+        imm > 0;
+        src1 + imm < BASE_32;
     ensures
-        dst == old(src1) + old(src2);
+        dst == old(src1) + imm;
 {
     assume false;
 }
 
-procedure sub(inout dst: reg32, in src1: reg32, in src2: reg32)
-    {:instruction Ins32(SUB(dst, src1, src2))}
-    requires
-        src1 - src2 >= 0;
-    ensures
-        dst == old(src1 - src2);
-{
-    assume false;
-}
-
-procedure and(inout dst: reg32, in src1: reg32, in src2: reg32)
-    {:instruction Ins32(AND(dst, src1, src2))}
-    ensures
-        dst == uint32_and(old(src1), old(src2));
-{
-    assume false;
-}
-
-procedure andi(inout dst: reg32, in src1: reg32, in src2: imm32)
-    {:instruction Ins32(ANDI(dst, src1, src2))}
-    requires
-        src2 < 0x1000;
-    ensures
-        dst == uint32_and(old(src1), uint32_se(old(src2), 12));
-{
-    assume false;
-}
-
-procedure or(inout dst: reg32, in src1: reg32, in src2: reg32)
-    {:instruction Ins32(OR(dst, src1, src2))}
-    ensures
-        dst == uint32_or(old(src1), old(src2));
-{
-    assume false;
-}
-
-procedure ori(inout dst: reg32, in src1: reg32, in src2: imm32)
-    {:instruction Ins32(ORI(dst, src1, src2))}
-    requires
-        src2 < 0x1000;
-    ensures
-        dst == uint32_or(old(src1), uint32_se(old(src2), 12));
-{
-    assume false;
-}
-
-procedure xor(inout dst: reg32, in src1: reg32, in src2: reg32)
-    {:instruction Ins32(XOR(dst, src1, src2))}
-    ensures
-        dst == uint32_xor(old(src1), old(src2));
-{
-    assume false;
-}
-
-procedure xori(inout dst: reg32, in src1: reg32, in src2: imm32)
-    {:instruction Ins32(XORI(dst, src1, src2))}
-    requires
-        src2 < 0x1000;
-    ensures
-        dst == uint32_xor(old(src1), uint32_se(old(src2), 12));
-{
-    assume false;
-}
-
-procedure lui32(inout dst: reg32, in src: imm32)
-    {:instruction Ins32(LUI(dst, src))}
-    requires
-        src < 0x100000; // 20-bit immediate
-    ensures
-        dst == uint32_ls(old(src), 12);
-{
-    assume false;
-}
-
-// procedure csrrw(inout dst: reg32, inout csr: reg32, in src: reg32)
-
-procedure li(inout dst: reg32, in imm: imm32)
+procedure li(inout dst: reg32, inline imm: uint32)
     {:instruction Ins32(LI(dst, imm))}
     ensures
         dst == imm;
@@ -422,10 +351,15 @@ procedure li(inout dst: reg32, in imm: imm32)
     assume false;    
 }
 
-procedure bn_xor(inout dst: reg256, in src1: reg256, in src2: reg256, inline shift: shift_t)
-    {:instruction Ins256(BN_XOR(dst, src1, src2, shift))}
+procedure bn_xor(inout dst: reg256, in src1: reg256, in src2: reg256, inline shift: shift_t, inline which_group: uint1)
+    {:instruction Ins256(BN_XOR(dst, src1, src2, shift, which_group))}
+    modifies
+        fgroups;    
     ensures
-        dst == otbn_xor(old(src1), old(src2), shift);
+        let cin := old(select_fgroup(fgroups, which_group).cf);
+        let result := otbn_xor(old(src1), old(src2), shift, cin);
+        dst == fst(result) &&
+        fgroups == update_fgroups(old(fgroups), which_group, snd(result));
 {
     assume false;
 }
@@ -502,52 +436,6 @@ procedure bn_subb(inout dst: reg256, in src1: reg256, in src2: reg256, inline sh
         fgroups == update_fgroups(old(fgroups), which_group, snd(result));
 {
     assume false; // TODO
-}
-
-// procedure bn_subi(inout dst: reg256, in src1: reg256, in src2: imm128, inline which_group: uint1)
-//     {:instruction Ins256(BN_SUBI(dst, src1, src2, which_group))}
-//     requires
-//         src2 < 1024;
-//     modifies
-//         fgroups;
-//     ensures
-//         let result := otbn_subb(old(src1), old(src2), shift, false) in
-//         dst == fst(result) &&
-//         fgroups == update_fgroups(old(fgroups), which_group, snd(result));
-// {
-//     assume false;
-// }
-
-procedure bn_subm(inout dst: reg256, in src1: reg256, in src2: reg256)
-    {:instruction Ins256(BN_SUBM(dst, src1, src2))}
-    requires
-        false; // TODO: dst cannot be wmod
-    reads
-        wmod;
-    ensures
-        dst == otbn_subm(old(src1), old(src2), wmod);
-{
-    assume false;
-}
-
-procedure bn_or(inout dst: reg256, in src1: reg256, in src2: reg256, inline shift: shift_t)
-    {:instruction Ins256(BN_OR(dst, src1, src2, shift))}
-    modifies
-        fgroups;
-    ensures
-        dst == otbn_or(old(src1), old(src2), shift);
-{
-    assume false;
-}
-
-procedure bn_and(inout dst: reg256, in src1: reg256, in src2: reg256, inline shift: shift_t)
-    {:instruction Ins256(BN_AND(dst, src1, src2, shift))}
-    modifies
-        fgroups;
-    ensures
-        dst == otbn_and(old(src1), old(src2), shift);
-{
-    assume false;
 }
 
 procedure bn_mulqacc_z(
@@ -769,16 +657,6 @@ procedure bn_movr(inout grd: reg32, inline grd_inc: bool, inout grs: reg32, inli
         grd == (if grd_inc then (old(grd) + 1) else old(grd));
         grs == (if grs_inc then (old(grs) + 1) else old(grs));
         wdrs == old(wdrs[grd := wdrs[grs]]);
-{
-    assume false;
-}
-
-procedure bn_rshi(inout dst: reg256, in src1: reg256, in src2: reg256, in imm: imm32)
-    {:instruction Ins256(BN_RSHI(dst, src1, src2, imm))}
-    requires
-        imm < 256;
-    ensures
-        dst == otbn_rshi(src1, src2, imm);
 {
     assume false;
 }

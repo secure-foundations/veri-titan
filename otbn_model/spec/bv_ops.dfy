@@ -18,7 +18,7 @@ module bv_ops {
     type uint256 = i :int | 0 <= i < BASE_256
     type uint512 = i :int | 0 <= i < BASE_512
 
-    type imm12   = i :int | -2048 <= i <= 2047
+    type int12   = i :int | -2048 <= i <= 2047
     type uint10  = i :int | 0 <= i < 1024
 
     datatype shift_t = SFT(left: bool, bytes: uint5)

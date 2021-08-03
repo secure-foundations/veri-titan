@@ -146,6 +146,43 @@ module vt_ops {
         && iter.index < |iter.buff|
     }
 
+/* instruction definions */
+
+    datatype ins32 =
+        | ADD(xrd: reg32_t, xrs1: reg32_t, xrs2: reg32_t)
+        | ADDI(xrd: reg32_t, xrs1: reg32_t, imm: int12)
+        | LW(xrd: reg32_t, xrs1: reg32_t, offset: int12)
+        | SW(xrs1: reg32_t, xrs2: reg32_t, offset: int12)
+        // | LOOP(grs: reg32_t, bodysize: uint32)
+        // | LOOPI(iterations: uint32, bodysize: uint32)
+        | LI(xrd: reg32_t, imm32: uint32)
+
+    datatype ins256 =
+        | BN_ADD(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
+        | BN_ADDC(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
+        | BN_ADDI(wrd: reg256_t, wrs1: reg256_t, imm: uint10, fg: uint1)
+        // | BN_ADDM(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t)
+        | BN_MULQACC(zero: bool, wrs1: reg256_t, qwsel1: uint2, wrs2: reg256_t, qwsel2: uint2, shift_qws: uint2)
+        | BN_MULQACC_SO(zero: bool, wrd: reg256_t, lower: bool, wrs1: reg256_t, qwsel1: uint2, wrs2: reg256_t, qwsel2: uint2, shift_qws: uint2)
+        | BN_SUB(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
+        | BN_SUBB(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
+        // | BN_SUBI(wrd: reg256_t, wrs1: reg256_t, imm: uint10, fg: uint1)
+        // | BN_SUBM(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t)
+        // | BN_AND(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
+        // | BN_OR(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
+        // | BN_NOT(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
+        | BN_XOR(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
+        // | BN_RSHI(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, imm: uint256)
+        | BN_SEL(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, fg: uint1, flag: uint2)
+        // | BN_CMP(wrs1: reg256_t, wrs2: reg256_t, fg: uint1)
+        // | BN_CMPB(wrs1: reg256_t, wrs2: reg256_t, fg: uint1)
+        | BN_LID(grd: reg32_t, grd_inc: bool, offset: uint32, grs: reg32_t, grs_inc: bool)
+        | BN_SID(grs2: reg32_t, grs2_inc: bool, offset: uint32, grs1: reg32_t, grs1_inc: bool)
+        | BN_MOV(wrd: reg256_t, wrs: reg256_t)
+        | BN_MOVR(grd: reg32_t, grd_inc: bool, grs: reg32_t, grs_inc: bool)
+        // | BN_WSRRS 
+        // | BN_WSRRW
+
 /* stateless semantic functions  */
 
     function method set_flags(carry: uint1, value: uint256): flags_t
@@ -281,7 +318,7 @@ module vt_ops {
             write_reg32(xrd, sum)
         }
 
-        function method eval_ADDI(xrd: reg32_t, xrs1: reg32_t, imm: imm12): state
+        function method eval_ADDI(xrd: reg32_t, xrs1: reg32_t, imm: int12): state
             requires imm > 0
         {
             var v1 := read_reg32(xrs1);
@@ -289,7 +326,7 @@ module vt_ops {
             write_reg32(xrd, sum)
         }
 
-        function method eval_LW(xrs1: reg32_t, xrs2: reg32_t, offset: imm12): state
+        function method eval_LW(xrs1: reg32_t, xrs2: reg32_t, offset: int12): state
             requires offset > 0
         {
             var addr := uint32_add(read_reg32(xrs1), offset);
@@ -297,7 +334,7 @@ module vt_ops {
             else write_xmem(addr, read_reg32(xrs2))
         }
 
-        function method eval_SW(xrd: reg32_t, xrs1: reg32_t, offset: imm12): state
+        function method eval_SW(xrd: reg32_t, xrs1: reg32_t, offset: int12): state
             requires offset > 0
         {
             var addr := uint32_add(read_reg32(xrs1), offset);
@@ -446,50 +483,16 @@ module vt_ops {
         s.ok
     }
 
-/* instruction definions (THESE ARE NOT CONNECTED TO ABOVE YET) */
-
-    datatype ins32 =
-        | ADD(xrd: reg32_t, xrs1: reg32_t, xrs2: reg32_t)
-        | ADDI(xrd: reg32_t, xrs1: reg32_t, imm: imm12)
-        | LW(xrd: reg32_t, xrs1: reg32_t, offset: imm12)
-        | SW(xrs1: reg32_t, xrs2: reg32_t, offset: imm12)
-        | LOOP(grs: reg32_t, bodysize: uint32)
-        | LOOPI(iterations: uint32, bodysize: uint32)
-        | LI(xrd: reg32_t, imm32: uint32)
-
-    datatype ins256 =
-        | BN_ADD(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
-        | BN_ADDC(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
-        | BN_ADDI(wrd: reg256_t, wrs1: reg256_t, imm: uint10, fg: uint1)
-        // | BN_ADDM(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t)
-        | BN_MULQACC(zero: bool, wrs1: reg256_t, qwsel1: uint2, wrs2: reg256_t, qwsel2: uint2, shift_qws: uint2)
-        | BN_MULQACC_SO(zero: bool, wrd: reg256_t, lower: bool, wrs1: reg256_t, qwsel1: uint2, wrs2: reg256_t, qwsel2: uint2, shift_qws: uint2)
-        | BN_SUB(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
-        | BN_SUBB(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
-        // | BN_SUBI(wrd: reg256_t, wrs1: reg256_t, imm: uint10, fg: uint1)
-        // | BN_SUBM(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t)
-        // | BN_AND(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
-        // | BN_OR(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
-        // | BN_NOT(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
-        | BN_XOR(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
-        // | BN_RSHI(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, imm: uint256)
-        | BN_SEL(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, fg: uint1, flag: uint2)
-        // | BN_CMP(wrs1: reg256_t, wrs2: reg256_t, fg: uint1)
-        // | BN_CMPB(wrs1: reg256_t, wrs2: reg256_t, fg: uint1)
-        | BN_LID(grd: reg32_t, grd_inc: bool, offset: uint32, grs: reg32_t, grs_inc: bool)
-        | BN_SID(grs2: reg32_t, grs2_inc: bool, offset: uint32, grs1: reg32_t, grs1_inc: bool)
-        | BN_MOV(wrd: reg256_t, wrs: reg256_t)
-        | BN_MOVR(grd: reg32_t, grd_inc: bool, grs: reg32_t, grs_inc: bool)
-        // | BN_WSRRS 
-        // | BN_WSRRW
-
-
     predicate eval_ins32(xins: ins32, s: state, r: state)
     {
         if !s.ok then
             !r.ok
-        else
-            r.ok && (valid_state(s) ==> valid_state(r))
+        else match xins
+            case ADD(xrd, xrs1, xrs2) => r == s.eval_ADD(xrd, xrs1, xrs2)
+            case ADDI(xrd, xrs1, imm) => r == s.eval_ADDI(xrd, xrs1, imm)
+            case LW(xrd, xrs1, offset) => r == s.eval_LW(xrd, xrs1, offset)
+            case SW(xrs1, xrs2, offset) => r == s.eval_SW(xrs1, xrs2, offset)
+            case LI(xrd, imm32) => r == s.eval_LI(xrd, imm32)
     }
 
     predicate eval_ins256(wins: ins256, s: state, r: state)
