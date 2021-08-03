@@ -31,10 +31,6 @@ module rsa_ops {
     function {:opaque} to_nat(xs: seq<uint>): nat
     {
         refining_NatSeq.to_nat(xs)
-        // if |xs| == 0 then 0
-        // else
-        //     var len' := |xs| - 1;
-        //     to_nat(xs[..len']) + xs[len'] * pow_B256(len')
     }
 
     lemma to_nat_lemma_0(xs: seq<uint>)
@@ -120,60 +116,43 @@ module rsa_ops {
         to_nat_lemma_1([num.lh, num.uh]);
     }
 
-    // function seq_zero(len: nat): (zs: seq<uint>)
-    //     ensures |zs| == len
-    // {
-    //     // if len == 0 then []
-    //     // else seq_zero(len - 1) + [0]
-    // }
+    function seq_zero(len: nat): (zs: seq<uint>)
+        ensures |zs| == len
+    {
+        // if len == 0 then []
+        // else seq_zero(len - 1) + [0]
+        reveal refining_NatSeq.seq_zero();
+        refining_NatSeq.seq_zero(len)
+    }
 
-    // lemma seq_zero_to_nat_lemma(len: nat)
-    //     ensures to_nat(seq_zero(len)) == 0
-    // {
-        
-    //     reveal to_nat();
+    lemma seq_zero_to_nat_lemma(len: nat)
+        ensures to_nat(seq_zero(len)) == 0
+    {
+        reveal to_nat();
+        lemma_seq_zero_nat(len);
 
-    // }
+    }
 
     lemma to_nat_bound_lemma(xs: seq<uint>)
         ensures to_nat(xs) < pow_B256(|xs|)
     {
             reveal to_nat();
             lemma_seq_nat_bound(xs);
-        // if |xs| != 0 {
-        //     var len' := |xs| - 1;
-        //     calc {
-        //         to_nat(xs); 
-        //         { lemma_seq_prefix(xs, len'); }
-        //         to_nat(xs[..len']) + to_nat(xs[len'..]) * pow_B256(len');
-        //         < { lemma_seq_nat_bound(xs[..len']); }
-        //         pow_B256(len') + to_nat(xs[len'..]) * pow_B256(len');
-        //         <= {
-        //             to_nat_lemma_0(xs[len'..]); assert to_nat(xs[len'..]) <= NT.BASE_256 - 1;
-        //             lemma_mul_inequality(to_nat(xs[len'..]), NT.BASE_256 - 1, pow_B256(len'));
-        //         }
-        //         pow_B256(len') + (NT.BASE_256 - 1) * pow_B256(len');
-        //         NT.BASE_256 * pow_B256(len');
-        //         == {lemma_power_1(NT.BASE_256);}
-        //         pow_B256(1) * pow_B256(len');
-        //         == { lemma_power_adds(NT.BASE_256, 1, len'); }
-        //         pow_B256(1 + len');
-        //     }
-        // }
     }
 
     lemma to_nat_zero_prepend_lemma (xs: seq<uint>)
       ensures to_nat([0] + xs) == to_nat(xs) * NT.BASE_256
     {
-        assume false;
+        reveal to_nat();
+        lemma_seq_prepend_zero(xs);
     }
 
     lemma to_nat_prefix_lemma(xs: seq<uint>, i: nat)
-        requires 1 <= i < |xs|;
-        ensures to_nat(xs[..i]) == to_nat(xs[..i-1]) + xs[i-1] * pow_B256(i-1);
+        requires 0 <= i < |xs|;
+        ensures to_nat(xs[..i]) + to_nat(xs[i..]) * pow_B256(i) == to_nat(xs);
     {
-        assert xs[..i][..i-1] == xs[..i-1];
         reveal to_nat();
+        lemma_seq_prefix(xs, i);
     }
 
     lemma to_nat_zero_extend_lemma(xs': seq<uint>, xs: seq<uint>) 
@@ -196,7 +175,11 @@ module rsa_ops {
                 { to_nat_zero_extend_lemma(xs', xs[..len'']); }
                 to_nat(xs');
             }
-            assert to_nat(xs) == to_nat(xs');
+            assert to_nat(xs') == to_nat(xs);
+        }
+        ///// come back to this!!!
+        else {
+            assume false;
         }
     }
 
@@ -205,12 +188,8 @@ module rsa_ops {
         ensures var (zs, cout) := seq_addc(xs, ys);
             && |zs| == |xs|
     {
-        if |xs| == 0 then ([], 0)
-        else 
-            var len' := |xs| - 1;
-            var (zs', cin) := seq_addc(xs[..len'], ys[..len']);
-            var (z, cout) := uint256_addc(xs[len'], ys[len'], cin);
-            (zs' + [z], cout)
+        reveal seq_add();
+        refining_NatSeq.seq_add(xs, ys)
     }
 
     lemma seq_addc_nat_lemma(xs: seq<uint>, ys: seq<uint>, zs: seq<uint>, cout: uint1)
@@ -219,28 +198,8 @@ module rsa_ops {
         ensures to_nat(xs) + to_nat(ys) == to_nat(zs) + cout * pow_B256(|xs|)
     {
         reveal to_nat();
-        if |xs| == 0 {
-            reveal power();
-        } else {
-            var len' := |xs| - 1;
-            var (zs', cin) := seq_addc(xs[..len'], ys[..len']);
-            var (z, _) := uint256_addc(xs[len'], ys[len'], cin);
-            assert xs[len'] + ys[len'] + cin == z + cout * NT.BASE_256;
-
-            calc {
-                to_nat(zs);
-                to_nat(zs') + z * pow_B256(len');
-                    { seq_addc_nat_lemma(xs[..len'], ys[..len'], zs', cin); }
-                to_nat(xs[..len']) + to_nat(ys[..len']) - cin * pow_B256(len') + z * pow_B256(len');
-                to_nat(xs[..len']) + to_nat(ys[..len']) + xs[len'] * pow_B256(len') 
-                    + ys[len'] * pow_B256(len') - cout * NT.BASE_256 * pow_B256(len');
-                    { reveal to_nat(); }
-                to_nat(xs) + to_nat(ys) - cout * NT.BASE_256 * pow_B256(len');
-                    { reveal power(); }
-                to_nat(xs) + to_nat(ys) - cout * pow_B256(|xs|);
-            }
-            assert to_nat(zs) + cout * pow_B256(|xs|) == to_nat(xs) + to_nat(ys);
-        }
+        reveal seq_add();
+        refining_NatSeq.lemma_seq_add(xs, ys, zs, cout);
     }
 
     function seq_subb(xs: seq<uint>, ys: seq<uint>) : (seq<uint>, uint1)
@@ -248,12 +207,9 @@ module rsa_ops {
         ensures var (zs, bout) := seq_subb(xs, ys);
             && |zs| == |xs|
     {
-        if |xs| == 0 then ([], 0)
-        else 
-            var len' := |xs| - 1;
-            var (zs, bin) := seq_subb(xs[..len'], ys[..len']);
-            var (z, bout) := uint256_subb(xs[len'], ys[len'], bin);
-            (zs + [z], bout)
+        reveal to_nat();
+        reveal seq_sub();
+        refining_NatSeq.seq_sub(xs, ys)
     }
 
     lemma seq_subb_nat_lemma(xs: seq<uint>, ys: seq<uint>, zs: seq<uint>, bout: uint1)
@@ -262,29 +218,8 @@ module rsa_ops {
         ensures to_nat(xs) - to_nat(ys) + bout * pow_B256(|xs|) == to_nat(zs)
     {
         reveal to_nat();
-        if |xs| == 0 {
-            reveal power();
-        } else {
-            var len' := |xs| - 1;
-            var (zs', bin) := seq_subb(xs[..len'], ys[..len']);
-            var (z, _) := uint256_subb(xs[len'], ys[len'], bin);
-            assert bout * NT.BASE_256 + xs[len'] - bin - ys[len'] == z;
-            
-            calc {
-                to_nat(zs);
-                to_nat(zs') + z * pow_B256(len');
-                    { seq_subb_nat_lemma(xs[..len'], ys[..len'], zs', bin); }
-                to_nat(xs[..len']) - to_nat(ys[..len']) + bin * pow_B256(len') + z * pow_B256(len');
-                to_nat(xs[..len']) - to_nat(ys[..len']) + xs[len'] * pow_B256(len')
-                    - ys[len'] * pow_B256(len') + bout * NT.BASE_256 * pow_B256(len');
-                    { reveal to_nat(); }
-                to_nat(xs) - to_nat(ys) + bout * NT.BASE_256 * pow_B256(len');
-                {lemma_power_1(NT.BASE_256);}
-                to_nat(xs) - to_nat(ys) + bout * power(NT.BASE_256, 1) * pow_B256(len');             
-                    { reveal power(); }
-                to_nat(xs) - to_nat(ys) + bout * pow_B256(|xs|);
-            }
-        }
+        reveal seq_sub();
+        refining_NatSeq.lemma_seq_sub(xs, ys, zs, bout);
     }
 
 /* rsa/mm definions & lemmas */

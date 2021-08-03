@@ -486,7 +486,7 @@ abstract module NatSeq {
 
   /* Proves seq_add yields the same value as converting the sequences to nats,
   then adding them. */
-  lemma lemma_seq_add_nat(xs: seq<uint>,
+  lemma lemma_seq_add(xs: seq<uint>,
                           ys: seq<uint>,
                           zs: seq<uint>,
                           cout: nat)
@@ -510,7 +510,7 @@ abstract module NatSeq {
         to_nat(zs);
         to_nat_rev(zs);
         to_nat_rev(zs') + z * pow;
-          { lemma_seq_add_nat(drop_last(xs), drop_last(ys), zs', cin); }
+          { lemma_seq_add(drop_last(xs), drop_last(ys), zs', cin); }
         to_nat_rev(drop_last(xs)) + to_nat_rev(drop_last(ys)) - cin * pow + z * pow;
           {
             lemma_mul_equality_auto();
@@ -546,7 +546,7 @@ abstract module NatSeq {
 
   /* Proves seq_sub yields the same value as converting the sequences to nats,
   then subtracting them. */
-  lemma lemma_seq_sub_nat(xs: seq<uint>,
+  lemma lemma_seq_sub(xs: seq<uint>,
                           ys: seq<uint>,
                           zs: seq<uint>,
                           cout: nat)
@@ -571,7 +571,7 @@ abstract module NatSeq {
         to_nat(zs);
         to_nat_rev(zs);
         to_nat_rev(zs') + z * pow;
-          { lemma_seq_sub_nat(drop_last(xs), drop_last(ys), zs', cin); }
+          { lemma_seq_sub(drop_last(xs), drop_last(ys), zs', cin); }
         to_nat_rev(drop_last(xs)) - to_nat_rev(drop_last(ys)) + cin * pow + z * pow;
           {
             lemma_mul_equality_auto();
