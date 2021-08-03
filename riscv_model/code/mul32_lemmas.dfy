@@ -16,32 +16,28 @@ module mul32_lemmas {
         a: uint32, // x10
         b: uint32, // x11
         c: uint32, // x12
-
-        p0: uint32, // ab lower
-        p1: uint32, // ab upper
-
-        p2: uint32, // ab + c lower
-        p3: uint32,
-        p4: uint32, // ab + c upper
-
-        r0: uint64, // ab
-        r1: uint64  // ab + c
+        x10: uint32,
+        x11: uint32,
+        x15: uint32
         )
-        
         requires
-        && p0 == uint32_mul(a, b)
-        && p1 == uint32_mulhu(a, b)
-
-        && p2 == uint32_add(p0, c)
-        && p3 == uint32_lt(p2, p0)
-        && p4 == uint32_add(p1, p3) 
-        
-        && r0 == a * b
-        && r1 == r0 + c
-        ensures
-            to_nat([p2, p4]) == a * b + c;
+        && x10 == uint32_add(uint32_mul(a, b), c)
+        && x15 == uint32_lt(x10, uint32_mul(a, b))
+        && x11 == uint32_add(uint32_mulhu(a, b), x15)
+        // ensures
+            // to_nat([x10, x11]) == a * b + c;
     {
-      assert r1 == a *  b + c;
+      single_digit_lemma_1(a, b, c, B);
+      lemma_uint64_half_split(a * b);
+
+      calc {
+        to_nat([x10, x11]);
+        { to_nat_lemma_1([x10, x11]); }
+        x10 + x11 * B;
+        uint32_add(uint32_mul(a, b), c) + uint32_add(uint32_mulhu(a, b), x15) * B;
+        
+      }
+
     }
 
 }

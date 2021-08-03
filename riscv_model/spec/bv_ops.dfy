@@ -64,7 +64,8 @@ module bv_ops {
 
     function method {:opaque} uint32_add(x:uint32, y:uint32):uint32
     {
-        (x + y) % BASE_32
+        var r := x as int + y as int;
+        if r >= BASE_32 then (r - BASE_32) else r
     }
 
     function method {:opaque} uint32_sub(x:uint32, y:uint32) : uint32
@@ -152,5 +153,6 @@ module bv_ops {
         reveal uint64_lh();
         reveal uint64_uh();
     }
+
     
 } // end module ops

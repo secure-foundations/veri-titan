@@ -138,6 +138,7 @@ operand_type imm2: uint2 := const;
 
 function uint32_lt(x: uint32, y: uint32): uint32 extern;
     
+function uint32_add(x: uint32, y: uint32): uint32 extern;
 function uint32_xor(x: uint32, y: uint32): uint32 extern;
 function uint32_or(x: uint32, y: uint32): uint32 extern;
 function uint32_and(x: uint32, y: uint32): uint32 extern;
@@ -451,7 +452,7 @@ procedure add(inout dst: reg32, in src1: reg32, in src2: reg32)
 procedure add_wrap(inout dst: reg32, in src1: reg32, in src2: reg32)
     {:instruction Ins32(RV_ADD(dst, src1, src2))}
     ensures
-        dst == old(src1 + src2) % 0x1_0000_0000;
+        dst == uint32_add(old(src1), old(src2));
 {
     assume false;
 }

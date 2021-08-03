@@ -4,6 +4,7 @@ include "decls.vad"
 include "../code/vale.dfy"
 include "../gen/decls.dfy"
 include "../spec/rsa_ops.dfy"
+include "../code/mul32_lemmas.dfy"
 
 module mul256 {
 
@@ -13,10 +14,19 @@ import opened rsa_ops
 import opened rv_consts
 import opened rv_decls
 import opened rv_vale
+import opened mul32_lemmas
 
 #endverbatim
 
 ghost procedure lemma_uint64_half_split(ghost x: nat) extern;
+ghost procedure mula32_correct_lemma(
+       ghost a: uint32, // x10
+       ghost b: uint32, // x11
+       ghost c: uint32, // x12
+       ghost x10: uint32,
+       ghost x11: uint32,
+       ghost x15: uint32
+) extern;
 
 
 procedure mul32()
@@ -57,8 +67,8 @@ procedure mula32()
         x12;
     modifies
         x10; x11; x15;
-    ensures
-        to_nat(seq(x10, x11)) == old(x11) * old(x10) + old(x12);
+    // ensures
+        // to_nat(seq(x10, x11)) == old(x11) * old(x10) + old(x12);
 {
     ghost var a := x10;
     ghost var b := x11;
@@ -74,21 +84,21 @@ procedure mula32()
     mulhu(x11, x10, x11);
     assert x11 == uint32_mulhu(a, b);
 
-    lemma_uint64_half_split(r);
-
     // bottom half + x12 value in x10
     add_wrap(x10, x15, x12);
+    assert x10 == uint32_add(uint32_mul(a, b), c);
 
     // if x10 now less than x15 it's because we overflowed
     // so we need to add 1 to x11
     sltu(x15, x10, x15);
-    assert x15 <= 1;
+    assert x15 == uint32_lt(x10, uint32_mul(a, b));
     
     // add 1 to top half if needed
-    add(x11, x11, x15);
+    add_wrap(x11, x11, x15);
+    assert x11 == uint32_add(uint32_mulhu(a, b), x15);
     
     // result: x10 * x11 + x12
-    to_nat_lemma_1(seq(x10, x11));
+    mula32_correct_lemma(a, b, c, x10, x11, x15);
 }
 
         
