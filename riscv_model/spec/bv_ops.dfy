@@ -89,7 +89,7 @@ module bv_ops {
       uint64_uh(uint32_full_mul(x, y))
     }
 
-    function uint32_gt(x:uint32, y:uint32) : uint32
+    function uint32_lt(x:uint32, y:uint32) : uint32
     {
         if x < y then 1 else 0
     }

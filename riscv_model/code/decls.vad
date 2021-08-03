@@ -136,7 +136,7 @@ operand_type imm128: uint128 := const;
 operand_type imm32: uint32 := const;
 operand_type imm2: uint2 := const;
 
-function uint32_gt(x: uint32, y: uint32): uint32 extern;
+function uint32_lt(x: uint32, y: uint32): uint32 extern;
     
 function uint32_xor(x: uint32, y: uint32): uint32 extern;
 function uint32_or(x: uint32, y: uint32): uint32 extern;
@@ -295,7 +295,7 @@ procedure slti(inout dst: reg32, in src1: reg32, in src2: imm32)
     requires
         src2 < 0x1000;
     ensures
-    dst == uint32_gt(old(src1), old(src2));
+    dst == uint32_lt(old(src1), old(src2));
 {
     assume false;
 }
@@ -305,7 +305,7 @@ procedure sltiu(inout dst: reg32, in src1: reg32, in src2: imm32)
     requires
         src2 < 0x1000;
     ensures
-       dst == uint32_gt(old(src1), old(src2));
+       dst == uint32_lt(old(src1), old(src2));
 {
     assume false;
 }
@@ -479,7 +479,7 @@ procedure slt(inout dst: reg32, in src1: reg32, in src2: reg32)
     {:instruction Ins32(RV_SLT(dst, src1, src2))}
     ensures
         // < comparison as signed ints
-        dst == uint32_gt(old(src1), old(src2));
+        dst == uint32_lt(old(src1), old(src2));
 {
     assume false;
 }
@@ -488,7 +488,7 @@ procedure sltu(inout dst: reg32, in src1: reg32, in src2: reg32)
     {:instruction Ins32(RV_SLTU(dst, src1, src2))}
     ensures
         // < comparison as unsigned ints
-        dst == uint32_gt(old(src1), old(src2));
+        dst == uint32_lt(old(src1), old(src2));
 {
     assume false;
 }

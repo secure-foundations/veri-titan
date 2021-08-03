@@ -18,6 +18,7 @@ import opened rv_vale
 
 ghost procedure lemma_uint64_half_split(ghost x: nat) extern;
 
+
 procedure mul32()
     modifies
         x10; x11; x15;
@@ -43,6 +44,53 @@ procedure mul32()
     lemma_uint64_half_split(r);
     to_nat_lemma_1(seq(x10, x11));
 }
+  
+//  <mulaa32>
+//  mul	    x15,x10,x11
+//  mulhu	x11,x10,x11
+//  add     x10,x15,x12
+//  sltu	x15,x10,x15
+//  add 	x11,x11,x15
+
+procedure mula32()
+    reads
+        x12;
+    modifies
+        x10; x11; x15;
+    ensures
+        to_nat(seq(x10, x11)) == old(x11) * old(x10) + old(x12);
+{
+    ghost var a := x10;
+    ghost var b := x11;
+    ghost var c := x12;
+    ghost var r := a * b;
+    ghost var s := r + c;
+   
+    // bottom half of x10 * x11 in x15 
+    mul(x15, x10, x11);
+    assert x15 = uint32_mul(a, b);
+    
+    // top half of x10 * x11 in x11
+    mulhu(x11, x10, x11);
+    assert x11 == uint32_mulhu(a, b);
+
+    lemma_uint64_half_split(r);
+
+    // bottom half + x12 value in x10
+    add_wrap(x10, x15, x12);
+
+    // if x10 now less than x15 it's because we overflowed
+    // so we need to add 1 to x11
+    sltu(x15, x10, x15);
+    assert x15 <= 1;
+    
+    // add 1 to top half if needed
+    add(x11, x11, x15);
+    
+    // result: x10 * x11 + x12
+    to_nat_lemma_1(seq(x10, x11));
+}
+
         
 #verbatim
 }
