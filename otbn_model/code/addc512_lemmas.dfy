@@ -1,6 +1,7 @@
 include "../spec/rsa_ops.dfy"
 include "../dafny_library/NonlinearArithmetic/Power.dfy"
 include "../dafny_library/NonlinearArithmetic/DivMod.dfy"
+include "../dafny_library/Sequences/Seq.dfy"
 
 module addc512_lemmas {
     import opened bv_ops
@@ -10,13 +11,22 @@ module addc512_lemmas {
     import opened Power
     import opened DivMod
     import NT = NativeTypes
+    import S = Seq
+    import refining_NatSeq
 
     lemma addc_256_op_lemma(
         x: uint256, y: uint256, z: uint256, c: uint1)
         requires (z, c) == uint256_addc(x, y, 0);
         ensures seq_addc([x], [y]) == ([z], c);
     {
+        var (a, b) := refining_NatSeq.seq_add([x], [y]);
         assert [] + [z] == [z];
+        calc {
+            seq_addc([x], [y]);
+            refining_NatSeq.seq_add([x], [y]);
+            (a, b);
+        }
+
     }
 
     lemma addc_512_op_lemma(
@@ -28,6 +38,14 @@ module addc512_lemmas {
     {
         addc_256_op_lemma(x0, y0, z0, c0);
         assert [z0] + [z1] == [z0, z1];
+
+        reveal refining_NatSeq.seq_add();
+        var (a, b) := refining_NatSeq.seq_add([x0, x1], [y0, y1]);
+        calc {
+            seq_addc([x0, x1], [y0, y1]);
+            refining_NatSeq.seq_add([x0, x1], [y0, y1]);
+            (a, b);
+        }
     }
 
     predicate seq_addc_512_is_safe(xs: seq<uint256>, ys: seq<uint256>)
@@ -40,10 +58,10 @@ module addc512_lemmas {
         xs: seq<uint256>, ys: seq<uint256>, a: uint256, b: uint256)
         requires |xs| == |ys| == 2;
         requires to_nat(xs) == a * b;
-        requires ys[1] == 0;
+        requires S.last(ys) == 0;
         ensures seq_addc_512_is_safe(xs, ys);
     {
-        var c := ys[0];
+        var c := S.first(ys);
         calc {
             to_nat(xs) + to_nat(ys);
             == { to_nat_lemma_1(ys); }
@@ -59,10 +77,10 @@ module addc512_lemmas {
         xs: seq<uint256>, ys: seq<uint256>, a: uint256, b: uint256, c: uint256)
         requires |xs| == |ys| == 2;
         requires to_nat(xs) == a * b + c;
-        requires ys[1] == 0;
+        requires S.last(ys) == 0;
         ensures seq_addc_512_is_safe(xs, ys);
     {
-        var d := ys[0];
+        var d := S.first(ys);
         calc {
             to_nat(xs) + to_nat(ys);
             == { to_nat_lemma_1(ys); }

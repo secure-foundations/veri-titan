@@ -487,7 +487,7 @@ abstract module NatSeq {
   /* Proves seq_add yields the same value as converting the sequences to nats,
   then adding them. */
   lemma lemma_seq_add(xs: seq<uint>,
-                          ys: seq<uint>,
+                      ys: seq<uint>,
                           zs: seq<uint>,
                           cout: nat)
     requires |xs| == |ys|
