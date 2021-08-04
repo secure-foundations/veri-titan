@@ -29,7 +29,7 @@ module bv_ops {
     {
         cong(a, b, BASE_256)
     }
-    
+
     function pow_B256(e: nat): nat
     {
         power(BASE_256, e)
@@ -38,6 +38,12 @@ module bv_ops {
     function method bool_to_uint1(i:bool) : uint1
     {
         if i then 1 else 0
+    }
+
+    function method to_2s_comp_uint32(n: int): uint32
+        requires - BASE_32 < n < BASE_32
+    {
+        if n < 0 then n + BASE_32 else n
     }
 
     function method {:opaque} uint32_and(x:uint32, y:uint32) : uint32
@@ -72,13 +78,18 @@ module bv_ops {
         (x as bv32 << amount) as uint32
     }
 
-    function method {:opaque} uint32_add(x:uint32, y:uint32): uint32
+    function method uint32_add(x:uint32, y:uint32): uint32
     {
         var s :uint64 := x + y;
         if s < BASE_32 then 
             s
         else
             s - BASE_32
+    }
+
+    function method uint32_addi(x: uint32, imm: int12): uint32
+    {
+        uint32_add(x, to_2s_comp_uint32(imm))
     }
 
     function method {:opaque} uint32_sub(x:uint32, y:uint32):uint32
@@ -194,9 +205,13 @@ module bv_ops {
         requires a <= u;
         requires b <= u;
         ensures a * b <= u * u;
-            {
-        assert true;
-            }
+    {
+        calc <= {
+            a * b;
+            a * u;
+            u * u;
+        }
+    }
 
     lemma single_digit_lemma_1(a: nat, b: nat, c: nat, u: nat)
         requires a <= u;

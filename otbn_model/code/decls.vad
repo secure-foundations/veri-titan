@@ -52,6 +52,8 @@ function operator(.ok) (s: state): bool extern;
 function operator(.ok :=) (s: state, b: bool): state extern;
 
 type reg32_t: Type(0) extern;
+function operator(.index) (r :reg32_t): int extern;
+
 type reg256_t: Type(0) extern;
 function operator(.index) (r :reg256_t): int extern;
 function is_wide_data_register(r: reg256_t): bool extern;
@@ -92,10 +94,11 @@ function operator(.fg0) (fgroups: fgroups_t): flags_t extern;
 function operator(.fg1) (fgroups :fgroups_t): flags_t extern;
 
 var fgroups: fgroups_t  {:state fgroups()};
-
 function select_fgroup(fgps: fgroups_t, which_group: uint1): flags_t extern;
 function update_fgroups(fgps: fgroups_t, which_group: uint1, new_flags_t: flags_t) : fgroups_t extern;
 function get_flag(fgps: fgroups_t, which_group: uint1, which_flag: int): bool extern;
+
+function to_2s_comp_uint32(n: int): uint32 extern;
 
 type uint512_view_t: Type(0) extern;
 function uint512_cons(lh: int, uh: int, full: int): uint512_view_t extern;
@@ -235,8 +238,7 @@ operand_type reg32: uint32 @ reg32_t :=
 | inout x16 | inout x17 | inout x18 | inout x19
 | inout x20 | inout x21 | inout x22 | inout x23
 | inout x24 | inout x25 | inout x26 | inout x27
-| inout x28 | inout x29 | inout x30 | inout x31
-| inout xrnd;
+| inout x28 | inout x29 | inout x30 | inout x31;
 
 operand_type reg256: uint256 @ reg256_t := 
 | inout w0 | inout w1 | inout w2 | inout w3
@@ -249,8 +251,8 @@ operand_type reg256: uint256 @ reg256_t :=
 | inout w28 | inout w29 | inout w30 | inout w31
 | inout wmod | inout wrnd | inout wacc;
 
-operand_type imm128: uint128 := const;
-operand_type imm32: uint32 := const;
+// operand_type imm128: uint128 := const;
+// operand_type imm32: uint32 := const;
 
 type shift_t: Type(0) extern;
 const SFT_DFT: shift_t extern;
@@ -259,6 +261,8 @@ const NA: int extern;
 function uint32_xor(x: uint32, y: uint32): uint32 extern;
 function uint32_or(x: uint32, y: uint32): uint32 extern;
 function uint32_and(x: uint32, y: uint32): uint32 extern;
+function uint32_add(x: uint32, y: uint32): uint32 extern;
+function uint32_addi(x: uint32, y: int12): uint32 extern;
 function uint32_not(x: uint32): uint32 extern;
 function uint32_ls(x: uint32, amount: uint32): uint32 extern; 
 function uint32_se(x: uint32, size: int): uint32 extern;
@@ -293,18 +297,24 @@ function seq_addc(x: seq(uint256), y: seq(uint256)) : tuple(seq(uint256), uint1)
 
 function seq_addc_512_is_safe(x: seq(uint256), y: seq(uint256)) : bool extern;
 
+//   assert va_s0.ok;
+//   assert va_cM == Ins32(SW(grs2, grs1, offset));
+//   assert eval_code_lax(va_cM, va_s0, va_sM);
+//   assert eval_code(va_cM, va_s0, va_sM);
+//   assert eval_ins32(va_cM.ins, va_s0, va_sM);
+//   assert va_sM == va_s0.eval_SW(grs1, grs2, offset);
+
 procedure lw(out grd: reg32, inline offset: int12, in grs1: reg32)
     {:instruction Ins32(LW(grd, grs1, offset))}
     reads
         xmem;
     requires
-        offset > 0;
-        xmem_addr_valid(xmem, grs1 + offset);
+        xmem_addr_valid(xmem, uint32_addi(grs1, offset));
     ensures
-        xmem_addr_valid(xmem, old(grs1) + offset);
-        grd == xmem[old(grs1) + offset];
+        xmem_addr_valid(xmem, uint32_addi(old(grs1), offset));
+        grd == xmem[uint32_addi(old(grs1), offset)];
 {
-    assume false;
+    reveal eval_code_opaque;
 }
 
 procedure sw(in grs2: reg32, inline offset: int12, in grs1: reg32)
@@ -312,35 +322,29 @@ procedure sw(in grs2: reg32, inline offset: int12, in grs1: reg32)
     modifies
         xmem;
     requires
-        offset > 0;
-    requires/ensures
-        xmem_addr_valid(xmem, grs1 + offset);
+        xmem_addr_valid(xmem, uint32_addi(grs1, offset));
     ensures
-        xmem == old(xmem)[grs1 + offset := grs2];
+        xmem_addr_valid(xmem, uint32_addi(grs1, offset));
+    ensures
+        xmem == old(xmem)[uint32_addi(grs1, offset) := grs2];
 {
-    assume false;
+    reveal eval_code_opaque;
 }
 
 procedure add(inout dst: reg32, in src1: reg32, in src2: reg32)
     {:instruction Ins32(ADD(dst, src1, src2))}
-    requires
-       src1 + src2 < BASE_32;
     ensures
-        dst == old(src1) + old(src2);
+        dst == uint32_add(old(src1), old(src2));
 {
     reveal eval_code_opaque;
-    reveal uint32_add;
 }
 
 procedure addi(inout dst: reg32, in src1: reg32, inline imm: int12)
     {:instruction Ins32(ADDI(dst, src1, imm))}
-    requires
-        imm > 0;
-        src1 + imm < BASE_32;
     ensures
-        dst == old(src1) + imm;
+        dst == uint32_addi(old(src1), imm);
 {
-    assume false;
+    reveal eval_code_opaque;
 }
 
 procedure li(inout dst: reg32, inline imm: uint32)
@@ -348,13 +352,13 @@ procedure li(inout dst: reg32, inline imm: uint32)
     ensures
         dst == imm;
 {
-    assume false;    
+    reveal eval_code_opaque;
 }
 
 procedure bn_xor(inout dst: reg256, in src1: reg256, in src2: reg256, inline shift: shift_t, inline which_group: uint1)
     {:instruction Ins256(BN_XOR(dst, src1, src2, shift, which_group))}
     modifies
-        fgroups;    
+        fgroups;
     ensures
         let cin := old(select_fgroup(fgroups, which_group).cf);
         let result := otbn_xor(old(src1), old(src2), shift, cin);
@@ -526,7 +530,7 @@ function mod_add(a: int, b: int, m: int): int extern;
 
 procedure bn_lid(
     inout grd: reg32, inline grd_inc: bool,
-    in offset: imm32,
+    inline offset: uint32,
     inout grs: reg32, inline grs_inc: bool,
     ghost iter: iter_t)
     {:instruction Ins256(BN_LID(grd, grd_inc, offset, grs, grs_inc))}
@@ -551,7 +555,7 @@ procedure bn_lid(
 
 procedure bn_lid_safe(
     inout grd: reg32, inline grd_inc: bool,
-    in offset: imm32,
+    inline offset: uint32,
     inout grs: reg32, inline grs_inc: bool,
     ghost iter: iter_t)
     returns (ghost next_iter: iter_t)
@@ -581,7 +585,7 @@ procedure bn_lid_safe(
 
 procedure bn_sid(
     inout grs2: reg32, inline grs2_inc: bool,
-    in offset: imm32,
+    inline offset: uint32,
     inout grs1: reg32, inline grs1_inc: bool,
     ghost iter: iter_t)
     {:instruction Ins256(BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc))}
@@ -606,7 +610,7 @@ procedure bn_sid(
 
 procedure bn_sid_safe(
     inout grs2: reg32, inline grs2_inc: bool,
-    in offset: imm32,
+    inline offset: uint32,
     inout grs1: reg32, inline grs1_inc: bool,
     ghost iter: iter_t)
     returns (ghost next_iter: iter_t)

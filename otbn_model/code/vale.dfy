@@ -140,7 +140,7 @@ module vt_vale {
 
     predicate va_is_dst_reg32(r: reg32_t, s: va_state)
     {
-        true
+        r.index != 0
     }
 
     function va_eval_reg32(s: va_state, r : reg32_t):uint32
@@ -363,10 +363,10 @@ module vt_vale {
     lemma va_lemma_block(b:codes, s0: va_state, r: va_state) returns(r1: va_state, c0:code, b1:codes)
         requires b.va_CCons?
         requires eval_code_lax(Block(b), s0, r)
-        ensures  b == va_CCons(c0, b1)
-        ensures  eval_code_lax(c0, s0, r1)
-            ensures valid_state_opaque(s0) && r1.ok ==> valid_state_opaque(r1);
-        ensures  eval_code_lax(Block(b1), r1, r)
+        ensures b == va_CCons(c0, b1)
+        ensures eval_code_lax(c0, s0, r1)
+        ensures valid_state_opaque(s0) && r1.ok ==> valid_state_opaque(r1);
+        ensures eval_code_lax(Block(b1), r1, r)
     {
         reveal_eval_code_opaque();
         c0 := b.hd;

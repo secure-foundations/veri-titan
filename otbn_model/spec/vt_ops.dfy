@@ -88,12 +88,19 @@ module vt_ops {
 
     type xmem_t = map<int, uint32>
 
-    predicate xmem_addr_valid(xmem: xmem_t, addr: int)
+    predicate method admissible_xmem_addr(addr: uint32)
     {
+        && addr % 4 == 0
+        && addr < DMEM_LIMIT
+    }    
+
+    predicate xmem_addr_valid(xmem: xmem_t, addr: uint32)
+    {
+        && admissible_xmem_addr(addr)
         && addr in xmem
     }
 
-    predicate xmem_addr_mapped(xmem: xmem_t, addr: int, value: uint32)
+    predicate xmem_addr_mapped(xmem: xmem_t, addr: uint32, value: uint32)
     {
         && xmem_addr_valid(xmem, addr)
         && xmem[addr] == value
@@ -265,12 +272,6 @@ module vt_ops {
 
 /* state definions */
 
-    predicate method admissible_xmem_addr(addr: uint32)
-    {
-        && addr % 4 == 0
-        && addr < DMEM_LIMIT
-    }
-
     datatype state = state(
         gprs: gprs_t, // 32-bit registers
         wdrs: wdrs_t, // 256-bit registers
@@ -319,27 +320,26 @@ module vt_ops {
         }
 
         function method eval_ADDI(xrd: reg32_t, xrs1: reg32_t, imm: int12): state
-            requires imm > 0
         {
             var v1 := read_reg32(xrs1);
-            var sum := uint32_add(v1, imm);
+            var sum := uint32_addi(v1, imm);
             write_reg32(xrd, sum)
         }
 
-        function method eval_LW(xrs1: reg32_t, xrs2: reg32_t, offset: int12): state
-            requires offset > 0
+        function method eval_LW(xrd: reg32_t, xrs1: reg32_t, offset: int12): state
         {
-            var addr := uint32_add(read_reg32(xrs1), offset);
-            if !admissible_xmem_addr(addr) then this.(ok := false)
-            else write_xmem(addr, read_reg32(xrs2))
-        }
-
-        function method eval_SW(xrd: reg32_t, xrs1: reg32_t, offset: int12): state
-            requires offset > 0
-        {
-            var addr := uint32_add(read_reg32(xrs1), offset);
+            var base := read_reg32(xrs1);
+            var addr := uint32_addi(base, offset);
             if !admissible_xmem_addr(addr) then this.(ok := false)
             else write_reg32(xrd, read_xmem(addr))
+        }
+
+        function method eval_SW(xrs1: reg32_t, xrs2: reg32_t, offset: int12): state
+        {
+            var base := read_reg32(xrs1);
+            var addr := uint32_addi(base, offset);
+            if !admissible_xmem_addr(addr) then this.(ok := false)
+            else write_xmem(addr, read_reg32(xrs2))
         }
 
         function method eval_LI(xrd: reg32_t, imm: uint32): state
@@ -488,11 +488,11 @@ module vt_ops {
         if !s.ok then
             !r.ok
         else match xins
-            case ADD(xrd, xrs1, xrs2) => r == s.eval_ADD(xrd, xrs1, xrs2)
-            case ADDI(xrd, xrs1, imm) => r == s.eval_ADDI(xrd, xrs1, imm)
-            case LW(xrd, xrs1, offset) => r == s.eval_LW(xrd, xrs1, offset)
-            case SW(xrs1, xrs2, offset) => r == s.eval_SW(xrs1, xrs2, offset)
-            case LI(xrd, imm32) => r == s.eval_LI(xrd, imm32)
+            case ADD(xrd, xrs1, xrs2) => (r == s.eval_ADD(xrd, xrs1, xrs2))
+            case ADDI(xrd, xrs1, imm) => (r == s.eval_ADDI(xrd, xrs1, imm))
+            case LW(xrd, xrs1, offset) => (r == s.eval_LW(xrd, xrs1, offset))
+            case SW(xrs2, xrs1, offset) => (r == s.eval_SW(xrs1, xrs2, offset))
+            case LI(xrd, imm32) => (r == s.eval_LI(xrd, imm32))
     }
 
     predicate eval_ins256(wins: ins256, s: state, r: state)
