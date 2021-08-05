@@ -192,6 +192,12 @@ module vt_ops {
 
 /* stateless semantic functions  */
 
+    function mod_add(a: nat, b: nat, m: nat): nat 
+        requires a < m && b < m;
+    {
+        if a + b > m then a + b - m else a + b
+    }
+
     function method set_flags(carry: uint1, value: uint256): flags_t
     {
         flags_t(carry == 1, uint256_msb(value) == 1, uint256_lsb(value) == 1, value == 0)
@@ -231,6 +237,18 @@ module vt_ops {
         && (acc + otbn_qshift_safe(BASE_128 - 1, shift) < BASE_256)
     }
 
+    // quater shift but no overflow
+    function otbn_qshift_safe(x: uint256, q: uint2): (r: uint256)
+        requires (q == 1) ==> (x < BASE_192);
+        requires (q == 2) ==> (x < BASE_128);
+        requires (q == 3) ==> (x < BASE_64);
+    {
+        if q == 0 then x
+        else if q == 1 then x * BASE_64
+        else if q == 2 then x * BASE_128
+        else x * BASE_192
+    }
+
     // mulquacc but no overflow
     function otbn_mulqacc_safe(
         zero: bool,
@@ -246,16 +264,16 @@ module vt_ops {
         if zero then shift else acc + shift
     }
 
-    // quater shift but no overflow
-    function otbn_qshift_safe(x: uint256, q: uint2): (r: uint256)
-        requires (q == 1) ==> (x < BASE_192);
-        requires (q == 2) ==> (x < BASE_128);
-        requires (q == 3) ==> (x < BASE_64);
+    lemma otbn_mulqacc_safe_correct(
+        zero: bool,
+        x: uint256, qx: uint2,
+        y: uint256, qy: uint2,
+        shift: uint2,
+        acc: uint256)
+        requires otbn_mulqacc_is_safe(shift, acc);
+        ensures otbn_mulqacc_safe(zero, x, qx, y, qy, shift, acc)
+            == otbn_mulqacc(zero, x, qx, y, qy, shift, acc);
     {
-        if q == 0 then x
-        else if q == 1 then x * BASE_64
-        else if q == 2 then x * BASE_128
-        else x * BASE_192
     }
 
     function method otbn_xor(x: uint256, y: uint256, shift: shift_t, carry: bool): (uint256, flags_t)
@@ -469,11 +487,11 @@ module vt_ops {
         {
             var di := read_reg32(grd);
             var si := read_reg32(grs);
-            if di > 5 || si > 5 then 
+            if di > 31 || si > 31 then 
                 this.(ok := false)
             else
                 write_reg32(grd, if grd_inc then di + 1 else di).
-                write_reg32(grs, if grs_inc then di + 1 else si).
+                write_reg32(grs, if grs_inc then si + 1 else si).
                 write_reg256(WDR(di), read_reg256(WDR(si)))
         }
     }
@@ -499,8 +517,35 @@ module vt_ops {
     {
         if !s.ok then
             !r.ok
-        else
-            r.ok && (valid_state(s) ==> valid_state(r))
+        else match wins
+            case BN_ADD(wrd, wrs1, wrs2, shift, fg) =>
+                r == s.eval_BN_ADD(wrd, wrs1, wrs2, shift, fg)
+            case BN_ADDC(wrd, wrs1, wrs2, shift, fg) =>
+                r == s.eval_BN_ADDC(wrd, wrs1, wrs2, shift, fg)
+            case BN_ADDI(wrd, wrs1, imm, fg) =>
+                r == s.eval_BN_ADDI(wrd, wrs1, imm, fg)
+            case BN_MULQACC(zero, wrs1, qwsel1, wrs2, qwsel2, shift_qws) =>
+                r == s.eval_BN_MULQACC(zero, wrs1, qwsel1, wrs2, qwsel2, shift_qws)
+            case BN_MULQACC_SO(zero, wrd, lower, wrs1, qwsel1, wrs2, qwsel2, shift_qws) =>
+                r == s.eval_BN_MULQACC_SO(zero, wrd, lower, wrs1, qwsel1, wrs2, qwsel2, shift_qws)
+            case BN_SUB(wrd, wrs1, wrs2, shift, fg) => 
+                r == s.eval_BN_SUB(wrd, wrs1, wrs2, shift, fg)
+            case BN_SUBB(wrd, wrs1, wrs2, shift, fg) => 
+                r == s.eval_BN_SUBB(wrd, wrs1, wrs2, shift, fg)
+            case BN_XOR(wrd, wrs1, wrs2, shift, fg) => 
+                r == s.eval_BN_XOR(wrd, wrs1, wrs2, shift, fg)
+            case BN_SEL(wrd, wrs1, wrs2, fg, flag) => 
+                r == s.eval_BN_SEL(wrd, wrs1, wrs2, fg, flag)
+            case BN_MOV(wrd, wrs) =>
+                r == s.eval_BN_MOV(wrd, wrs)
+            case BN_MOVR(grd, grd_inc, grs, grs_inc) =>
+                r == s.eval_BN_MOVR(grd, grd_inc, grs, grs_inc)
+            case BN_LID(grd, grd_inc, offset, grs, grs_inc) =>
+                // r == s.eval_BN_LID(grd, grd_inc, offset, grs, grs_inc)
+                !r.ok
+            case BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc) =>
+                // => r == s.eval_BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc)
+                !r.ok
     }
 
 /* control flow definions */

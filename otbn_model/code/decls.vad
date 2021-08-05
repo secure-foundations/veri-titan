@@ -29,6 +29,7 @@ type nat:     Type(0) := int_range(0, _);
 type uint1:   Type(0) := int_range(0, 1);
 type uint2:   Type(0) := int_range(0, 3);
 type uint5:   Type(0) := int_range(0, 31);
+type uint10:  Type(0) := int_range(0, 1024);
 type uint32:  Type(0) := int_range(0, 0xffffffff);
 type uint128: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff);
 type uint256: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff);
@@ -355,19 +356,6 @@ procedure li(inout dst: reg32, inline imm: uint32)
     reveal eval_code_opaque;
 }
 
-procedure bn_xor(inout dst: reg256, in src1: reg256, in src2: reg256, inline shift: shift_t, inline which_group: uint1)
-    {:instruction Ins256(BN_XOR(dst, src1, src2, shift, which_group))}
-    modifies
-        fgroups;
-    ensures
-        let cin := old(select_fgroup(fgroups, which_group).cf);
-        let result := otbn_xor(old(src1), old(src2), shift, cin);
-        dst == fst(result) &&
-        fgroups == update_fgroups(old(fgroups), which_group, snd(result));
-{
-    assume false;
-}
-
 procedure bn_add(inout dst: reg256, in src1: reg256, in src2: reg256, inline shift: shift_t, inline which_group: uint1)
     {:instruction Ins256(BN_ADD(dst, src1, src2, shift, which_group))}
     modifies
@@ -377,7 +365,7 @@ procedure bn_add(inout dst: reg256, in src1: reg256, in src2: reg256, inline shi
         dst == fst(result) &&
         fgroups == update_fgroups(old(fgroups), which_group, snd(result));
 {
-    assume false;
+    reveal eval_code_opaque;
 }
 
 procedure bn_addc(inout dst: reg256, in src1: reg256, in src2: reg256, inline shift: shift_t, inline which_group: uint1)
@@ -390,32 +378,33 @@ procedure bn_addc(inout dst: reg256, in src1: reg256, in src2: reg256, inline sh
         dst == fst(result) &&
         fgroups == update_fgroups(old(fgroups), which_group, snd(result));
 {
-    assume false;
+    reveal eval_code_opaque;
 }
 
-// procedure bn_addi(inout dst: reg256, in src: reg256, in imm: imm32, inline which_group: uint1)
-//     {:instruction Ins256(BN_ADDI(dst, src, imm, which_group))}
-//     requires
-//         imm < 1024;
-//     modifies
-//         fgroups;
-//     ensures
-//         let result := otbn_addc(old(src), imm, false, 0, false) in
-//         dst == fst(result) &&
-//         fgroups == update_fgroups(old(fgroups), which_group, snd(result));
-// {
-//     assume false;
-// }
+procedure bn_addi(inout dst: reg256, in src: reg256, inline imm: uint10, inline which_group: uint1)
+    {:instruction Ins256(BN_ADDI(dst, src, imm, which_group))}
+    modifies
+        fgroups;
+    ensures
+        let result := otbn_addc(old(src), imm, SFT_DFT, false) in
+        dst == fst(result) &&
+        fgroups == update_fgroups(old(fgroups), which_group, snd(result));
+{
+    reveal eval_code_opaque;
+}
 
-// procedure bn_addm(inout dst: reg256, in src1: reg256, in src2: reg256)
-//     {:instruction Ins256(BN_ADDM(dst, src1, src2))}
-//     reads
-//         wmod; // TODO: dst cannot be wmod
-//     ensures
-//         dst == otbn_addm(old(src1), old(src2), old(wmod));
-// {
-//     assume false;
-// }
+procedure bn_xor(inout dst: reg256, in src1: reg256, in src2: reg256, inline shift: shift_t, inline which_group: uint1)
+    {:instruction Ins256(BN_XOR(dst, src1, src2, shift, which_group))}
+    modifies
+        fgroups;
+    ensures
+        let cin := old(select_fgroup(fgroups, which_group).cf);
+        let result := otbn_xor(old(src1), old(src2), shift, cin);
+        dst == fst(result) &&
+        fgroups == update_fgroups(old(fgroups), which_group, snd(result));
+{
+    reveal eval_code_opaque;
+}
 
 procedure bn_sub(inout dst: reg256, in src1: reg256, in src2: reg256, inline shift: shift_t, inline which_group: uint1)
     {:instruction Ins256(BN_SUB(dst, src1, src2, shift, which_group))}
@@ -426,7 +415,7 @@ procedure bn_sub(inout dst: reg256, in src1: reg256, in src2: reg256, inline shi
         dst == fst(result) &&
         fgroups == update_fgroups(old(fgroups), which_group, snd(result));
 {
-    assume false;
+    reveal eval_code_opaque;
 }
 
 procedure bn_subb(inout dst: reg256, in src1: reg256, in src2: reg256, inline shift: shift_t, inline which_group: uint1)
@@ -439,20 +428,7 @@ procedure bn_subb(inout dst: reg256, in src1: reg256, in src2: reg256, inline sh
         dst == fst(result) &&
         fgroups == update_fgroups(old(fgroups), which_group, snd(result));
 {
-    assume false; // TODO
-}
-
-procedure bn_mulqacc_z(
-    in src1: reg256, inline qwsel1: uint2,
-    in src2: reg256, inline qwsel2: uint2,
-    inline shift: uint2)
-    {:instruction Ins256(BN_MULQACC(true, src1, qwsel1, src2, qwsel2, shift))}
-    modifies
-        wacc;
-    ensures
-        wacc == otbn_mulqacc(true, old(src1), qwsel1, old(src2), qwsel2, shift, old(wacc));
-{
-    assume false;
+    reveal eval_code_opaque;
 }
 
 procedure bn_mulqacc(
@@ -465,14 +441,35 @@ procedure bn_mulqacc(
     ensures
         wacc == otbn_mulqacc(false, old(src1), qwsel1, old(src2), qwsel2, shift, old(wacc));
 {
-    assume false;
+    reveal eval_code_opaque;
 }
+
+procedure bn_mulqacc_z(
+    in src1: reg256, inline qwsel1: uint2,
+    in src2: reg256, inline qwsel2: uint2,
+    inline shift: uint2)
+    {:instruction Ins256(BN_MULQACC(true, src1, qwsel1, src2, qwsel2, shift))}
+    modifies
+        wacc;
+    ensures
+        wacc == otbn_mulqacc(true, old(src1), qwsel1, old(src2), qwsel2, shift, old(wacc));
+{
+    reveal eval_code_opaque;
+}
+
+ghost procedure otbn_mulqacc_safe_correct(
+    ghost zero: bool,
+    ghost x: uint256,
+    ghost qx: uint2,
+    ghost y: uint256,
+    ghost qy: uint2,
+    ghost shift: uint2,
+    ghost acc: uint256) extern;
 
 procedure bn_mulqacc_safe(
     in src1: reg256, inline qwsel1: uint2,
     in src2: reg256, inline qwsel2: uint2,
     inline shift: uint2)
-    {:instruction Ins256(BN_MULQACC(false, src1, qwsel1, src2, qwsel2, shift))}
     requires
         otbn_mulqacc_is_safe(shift, old(wacc));
     modifies
@@ -480,8 +477,9 @@ procedure bn_mulqacc_safe(
     ensures
         wacc == otbn_mulqacc_safe(false, old(src1), qwsel1, old(src2), qwsel2, shift, old(wacc));
 {
-    // TODO: call bn_mulqacc
-    assume false;
+    // not sure why this lemma call is needed
+    otbn_mulqacc_safe_correct(false, src1, qwsel1, src2, qwsel2, shift, wacc);
+    bn_mulqacc(src1, qwsel1, src2, qwsel2, shift);
 }
 
 procedure bn_mulqacc_so( 
@@ -500,7 +498,7 @@ procedure bn_mulqacc_so(
         // the lower half gets written back into dst
         && dst == uint256_hwb(old(dst), uint256_lh(result), lower);
 {
-    assume false;
+    reveal eval_code_opaque;
 }
 
 procedure bn_mulqacc_so_safe( 
@@ -509,8 +507,6 @@ procedure bn_mulqacc_so_safe(
     in src1: reg256, inline qwsel1: uint2,
     in src2: reg256, inline qwsel2: uint2,
     inline shift: uint2)
-    {:instruction Ins256(BN_MULQACC_SO(false, dst, lower, src1, qwsel1, src2, qwsel2, shift))}
-
     requires
         otbn_mulqacc_is_safe(shift, old(wacc));
     modifies
@@ -522,8 +518,9 @@ procedure bn_mulqacc_so_safe(
         // the lower half gets written back into dst
         && dst == uint256_hwb(old(dst), uint256_lh(result), lower);
 {
-    // TODO: call bn_mulqacc_so
-    assume false;
+    // not sure why this lemma call is needed
+    otbn_mulqacc_safe_correct(false, src1, qwsel1, src2, qwsel2, shift, wacc);
+    bn_mulqacc_so(dst, lower, src1, qwsel1, src2, qwsel2, shift);
 }
 
 function mod_add(a: int, b: int, m: int): int extern;
@@ -645,36 +642,34 @@ procedure bn_mov(inout dst: reg256, in src: reg256)
     ensures
         dst == old(src);
 {
-    assume false;
+    reveal eval_code_opaque;
 }
 
 procedure bn_movr(inout grd: reg32, inline grd_inc: bool, inout grs: reg32, inline grs_inc: bool)
     {:instruction Ins256(BN_MOVR(grd, grd_inc, grs, grs_inc))}
     requires
-        !(grd_inc && grs_inc);
-        if grd_inc then grd < 31 else grd < 32;
-        if grs_inc then grs < 31 else grs < 32;
+        @grd != @grs;
+        grd <= 31;
+        grs <= 31;
     modifies
         wdrs;
-
     ensures
         grd == (if grd_inc then (old(grd) + 1) else old(grd));
         grs == (if grs_inc then (old(grs) + 1) else old(grs));
         wdrs == old(wdrs[grd := wdrs[grs]]);
 {
-    assume false;
+    reveal eval_code_opaque;
 }
 
 procedure bn_sel(inout dst: reg256, in src1: reg256, in src2: reg256, inline which_group: uint1, inline flag: uint2)
     {:instruction Ins256(BN_SEL(dst, src1, src2, which_group, flag))} 
-    // TODO: sort out fg/flag
     reads
         fgroups;
 
     ensures
         dst == (if old(get_flag(fgroups, which_group, flag)) then old(src1) else old(src2));
 {
-    assume false;
+    reveal eval_code_opaque;
 }
     
 procedure comment(inline comment: string)

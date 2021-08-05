@@ -29,12 +29,6 @@ module vt_vale {
         xs + [x]
     }
 
-    function mod_add(a: nat, b: nat, m: nat): nat 
-        requires a < m && b < m;
-    {
-        if a + b > m then a + b - m else a + b
-    }
-
     function va_get_ok(s: va_state): bool
     {
         s.ok
@@ -166,12 +160,13 @@ module vt_vale {
 
     predicate va_is_src_reg256(r :reg256_t, s: va_state)
     {
-        true
+        r.WDR?
     }
 
     predicate va_is_dst_reg256(r :reg256_t, s: va_state)
     {
-        !r.WRND?
+        r.WDR?
+        // !r.WRND?
     }
 
     function va_read_reg256(s: va_state, r :reg256_t):uint256

@@ -11,6 +11,7 @@ module bv_ops {
     type uint4   = i :int | 0 <= i < BASE_4
     type uint5   = i :int | 0 <= i < BASE_5
     type uint8   = i :int | 0 <= i < BASE_8
+    type uint10  = i :int | 0 <= i < 1024
     type uint16  = i :int | 0 <= i < BASE_16
     type uint32  = i :int | 0 <= i < BASE_32
     type uint64  = i :int | 0 <= i < BASE_64
@@ -19,7 +20,6 @@ module bv_ops {
     type uint512 = i :int | 0 <= i < BASE_512
 
     type int12   = i :int | -2048 <= i <= 2047
-    type uint10  = i :int | 0 <= i < 1024
 
     datatype shift_t = SFT(left: bool, bytes: uint5)
 
@@ -111,7 +111,6 @@ module bv_ops {
         var sum : int := x + y + cin;
         var sum_out := if sum < BASE_256 then sum else sum - BASE_256;
         var cout := if sum  < BASE_256 then 0 else 1;
-        // assert x + y + cin == sum_out + cout * BASE_256;
         (sum_out, cout)
     }
 
@@ -146,11 +145,14 @@ module bv_ops {
     }
 
     function method uint256_ls(x: uint256, num_bytes: uint5): (r: uint256)
+        ensures (num_bytes == 0) ==> r == x;
         ensures (num_bytes == 8 && x < BASE_192) ==> (r == x * BASE_64);
-    // {
-    //     //assume false;
-    //     (x as bv256 << (num_bytes * 8)) as uint256
-    // }
+        ensures (num_bytes == 16 && x < BASE_128) ==> (r == x * BASE_128);
+        ensures (num_bytes == 24 && x < BASE_64) ==> (r == x * BASE_192);
+    {
+        assume false;
+        (x as bv256 << (num_bytes * 8)) as uint256
+    }
 
     function method uint256_rs(x: uint256, num_bytes: uint5): uint256
 
