@@ -1,11 +1,13 @@
 include "vt_consts.dfy"
 include "bv_ops.dfy"
+include "vt_mem.dfy"
 include "../lib/powers.dfy"
 include "../lib/congruences.dfy"
 
 module vt_ops {
     import opened bv_ops
     import opened vt_consts
+    import opened vt_mem
     import opened powers
     import opened congruences
 
@@ -84,75 +86,6 @@ module vt_ops {
         if which_group == 0 then fgps.(fg0 := new_flags) else fgps.(fg1 := new_flags)
     }
 
-/* memory definions */
-
-    type xmem_t = map<int, uint32>
-
-    predicate method admissible_xmem_addr(addr: uint32)
-    {
-        && addr % 4 == 0
-        && addr < DMEM_LIMIT
-    }    
-
-    predicate xmem_addr_valid(xmem: xmem_t, addr: uint32)
-    {
-        && admissible_xmem_addr(addr)
-        && addr in xmem
-    }
-
-    predicate xmem_addr_mapped(xmem: xmem_t, addr: uint32, value: uint32)
-    {
-        && xmem_addr_valid(xmem, addr)
-        && xmem[addr] == value
-    }
-
-    type wmem_t = map<int, seq<uint256>>
-
-    predicate wmem_base_addr_valid(wmem: wmem_t, addr: int, size: nat)
-    {
-        && addr in wmem
-        // buff is not empty
-        && |wmem[addr]| == size != 0
-        // buff does not extend beyond mem limit
-        && addr + 32 * size <= DMEM_LIMIT
-    }
-
-/* iter_t definion (SHADOW) */
-
-    datatype iter_t = iter_cons(base_addr: int, index: nat, buff: seq<uint256>)
-
-    function bn_lid_next_iter(iter: iter_t, inc: bool): iter_t
-    {
-        iter.(index := if inc then iter.index + 1 else iter.index)
-    }
-
-    function bn_sid_next_iter(iter: iter_t, value: uint256, inc: bool): iter_t
-        requires iter.index < |iter.buff|
-    {
-        iter.(index := if inc then iter.index + 1 else iter.index)
-            .(buff := iter.buff[iter.index := value])
-    }
-
-    predicate iter_inv(iter: iter_t, wmem: wmem_t, address: int)
-    {
-        var base_addr := iter.base_addr;
-        // address is correct
-        && address == base_addr + 32 * iter.index
-        // base_addr points to a valid buffer
-        && wmem_base_addr_valid(wmem, base_addr, |iter.buff|)
-        // the view is consistent with wmem
-        && wmem[base_addr] == iter.buff
-        // the index is within bound (or at end)
-        && iter.index <= |iter.buff|
-    }
-
-    predicate iter_safe(iter: iter_t, wmem: wmem_t, address: int)
-    {
-        && iter_inv(iter, wmem, address)
-        // tighter constraint so we can dereference
-        && iter.index < |iter.buff|
-    }
-
 /* instruction definions */
 
     datatype ins32 =
@@ -183,8 +116,8 @@ module vt_ops {
         | BN_SEL(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, fg: uint1, flag: uint2)
         // | BN_CMP(wrs1: reg256_t, wrs2: reg256_t, fg: uint1)
         // | BN_CMPB(wrs1: reg256_t, wrs2: reg256_t, fg: uint1)
-        | BN_LID(grd: reg32_t, grd_inc: bool, offset: uint32, grs: reg32_t, grs_inc: bool)
-        | BN_SID(grs2: reg32_t, grs2_inc: bool, offset: uint32, grs1: reg32_t, grs1_inc: bool)
+        | BN_LID(grd: reg32_t, grd_inc: bool, offset: int10, grs: reg32_t, grs_inc: bool)
+        | BN_SID(grs2: reg32_t, grs2_inc: bool, offset: int10, grs1: reg32_t, grs1_inc: bool)
         | BN_MOV(wrd: reg256_t, wrs: reg256_t)
         | BN_MOVR(grd: reg32_t, grd_inc: bool, grs: reg32_t, grs_inc: bool)
         // | BN_WSRRS 
@@ -302,9 +235,10 @@ module vt_ops {
 
         xmem: xmem_t,
         wmem: wmem_t,
+        ghost heap: heap_t,
 
         ok: bool)
-    {
+    {   
         function method read_reg32(r: reg32_t): uint32
         {
             if r.index == 0 then 0
@@ -318,13 +252,13 @@ module vt_ops {
         }
 
         function method read_xmem(addr: uint32): uint32
-            requires admissible_xmem_addr(addr)
+            requires xmem_addr_admissible(addr)
         {
             if addr in xmem then xmem[addr] else 0
         }
 
         function method write_xmem(addr: uint32, v: uint32): state
-            requires admissible_xmem_addr(addr)
+            requires xmem_addr_admissible(addr)
         {
             this.(xmem := xmem[addr := v])
         }
@@ -348,7 +282,7 @@ module vt_ops {
         {
             var base := read_reg32(xrs1);
             var addr := uint32_addi(base, offset);
-            if !admissible_xmem_addr(addr) then this.(ok := false)
+            if !xmem_addr_admissible(addr) then this.(ok := false)
             else write_reg32(xrd, read_xmem(addr))
         }
 
@@ -356,7 +290,7 @@ module vt_ops {
         {
             var base := read_reg32(xrs1);
             var addr := uint32_addi(base, offset);
-            if !admissible_xmem_addr(addr) then this.(ok := false)
+            if !xmem_addr_admissible(addr) then this.(ok := false)
             else write_xmem(addr, read_reg32(xrs2))
         }
 
@@ -395,6 +329,50 @@ module vt_ops {
             this.(fgroups := update_fgroups(fgroups, which_group, new_flags))
         }
 
+        function method read_wmem(addr: uint32): uint256 
+            requires wmem_addr_admissible(addr)
+        {
+            if addr in wmem then wmem[addr] else 0
+        }
+
+        function method write_wmem(addr: uint32, v: uint256): state 
+            requires wmem_addr_admissible(addr)
+        {
+            this.(wmem := wmem[addr := v])
+        }
+
+        function method eval_BN_LID(grd: reg32_t, grd_inc: bool, offset: int10, grs: reg32_t, grs_inc: bool): state
+            // grd and grs should not be the same
+        {
+            var di := read_reg32(grd);
+            var base := read_reg32(grs);
+            var addr := wmem_offsetted_addr(base, offset);
+            if di > 31 || !wmem_addr_admissible(addr) then 
+                this.(ok := false)
+            else
+                var value := read_wmem(addr);
+                // write to wdr[grd]
+                write_reg256(WDR(di), value).
+                // update grd
+                write_reg32(grd, if grd_inc then di + 1 else di).
+                // update grs
+                write_reg32(grs, if grs_inc then uint32_add(base, 32) else base)
+        }
+
+        function method eval_BN_SID(grs2: reg32_t, grs2_inc: bool, offset: int10, grs1: reg32_t, grs1_inc: bool): state
+        {
+            var di := read_reg32(grs2);
+            var base := read_reg32(grs1);
+            var addr := wmem_offsetted_addr(base, offset);
+            if di > 31 || !wmem_addr_admissible(addr) then 
+                this.(ok := false)
+            else
+                var value := read_reg256(WDR(di));
+                write_wmem(addr, value).
+                write_reg32(grs1, if grs1_inc then uint32_add(base, 32) else base).
+                write_reg32(grs2, if grs2_inc then di + 1 else di)
+        }
+
         function method eval_BN_ADD(wrd: reg256_t, wrs1: reg256_t, wrs2: 
         reg256_t, shift: shift_t, fg: uint1): state
         {
@@ -420,7 +398,10 @@ module vt_ops {
             write_reg256(wrd, sum).write_flags(fg, flags)
         }
 
-        function method eval_BN_MULQACC(zero: bool, wrs1: reg256_t, qwsel1: uint2, wrs2: reg256_t, qwsel2: uint2, shift_qws: uint2): state
+        function method eval_BN_MULQACC(zero: bool,
+            wrs1: reg256_t, qwsel1: uint2,
+            wrs2: reg256_t, qwsel2: uint2,
+            shift_qws: uint2): state
         {
             var v1 := read_reg256(wrs1);
             var v2 := read_reg256(wrs2);
@@ -429,7 +410,11 @@ module vt_ops {
             write_reg256(WACC, product)
         }
         
-        function method eval_BN_MULQACC_SO(zero: bool, wrd: reg256_t, lower: bool, wrs1: reg256_t, qwsel1: uint2, wrs2: reg256_t, qwsel2: uint2, shift_qws: uint2): state
+        function method eval_BN_MULQACC_SO(zero: bool,
+            wrd: reg256_t, lower: bool,
+            wrs1: reg256_t, qwsel1: uint2,
+            wrs2: reg256_t, qwsel2: uint2,
+            shift_qws: uint2): state
         {
             var v1 := read_reg256(wrs1);
             var v2 := read_reg256(wrs2);
@@ -498,7 +483,8 @@ module vt_ops {
 
     predicate valid_state(s: state)
     {
-        s.ok
+        && s.ok
+        && mem_equiv(s.heap, s.wmem)
     }
 
     predicate eval_ins32(xins: ins32, s: state, r: state)
@@ -541,11 +527,79 @@ module vt_ops {
             case BN_MOVR(grd, grd_inc, grs, grs_inc) =>
                 r == s.eval_BN_MOVR(grd, grd_inc, grs, grs_inc)
             case BN_LID(grd, grd_inc, offset, grs, grs_inc) =>
-                // r == s.eval_BN_LID(grd, grd_inc, offset, grs, grs_inc)
-                !r.ok
+                r == s.eval_BN_LID(grd, grd_inc, offset, grs, grs_inc)
             case BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc) =>
-                // => r == s.eval_BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc)
-                !r.ok
+                r == s.eval_BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc)
+    }
+
+    lemma bn_lid_correct(
+        grd: reg32_t, grd_inc: bool,
+        offset: int10, grs: reg32_t, grs_inc: bool,
+        addr: uint32, iter: iter_t,
+        s: state)
+        returns (r: state, new_iter: iter_t)
+
+        requires valid_state(s)
+        // note this is overly restricting 
+        requires offset == 0
+        requires grd.index != grs.index
+            && grd.index != 0
+            && grs.index != 0
+        requires s.read_reg32(grd) <= 31
+        requires addr == wmem_offsetted_addr(s.read_reg32(grs), offset)
+        requires iter_safe(iter, s.heap, addr)
+
+        ensures r == s.eval_BN_LID(grd, grd_inc, offset, grs, grs_inc)
+        ensures valid_state(r)
+        // the resulting gerenal registers
+        ensures r.read_reg32(grd) == s.read_reg32(grd) + if grd_inc then 1 else 0
+        ensures r.read_reg32(grs) == s.read_reg32(grs) + if grs_inc then 32 else 0
+        // new_iter still reflects the memory
+        ensures new_iter == bn_lid_next_iter(iter, grs_inc)
+        ensures var addr := wmem_offsetted_addr(r.read_reg32(grs), offset);
+            && iter_inv(new_iter, r.heap, addr)
+        // the resulting wide register
+        ensures r.wdrs[s.read_reg32(grd)] == new_iter.buff[iter.index]
+    {
+        new_iter := bn_lid_next_iter(iter, grs_inc);
+        r := s.eval_BN_LID(grd, grd_inc, offset, grs, grs_inc);
+    }
+
+    lemma bn_sid_correct(
+        grs2: reg32_t, grs2_inc: bool,
+        offset: int10, grs1: reg32_t, grs1_inc: bool,
+        value: uint256, addr: uint32, iter: iter_t,
+        s: state)
+    returns (r: state, new_iter: iter_t)
+
+        requires valid_state(s)
+        // note this is overly restricting 
+        requires offset == 0
+        requires grs1.index != grs2.index
+            && grs1.index != 0
+            && grs2.index != 0
+        requires s.read_reg32(grs2) <= 31
+        requires addr == wmem_offsetted_addr(s.read_reg32(grs1), offset)
+        requires value == s.read_reg256(WDR(s.read_reg32(grs2)))
+        requires iter_safe(iter, s.heap, addr)
+
+        // ensures r == s.eval_BN_LID(grd, grd_inc, offset, grs, grs_inc)
+        ensures valid_state(r)
+        // the resulting gerenal registers
+        ensures r.read_reg32(grs2) == s.read_reg32(grs2) + if grs2_inc then 1 else 0
+        ensures r.read_reg32(grs1) == s.read_reg32(grs1) + if grs1_inc then 32 else 0
+        // new_iter still reflects the memory
+        ensures new_iter == bn_sid_next_iter(iter, value, grs1_inc)
+        ensures var addr := wmem_offsetted_addr(r.read_reg32(grs1), offset);
+            && iter_inv(new_iter, r.heap, addr)
+        ensures r.wmem == s.wmem[addr := value]
+    {
+        r := s.eval_BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc);
+        var (new_heap, temp) := write_heap(addr, value, s.heap, iter);
+        write_equiv(s.wmem, addr, value, s.heap, iter);
+        new_iter := bn_sid_next_iter(iter, value, grs1_inc);
+        assert new_iter.buff == temp.buff;
+        r := r.(heap := new_heap);
     }
 
 /* control flow definions */
