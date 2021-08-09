@@ -235,7 +235,6 @@ module vt_ops {
 
         xmem: xmem_t,
         wmem: wmem_t,
-        ghost heap: heap_t,
 
         ok: bool)
     {   
@@ -484,7 +483,6 @@ module vt_ops {
     predicate valid_state(s: state)
     {
         && s.ok
-        && mem_equiv(s.heap, s.wmem)
     }
 
     predicate eval_ins32(xins: ins32, s: state, r: state)
@@ -530,76 +528,6 @@ module vt_ops {
                 r == s.eval_BN_LID(grd, grd_inc, offset, grs, grs_inc)
             case BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc) =>
                 r == s.eval_BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc)
-    }
-
-    lemma bn_lid_correct(
-        grd: reg32_t, grd_inc: bool,
-        offset: int10, grs: reg32_t, grs_inc: bool,
-        addr: uint32, iter: iter_t,
-        s: state)
-        returns (r: state, new_iter: iter_t)
-
-        requires valid_state(s)
-        // note this is overly restricting 
-        requires offset == 0
-        requires grd.index != grs.index
-            && grd.index != 0
-            && grs.index != 0
-        requires s.read_reg32(grd) <= 31
-        requires addr == wmem_offsetted_addr(s.read_reg32(grs), offset)
-        requires iter_safe(iter, s.heap, addr)
-
-        ensures r == s.eval_BN_LID(grd, grd_inc, offset, grs, grs_inc)
-        ensures valid_state(r)
-        // the resulting gerenal registers
-        ensures r.read_reg32(grd) == s.read_reg32(grd) + if grd_inc then 1 else 0
-        ensures r.read_reg32(grs) == s.read_reg32(grs) + if grs_inc then 32 else 0
-        // new_iter still reflects the memory
-        ensures new_iter == bn_lid_next_iter(iter, grs_inc)
-        ensures var addr := wmem_offsetted_addr(r.read_reg32(grs), offset);
-            && iter_inv(new_iter, r.heap, addr)
-        // the resulting wide register
-        ensures r.wdrs[s.read_reg32(grd)] == new_iter.buff[iter.index]
-    {
-        new_iter := bn_lid_next_iter(iter, grs_inc);
-        r := s.eval_BN_LID(grd, grd_inc, offset, grs, grs_inc);
-    }
-
-    lemma bn_sid_correct(
-        grs2: reg32_t, grs2_inc: bool,
-        offset: int10, grs1: reg32_t, grs1_inc: bool,
-        value: uint256, addr: uint32, iter: iter_t,
-        s: state)
-    returns (r: state, new_iter: iter_t)
-
-        requires valid_state(s)
-        // note this is overly restricting 
-        requires offset == 0
-        requires grs1.index != grs2.index
-            && grs1.index != 0
-            && grs2.index != 0
-        requires s.read_reg32(grs2) <= 31
-        requires addr == wmem_offsetted_addr(s.read_reg32(grs1), offset)
-        requires value == s.read_reg256(WDR(s.read_reg32(grs2)))
-        requires iter_safe(iter, s.heap, addr)
-
-        // ensures r == s.eval_BN_LID(grd, grd_inc, offset, grs, grs_inc)
-        ensures valid_state(r)
-        // the resulting gerenal registers
-        ensures r.read_reg32(grs2) == s.read_reg32(grs2) + if grs2_inc then 1 else 0
-        ensures r.read_reg32(grs1) == s.read_reg32(grs1) + if grs1_inc then 32 else 0
-        // new_iter still reflects the memory
-        ensures new_iter == bn_sid_next_iter(iter, value, grs1_inc)
-        ensures var addr := wmem_offsetted_addr(r.read_reg32(grs1), offset);
-            && iter_inv(new_iter, r.heap, addr)
-        ensures r.wmem == s.wmem[addr := value]
-    {
-        r := s.eval_BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc);
-        var (new_heap, temp) := write_heap(addr, value, s.heap, iter);
-        write_equiv(s.wmem, addr, value, s.heap, iter);
-        new_iter := bn_sid_next_iter(iter, value, grs1_inc);
-        assert new_iter.buff == temp.buff;
-        r := r.(heap := new_heap);
     }
 
 /* control flow definions */

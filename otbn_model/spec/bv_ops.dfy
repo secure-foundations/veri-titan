@@ -19,6 +19,7 @@ module bv_ops {
     type uint256 = i :int | 0 <= i < BASE_256
     type uint512 = i :int | 0 <= i < BASE_512
 
+    type int10   = i :int | -512 <= i <= 511
     type int12   = i :int | -2048 <= i <= 2047
 
     datatype shift_t = SFT(left: bool, bytes: uint5)
@@ -80,14 +81,15 @@ module bv_ops {
 
     function method uint32_add(x:uint32, y:uint32): uint32
     {
-        var s :uint64 := x + y;
+        var s: uint64 := x + y;
         if s < BASE_32 then 
             s
         else
             s - BASE_32
     }
 
-    function method uint32_addi(x: uint32, imm: int12): uint32
+    function method uint32_addi(x: uint32, imm: int): uint32
+        requires - BASE_32 < imm < BASE_32
     {
         uint32_add(x, to_2s_comp_uint32(imm))
     }

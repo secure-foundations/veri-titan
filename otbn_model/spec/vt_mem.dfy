@@ -33,9 +33,9 @@ module vt_mem {
 
     type wmem_t = map<nat, uint256>
 
-    function method offsetted_addr(addr: nat, i: nat): nat
+    function method wmem_offsetted_addr(base: uint32, offset: int10): uint32
     {
-        addr + 32 * i
+        uint32_addi(base, offset * 32)
     }
 
     // admissible is aligned and bounded
@@ -56,13 +56,18 @@ module vt_mem {
 
     type heap_t = map<nat, seq<uint256>>
 
+    function heap_indexed_addr(addr: nat, i: nat): nat
+    {
+        addr + 32 * i
+    }
+
     predicate heap_base_addr_valid(heap: heap_t, addr: int)
     {
         && addr in heap
         // buff is not empty
         && |heap[addr]| != 0
         // address is also admissible
-        && wmem_addr_admissible(offsetted_addr(addr, |heap[addr]|))
+        && wmem_addr_admissible(heap_indexed_addr(addr, |heap[addr]|))
     }
 
 /* iter_t definion (SHADOW) */
@@ -75,7 +80,7 @@ module vt_mem {
         // base_addr points to a valid buffer
         && heap_base_addr_valid(heap, base_addr)
         // address is correct
-        && address == offsetted_addr(base_addr, iter.index)
+        && address == heap_indexed_addr(base_addr, iter.index)
         // the view is consistent with heap
         && heap[base_addr] == iter.buff
         // the index is within bound (or at end)
@@ -111,11 +116,11 @@ module vt_mem {
         var len := |buff|;
         && heap_base_addr_valid(heap, base_addr)
         && (forall i | 0 <= i < len ::
-            (var sub_addr := offsetted_addr(base_addr, i);
+            (var sub_addr := heap_indexed_addr(base_addr, i);
             && wmem_addr_valid(wmem, sub_addr)
             && wmem[sub_addr] == buff[i]))
         && (forall i | 0 < i < len ::
-            offsetted_addr(base_addr, i) !in heap)
+            heap_indexed_addr(base_addr, i) !in heap)
     }
 
     // this holds for a given cell in wmem_t
@@ -143,6 +148,14 @@ module vt_mem {
 
 /* correspondence lemmas */
 
+    // lemma read_equiv(wmem: wmem_t, addr: nat, heap: heap_t, iter: iter_t)
+    //     requires wmem_addr_valid(wmem, addr)
+    //     requires mem_equiv(heap, wmem)
+    //     requires iter_safe(iter, heap, addr)
+    //     ensures wmem[addr] == iter.buff[iter.index]
+    // {
+    // }
+
     // given an address, there is an unique iter to it
     lemma addess_iter_unique(wmem: wmem_t, addr: nat, heap: heap_t)
         requires wmem_addr_valid(wmem, addr)
@@ -165,14 +178,14 @@ module vt_mem {
                     assert heap_buff_inv(heap, wmem, base);
                     var k := i - j;
                     assert 0 < k < len;
-                    assert alt_base == offsetted_addr(base, k);
+                    assert alt_base == heap_indexed_addr(base, k);
                     assert alt_base !in heap;
                 } else {
                     var buff, len := heap[alt_base], |heap[alt_base]|;
                     assert heap_buff_inv(heap, wmem, alt_base);
                     var k := j - i;
                     assert 0 < k < len;
-                    assert base == offsetted_addr(alt_base, k);
+                    assert base == heap_indexed_addr(alt_base, k);
                     assert base !in heap;
                 }
                 assert false; 
@@ -181,25 +194,16 @@ module vt_mem {
         }
     }
 
-    lemma read_equiv(wmem: wmem_t, addr: nat, heap: heap_t, iter: iter_t)
-        requires wmem_addr_valid(wmem, addr)
-        requires mem_equiv(heap, wmem)
-        requires iter_safe(iter, heap, addr)
-        ensures wmem[addr] == iter.buff[iter.index]
-    {
-        addess_iter_unique(wmem, addr, heap);
-    }
-
     lemma sub_address_rooted(wmem: wmem_t, base: nat, i: nat, heap: heap_t)
         requires mem_equiv(heap, wmem)
         requires heap_base_addr_valid(heap, base)
         requires 0 <= i < |heap[base]|
-        ensures get_iter(wmem, offsetted_addr(base, i), heap) == iter_cons(base, i, heap[base])
+        ensures get_iter(wmem, heap_indexed_addr(base, i), heap) == iter_cons(base, i, heap[base])
     {
         assert heap_buff_inv(heap, wmem, base);
 
         var buff := heap[base]; 
-        var sub_addr := offsetted_addr(base, i);
+        var sub_addr := heap_indexed_addr(base, i);
         assert sub_addr in wmem;
         assert wmem[sub_addr] == buff[i];
 
@@ -241,7 +245,7 @@ module vt_mem {
         var len := |buff|;
 
         assert heap_base_addr_valid(heap', base_addr);
-        assert forall i | 0 < i < len :: offsetted_addr(base_addr, i) !in heap';
+        assert forall i | 0 < i < len :: heap_indexed_addr(base_addr, i) !in heap';
 
         assert heap_buff_inv(heap, wmem, base_addr);
 
@@ -249,11 +253,11 @@ module vt_mem {
             assert heap'[base_addr] == buff;
 
             forall i | 0 <= i < len
-                ensures var sub_addr := offsetted_addr(base_addr, i);
+                ensures var sub_addr := heap_indexed_addr(base_addr, i);
                     && wmem_addr_valid(wmem', sub_addr)
                     && wmem'[sub_addr] == buff[i]
             {
-                var sub_addr := offsetted_addr(base_addr, i);
+                var sub_addr := heap_indexed_addr(base_addr, i);
                 if sub_addr == write_addr {
                     sub_address_rooted(wmem, base_addr, i, heap);
                     assert false;
@@ -264,11 +268,11 @@ module vt_mem {
             assert heap'[base_addr] == buff'[j := value];
 
             forall i | 0 <= i < len
-                ensures var sub_addr := offsetted_addr(base_addr, i);
+                ensures var sub_addr := heap_indexed_addr(base_addr, i);
                     && wmem_addr_valid(wmem', sub_addr)
                     && wmem'[sub_addr] == buff'[i]
             {
-                var sub_addr := offsetted_addr(base_addr, i);
+                var sub_addr := heap_indexed_addr(base_addr, i);
                 if i == j {
                     assert sub_addr == write_addr;
                     assert wmem'[sub_addr] == value; 
@@ -305,7 +309,7 @@ module vt_mem {
             if iter.base_addr != iter'.base_addr {
                 assert iter_safe(iter, heap', addr);
             } else {
-                assert addr == offsetted_addr(iter.base_addr, iter.index);
+                assert addr == heap_indexed_addr(iter.base_addr, iter.index);
                 assert iter'.base_addr == iter.base_addr;
                 var iter'' := iter'.(index := iter.index);
                 assert iter_safe(iter'', heap', addr);
