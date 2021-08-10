@@ -6,8 +6,17 @@ module congruences {
     }
 
     lemma cong_reflective_lemma(a: int, b: int, n: int)
-        requires a == b
+        requires a == b;
+        requires n != 0;
         ensures cong(a, b, n);
+    {
+        reveal cong();
+    }
+
+    lemma cong_symmetric_lemma(a: int, b: int, n: int)
+        requires n != 0;
+        requires cong(a, b, n);
+        ensures cong(b, a, n);
     {
         reveal cong();
     }

@@ -93,21 +93,22 @@ module mont_loop_lemmas {
             cong_B256(ui * m0 + p1.lh, 0);
         }
 
-        calc ==> {
-            p2.full == ui * m0 + p1.lh;
-            { lemma_uint512_half_split(p2.full); }
-            p2.lh + p2.uh * BASE_256 == ui * m0 + p1.lh;
-            { cong_reflective_lemma(p2.lh + p2.uh * BASE_256, ui * m0 + p1.lh, BASE_256); }
-            cong_B256(p2.lh + p2.uh * BASE_256, ui * m0 + p1.lh);
-            { reveal cong(); }
-            cong_B256(ui * m0 + p1.lh, p2.lh + p2.uh * BASE_256);
-            { cong_add_lemma_5(ui * m0 + p1.lh, p2.lh + p2.uh * BASE_256, -(p2.uh as int), BASE_256); }
-            cong_B256(ui * m0 + p1.lh, p2.lh);
-            { cong_trans_lemma(p2.lh, ui * m0 + p1.lh, 0, BASE_256); }
-            cong_B256(p2.lh, 0);
+        assert cong_B256(p2.lh, 0) by {
+            calc ==> {
+                p2.full == ui * m0 + p1.lh;
+                { lemma_uint512_half_split(p2.full); }
+                p2.lh + p2.uh * BASE_256 == ui * m0 + p1.lh;
+                { cong_reflective_lemma(p2.lh + p2.uh * BASE_256, ui * m0 + p1.lh, BASE_256); }
+                cong_B256(p2.lh + p2.uh * BASE_256, ui * m0 + p1.lh);
+                { cong_symmetric_lemma(p2.lh + p2.uh * BASE_256, ui * m0 + p1.lh, BASE_256); }
+                cong_B256(ui * m0 + p1.lh, p2.lh + p2.uh * BASE_256);
+                { cong_add_lemma_5(ui * m0 + p1.lh, p2.lh + p2.uh * BASE_256, -(p2.uh as int), BASE_256); }
+                cong_B256(ui * m0 + p1.lh, p2.lh);
+                { cong_trans_lemma(p2.lh, ui * m0 + p1.lh, 0, BASE_256); }
+                cong_B256(p2.lh, 0);
+            }
         }
 
-        assert cong_B256(p2.lh, 0);
         cong_residual_lemma(p2.lh, 0, BASE_256);
     }
 
