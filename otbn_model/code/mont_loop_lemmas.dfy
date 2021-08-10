@@ -93,13 +93,11 @@ module mont_loop_lemmas {
             cong_B256(ui * m0 + p1.lh, 0);
         }
 
-        assume false;
-
         calc ==> {
             p2.full == ui * m0 + p1.lh;
             { lemma_uint512_half_split(p2.full); }
             p2.lh + p2.uh * BASE_256 == ui * m0 + p1.lh;
-            { reveal cong(); }
+            { cong_reflective_lemma(p2.lh + p2.uh * BASE_256, ui * m0 + p1.lh, BASE_256); }
             cong_B256(p2.lh + p2.uh * BASE_256, ui * m0 + p1.lh);
             { reveal cong(); }
             cong_B256(ui * m0 + p1.lh, p2.lh + p2.uh * BASE_256);

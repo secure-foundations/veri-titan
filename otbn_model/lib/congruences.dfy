@@ -5,6 +5,13 @@ module congruences {
         a % n == b % n
     }
 
+    lemma cong_reflective_lemma(a: int, b: int, n: int)
+        requires a == b
+        ensures cong(a, b, n);
+    {
+        reveal cong();
+    }
+
     lemma cong_equiv_lemma(a: int, b: int, n: int)
         requires n != 0;
         ensures cong(a, b, n) <==> ((a - b) % n == 0);
