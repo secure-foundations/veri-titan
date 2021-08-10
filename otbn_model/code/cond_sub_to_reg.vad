@@ -11,6 +11,7 @@ module cond_sub_to_reg {
 
 import opened bv_ops
 import opened vt_ops
+import opened vt_mem
 import opened rsa_ops
 import opened vt_consts
 import opened vt_vale
@@ -54,7 +55,7 @@ procedure cond_sub_to_reg_inner(
         x12 == 30;
         x13 == 24;
 
-        iter_safe(iter, wmem, x16);
+        iter_safe(iter, heap, x16);
         seq_len(iter.buff) == NUM_WORDS;
 
         valid_wdr_view(wdrs, prev_view, 4, NUM_WORDS);
@@ -72,7 +73,7 @@ procedure cond_sub_to_reg_inner(
             init_view[..iter.index] == wdrs[4..x8];
     
     reads
-        w3; w31; wmem;
+        w3; w31; wmem; heap;
 
     modifies
         x8; x12; x13; x16;
@@ -89,7 +90,7 @@ procedure cond_sub_to_reg_inner(
         w3 == old(w3);
         w31 == old(w31);
 
-        iter_inv(next_iter, wmem, x16);
+        iter_inv(next_iter, heap, x16);
         next_iter == bn_lid_next_iter(iter, true);
 
         valid_wdr_view(wdrs, next_view, 4, NUM_WORDS);
@@ -150,12 +151,12 @@ procedure cond_sub_to_reg(
 
         valid_wdr_view(wdrs, init_view, 4, NUM_WORDS);
         
-        iter_safe(init_iter, wmem, x16);
+        iter_safe(init_iter, heap, x16);
         init_iter.index == 0;
         seq_len(init_iter.buff) == NUM_WORDS;
 
     reads
-        x30; w3; w31; wmem;
+        x30; w3; w31; wmem; heap;
 
     modifies
         fgroups;
@@ -194,7 +195,7 @@ procedure cond_sub_to_reg(
             w3 == old(w3);
             w31 == old(w31);
 
-            iter_inv(iter, wmem, x16);
+            iter_inv(iter, heap, x16);
             iter.buff == init_iter.buff;
             iter.index + loop_ctr == NUM_WORDS;
 

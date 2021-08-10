@@ -170,15 +170,16 @@ module mont_loop_lemmas {
         calc {
             xi * to_nat(y[..1]) + ui * to_nat(m[..1]) + to_nat(a[..1]);
             p2.uh * pow_B256(1) + p1.uh * pow_B256(1);
-                {
+            {
+                assert to_nat([0]) == 0 by {
                     reveal to_nat();
-                    assert to_nat([0]) == 0;
                 }
+            }
             to_nat([0]) + p2.uh * pow_B256(1) + p1.uh * pow_B256(1);
-                {
-                    assert [0] + a[..0] == [0];
-                    assert to_nat([0]) == to_nat([0] + a[..0]);
-                }
+            {
+                assert [0] + a[..0] == [0];
+                assert to_nat([0]) == to_nat([0] + a[..0]);
+            }
             to_nat([0] + a[..0]) + p2.uh * pow_B256(1) + p1.uh * pow_B256(1);
         }
     }

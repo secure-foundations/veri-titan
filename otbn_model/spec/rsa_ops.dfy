@@ -288,15 +288,15 @@ module rsa_ops {
 
     predicate mvars_iter_init(iter: iter_t, heap: heap_t, address: int, value: int)
     {
-        && (address > 0 ==> iter_inv(iter, heap, address))
-        && (value > 0 ==> to_nat(iter.buff) == value)
+        && (address >= 0 ==> iter_inv(iter, heap, address))
+        && (value >= 0 ==> to_nat(iter.buff) == value)
             && iter.index == 0
         && |iter.buff| == NUM_WORDS
     }
 
     predicate m0d_it_inv(iter: iter_t, heap: heap_t, address: int)
     {
-        && (address > 0==> iter_inv(iter, heap, address))
+        && (address >= 0 ==> iter_inv(iter, heap, address))
         && iter.index == 0
         && |iter.buff| == 1
     }
