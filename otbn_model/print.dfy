@@ -137,7 +137,7 @@ method printIns256(ins:ins256)
         case BN_XOR(dst, src1, src2, shift, fg) =>
             print("  bn.xor ");
             printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" "); 
-            printShift(shift); printFlags(fg);
+            printShift(shift); print(", "); printFlags(fg);
             print("\n");
 
         case BN_ADD(dst, src1, src2, shift, fg) =>
@@ -176,11 +176,11 @@ method printIns256(ins:ins256)
         //     printReg256(dst); print(", "); printReg256(src1); print(", "); print(src2); print(", ");
         //     printFlags(fg); print("\n");
 
-        // case BN_SUBB(dst, src1, src2, shift, fg) =>
-        //     print("  bn.subb ");
-        //     printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" ");
-        //     printShift(shift); print(", "); printFlags(fg);
-        //     print("\n");
+        case BN_SUBB(dst, src1, src2, shift, fg) =>
+            print("  bn.subb ");
+            printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" ");
+            printShift(shift); print(", "); printFlags(fg);
+            print("\n");
 
         case BN_SUB(dst, src1, src2, shift, fg) =>
             print("  bn.sub ");

@@ -99,9 +99,16 @@ module bv_ops {
         (x - y) % BASE_32
     }
 
-    function method uint256_msb(x: uint256): uint1
+    function method {:opaque} uint256_msb(x: uint256): uint1
+    {
+        var mask := BASE_256 / 2;
+        if (x as bv256 & mask as bv256) == mask as bv256 then 1 else 0
+    }
 
-    function method uint256_lsb(x: uint256): uint1
+    function method {:opaque} uint256_lsb(x: uint256): uint1
+    {
+        x % 2
+    }
 
     function method uint256_mul(x: uint256, y: uint256): uint256
     {
@@ -146,17 +153,28 @@ module bv_ops {
         (x as bv256 | y as bv256) as uint256
     }
 
-    function method uint256_ls(x: uint256, num_bytes: uint5): (r: uint256)
+    lemma {:axiom} left_shift_is_mul(x: uint256, num_bytes: uint5, r: uint256)
+        requires r == (x as bv256 << (num_bytes * 8)) as uint256;
+        ensures (num_bytes == 0) ==> r == x;
+        ensures (num_bytes == 8 && x < BASE_192) ==> (r == x * BASE_64);
+        ensures (num_bytes == 16 && x < BASE_128) ==> (r == x * BASE_128);
+        ensures (num_bytes == 24 && x < BASE_64) ==> (r == x * BASE_192);
+
+    function method {:opaque} uint256_ls(x: uint256, num_bytes: uint5): (r: uint256)
         ensures (num_bytes == 0) ==> r == x;
         ensures (num_bytes == 8 && x < BASE_192) ==> (r == x * BASE_64);
         ensures (num_bytes == 16 && x < BASE_128) ==> (r == x * BASE_128);
         ensures (num_bytes == 24 && x < BASE_64) ==> (r == x * BASE_192);
     {
-        assume false;
-        (x as bv256 << (num_bytes * 8)) as uint256
+        var r := (x as bv256 << (num_bytes * 8)) as uint256;
+        left_shift_is_mul(x, num_bytes, r);
+        r
     }
 
-    function method uint256_rs(x: uint256, num_bytes: uint5): uint256
+    function method {:opaque} uint256_rs(x: uint256, num_bytes: uint5): uint256
+    {
+        (x as bv256 >> (num_bytes * 8)) as uint256
+    }
 
     function method uint256_sb(b: uint256, shift: shift_t) : uint256
     {    
@@ -183,11 +201,19 @@ module bv_ops {
         reveal uint256_uh();
     }
 
-    function method {:extern} uint256_hwb(x: uint256, v: uint128, lower: bool): (x': uint256)
+    function method {:opaque} uint256_hwb(x: uint256, v: uint128, lower: bool): (x': uint256)
         // overwrites the lower half, keeps the higher half
         ensures lower ==> (uint256_lh(x') == v && uint256_uh(x') == uint256_uh(x));
         // overwrites the higher half, keeps the lower half
         ensures !lower ==> (uint256_uh(x') == v && uint256_lh(x') == uint256_lh(x));
+    {
+        var uh := uint256_uh(x);
+        var lh := uint256_lh(x);
+        reveal uint256_lh();
+        reveal uint256_uh();
+        if lower then v + uh * BASE_128
+        else lh + v * BASE_128
+    }
 
     lemma uint256_hwb_lemma(x1: uint256, x2: uint256, x3: uint256, lo: uint128, hi: uint128)
         requires x2 == uint256_hwb(x1, lo, true);
@@ -268,6 +294,7 @@ module bv_ops {
         var src1 := uint256_qsel(x, qx);
         var src2 := uint256_qsel(y, qy);
         single_digit_lemma_0(src1, src2, BASE_64-1);
+        assert src1 * src2 <= (BASE_64-1) * (BASE_64-1) < BASE_128;
         src1 as uint128 * src2 as uint128
     }
 
