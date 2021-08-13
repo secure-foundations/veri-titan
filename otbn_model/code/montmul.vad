@@ -21,6 +21,7 @@ module montmul {
 
 import opened bv_ops
 import opened vt_ops
+import opened vt_mem
 import opened rsa_ops
 import opened vt_consts
 import opened vt_vale
@@ -51,7 +52,7 @@ procedure montmul_0(ghost vars: mvars)
     
         w31 == 0;
 
-        mvars_inv(vars, wmem, x20, x19, x16, x17, NA, NA);
+        mvars_inv(vars, heap, x20, x19, x16, x17, NA, NA);
 
     ensures
         x9 == old(x9);
@@ -65,12 +66,13 @@ procedure montmul_0(ghost vars: mvars)
         w3 == vars.rsa.M0D;
         w31 == 0;
 
+        heap == old(heap);
         wmem == old(wmem);
         xmem == old(xmem);
 
         valid_wdr_view(wdrs, a_view, 4, NUM_WORDS);
         to_nat(a_view) == 0;
-        mvars_inv(vars, wmem, x20, x19, x16, x17, NA, NA);
+        mvars_inv(vars, heap, x20, x19, x16, x17, NA, NA);
 {
     let _ := bn_lid_safe(x9, false, 0, x17, false, vars.m0d_it);
     bn_mov(w2, w31);
@@ -92,10 +94,11 @@ procedure montmul_0(ghost vars: mvars)
             w3 == vars.rsa.M0D;
             w31 == 0;
 
-            mvars_inv(vars, wmem, x20, x19, x16, x17, NA, NA);
+            mvars_inv(vars, heap, x20, x19, x16, x17, NA, NA);
             valid_wdr_view(wdrs, a_view, 4, NUM_WORDS);
             a_view[..x10 - 4] == seq_zero(x10 - 4);
 
+            heap == old(heap);
             wmem == old(wmem);
             xmem == old(xmem);
 
@@ -123,7 +126,7 @@ procedure montmul(ghost vars: mvars)
         x30 == NUM_WORDS;
         x31 == NUM_WORDS - 1;
 
-        mvars_inv(vars, wmem, x20, x19, x16, x17, NA, NA);
+        mvars_inv(vars, heap, x20, x19, x16, x17, NA, NA);
 
         w31 == 0;
     
@@ -139,11 +142,12 @@ procedure montmul(ghost vars: mvars)
 
         w31 == 0;
 
+        heap == old(heap);
         xmem == old(xmem);
         wmem == old(wmem);
 
         valid_wdr_view(wdrs, a_view, 4, NUM_WORDS);
-        mvars_inv(vars, wmem, NA, x19, x16, x17, NA, NA);
+        mvars_inv(vars, heap, NA, x19, x16, x17, NA, NA);
         montmul_inv(a_view, vars.x_it.buff, NUM_WORDS, vars.y_it.buff, vars.rsa);
 {
     a_view := montmul_0(vars);
@@ -163,7 +167,7 @@ procedure montmul(ghost vars: mvars)
             x30 == NUM_WORDS;
             x31 == NUM_WORDS - 1;
 
-            iter_inv(x_it, wmem, x20);
+            iter_inv(x_it, heap, x20);
             x_it.index + loop_ctr == NUM_WORDS;
             x_it.base_addr == vars.x_it.base_addr;
             x_it.buff == vars.x_it.buff;
@@ -171,12 +175,13 @@ procedure montmul(ghost vars: mvars)
             w3 == vars.rsa.M0D;
             w31 == 0;
     
-            mvars_inv(vars, wmem, NA, x19, x16, x17, NA, NA);
+            mvars_inv(vars, heap, NA, x19, x16, x17, NA, NA);
 
             montmul_inv(a_view, x_it.buff, x_it.index, vars.y_it.buff, vars.rsa);
 
             valid_wdr_view(wdrs, a_view, 4, NUM_WORDS);
 
+            heap == old(heap);
             wmem == old(wmem);
             xmem == old(xmem);
 

@@ -8,6 +8,7 @@ module rsa_ops {
     import opened vt_consts
     import opened bv_ops
     import opened vt_ops
+    import opened vt_mem
     import opened powers
     import opened congruences
 
@@ -285,24 +286,24 @@ module rsa_ops {
         sig_it: iter_t,
         rsa: rsa_params)
 
-    predicate mvars_iter_init(iter: iter_t, wmem: wmem_t, address: int, value: int)
+    predicate mvars_iter_init(iter: iter_t, heap: heap_t, address: int, value: int)
     {
-        && (address != NA ==> iter_inv(iter, wmem, address))
-        && (value != NA ==> to_nat(iter.buff) == value)
+        && (address >= 0 ==> iter_inv(iter, heap, address))
+        && (value >= 0 ==> to_nat(iter.buff) == value)
             && iter.index == 0
         && |iter.buff| == NUM_WORDS
     }
 
-    predicate m0d_it_inv(iter: iter_t, wmem: wmem_t, address: int)
+    predicate m0d_it_inv(iter: iter_t, heap: heap_t, address: int)
     {
-        && (address != NA ==> iter_inv(iter, wmem, address))
+        && (address >= 0 ==> iter_inv(iter, heap, address))
         && iter.index == 0
         && |iter.buff| == 1
     }
 
     predicate mvars_inv(
         vars: mvars,
-        wmem: wmem_t,
+        heap: heap_t,
         x_ptr: int,
         y_ptr: int,
         m_ptr: int,
@@ -312,20 +313,20 @@ module rsa_ops {
     {
         && rsa_params_inv(vars.rsa)
 
-        && mvars_iter_init(vars.x_it, wmem, x_ptr, NA)
-        && mvars_iter_init(vars.y_it, wmem, y_ptr, NA)
-        && mvars_iter_init(vars.sig_it, wmem, sig_ptr, vars.rsa.SIG)
-        && mvars_iter_init(vars.m_it, wmem, m_ptr, vars.rsa.M)
-        && mvars_iter_init(vars.rr_it, wmem, rr_ptr, vars.rsa.RR)
+        && mvars_iter_init(vars.x_it, heap, x_ptr, NA)
+        && mvars_iter_init(vars.y_it, heap, y_ptr, NA)
+        && mvars_iter_init(vars.sig_it, heap, sig_ptr, vars.rsa.SIG)
+        && mvars_iter_init(vars.m_it, heap, m_ptr, vars.rsa.M)
+        && mvars_iter_init(vars.rr_it, heap, rr_ptr, vars.rsa.RR)
 
-        && m0d_it_inv(vars.m0d_it, wmem, m0d_ptr)
+        && m0d_it_inv(vars.m0d_it, heap, m0d_ptr)
         && vars.m0d_it.buff[0] == vars.rsa.M0D
     }
 
     predicate mvars_init(
         vars: mvars,
         xmem: xmem_t,
-        wmem: wmem_t,
+        heap: heap_t,
         m_ptr: uint32,
         m0d_ptr: uint32,
         rr_ptr: uint32,
@@ -342,8 +343,9 @@ module rsa_ops {
         && xmem_addr_mapped(xmem, 20, sig_ptr)
         && xmem_addr_mapped(xmem, 28, out_ptr)
 
-        && mvars_inv(vars, wmem, NA, NA, m_ptr, m0d_ptr, rr_ptr, sig_ptr)
-        && wmem_base_addr_valid(wmem, out_ptr, NUM_WORDS)
+        && mvars_inv(vars, heap, NA, NA, m_ptr, m0d_ptr, rr_ptr, sig_ptr)
+        && heap_base_addr_valid(heap, out_ptr)
+        && |heap[out_ptr]| == NUM_WORDS
 
         && out_ptr != m0d_ptr
         && out_ptr != rr_ptr
