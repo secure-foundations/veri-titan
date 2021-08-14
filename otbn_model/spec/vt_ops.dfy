@@ -478,56 +478,96 @@ module vt_ops {
                 write_reg32(grs, if grs_inc then si + 1 else si).
                 write_reg256(WDR(di), read_reg256(WDR(si)))
         }
+
+        function method eval_ins32(xins: ins32): state
+        {
+            if !ok then
+                this
+            else match xins
+                case ADD(xrd, xrs1, xrs2) => eval_ADD(xrd, xrs1, xrs2)
+                case ADDI(xrd, xrs1, imm) => eval_ADDI(xrd, xrs1, imm)
+                case LW(xrd, xrs1, offset) => eval_LW(xrd, xrs1, offset)
+                case SW(xrs2, xrs1, offset) => eval_SW(xrs1, xrs2, offset)
+                case LI(xrd, imm32) => eval_LI(xrd, imm32)
+        }
+
+        function method eval_ins256(wins: ins256): state
+        {
+            if !ok then
+                this
+            else match wins
+                case BN_ADD(wrd, wrs1, wrs2, shift, fg) =>
+                    eval_BN_ADD(wrd, wrs1, wrs2, shift, fg)
+                case BN_ADDC(wrd, wrs1, wrs2, shift, fg) =>
+                    eval_BN_ADDC(wrd, wrs1, wrs2, shift, fg)
+                case BN_ADDI(wrd, wrs1, imm, fg) =>
+                    eval_BN_ADDI(wrd, wrs1, imm, fg)
+                case BN_MULQACC(zero, wrs1, qwsel1, wrs2, qwsel2, shift_qws) =>
+                    eval_BN_MULQACC(zero, wrs1, qwsel1, wrs2, qwsel2, shift_qws)
+                case BN_MULQACC_SO(zero, wrd, lower, wrs1, qwsel1, wrs2, qwsel2, shift_qws) =>
+                    eval_BN_MULQACC_SO(zero, wrd, lower, wrs1, qwsel1, wrs2, qwsel2, shift_qws)
+                case BN_SUB(wrd, wrs1, wrs2, shift, fg) => 
+                    eval_BN_SUB(wrd, wrs1, wrs2, shift, fg)
+                case BN_SUBB(wrd, wrs1, wrs2, shift, fg) => 
+                    eval_BN_SUBB(wrd, wrs1, wrs2, shift, fg)
+                case BN_XOR(wrd, wrs1, wrs2, shift, fg) => 
+                    eval_BN_XOR(wrd, wrs1, wrs2, shift, fg)
+                case BN_SEL(wrd, wrs1, wrs2, fg, flag) => 
+                    eval_BN_SEL(wrd, wrs1, wrs2, fg, flag)
+                case BN_MOV(wrd, wrs) =>
+                    eval_BN_MOV(wrd, wrs)
+                case BN_MOVR(grd, grd_inc, grs, grs_inc) =>
+                    eval_BN_MOVR(grd, grd_inc, grs, grs_inc)
+                case BN_LID(grd, grd_inc, offset, grs, grs_inc) =>
+                    eval_BN_LID(grd, grd_inc, offset, grs, grs_inc)
+                case BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc) =>
+                    eval_BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc)
+        }
+
+        function method eval_block(block: codes): state
+            decreases block
+        {
+            if block.CNil? then
+                this
+            else
+                eval_code(block.hd).eval_block(block.tl)
+        }
+
+        function method eval_cond(wc: whileCond): nat
+        {
+            match wc 
+                case RegCond(r) => read_reg32(r)
+                case ImmCond(c) => c
+        }
+
+        function method eval_while(c: code, n: nat): state
+            decreases c, n
+        {
+            if !ok then
+                this
+            else
+                if n == 0 then
+                    this
+                else
+                    eval_code(c).eval_while(c, n - 1)
+        }
+
+        function method eval_code(c: code): state
+            decreases c, 0
+        {
+            match c
+                case Ins32(ins) => eval_ins32(ins)
+                case Ins256(ins) => eval_ins256(ins)
+                case Block(block) => eval_block(block)
+                case While(cond, body) => eval_while(body, eval_cond(cond))
+                case Comment(com) => this
+        }
+
     }
 
     predicate valid_state(s: state)
     {
         && s.ok
-    }
-
-    predicate eval_ins32(xins: ins32, s: state, r: state)
-    {
-        if !s.ok then
-            !r.ok
-        else match xins
-            case ADD(xrd, xrs1, xrs2) => (r == s.eval_ADD(xrd, xrs1, xrs2))
-            case ADDI(xrd, xrs1, imm) => (r == s.eval_ADDI(xrd, xrs1, imm))
-            case LW(xrd, xrs1, offset) => (r == s.eval_LW(xrd, xrs1, offset))
-            case SW(xrs2, xrs1, offset) => (r == s.eval_SW(xrs1, xrs2, offset))
-            case LI(xrd, imm32) => (r == s.eval_LI(xrd, imm32))
-    }
-
-    predicate eval_ins256(wins: ins256, s: state, r: state)
-    {
-        if !s.ok then
-            !r.ok
-        else match wins
-            case BN_ADD(wrd, wrs1, wrs2, shift, fg) =>
-                r == s.eval_BN_ADD(wrd, wrs1, wrs2, shift, fg)
-            case BN_ADDC(wrd, wrs1, wrs2, shift, fg) =>
-                r == s.eval_BN_ADDC(wrd, wrs1, wrs2, shift, fg)
-            case BN_ADDI(wrd, wrs1, imm, fg) =>
-                r == s.eval_BN_ADDI(wrd, wrs1, imm, fg)
-            case BN_MULQACC(zero, wrs1, qwsel1, wrs2, qwsel2, shift_qws) =>
-                r == s.eval_BN_MULQACC(zero, wrs1, qwsel1, wrs2, qwsel2, shift_qws)
-            case BN_MULQACC_SO(zero, wrd, lower, wrs1, qwsel1, wrs2, qwsel2, shift_qws) =>
-                r == s.eval_BN_MULQACC_SO(zero, wrd, lower, wrs1, qwsel1, wrs2, qwsel2, shift_qws)
-            case BN_SUB(wrd, wrs1, wrs2, shift, fg) => 
-                r == s.eval_BN_SUB(wrd, wrs1, wrs2, shift, fg)
-            case BN_SUBB(wrd, wrs1, wrs2, shift, fg) => 
-                r == s.eval_BN_SUBB(wrd, wrs1, wrs2, shift, fg)
-            case BN_XOR(wrd, wrs1, wrs2, shift, fg) => 
-                r == s.eval_BN_XOR(wrd, wrs1, wrs2, shift, fg)
-            case BN_SEL(wrd, wrs1, wrs2, fg, flag) => 
-                r == s.eval_BN_SEL(wrd, wrs1, wrs2, fg, flag)
-            case BN_MOV(wrd, wrs) =>
-                r == s.eval_BN_MOV(wrd, wrs)
-            case BN_MOVR(grd, grd_inc, grs, grs_inc) =>
-                r == s.eval_BN_MOVR(grd, grd_inc, grs, grs_inc)
-            case BN_LID(grd, grd_inc, offset, grs, grs_inc) =>
-                r == s.eval_BN_LID(grd, grd_inc, offset, grs, grs_inc)
-            case BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc) =>
-                r == s.eval_BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc)
     }
 
 /* control flow definions */
@@ -547,43 +587,4 @@ module vt_ops {
         | RegCond(r: reg32_t)
         | ImmCond(c: uint32)
 
-    predicate eval_block(block: codes, s: state, r: state)
-    {
-        if block.CNil? then
-            r == s
-        else
-            exists r': state :: eval_code(block.hd, s, r') && eval_block(block.tl, r', r)
-    }
-
-    function eval_cond(s: state, wc: whileCond): nat
-    {
-        match wc 
-            case RegCond(r) => s.read_reg32(r)
-            case ImmCond(c) => c
-    }
-
-    predicate eval_while(c: code, n: nat, s: state, r: state)
-        decreases c, n
-    {
-        if s.ok then
-            if n == 0 then
-                s == r
-            else
-                exists loop_body_end: state :: eval_code(c, s, loop_body_end)
-                    && eval_while(c, n - 1, loop_body_end, r)
-        else
-            !r.ok
-    }
-
-    predicate eval_code(c: code, s: state, r: state)
-        decreases c, 0
-    {
-        match c
-            case Ins32(ins) => eval_ins32(ins, s, r)
-            case Ins256(ins) => eval_ins256(ins, s, r)
-            case Block(block) => eval_block(block, s, r)
-            //case IfElse(cond, ifT, ifF) => evalIfElse(cond, ifT, ifF, s, r)
-            case While(cond, body) => eval_while(body, eval_cond(s, cond), s, r)
-            case Comment(com) => s == r
-    }
 }

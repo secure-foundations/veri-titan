@@ -297,7 +297,7 @@ module vt_vale {
 
     predicate{:opaque} eval_code_opaque(c: code, s0: state, sN: state)
     {
-        eval_code(c, s0, sN)
+        sN == s0.eval_code(c)
     }
 
     predicate eval_code_lax(c: code, s: va_state, r: va_state)
@@ -359,19 +359,19 @@ module vt_vale {
     function method va_get_whileBody(c: code): code requires c.While? { c.whileBody }
 
     lemma lemma_FailurePreservedByBlock(block: codes, s: state, r: state)
-        requires eval_block(block, s, r);
+        requires r == s.eval_block(block);
         ensures !s.ok ==> !r.ok;
         decreases block;
     {
         if !block.CNil? {
-            var r' :| eval_code(block.hd, s, r') && eval_block(block.tl, r', r);
+            var r' :| r' == s.eval_code(block.hd) && r == r'.eval_block(block.tl);
             lemma_FailurePreservedByCode(block.hd, s, r');
             lemma_FailurePreservedByBlock(block.tl, r', r);
         }
     }
 
     lemma lemma_FailurePreservedByCode(c: code, s: state, r: state)
-        requires eval_code(c, s, r);
+        requires r == s.eval_code(c);
         ensures !s.ok ==> !r.ok;
     {
         match c {
@@ -379,28 +379,28 @@ module vt_vale {
                 lemma_FailurePreservedByBlock(b, s, r);
             }
             case While(c, b) => {
-                var n :| eval_while(b, n, s, r);
+                var n :| r == s.eval_while(b, n);
             }
             case Ins256(i) => {
-                var r' :| eval_code(c, s, r');
+                var r' :| r' == s.eval_code(c);
             }
             case Ins32(i) => {
-                var r' :| eval_code(c, s, r');
+                var r' :| r' == s.eval_code(c);
             }
             case Comment(com) => {
-                var r' :| eval_code(c, s, r');
+                var r' :| r' == s.eval_code(c);
             }
         }
     }
 
     lemma block_state_validity(block: codes, s: state, r: state)
-        requires eval_block(block, s, r);
+        requires r == s.eval_block(block);
         requires valid_state(s);
         decreases block, 0;
         ensures r.ok ==> valid_state(r);
     {
         if block.va_CCons? {
-            var r':state :| eval_code(block.hd, s, r') && eval_block(block.tl, r', r);
+            var r':state :| r' == s.eval_code(block.hd) && r == r'.eval_block(block.tl);
             code_state_validity(block.hd, s, r');
             if r'.ok {
                 block_state_validity(block.tl, r', r);
@@ -411,12 +411,12 @@ module vt_vale {
     }
 
     lemma eval_while_validity(w:whileCond, c:code, n:nat, s:state, r:state)
-        requires eval_while(c, n, s, r);
+        requires r == s.eval_while(c, n);
         decreases c, 1, n;
         ensures valid_state(s) && r.ok ==> valid_state(r);
     {
         if valid_state(s) && r.ok && n > 0 {
-            var r' :| eval_code(c, s, r') && eval_while(c, n - 1, r', r);
+            var r' :| r' == s.eval_code(c) && r == r'.eval_while(c, n - 1);
             code_state_validity(c, s, r');
             eval_while_validity(w, c, n - 1, r', r);
             assert valid_state(r);
@@ -424,7 +424,7 @@ module vt_vale {
     }
 
     lemma code_state_validity(c:code, s:state, r:state)
-        requires eval_code(c, s, r);
+        requires r == s.eval_code(c);
         requires valid_state(s);
         decreases c, 0;
         ensures  r.ok ==> valid_state(r);
@@ -437,7 +437,7 @@ module vt_vale {
             } else if c.Block? {
                 block_state_validity(c.block, s, r);
             } else if c.While? {
-                var n:nat :| eval_while(c.whileBody, n, s, r);
+                var n:nat :| r == s.eval_while(c.whileBody, n);
                 eval_while_validity(c.whileCond, c.whileBody, n, s, r);
                 assert valid_state(r);
             } else if c.Comment? {
@@ -467,8 +467,8 @@ module vt_vale {
         c0 := b.hd;
         b1 := b.tl;
         if s0.ms.ok {
-            assert eval_block(b, s0.ms, r.ms);
-            var r':state :| eval_code(b.hd, s0.ms, r') && eval_block(b.tl, r', r.ms);
+            assert r.ms == s0.ms.eval_block(b);
+            var r':state :| r' == s0.ms.eval_code(b.hd) && r.ms == r'.eval_block(b.tl);
             c0 := b.hd;
             b1 := b.tl;
             r1 := gstate(r', s0.heap);
@@ -487,7 +487,7 @@ module vt_vale {
 
     predicate {:opaque} eval_while_opaque(w: whileCond, c: code, n: nat, s: state, r: state)
     {
-        eval_while(c, n, s, r)
+        r == s.eval_while(c, n)
     }
 
     predicate eval_while_lax(w: whileCond, c: code, n: nat, s: state, r: state)
@@ -507,7 +507,7 @@ module vt_vale {
         requires eval_code_lax(While(w, c), s, r)
         ensures  eval_while_lax(w, c, n, r'.ms, r.ms)
         //ensures  r'.ok
-        ensures s.ms.ok ==> (n == eval_cond(s.ms, w));
+        ensures s.ms.ok ==> (n == s.ms.eval_cond(w));
         ensures valid_state_opaque(r');
         ensures r' == s
     {
@@ -515,8 +515,8 @@ module vt_vale {
         reveal_valid_state_opaque();
         reveal_eval_while_opaque();
         if s.ms.ok {
-            assert eval_code(While(w, c), s.ms, r.ms);
-            n := eval_cond(s.ms, w);
+            assert r.ms == s.ms.eval_code(While(w, c));
+            n := s.ms.eval_cond(w);
         } else {
             n := 0;
         }
@@ -550,10 +550,10 @@ module vt_vale {
             r' := s;
             return;
         }
-        assert eval_while(c, n, s.ms, r.ms); 
+        assert r.ms == s.ms.eval_while(c, n); 
 
         if valid_state_opaque(s) {
-            var r'':state :| eval_code(c, s.ms, r'') && eval_while(c, n - 1, r'', r.ms);
+            var r'':state :| r'' == s.ms.eval_code(c) && r.ms == r''.eval_while(c, n - 1);
             s' := s;
             r' := gstate(r'', s.heap);
             code_state_validity(c, s'.ms, r'');
