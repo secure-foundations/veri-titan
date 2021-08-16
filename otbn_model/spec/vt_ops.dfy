@@ -1,6 +1,6 @@
 include "vt_consts.dfy"
 include "bv_ops.dfy"
-include "../dafny_library/NonlinearArithmetic/Power2.dfy"
+include "../libraries/src/NonlinearArithmetic/Power2.dfy"
 
 
 module vt_ops {
@@ -309,7 +309,7 @@ module vt_ops {
         requires 0 <= shift_amt < 256;
     {
         var concat : int := x * NT.BASE_256 + y;
-        (concat / power2(shift_amt)) % NT.BASE_256
+        (concat / Pow2(shift_amt)) % NT.BASE_256
     }
 
 /* instruction definions (THESE ARE NOT CONNECTED TO ABOVE YET) */

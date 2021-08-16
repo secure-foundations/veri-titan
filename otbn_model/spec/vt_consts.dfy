@@ -1,4 +1,4 @@
-include "../dafny_library/NativeTypes.dfy"
+include "../libraries/NativeTypes.dfy"
 
 module vt_consts {
     import opened NativeTypes

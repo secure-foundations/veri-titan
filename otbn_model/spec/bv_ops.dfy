@@ -1,7 +1,7 @@
 include "vt_consts.dfy"
-include "../dafny_library/NonlinearArithmetic/DivMod.dfy"
-include "../dafny_library/NonlinearArithmetic/Power.dfy"
-include "../dafny_library/NonlinearArithmetic/Mul.dfy"
+include "../libraries/src/NonlinearArithmetic/DivMod.dfy"
+include "../libraries/src/NonlinearArithmetic/Power.dfy"
+include "../libraries/src/NonlinearArithmetic/Mul.dfy"
 
 module bv_ops {
     import opened NativeTypes
@@ -23,29 +23,11 @@ module bv_ops {
     type uint256 = i :int | 0 <= i < BASE_256
     type uint512 = i :int | 0 <= i < BASE_512
 
-    type int12     = i :int | -2048 <= i <= 2047
+    type int12   = i :int | -2048 <= i <= 2047
 
     datatype shift_t = SFT(left: bool, bytes: uint5)
 
     const SFT_DFT :shift_t := SFT(true, 0);
-
-
-    predicate {:opaque} cong(a: int, b: int, n: int)
-        requires n > 0
-    {
-        is_mod_equivalent(a, b, n)
-    }
-
-    predicate cong_B256(a: int, b: int)
-    {
-        cong(a, b, BASE_256)
-    }
-    
-    function pow_B256(e: nat): nat
-    {
-        lemma_power_positive(BASE_256, e);
-        power(BASE_256, e)
-    }
 
     function bool_to_uint1(i:bool) : uint1
     {
@@ -123,9 +105,8 @@ module bv_ops {
 
     lemma uint256_addc_cong_lemma(z: uint256, x: uint256, y: uint256)
         requires uint256_addc(x, y, 0).0 == z;
-        ensures cong_B256(z, x + y);
+        ensures IsModEquivalent(z, x + y, BASE_256);
     {
-        reveal cong();
     }
 
     function method uint256_subb(x: uint256, y: uint256, bin: uint1): (uint256, uint1)
@@ -212,7 +193,7 @@ module bv_ops {
         requires b <= u;
         ensures a * b <= u * u;
     {
-        lemma_mul_upper_bound(a, u, b, u);
+        LemmaMulUpperBound(a, u, b, u);
     }
 
     lemma single_digit_lemma_1(a: nat, b: nat, c: nat, u: nat)
@@ -225,9 +206,9 @@ module bv_ops {
             a * b + c;
             <= { single_digit_lemma_0(a, b, u); }
             u * u + c;
-            <= u * u + u; {lemma_mul_is_distributive_add(u, u, 1);}
+            <= u * u + u; {LemmaMulIsDistributiveAdd(u, u, 1);}
             u * (u + 1); 
-            < {lemma_mul_left_inequality(u + 1, u, u + 1);}
+            < {LemmaMulLeftInequality(u + 1, u, u + 1);}
             (u + 1) * (u + 1); 
         }
     }
@@ -249,9 +230,9 @@ module bv_ops {
         }
 
         calc {
-            (u + 1) * (u + 1); {lemma_mul_is_distributive_add(u + 1, u, 1);}
+            (u + 1) * (u + 1); {LemmaMulIsDistributiveAdd(u + 1, u, 1);}
             (u + 1) * u + (u + 1) * 1; 
-            u * (u + 1) + u + 1; {lemma_mul_is_distributive_add(u, u, 1);}
+            u * (u + 1) + u + 1; {LemmaMulIsDistributiveAdd(u, u, 1);}
             (u * u) + (2 * u) + 1;
         }
     }
@@ -273,7 +254,7 @@ module bv_ops {
         var src1 := uint256_qsel(x, qx);
         var src2 := uint256_qsel(y, qy);
         single_digit_lemma_0(src1, src2, BASE_64-1);
-        lemma_mul_strictly_increases_auto();
+        LemmaMulStrictlyIncreasesAuto();
         src1 as uint128 * src2 as uint128
     }
 

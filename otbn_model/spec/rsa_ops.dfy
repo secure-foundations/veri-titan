@@ -1,17 +1,14 @@
 include "vt_consts.dfy"
 include "bv_ops.dfy"
 include "vt_ops.dfy"
-include "../dafny_library/NonlinearArithmetic/Power.dfy"
-include "../dafny_library/NonlinearArithmetic/DivMod.dfy"
-include "../dafny_library/NonlinearArithmetic/Mul.dfy"
-include "../dafny_library/Sequences/NatSeq.dfy"
+include "../libraries/src/NonlinearArithmetic/Power.dfy"
+include "../libraries/src/NonlinearArithmetic/DivMod.dfy"
+include "../libraries/src/Collections/Sequences/NatSeq.dfy"
 
-module refining_NatSeq refines NatSeq {
+module BASE_256_Seq refines NatSeq {
     import NT = NativeTypes
     
-    function method BASE(): nat {
-		NT.BASE_256
-	}
+    function method BOUND(): nat { NT.BASE_256 }
 }
 
 module rsa_ops {
@@ -20,207 +17,45 @@ module rsa_ops {
     import opened vt_ops
     import opened Power
     import opened DivMod 
-    import opened Mul
     import NT = NativeTypes
-    import opened refining_NatSeq
-    import opened Seq
+    import opened BASE_256_Seq
 
-
-/* to_nat definions & lemmas */
-
-    function {:opaque} to_nat(xs: seq<uint>): nat
-    {
-        refining_NatSeq.to_nat(xs)
-    }
-
-    lemma to_nat_lemma_0(xs: seq<uint>)
-        requires |xs| == 1
-        ensures to_nat(xs) == first(xs);
-    {
-        reveal to_nat();
-        reveal power();
-        lemma_seq_len_1(xs);
-    }
-
-    lemma to_nat_lemma_1(xs: seq<uint>)
-        requires |xs| == 2
-        ensures to_nat(xs) == first(xs) + last(xs) * NT.BASE_256
-    {
-        reveal to_nat();
-        to_nat_lemma_0(drop_first(xs));
-        reveal power();
-        lemma_seq_len_2(xs);
-    }
-
-    lemma lsw_cong_lemma(xs: seq<uint>)
-        requires |xs| >= 1;
-        ensures cong_B256(to_nat(xs), xs[0]);
-    {
-        if |xs| == 1 {
-            to_nat_lemma_0(xs);
-            reveal cong();
-        } else {
-            assert cong_B256(to_nat(xs), xs[0]) by {
-                var len' := |xs| - 1;
-                var xs' := xs[..len'];
-
-                    reveal cong();
-                    lemma_power_mod(NT.BASE_256, len');
-                    calc ==> {
-                        pow_B256(len') % NT.BASE_256 == 0 % NT.BASE_256;
-                        { lemma_mod_equivalence(pow_B256(len'), 0, NT.BASE_256); }
-                        pow_B256(len') % NT.BASE_256 == 0;
-                        {lemma_mul_mod_noop_general_auto();}
-                        pow_B256(len') * xs[len'] % NT.BASE_256 == 0;
-                        cong_B256(xs[len'] * pow_B256(len'), 0);
-                    }
-                    lemma_mod_equivalence(pow_B256(len') * xs[len'], 0 * xs[len'], NT.BASE_256);
-
-                calc ==> {
-                    true;
-                        { 
-                            reveal to_nat(); reveal cong();
-                            calc ==> {
-                                xs == xs' + [xs[len']];
-                                {lemma_seq_eq(xs, xs' + [xs[len']]);}
-                                to_nat(xs) == to_nat(xs' + [xs[len']]);
-                                {lemma_seq_prefix(xs' + [xs[len']], len');}
-                                to_nat(xs) == to_nat(xs') + to_nat([xs[len']]) * pow_B256(len'); 
-                                { lemma_nat_seq_nat(xs[len']); to_nat_lemma_0([xs[len']]);
-                                    lemma_mod_equivalence(to_nat(xs), to_nat(xs') + xs[len'] * pow_B256(len'), NT.BASE_256);}
-                                is_mod_equivalent(to_nat(xs), to_nat(xs') + xs[len'] * pow_B256(len'), NT.BASE_256);
-                            }
-                        }
-                    cong_B256(to_nat(xs), to_nat(xs') + xs[len'] * pow_B256(len'));
-                    cong_B256(to_nat(xs), to_nat(xs'));
-                        {
-                           lsw_cong_lemma(xs');
-                           assert xs'[0] == xs[0];
-                           reveal cong();
-                        }
-                    cong_B256(to_nat(xs), xs[0]);
-                }
-                assert cong_B256(to_nat(xs), xs[0]);
-            }
-        }
-
-    }
+    // lemma lsw_cong_lemma(xs: seq<uint>)
+    //     requires |xs| >= 1;
+    //     ensures cong_B256(ToNat(xs), xs[0]);
 
     lemma uint512_view_lemma(num: uint512_view_t)
         ensures num.full
-            == to_nat([num.lh, num.uh])
+            == ToNat([num.lh, num.uh])
             == num.lh + num.uh * NT.BASE_256;
     {
         reveal uint512_lh();
         reveal uint512_uh();
-        to_nat_lemma_1([num.lh, num.uh]);
+        LemmaSeqLen2([num.lh, num.uh]);
     }
 
-    function seq_zero(len: nat): (zs: seq<uint>)
-        ensures |zs| == len
-    {
-        // if len == 0 then []
-        // else seq_zero(len - 1) + [0]
-        reveal refining_NatSeq.seq_zero();
-        refining_NatSeq.seq_zero(len)
-    }
+    // function seq_zero(len: nat): (zs: seq<uint>)
+    //     ensures |zs| == len
 
-    lemma seq_zero_to_nat_lemma(len: nat)
-        ensures to_nat(seq_zero(len)) == 0
-    {
-        reveal to_nat();
-        lemma_seq_zero_nat(len);
+    // lemma seq_zero_to_nat_lemma(len: nat)
+    //     ensures ToNat(seq_zero(len)) == 0
 
-    }
+    // lemma to_nat_bound_lemma(xs: seq<uint>)
+    //     ensures ToNat(xs) < pow_B256(|xs|)
 
-    lemma to_nat_bound_lemma(xs: seq<uint>)
-        ensures to_nat(xs) < pow_B256(|xs|)
-    {
-            reveal to_nat();
-            lemma_seq_nat_bound(xs);
-    }
+    // lemma to_nat_zero_prepend_lemma (xs: seq<uint>)
+    //   ensures ToNat([0] + xs) == ToNat(xs) * NT.BASE_256
 
-    lemma to_nat_zero_prepend_lemma (xs: seq<uint>)
-      ensures to_nat([0] + xs) == to_nat(xs) * NT.BASE_256
-    {
-        reveal to_nat();
-        lemma_seq_prepend_zero(xs);
-    }
+    // lemma to_nat_prefix_lemma(xs: seq<uint>, i: nat)
+    //     requires 0 <= i < |xs|;
+    //     ensures ToNat(xs[..i]) + ToNat(xs[i..]) * pow_B256(i) == ToNat(xs);
 
-    lemma to_nat_prefix_lemma(xs: seq<uint>, i: nat)
-        requires 0 <= i < |xs|;
-        ensures to_nat(xs[..i]) + to_nat(xs[i..]) * pow_B256(i) == to_nat(xs);
-    {
-        reveal to_nat();
-        lemma_seq_prefix(xs, i);
-    }
-
-    lemma to_nat_zero_extend_lemma(xs': seq<uint>, xs: seq<uint>) 
-        requires |xs'| < |xs|
-        requires var len' := |xs'|;
-            && xs[..len'] == xs'
-            && xs[len'.. ] == seq(|xs| - len', i => 0)
-        ensures to_nat(xs') == to_nat(xs);
-    {
-        var len, len' := |xs|, |xs'|;
-        reveal to_nat();
-        if len != len' + 1 {
-            var len'' := len-1;
-            calc == {
-                to_nat(xs);
-                { lemma_seq_prefix(xs, len''); }
-                to_nat(xs[..len'']) + to_nat(xs[len''..]) * pow_B256(len'');
-                { to_nat_lemma_0(xs[len''..]); }
-                to_nat(xs[..len'']);
-                { to_nat_zero_extend_lemma(xs', xs[..len'']); }
-                to_nat(xs');
-            }
-            assert to_nat(xs') == to_nat(xs);
-        }
-        ///// come back to this!!!
-        else {
-            assume false;
-        }
-    }
-
-    function seq_addc(xs: seq<uint>, ys: seq<uint>) : (seq<uint>, uint1)
-        requires |xs| == |ys|
-        ensures var (zs, cout) := seq_addc(xs, ys);
-            && |zs| == |xs|
-    {
-        reveal seq_add();
-        refining_NatSeq.seq_add(xs, ys)
-    }
-
-    lemma seq_addc_nat_lemma(xs: seq<uint>, ys: seq<uint>, zs: seq<uint>, cout: uint1)
-        requires |xs| == |ys|;
-        requires seq_addc(xs, ys) == (zs, cout);
-        ensures to_nat(xs) + to_nat(ys) == to_nat(zs) + cout * pow_B256(|xs|)
-    {
-        reveal to_nat();
-        reveal seq_add();
-        refining_NatSeq.lemma_seq_add(xs, ys, zs, cout);
-    }
-
-    function seq_subb(xs: seq<uint>, ys: seq<uint>) : (seq<uint>, uint1)
-        requires |xs| == |ys|
-        ensures var (zs, bout) := seq_subb(xs, ys);
-            && |zs| == |xs|
-    {
-        reveal to_nat();
-        reveal seq_sub();
-        refining_NatSeq.seq_sub(xs, ys)
-    }
-
-    lemma seq_subb_nat_lemma(xs: seq<uint>, ys: seq<uint>, zs: seq<uint>, bout: uint1)
-        requires |xs| == |ys|
-        requires seq_subb(xs, ys) == (zs, bout);
-        ensures to_nat(xs) - to_nat(ys) + bout * pow_B256(|xs|) == to_nat(zs)
-    {
-        reveal to_nat();
-        reveal seq_sub();
-        refining_NatSeq.lemma_seq_sub(xs, ys, zs, bout);
-    }
+    // lemma to_nat_zero_extend_lemma(xs': seq<uint>, xs: seq<uint>) 
+    //     requires |xs'| < |xs|
+    //     requires var len' := |xs'|;
+    //         && xs[..len'] == xs'
+    //         && xs[len'.. ] == seq(|xs| - len', i => 0)
+    //     ensures ToNat(xs') == ToNat(xs);
 
 /* rsa/mm definions & lemmas */
 
@@ -238,24 +73,24 @@ module rsa_ops {
     predicate rsa_params_inv(rsa: rsa_params)
     {
         // E0 is derived from the exponent E
-        && rsa.E == power(2, rsa.E0) + 1
+        && rsa.E == Pow(2, rsa.E0) + 1
 
         // modulo is none zero
         && rsa.M != 0
-        && cong_B256(rsa.M0D * rsa.M, -1)
+        && IsModEquivalent(rsa.M0D * rsa.M, -1, NT.BASE_256)
 
         // signature
         && rsa.SIG < rsa.M
 
-        && rsa.R == power(NT.BASE_256, NUM_WORDS)
+        && rsa.R == Pow(NT.BASE_256, NUM_WORDS)
 
         && rsa.RR < rsa.M
-        && cong(rsa.RR, rsa.R * rsa.R, rsa.M)
+        && IsModEquivalent(rsa.RR, rsa.R * rsa.R, rsa.M)
 
-        && rsa.R_INV == power(rsa.B256_INV, NUM_WORDS)
-        && cong(rsa.R_INV * rsa.R, 1, rsa.M)
+        && rsa.R_INV == Pow(rsa.B256_INV, NUM_WORDS)
+        && IsModEquivalent(rsa.R_INV * rsa.R, 1, rsa.M)
 
-        && cong(NT.BASE_256 * rsa.B256_INV, 1, rsa.M)
+        && IsModEquivalent(NT.BASE_256 * rsa.B256_INV, 1, rsa.M)
     }
 
     datatype mvars = mvars(
@@ -271,7 +106,7 @@ module rsa_ops {
     predicate mvars_iter_init(iter: iter_t, wmem: wmem_t, address: int, value: int)
     {
         && (address != NA ==> iter_inv(iter, wmem, address))
-        && (value != NA ==> to_nat(iter.buff) == value)
+        && (value != NA ==> ToNat(iter.buff) == value)
             && iter.index == 0
         && |iter.buff| == NUM_WORDS
     }
