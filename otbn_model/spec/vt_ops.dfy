@@ -221,6 +221,24 @@ module vt_ops {
         if sel then x else y
     }
 
+
+/* control flow definions */
+
+    datatype code =
+        | Ins32(ins: ins32)
+        | Ins256(bn_ins: ins256)
+        | Block(block: codes)
+        | While(whileCond: whileCond, whileBody: code)
+        | Comment(com: string)
+
+    datatype codes = 
+        | CNil
+        | va_CCons(hd: code, tl: codes)
+
+    datatype whileCond = 
+        | RegCond(r: reg32_t)
+        | ImmCond(c: uint32)
+
 /* state definions */
 
     datatype state = state(
@@ -237,7 +255,15 @@ module vt_ops {
         wmem: wmem_t,
 
         ok: bool)
-    {   
+    {
+        static function method init(): state
+        {
+            var flags := flags_t(false, false, false, false);
+            state(seq(32, n => 0), seq(32, n => 0), 0, 0, 0,
+                fgroups_t(flags, flags),
+                map[], map[], true)
+        }
+
         function method read_reg32(r: reg32_t): uint32
         {
             if r.index == 0 then 0
@@ -563,6 +589,24 @@ module vt_ops {
                 case Comment(com) => this
         }
 
+        method dump()
+        {
+            var i := 0;
+            while i < 32
+            {
+                print("x"); print(i); print("\t");
+                print(read_reg32(GPR(i))); print("\n"); 
+                i := i + 1;
+            }
+
+            i := 0;
+            while i < 32
+            {
+                print("w"); print(i); print("\t");
+                print(read_reg256(WDR(i))); print("\n"); 
+                i := i + 1;
+            }
+        }
     }
 
     predicate valid_state(s: state)
@@ -570,21 +614,5 @@ module vt_ops {
         && s.ok
     }
 
-/* control flow definions */
-
-    datatype code =
-        | Ins32(ins: ins32)
-        | Ins256(bn_ins: ins256)
-        | Block(block: codes)
-        | While(whileCond: whileCond, whileBody: code)
-        | Comment(com: string)
-
-    datatype codes = 
-        | CNil
-        | va_CCons(hd: code, tl: codes)
-
-    datatype whileCond = 
-        | RegCond(r: reg32_t)
-        | ImmCond(c: uint32)
 
 }
