@@ -15,4 +15,5 @@ build.ninja
 output.s
 *.dll
 *.runtimeconfig.json
-tools/
+otbn_model/tools/dafny/
+otbn_model/tools/vale/
