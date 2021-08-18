@@ -1,7 +1,5 @@
-// include "../gen/mont_loop.dfy"
-include "gen/modexp_var.dfy"
-include "code/vale.dfy"
-include "gen/mul256.dfy" 
+include "../code/vale.dfy"
+include "../gen/modexp_var.dfy"
 
 module otbn_printer {
     import opened bv_ops
@@ -324,28 +322,6 @@ function method procName(proc_name:seq<char>, suffix:seq<char>, asm:AsmTarget, p
 method PrintDemo(asm:AsmTarget, platform:PlatformTarget)
 {
     printProc("modexp_var", va_code_modexp_var());
-}
-
-method ExecuteDemo()
-{
-    // var state: state;
-    // va_code_mul256_w30xw2
-    // datatype state = state(
-    //     gprs: gprs_t, // 32-bit registers
-    //     wdrs: wdrs_t, // 256-bit registers
-
-    //     wmod: uint256,
-    //     wrnd: uint256,
-    //     wacc: uint256,
-
-    //     fgroups: fgroups_t,
-
-    //     xmem: xmem_t,
-    //     wmem: wmem_t,
-
-    //     ok: bool)
-
-    // va_code_modexp_var()
 }
 
 method Main()
