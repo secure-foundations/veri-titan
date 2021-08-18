@@ -77,7 +77,7 @@ module rsa_ops {
 
         // modulo is none zero
         && rsa.M != 0
-        && IsModEquivalent(rsa.M0D * rsa.M, -1, NT.BASE_256)
+        && cong_B256(rsa.M0D * rsa.M, -1)
 
         // signature
         && rsa.SIG < rsa.M

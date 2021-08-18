@@ -118,14 +118,6 @@ abstract module NatSeq {
     LemmaSeqLen1(DropLast(xs));
   }
 
-  /* Prepending a zero is equal to multiplying the nat representation of the
-  sequence by BOUND(). */
-  lemma LemmaSeqPrependZero(xs: seq<uint>)
-    ensures ToNat([0] + xs) == ToNat(xs) * BOUND()
-  {
-    reveal ToNat();
-  }
-
   /* Appending a zero does not change the nat representation of the sequence. */
   lemma LemmaSeqAppendZero(xs: seq<uint>) 
     ensures ToNat(xs + [0]) == ToNat(xs)

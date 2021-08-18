@@ -29,6 +29,17 @@ module bv_ops {
 
     const SFT_DFT :shift_t := SFT(true, 0);
 
+    predicate cong_B256(a: int, b: int)
+    {
+        IsModEquivalent(a, b, BASE_256)
+    }
+    
+    function pow_B256(e: nat): nat
+    {
+        //LemmaPowPositive(BASE_256, e);
+        Pow(BASE_256, e)
+    }
+
     function bool_to_uint1(i:bool) : uint1
     {
         if i then 1 else 0

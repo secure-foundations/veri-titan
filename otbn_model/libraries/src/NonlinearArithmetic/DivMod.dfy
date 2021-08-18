@@ -1111,13 +1111,6 @@ module DivMod {
       LemmaModMultiplesVanish(a, b, m);
     }
   }
-
-  /* true if x%n and y%n are equal */
-  predicate IsModEquivalent(x: int, y: int, m: int)
-    requires m > 0
-  {
-    (x - y) % m == 0 // same as x % n == y % n, but easier to do induction on x - y than x and y separately
-  }
   
   /* proves modulus equivalence in two forms */
   lemma LemmaModEquivalence(x: int, y: int, m: int)
@@ -1136,6 +1129,15 @@ module DivMod {
     {
       LemmaModEquivalence(x, y, m);
     }
+  }
+
+  /* true if x%n and y%n are equal */
+  predicate IsModEquivalent(x: int, y: int, m: int)
+    requires m > 0
+    ensures x % m == y % m <==> (x - y) % m == 0
+  {
+    LemmaModEquivalence(x, y, m);
+    (x - y) % m == 0 // same as x % n == y % n, but easier to do induction on x - y than x and y separately
   }
 
   /* proves equivalent forms of modulus subtraction */
