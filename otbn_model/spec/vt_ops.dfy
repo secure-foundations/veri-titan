@@ -589,7 +589,7 @@ module vt_ops {
                 case Comment(com) => this
         }
 
-        method dump()
+        method dump_regs()
         {
             var i := 0;
             while i < 32
@@ -605,6 +605,25 @@ module vt_ops {
                 print("w"); print(i); print("\t");
                 print(read_reg256(WDR(i))); print("\n"); 
                 i := i + 1;
+            }
+        }
+
+        method dump_wmem(addr: uint32, words: uint32)
+            requires wmem_addr_admissible(addr + words * 32)
+        {
+            var end := addr + words * 32;
+            var i := 0;
+            var cur := addr;
+
+            while cur < end
+                invariant cur == addr + i * 32
+                invariant wmem_addr_admissible(cur)
+                decreases end - cur
+            {
+                var value := read_wmem(cur);
+                print(cur); print(":"); print(value); print("\n");
+                i := i + 1;
+                cur := cur + 32;
             }
         }
     }
