@@ -29,15 +29,15 @@ rule otbn-ld
 """
 
 
-PRINTER_DFY_PATH = "print.dfy"
+PRINTER_DFY_PATH = "tests/print.dfy"
 PRINTER_DLL_PATH = "gen/print.dll"
 PRINTER_CONFIG_PATH = "gen/print.runtimeconfig.json"
 
 OUTPUT_ASM_PATH = "gen/output.s"
-TEST_ASM_PATH = "run_modexp.s"
+TEST_ASM_PATH = "tests/run_modexp.s"
 OUTPUT_ELF_PATH = "gen/run_modexp.elf"
 
-EXE_DFY_PATH = "execute.dfy"
+EXE_DFY_PATH = "tests/execute.dfy"
 EXE_DLL_PATH = "gen/execute.dll"
 EXE_CONFIG_PATH = "gen/execute.runtimeconfig.json"
 OUTPUT_DUMP_PATH = "gen/dump.out"
@@ -343,7 +343,6 @@ def generate_dll(dfy_path, dll_path):
 
     command = f"dafny {dfy_path} /compile:1 /vcsCores:2 /out:{temp}.dll"
     command += f" && mv {temp}.dll {dll_path} && mv {temp}.runtimeconfig.json {confg_path}"
-    print(command)
     os_system(command)
 
 ## command line interface

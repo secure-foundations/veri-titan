@@ -1,5 +1,5 @@
-include "code/vale.dfy"
-include "gen/modexp_var.dfy" 
+include "../code/vale.dfy"
+include "../gen/modexp_var.dfy" 
 
 module otbn_exe {
     import opened bv_ops

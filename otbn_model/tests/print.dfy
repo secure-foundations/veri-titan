@@ -1,7 +1,5 @@
-// include "../gen/mont_loop.dfy"
-include "gen/modexp_var.dfy"
-include "code/vale.dfy"
-include "gen/mul256.dfy" 
+include "../code/vale.dfy"
+include "../gen/modexp_var.dfy"
 
 module otbn_printer {
     import opened bv_ops
