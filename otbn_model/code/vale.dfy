@@ -1,11 +1,12 @@
 include "../spec/rsa_ops.dfy"
+include "../libraries/src/NonlinearArithmetic/Mul.dfy"
 
 module vt_vale {
     import opened vt_ops
     import opened bv_ops
     import opened rsa_ops
-    import opened congruences
     import opened vt_consts
+    import opened Mul
 
     type va_code = code
     type va_codes = codes
@@ -118,6 +119,7 @@ module vt_vale {
 
     function va_mul_nat(a: nat, b: nat): nat
     {
+        LemmaMulNonnegativeAuto();
         a * b
     }
 

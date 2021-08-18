@@ -1015,6 +1015,14 @@ module DivMod {
     }
   }
 
+  /* if 0 <= x < m, then x modulo m is x */
+  lemma LemmaModLessThanDivisor(x: int, m: int)
+      requires m != 0
+      requires 0 <= x < m
+      ensures x == x % m
+  {
+  }
+
   /* the remainder of a natural number x divided by a natural number d will be less
   than or equal to x */
   lemma LemmaModDecreases(x: nat, d: nat)
