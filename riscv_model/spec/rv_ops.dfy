@@ -30,13 +30,11 @@ module rv_ops {
         witness *
 
     predicate valid_uint64_view(
-        wdrs: gprs_t, num: uint64_view_t,
-        li: int, ui: int)
-        requires -1 <= li < BASE_5;
-        requires -1 <= ui < BASE_5;
+        num: uint64_view_t,
+        lh: uint32, uh: uint32)
     {
-        && (li == NA || wdrs[li] == num.lh)
-        && (ui == NA || wdrs[ui] == num.uh)
+        && lh == num.lh
+        && uh == num.uh
     }
 
     predicate valid_gpr_view(gprs: gprs_t, view: seq<uint32>, start: nat, len: nat)
@@ -46,7 +44,24 @@ module rv_ops {
         && gprs[start..start+len] == view
     }
 
-    
+    /* experimental -- signed integer views */
+    datatype int64_raw = int64_cons(
+        lh: int32, uh: int32, full: int64)
+
+    type int64_view_t = num: int64_raw |
+        && num.lh == int64_lh(num.full)
+        && num.uh == int64_uh(num.full)
+        witness *
+
+    predicate valid_int64_view(
+        num: int64_view_t,
+        lh: int32, uh: int32)
+    {
+        && lh == num.lh
+        && uh == num.uh
+    }
+    /* end experimental */
+
    /* memory definitions */ 
 
     type mem_t = map<int, seq<uint32>>
@@ -155,6 +170,7 @@ module rv_ops {
     | RV_AND (rd: reg32_t, rs1: reg32_t, rs2: reg32_t) // bitwise
 
     | RV_LUI (rd: reg32_t, imm20: uint32)
+    | RV_LI (rd: reg32_t, imm20: uint32)
 
     // | RV_BEQ (rs1: reg32_t, rs2: reg32_t, sbimm12: uint32)
     // | RV_BNE (rs1: reg32_t, rs2: reg32_t, sbimm12: uint32)

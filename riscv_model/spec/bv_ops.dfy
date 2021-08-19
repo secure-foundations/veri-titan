@@ -20,6 +20,8 @@ module bv_ops {
 
     type int12   = i :int | -2048 <= i <= 2047
 
+    type int64  = i :int | -BASE_63 <= i <= (BASE_63 - 1)
+
     function pow_B32(e: nat): nat
     {
         power(BASE_32, e)

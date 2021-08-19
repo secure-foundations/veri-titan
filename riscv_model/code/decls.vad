@@ -28,6 +28,7 @@ type uint1:   Type(0) := int_range(0, 1);
 type uint2:   Type(0) := int_range(0, 3);
 type uint5:   Type(0) := int_range(0, 31);
 type uint32:  Type(0) := int_range(0, 0xffffffff);
+type uint64:  Type(0) := int_range(0, 0xffffffff_ffffffff);
 type uint128: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff);
 type uint256: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff);
 
@@ -70,6 +71,10 @@ var ok: bool {:state ok()};
     
 var mem: mem_t {:state mem()};
 function mem_addr_valid(h: mem_t, ptr: int): bool extern;
+
+type uint64_view_t: Type(0) extern;
+function uint64_cons(lh: uint32, uh: uint32, full: uint64) : uint64_view_t extern;
+function valid_uint64_view(view: uint64_view_t, lh: uint32, uh: uint32) : bool extern;
 
 type iter_t: Type(0) extern;
 function iter_inv(iter: iter_t, h: mem_t, ptr: int): bool extern;
@@ -385,19 +390,20 @@ procedure srai(inout dst: reg32, in src1: reg32, in src2: imm32)
     
 // store instructions
     
-procedure sw(in src1: reg32, in src2: reg32, in offset: imm32, ghost iter: iter_t)
+// TODO: double-check semantics
+procedure sw(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: iter_t)
     returns (ghost next_iter: iter_t)
-    {:instruction Ins32(RV_SW(src1, src2, offset))}
+    {:instruction Ins32(RV_SW(rs2, base, offset))}
     modifies
         mem;
     requires
-        iter_safe(iter, mem, src1 + offset);
+        iter_safe(iter, mem, base + offset);
         offset < 0x1000;
     ensures
-        // mem location = src1 + sign-extended offset, store src2 value at mem location
-        mem == old(mem[iter.base_addr := mem[iter.base_addr][iter.index := src2]]);
-        iter_inv(next_iter, mem, src1 + offset + 4);
-        next_iter == sw_next_iter(iter, src2);
+        // store rs2 at mem[base + offset]
+        mem == old(mem[iter.base_addr := mem[iter.base_addr][iter.index := rs2]]);
+        iter_inv(next_iter, mem, base + offset + 4);
+        next_iter == sw_next_iter(iter, rs2);
 {
     assume false;
 }
@@ -547,6 +553,14 @@ procedure lui(inout dst: reg32, in src: imm32)
         src < 0x100000; // 20-bit immediate
     ensures
         dst == uint32_ls(old(src), 12);
+{
+    assume false;
+}
+
+procedure li(inout dst: reg32, in src: imm32)
+    {:instruction Ins32(RV_LI(dst, src))}
+    ensures
+        dst == src;
 {
     assume false;
 }
