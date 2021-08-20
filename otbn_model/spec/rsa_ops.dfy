@@ -20,10 +20,6 @@ module rsa_ops {
     import NT = NativeTypes
     import opened BASE_256_Seq
 
-    // lemma lsw_cong_lemma(xs: seq<uint>)
-    //     requires |xs| >= 1;
-    //     ensures cong_B256(ToNat(xs), xs[0]);
-
     lemma uint512_view_lemma(num: uint512_view_t)
         ensures num.full
             == ToNat([num.lh, num.uh])
@@ -33,29 +29,6 @@ module rsa_ops {
         reveal uint512_uh();
         LemmaSeqLen2([num.lh, num.uh]);
     }
-
-    // function seq_zero(len: nat): (zs: seq<uint>)
-    //     ensures |zs| == len
-
-    // lemma seq_zero_to_nat_lemma(len: nat)
-    //     ensures ToNat(seq_zero(len)) == 0
-
-    // lemma to_nat_bound_lemma(xs: seq<uint>)
-    //     ensures ToNat(xs) < pow_B256(|xs|)
-
-    // lemma to_nat_zero_prepend_lemma (xs: seq<uint>)
-    //   ensures ToNat([0] + xs) == ToNat(xs) * NT.BASE_256
-
-    // lemma to_nat_prefix_lemma(xs: seq<uint>, i: nat)
-    //     requires 0 <= i < |xs|;
-    //     ensures ToNat(xs[..i]) + ToNat(xs[i..]) * pow_B256(i) == ToNat(xs);
-
-    // lemma to_nat_zero_extend_lemma(xs': seq<uint>, xs: seq<uint>) 
-    //     requires |xs'| < |xs|
-    //     requires var len' := |xs'|;
-    //         && xs[..len'] == xs'
-    //         && xs[len'.. ] == seq(|xs| - len', i => 0)
-    //     ensures ToNat(xs') == ToNat(xs);
 
 /* rsa/mm definions & lemmas */
 

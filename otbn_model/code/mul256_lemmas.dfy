@@ -7,8 +7,8 @@ module mul256_lemmas {
     import opened rsa_ops
     import opened vt_consts
     import opened NativeTypes
-    import opened BASE_256_Seq
     import opened Mul
+    import opened BASE_256_Seq
 
     const B  : int := BASE_64;
     const B2 : int := B * B;

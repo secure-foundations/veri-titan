@@ -1,6 +1,6 @@
 include "../spec/rsa_ops.dfy"
-include "../libraries/src/NonlinearArithmetic/Power.dfy"
 include "../libraries/src/NonlinearArithmetic/DivMod.dfy"
+include "../libraries/src/NonlinearArithmetic/Power.dfy"
 include "../libraries/src/Collections/Sequences/Seq.dfy"
 
 module addc512_lemmas {
@@ -8,11 +8,11 @@ module addc512_lemmas {
     import opened vt_ops
     import opened rsa_ops
     import opened vt_consts
-    import opened Power
     import opened DivMod
-    import NT = NativeTypes
+    import opened Power
     import opened Seq
     import opened BASE_256_Seq
+    import NT = NativeTypes
 
     lemma addc_256_op_lemma(
         x: uint256, y: uint256, z: uint256, c: uint1)

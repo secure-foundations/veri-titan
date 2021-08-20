@@ -8,9 +8,9 @@ module montmul_lemmas {
     import opened rsa_ops
     import opened vt_consts
     import opened mont_loop_lemmas
-    import opened BASE_256_Seq
     import opened DivMod
     import opened Mul
+    import opened BASE_256_Seq
 
     lemma montmul_inv_lemma_0(
         a: seq<uint256>,
@@ -38,7 +38,6 @@ module montmul_lemmas {
         ensures IsModEquivalent(a, b, rsa.M);
     {
         assert IsModEquivalent(b * rsa.R_INV * rsa.R, b, rsa.M) by {
-            assert IsModEquivalent(rsa.R_INV * rsa.R, 1, rsa.M);
             LemmaModMulEquivalent(rsa.R_INV * rsa.R, 1, b, rsa.M);
             LemmaMulIsAssociativeAuto();
         }

@@ -455,8 +455,7 @@ abstract module NatSeq {
   //////////////////////////////////////////////////////////////////////////////
 
   /* Adds two sequences. */
-  function method {:opaque} SeqAdd(xs: seq<uint>,
-                                    ys: seq<uint>): (seq<uint>, nat)
+  function method {:opaque} SeqAdd(xs: seq<uint>, ys: seq<uint>): (seq<uint>, nat)
     requires |xs| == |ys|
     ensures var (zs, cout) := SeqAdd(xs, ys);
       |zs| == |xs| && 0 <= cout <= 1

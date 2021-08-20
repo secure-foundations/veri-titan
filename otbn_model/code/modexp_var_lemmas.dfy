@@ -13,10 +13,10 @@ module modexp_var_lemmas {
     import opened mont_loop_lemmas
     import opened montmul_lemmas
     import opened subb_lemmas
-    import opened BASE_256_Seq
     import opened DivMod
     import opened Mul
     import opened Power
+    import opened BASE_256_Seq
 
     predicate modexp_var_inv(
         a: nat,

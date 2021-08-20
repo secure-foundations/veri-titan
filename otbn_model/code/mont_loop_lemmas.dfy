@@ -8,11 +8,11 @@ module mont_loop_lemmas {
     import opened vt_ops
     import opened rsa_ops
     import opened vt_consts
-    import NT = NativeTypes
-    import opened BASE_256_Seq
     import opened DivMod
     import opened Mul
     import opened Power
+    import opened BASE_256_Seq
+    import NT = NativeTypes
 
     lemma mont_loop_cong_lemma(
         p1: uint512_view_t,

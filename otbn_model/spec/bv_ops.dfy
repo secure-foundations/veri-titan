@@ -1,13 +1,13 @@
 include "vt_consts.dfy"
 include "../libraries/src/NonlinearArithmetic/DivMod.dfy"
-include "../libraries/src/NonlinearArithmetic/Power.dfy"
 include "../libraries/src/NonlinearArithmetic/Mul.dfy"
+include "../libraries/src/NonlinearArithmetic/Power.dfy"
 
 module bv_ops {
     import opened NativeTypes
-    import opened Power
     import opened DivMod
     import opened Mul
+    import opened Power
 
     import opened vt_consts
 
@@ -36,7 +36,7 @@ module bv_ops {
     
     function pow_B256(e: nat): nat
     {
-        //LemmaPowPositive(BASE_256, e);
+        LemmaPowPositiveAuto();
         Pow(BASE_256, e)
     }
 
@@ -204,7 +204,7 @@ module bv_ops {
         requires b <= u;
         ensures a * b <= u * u;
     {
-        LemmaMulUpperBound(a, u, b, u);
+        LemmaMulUpperBoundAuto();
     }
 
     lemma single_digit_lemma_1(a: nat, b: nat, c: nat, u: nat)
@@ -217,9 +217,11 @@ module bv_ops {
             a * b + c;
             <= { single_digit_lemma_0(a, b, u); }
             u * u + c;
-            <= u * u + u; {LemmaMulIsDistributiveAdd(u, u, 1);}
+            <=
+            u * u + u;
+            == { LemmaMulIsDistributiveAddAuto(); }
             u * (u + 1); 
-            < {LemmaMulLeftInequality(u + 1, u, u + 1);}
+            <  { LemmaMulLeftInequality(u + 1, u, u + 1); }
             (u + 1) * (u + 1); 
         }
     }
@@ -233,7 +235,7 @@ module bv_ops {
     {
         calc {
             a * b + c + d;
-            <={ single_digit_lemma_0(a, b, u); }
+            <= { single_digit_lemma_0(a, b, u); }
             u * u + c + d;
             <= u * u + u + u;
             u * u + 2 * u;
@@ -241,9 +243,11 @@ module bv_ops {
         }
 
         calc {
-            (u + 1) * (u + 1); {LemmaMulIsDistributiveAdd(u + 1, u, 1);}
+            (u + 1) * (u + 1);
+            { LemmaMulIsDistributiveAdd(u + 1, u, 1); }
             (u + 1) * u + (u + 1) * 1; 
-            u * (u + 1) + u + 1; {LemmaMulIsDistributiveAdd(u, u, 1);}
+            u * (u + 1) + u + 1;
+            { LemmaMulIsDistributiveAdd(u, u, 1); }
             (u * u) + (2 * u) + 1;
         }
     }
