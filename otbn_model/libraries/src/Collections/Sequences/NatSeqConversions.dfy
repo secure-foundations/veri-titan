@@ -56,20 +56,6 @@ abstract module NatSeqConversions {
     Large.BITS() / Small.BITS()
   }
 
-  /* If x % y is zero and x is greater than zero, x is greater than y. */
-  lemma LemmaModEqZero(x: nat, y: nat)
-    requires x > 0 && y > 0
-    requires x % y == 0
-    ensures x >= y
-  {
-    calc ==> {
-      x < y;
-        { LemmaSmallMod(x, y); }
-      x % y == x;
-      false;
-    }
-  }
-
   /* Converts a sequence from Large.BOUND() to Small.BOUND(). */
   function method {:opaque} ToSmall(xs: seq<Large.uint>): (ys: seq<Small.uint>)
     ensures |ys| == |xs| * E()
@@ -87,7 +73,7 @@ abstract module NatSeqConversions {
   {
     if |xs| == 0 then LemmaDivBasicsAuto(); []
     else
-      LemmaModEqZero(|xs|, E());
+      LemmaModIsZero(|xs|, E());
       assert |xs| >= E();
 
       Small.LemmaSeqNatBound(xs[..E()]);
@@ -134,7 +120,7 @@ abstract module NatSeqConversions {
       calc {
         Large.ToNat(ToLarge(xs));
           {
-            LemmaModEqZero(|xs|, E());
+            LemmaModIsZero(|xs|, E());
             LemmaModSubMultiplesVanishAuto();
             Small.LemmaSeqNatBound(xs[..E()]);
           }
@@ -185,7 +171,7 @@ abstract module NatSeqConversions {
       calc {
         ToSmall(ToLarge(xs));
           {
-            LemmaModEqZero(|xs|, E());
+            LemmaModIsZero(|xs|, E());
             Small.LemmaSeqNatBound(xs[..E()]);
             LemmaModSubMultiplesVanishAuto();
           }

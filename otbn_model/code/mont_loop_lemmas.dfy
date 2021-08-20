@@ -45,8 +45,8 @@ module mont_loop_lemmas {
             true;
                 { LemmaSeqLen2([w25, w26]); }
             w25 + w26 * NT.BASE_256 == p1.lh * m0d;
-            // cong_B256(w25 + w26 * NT.BASE_256, p1.lh * m0d);
-            // cong_B256(w25 + w26 * NT.BASE_256, (a0 + y0 * xi) * m0d);
+            cong_B256(w25 + w26 * NT.BASE_256, p1.lh * m0d);
+            cong_B256(w25 + w26 * NT.BASE_256, (a0 + y0 * xi) * m0d);
             cong_B256(w25, (a0 + y0 * xi) * m0d);
         }
     }
