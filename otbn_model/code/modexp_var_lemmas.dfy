@@ -45,10 +45,7 @@ module modexp_var_lemmas {
 
         calc ==> {
             true;
-                {
-                    LemmaMulModNoopLeft(rsa.RR, rsa.R_INV, m);
-                    LemmaMulModNoopLeft(rsa.R * rsa.R, rsa.R_INV, m);
-                }
+                { LemmaModMulEquivalentAuto(); }
             IsModEquivalent(rsa.RR * rsa.R_INV, rsa.R * rsa.R * rsa.R_INV, m);
                 {
                     LemmaMulProperties();
@@ -59,8 +56,7 @@ module modexp_var_lemmas {
 
         assert IsModEquivalent(a, s * rsa.R, m) by {
             assert IsModEquivalent(rsa.RR * rsa.R_INV * s, rsa.R * s, m) by {
-                LemmaMulModNoopLeft(rsa.RR * rsa.R_INV, s, m);
-                LemmaMulModNoopLeft(rsa.R, s, m);
+                LemmaModMulEquivalentAuto();
             }
             assert IsModEquivalent(a, rsa.RR * rsa.R_INV * s, m) by {
                 montmul_inv_lemma_1(a_view, rr, sig, rsa);
@@ -107,10 +103,7 @@ module modexp_var_lemmas {
             IsModEquivalent(a * a, Pow(sig, Pow(2, i) + Pow(2, i)) * rsa.R * rsa.R, m);
                 { reveal Pow(); }
             IsModEquivalent(a * a, next_goal * rsa.R, m);
-                {
-                    LemmaMulModNoopLeft(a * a, rsa.R_INV, m);
-                    LemmaMulModNoopLeft(next_goal * rsa.R, rsa.R_INV, m);
-                }
+                { LemmaModMulEquivalentAuto(); }
             IsModEquivalent(a * a * rsa.R_INV, next_goal * rsa.R * rsa.R_INV, m);
                 {
                     assert IsModEquivalent(next_a, a * a * rsa.R_INV, m) by {
@@ -148,10 +141,7 @@ module modexp_var_lemmas {
 
         calc ==> {
             IsModEquivalent(a, cur * rsa.R, m);
-                {
-                    LemmaMulModNoopLeft(a, s * rsa.R_INV, m);
-                    LemmaMulModNoopLeft(cur * rsa.R, s * rsa.R_INV, m);
-                }
+                { LemmaModMulEquivalentAuto(); }
             IsModEquivalent(a * (s * rsa.R_INV), (cur * rsa.R) * (s * rsa.R_INV), m);
                 { LemmaMulIsAssociativeAuto(); }
             IsModEquivalent(a * s * rsa.R_INV, cur * rsa.R * s * rsa.R_INV, m);
@@ -199,7 +189,7 @@ module modexp_var_lemmas {
     ensures !carry ==> adjusted_val == Pow(rsa.SIG, rsa.E) % rsa.M;
     {
         if carry {
-            LemmaModLessThanDivisor(raw_val, rsa.M);
+            LemmaSmallMod(raw_val, rsa.M);
             assert raw_val == Pow(rsa.SIG, rsa.E) % rsa.M;
         } else {
             calc ==> {
@@ -209,7 +199,7 @@ module modexp_var_lemmas {
                 IsModEquivalent(adjusted_val, Pow(rsa.SIG, rsa.E), rsa.M);
             }
 
-            LemmaModLessThanDivisor(adjusted_val, rsa.M);
+            LemmaSmallMod(adjusted_val, rsa.M);
         }
     }
 }

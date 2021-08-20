@@ -39,8 +39,7 @@ module montmul_lemmas {
     {
         assert IsModEquivalent(b * rsa.R_INV * rsa.R, b, rsa.M) by {
             assert IsModEquivalent(rsa.R_INV * rsa.R, 1, rsa.M);
-            LemmaMulModNoopLeft(rsa.R_INV * rsa.R, b, rsa.M);
-            LemmaMulModNoopLeft(1, b, rsa.M);
+            LemmaModMulEquivalent(rsa.R_INV * rsa.R, 1, b, rsa.M);
             LemmaMulIsAssociativeAuto();
         }
     }
@@ -60,10 +59,7 @@ module montmul_lemmas {
 
         calc ==> {
             IsModEquivalent(a * rsa.R, ToNat(x) * ToNat(y), m);
-                {
-                    LemmaMulModNoopLeft(a * rsa.R, rsa.R_INV, m);
-                    LemmaMulModNoopLeft(ToNat(x) * ToNat(y), rsa.R_INV, m);
-                }
+                { LemmaModMulEquivalentAuto(); }
             IsModEquivalent(a * rsa.R * rsa.R_INV, ToNat(x) * ToNat(y) * rsa.R_INV, m);
             IsModEquivalent(ToNat(x) * ToNat(y) * rsa.R_INV, a * rsa.R * rsa.R_INV, m);
                 {

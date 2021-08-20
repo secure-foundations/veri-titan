@@ -34,10 +34,7 @@ module mont_loop_lemmas {
             cong_B256(a0 + y0 * xi, p1.lh + p1.uh * NT.BASE_256);
             cong_B256(a0 + y0 * xi, p1.lh);
             cong_B256(p1.lh, a0 + y0 * xi);
-                {
-                    LemmaMulModNoopLeft(p1.lh, m0d, NT.BASE_256);
-                    LemmaMulModNoopLeft(a0 + y0 * xi, m0d, NT.BASE_256);
-                }
+                { LemmaModMulEquivalentAuto(); }
             cong_B256(p1.lh * m0d, (a0 + y0 * xi) * m0d);
         }
 
@@ -67,12 +64,10 @@ module mont_loop_lemmas {
 
         assert cong_B256(ui * m0, -p1_full) by {
             assert cong_B256(m0d * m0 * p1.full, -p1_full) by {
-                LemmaMulModNoopLeft(m0d * m0, p1.full, NT.BASE_256);
-                LemmaMulModNoopLeft(-1, p1.full, NT.BASE_256);
+                LemmaModMulEquivalent(m0d * m0, -1, p1.full, NT.BASE_256);
             }
             assert cong_B256(ui * m0, p1.full * m0d * m0) by {
-                LemmaMulModNoopLeft(ui, m0, NT.BASE_256);
-                LemmaMulModNoopLeft(p1.full * m0d, m0, NT.BASE_256);
+                LemmaModMulEquivalentAuto();
             }
             assert p1.full * m0d * m0 == m0d * m0 * p1.full by {
                 LemmaMulIsAssociativeAuto();
@@ -142,8 +137,7 @@ module mont_loop_lemmas {
     {
         assert cong_B256(m0d * m[0], -1) by {
             LemmaSeqLswModEquivalence(m);
-            LemmaMulModNoopLeft(ToNat(m), m0d, NT.BASE_256);
-            LemmaMulModNoopLeft(m[0], m0d, NT.BASE_256);
+            LemmaModMulEquivalent(ToNat(m), m[0], m0d, NT.BASE_256);
             LemmaMulIsCommutativeAuto();
         }
 
@@ -473,8 +467,7 @@ module mont_loop_lemmas {
                 }
             IsModEquivalent(curr_a * pow_B256(1), x[i] * ToNat(y) + prev_a, rsa.M);
                 {
-                    LemmaMulModNoopLeft(curr_a * pow_B256(1), pow_B256(i), rsa.M);
-                    LemmaMulModNoopLeft(x[i] * ToNat(y) + prev_a, pow_B256(i), rsa.M);
+                    LemmaModMulEquivalent(curr_a * pow_B256(1), x[i] * ToNat(y) + prev_a, pow_B256(i), rsa.M);
                     LemmaMulIsDistributiveAuto();
                 }
             IsModEquivalent(curr_a * pow_B256(1) * pow_B256(i), x[i] * ToNat(y) * pow_B256(i) + prev_a * pow_B256(i), rsa.M);
