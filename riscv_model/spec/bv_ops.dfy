@@ -18,9 +18,44 @@ module bv_ops {
     type uint256 = i :int | 0 <= i < BASE_256
     type uint512 = i :int | 0 <= i < BASE_512
 
-    type int12   = i :int | -2048 <= i <= 2047
+    type int12  = i :int | -2048 <= i <= 2047
 
+    type int32  = i :int | -BASE_31 <= i <= (BASE_31 - 1)
     type int64  = i :int | -BASE_63 <= i <= (BASE_63 - 1)
+
+    /* signed operations */
+    function int32_rs(x: int32, shift: nat) : int32
+    {
+      x / pow2(shift)
+    }
+
+    // right arithmetic shift
+    function int64_rs(x: int64, shift: nat) : int64
+    {
+      x / pow2(shift)
+    }
+
+    function to_uint32(i: int) : uint32
+      requires - BASE_32 < i < BASE_32
+    {
+      if i < 0 then i + BASE_32 else i
+    }
+
+    function to_int32(i:uint32) : int32
+    {
+      if i > (BASE_31 - 1) then i - BASE_32 else i
+    }
+
+
+    lemma int32_uint32_inverse_lemma(i:int32)
+      ensures to_int32(to_uint32(i)) == i
+    {
+    }
+    
+    lemma uint32_int32_inverse_lemma(i:uint32)
+      ensures to_uint32(to_int32(i)) == i
+    {
+    }
 
     function pow_B32(e: nat): nat
     {
@@ -30,6 +65,12 @@ module bv_ops {
     function bool_to_uint1(i:bool) : uint1
     {
         if i then 1 else 0
+    }
+
+    function neg1_to_uint1(i:int) : uint1
+      requires -1 <= i <= 0;
+    {
+      if i == -1 then 1 else 0
     }
 
     function method {:opaque} uint32_and(x:uint32, y:uint32) : uint32
