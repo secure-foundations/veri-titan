@@ -1,12 +1,10 @@
-// include "../gen/mont_loop.dfy"
-include "gen/modexp_var.dfy"
-include "code/vale.dfy"
+include "../code/vale.dfy"
+include "../gen/modexp_var.dfy"
 
 module otbn_printer {
     import opened bv_ops
     import opened vt_ops
     import opened modexp_var
-
 
 method printReg32(r:reg32_t)
 {
@@ -45,45 +43,45 @@ method printIns32(ins:ins32)
             printReg32(dst); print(", "); printReg32(src1); print(", "); print(src2);
             print("\n");
 
-        case SUB(dst, src1, src2) =>
-            print ("  sub ");
-            printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
-            print("\n");
+        // case SUB(dst, src1, src2) =>
+        //     print ("  sub ");
+        //     printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
+        //     print("\n");
 
-        case AND(dst, src1, src2) =>
-            print ("  and ");
-            printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
-            print("\n");
+        // case AND(dst, src1, src2) =>
+        //     print ("  and ");
+        //     printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
+        //     print("\n");
 
-        case ANDI(dst, src1, src2) =>
-            print ("  andi ");
-            printReg32(dst); print(", "); printReg32(src1); print(", "); print(src2);
-            print("\n");
+        // case ANDI(dst, src1, src2) =>
+        //     print ("  andi ");
+        //     printReg32(dst); print(", "); printReg32(src1); print(", "); print(src2);
+        //     print("\n");
 
-        case OR(dst, src1, src2) =>
-            print ("  or ");
-            printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
-            print("\n");
+        // case OR(dst, src1, src2) =>
+        //     print ("  or ");
+        //     printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
+        //     print("\n");
 
-        case ORI(dst, src1, src2) =>
-            print ("  ori ");
-            printReg32(dst); print(", "); printReg32(src1); print(", "); print(src2);
-            print("\n");
+        // case ORI(dst, src1, src2) =>
+        //     print ("  ori ");
+        //     printReg32(dst); print(", "); printReg32(src1); print(", "); print(src2);
+        //     print("\n");
 
-        case XOR(dst, src1, src2) =>
-            print ("  xor ");
-            printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
-            print("\n");
+        // case XOR(dst, src1, src2) =>
+        //     print ("  xor ");
+        //     printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
+        //     print("\n");
 
-        case XORI(dst, src1, src2) =>
-            print ("  xori ");
-            printReg32(dst); print(", "); printReg32(src1); print(", "); print(src2);
-            print("\n");
+        // case XORI(dst, src1, src2) =>
+        //     print ("  xori ");
+        //     printReg32(dst); print(", "); printReg32(src1); print(", "); print(src2);
+        //     print("\n");
 
-        case LUI(dst, src) =>
-            print ("  lui ");
-            printReg32(dst); print(", "); print(src);
-            print("\n");
+        // case LUI(dst, src) =>
+        //     print ("  lui ");
+        //     printReg32(dst); print(", "); print(src);
+        //     print("\n");
 
         // TODO: this is case-by-case combo of addi and lui, should we print that instead?
         case LI(dst, src) =>
@@ -117,7 +115,6 @@ method printFlag(flag:uint2)
         case 1 => print("M");
         case 2 => print("L");
         case 3 => print("Z");
-        case _ => print("ERROR: Invalid flag.");
 }
 
 method printAccShift(shift:int)
@@ -134,10 +131,10 @@ method printIns256(ins:ins256)
 {
     match ins
 
-        case BN_XOR(dst, src1, src2, shift) =>
+        case BN_XOR(dst, src1, src2, shift, fg) =>
             print("  bn.xor ");
-            printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" ");
-            printShift(shift);
+            printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" "); 
+            printShift(shift); print(", "); printFlags(fg);
             print("\n");
 
         case BN_ADD(dst, src1, src2, shift, fg) =>
@@ -171,10 +168,10 @@ method printIns256(ins:ins256)
             printAccShift(shift); print("\n");
 
         // todo
-        case BN_SUBI(dst, src1, src2, fg) =>
-            print("  bn.subi ");
-            printReg256(dst); print(", "); printReg256(src1); print(", "); print(src2); print(", ");
-            printFlags(fg); print("\n");
+        // case BN_SUBI(dst, src1, src2, fg) =>
+        //     print("  bn.subi ");
+        //     printReg256(dst); print(", "); printReg256(src1); print(", "); print(src2); print(", ");
+        //     printFlags(fg); print("\n");
 
         case BN_SUBB(dst, src1, src2, shift, fg) =>
             print("  bn.subb ");
@@ -189,21 +186,21 @@ method printIns256(ins:ins256)
             print("\n");
 
         // TODO: fix otbn_subm in vt_ops file
-        case BN_SUBM(dst, src1, src2) =>
-            print("  bn.subm ");
-            printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2);
-            print("\n");
+        // case BN_SUBM(dst, src1, src2) =>
+        //     print("  bn.subm ");
+        //     printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2);
+        //     print("\n");
 
-        case BN_OR(dst, src1, src2, shift) =>
-            print("  bn.or ");
-            printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" ");
-            printShift(shift);
-            print("\n");
+        // case BN_OR(dst, src1, src2, shift) =>
+        //     print("  bn.or ");
+        //     printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" ");
+        //     printShift(shift);
+        //     print("\n");
 
-        case BN_AND(dst, src1, src2, shift) =>
-            print("  bn.and ");
-            printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" ");
-            printShift(shift); print(" "); print("\n");
+        // case BN_AND(dst, src1, src2, shift) =>
+        //     print("  bn.and ");
+        //     printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" ");
+        //     printShift(shift); print(" "); print("\n");
 
         case BN_LID(grd, grd_inc, offset, grs, grs_inc) =>
             print("  bn.lid ");
@@ -212,11 +209,11 @@ method printIns256(ins:ins256)
             printReg32(grs); if grs_inc { print("++"); }
             print(")"); print("\n");
 
-        case BN_RSHI(dst, src1, src2, imm) =>
-            print("  bn.rshi ");
-            printReg256(dst); print(", "); printReg256(src1); print(", ");
-            printReg256(src2); print(" >> "); print(imm);
-            print("\n");
+        // case BN_RSHI(dst, src1, src2, imm) =>
+        //     print("  bn.rshi ");
+        //     printReg256(dst); print(", "); printReg256(src1); print(", ");
+        //     printReg256(src2); print(" >> "); print(imm);
+        //     print("\n");
 
         case BN_SEL(dst, src1, src2, fg, flag) =>
             print("  bn.sel ");

@@ -9,6 +9,7 @@ module modexp_var {
 
 import opened bv_ops
 import opened vt_ops
+import opened vt_mem
 import opened rsa_ops
 import opened vt_consts
 import opened vt_vale
@@ -78,7 +79,7 @@ function mod(a: int, n: int): int extern;
 function mvars_init(
     vars: mvars,
     xmem: xmem_t,
-    wmem: wmem_t,
+    heap: heap_t,
     m_ptr: uint32,
     m0d_ptr: uint32,
     rr_ptr: uint32,
@@ -94,14 +95,15 @@ procedure modexp_var_0(
     ghost out_ptr: uint32)
 
     requires
-        mvars_init(init_vars, xmem, wmem,
+        mvars_init(init_vars, xmem, heap,
             m_ptr, m0d_ptr, rr_ptr, sig_ptr, out_ptr);
 
     reads
         x0;
-        xmem; wmem;
+        xmem; wmem; heap;
 
     modifies
+        fgroups;
         x8; x9; x10; x11; x16; x17; x18; x29; x30; x31;
         w31;
 
@@ -116,15 +118,14 @@ procedure modexp_var_0(
 
         w31 == 0;
 
-        mvars_inv(init_vars, wmem, NA, NA, x16, x17, x18, NA);
+        mvars_inv(init_vars, heap, NA, NA, x16, x17, x18, NA);
 {
     xor_clear_lemma(w31);
-    bn_xor(w31, w31, w31, SFT_DFT);
+    bn_xor(w31, w31, w31, SFT_DFT, 0);
 
     lw(x30, 4, x0);
 
-    addi(x31, x0, 1); // TODO: use one instruction instead
-    sub(x31, x30, x31);
+    addi(x31, x30, (-1));
 
     lw(x16, 16, x0);
     lw(x17, 8, x0);
@@ -151,12 +152,12 @@ procedure sub_mod(
 
         w31 == 0;
 
-        mvars_iter_init(initial_m_it, wmem, x16, NA);
+        mvars_iter_init(initial_m_it, heap, x16, NA);
         valid_wdr_view(wdrs, raw_view, 4, NUM_WORDS);
 
     reads
         x30;
-        wmem;
+        wmem; heap;
 
     modifies
         x8; x9; x11; x16; x17;
@@ -179,7 +180,7 @@ procedure sub_mod(
 
     while (Loop(x30))
         invariant
-            iter_inv(m_it, wmem, x16);
+            iter_inv(m_it, heap, x16);
             m_it.base_addr == initial_m_it.base_addr;
             m_it.index == NUM_WORDS - loop_ctr;
             seq_len(m_it.buff) == NUM_WORDS;
@@ -227,23 +228,22 @@ procedure write_to_dmem(ghost iter: iter_t)
         x8 == 4;
         x30 == NUM_WORDS;
 
-        iter_safe(iter, wmem, x21);
+        iter_safe(iter, heap, x21);
         seq_len(iter.buff) == NUM_WORDS;
         iter.index == 0;
     
     modifies
-        x8; x21; wmem;
+        x8; x21; wmem; heap;
     
     reads
         x30; wdrs;
 
     ensures
-        iter_inv(next_iter, wmem, iter.base_addr);
+        iter_inv(next_iter, heap, iter.base_addr);
         next_iter.base_addr == iter.base_addr;
         seq_len(next_iter.buff) == NUM_WORDS;
         next_iter.buff == wdrs[4..4+NUM_WORDS];
-
-        wmem == old(wmem)[next_iter.base_addr := next_iter.buff];
+        heap == old(heap)[next_iter.base_addr := next_iter.buff];
 {
     next_iter := iter;
 
@@ -251,7 +251,7 @@ procedure write_to_dmem(ghost iter: iter_t)
         invariant
             x8 == 4 + next_iter.index;
 
-            iter_inv(next_iter, wmem, x21);
+            iter_inv(next_iter, heap, x21);
             next_iter.index + loop_ctr == NUM_WORDS;
             seq_len(next_iter.buff) == NUM_WORDS;
 
@@ -259,7 +259,7 @@ procedure write_to_dmem(ghost iter: iter_t)
             wdrs == old(wdrs);
 
             next_iter.base_addr == iter.base_addr;
-            wmem == old(wmem)[next_iter.base_addr := next_iter.buff];
+            heap == old(heap)[next_iter.base_addr := next_iter.buff];
 
         decreases
             loop_ctr;
@@ -270,7 +270,18 @@ procedure write_to_dmem(ghost iter: iter_t)
         next_iter := bn_sid_safe(x8, false, 0, x21, true, next_iter);
         addi(x8, x8, 1);
 
+        ghost var item := next_iter.buff[index];
         assert next_iter.buff[index] == wdrs[4+index];
+
+        calc == {
+            next_iter.buff[..next_iter.index];
+            ==
+            seq_append(last_iter.buff[..index], item);
+            ==
+            seq_append(wdrs[4..4+index], item);
+            ==
+            wdrs[4..4+next_iter.index];
+        }
     }
 
     next_iter := next_iter.(index := 0);
@@ -288,7 +299,9 @@ returns (ghost out_iter: iter_t)
 
     requires
         xmem_addr_valid(xmem, 28); // out
-        wmem_base_addr_valid(wmem, xmem[28], NUM_WORDS);
+        heap_base_addr_valid(heap, xmem[28]);
+        let loc := #nat(xmem[28]);
+        seq_len(heap[loc]) == NUM_WORDS;
 
         NUM_WORDS == x30;
 
@@ -302,7 +315,7 @@ returns (ghost out_iter: iter_t)
         !carry ==> to_nat(adjusted_view) == mod(power(sig, rsa.E), rsa.M);
     
     ensures
-        iter_inv(out_iter, wmem, x21);
+        iter_inv(out_iter, heap, x21);
         to_nat(out_iter.buff) == mod(power(sig, rsa.E), rsa.M);
 {
     lw(x21, 28, x0);
@@ -311,7 +324,7 @@ returns (ghost out_iter: iter_t)
     li(x10, 3);
     li(x17, 16);
 
-    out_iter := iter_cons(x21, 0, wmem[x21]);
+    out_iter := iter_cons(x21, 0, heap[x21]);
 
     while (Loop(x30))
         invariant
@@ -321,7 +334,7 @@ returns (ghost out_iter: iter_t)
             x17 == 16 + out_iter.index;
             carry == fgroups.fg0.cf;
 
-            iter_inv(out_iter, wmem, x21);
+            iter_inv(out_iter, heap, x21);
             out_iter.index + loop_ctr == NUM_WORDS;
             seq_len(out_iter.buff) == NUM_WORDS;
 
@@ -355,6 +368,23 @@ returns (ghost out_iter: iter_t)
     assert adjusted_view == adjusted_view[..out_iter.index];
 }
 
+// procedure dump(ghost iter: iter_t)
+//     {:frame false}
+//     requires false;
+// {
+//     ghost var out_iter := iter;
+
+//     lw(x21, 28, x0);
+//     li(x8, 0);
+//     while (Loop(x30))
+//         invariant false;
+//         decreases
+//             loop_ctr;
+//     {
+//         out_iter := bn_lid_safe(x8, true, 0, x21, true, out_iter);
+//     }
+// }
+
 procedure modexp_var(
     ghost init_vars: mvars,
     ghost m_ptr: uint32,
@@ -368,12 +398,12 @@ procedure modexp_var(
     {:frame false}
 
     requires
-        mvars_init(init_vars, xmem, wmem,
+        mvars_init(init_vars, xmem, heap,
             m_ptr, m0d_ptr, rr_ptr, sig_ptr, out_ptr);
 
     ensures
         // out_iter contains a valid view of memory
-        iter_inv(out_iter, wmem, x21);
+        iter_inv(out_iter, heap, x21);
         // out_iter contains the right value
         let rsa := init_vars.rsa in 
         to_nat(out_iter.buff) == mod(power(rsa.SIG, rsa.E), rsa.M);
@@ -391,13 +421,13 @@ procedure modexp_var(
     ghost var vars := init_vars.(x_it := rr_iter).(y_it := sig_iter);
     a_view := montmul(vars);
 
-    out_iter := iter_cons(out_ptr, 0, wmem[out_ptr]);
+    out_iter := iter_cons(out_ptr, 0, heap[out_ptr]);
     out_iter := write_to_dmem(out_iter);
 
     vars := vars.(x_it := out_iter).(y_it := out_iter);
 
     modexp_var_inv_pre_lemma(a_view, rr_iter.buff, sig_iter.buff, vars.rsa);
-
+    
     ghost var i : nat := 0;
 
     while (Loop(x29))
@@ -413,10 +443,10 @@ procedure modexp_var(
             init_vars.rsa == vars.rsa;
             init_vars.sig_it== vars.sig_it;
 
-            mvars_iter_init(out_iter, wmem, out_ptr, NA);
+            mvars_iter_init(out_iter, heap, out_ptr, NA);
             out_iter.buff == a_view;
 
-            mvars_inv(vars, wmem, out_ptr, out_ptr, x16, x17, rr_ptr, sig_ptr);
+            mvars_inv(vars, heap, out_ptr, out_ptr, x16, x17, rr_ptr, sig_ptr);
             modexp_var_inv(to_nat(a_view), vars.rsa.SIG, i, vars.rsa);
 
             out_ptr != x16;

@@ -15,9 +15,12 @@ import opened rsa_ops
 import opened vt_consts
 import opened vt_vale
 import opened vt_decls
-import opened powers
-import opened congruences
 import opened addc512_lemmas
+
+import opened DivMod
+import opened Power
+import opened Seq
+import opened BASE_256_Seq
 
 #endverbatim
 

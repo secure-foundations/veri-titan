@@ -15,10 +15,75 @@ module rsa_ops {
     import opened vt_consts
     import opened bv_ops
     import opened vt_ops
+    import opened vt_mem
+
     import opened Power
     import opened DivMod 
     import NT = NativeTypes
     import opened BASE_256_Seq
+
+
+/* to_nat definions & lemmas */
+
+    function to_nat(xs: seq<uint256>): nat
+    {
+        ToNat(xs)
+    }
+
+    // lemma to_nat_lemma_0(xs: seq<uint256>)
+    //     requires |xs| == 1
+    //     ensures to_nat(xs) == xs[0]
+    // {
+    //     reveal to_nat();
+    //     reveal power();
+    // }
+
+    // lemma to_nat_lemma_1(xs: seq<uint256>)
+    //     requires |xs| == 2
+    //     ensures to_nat(xs) == xs[0] + xs[1] * BASE_256
+    // {
+    //     reveal to_nat();
+    //     to_nat_lemma_0(xs[..1]);
+    //     reveal power();
+    // }
+
+    // // unstable
+    // lemma lsw_cong_lemma(xs: seq<uint256>)
+    //     requires |xs| >= 1;
+    //     ensures cong_B256(to_nat(xs), xs[0]);
+    // {
+    //     if |xs| == 1 {
+    //         to_nat_lemma_0(xs);
+    //         reveal cong();
+    //     } else {
+    //         assert cong_B256(to_nat(xs), xs[0]) by {
+    //             var len' := |xs| - 1;
+    //             var xs' := xs[..len'];
+
+    //             assert cong_B256(xs[len'] * pow_B256(len'), 0) by {
+    //                 reveal cong();
+    //                 power_mod_lemma_1(BASE_256, len');
+    //                 cong_mul_lemma_1(pow_B256(len'), 0, xs[len'], BASE_256);
+    //             }
+
+    //             calc ==> {
+    //                 true;
+    //                     { reveal to_nat(); reveal cong(); }
+    //                 cong_B256(to_nat(xs), to_nat(xs') + xs[len'] * pow_B256(len'));
+    //                     { cong_add_compose_lemma(to_nat(xs), to_nat(xs'), xs[len'] * pow_B256(len'), 0, BASE_256); }
+    //                 cong_B256(to_nat(xs), to_nat(xs'));
+    //                     {
+    //                        lsw_cong_lemma(xs');
+    //                        assert xs'[0] == xs[0];
+    //                        reveal cong();
+    //                     }
+    //                 cong_B256(to_nat(xs), xs[0]);
+    //             }
+    //             assert cong_B256(to_nat(xs), xs[0]);
+    //         }
+    //     }
+
+    // }
 
     lemma uint512_view_lemma(num: uint512_view_t)
         ensures num.full
@@ -76,24 +141,24 @@ module rsa_ops {
         sig_it: iter_t,
         rsa: rsa_params)
 
-    predicate mvars_iter_init(iter: iter_t, wmem: wmem_t, address: int, value: int)
+    predicate mvars_iter_init(iter: iter_t, heap: heap_t, address: int, value: int)
     {
-        && (address != NA ==> iter_inv(iter, wmem, address))
-        && (value != NA ==> ToNat(iter.buff) == value)
-            && iter.index == 0
+        && (address >= 0 ==> iter_inv(iter, heap, address))
+        && (value >= 0 ==> ToNat(iter.buff) == value)
+        && iter.index == 0
         && |iter.buff| == NUM_WORDS
     }
 
-    predicate m0d_it_inv(iter: iter_t, wmem: wmem_t, address: int)
+    predicate m0d_it_inv(iter: iter_t, heap: heap_t, address: int)
     {
-        && (address != NA ==> iter_inv(iter, wmem, address))
+        && (address >= 0 ==> iter_inv(iter, heap, address))
         && iter.index == 0
         && |iter.buff| == 1
     }
 
     predicate mvars_inv(
         vars: mvars,
-        wmem: wmem_t,
+        heap: heap_t,
         x_ptr: int,
         y_ptr: int,
         m_ptr: int,
@@ -103,20 +168,20 @@ module rsa_ops {
     {
         && rsa_params_inv(vars.rsa)
 
-        && mvars_iter_init(vars.x_it, wmem, x_ptr, NA)
-        && mvars_iter_init(vars.y_it, wmem, y_ptr, NA)
-        && mvars_iter_init(vars.sig_it, wmem, sig_ptr, vars.rsa.SIG)
-        && mvars_iter_init(vars.m_it, wmem, m_ptr, vars.rsa.M)
-        && mvars_iter_init(vars.rr_it, wmem, rr_ptr, vars.rsa.RR)
+        && mvars_iter_init(vars.x_it, heap, x_ptr, NA)
+        && mvars_iter_init(vars.y_it, heap, y_ptr, NA)
+        && mvars_iter_init(vars.sig_it, heap, sig_ptr, vars.rsa.SIG)
+        && mvars_iter_init(vars.m_it, heap, m_ptr, vars.rsa.M)
+        && mvars_iter_init(vars.rr_it, heap, rr_ptr, vars.rsa.RR)
 
-        && m0d_it_inv(vars.m0d_it, wmem, m0d_ptr)
+        && m0d_it_inv(vars.m0d_it, heap, m0d_ptr)
         && vars.m0d_it.buff[0] == vars.rsa.M0D
     }
 
     predicate mvars_init(
         vars: mvars,
         xmem: xmem_t,
-        wmem: wmem_t,
+        heap: heap_t,
         m_ptr: uint32,
         m0d_ptr: uint32,
         rr_ptr: uint32,
@@ -133,8 +198,9 @@ module rsa_ops {
         && xmem_addr_mapped(xmem, 20, sig_ptr)
         && xmem_addr_mapped(xmem, 28, out_ptr)
 
-        && mvars_inv(vars, wmem, NA, NA, m_ptr, m0d_ptr, rr_ptr, sig_ptr)
-        && wmem_base_addr_valid(wmem, out_ptr, NUM_WORDS)
+        && mvars_inv(vars, heap, NA, NA, m_ptr, m0d_ptr, rr_ptr, sig_ptr)
+        && heap_base_addr_valid(heap, out_ptr)
+        && |heap[out_ptr]| == NUM_WORDS
 
         && out_ptr != m0d_ptr
         && out_ptr != rr_ptr
