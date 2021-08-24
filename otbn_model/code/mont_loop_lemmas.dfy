@@ -1,18 +1,17 @@
 include "../spec/rsa_ops.dfy"
-include "../libraries/src/NonlinearArithmetic/DivMod.dfy"
 include "../libraries/src/NonlinearArithmetic/Mul.dfy"
-include "../libraries/src/NonlinearArithmetic/Power.dfy"
 
 module mont_loop_lemmas {
     import opened bv_ops
     import opened vt_ops
     import opened rsa_ops
     import opened vt_consts
+
     import opened DivMod
     import opened Mul
+    import opened NativeTypes
     import opened Power
     import opened BASE_256_Seq
-    import NT = NativeTypes
 
     lemma mont_loop_cong_lemma(
         p1: uint512_view_t,
@@ -31,7 +30,7 @@ module mont_loop_lemmas {
             true;
             cong_B256(a0 + y0 * xi, p1.full);
                 { uint512_view_lemma(p1); }
-            cong_B256(a0 + y0 * xi, p1.lh + p1.uh * NT.BASE_256);
+            cong_B256(a0 + y0 * xi, p1.lh + p1.uh * BASE_256);
             cong_B256(a0 + y0 * xi, p1.lh);
             cong_B256(p1.lh, a0 + y0 * xi);
                 { LemmaModMulEquivalentAuto(); }
@@ -41,9 +40,9 @@ module mont_loop_lemmas {
         calc ==> {
             true;
                 { LemmaSeqLen2([w25, w26]); }
-            w25 + w26 * NT.BASE_256 == p1.lh * m0d;
-            cong_B256(w25 + w26 * NT.BASE_256, p1.lh * m0d);
-            cong_B256(w25 + w26 * NT.BASE_256, (a0 + y0 * xi) * m0d);
+            w25 + w26 * BASE_256 == p1.lh * m0d;
+            cong_B256(w25 + w26 * BASE_256, p1.lh * m0d);
+            cong_B256(w25 + w26 * BASE_256, (a0 + y0 * xi) * m0d);
             cong_B256(w25, (a0 + y0 * xi) * m0d);
         }
     }
@@ -64,7 +63,7 @@ module mont_loop_lemmas {
 
         assert cong_B256(ui * m0, -p1_full) by {
             assert cong_B256(m0d * m0 * p1.full, -p1_full) by {
-                LemmaModMulEquivalent(m0d * m0, -1, p1.full, NT.BASE_256);
+                LemmaModMulEquivalent(m0d * m0, -1, p1.full, BASE_256);
             }
             assert cong_B256(ui * m0, p1.full * m0d * m0) by {
                 LemmaModMulEquivalentAuto();
@@ -78,18 +77,18 @@ module mont_loop_lemmas {
             cong_B256(ui * m0, -p1_full);
             cong_B256(ui * m0 + p1.lh , - p1_full + p1.lh);
                 { lemma_uint512_half_split(p1.full); }
-            cong_B256(ui * m0 + p1.lh, - (p1.uh as int * NT.BASE_256 + p1.lh) + p1.lh);
-            cong_B256(ui * m0 + p1.lh, - (p1.uh as int) * NT.BASE_256);
-                { assert cong_B256(- (p1.uh as int) * NT.BASE_256, 0); }
+            cong_B256(ui * m0 + p1.lh, - (p1.uh as int * BASE_256 + p1.lh) + p1.lh);
+            cong_B256(ui * m0 + p1.lh, - (p1.uh as int) * BASE_256);
+                { assert cong_B256(- (p1.uh as int) * BASE_256, 0); }
             cong_B256(ui * m0 + p1.lh, 0);
         }
 
         calc ==> {
             p2.full == ui * m0 + p1.lh;
                 { lemma_uint512_half_split(p2.full); }
-            p2.lh + p2.uh * NT.BASE_256 == ui * m0 + p1.lh;
-            cong_B256(p2.lh + p2.uh * NT.BASE_256, ui * m0 + p1.lh);
-            cong_B256(ui * m0 + p1.lh, p2.lh + p2.uh * NT.BASE_256);
+            p2.lh + p2.uh * BASE_256 == ui * m0 + p1.lh;
+            cong_B256(p2.lh + p2.uh * BASE_256, ui * m0 + p1.lh);
+            cong_B256(ui * m0 + p1.lh, p2.lh + p2.uh * BASE_256);
             cong_B256(ui * m0 + p1.lh, p2.lh);
             cong_B256(p2.lh, 0);
         }
@@ -158,7 +157,7 @@ module mont_loop_lemmas {
     {
         assert cong_B256(m0d * m[0], -1) by {
             LemmaSeqLswModEquivalence(m);
-            LemmaModMulEquivalent(ToNat(m), m[0], m0d, NT.BASE_256);
+            LemmaModMulEquivalent(ToNat(m), m[0], m0d, BASE_256);
             LemmaMulIsCommutativeAuto();
         }
 
@@ -168,7 +167,7 @@ module mont_loop_lemmas {
         LemmaSeqLen1(m[..1]);
         LemmaSeqLen1(a[..1]);
 
-        assert p2.full == p2.uh * NT.BASE_256 by {
+        assert p2.full == p2.uh * BASE_256 by {
             uint512_view_lemma(p2);
         }
 
@@ -236,7 +235,7 @@ module mont_loop_lemmas {
         var p1_uh := p1.uh;
         var p2_uh := p2.uh;
 
-        assert pow_B256_j' == pow_B256_j * NT.BASE_256 by {
+        assert pow_B256_j' == pow_B256_j * BASE_256 by {
           reveal Pow();
         }
 
@@ -244,11 +243,11 @@ module mont_loop_lemmas {
             == 
         ea_nat + p2_uh * pow_B256_j +p1_uh * pow_B256_j;
 
-        assert p1_uh == next_p1.lh + next_p1.uh * NT.BASE_256 - y_j * xi - a_j by {
+        assert p1_uh == next_p1.lh + next_p1.uh * BASE_256 - y_j * xi - a_j by {
             uint512_view_lemma(next_p1);
         }
 
-        assert p2_uh == next_p2.lh + next_p2.uh * NT.BASE_256 - m_j * ui - next_p1.lh by {
+        assert p2_uh == next_p2.lh + next_p2.uh * BASE_256 - m_j * ui - next_p1.lh by {
             uint512_view_lemma(next_p2);
         }
 
@@ -282,15 +281,15 @@ module mont_loop_lemmas {
                 ToNat(a[..j-1]) + next_p2.lh * pow_B256(j-1);
             }
 
-            assert ToNat([0] + a[..j-1]) == ToNat(a[..j-1]) * NT.BASE_256 by {
+            assert ToNat([0] + a[..j-1]) == ToNat(a[..j-1]) * BASE_256 by {
                 reveal ToNat();
             }
 
-            assert ToNat([0] + next_a[..j]) == ToNat(next_a[..j]) * NT.BASE_256 by {
+            assert ToNat([0] + next_a[..j]) == ToNat(next_a[..j]) * BASE_256 by {
                 reveal ToNat();
             }
 
-            assert pow_B256(j-1) * NT.BASE_256 == pow_B256(j) by {
+            assert pow_B256(j-1) * BASE_256 == pow_B256(j) by {
                 reveal Pow();
             }
 
@@ -318,27 +317,27 @@ module mont_loop_lemmas {
         requires mont_loop_inv(xi, ui, p1, p2, y, m, prev_a, a, NUM_WORDS);
         requires uint256_addc(p1.uh, p2.uh, 0) == (a[NUM_WORDS-1], bout);
 
-        ensures ToNat(a) * NT.BASE_256 + bout * pow_B256(NUM_WORDS+1)
+        ensures ToNat(a) * BASE_256 + bout * pow_B256(NUM_WORDS+1)
             == xi * ToNat(y) + ui * ToNat(m) + ToNat(prev_a);
     {
         // var m := ToNat(m);
         calc {
-            ToNat(a) * NT.BASE_256 + bout * pow_B256(NUM_WORDS+1);
+            ToNat(a) * BASE_256 + bout * pow_B256(NUM_WORDS+1);
                 {
                     LemmaToNatEqToNatRev(a);
                     reveal ToNatRev();
                     LemmaToNatEqToNatRev(a[..NUM_WORDS-1]);
                 }
-            (ToNat(a[..NUM_WORDS-1]) + a[NUM_WORDS-1] * pow_B256(NUM_WORDS-1)) * NT.BASE_256 + bout * pow_B256(NUM_WORDS+1);
-            ToNat(a[..NUM_WORDS-1]) * NT.BASE_256 + a[NUM_WORDS-1] * pow_B256(NUM_WORDS-1) * NT.BASE_256 + bout * pow_B256(NUM_WORDS+1);
+            (ToNat(a[..NUM_WORDS-1]) + a[NUM_WORDS-1] * pow_B256(NUM_WORDS-1)) * BASE_256 + bout * pow_B256(NUM_WORDS+1);
+            ToNat(a[..NUM_WORDS-1]) * BASE_256 + a[NUM_WORDS-1] * pow_B256(NUM_WORDS-1) * BASE_256 + bout * pow_B256(NUM_WORDS+1);
                 {
                     reveal Pow();
                     LemmaMulIsCommutativeAuto();
                     LemmaMulIsAssociativeAuto();
                 }
-            ToNat(a[..NUM_WORDS-1]) * NT.BASE_256 + a[NUM_WORDS-1] * pow_B256(NUM_WORDS) + bout * NT.BASE_256 * pow_B256(NUM_WORDS);
+            ToNat(a[..NUM_WORDS-1]) * BASE_256 + a[NUM_WORDS-1] * pow_B256(NUM_WORDS) + bout * BASE_256 * pow_B256(NUM_WORDS);
                 { LemmaMulIsDistributiveAuto(); }
-            ToNat(a[..NUM_WORDS-1]) * NT.BASE_256 + p2.uh * pow_B256(NUM_WORDS) + p1.uh * pow_B256(NUM_WORDS);
+            ToNat(a[..NUM_WORDS-1]) * BASE_256 + p2.uh * pow_B256(NUM_WORDS) + p1.uh * pow_B256(NUM_WORDS);
                 { reveal ToNat(); }
             ToNat([0] + a[..NUM_WORDS-1]) + p2.uh * pow_B256(NUM_WORDS) + p1.uh * pow_B256(NUM_WORDS);
                 {
@@ -362,13 +361,13 @@ module mont_loop_lemmas {
         requires m != 0;
         requires |next_a| == |y| == NUM_WORDS;
         requires prev_a < m + ToNat(y);
-        requires ToNat(a) * NT.BASE_256 + pow_B256(NUM_WORDS+1)
+        requires ToNat(a) * BASE_256 + pow_B256(NUM_WORDS+1)
             == xi * ToNat(y) + ui * m + prev_a;
         requires ToNat(next_a) - pow_B256(NUM_WORDS) * next_bout == ToNat(a) - m
         requires ToNat(a) + pow_B256(NUM_WORDS) < ToNat(y) + m
 
         ensures ToNat(next_a) < m + ToNat(y)
-        ensures IsModEquivalent(ToNat(next_a) * NT.BASE_256, xi * ToNat(y) + ui * m + prev_a, m)
+        ensures IsModEquivalent(ToNat(next_a) * BASE_256, xi * ToNat(y) + ui * m + prev_a, m)
     {
         if ToNat(a) >= m {
             LemmaSeqNatBound(y);
@@ -383,18 +382,18 @@ module mont_loop_lemmas {
         assert next_bout == 1;
 
         calc {
-            ToNat(next_a) * NT.BASE_256;
-            ToNat(a) * NT.BASE_256 + pow_B256(NUM_WORDS) * NT.BASE_256 - m * NT.BASE_256;
+            ToNat(next_a) * BASE_256;
+            ToNat(a) * BASE_256 + pow_B256(NUM_WORDS) * BASE_256 - m * BASE_256;
                 { reveal Pow(); }
-            ToNat(a) * NT.BASE_256 + pow_B256(NUM_WORDS+1) - m * NT.BASE_256;
-            xi * ToNat(y) + ui * m + prev_a - m * NT.BASE_256;
+            ToNat(a) * BASE_256 + pow_B256(NUM_WORDS+1) - m * BASE_256;
+            xi * ToNat(y) + ui * m + prev_a - m * BASE_256;
         }
         
         calc ==> {
             true;
-            IsModEquivalent(ToNat(next_a) * NT.BASE_256, xi * ToNat(y) + ui * m + prev_a - m * NT.BASE_256, m);
-                { LemmaModMultiplesVanish(-1 * NT.BASE_256, xi * ToNat(y) + ui * m + prev_a, m); }
-            IsModEquivalent(ToNat(next_a) * NT.BASE_256, xi * ToNat(y) + ui * m + prev_a, m);
+            IsModEquivalent(ToNat(next_a) * BASE_256, xi * ToNat(y) + ui * m + prev_a - m * BASE_256, m);
+                { LemmaModMultiplesVanish(-1 * BASE_256, xi * ToNat(y) + ui * m + prev_a, m); }
+            IsModEquivalent(ToNat(next_a) * BASE_256, xi * ToNat(y) + ui * m + prev_a, m);
         }
     }
 
@@ -412,7 +411,7 @@ module mont_loop_lemmas {
         requires m != 0;
         requires |next_a| == |y| == NUM_WORDS;
         requires prev_a < m + ToNat(y);
-        requires ToNat(a) * NT.BASE_256 + bout * pow_B256(NUM_WORDS+1)
+        requires ToNat(a) * BASE_256 + bout * pow_B256(NUM_WORDS+1)
             == xi * ToNat(y) + ui * m + prev_a;
         requires bout == 0 ==>
             ToNat(a) == ToNat(next_a)
@@ -420,26 +419,26 @@ module mont_loop_lemmas {
             ToNat(next_a) - pow_B256(NUM_WORDS) * next_bout == ToNat(a) - m
 
         ensures ToNat(next_a) < m + ToNat(y)
-        ensures IsModEquivalent(ToNat(next_a) * NT.BASE_256, xi * ToNat(y) + ui * m + prev_a, m)
+        ensures IsModEquivalent(ToNat(next_a) * BASE_256, xi * ToNat(y) + ui * m + prev_a, m)
     {
         assert ToNat(a) + bout * pow_B256(NUM_WORDS) < ToNat(y) + m by {
             calc {
-                (ToNat(a) + bout * pow_B256(NUM_WORDS)) * NT.BASE_256;
-                ToNat(a) * NT.BASE_256 + bout * pow_B256(NUM_WORDS) * NT.BASE_256;
+                (ToNat(a) + bout * pow_B256(NUM_WORDS)) * BASE_256;
+                ToNat(a) * BASE_256 + bout * pow_B256(NUM_WORDS) * BASE_256;
                     { reveal Pow(); }
-                ToNat(a) * NT.BASE_256 + bout * pow_B256(NUM_WORDS+1);
+                ToNat(a) * BASE_256 + bout * pow_B256(NUM_WORDS+1);
                 xi * ToNat(y) + ui * m + prev_a;
                 <
                 xi * ToNat(y) + ui * m + m + ToNat(y);
                     { LemmaMulIsDistributiveAuto(); }
                 (xi + 1) * ToNat(y) + (ui + 1) * m;
                 <=  {
-                        assert xi + 1 <= NT.BASE_256;
-                        assert ui + 1 <= NT.BASE_256;
+                        assert xi + 1 <= BASE_256;
+                        assert ui + 1 <= BASE_256;
                         LemmaMulInequalityConverseAuto();
                     }
-                NT.BASE_256 * ToNat(y) + NT.BASE_256 * m;
-                (ToNat(y) + m) * NT.BASE_256;
+                BASE_256 * ToNat(y) + BASE_256 * m;
+                (ToNat(y) + m) * BASE_256;
             }
         }
         

@@ -18,16 +18,16 @@ module NativeTypes {
   const BASE_512: int :=
   0x1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000;
 
-  newtype {:nativeType "byte"}    uint8 = x: int | 0 <= x < 0x100
-  newtype {:nativeType "ushort"}  uint16 = x: int | 0 <= x < 0x1_0000
-  newtype {:nativeType "uint"}    uint32 = x: int | 0 <= x < 0x1_00000000
-  newtype {:nativeType "ulong"}   uint64 = x: int | 0 <= x < 0x1_00000000_00000000
+  type {:nativeType "byte"}    uint8 = x: int | 0 <= x < BASE_8
+  type {:nativeType "ushort"}  uint16 = x: int | 0 <= x < BASE_16
+  type {:nativeType "uint"}    uint32 = x: int | 0 <= x < BASE_32
+  type {:nativeType "ulong"}   uint64 = x: int | 0 <= x < BASE_64
 
-  newtype {:nativeType "sbyte"}   int8 = x: int | -0x80 <= x < 0x80
-  newtype {:nativeType "short"}   int16 = x: int | -0x8000 <= x < 0x8000
-  newtype {:nativeType "int"}     int32 = x: int | -0x8000_0000 <= x < 0x8000_0000
-  newtype {:nativeType "long"}    int64 = x: int | -0x8000_0000_0000_0000 <= x < 0x8000_0000_0000_0000
+  type {:nativeType "sbyte"}   int8 = x: int | -0x80 <= x < 0x80
+  type {:nativeType "short"}   int16 = x: int | -0x8000 <= x < 0x8000
+  type {:nativeType "int"}     int32 = x: int | -0x8000_0000 <= x < 0x8000_0000
+  type {:nativeType "long"}    int64 = x: int | -0x8000_0000_0000_0000 <= x < 0x8000_0000_0000_0000
 
-  newtype {:nativeType "int"}     nat32 = i:int | 0 <= i < 0x8000_0000
+  type {:nativeType "int"}     nat32 = i:int | 0 <= i < 0x8000_0000
 
 }

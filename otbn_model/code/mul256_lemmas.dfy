@@ -1,13 +1,13 @@
 include "../spec/rsa_ops.dfy"
-include "../libraries/src/NonlinearArithmetic/Mul.dfy"
 
 module mul256_lemmas {
     import opened bv_ops
     import opened vt_ops
     import opened rsa_ops
     import opened vt_consts
-    import opened NativeTypes
+
     import opened Mul
+    import opened NativeTypes
     import opened BASE_256_Seq
 
     const B  : int := BASE_64;

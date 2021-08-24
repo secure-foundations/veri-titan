@@ -18,6 +18,7 @@ import opened vt_decls
 import opened addc512_lemmas
 
 import opened DivMod
+import opened NativeTypes
 import opened Power
 import opened Seq
 import opened BASE_256_Seq
@@ -28,16 +29,15 @@ ghost procedure addc_512_op_lemma(
     ghost x0: uint256, ghost y0: uint256, ghost z0: uint256, ghost c0: uint1,
     ghost x1: uint256, ghost y1: uint256, ghost z1: uint256, ghost c1: uint1) extern;
 
-ghost procedure seq_addc_nat_lemma(
-    ghost xs: seq(uint256), ghost ys: seq(uint256), ghost zs: seq(uint256),
-    ghost cout: uint1) extern;
+ghost procedure LemmaSeqAdd #[a:Type(0)](
+    ghost xs: seq(a), ghost ys: seq(a), ghost zs: seq(a), ghost cout: uint1)
+    extern;
 
 ghost procedure seq_addc_512_safe_nat_lemma(
     ghost xs: seq(uint256), ghost ys: seq(uint256), ghost zs: seq(uint256),
     ghost cout: uint1) extern;
 
-ghost procedure to_nat_zero_extend_lemma(
-    ghost xs': seq(uint256), ghost xs: seq(uint256)) extern;
+ghost procedure LemmaSeqAppendZero #[a:Type(0)](ghost xs: seq(a)) extern;
 
 procedure seq_addc_512(
     inout dst1: reg256, in src1a: reg256, in src1b: reg256,
@@ -52,11 +52,11 @@ procedure seq_addc_512(
         fgroups;
     
     ensures
-        to_nat(seq(old(src1a), old(src2a))) + to_nat(seq(old(src1b), old(src2b)))
+        ToNat(seq(old(src1a), old(src2a))) + ToNat(seq(old(src1b), old(src2b)))
             ==
-        to_nat(seq(dst1, dst2)) + pow_B256(2) * bool_to_uint1(fgroups.fg0.cf);
+        ToNat(seq(dst1, dst2)) + pow_B256(2) * bool_to_uint1(fgroups.fg0.cf);
 
-        seq_addc(seq(old(src1a), old(src2a)), seq(old(src1b), old(src2b)))
+        SeqAdd(seq(old(src1a), old(src2a)), seq(old(src1b), old(src2b)))
             ==
         tuple(seq(dst1, dst2), bool_to_uint1(fgroups.fg0.cf));
 {
@@ -75,10 +75,10 @@ procedure seq_addc_512(
 
     addc_512_op_lemma(x1, y1, dst1, cin, x2, y2, dst2, cout);
 
-    seq_addc_nat_lemma(seq(x1, x2), seq(y1, y2), seq(dst1, dst2), cout);
+    LemmaSeqAdd(seq(x1, x2), seq(y1, y2), seq(dst1, dst2), cout);
 
-    assert to_nat(seq(x1, x2)) + to_nat(seq(y1, y2)) 
-        == to_nat(seq(dst1, dst2)) + pow_B256(2) * cout;
+    assert ToNat(seq(x1, x2)) + ToNat(seq(y1, y2)) 
+        == ToNat(seq(dst1, dst2)) + pow_B256(2) * cout;
 }
 
 procedure seq_addc_512_safe(
@@ -105,7 +105,7 @@ procedure seq_addc_512_safe(
 
     ensures
         valid_uint512_view(wdrs, sum, @dst1.index, @dst2.index);
-        sum.full == to_nat(seq(old(src1a), old(src2a))) + old(src1b);
+        sum.full == ToNat(seq(old(src1a), old(src2a))) + old(src1b);
 {
     ghost var s1a := src1a;
     ghost var s1b := src1b;
@@ -117,21 +117,24 @@ procedure seq_addc_512_safe(
     seq_addc_512_safe_nat_lemma(
         seq(s1a, s2a), seq(s1b, s2b), seq(dst1, dst2),
         bool_to_uint1(fgroups.fg0.cf));
-    ghost var value := to_nat(seq(dst1, dst2));
+    ghost var value := ToNat(seq(dst1, dst2));
     calc == {
         value;
         ==
-        to_nat(seq(s1a, s2a)) + to_nat(seq(s1b, s2b));
+        ToNat(seq(s1a, s2a)) + ToNat(seq(s1b, s2b));
         ==
-        to_nat(seq(s1a, s2a)) + to_nat(seq(s1b, 0));
-        == { to_nat_zero_extend_lemma(seq(s1b), seq(s1b, 0)); }
-        to_nat(seq(s1a, s2a)) + to_nat(seq(s1b));
-        == { reveal to_nat; reveal power; }
-        to_nat(seq(s1a, s2a)) + s1b;
+        ToNat(seq(s1a, s2a)) + ToNat(seq(s1b, 0));
+        == {
+            assert seq_concat(seq(s1b), seq(0)) == seq(s1b, 0);
+            LemmaSeqAppendZero(seq(s1b));
+        }
+        ToNat(seq(s1a, s2a)) + ToNat(seq(s1b));
+        == { reveal ToNat; reveal Pow; }
+        ToNat(seq(s1a, s2a)) + s1b;
     }
 
     assert value < BASE_512;
-    to_nat_lemma_1(seq(dst1, dst2));
+    LemmaSeqLen2(seq(dst1, dst2));
     assert dst1 = uint512_lh(value) by {
         reveal uint512_lh;
     }

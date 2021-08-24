@@ -1,6 +1,4 @@
 include "mont_loop_lemmas.dfy"
-include "../libraries/src/NonlinearArithmetic/DivMod.dfy"
-include "../libraries/src/NonlinearArithmetic/Mul.dfy"
 
 module montmul_lemmas {
     import opened bv_ops
@@ -8,8 +6,10 @@ module montmul_lemmas {
     import opened rsa_ops
     import opened vt_consts
     import opened mont_loop_lemmas
+
     import opened DivMod
     import opened Mul
+    import opened NativeTypes
     import opened BASE_256_Seq
 
     lemma montmul_inv_lemma_0(

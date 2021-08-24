@@ -1,18 +1,16 @@
 include "../spec/rsa_ops.dfy"
-include "../libraries/src/NonlinearArithmetic/DivMod.dfy"
-include "../libraries/src/NonlinearArithmetic/Power.dfy"
-include "../libraries/src/Collections/Sequences/Seq.dfy"
 
 module addc512_lemmas {
     import opened bv_ops
     import opened vt_ops
     import opened rsa_ops
     import opened vt_consts
+
     import opened DivMod
+    import opened NativeTypes
     import opened Power
     import opened Seq
     import opened BASE_256_Seq
-    import NT = NativeTypes
 
     lemma addc_256_op_lemma(
         x: uint256, y: uint256, z: uint256, c: uint1)
@@ -53,8 +51,8 @@ module addc512_lemmas {
             ToNat(xs) + ToNat(ys);
             == { LemmaSeqLen2(ys); }
             a * b + c;
-            < { single_digit_lemma_1(a, b, c, NT.BASE_256 - 1); }
-            NT.BASE_256 * NT.BASE_256;
+            < { single_digit_lemma_1(a, b, c, BASE_256 - 1); }
+            BASE_256 * BASE_256;
             == { reveal Pow(); }
             pow_B256(2);
         }
@@ -72,8 +70,8 @@ module addc512_lemmas {
             ToNat(xs) + ToNat(ys);
             == { LemmaSeqLen2(ys); }
             a * b + c + d;
-            < { single_digit_lemma_2(a, b, c, d, NT.BASE_256 - 1); }
-            NT.BASE_256 * NT.BASE_256;
+            < { single_digit_lemma_2(a, b, c, d, BASE_256 - 1); }
+            BASE_256 * BASE_256;
             == { reveal Pow(); }
             pow_B256(2);
         }
@@ -85,9 +83,9 @@ module addc512_lemmas {
         requires SeqAdd(xs, ys) == (zs, cout);
         requires seq_addc_512_is_safe(xs, ys);
         ensures ToNat(xs) + ToNat(ys) == ToNat(zs);
-        ensures ToNat(zs) < NT.BASE_512
+        ensures ToNat(zs) < BASE_512
     {
-        assert pow_B256(2) == NT.BASE_512 by {
+        assert pow_B256(2) == BASE_512 by {
             reveal Pow();
         }
         LemmaSeqAdd(xs, ys, zs, cout);

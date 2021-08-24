@@ -1,14 +1,12 @@
 include "vt_consts.dfy"
 include "bv_ops.dfy"
 include "vt_ops.dfy"
-include "../libraries/src/NonlinearArithmetic/Power.dfy"
-include "../libraries/src/NonlinearArithmetic/DivMod.dfy"
 include "../libraries/src/Collections/Sequences/NatSeq.dfy"
 
 module BASE_256_Seq refines NatSeq {
-    import NT = NativeTypes
+    import opened NativeTypes
     
-    function method BOUND(): nat { NT.BASE_256 }
+    function method BOUND(): nat { BASE_256 }
 }
 
 module rsa_ops {
@@ -17,18 +15,18 @@ module rsa_ops {
     import opened vt_ops
     import opened vt_mem
 
+    import opened DivMod
     import opened Power
-    import opened DivMod 
-    import NT = NativeTypes
+    import opened NativeTypes
     import opened BASE_256_Seq
 
 
 /* to_nat definions & lemmas */
 
-    function to_nat(xs: seq<uint256>): nat
-    {
-        ToNat(xs)
-    }
+    // function to_nat(xs: seq<uint256>): nat
+    // {
+    //     ToNat(xs)
+    // }
 
     // lemma to_nat_lemma_0(xs: seq<uint256>)
     //     requires |xs| == 1
@@ -88,7 +86,7 @@ module rsa_ops {
     lemma uint512_view_lemma(num: uint512_view_t)
         ensures num.full
             == ToNat([num.lh, num.uh])
-            == num.lh + num.uh * NT.BASE_256;
+            == num.lh + num.uh * BASE_256;
     {
         reveal uint512_lh();
         reveal uint512_uh();
@@ -120,7 +118,7 @@ module rsa_ops {
         // signature
         && rsa.SIG < rsa.M
 
-        && rsa.R == Pow(NT.BASE_256, NUM_WORDS)
+        && rsa.R == Pow(BASE_256, NUM_WORDS)
 
         && rsa.RR < rsa.M
         && IsModEquivalent(rsa.RR, rsa.R * rsa.R, rsa.M)
@@ -128,7 +126,7 @@ module rsa_ops {
         && rsa.R_INV == Pow(rsa.B256_INV, NUM_WORDS)
         && IsModEquivalent(rsa.R_INV * rsa.R, 1, rsa.M)
 
-        && IsModEquivalent(NT.BASE_256 * rsa.B256_INV, 1, rsa.M)
+        && IsModEquivalent(BASE_256 * rsa.B256_INV, 1, rsa.M)
     }
 
     datatype mvars = mvars(

@@ -15,11 +15,7 @@ module bv_ops {
     type uint2   = i :int | 0 <= i < BASE_2
     type uint4   = i :int | 0 <= i < BASE_4
     type uint5   = i :int | 0 <= i < BASE_5
-    type uint8   = i :int | 0 <= i < BASE_8
     type uint10  = i :int | 0 <= i < 1024
-    type uint16  = i :int | 0 <= i < BASE_16
-    type uint32  = i :int | 0 <= i < BASE_32
-    type uint64  = i :int | 0 <= i < BASE_64
     type uint128 = i :int | 0 <= i < BASE_128
     type uint256 = i :int | 0 <= i < BASE_256
     type uint512 = i :int | 0 <= i < BASE_512

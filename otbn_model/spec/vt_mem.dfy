@@ -5,6 +5,8 @@ module vt_mem {
     import opened bv_ops
     import opened vt_consts
 
+    import opened NativeTypes
+
     type xmem_t = map<int, uint32>
 
     predicate method xmem_addr_admissible(addr: uint32)

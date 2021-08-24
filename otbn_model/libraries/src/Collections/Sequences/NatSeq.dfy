@@ -418,13 +418,33 @@ abstract module NatSeq {
     SeqExtend(FromNat(n), len)
   }
 
+  /* If the nat representation of a sequence is zero, then the sequence is a
+  sequence of zeros. */
+  lemma LemmaSeqZero(xs: seq<uint>)
+    requires ToNat(xs) == 0
+    ensures forall i {:trigger xs[i]} :: 0 <= i < |xs| ==> xs[i] == 0
+  {
+    reveal ToNat();
+    if |xs| == 0 {
+    } else {
+      LemmaMulNonnegativeAuto();
+      assert First(xs) == 0;
+
+      LemmaMulNonzeroAuto();
+      LemmaSeqZero(DropFirst(xs));
+    }
+  }
+
   /* Generates a sequence of zeros of a specified length. */
-  function method {:opaque} SeqZero(len: nat): (zs: seq<uint>)
-    ensures |zs| == len
-    ensures ToNat(zs) == 0
+  function method {:opaque} SeqZero(len: nat): (xs: seq<uint>)
+    ensures |xs| == len
+    ensures forall i {:trigger xs[i]} :: 0 <= i < |xs| ==> xs[i] == 0
+    ensures ToNat(xs) == 0
   {
     LemmaPowPositive(BOUND(), len);
-    FromNatWithLen(0, len)
+    var xs := FromNatWithLen(0, len);
+    LemmaSeqZero(xs);
+    xs
   }
 
   /* If we start with a sequence, convert it to a nat, and convert it back to a

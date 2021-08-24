@@ -5,6 +5,8 @@ module subb_lemmas {
     import opened vt_ops
     import opened rsa_ops
     import opened vt_consts
+
+    import opened NativeTypes
     import opened BASE_256_Seq
 
     predicate subb_inv(
@@ -17,6 +19,7 @@ module subb_lemmas {
     requires |dst| == |src1| == |src2|;
     requires index <= |src1|;
     {
+        //reveal SeqSub();
         (dst[..index], carry)
             == SeqSub(src1[..index], src2[..index])
     }

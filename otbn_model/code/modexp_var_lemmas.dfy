@@ -1,9 +1,6 @@
 include "../spec/rsa_ops.dfy"
 include "montmul_lemmas.dfy"
 include "subb_lemmas.dfy"
-include "../libraries/src/NonlinearArithmetic/DivMod.dfy"
-include "../libraries/src/NonlinearArithmetic/Mul.dfy"
-include "../libraries/src/NonlinearArithmetic/Power.dfy"
 
 module modexp_var_lemmas {
     import opened bv_ops
@@ -13,8 +10,10 @@ module modexp_var_lemmas {
     import opened mont_loop_lemmas
     import opened montmul_lemmas
     import opened subb_lemmas
+
     import opened DivMod
     import opened Mul
+    import opened NativeTypes
     import opened Power
     import opened BASE_256_Seq
 
