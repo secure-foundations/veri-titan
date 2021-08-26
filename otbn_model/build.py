@@ -4,7 +4,7 @@ from subprocess import PIPE, Popen
 TOOLS_DIR = "./tools"
 DAFNY_PATH = "./tools/dafny/dafny"
 VALE_PATH = "./tools/vale/bin/vale"
-DFY_LIB_DIR = "./libraries"
+DAFNY_LIB_DIR = "./libraries"
 
 rules = f"""
 rule dafny
@@ -134,9 +134,6 @@ def setup_tools():
         elif choice == "y":
             break
 
-    if not os.path.exists(TOOLS_DIR):
-        os.makedirs(TOOLS_DIR)
-
     if os.path.exists(DAFNY_PATH):
         print("[INFO] dafny binary already exists")
     else:
@@ -150,6 +147,11 @@ def setup_tools():
         os.system("cd tools && git clone git@github.com:project-everest/vale.git")
         os.system("cd tools/vale && git checkout otbn-custom && ./run_scons.sh")
         os.system("mv tools/vale/bin/vale.exe tools/vale/bin/vale")
+
+    if os.path.exists(DAFNY_LIB_DIR):
+        print("[INFO] dafny library already exists")
+    else:
+        os.system("git clone https://github.com/secure-foundations/dafny_library.git libraries")
 
 # list dependecy 
 
@@ -186,10 +188,10 @@ def list_dfy_deps(dfy_file):
 
     for (i, include) in enumerate(outputs):
         include = os.path.relpath(include)
-        if include.startswith(DFY_LIB_DIR):
+        if include.startswith(DAFNY_LIB_DIR):
             continue
         if i == 0:
-            print(dfy_file)
+            # print(dfy_file)
             pass
         else:
             include = get_ver_path(include)
@@ -203,7 +205,7 @@ def get_dfy_files(include_gen):
     for root, _, files in os.walk("."):
         if root.startswith(TOOLS_DIR):
             continue
-        if root.startswith(DFY_LIB_DIR):
+        if root.startswith(DAFNY_LIB_DIR):
             continue
         # do not include files in ./gen unless specified
         if root.startswith("./gen") and not include_gen:

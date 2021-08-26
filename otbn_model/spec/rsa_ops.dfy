@@ -116,7 +116,7 @@ module rsa_ops {
         && cong_B256(rsa.M0D * rsa.M, -1)
 
         // signature
-        && rsa.SIG < rsa.M
+        && 0 < rsa.SIG < rsa.M
 
         && rsa.R == Pow(BASE_256, NUM_WORDS)
 

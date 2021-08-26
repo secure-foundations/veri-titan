@@ -74,6 +74,7 @@ module modexp_var_lemmas {
         rsa: rsa_params)
 
         requires montmul_inv(next_a_view, a_view, NUM_WORDS, a_view, rsa);
+        requires sig > 0;
         requires modexp_var_inv(ToNat(a_view), sig, i, rsa);
         ensures modexp_var_inv(ToNat(next_a_view), sig, i + 1, rsa);
     {
@@ -82,7 +83,7 @@ module modexp_var_lemmas {
         var next_a := ToNat(next_a_view);
 
         LemmaPowPositiveAuto();
-        LemmaPowNonnegativeAuto();
+        // LemmaPowNonnegativeAuto();
         LemmaMulNonnegativeAuto();
         var next_goal := Pow(sig, Pow(2, i + 1)) * rsa.R;
 
@@ -114,7 +115,6 @@ module modexp_var_lemmas {
                 { r_r_inv_cancel_lemma(next_a, next_goal, rsa); }
             IsModEquivalent(next_a, next_goal, m);
         }
-
     }
 
     lemma modexp_var_inv_post_lemma(
@@ -133,7 +133,7 @@ module modexp_var_lemmas {
         var s := ToNat(sig);
 
         LemmaPowPositiveAuto();
-        LemmaPowNonnegativeAuto();
+        // LemmaPowNonnegativeAuto();
         var cur := Pow(s, Pow(2, rsa.E0));
 
         assert IsModEquivalent(a, cur * rsa.R, m);

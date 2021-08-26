@@ -138,30 +138,6 @@ module Power {
     {}
   }
 
-  /* A natural number raised to any power is greater than or equal to zero. */
-  lemma LemmaPowNonnegative(b: nat, e: nat)
-    requires b > 0 || e > 0
-    ensures 0 <= Pow(b, e)
-  {
-    if b == 0 { Lemma0Pow(e); }
-    else {
-      LemmaMulIncreasesAuto();
-      LemmaMulInductionAuto(e, u => 0 <= u ==> 0 < Pow(b, u));
-    }
-  }
-
-  lemma LemmaPowNonnegativeAuto()
-    ensures forall b: nat, e: nat {:trigger Pow(b, e)}
-      :: b > 0 || e > 0 ==> 0 <= Pow(b, e)
-  {
-    reveal Pow();
-    forall b: nat, e: nat {:trigger Pow(b, e)} | b > 0 || e > 0
-      ensures 0 <= Pow(b, e)
-    {
-      LemmaPowNonnegative(b, e);
-    }
-  }
-
   /* A positive number raised to any power is positive. */
   lemma LemmaPowPositive(b: int, e: nat)
     requires b > 0

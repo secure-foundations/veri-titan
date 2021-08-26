@@ -1,3 +1,6 @@
+// RUN: %dafny /compile:0 /noNLarith "%s" > "%t"
+// RUN: %diff "%s.expect" "%t"
+
 include "../../NonlinearArithmetic/DivMod.dfy"
 include "../../NonlinearArithmetic/Mul.dfy"
 include "../../NonlinearArithmetic/Power.dfy"

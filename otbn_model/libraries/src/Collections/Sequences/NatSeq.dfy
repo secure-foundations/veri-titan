@@ -1,4 +1,7 @@
-/* The First element of a sequence is the least significant word; the Last
+// RUN: %dafny /compile:0 /noNLarith "%s" > "%t"
+// RUN: %diff "%s.expect" "%t"
+
+/* The first element of a sequence is the least significant word; the last
 element is the most significant word. */
 
 include "../../NonlinearArithmetic/DivMod.dfy"
