@@ -1,12 +1,15 @@
 include "../spec/rsa_ops.dfy"
+include "../libraries/src/NonlinearArithmetic/Mul.dfy"
 
 module vt_vale {
     import opened vt_ops
     import opened bv_ops
     import opened vt_mem
     import opened rsa_ops
-    import opened congruences
     import opened vt_consts
+
+    import opened Mul
+    import opened NativeTypes
 
 
     function fst<T,Q>(t:(T, Q)) : T { t.0 }
@@ -34,6 +37,7 @@ module vt_vale {
 
     function va_mul_nat(a: nat, b: nat): nat
     {
+        LemmaMulNonnegativeAuto();
         a * b
     }
 

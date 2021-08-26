@@ -4,10 +4,11 @@ from subprocess import PIPE, Popen
 TOOLS_DIR = "./tools"
 DAFNY_PATH = "./tools/dafny/dafny"
 VALE_PATH = "./tools/vale/bin/vale"
+DAFNY_LIB_DIR = "./libraries"
 
 rules = f"""
 rule dafny
-    command = {DAFNY_PATH} $in /compile:0 /timeLimit:20 /vcsCores:2 && touch $out
+    command = {DAFNY_PATH} $in /compile:0 /noNLarith /timeLimit:20 /vcsCores:2 && touch $out
 
 rule vale
     command = {VALE_PATH} -dafnyText -in $in -out $out
@@ -133,9 +134,6 @@ def setup_tools():
         elif choice == "y":
             break
 
-    if not os.path.exists(TOOLS_DIR):
-        os.makedirs(TOOLS_DIR)
-
     if os.path.exists(DAFNY_PATH):
         print("[INFO] dafny binary already exists")
     else:
@@ -149,6 +147,11 @@ def setup_tools():
         os.system("cd tools && git clone git@github.com:project-everest/vale.git")
         os.system("cd tools/vale && git checkout otbn-custom && ./run_scons.sh")
         os.system("mv tools/vale/bin/vale.exe tools/vale/bin/vale")
+
+    if os.path.exists(DAFNY_LIB_DIR):
+        print("[INFO] dafny library already exists")
+    else:
+        os.system("git clone https://github.com/secure-foundations/dafny_library.git libraries")
 
 # list dependecy 
 
@@ -185,9 +188,11 @@ def list_dfy_deps(dfy_file):
 
     for (i, include) in enumerate(outputs):
         include = os.path.relpath(include)
+        if include.startswith(DAFNY_LIB_DIR):
+            continue
         if i == 0:
+            # print(dfy_file)
             pass
-            # assert include == dfy_file
         else:
             include = get_ver_path(include)
             includes.append(include)
@@ -199,6 +204,8 @@ def get_dfy_files(include_gen):
     dfy_files = list()
     for root, _, files in os.walk("."):
         if root.startswith(TOOLS_DIR):
+            continue
+        if root.startswith(DAFNY_LIB_DIR):
             continue
         # do not include files in ./gen unless specified
         if root.startswith("./gen") and not include_gen:
@@ -341,7 +348,7 @@ def generate_dll(dfy_path, dll_path):
         confg_path = EXE_CONFIG_PATH
         temp = "temp2"
 
-    command = f"dafny {dfy_path} /compile:1 /vcsCores:2 /out:{temp}.dll"
+    command = f"dafny {dfy_path} /compile:1 /noNLarith /vcsCores:2 /out:{temp}.dll"
     command += f" && mv {temp}.dll {dll_path} && mv {temp}.runtimeconfig.json {confg_path}"
     os_system(command)
 

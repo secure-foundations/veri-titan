@@ -1,15 +1,16 @@
 include "vt_consts.dfy"
 include "bv_ops.dfy"
 include "vt_mem.dfy"
-include "../lib/powers.dfy"
-include "../lib/congruences.dfy"
+
+include "../libraries/src/NonlinearArithmetic/Power2.dfy"
 
 module vt_ops {
     import opened bv_ops
     import opened vt_consts
     import opened vt_mem
-    import opened powers
-    import opened congruences
+
+    import opened Power2
+    import opened NativeTypes
 
 /* registers definions */
 
@@ -182,6 +183,7 @@ module vt_ops {
         else x * BASE_192
     }
 
+
     // mulquacc but no overflow
     function otbn_mulqacc_safe(
         zero: bool,
@@ -221,6 +223,12 @@ module vt_ops {
         if sel then x else y
     }
 
+    // function otbn_rshi(x: uint256, y: uint256, shift_amt: int) : uint256
+    //     requires 0 <= shift_amt < 256;
+    // {
+    //     var concat : int := x * BASE_256 + y;
+    //     (concat / Pow2(shift_amt)) % BASE_256
+    // }
 
 /* control flow definions */
 
@@ -632,6 +640,4 @@ module vt_ops {
     {
         && s.ok
     }
-
-
 }

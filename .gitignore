@@ -17,3 +17,4 @@ output.s
 *.runtimeconfig.json
 otbn_model/tools/dafny/
 otbn_model/tools/vale/
+otbn_model/libraries
