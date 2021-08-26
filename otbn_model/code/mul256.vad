@@ -18,6 +18,10 @@ import opened vt_vale
 import opened vt_decls
 import opened mul256_lemmas
 
+import opened Mul
+import opened NativeTypes
+import opened BASE_256_Seq
+
 #endverbatim
 
 ghost procedure mul256_correct_lemma(
@@ -57,7 +61,7 @@ procedure mul256_w30xw2()
     modifies
         w26; w27; wacc;
     ensures
-        to_nat(seq(w27, w26)) == w2 * w30;
+        ToNat(seq(w27, w26)) == w2 * w30;
 {
     ghost var p0 := uint256_qmul(w30, 0, w2, 0);
     ghost var p1 := uint256_qmul(w30, 1, w2, 0);
@@ -132,7 +136,7 @@ procedure mul256_w30xw25()
     modifies
         w26; w27; wacc;
     ensures
-        to_nat(seq(w27, w26)) == w30 * w25;
+        ToNat(seq(w27, w26)) == w30 * w25;
 {
     ghost var p0 := uint256_qmul(w30, 0, w25, 0);
     ghost var p1 := uint256_qmul(w30, 1, w25, 0);

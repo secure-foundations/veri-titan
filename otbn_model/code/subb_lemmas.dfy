@@ -15,11 +15,9 @@ module subb_lemmas {
         src1: seq<uint256>,
         src2: seq<uint256>,
         index: nat)
-
     requires |dst| == |src1| == |src2|;
     requires index <= |src1|;
     {
-        //reveal SeqSub();
         (dst[..index], carry)
             == SeqSub(src1[..index], src2[..index])
     }
