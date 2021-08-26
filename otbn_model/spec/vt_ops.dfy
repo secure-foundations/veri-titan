@@ -24,6 +24,7 @@ module vt_ops {
         | WDR(index: reg_index)
         | WMOD // Wide modulo register
         | WRND // Wide random number
+        | WURND // Wide urandom number
         | WACC // Wide accumulator
 
     predicate is_wide_data_register(r: reg256_t)
@@ -65,6 +66,15 @@ module vt_ops {
 
     // datatype flag = CF | MSB | LSB | ZERO
     datatype flags_t = flags_t(cf: bool, msb: bool, lsb: bool, zero: bool)
+    {
+        function method to_nat(): nat
+        {
+            var r := if cf then 1 else 0;
+            var r := r + if msb then 2 else 0;
+            var r := r + if lsb then 4 else 0;
+            r + if zero then 8 else 0
+        }
+    }
 
     datatype fgroups_t = fgroups_t(fg0: flags_t, fg1: flags_t)
 
@@ -96,6 +106,7 @@ module vt_ops {
         // | LOOP(grs: reg32_t, bodysize: uint32)
         // | LOOPI(iterations: uint32, bodysize: uint32)
         | LI(xrd: reg32_t, imm32: uint32)
+        | ECALL
 
     datatype ins256 =
         | BN_ADD(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
@@ -103,14 +114,16 @@ module vt_ops {
         | BN_ADDI(wrd: reg256_t, wrs1: reg256_t, imm: uint10, fg: uint1)
         // | BN_ADDM(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t)
         | BN_MULQACC(zero: bool, wrs1: reg256_t, qwsel1: uint2, wrs2: reg256_t, qwsel2: uint2, shift_qws: uint2)
-        | BN_MULQACC_SO(zero: bool, wrd: reg256_t, lower: bool, wrs1: reg256_t, qwsel1: uint2, wrs2: reg256_t, qwsel2: uint2, shift_qws: uint2)
+        | BN_MULQACC_SO(zero: bool, wrd: reg256_t, lower: bool,
+            wrs1: reg256_t, qwsel1: uint2, wrs2: reg256_t, qwsel2: uint2,
+            shift_qws: uint2, fg: uint1)
         | BN_SUB(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
         | BN_SUBB(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
         // | BN_SUBI(wrd: reg256_t, wrs1: reg256_t, imm: uint10, fg: uint1)
         // | BN_SUBM(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t)
         // | BN_AND(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
         // | BN_OR(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
-        // | BN_NOT(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
+        | BN_NOT(wrd: reg256_t, wrs: reg256_t, shift: shift_t, fg: uint1)
         | BN_XOR(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
         // | BN_RSHI(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, imm: uint256)
         | BN_SEL(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, fg: uint1, flag: uint2)
@@ -120,7 +133,7 @@ module vt_ops {
         | BN_SID(grs2: reg32_t, grs2_inc: bool, offset: int10, grs1: reg32_t, grs1_inc: bool)
         | BN_MOV(wrd: reg256_t, wrs: reg256_t)
         | BN_MOVR(grd: reg32_t, grd_inc: bool, grs: reg32_t, grs_inc: bool)
-        // | BN_WSRRS 
+        | BN_WSRR(wrd: reg256_t, wsr: uint2)
         // | BN_WSRRW
 
 /* stateless semantic functions  */
@@ -131,7 +144,7 @@ module vt_ops {
         if a + b > m then a + b - m else a + b
     }
 
-    function method set_flags(carry: uint1, value: uint256): flags_t
+    function method set_mlz_flags(carry: uint1, value: uint256): flags_t
     {
         flags_t(carry == 1, uint256_msb(value) == 1, uint256_lsb(value) == 1, value == 0)
     }
@@ -140,14 +153,14 @@ module vt_ops {
     {
         var cin := if carry then 1 else 0;
         var (sum, cout) := uint256_addc(x, uint256_sb(y, shift), cin);
-        (sum, set_flags(cout, sum))
+        (sum, set_mlz_flags(cout, sum))
     }
 
     function method otbn_subb(x: uint256, y: uint256, shift: shift_t, borrow: bool) : (uint256, flags_t)
     {
         var cf := if borrow then 1 else 0;
         var (diff, cout) := uint256_subb(x, uint256_sb(y, shift), cf);
-        (diff, set_flags(cout, diff))
+        (diff, set_mlz_flags(cout, diff))
     }
 
     function method otbn_mulqacc(
@@ -209,11 +222,18 @@ module vt_ops {
     {
     }
 
+    function method otbn_not(x: uint256, shift: shift_t, carry: bool): (uint256, flags_t)
+    {
+        var result := uint256_not(uint256_sb(x, shift));
+        // keep the old carry
+        (result, set_mlz_flags(bool_to_uint1(carry), result))
+    }
+
     function method otbn_xor(x: uint256, y: uint256, shift: shift_t, carry: bool): (uint256, flags_t)
     {
         var result := uint256_xor(x, uint256_sb(y, shift));
         // keep the old carry
-        (result, set_flags(bool_to_uint1(carry), result))
+        (result, set_mlz_flags(bool_to_uint1(carry), result))
     }
 
     function method otbn_sel(x: uint256, y: uint256, sel: bool): uint256
@@ -247,6 +267,7 @@ module vt_ops {
 
         wmod: uint256,
         wrnd: uint256,
+        wurnd: uint256,
         wacc: uint256,
 
         fgroups: fgroups_t,
@@ -259,7 +280,7 @@ module vt_ops {
         static function method init(): state
         {
             var flags := flags_t(false, false, false, false);
-            state(seq(32, n => 0), seq(32, n => 0), 0, 0, 0,
+            state(seq(32, n => 0), seq(32, n => 0), 0, 0, 0, 0,
                 fgroups_t(flags, flags),
                 map[], map[], true)
         }
@@ -272,7 +293,7 @@ module vt_ops {
 
         function method write_reg32(r: reg32_t, v: uint32): state
         {
-            if r.index == 0 then this
+            if r.index == 0 || r.index == 1 then this
             else this.(gprs := gprs[r.index := v])
         }
 
@@ -329,7 +350,8 @@ module vt_ops {
             match r {
                 case WDR(index) => wdrs[r.index]
                 case WMOD => wmod
-                case WRND => wrnd
+                case WRND => 0x99999999_99999999_99999999_99999999_99999999_99999999_99999999_99999999
+                case WURND => wurnd
                 case WACC => wacc
             }
         }
@@ -339,6 +361,7 @@ module vt_ops {
             match r {
                 case WDR(index) => this.(wdrs := wdrs[r.index := v])
                 case WMOD => this.(wmod := v)
+                case WURND => this.(wurnd := v)
                 case WRND => this.(wrnd := v)
                 case WACC => this.(wacc := v)
             }
@@ -434,12 +457,12 @@ module vt_ops {
             var product := otbn_mulqacc(zero, v1, qwsel1, v2, qwsel2, shift_qws, v3);
             write_reg256(WACC, product)
         }
-        
+
         function method eval_BN_MULQACC_SO(zero: bool,
             wrd: reg256_t, lower: bool,
             wrs1: reg256_t, qwsel1: uint2,
             wrs2: reg256_t, qwsel2: uint2,
-            shift_qws: uint2): state
+            shift_qws: uint2, fg: uint1): state
         {
             var v1 := read_reg256(wrs1);
             var v2 := read_reg256(wrs2);
@@ -447,6 +470,16 @@ module vt_ops {
             var v4 := read_reg256(wrd);
             var product := otbn_mulqacc(zero, v1, qwsel1, v2, qwsel2, shift_qws, v3);
             var lh, uh := uint256_lh(product), uint256_uh(product);
+
+            var cf := read_flag(fg, 0);
+            var msb := read_flag(fg, 1);
+            var lsb := read_flag(fg, 2);
+            var zero := read_flag(fg, 3);
+
+            (if lower then
+                write_flags(fg, flags_t(cf, msb, uint128_lsb(lh) == 1, lh == 0))
+            else
+                write_flags(fg, flags_t(cf, uint128_msb(lh) == 1, lsb, (lh == 0) && zero))).
             // the upper half stay in wacc
             write_reg256(WACC, uh).
             // the lower half gets written back into dst
@@ -468,6 +501,14 @@ module vt_ops {
             var borrow := read_flag(fg, 0);
             var (diff, flags) := otbn_subb(v1, v2, shift, borrow);
             write_reg256(wrd, diff).write_flags(fg, flags)
+        }
+
+        function method eval_BN_NOT(wrd: reg256_t, wrs: reg256_t, shift: shift_t, fg: uint1): state
+        {
+            var v := read_reg256(wrs);
+            var carry := read_flag(fg, 0);
+            var (result, flags) := otbn_not(v, shift, carry);
+            write_reg256(wrd, result).write_flags(fg, flags)
         }
 
         function method eval_BN_XOR(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1): state
@@ -500,9 +541,18 @@ module vt_ops {
             if di > 31 || si > 31 then 
                 this.(ok := false)
             else
-                write_reg32(grd, if grd_inc then di + 1 else di).
-                write_reg32(grs, if grs_inc then si + 1 else si).
-                write_reg256(WDR(di), read_reg256(WDR(si)))
+                var s := (if grd_inc then write_reg32(grd, di + 1) else this);
+                var l := (if grs_inc then s.write_reg32(grs, si + 1) else s);
+                l.write_reg256(WDR(di), read_reg256(WDR(si)))
+        }
+
+        function method eval_BN_WSRR(wrd: reg256_t, wsr: uint2): state
+        {
+            var val := if wsr == 0 then wmod
+                else if wsr == 1 then 0x99999999_99999999_99999999_99999999_99999999_99999999_99999999_99999999
+                else if wsr == 2 then 0x99999999_99999999_99999999_99999999_99999999_99999999_99999999_99999999
+                else wacc;
+            write_reg256(wrd, val)
         }
 
         function method eval_ins32(xins: ins32): state
@@ -515,6 +565,7 @@ module vt_ops {
                 case LW(xrd, xrs1, offset) => eval_LW(xrd, xrs1, offset)
                 case SW(xrs2, xrs1, offset) => eval_SW(xrs1, xrs2, offset)
                 case LI(xrd, imm32) => eval_LI(xrd, imm32)
+                case ECALL => this
         }
 
         function method eval_ins256(wins: ins256): state
@@ -530,12 +581,14 @@ module vt_ops {
                     eval_BN_ADDI(wrd, wrs1, imm, fg)
                 case BN_MULQACC(zero, wrs1, qwsel1, wrs2, qwsel2, shift_qws) =>
                     eval_BN_MULQACC(zero, wrs1, qwsel1, wrs2, qwsel2, shift_qws)
-                case BN_MULQACC_SO(zero, wrd, lower, wrs1, qwsel1, wrs2, qwsel2, shift_qws) =>
-                    eval_BN_MULQACC_SO(zero, wrd, lower, wrs1, qwsel1, wrs2, qwsel2, shift_qws)
+                case BN_MULQACC_SO(zero, wrd, lower, wrs1, qwsel1, wrs2, qwsel2, shift_qws, fg) =>
+                    eval_BN_MULQACC_SO(zero, wrd, lower, wrs1, qwsel1, wrs2, qwsel2, shift_qws, fg)
                 case BN_SUB(wrd, wrs1, wrs2, shift, fg) => 
                     eval_BN_SUB(wrd, wrs1, wrs2, shift, fg)
                 case BN_SUBB(wrd, wrs1, wrs2, shift, fg) => 
                     eval_BN_SUBB(wrd, wrs1, wrs2, shift, fg)
+                case BN_NOT(wrd, wrs, shift, fg) => 
+                    eval_BN_NOT(wrd, wrs, shift, fg)
                 case BN_XOR(wrd, wrs1, wrs2, shift, fg) => 
                     eval_BN_XOR(wrd, wrs1, wrs2, shift, fg)
                 case BN_SEL(wrd, wrs1, wrs2, fg, flag) => 
@@ -548,6 +601,8 @@ module vt_ops {
                     eval_BN_LID(grd, grd_inc, offset, grs, grs_inc)
                 case BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc) =>
                     eval_BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc)
+                case BN_WSRR(wrd, wsr) => 
+                    eval_BN_WSRR(wrd, wsr)
         }
 
         function method eval_block(block: codes): state
@@ -594,18 +649,31 @@ module vt_ops {
             var i := 0;
             while i < 32
             {
-                print("x"); print(i); print("\t");
-                print(read_reg32(GPR(i))); print("\n"); 
+                print(" x"); print(i); 
+                if i < 10 {
+                    print("  = ");
+                } else {
+                    print(" = ");
+                }
+                print_as_hex(read_reg32(GPR(i)), 4); print("\n"); 
                 i := i + 1;
             }
 
             i := 0;
             while i < 32
             {
-                print("w"); print(i); print("\t");
-                print(read_reg256(WDR(i))); print("\n"); 
+                print(" w"); print(i);
+                if i < 10 {
+                    print("  = ");
+                } else {
+                    print(" = ");
+                }
+                print_as_hex(read_reg256(WDR(i)), 32); print("\n"); 
                 i := i + 1;
             }
+
+            print(" fg0 = ");print_as_hex(fgroups.fg0.to_nat(), 4); print("\n"); 
+            print(" fg1 = ");print_as_hex(fgroups.fg1.to_nat(), 4); print("\n"); 
         }
 
         method dump_wmem(addr: uint32, words: uint32)
@@ -621,17 +689,64 @@ module vt_ops {
                 decreases end - cur
             {
                 var value := read_wmem(cur);
-                print(cur); print(":"); print(value); print("\n");
+                print(cur); print(":"); print_as_hex(value, 4); print("\n");
                 i := i + 1;
                 cur := cur + 32;
             }
         }
     }
 
+    method print_as_hex(a: nat, bytes: nat)
+    {
+        var val := a;
+        var num_digits := bytes * 2;
+        var i := 0;
+        var result := "";
+        while i < num_digits
+            decreases num_digits - i
+        {
+            var digit := val % 16;
+            if digit == 0 {
+                result := "0" + result;
+            } else if digit == 1 {
+                result := "1" + result;
+            } else if digit == 2 {
+                result := "2" + result;
+            } else if digit == 3 {
+                result := "3" + result;
+            } else if digit == 4 {
+                result := "4" + result;
+            } else if digit == 5 {
+                result := "5" + result;
+            } else if digit == 6 {
+                result := "6" + result;
+            } else if digit == 7 {
+                result := "7" + result;
+            } else if digit == 8 {
+                result := "8" + result;
+            } else if digit == 9 {
+                result := "9" + result;
+            } else if digit == 10 {
+                result := "a" + result;
+            } else if digit == 11 {
+                result := "b" + result;
+            } else if digit == 12 {
+                result := "c" + result;
+            } else if digit == 13 {
+                result := "d" + result;
+            } else if digit == 14 {
+                result := "e" + result;
+            } else if digit == 15 {
+                result := "f" + result;
+            }
+            val := val / 16;
+            i := i + 1;
+        }
+        print("0x"); print(result);
+    }
+
     predicate valid_state(s: state)
     {
         && s.ok
     }
-
-
 }

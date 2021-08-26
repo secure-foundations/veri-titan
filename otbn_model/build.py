@@ -51,7 +51,8 @@ CODE_DIR = "code"
 
 def os_system(command):
     print(command)
-    os.system(command)
+    code = os.system(command)
+    sys.exit(code)
 
 def subprocess_run(command):
     # print(command)

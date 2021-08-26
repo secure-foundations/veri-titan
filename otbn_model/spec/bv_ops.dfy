@@ -99,10 +99,19 @@ module bv_ops {
         (x - y) % BASE_32
     }
 
+    function method {:opaque} uint128_msb(x: uint128): uint1
+    {
+        if ((x as bv128 >> 127) & 1 == 1) then 1 else 0
+    }
+
+    function method {:opaque} uint128_lsb(x: uint128): uint1
+    {
+        x % 2
+    }
+
     function method {:opaque} uint256_msb(x: uint256): uint1
     {
-        var mask := BASE_256 / 2;
-        if (x as bv256 & mask as bv256) == mask as bv256 then 1 else 0
+        if ((x as bv256 >> 255) & 1 == 1) then 1 else 0
     }
 
     function method {:opaque} uint256_lsb(x: uint256): uint1
@@ -151,6 +160,11 @@ module bv_ops {
     function method {:opaque} uint256_and(x: uint256, y: uint256): uint256
     {
         (x as bv256 | y as bv256) as uint256
+    }
+
+    function method {:opaque} uint256_not(x: uint256): uint256
+    {
+        !(x as bv256) as uint256
     }
 
     lemma {:axiom} left_shift_is_mul(x: uint256, num_bytes: uint5, r: uint256)
