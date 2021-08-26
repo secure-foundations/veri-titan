@@ -146,7 +146,6 @@ module mont_loop_lemmas {
         y: seq<uint256>,
         m: seq<uint256>,
         a: seq<uint256>)
-
         requires |m| == |a| == |y| == NUM_WORDS;
         requires p1.full == xi * y[0] + a[0];
         requires p2.full == ui * m[0] + p1.lh;
