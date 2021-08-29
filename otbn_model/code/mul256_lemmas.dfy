@@ -5,8 +5,10 @@ module mul256_lemmas {
     import opened vt_ops
     import opened rsa_ops
     import opened vt_consts
-    import opened powers
-    import opened congruences
+
+    import opened Mul
+    import opened NativeTypes
+    import opened BASE_256_Seq
 
     const B  : int := BASE_64;
     const B2 : int := B * B;
@@ -77,7 +79,7 @@ module mul256_lemmas {
             && wacc == uint256_uh(r3)
 
         ensures
-            to_nat([t2, u2]) == x * y;
+            ToNat([t2, u2]) == x * y;
     {
         assert t2 == uint256_lh(r0) + uint256_lh(r1) * B2 by {
             uint256_hwb_lemma(t0, t1, t2, uint256_lh(r0), uint256_lh(r1));
@@ -99,13 +101,19 @@ module mul256_lemmas {
             t2 + u2 * B4 + wacc * B8;
                 { uint256_half_split_lemma(r3); }
             t2 + (uint256_lh(r2) + r3 * B2) * B4;
-                { uint256_half_split_lemma(r2); }
+                {
+                    uint256_half_split_lemma(r2);
+                    LemmaMulIsAssociativeAuto();
+                }
             uint256_lh(r0) + uint256_lh(r1) * B2 + r2 * B4 + p15 * B6;
                 { uint256_half_split_lemma(r1); }
             uint256_lh(r0) + r1 * B2 + (p10 + p11 + p12) * B4 + (p13 + p14) * B5 + p15 * B6;
                 { uint256_half_split_lemma(r0); }
             p0 + (p1 + p2) * B + (p3 + p4 + p5) * B2 + (p6 + p7 + p8 + p9) * B3 + (p10 + p11 + p12) * B4 + (p13 + p14) * B5 + p15 * B6;
-                { reveal uint256_qmul(); }
+                {
+                    reveal uint256_qmul();
+                    LemmaMulProperties();
+                }
             x * y;
         }
 
@@ -114,8 +122,8 @@ module mul256_lemmas {
             assert x * y <= B8;
         }
 
-        assert to_nat([t2, u2]) == x * y by {
-            to_nat_lemma_1([t2, u2]);
+        assert ToNat([t2, u2]) == x * y by {
+            LemmaSeqLen2([t2, u2]);
         }
     }
 }

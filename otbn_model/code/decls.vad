@@ -11,6 +11,8 @@ import opened vt_consts
 import opened vt_vale
 import opened vt_mem
 
+import opened NativeTypes
+
 #endverbatim
 
 type seq(a: Type(0)): Type(0) {: primitive} extern;
@@ -38,8 +40,8 @@ type uint256: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff_ffff
 type int10:  Type(0) := int_range((-512), 512);
 type int12:  Type(0) := int_range((-2048), 2048);
 
-function power(b: int, e: nat) : int extern;
-function cong(a: int, b: int, n: int) : bool extern;
+function Pow(b: int, e: nat) : int extern;
+function IsModEquivalent(a: int, b: int, n: int) : bool extern;
 function cong_B256(a: int, b: int) : bool extern;
 function pow_B256(e: nat): nat extern;
 
@@ -161,8 +163,8 @@ function operator(.rsa) (vars: mvars): rsa_params extern;
 function mvars_inv(vars: mvars, heap: heap_t, x_ptr: int, y_ptr: int,
     m_ptr: int, rr_ptr: int, m0d_ptr: int, sig_ptr: int): bool extern;
 
-function to_nat(s: seq(uint256)): nat extern;
-ghost procedure to_nat_lemma_1(ghost xs: seq(uint256)) extern;
+function ToNat #[a: Type(0)] (s: seq(a)): nat extern;
+ghost procedure LemmaSeqLen2 #[a: Type(0)] (ghost xs: seq(a)) extern;
     
 type string: Type(0) extern;
 
@@ -295,8 +297,8 @@ function otbn_mulqacc_is_safe(shift: uint32, macc: uint256): bool extern;
 function otbn_mulqacc_safe(zero: bool, a: uint256, qa: uint32, b: uint256, qb: uint32, shift: uint32, macc: uint256): uint256 extern;
 function otbn_mulqacc(zero: bool, a: uint256, qa: uint32, b: uint256, qb: uint32, shift: uint32, macc: uint256): uint256 extern;
 
-function seq_subb(x: seq(uint256), y: seq(uint256)) : tuple(seq(uint256), uint1) extern;
-function seq_addc(x: seq(uint256), y: seq(uint256)) : tuple(seq(uint256), uint1) extern;
+function SeqSub #[a:Type(0)] (x: seq(a), y: seq(a)) : tuple(seq(a), uint1) extern;
+function SeqAdd #[a:Type(0)] (x: seq(a), y: seq(a)) : tuple(seq(a), uint1) extern;
 
 function seq_addc_512_is_safe(x: seq(uint256), y: seq(uint256)) : bool extern;
 

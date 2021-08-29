@@ -1,13 +1,11 @@
 include "vt_consts.dfy"
 include "bv_ops.dfy"
-include "../lib/powers.dfy"
-include "../lib/congruences.dfy"
 
 module vt_mem {
     import opened bv_ops
     import opened vt_consts
-    import opened powers
-    import opened congruences
+
+    import opened NativeTypes
 
     type xmem_t = map<int, uint32>
 

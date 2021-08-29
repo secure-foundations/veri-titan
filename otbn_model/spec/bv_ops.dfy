@@ -1,20 +1,21 @@
 include "vt_consts.dfy"
-include "../lib/powers.dfy"
+include "../libraries/src/NonlinearArithmetic/DivMod.dfy"
+include "../libraries/src/NonlinearArithmetic/Mul.dfy"
+include "../libraries/src/NonlinearArithmetic/Power.dfy"
 
 module bv_ops {
+    import opened NativeTypes
+    import opened DivMod
+    import opened Mul
+    import opened Power
+
     import opened vt_consts
-    import opened powers
-    import opened congruences
 
     type uint1   = i :int | 0 <= i < BASE_1
     type uint2   = i :int | 0 <= i < BASE_2
     type uint4   = i :int | 0 <= i < BASE_4
     type uint5   = i :int | 0 <= i < BASE_5
-    type uint8   = i :int | 0 <= i < BASE_8
     type uint10  = i :int | 0 <= i < 1024
-    type uint16  = i :int | 0 <= i < BASE_16
-    type uint32  = i :int | 0 <= i < BASE_32
-    type uint64  = i :int | 0 <= i < BASE_64
     type uint128 = i :int | 0 <= i < BASE_128
     type uint256 = i :int | 0 <= i < BASE_256
     type uint512 = i :int | 0 <= i < BASE_512
@@ -28,12 +29,13 @@ module bv_ops {
 
     predicate cong_B256(a: int, b: int)
     {
-        cong(a, b, BASE_256)
+        IsModEquivalent(a, b, BASE_256)
     }
 
     function pow_B256(e: nat): nat
     {
-        power(BASE_256, e)
+        LemmaPowPositiveAuto();
+        Pow(BASE_256, e)
     }
 
     function method bool_to_uint1(i:bool) : uint1
@@ -134,9 +136,8 @@ module bv_ops {
 
     lemma uint256_addc_cong_lemma(z: uint256, x: uint256, y: uint256)
         requires uint256_addc(x, y, 0).0 == z;
-        ensures cong_B256(z, x + y);
+        ensures IsModEquivalent(z, x + y, BASE_256);
     {
-        reveal cong();
     }
 
     function method uint256_subb(x: uint256, y: uint256, bin: uint1): (uint256, uint1)
@@ -250,11 +251,7 @@ module bv_ops {
         requires b <= u;
         ensures a * b <= u * u;
     {
-        calc <= {
-            a * b;
-            a * u;
-            u * u;
-        }
+        LemmaMulUpperBoundAuto();
     }
 
     lemma single_digit_lemma_1(a: nat, b: nat, c: nat, u: nat)
@@ -267,9 +264,12 @@ module bv_ops {
             a * b + c;
             <= { single_digit_lemma_0(a, b, u); }
             u * u + c;
-            <= u * u + u;
-            u * (u + 1);
-            < (u + 1) * (u + 1);
+            <=
+            u * u + u;
+            == { LemmaMulIsDistributiveAddAuto(); }
+            u * (u + 1); 
+            <  { LemmaMulLeftInequality(u + 1, u, u + 1); }
+            (u + 1) * (u + 1); 
         }
     }
 
@@ -282,12 +282,20 @@ module bv_ops {
     {
         calc {
             a * b + c + d;
-            <={ single_digit_lemma_0(a, b, u); }
+            <= { single_digit_lemma_0(a, b, u); }
             u * u + c + d;
             <= u * u + u + u;
             u * u + 2 * u;
-            < u * u + 2 * u + 1;
+            < (u * u) + (2 * u) + 1;
+        }
+
+        calc {
             (u + 1) * (u + 1);
+            { LemmaMulIsDistributiveAdd(u + 1, u, 1); }
+            (u + 1) * u + (u + 1) * 1; 
+            u * (u + 1) + u + 1;
+            { LemmaMulIsDistributiveAdd(u, u, 1); }
+            (u * u) + (2 * u) + 1;
         }
     }
 
@@ -308,7 +316,7 @@ module bv_ops {
         var src1 := uint256_qsel(x, qx);
         var src2 := uint256_qsel(y, qy);
         single_digit_lemma_0(src1, src2, BASE_64-1);
-        assert src1 * src2 <= (BASE_64-1) * (BASE_64-1) < BASE_128;
+        LemmaMulStrictlyIncreasesAuto();
         src1 as uint128 * src2 as uint128
     }
 
