@@ -71,7 +71,7 @@ module vt_vale {
 
     predicate va_is_dst_reg32(r: reg32_t, s: va_state)
     {
-        r.index != 0
+        r.index != 0 && r.index != 1
     }
 
     function va_eval_reg32(s: va_state, r: reg32_t):uint32
@@ -201,7 +201,9 @@ module vt_vale {
         requires offset == 0
         requires grd.index != grs.index
             && grd.index != 0
+            && grd.index != 1
             && grs.index != 0
+            && grs.index != 1
         requires gs.ms.read_reg32(grd) <= 31
         requires addr == wmem_offsetted_addr(gs.ms.read_reg32(grs), offset)
         requires iter_safe(iter, gs.heap, addr)
@@ -236,7 +238,9 @@ module vt_vale {
         requires offset == 0
         requires grs1.index != grs2.index
             && grs1.index != 0
+            && grs1.index != 1
             && grs2.index != 0
+            && grs2.index != 1
         requires 
             var s := gs.ms;
             && s.read_reg32(grs2) <= 31

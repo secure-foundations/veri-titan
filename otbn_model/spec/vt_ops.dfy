@@ -245,22 +245,6 @@ module vt_ops {
         mulqacc_so_result_t(uh, uint256_hwb(z, lh, lower), new_flags)
     }
 
-    // function otbn_mulqacc_so_safe(
-    //     zero: bool,
-    //     z: uint256, lower: bool,
-    //     x: uint256, qx: uint2,
-    //     y: uint256, qy: uint2,
-    //     shift: uint2,
-    //     acc: uint256,
-    //     flags: flags_t) : uint256
-
-    //     requires otbn_mulqacc_is_safe(shift, acc);
-    // {
-    //     var  := otbn_mulqacc_safe(zero, x, qx, y, qy, shift, acc)
-
-    // }
-
-
     function method otbn_not(x: uint256, shift: shift_t, carry: bool): (uint256, flags_t)
     {
         var result := uint256_not(uint256_sb(x, shift));
@@ -331,7 +315,7 @@ module vt_ops {
 
         function method write_reg32(r: reg32_t, v: uint32): state
         {
-            if r.index == 0 then this
+            if r.index == 0 || r.index == 1 then this
             else this.(gprs := gprs[r.index := v])
         }
 
