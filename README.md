@@ -25,5 +25,5 @@ Making Assembly Proofs Easier
 
 Building a Verified Hardware Root of Trust
 
-Closing the Hardware/Software Gap
+[Closing the Hardware/Software Gap](https://github.com/secure-foundations/veri-titan/blob/master/documents/direction_hardware.md)
 
