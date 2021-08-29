@@ -160,12 +160,13 @@ method printIns256(ins:ins256)
             printReg256(src2); print("."); print(qwsel2); print(", ");
             printAccShift(shift); print("\n");
 
-        case BN_MULQACC_SO(zero, dst, lower, src1, qwsel1, src2, qwsel2, shift) =>
+        case BN_MULQACC_SO(zero, dst, lower, src1, qwsel1, src2, qwsel2, shift, fg) =>
             if zero { print("  bn.mulqacc.so.z "); } else { print("  bn.mulqacc.so "); }
                     printReg256(dst); print("."); if lower { print("L"); } else { print("U"); } print(", ");
             printReg256(src1); print("."); print(qwsel1); print(", ");
             printReg256(src2); print("."); print(qwsel2); print(", ");
-            printAccShift(shift); print("\n");
+            printAccShift(shift); print(", "); printFlags(fg); 
+            print("\n");
 
         // todo
         // case BN_SUBI(dst, src1, src2, fg) =>

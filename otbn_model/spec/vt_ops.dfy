@@ -75,24 +75,29 @@ module vt_ops {
             var r := r + if lsb then 4 else 0;
             r + if zero then 8 else 0
         }
+
+        function method get_single_flag(which_flag: uint2): bool
+        {
+            if which_flag == 0 then cf 
+            else if which_flag == 1 then msb
+            else if which_flag == 2 then lsb
+            else zero
+        }
     }
 
     datatype fgroups_t = fgroups_t(fg0: flags_t, fg1: flags_t)
 
-    function method select_fgroup(fgps: fgroups_t, which: uint1): flags_t
+    function method get_fgroup(fgps: fgroups_t, which: uint1): flags_t
     {
         if which == 0 then fgps.fg0 else fgps.fg1
     }
 
     function method get_flag(fgps: fgroups_t, which_group: uint1, which_flag: uint2) : bool
     {
-        if which_flag == 0 then select_fgroup(fgps, which_group).cf 
-        else if which_flag == 1 then select_fgroup(fgps, which_group).msb
-        else if which_flag == 2 then select_fgroup(fgps, which_group).lsb
-        else select_fgroup(fgps, which_group).zero
+        get_fgroup(fgps, which_group).get_single_flag(which_flag)
     }
 
-    function method update_fgroups(fgps: fgroups_t, which_group: uint1, new_flags: flags_t) : fgroups_t
+    function method update_fgroups(fgps: fgroups_t, which_group: uint1, new_flags: flags_t): fgroups_t
     {
         if which_group == 0 then fgps.(fg0 := new_flags) else fgps.(fg1 := new_flags)
     }
@@ -224,6 +229,38 @@ module vt_ops {
     {
     }
 
+    datatype mulqacc_so_result_t = mulqacc_so_result_t(
+        new_acc: uint256,
+        new_dst: uint256,
+        new_flags: flags_t)
+
+    function method otbn_mulqacc_so(product: uint256, z: uint256, lower: bool, flags: flags_t) : mulqacc_so_result_t
+    {
+        var lh, uh := uint256_lh(product), uint256_uh(product);
+        var new_flags :=
+            (if lower then
+                flags_t(flags.cf, flags.msb, uint128_lsb(lh) == 1, lh == 0)
+            else
+                flags_t(flags.cf, uint128_msb(lh) == 1, flags.lsb, (lh == 0) && flags.zero));
+        mulqacc_so_result_t(uh, uint256_hwb(z, lh, lower), new_flags)
+    }
+
+    // function otbn_mulqacc_so_safe(
+    //     zero: bool,
+    //     z: uint256, lower: bool,
+    //     x: uint256, qx: uint2,
+    //     y: uint256, qy: uint2,
+    //     shift: uint2,
+    //     acc: uint256,
+    //     flags: flags_t) : uint256
+
+    //     requires otbn_mulqacc_is_safe(shift, acc);
+    // {
+    //     var  := otbn_mulqacc_safe(zero, x, qx, y, qy, shift, acc)
+
+    // }
+
+
     function method otbn_not(x: uint256, shift: shift_t, carry: bool): (uint256, flags_t)
     {
         var result := uint256_not(uint256_sb(x, shift));
@@ -242,13 +279,6 @@ module vt_ops {
     {
         if sel then x else y
     }
-
-    // function otbn_rshi(x: uint256, y: uint256, shift_amt: int) : uint256
-    //     requires 0 <= shift_amt < 256;
-    // {
-    //     var concat : int := x * BASE_256 + y;
-    //     (concat / Pow2(shift_amt)) % BASE_256
-    // }
 
 /* control flow definions */
 
@@ -301,7 +331,7 @@ module vt_ops {
 
         function method write_reg32(r: reg32_t, v: uint32): state
         {
-            if r.index == 0 || r.index == 1 then this
+            if r.index == 0 then this
             else this.(gprs := gprs[r.index := v])
         }
 
@@ -475,23 +505,17 @@ module vt_ops {
             var v1 := read_reg256(wrs1);
             var v2 := read_reg256(wrs2);
             var v3 := read_reg256(WACC);
-            var v4 := read_reg256(wrd);
+            var z := read_reg256(wrd);
+            var flags := get_fgroup(fgroups, fg);
+
             var product := otbn_mulqacc(zero, v1, qwsel1, v2, qwsel2, shift_qws, v3);
-            var lh, uh := uint256_lh(product), uint256_uh(product);
 
-            var cf := read_flag(fg, 0);
-            var msb := read_flag(fg, 1);
-            var lsb := read_flag(fg, 2);
-            var zero := read_flag(fg, 3);
+            var mulqacc_so_result_t(new_acc, new_z, new_flags) :=
+                otbn_mulqacc_so(product, z, lower, flags);
 
-            (if lower then
-                write_flags(fg, flags_t(cf, msb, uint128_lsb(lh) == 1, lh == 0))
-            else
-                write_flags(fg, flags_t(cf, uint128_msb(lh) == 1, lsb, (lh == 0) && zero))).
-            // the upper half stay in wacc
-            write_reg256(WACC, uh).
-            // the lower half gets written back into dst
-            write_reg256(wrd, uint256_hwb(v4, lh, lower))
+            write_flags(fg, new_flags).
+            write_reg256(WACC, new_acc).
+            write_reg256(wrd, new_z)
         }
 
         function method eval_BN_SUB(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1): state
