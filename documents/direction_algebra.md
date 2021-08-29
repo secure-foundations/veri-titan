@@ -1,3 +1,8 @@
+# Using Algebra Solver To Automate Certain Proofs
+
+The idea has been explored in prior research. Seems applicable in our code base in several places. 
+
+----
 # Proof Triaging:
 ----
 ## Congruence Proofs: 
@@ -81,3 +86,35 @@ Reasoning around `Power()` is a bit awkward.
 [this file](https://github.com/secure-foundations/veri-titan/blob/dafny-model-dev/dfy_model/powers.dfy) is all about proving some trivial lemmas about `Power()`. 
 
 [this calc](https://github.com/secure-foundations/veri-titan/blob/2fd39315020e3c094b0cc1c1a0ccd315803128cb/dfy_model/RSALemmas.dfy#L280) is an example where the lemmas are being invoked. 
+
+----
+# Related Works:
+
+## [Certified Verification of Algebraic Properties on LowLevel Mathematical Constructs in Cryptographic Programs](https://dl.acm.org/doi/pdf/10.1145/3133956.3134076)
+
+They develop a certified technique to verify low-level mathematical constructs in X25519. 
+They translate algebraic specification of mathematical constructs into an algebraic problem.
+Algebraic problems are solved by algebra system Singular.
+Range problems are solved by  SMT solvers.
+They certify the translation using Coq.
+
+### Comments:
+* the translation from assembly to bvCryptoLine is pushed into future work
+* moreover, bvCryptoLine is supposedly close to assembly code, but it is unclear how large the gap is. would be interesting to know how well it translates from SIMD extensions for example. 
+* the Gröbner Bases method is sound but incomplete
+* the verification time is pretty long (131 hours), which seems high for interactive development
+
+----
+## [Signed Cryptographic Program Verification with Typed CryptoLine](https://dl.acm.org/doi/pdf/10.1145/3319535.3354199)
+
+### Comments:
+* the extension from CryptoLine seems somewhat incremental
+* the translation from GIMPLE to CryptoLine does not seem to be verified, so the TCB excludes C -> GIMPLE, but includes GIMPLE -> CryptoLine. The GIMPLE -> ASM part is still in the TCB. 
+
+----
+## [Verifying Arithmetic in Cryptographic C Programs](https://www.iis.sinica.edu.tw/~bywang/papers/ase19.pdf)
+
+### Comments:
+* the diff between this work and Signed CryptoLine does not seem very significant. not sure how the LLVM -> CryptoLine differs greatly from GIMPLE -> CryptoLine.
+* instead of a equivalence proof, the translation have a soundness theorem, which is a contribution
+
