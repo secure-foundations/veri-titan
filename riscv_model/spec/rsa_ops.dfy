@@ -44,7 +44,7 @@ module rsa_ops {
             && |zs| == |xs|
     {
         if |xs| == 0 then ([], 0)
-        else 
+        else
             var len' := |xs| - 1;
             var (zs, bin) := seq_subb(xs[..len'], ys[..len']);
             var (z, bout) := uint32_subb(xs[len'], ys[len'], bin);
@@ -64,7 +64,7 @@ module rsa_ops {
             var (zs', bin) := seq_subb(xs[..len'], ys[..len']);
             var (z, _) := uint32_subb(xs[len'], ys[len'], bin);
             assert bout * BASE_32 + xs[len'] - bin - ys[len'] == z;
-            
+
             calc {
                 to_nat(zs);
                 to_nat(zs') + z * pow_B32(len');

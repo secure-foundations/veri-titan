@@ -4,6 +4,7 @@ include "decls.vad"
 include "../code/vale.dfy"
 include "../gen/decls.dfy"
 include "../spec/rsa_ops.dfy"
+include "../code/mod32_lemmas.dfy"
 
 module mul256 {
 
@@ -13,6 +14,7 @@ import opened rsa_ops
 import opened rv_consts
 import opened rv_decls
 import opened rv_vale
+import opened mod32_lemmas
 
 #endverbatim
 
@@ -25,40 +27,22 @@ ghost procedure sub_mod32_correct_lemma(
        ghost x11: uint32,
        ghost x15: uint32
 ) extern;
-
-
-// static void sub_mod(const uint32_t *n, uint32_t *a)
-// {
-//   int64_t A = 0;
-//   uint32_t i;
-//   for (i = 0; i < RSANUMWORDS; ++i) {
-//     A += (uint64_t)a[i] - n[i];
-//     a[i] = (uint32_t)A;
-//     A >>= 32;
-//   }
-// }
     
-//    lui	a2,0x11
-//    addi	a2,a2,1560 # 11618 <n>
-//    addi	a6,a2,384
+function seq_subb(xs: seq(uint32), ys: seq(uint32)) : tuple(seq(uint32), uint1) extern;
+function int64_rs(x: int64, shift: nat) : int64 extern;
+function sub_mod32_update_A(A: int, a: int, n: int) : int64 extern;
 
-//    li	a5, 0
-//    li	a1, 0
-//    lw	a4, 0(a0)
-//    lw	a3, 0(a2)
-
-//    addi	a2,a2,4
-//    add	a5,a5,a4
-//    sub	a3,a5,a3
-//    sltu	a4,a5,a4
-//    add	a4,a4,a1
-//    sltu	a5,a5,a3
-//    sw	a3,0(a0)
-//    sub	a5,a4,a5
-//    srai	a1,a5,0x1f
-//    addi	a0,a0,4
-//    bne	a6,a2,1016c <sub_mod.constprop.0+0xe>
-
+ghost procedure lemma_sub_mod32_correct(
+      ghost A: int64_view_t, // old A
+      ghost A': int64_view_t, // new A
+      ghost iter_a: iter_t,
+      ghost iter_n: iter_t,
+      ghost iter_a': iter_t,
+      ghost iter_a_next: iter_t,
+      ghost iter_n_next: iter_t,
+      ghost iter_a'_next: iter_t
+) extern;
+    
 procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     returns (ghost iter_a': iter_t)
     requires
@@ -73,9 +57,12 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         // iter valid for n
         iter_safe(iter_n, mem, 71192);
         seq_len(iter_n.buff) == 384 ;
-        // iter valid for a
 
-        // to_nat(iter_a'.buff) == to_nat(iter_a.buff) - to_nat(iter_n.buff)
+        // iter valid for a
+        iter_safe(iter_a, mem, 71192);
+        seq_len(iter_a.buff) == 384 ;
+
+        to_nat(iter_a'.buff) == (to_nat(iter_a.buff) - to_nat(iter_n.buff));
 {
     ghost var a := x10;
     ghost var n := x12;
@@ -95,17 +82,23 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     assert(valid_int64_view(A, x15, x11));
     
     iter_a' := iter_a;
+    ghost var iter_a := iter_a;
     ghost var iter_n := iter_n;
     while (x12 != x16)
         invariant iter_inv(iter_a', mem, x10); 
         invariant iter_inv(iter_n, mem, x12);
         invariant valid_int64_view(A, x15, x11);
-    decreases x16 - x12;
+        invariant ((-1) <= A.full);
+        invariant (A.full <= 0);
+        invariant iter_a.index == iter_a'.index;
+        invariant iter_a'.index == iter_n.index;
+        invariant seq_subb(iter_a.buff[0..iter_a.index], iter_n.buff[0..iter_n.index]) == tuple(iter_a'.buff[0..iter_a'.index], neg1_to_uint1(A.full));
+        decreases x16 - x12;
     {
-        let _ := lw_safe(x14, x10, 0, iter_a'); // load mem from x10 to x14 (x14 == a[i])
-        iter_n := lw_safe(x13, x12, 0, iter_n); // load mem from x12 into x13 (x13 == n[i])
+        let iter_a_next := lw_safe(x14, x10, 0, iter_a'); // load mem from x10 to x14 (x14 == a[i])
+        let iter_n_next := lw_safe(x13, x12, 0, iter_n); // load mem from x12 into x13 (x13 == n[i])
 
-        addi(x12, x12, 4); // increment x12 (increment n)
+        addi(x12, x12, 4); // increment n pointer
 
         add(x15, x15, x14); // lower half of A += a[i]
         sub(x13, x15, x13); // lower half of A -= n[i]
@@ -116,9 +109,8 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         sltu(x15, x15, x13); // underflow check from sub
 
         // a[i] == lower half of A
-        // store x13 at address in x10
         // storing lower old(A) + a[i] - n[i]
-        iter_a' := sw(x13, x10, 0, iter_a'); // store x13 at address in x10 -- line 348
+        let iter_a'_next := sw(x13, x10, 0, iter_a');
 
         sub(x15, x14, x15); // subtract underflow carry from upper half of A
     
@@ -126,8 +118,17 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         srai(x11, x15, 0x1f); // right arith shift by 31 -- x11 == uh(A)
     
         // new A is signed old A, shifted by 32
-        A := int64_cons(x15, x11, (A + a - n) >> 32);
-        addi(x10, x10, 4); // pointer inc
+        ghost var A' := int64_cons(x15, x11, int64_rs(sub_mod32_update_A(A.full, a, n), 32));
+    
+        addi(x10, x10, 4); // increment a pointer
+    
+        lemma_sub_mod32_correct(A, A', iter_a, iter_n, iter_a', iter_a_next, iter_n_next, iter_a'_next);
+
+        // update variables for next loop
+        A := A';
+        iter_a := iter_a_next;
+        iter_n := iter_n_next;
+        iter_a' := iter_a'_next;
 
     }
 

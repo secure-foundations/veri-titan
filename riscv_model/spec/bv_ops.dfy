@@ -35,13 +35,13 @@ module bv_ops {
       x / pow2(shift)
     }
 
-    function to_uint32(i: int) : uint32
+    function method to_uint32(i: int) : uint32
       requires - BASE_32 < i < BASE_32
     {
       if i < 0 then i + BASE_32 else i
     }
 
-    function to_int32(i:uint32) : int32
+    function method to_int32(i:uint32) : int32
     {
       if i > (BASE_31 - 1) then i - BASE_32 else i
     }
@@ -51,12 +51,35 @@ module bv_ops {
       ensures to_int32(to_uint32(i)) == i
     {
     }
-    
+
     lemma uint32_int32_inverse_lemma(i:uint32)
       ensures to_uint32(to_int32(i)) == i
     {
     }
 
+    function method to_uint64(i: int) : uint64
+      requires - BASE_64 < i < BASE_64
+    {
+      if i < 0 then i + BASE_64 else i
+    }
+
+    function method to_int64(i:uint64) : int64
+    {
+      if i > (BASE_63 - 1) then i - BASE_64 else i
+    }
+
+
+    lemma int64_uint64_inverse_lemma(i:int64)
+      ensures to_int64(to_uint64(i)) == i
+    {
+    }
+
+    lemma uint64_int64_inverse_lemma(i:uint64)
+      ensures to_uint64(to_int64(i)) == i
+    {
+    }
+
+    
     function pow_B32(e: nat): nat
     {
         power(BASE_32, e)
@@ -137,7 +160,7 @@ module bv_ops {
     {
         if x < y then 1 else 0
     }
-    
+
     lemma single_digit_lemma_0(a: nat, b: nat, u: nat)
         requires a <= u;
         requires b <= u;
@@ -197,5 +220,30 @@ module bv_ops {
         reveal uint64_uh();
     }
 
+    function method uint32_subb(x: uint32, y: uint32, bin: uint1): (uint32, uint1)
+    {
+      var diff : int := x - y - bin;
+        var diff_out := if diff >= 0 then diff else diff + BASE_32;
+        var bout := if diff >= 0 then 0 else 1;
+        (diff_out, bout)
+    }
+
+    // signed integer views
+    function method {:opaque} int64_lh(x: int64): uint32
+    {
+        to_uint64(x) % BASE_32
+    }
+
+    function method {:opaque} int64_uh(x: int64): uint32
+    {
+        to_uint64(x) / BASE_32
+    }
     
+    lemma lemma_int64_half_split(x: int64)
+        ensures x == to_int64(int64_lh(x) + int64_uh(x) * BASE_32);
+    {
+        reveal int64_lh();
+        reveal int64_uh();
+    }
+
 } // end module ops

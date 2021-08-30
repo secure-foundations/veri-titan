@@ -44,23 +44,26 @@ module rv_ops {
         && gprs[start..start+len] == view
     }
 
-    /* experimental -- signed integer views */
+
+    /* int64 views are constructed from UNSIGNED uint32 values in
+    registers, so that we always keep the assumption that values in a
+    register are unsigned but can be VIEWED as signed */
     datatype int64_raw = int64_cons(
-        lh: int32, uh: int32, full: int64)
+        lh: uint32, uh: uint32, full: int64)
 
     type int64_view_t = num: int64_raw |
-        && num.lh == int64_lh(num.full)
-        && num.uh == int64_uh(num.full)
+        && num.lh == to_uint32(int64_lh(num.full))
+        && num.uh == to_uint32(int64_uh(num.full))
         witness *
 
     predicate valid_int64_view(
         num: int64_view_t,
-        lh: int32, uh: int32)
+        lh: uint32, uh: uint32)
     {
         && lh == num.lh
         && uh == num.uh
     }
-    /* end experimental */
+
 
    /* memory definitions */ 
 

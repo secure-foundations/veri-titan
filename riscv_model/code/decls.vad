@@ -32,6 +32,9 @@ type uint64:  Type(0) := int_range(0, 0xffffffff_ffffffff);
 type uint128: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff);
 type uint256: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff);
 
+type int32:  Type(0) := int_range((-0x80000000), 0x7fffffff);
+type int64:  Type(0) := int_range((-0x80000000_00000000), 0x7fffffff_ffffffff);
+    
 function power(b: int, e: nat) : int extern;
 function cong(a: int, b: int, n: int) : bool extern;
 
@@ -41,6 +44,15 @@ const BASE_128: nat extern;
 const BASE_256: nat extern;
 const BASE_512: nat extern;
 const NUM_WORDS:nat extern;
+    
+const BASE_31:  int extern;
+const BASE_63:  int extern; 
+    
+function to_uint32(i:int) : uint32 extern;
+function to_int32(i:uint32) : int32 extern;
+
+function to_uint64(i:int) : uint64 extern;
+function to_int64(i:uint64) : int64 extern;
 
 type state: Type(0) {: primitive} extern;
 function operator(.ok) (s: state): bool extern;
@@ -64,6 +76,7 @@ function fst #[a: Type(0), b: Type(0)](m: tuple(a, b)): a extern;
 function snd #[a: Type(0), b: Type(0)](m: tuple(a, b)): b extern;
 
 function bool_to_uint1(i:bool) : uint1 extern;
+function neg1_to_uint1(i:int) : uint1 extern;
 
 var gprs: gprs_t {:state gprs()};
 
@@ -75,6 +88,11 @@ function mem_addr_valid(h: mem_t, ptr: int): bool extern;
 type uint64_view_t: Type(0) extern;
 function uint64_cons(lh: uint32, uh: uint32, full: uint64) : uint64_view_t extern;
 function valid_uint64_view(view: uint64_view_t, lh: uint32, uh: uint32) : bool extern;
+
+type int64_view_t: Type(0) extern;
+function int64_cons(lh: uint32, uh: uint32, full: int64) : int64_view_t extern;
+function valid_int64_view(view: int64_view_t, lh: uint32, uh: uint32) : bool extern;
+function operator(.full) (num: int64_view_t) : int extern;
 
 type iter_t: Type(0) extern;
 function iter_inv(iter: iter_t, h: mem_t, ptr: int): bool extern;
@@ -155,6 +173,8 @@ function uint32_rs(x: uint32, y: uint32): uint32 extern;
 function uint32_arith_rs(x: uint32, y: uint32): uint32 extern;
 function uint32_mul(x: uint32, y: uint32): uint32 extern;
 function uint32_mulhu(x: uint32, y: uint32): uint32 extern;
+   
+function int32_rs(x: int32, shift: nat): int32 extern;
 
 
 // --------------------------------------------------------------
@@ -360,10 +380,9 @@ procedure srli(inout dst: reg32, in src1: reg32, in src2: imm32)
 procedure srai(inout dst: reg32, in src1: reg32, in src2: imm32)
     {:instruction Ins32(RV_SRAI(dst, src1, src2))}
     requires
-        // limit to non-negative values for our use case
         0 <= src2 < 31;
     ensures
-        dst == uint32_rs(old(src1), old(src2));
+        dst == to_uint32(int32_rs(to_int32(old(src1)), old(src2)));
 {
     assume false;
 }
