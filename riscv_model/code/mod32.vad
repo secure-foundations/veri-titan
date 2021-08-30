@@ -40,7 +40,10 @@ ghost procedure lemma_sub_mod32_correct(
       ghost iter_a': iter_t,
       ghost iter_a_next: iter_t,
       ghost iter_n_next: iter_t,
-      ghost iter_a'_next: iter_t
+      ghost iter_a'_next: iter_t,
+      ghost x13: uint32,
+      ghost x14: uint32,
+      ghost i: int
 ) extern;
     
 procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
@@ -107,6 +110,7 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         add(x14, x14, x11); // add carry bit to upper half of A
 
         sltu(x15, x15, x13); // underflow check from sub
+        let carry_sub := x13;
 
         // a[i] == lower half of A
         // storing lower old(A) + a[i] - n[i]
@@ -122,7 +126,9 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     
         addi(x10, x10, 4); // increment a pointer
     
-        lemma_sub_mod32_correct(A, A', iter_a, iter_n, iter_a', iter_a_next, iter_n_next, iter_a'_next);
+        // A'.lh == x15
+        // A'.uh == x11
+        lemma_sub_mod32_correct(A, A', iter_a, iter_n, iter_a', iter_a_next, iter_n_next, iter_a'_next, x13, x14, iter_a.index);
 
         // update variables for next loop
         A := A';

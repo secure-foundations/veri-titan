@@ -12,7 +12,10 @@ module mod32_lemmas {
     const B  : int := BASE_32;
     const B2 : int := B * B;
 
-    function sub_mod32_update_A(A:int, a:int, n:int) : int64 
+    function sub_mod32_update_A(A:int64, a:int, n:int) : int64 
+      requires
+      && (0 <= a < BASE_32)
+      && (n <= 0 < BASE_32)
     {
       to_int64(A + a - n)
     }
@@ -40,23 +43,25 @@ module mod32_lemmas {
       iter_a_next: iter_t,
       iter_n_next: iter_t,
       iter_a'_next: iter_t,
-      x15: uint32,
-      x13: uint32)
+      x13: uint32,
+      x14: uint32,
+      i: int)
       requires
-        && sub_mod32_loop_inv(iter_a, iter_n, iter_a', A)
+        && sub_mod32_loop_inv(iter_a, iter_n, iter_a', A.full)
         && iter_a.index < |iter_a.buff| // still in bounds after increment
-        && x15 == uint32_add(iter_a.buff[i], A.lh)
-        && x13 == uint32_sub(x15, iter_n.buff[i])
-        && carry_add == uint32_lt(x15, iter_a.buff[i])
-        && carry_sub == uint32_lt(x15, x13)
-        && A.uh + carry_add
-        && iter_a_next == lw_iter_next(iter_a)
-        && iter_n_next == lw_iter_next(iter_n)
-        && iter_a'_next == sw_iter_next(iter_a', x13)
+        && i == iter_a.index
+        && A'.lh == uint32_add(iter_a.buff[i], A.lh)
+        && x13 == uint32_sub(A'.lh, iter_n.buff[i])
+        && A.uh + uint32_lt(A'.lh, iter_a.buff[i]) == x14
+        && iter_a_next == lw_next_iter(iter_a)
+        && iter_n_next == lw_next_iter(iter_n)
+        && iter_a'_next == sw_next_iter(iter_a', x13)
       ensures
-        sub_mod32_loop_inv(lw_iter_next(iter_a), lw_iter_next(iter_n), iter_a', A');
+        sub_mod32_loop_inv(lw_next_iter(iter_a), lw_next_iter(iter_n), iter_a', A'.full)
 
       {
+        var carry_add := uint32_lt(A'.lh, iter_a.buff[i]);
+        var carry_sub := uint32_lt(A.lh, x13);
         assume false;
       }
 
