@@ -97,8 +97,8 @@ method printShift(shift:shift_t)
     match shift
         case SFT(left, bytes) =>
         match left
-            case true => print("<< "); print(bytes);
-            case false => print(">> "); print(bytes);
+            case true => print("<< "); print(bytes * 8);
+            case false => print(">> "); print(bytes * 8);
 }
 
 method printFlags(fg:uint1)
