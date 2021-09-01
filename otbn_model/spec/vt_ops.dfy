@@ -264,6 +264,11 @@ module vt_ops {
         if sel then x else y
     }
 
+    function method wwrod_offset_ptr(base: uint32, offset: int10): uint32
+    {
+        uint32_addi(base, offset * 32)
+    }
+
 /* control flow definions */
 
     datatype code =
@@ -294,17 +299,17 @@ module vt_ops {
 
         fgroups: fgroups_t,
 
-        xmem: xmem_t,
-        wmem: wmem_t,
+        mem: mem_t,
 
         ok: bool)
     {
         static function method init(): state
         {
             var flags := flags_t(false, false, false, false);
-            state(seq(32, n => 0), seq(32, n => 0), 0, 0, 0, 0,
+                state(seq(32, n => 0), seq(32, n => 0),
+                0, 0, 0, 0,
                 fgroups_t(flags, flags),
-                map[], map[], true)
+                map[], true)
         }
 
         function method read_reg32(r: reg32_t): uint32
@@ -319,16 +324,37 @@ module vt_ops {
             else this.(gprs := gprs[r.index := v])
         }
 
-        function method read_xmem(addr: uint32): uint32
-            requires xmem_addr_admissible(addr)
+        function method read_xword(addr: uint32): uint32
+            requires xword_ptr_admissible(addr)
         {
-            if addr in xmem then xmem[addr] else 0
+            if addr in mem then mem[addr] else 0
         }
 
-        function method write_xmem(addr: uint32, v: uint32): state
-            requires xmem_addr_admissible(addr)
+        function method write_xword(addr: uint32, v: uint32): state
+            requires xword_ptr_admissible(addr)
         {
-            this.(xmem := xmem[addr := v])
+            this.(mem := mem[addr := v])
+        }
+
+        function method read_wword(addr: uint32): uint256 
+            requires wword_ptr_admissible(addr)
+        {
+            var p0 := read_xword(addr + 0);
+            var p1 := read_xword(addr + 4);
+            var p2 := read_xword(addr + 8);
+            var p3 := read_xword(addr + 12);
+            var p4 := read_xword(addr + 16);
+            var p5 := read_xword(addr + 20);
+            var p6 := read_xword(addr + 24);
+            var p7 := read_xword(addr + 28);
+            uint256_eighth_assemble(p0, p1, p2, p3, p4, p5, p6, p7)
+        }
+
+        function method write_wword(addr: uint32, v: uint256): state
+            requires wword_ptr_admissible(addr)
+        {
+            var mem' := mem_write_wword(mem, addr, v);
+            this.(mem := mem')
         }
 
         function method eval_ADD(xrd: reg32_t, xrs1: reg32_t, xrs2: reg32_t): state
@@ -350,16 +376,16 @@ module vt_ops {
         {
             var base := read_reg32(xrs1);
             var addr := uint32_addi(base, offset);
-            if !xmem_addr_admissible(addr) then this.(ok := false)
-            else write_reg32(xrd, read_xmem(addr))
+            if !xword_ptr_admissible(addr) then this.(ok := false)
+            else write_reg32(xrd, read_xword(addr))
         }
 
         function method eval_SW(xrs1: reg32_t, xrs2: reg32_t, offset: int12): state
         {
             var base := read_reg32(xrs1);
             var addr := uint32_addi(base, offset);
-            if !xmem_addr_admissible(addr) then this.(ok := false)
-            else write_xmem(addr, read_reg32(xrs2))
+            if !xword_ptr_admissible(addr) then this.(ok := false)
+            else write_xword(addr, read_reg32(xrs2))
         }
 
         function method eval_LI(xrd: reg32_t, imm: uint32): state
@@ -383,8 +409,8 @@ module vt_ops {
             match r {
                 case WDR(index) => this.(wdrs := wdrs[r.index := v])
                 case WMOD => this.(wmod := v)
-                case WURND => this.(wurnd := v)
-                case WRND => this.(wrnd := v)
+                case WURND => this
+                case WRND => this
                 case WACC => this.(wacc := v)
             }
         }
@@ -399,28 +425,16 @@ module vt_ops {
             this.(fgroups := update_fgroups(fgroups, which_group, new_flags))
         }
 
-        function method read_wmem(addr: uint32): uint256 
-            requires wmem_addr_admissible(addr)
-        {
-            if addr in wmem then wmem[addr] else 0
-        }
-
-        function method write_wmem(addr: uint32, v: uint256): state 
-            requires wmem_addr_admissible(addr)
-        {
-            this.(wmem := wmem[addr := v])
-        }
-
         function method eval_BN_LID(grd: reg32_t, grd_inc: bool, offset: int10, grs: reg32_t, grs_inc: bool): state
-            // grd and grs should not be the same
+            // grd and grs should probably not be the same
         {
             var di := read_reg32(grd);
             var base := read_reg32(grs);
-            var addr := wmem_offsetted_addr(base, offset);
-            if di > 31 || !wmem_addr_admissible(addr) then 
+            var addr := wwrod_offset_ptr(base, offset);
+            if di > 31 || !wword_ptr_admissible(addr) then 
                 this.(ok := false)
             else
-                var value := read_wmem(addr);
+                var value := read_wword(addr);
                 // write to wdr[grd]
                 write_reg256(WDR(di), value).
                 // update grd
@@ -433,12 +447,12 @@ module vt_ops {
         {
             var di := read_reg32(grs2);
             var base := read_reg32(grs1);
-            var addr := wmem_offsetted_addr(base, offset);
-            if di > 31 || !wmem_addr_admissible(addr) then 
+            var addr := wwrod_offset_ptr(base, offset);
+            if di > 31 || !wword_ptr_admissible(addr) then 
                 this.(ok := false)
             else
                 var value := read_reg256(WDR(di));
-                write_wmem(addr, value).
+                write_wword(addr, value).
                 write_reg32(grs1, if grs1_inc then uint32_add(base, 32) else base).
                 write_reg32(grs2, if grs2_inc then di + 1 else di)
         }
@@ -693,7 +707,7 @@ module vt_ops {
         }
 
         method dump_wmem(addr: uint32, words: uint32)
-            requires wmem_addr_admissible(addr + words * 32)
+            requires wword_ptr_admissible(addr + words * 32)
         {
             var end := addr + words * 32;
             var i := 0;
@@ -701,10 +715,10 @@ module vt_ops {
 
             while cur < end
                 invariant cur == addr + i * 32
-                invariant wmem_addr_admissible(cur)
+                invariant wword_ptr_admissible(cur)
                 decreases end - cur
             {
-                var value := read_wmem(cur);
+                var value := read_wword(cur);
                 print(cur); print(":"); print_as_hex(value, 4); print("\n");
                 i := i + 1;
                 cur := cur + 32;

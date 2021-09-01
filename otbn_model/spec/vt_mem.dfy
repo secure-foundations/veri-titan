@@ -24,7 +24,7 @@ module vt_mem {
 
     type mem_t = map<int, uint32>
 
-    predicate wword_ptr_valid(mem: mem_t, ptr: nat)
+    predicate method wword_ptr_valid(mem: mem_t, ptr: nat)
     {
         && wword_ptr_admissible(ptr)
         && ptr + 0 in mem
@@ -52,7 +52,7 @@ module vt_mem {
         uint256_eighth_assemble(p0, p1, p2, p3, p4, p5, p6, p7)
     }
 
-    function method wirte_wword(mem: mem_t, ptr: nat, value: uint256): (mem' : mem_t)
+    function method mem_write_wword(mem: mem_t, ptr: nat, value: uint256): (mem' : mem_t)
         requires wword_ptr_admissible(ptr)
         ensures wword_ptr_valid(mem', ptr)
     {
@@ -85,7 +85,7 @@ module vt_mem {
     //     ptr: nat, value: uint256,
     //     other_ptr: nat)
     //     requires wword_ptr_admissible(ptr)
-    //     requires mem' == wirte_wword(mem, ptr, value)
+    //     requires mem' == mem_write_wword(mem, ptr, value)
     //     ensures read_wword(mem', ptr) == value
     // {
     //     uint256_eighth_value(value);
@@ -108,7 +108,7 @@ module vt_mem {
     {
         // ptr is mapped
         && ptr in heap
-        // ptr maps to a buffer
+        // ptr maps to a word
         && heap[ptr].WBUFF?
     }
 
@@ -208,29 +208,12 @@ module vt_mem {
         && heap[ptr].v == mem[ptr]
     }
 
-    // this holds for a given cell in wmem_t
-    // predicate wmem_cell_inv(heap: heap_t, wmem: wmem_t, ptr: nat)
-    //     requires ptr in wmem
-    // {
-    //     exists iter :: iter_safe(iter, heap, ptr)
-    // }
-
-    // function get_iter(wmem: wmem_t, ptr: nat, heap: heap_t) : iter_t
-    //     requires ptr in wmem
-    //     requires wmem_cell_inv(heap, wmem, ptr)
-    // {
-    //     var iter :| iter_safe(iter, heap, ptr);
-    //     iter
-    // }
-
     predicate mem_equiv(heap: heap_t, mem: mem_t)
     {
         && (forall base_ptr | is_buff_base_ptr(heap, base_ptr) ::
             heap_wbuff_inv(heap, mem, base_ptr))
         && (forall base_ptr | is_xword_ptr(heap, base_ptr) ::
             heap_xword_inv(heap, mem, base_ptr))
-        // && (forall ptr | ptr in mem ::
-        //     wmem_cell_inv(heap, mem, ptr))
     }
 
 /* correspondence lemmas */
@@ -243,14 +226,20 @@ module vt_mem {
     {
     }
 
+    // in our heap, we limit writes to only predefined addresses
+
     function heap_write_wword(heap: heap_t, iter: iter_t, ptr: nat, value: uint256): (heap_t, iter_t)
         requires iter_safe(iter, heap, ptr)
-        ensures var (heap', iter') := heap_write_wword(heap, iter, ptr, value);
-            iter_safe(iter', heap', ptr)
     {
         var buff := heap[iter.base_ptr].b;
         var new_buff := buff[iter.index := value];
         (heap[iter.base_ptr := WBUFF(new_buff)], iter.(buff := new_buff))
+    }
+
+    function heap_write_xword(heap: heap_t, ptr: nat, value: uint32): heap_t
+        requires is_xword_ptr(heap, ptr)
+    {
+        heap[ptr := XWORD(value)]
     }
 
     lemma sub_ptrs_disjoint(heap: heap_t, mem: mem_t, base1: nat, base2: nat)
@@ -298,7 +287,7 @@ module vt_mem {
 
     lemma write_wword_preverses_heap_wbuff_inv(
         heap: heap_t, heap': heap_t,
-        iter: iter_t, iter': iter_t,
+        iter: iter_t, 
         mem: mem_t, mem': mem_t,
         write_ptr: nat, value: uint256,
         other_ptr: nat)
@@ -307,13 +296,12 @@ module vt_mem {
         requires iter_safe(iter, heap, write_ptr)
         requires is_buff_base_ptr(heap, other_ptr)
         requires heap_wbuff_inv(heap, mem, other_ptr)
-        requires (heap', iter') == heap_write_wword(heap, iter, write_ptr, value)
+        requires heap' == heap_write_wword(heap, iter, write_ptr, value).0
+        requires mem' == mem_write_wword(mem, write_ptr, value)
 
         ensures is_buff_base_ptr(heap', other_ptr)
         ensures heap_wbuff_inv(heap', mem', other_ptr)
     {
-        var mem' := wirte_wword(mem, write_ptr, value);
-
         var base_ptr, j := iter.base_ptr, iter.index;
         var buff := heap[other_ptr].b;
         var buff' := heap'[other_ptr].b;
@@ -345,39 +333,84 @@ module vt_mem {
         assert heap_wbuff_inv(heap', mem', other_ptr);
     }
 
-//     lemma write_equiv(wmem: wmem_t, write_ptr: nat, value: uint256, heap: heap_t, iter: iter_t)
-//         requires buff_base_ptr_valid(wmem, write_ptr)
-//         requires mem_equiv(heap, wmem)
-//         requires iter_safe(iter, heap, write_ptr)
+    lemma write_wword_preverses_heap_xword_inv(
+        heap: heap_t, heap': heap_t,
+        iter: iter_t, 
+        mem: mem_t, mem': mem_t,
+        write_ptr: nat, value: uint256,
+        other_ptr: nat)
 
-//         ensures
-//             var wmem' := wmem[write_ptr := value];
-//             var (heap', iter') := write_heap(write_ptr, value, heap, iter);
-//             && mem_equiv(heap', wmem')
-//             && iter_safe(iter', heap', write_ptr)
-//     {
-//         var wmem' := wmem[write_ptr := value];
-//         var (heap', iter') := write_heap(write_ptr, value, heap, iter);
-        
-//         forall base_ptr | base_ptr in heap'
-//             ensures heap_wbuff_inv(heap', wmem', base_ptr)
-//         {
-//             write_preverses_heap_inv(wmem, write_ptr, value,
-//                 base_ptr, heap, iter, heap', iter');
-//         }
+        requires mem_equiv(heap, mem)
+        requires iter_safe(iter, heap, write_ptr)
+        requires is_xword_ptr(heap, other_ptr)
+        requires heap_xword_inv(heap, mem, other_ptr)
+        requires heap' == heap_write_wword(heap, iter, write_ptr, value).0
+        requires mem' == mem_write_wword(mem, write_ptr, value)
 
-//         forall ptr | ptr in wmem'
-//             ensures wmem_cell_inv(heap', wmem', ptr)
-//         {
-//             var iter := get_iter(wmem, ptr, heap);
-//             if iter.base_ptr != iter'.base_ptr {
-//                 assert iter_safe(iter, heap', ptr);
-//             } else {
-//                 assert ptr == buff_indexed_ptr(iter.base_ptr, iter.index);
-//                 assert iter'.base_ptr == iter.base_ptr;
-//                 var iter'' := iter'.(index := iter.index);
-//                 assert iter_safe(iter'', heap', ptr);
-//             }
-//         }
-//     }
+        ensures is_xword_ptr(heap', other_ptr)
+        ensures heap_xword_inv(heap', mem', other_ptr)
+    {
+        assert heap[other_ptr] == heap'[other_ptr];
+
+        if mem[other_ptr] != mem'[other_ptr] {
+            var i :| && i % 4 == 0
+                && 0 <= i <= 28
+                && write_ptr + i == other_ptr;
+            assert wword_inv(heap, mem, iter.base_ptr, iter.index, iter.buff[iter.index]);
+            assert false;
+        }
+    }
+
+    lemma write_wword_preverses_mem_equiv(
+        heap: heap_t, heap': heap_t,
+        iter: iter_t, iter': iter_t,
+        mem: mem_t, mem': mem_t,
+        write_ptr: nat, value: uint256)
+
+        requires mem_equiv(heap, mem)
+        requires iter_safe(iter, heap, write_ptr)
+
+        requires (heap', iter') == heap_write_wword(heap, iter, write_ptr, value)
+        requires mem' == mem_write_wword(mem, write_ptr, value)
+    
+        ensures mem_equiv(heap', mem')
+        ensures iter_safe(iter', heap', write_ptr)
+    {
+        forall base_ptr | is_buff_base_ptr(heap', base_ptr)
+            ensures heap_wbuff_inv(heap', mem', base_ptr)
+        {
+            write_wword_preverses_heap_wbuff_inv(heap, heap',
+                iter, mem, mem', write_ptr, value, base_ptr);
+        }
+        forall base_ptr | is_xword_ptr(heap', base_ptr)
+            ensures heap_xword_inv(heap', mem', base_ptr)
+        {
+            write_wword_preverses_heap_xword_inv(heap, heap',
+                iter, mem, mem', write_ptr, value, base_ptr);
+        }
+    }
+
+    lemma write_xword_preverses_mem_equiv(
+        heap: heap_t, heap': heap_t,
+        mem: mem_t, mem': mem_t,
+        write_ptr: nat, value: uint32)
+        requires mem_equiv(heap, mem)
+        requires is_xword_ptr(heap, write_ptr)
+
+        requires heap' == heap_write_xword(heap, write_ptr, value)
+        requires mem' == mem[write_ptr := value]
+
+        ensures mem_equiv(heap', mem')
+    {
+        forall base_ptr | is_buff_base_ptr(heap', base_ptr)
+            ensures heap_wbuff_inv(heap', mem', base_ptr)
+        {
+            assert heap_wbuff_inv(heap, mem, base_ptr);
+        }
+        forall base_ptr | is_xword_ptr(heap', base_ptr)
+            ensures heap_xword_inv(heap', mem', base_ptr)
+        {
+            assert heap_xword_inv(heap, mem, base_ptr);
+        }
+    }
 }
