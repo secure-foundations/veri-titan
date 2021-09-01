@@ -41,6 +41,8 @@ ghost procedure lemma_sub_mod32_correct(
       ghost iter_a_next: iter_t,
       ghost iter_n_next: iter_t,
       ghost iter_a'_next: iter_t,
+      ghost carry_add: int,
+      ghost carry_sub: int,
       ghost x13: uint32,
       ghost x14: uint32,
       ghost i: int
@@ -98,7 +100,8 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         invariant seq_subb(iter_a.buff[0..iter_a.index], iter_n.buff[0..iter_n.index]) == tuple(iter_a'.buff[0..iter_a'.index], neg1_to_uint1(A.full));
         decreases x16 - x12;
     {
-        let iter_a_next := lw_safe(x14, x10, 0, iter_a'); // load mem from x10 to x14 (x14 == a[i])
+        let _ := lw_safe(x14, x10, 0, iter_a'); // load mem from x10 to x14 (x14 == a[i])
+        let iter_a_next := lw_next_iter(iter_a);
         let iter_n_next := lw_safe(x13, x12, 0, iter_n); // load mem from x12 into x13 (x13 == n[i])
 
         addi(x12, x12, 4); // increment n pointer
@@ -107,10 +110,11 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         sub(x13, x15, x13); // lower half of A -= n[i]
 
         sltu(x14, x15, x14); // 1 in x14 if x15 < x14 -- overflow check from add
+        let carry_add := x14;
         add(x14, x14, x11); // add carry bit to upper half of A
 
         sltu(x15, x15, x13); // underflow check from sub
-        let carry_sub := x13;
+        let carry_sub := x15;
 
         // a[i] == lower half of A
         // storing lower old(A) + a[i] - n[i]
@@ -128,7 +132,7 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     
         // A'.lh == x15
         // A'.uh == x11
-        lemma_sub_mod32_correct(A, A', iter_a, iter_n, iter_a', iter_a_next, iter_n_next, iter_a'_next, x13, x14, iter_a.index);
+        lemma_sub_mod32_correct(A, A', iter_a, iter_n, iter_a', iter_a_next, iter_n_next, iter_a'_next, carry_add, carry_sub, x13, x14, iter_a.index);
 
         // update variables for next loop
         A := A';
