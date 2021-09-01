@@ -67,7 +67,7 @@ type xmem_t: Type(0) := map(int, uint32);
 type heap_t: Type(0) := map(int, seq(uint256));
 type wmem_t: Type(0) := map(int, uint256);
 
-function heap_base_addr_valid(heap: heap_t, ptr: int): bool extern;
+function buff_base_addr_valid(heap: heap_t, ptr: int): bool extern;
 
 type wdrs_t: Type(0) extern;
 function operator([]) (s: wdrs_t, i: int): uint256 extern; 

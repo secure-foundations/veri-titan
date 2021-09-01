@@ -340,6 +340,14 @@ module bv_ops {
         }
     }
 
+    function method uint256_eighth_split(x: uint256, qx: uint4): uint32
+    
+    function method uint256_eighth_assemble(
+        p0: uint32, p1: uint32,
+        p2: uint32, p3: uint32,
+        p4: uint32, p5: uint32,
+        p6: uint32, p7: uint32): uint256
+
     // lemma {:axiom} and_single_bit_lemma(x': uint256, x: uint256, w0: uint256, i: nat)
     //     requires w0 == power(2, i);
     //     requires x' == uint256_and(x, w0);
