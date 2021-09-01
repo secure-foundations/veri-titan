@@ -79,7 +79,7 @@ module bv_ops {
     {
     }
 
-    
+
     function pow_B32(e: nat): nat
     {
         power(BASE_32, e)
@@ -238,7 +238,7 @@ module bv_ops {
     {
         to_uint64(x) / BASE_32
     }
-    
+
     lemma lemma_int64_half_split(x: int64)
         ensures x == to_int64(int64_lh(x) + int64_uh(x) * BASE_32);
     {

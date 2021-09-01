@@ -27,7 +27,7 @@ ghost procedure sub_mod32_correct_lemma(
        ghost x11: uint32,
        ghost x15: uint32
 ) extern;
-    
+
 function seq_subb(xs: seq(uint32), ys: seq(uint32)) : tuple(seq(uint32), uint1) extern;
 function int64_rs(x: int64, shift: nat) : int64 extern;
 function sub_mod32_update_A(A: int, a: int, n: int) : int64 extern;
@@ -44,16 +44,15 @@ ghost procedure lemma_sub_mod32_correct(
       ghost carry_add: int,
       ghost carry_sub: int,
       ghost x13: uint32,
-      ghost x14: uint32,
       ghost i: int
 ) extern;
-    
+
 procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     returns (ghost iter_a': iter_t)
     requires
         iter_safe(iter_n, mem, 71192);
         seq_len(iter_n.buff) == 384;
-    
+
         iter_safe(iter_a, mem, x10);
         seq_len(iter_a.buff) == 384;
     modifies
@@ -85,12 +84,12 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
 
     ghost var A := int64_cons(x15, x11, 0);
     assert(valid_int64_view(A, x15, x11));
-    
+
     iter_a' := iter_a;
     ghost var iter_a := iter_a;
     ghost var iter_n := iter_n;
     while (x12 != x16)
-        invariant iter_inv(iter_a', mem, x10); 
+        invariant iter_inv(iter_a', mem, x10);
         invariant iter_inv(iter_n, mem, x12);
         invariant valid_int64_view(A, x15, x11);
         invariant ((-1) <= A.full);
@@ -109,7 +108,7 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         add(x15, x15, x14); // lower half of A += a[i]
         sub(x13, x15, x13); // lower half of A -= n[i]
 
-        sltu(x14, x15, x14); // 1 in x14 if x15 < x14 -- overflow check from add
+        sltu(x14, x15, x14); // overflow check from add
         let carry_add := x14;
         add(x14, x14, x11); // add carry bit to upper half of A
 
@@ -121,18 +120,16 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         let iter_a'_next := sw(x13, x10, 0, iter_a');
 
         sub(x15, x14, x15); // subtract underflow carry from upper half of A
-    
+
         // srai is sign-preserving, so shifting by 31 bits results in all 0's or all 1's
         srai(x11, x15, 0x1f); // right arith shift by 31 -- x11 == uh(A)
-    
+
         // new A is signed old A, shifted by 32
         ghost var A' := int64_cons(x15, x11, int64_rs(sub_mod32_update_A(A.full, a, n), 32));
-    
+
         addi(x10, x10, 4); // increment a pointer
-    
-        // A'.lh == x15
-        // A'.uh == x11
-        lemma_sub_mod32_correct(A, A', iter_a, iter_n, iter_a', iter_a_next, iter_n_next, iter_a'_next, carry_add, carry_sub, x13, x14, iter_a.index);
+
+        lemma_sub_mod32_correct(A, A', iter_a, iter_n, iter_a', iter_a_next, iter_n_next, iter_a'_next, carry_add, carry_sub, x13, iter_a.index);
 
         // update variables for next loop
         A := A';
@@ -143,7 +140,7 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     }
 
 }
-        
+
 #verbatim
 }
 #endverbatim
