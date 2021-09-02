@@ -23,12 +23,12 @@ method printReg32(r:reg32_t)
 method printIns32(ins:ins32)
 {
     match ins
-        case LW(grd, grs1, offset) =>
+        case LW(grd, offset, grs1) =>
             print ("  lw ");
             printReg32(grd); print(", "); print(offset); print("("); printReg32(grs1); print(")");
             print("\n");
 
-        case SW(grs2, grs1, offset) =>
+        case SW(grs2, offset, grs1) =>
             print ("  sw ");
             printReg32(grs2); print(", "); print(offset); print("("); printReg32(grs1); print(")");
             print("\n");
@@ -97,8 +97,8 @@ method printShift(shift:shift_t)
     match shift
         case SFT(left, bytes) =>
         match left
-            case true => print("<< "); print(bytes);
-            case false => print(">> "); print(bytes);
+            case true => print("<< "); print(bytes * 8);
+            case false => print(">> "); print(bytes * 8);
 }
 
 method printFlags(fg:uint1)
@@ -160,12 +160,13 @@ method printIns256(ins:ins256)
             printReg256(src2); print("."); print(qwsel2); print(", ");
             printAccShift(shift); print("\n");
 
-        case BN_MULQACC_SO(zero, dst, lower, src1, qwsel1, src2, qwsel2, shift) =>
+        case BN_MULQACC_SO(zero, dst, lower, src1, qwsel1, src2, qwsel2, shift, fg) =>
             if zero { print("  bn.mulqacc.so.z "); } else { print("  bn.mulqacc.so "); }
                     printReg256(dst); print("."); if lower { print("L"); } else { print("U"); } print(", ");
             printReg256(src1); print("."); print(qwsel1); print(", ");
             printReg256(src2); print("."); print(qwsel2); print(", ");
-            printAccShift(shift); print("\n");
+            printAccShift(shift); print(", "); printFlags(fg); 
+            print("\n");
 
         // todo
         // case BN_SUBI(dst, src1, src2, fg) =>
