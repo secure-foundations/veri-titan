@@ -76,7 +76,7 @@ procedure cond_sub_to_reg_inner(
             init_view[..iter.index] == wdrs[4..x8];
     
     reads
-        w3; w31; wmem; heap;
+        w3; w31; mem; heap;
 
     modifies
         x8; x12; x13; x16;
@@ -135,6 +135,16 @@ procedure cond_sub_to_reg_inner(
     ghost if (selection) {
         subb_inv_peri_lemma(next_view, new_carry,
             init_view, next_iter.buff, old_carry, iter.index);
+    } else {
+        calc == {
+            init_view[..next_iter.index];
+            ==
+            seq_append(init_view[..iter.index], init_view[iter.index]);
+            ==
+            seq_append(wdrs[4..x8-1], init_view[iter.index]);
+            ==
+            wdrs[4..x8];
+        }
     }
 }
 
@@ -159,7 +169,7 @@ procedure cond_sub_to_reg(
         seq_len(init_iter.buff) == NUM_WORDS;
 
     reads
-        x30; w3; w31; wmem; heap;
+        x30; w3; w31; mem; heap;
 
     modifies
         fgroups;

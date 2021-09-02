@@ -63,9 +63,21 @@ type reg256_t: Type(0) extern;
 function operator(.index) (r :reg256_t): nat extern;
 function is_wide_data_register(r: reg256_t): bool extern;
 
-type xmem_t: Type(0) := map(int, uint32);
-type heap_t: Type(0) := map(int, seq(uint256));
-type wmem_t: Type(0) := map(int, uint256);
+type entry_t: Type(0) extern;
+function XWORD(v: uint32): entry_t extern;
+function WBUFF(b: seq(uint256)): entry_t extern;
+function operator(.v) (e :entry_t): uint32 extern;
+function operator(.b) (e :entry_t): seq(uint256) extern;
+
+type heap_t:  Type(0) := map(int, entry_t);
+var heap: heap_t {:state heap()};
+function xword_ptr_valid(heap: heap_t, ptr: int): bool extern;
+function buff_base_ptr_valid(heap: heap_t, ptr: nat): bool extern;
+function heap_read_xword(heap: heap_t, ptr: int): uint32 extern;
+function heap_write_xword(heap: heap_t, ptr: int, value: uint32): heap_t extern;
+
+type mem_t: Type(0) extern;
+var mem: mem_t {:state mem()};
 
 function buff_base_addr_valid(heap: heap_t, ptr: int): bool extern;
 
@@ -73,12 +85,6 @@ type wdrs_t: Type(0) extern;
 function operator([]) (s: wdrs_t, i: int): uint256 extern; 
 function operator([ := ]) (s: wdrs_t, i: int, v: uint256): wdrs_t extern;
 function operator([ .. ]) (s: wdrs_t, begin: int, end: int): seq(uint256) extern;
-
-function Loop(u: uint32) : bool extern;
-function LoopImm(u: uint32) : bool extern;
-
-function fst #[a: Type(0), b: Type(0)](m: tuple(a, b)): a extern;
-function snd #[a: Type(0), b: Type(0)](m: tuple(a, b)): b extern;
 
 function bool_to_uint1(i:bool) : uint1 extern;
 
@@ -117,22 +123,15 @@ function operator(.full) (num: uint512_view_t): int extern;
 
 var ok: bool {:state ok()};
 
-var xmem: xmem_t {:state xmem()};
-function xmem_addr_valid(h: xmem_t, ptr: int): bool extern;
-// function valid_base_addr(wmem: heap_t, base_addr: int, num_words: int): bool extern;
-
 type iter_t: Type(0) extern;
 function iter_cons(base_addr: int, index: nat, buff: seq(uint256)): iter_t extern;
 function bn_lid_next_iter(iter: iter_t, inc: bool): iter_t extern;
 function bn_sid_next_iter(iter: iter_t, value: uint256, inc: bool): iter_t extern;
-function operator(.base_addr) (iter :iter_t): int extern;
+function operator(.base_ptr) (iter :iter_t): int extern;
 function operator(.index) (iter :iter_t): int extern;
 function operator(.index := ) (iter: iter_t, i :int): iter_t extern;
 function operator(.buff) (iter :iter_t): seq(uint256) extern;
 function operator(.buff := ) (iter :iter_t, buff: seq(uint256)): iter_t extern;
-
-var heap: heap_t {:state heap()};
-var wmem: wmem_t {:state wmem()};
 
 function iter_inv(iter: iter_t, h: heap_t, ptr: int): bool extern;
 function iter_safe(iter: iter_t, h: heap_t, ptr: int): bool extern;
@@ -163,10 +162,16 @@ function operator(.rsa) (vars: mvars): rsa_params extern;
 function mvars_inv(vars: mvars, heap: heap_t, x_ptr: int, y_ptr: int,
     m_ptr: int, rr_ptr: int, m0d_ptr: int, sig_ptr: int): bool extern;
 
+function Loop(u: uint32) : bool extern;
+function LoopImm(u: uint32) : bool extern;
+
+type string: Type(0) extern;
+
+function fst #[a: Type(0), b: Type(0)](m: tuple(a, b)): a extern;
+function snd #[a: Type(0), b: Type(0)](m: tuple(a, b)): b extern;
+
 function ToNat #[a: Type(0)] (s: seq(a)): nat extern;
 ghost procedure LemmaSeqLen2 #[a: Type(0)] (ghost xs: seq(a)) extern;
-    
-type string: Type(0) extern;
 
 var x0: uint32 {:state reg32_t(GPR(0))};
 var x1: uint32 {:state reg32_t(GPR(1))};
@@ -306,9 +311,6 @@ function operator(.new_dst) (m: mulqacc_so_result_t): uint256 extern;
 function operator(.new_flags) (m: mulqacc_so_result_t): flags_t extern;
 function otbn_mulqacc_so(product: uint256, z: uint256, lower: bool, flags: flags_t) : mulqacc_so_result_t extern;
 
-// function seq_subb(x: seq(uint256), y: seq(uint256)) : tuple(seq(uint256), uint1) extern;
-// function seq_addc(x: seq(uint256), y: seq(uint256)) : tuple(seq(uint256), uint1) extern;
-
 function seq_addc_512_is_safe(x: seq(uint256), y: seq(uint256)) : bool extern;
 
 //   assert va_s0.ok;
@@ -319,35 +321,38 @@ function seq_addc_512_is_safe(x: seq(uint256), y: seq(uint256)) : bool extern;
 //   assert va_sM == va_s0.eval_SW(grs1, grs2, offset);
 
 procedure lw(out grd: reg32, inline offset: int12, in grs1: reg32)
-    {:instruction Ins32(LW(grd, grs1, offset))}
+    {:instruction Ins32(LW(grd, offset, grs1,))}
     reads
-        xmem;
+        heap;
     requires
-        xmem_addr_valid(xmem, uint32_addi(grs1, offset));
+        xword_ptr_valid(heap, uint32_addi(grs1, offset));
     ensures
-        xmem_addr_valid(xmem, uint32_addi(old(grs1), offset));
-        grd == xmem[uint32_addi(old(grs1), offset)];
+        xword_ptr_valid(heap, uint32_addi(old(grs1), offset));
+        grd == heap_read_xword(heap, uint32_addi(old(grs1), offset));
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
     this := this.(heap := old(this).heap);
 }
 
+function sw_correct(gs: state, grs2: reg32_t, offset: int12, grs1: reg32_t, write_ptr: uint32): (new_heap: heap_t) extern;
+
 procedure sw(in grs2: reg32, inline offset: int12, in grs1: reg32)
-    {:instruction Ins32(SW(grs2, grs1, offset))}
+    {:instruction Ins32(SW(grs2, offset, grs1))}
     modifies
-        xmem;
+        heap; mem;
     requires
-        xmem_addr_valid(xmem, uint32_addi(grs1, offset));
+        xword_ptr_valid(heap, uint32_addi(grs1, offset));
     ensures
-        xmem_addr_valid(xmem, uint32_addi(grs1, offset));
-    ensures
-        xmem == old(xmem)[uint32_addi(grs1, offset) := grs2];
+        xword_ptr_valid(old(heap), uint32_addi(grs1, offset));
+        heap == heap_write_xword(old(heap), uint32_addi(grs1, offset), grs2);
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
-    this := this.(heap := old(this).heap);
+    let new_heap := sw_correct(old(this), @grs2, offset, @grs1, uint32_addi(grs1, offset));
+    this := this.(heap := new_heap);
 }
+
 
 procedure add(inout dst: reg32, in src1: reg32, in src2: reg32)
     {:instruction Ins32(ADD(dst, src1, src2))}
@@ -572,7 +577,7 @@ procedure bn_mulqacc_so_safe(
 
 function mod_add(a: int, b: int, m: int): int extern;
 
-function wmem_offsetted_addr(base: uint32, offset: int10): uint32 extern;
+function wwrod_offset_ptr(base: uint32, offset: int10): uint32 extern;
 
 function bn_lid_correct(s: state,
     grd: reg32_t, grd_inc: bool,
@@ -591,13 +596,11 @@ procedure bn_lid_safe(
         // note this is overly restricting 
         offset == 0;
         @grd != @grs;
-        @grd.index != 0;
-        @grs.index != 0;
         grd <= 31;
-        let addr := wmem_offsetted_addr(grs, offset);
+        let addr := wwrod_offset_ptr(grs, offset);
         iter_safe(iter, heap, addr);
     reads
-        wmem; heap;
+        mem; heap;
     modifies
         wdrs;
     ensures
@@ -608,7 +611,7 @@ procedure bn_lid_safe(
         next_iter == bn_lid_next_iter(iter, grs_inc);
 {
     reveal eval_code_opaque;
-    let addr := wmem_offsetted_addr(old(grs), offset);
+    let addr := wwrod_offset_ptr(old(grs), offset);
     this := this.(heap := old(this).heap);
     next_iter := bn_lid_correct(old(this), @grd, grd_inc,
         offset, @grs, grs_inc, addr, iter);
@@ -619,6 +622,8 @@ function bn_sid_correct(gs: state,
         offset: int10, grs1: reg32_t, grs1_inc: bool,
         value: uint256, addr: uint32, iter: iter_t)
     : tuple(heap_t, iter_t) extern;
+
+function heap_write_wword(heap: heap_t, iter: iter_t, ptr: nat, value: uint256): heap_t extern;
 
 procedure bn_sid_safe(
     inout grs2: reg32, inline grs2_inc: bool,
@@ -632,24 +637,23 @@ procedure bn_sid_safe(
         // note this is overly restricting 
         offset == 0;
         @grs1 != @grs2;
-        @grs1.index != 0;
-        @grs2.index != 0;
         grs2 <= 31;
-        let addr := wmem_offsetted_addr(grs1, offset);
+        let addr := wwrod_offset_ptr(grs1, offset);
         iter_safe(iter, heap, addr);
     reads
         wdrs;
     modifies
-        wmem; heap;
+        mem; heap;
     ensures
         grs1 == (if grs1_inc then (old(grs1) + 32) else old(grs1));
         grs2 == (if grs2_inc then (old(grs2) + 1) else old(grs2));
+        let addr := wwrod_offset_ptr(old(grs1), offset);
+        heap == old(heap)[iter.base_ptr := WBUFF(next_iter.buff)];
         iter_inv(next_iter, heap, grs1 + offset);
-        heap == old(heap)[iter.base_addr := next_iter.buff];
         next_iter == bn_sid_next_iter(iter, wdrs[old(grs2)], grs1_inc);
 {
     reveal eval_code_opaque;
-    let addr := wmem_offsetted_addr(old(grs1), offset);
+    let addr := wwrod_offset_ptr(old(grs1), offset);
     let value := wdrs[old(grs2)];
     let result := bn_sid_correct(old(this), @grs2, grs2_inc,
         offset, @grs1, grs1_inc, value, addr, iter);
@@ -667,6 +671,7 @@ procedure bn_mov(inout dst: reg256, in src: reg256)
     this := this.(heap := old(this).heap);
 }
 
+// note that implicitly we are not using x0/x1 for inout 
 procedure bn_movr(inout grd: reg32, inline grd_inc: bool, inout grs: reg32, inline grs_inc: bool)
     {:instruction Ins256(BN_MOVR(grd, grd_inc, grs, grs_inc))}
     requires

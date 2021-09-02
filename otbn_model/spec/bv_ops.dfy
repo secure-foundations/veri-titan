@@ -340,33 +340,48 @@ module bv_ops {
         }
     }
 
-    function method uint256_eighth_split(x: uint256, qx: uint4): uint32
-    
-    function method uint256_eighth_assemble(
+    function method  {:opaque} uint256_eighth_split(x: uint256, sel: nat): uint32
+        requires 0 <= sel <= 7
+    {
+        if sel == 7 then ((x as bv256 >> 224) as int) % BASE_32
+        else if sel == 6 then ((x as bv256 >> 192) as int) % BASE_32
+        else if sel == 5 then ((x as bv256 >> 160) as int) % BASE_32
+        else if sel == 4 then ((x as bv256 >> 128) as int) % BASE_32
+        else if sel == 3 then ((x as bv256 >> 96) as int) % BASE_32
+        else if sel == 2 then ((x as bv256 >> 64) as int) % BASE_32
+        else if sel == 1 then ((x as bv256 >> 32) as int) % BASE_32
+        else ((x as bv256) as int) % BASE_32
+    }
+
+    function method {:opaque} uint256_eighth_assemble(
         p0: uint32, p1: uint32,
         p2: uint32, p3: uint32,
         p4: uint32, p5: uint32,
         p6: uint32, p7: uint32): uint256
+    {
+        ((p7 as bv256 << 224)
+        | (p6 as bv256 << 192) 
+        | (p5 as bv256 << 160) 
+        | (p4 as bv256 << 128) 
+        | (p3 as bv256 << 96) 
+        | (p2 as bv256 << 64) 
+        | (p1 as bv256 << 32) 
+        | (p0 as bv256)) as uint256
+    }
 
-    // lemma {:axiom} and_single_bit_lemma(x': uint256, x: uint256, w0: uint256, i: nat)
-    //     requires w0 == power(2, i);
-    //     requires x' == uint256_and(x, w0);
-    //     ensures x' == power(2, i) || x' == 0;
-
-    // lemma {:axiom} or_zero_nop_lemma(x: uint256, z: uint256)
-    //     requires z == 0;
-    //     ensures uint256_or(x, z) == x;
-
-    // lemma {:axiom} or_single_bit_add_lemma(x': uint256, x: uint256, w0: uint256, i: nat)
-    //     requires w0 == power(2, i);
-    //     requires x < power(2, i);
-    //     requires x' == uint256_or(x, w0);
-    //     ensures x' == x + w0;
-    //     ensures x' < power(2, i + 1);
-
-    // lemma {:axiom} odd_and_one_lemma(x: uint256) 
-    //     requires x % 2 == 1;
-    //     ensures uint256_and(x, 1) == 1;
+    lemma uint256_eighth_value(v: uint256)
+        ensures v == uint256_eighth_assemble(
+            uint256_eighth_split(v, 0),
+            uint256_eighth_split(v, 1),
+            uint256_eighth_split(v, 2),
+            uint256_eighth_split(v, 3),
+            uint256_eighth_split(v, 4),
+            uint256_eighth_split(v, 5),
+            uint256_eighth_split(v, 6),
+            uint256_eighth_split(v, 7))
+    {
+        assume false;
+    }
 
     lemma xor_clear_lemma(x: uint256)
         ensures uint256_xor(x, x) == 0;

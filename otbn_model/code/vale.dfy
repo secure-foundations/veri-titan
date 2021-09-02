@@ -11,7 +11,6 @@ module vt_vale {
     import opened Mul
     import opened NativeTypes
 
-
     function fst<T,Q>(t:(T, Q)) : T { t.0 }
     function snd<T,Q>(t:(T, Q)) : Q { t.1 }
 
@@ -152,30 +151,17 @@ module vt_vale {
         sK.(ms := sK.ms.(wdrs := temp))
     }
 
-    // xmem
+    // mem
 
-    function va_get_xmem(s: va_state): map<int, uint32>
+    function va_get_mem(s: va_state): map<int, uint32>
     {
-        s.ms.xmem
+        s.ms.mem
     }
 
-    function va_update_xmem(sM: va_state, sK: va_state): va_state
+    function va_update_mem(sM: va_state, sK: va_state): va_state
     {
-        var temp := sM.ms.xmem;
-        sK.(ms := sK.ms.(xmem := temp))
-    }
-
-    // wmem
-
-    function va_get_wmem(s: va_state): map<nat, uint256>
-    {
-        s.ms.wmem
-    }
-
-    function va_update_wmem(sM: va_state, sK: va_state): va_state
-    {
-        var temp := sM.ms.wmem;
-        sK.(ms := sK.ms.(wmem := temp))
+        var temp := sM.ms.mem;
+        sK.(ms := sK.ms.(mem := temp))
     }
 
     // heap
@@ -188,6 +174,33 @@ module vt_vale {
     function va_update_heap(sM: va_state, sK: va_state): va_state
     {
         sK.(heap := sM.heap)
+    }
+
+    lemma sw_correct(gs: gstate, grs2: reg32_t,
+        offset: int12, grs1: reg32_t, write_ptr: uint32)
+        returns (new_heap: heap_t)
+
+        requires valid_state_opaque(gs)
+        requires write_ptr == uint32_addi(gs.ms.read_reg32(grs1), offset);
+        requires xword_ptr_valid(gs.heap, write_ptr);
+        
+        ensures
+            var r := gs.ms.eval_SW(grs2, offset, grs1);
+            var gr := gstate(r, new_heap);
+            var value := gs.ms.read_reg32(grs2);
+            && valid_state_opaque(gr)
+            && xword_ptr_valid(gr.heap, write_ptr)
+            && heap_read_xword(gr.heap, write_ptr) == value
+            && new_heap == heap_write_xword(gs.heap, write_ptr, value)
+    {
+        reveal valid_state_opaque();
+
+        var value := gs.ms.read_reg32(grs2);
+        new_heap := heap_write_xword(gs.heap, write_ptr, value);
+
+        write_xword_preverses_mem_equiv(gs.heap, new_heap,
+            gs.ms.mem, gs.ms.mem[write_ptr := value],
+            write_ptr, value);
     }
 
     lemma bn_lid_correct(gs: gstate,
@@ -205,7 +218,7 @@ module vt_vale {
             && grs.index != 0
             && grs.index != 1
         requires gs.ms.read_reg32(grd) <= 31
-        requires addr == wmem_offsetted_addr(gs.ms.read_reg32(grs), offset)
+        requires addr == wwrod_offset_ptr(gs.ms.read_reg32(grs), offset)
         requires iter_safe(iter, gs.heap, addr)
 
         ensures 
@@ -217,7 +230,7 @@ module vt_vale {
             && gr.ms.read_reg32(grs) == (gs.ms.read_reg32(grs) + if grs_inc then 32 else 0)
             // new_iter still reflects the memory
             && new_iter == bn_lid_next_iter(iter, grs_inc)
-            && var addr := wmem_offsetted_addr(gr.ms.read_reg32(grs), offset);
+            && var addr := wwrod_offset_ptr(gr.ms.read_reg32(grs), offset);
             && iter_inv(new_iter, gr.heap, addr)
             // the resulting wide register
             && gr.ms.wdrs[gs.ms.read_reg32(grd)] == new_iter.buff[iter.index]
@@ -241,10 +254,10 @@ module vt_vale {
             && grs1.index != 1
             && grs2.index != 0
             && grs2.index != 1
-        requires 
+        requires
             var s := gs.ms;
             && s.read_reg32(grs2) <= 31
-            && addr == wmem_offsetted_addr(s.read_reg32(grs1), offset)
+            && addr == wwrod_offset_ptr(s.read_reg32(grs1), offset)
             && value == s.read_reg256(WDR(s.read_reg32(grs2)))
             && iter_safe(iter, gs.heap, addr)
 
@@ -259,17 +272,18 @@ module vt_vale {
             && r.read_reg32(grs1) == (s.read_reg32(grs1) + if grs1_inc then 32 else 0)
             // new_iter still reflects the memory
             && new_iter == bn_sid_next_iter(iter, value, grs1_inc)
-            && var addr := wmem_offsetted_addr(r.read_reg32(grs1), offset);
+            && var addr := wwrod_offset_ptr(r.read_reg32(grs1), offset);
             && iter_inv(new_iter, new_h, addr)
-            && gr.heap == gs.heap[iter.base_addr := new_iter.buff]
+            && gr.heap == gs.heap[iter.base_ptr := WBUFF(new_iter.buff)]
     {
         reveal valid_state_opaque();
         var r := gs.ms.eval_BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc);
-        var temp := write_heap(addr, value, gs.heap, iter);
-        write_equiv(gs.ms.wmem, addr, value, gs.heap, iter);
-        var new_iter := bn_sid_next_iter(iter, value, grs1_inc);
-        assert r.wmem == gs.ms.wmem[addr := value];
-        return (temp.0, new_iter);
+        var heap' := heap_write_wword(gs.heap, iter, addr, value);
+        write_wword_preverses_mem_equiv(
+            gs.heap, heap', iter,
+            gs.ms.mem, r.mem, addr, value);
+        var iter' := bn_sid_next_iter(iter, value, grs1_inc);
+        return (heap', iter');
     }
 
     // ok
@@ -296,7 +310,7 @@ module vt_vale {
         // && s0.ms.wrnd == s1.ms.wrnd
         // && s0.ms.wacc == s1.ms.wacc
         // && s0.ms.fgroups == s1.ms.fgroups
-        // && s0.ms.xmem == s1.ms.xmem
+        // && s0.ms.mem == s1.ms.mem
         // && s0.ms.wmem == s1.ms.wmem
         // && s0.ms.ok == s1.ms.ok
     }
@@ -317,7 +331,7 @@ module vt_vale {
         ensures valid_state_opaque(s) ==> valid_state(s.ms);
     {
         && s.ms.ok
-        && mem_equiv(s.heap, s.ms.wmem)
+        && mem_equiv(s.heap, s.ms.mem)
     }
 
     function method va_CNil(): codes { CNil }
@@ -480,7 +494,7 @@ module vt_vale {
             c0 := b.hd;
             b1 := b.tl;
             r1 := gstate(r', s0.heap);
-            // r1 := gstate(r'.gprs, r'.wdrs, r'.wmod, r'.wrnd, r'.wacc, r'.fgroups, r'.xmem, r'.wmem, r'.ok);
+            // r1 := gstate(r'.gprs, r'.wdrs, r'.wmod, r'.wrnd, r'.wacc, r'.fgroups, r'.mem, r'.wmem, r'.ok);
             if valid_state_opaque(s0) {
                 reveal_valid_state_opaque();
                 code_state_validity(c0, s0.ms, r1.ms);

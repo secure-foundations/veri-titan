@@ -107,8 +107,8 @@ module vt_ops {
     datatype ins32 =
         | ADD(xrd: reg32_t, xrs1: reg32_t, xrs2: reg32_t)
         | ADDI(xrd: reg32_t, xrs1: reg32_t, imm: int12)
-        | LW(xrd: reg32_t, xrs1: reg32_t, offset: int12)
-        | SW(xrs1: reg32_t, xrs2: reg32_t, offset: int12)
+        | LW(xrd: reg32_t, offset: int12, xrs1: reg32_t)
+        | SW(xrs2: reg32_t, offset: int12, xrs1: reg32_t)
         // | LOOP(grs: reg32_t, bodysize: uint32)
         // | LOOPI(iterations: uint32, bodysize: uint32)
         | LI(xrd: reg32_t, imm32: uint32)
@@ -200,7 +200,6 @@ module vt_ops {
         else if q == 2 then x * BASE_128
         else x * BASE_192
     }
-
 
     // mulquacc but no overflow
     function otbn_mulqacc_safe(
@@ -372,7 +371,7 @@ module vt_ops {
             write_reg32(xrd, sum)
         }
 
-        function method eval_LW(xrd: reg32_t, xrs1: reg32_t, offset: int12): state
+        function method eval_LW(xrd: reg32_t, offset: int12, xrs1: reg32_t): state
         {
             var base := read_reg32(xrs1);
             var addr := uint32_addi(base, offset);
@@ -380,7 +379,7 @@ module vt_ops {
             else write_reg32(xrd, read_xword(addr))
         }
 
-        function method eval_SW(xrs1: reg32_t, xrs2: reg32_t, offset: int12): state
+        function method eval_SW(xrs2: reg32_t, offset: int12, xrs1: reg32_t): state
         {
             var base := read_reg32(xrs1);
             var addr := uint32_addi(base, offset);
@@ -592,8 +591,8 @@ module vt_ops {
             else match xins
                 case ADD(xrd, xrs1, xrs2) => eval_ADD(xrd, xrs1, xrs2)
                 case ADDI(xrd, xrs1, imm) => eval_ADDI(xrd, xrs1, imm)
-                case LW(xrd, xrs1, offset) => eval_LW(xrd, xrs1, offset)
-                case SW(xrs2, xrs1, offset) => eval_SW(xrs1, xrs2, offset)
+                case LW(xrd, offset, xrs1) => eval_LW(xrd, offset, xrs1)
+                case SW(xrs2, offset, xrs1) => eval_SW(xrs2, offset, xrs1)
                 case LI(xrd, imm32) => eval_LI(xrd, imm32)
                 case ECALL => this
         }

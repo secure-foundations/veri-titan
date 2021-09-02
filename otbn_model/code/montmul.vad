@@ -67,8 +67,7 @@ procedure montmul_0(ghost vars: mvars)
         w31 == 0;
 
         heap == old(heap);
-        wmem == old(wmem);
-        xmem == old(xmem);
+        mem == old(mem);
 
         valid_wdr_view(wdrs, a_view, 4, NUM_WORDS);
         ToNat(a_view) == 0;
@@ -99,8 +98,7 @@ procedure montmul_0(ghost vars: mvars)
             a_view[..x10 - 4] == SeqZero(x10 - 4);
 
             heap == old(heap);
-            wmem == old(wmem);
-            xmem == old(xmem);
+            mem == old(mem);
 
         decreases
             loop_ctr;
@@ -142,8 +140,7 @@ procedure montmul(ghost vars: mvars)
         w31 == 0;
 
         heap == old(heap);
-        xmem == old(xmem);
-        wmem == old(wmem);
+        mem == old(mem);
 
         valid_wdr_view(wdrs, a_view, 4, NUM_WORDS);
         mvars_inv(vars, heap, NA, x19, x16, x17, NA, NA);
@@ -168,7 +165,7 @@ procedure montmul(ghost vars: mvars)
 
             iter_inv(x_it, heap, x20);
             x_it.index + loop_ctr == NUM_WORDS;
-            x_it.base_addr == vars.x_it.base_addr;
+            x_it.base_ptr == vars.x_it.base_ptr;
             x_it.buff == vars.x_it.buff;
 
             w3 == vars.rsa.M0D;
@@ -181,8 +178,7 @@ procedure montmul(ghost vars: mvars)
             valid_wdr_view(wdrs, a_view, 4, NUM_WORDS);
 
             heap == old(heap);
-            wmem == old(wmem);
-            xmem == old(xmem);
+            mem == old(mem);
 
         decreases loop_ctr;
     {
