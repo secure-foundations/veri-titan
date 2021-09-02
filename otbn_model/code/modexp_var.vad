@@ -361,12 +361,23 @@ returns (ghost out_iter: iter_t)
         assert w3 == adjusted_view[index];
    
         bn_sel(w2, w2, w3, 0, 0);
+
+        out_iter := bn_sid_safe(x9, false, 0, x21, true, out_iter);
+
         ghost if (carry) {
             assert w2 == raw_view[index];
+            calc == {
+                out_iter.buff[..out_iter.index];
+                ==
+                seq_append(out_iter.buff[..index], raw_view[index]);
+                ==
+                seq_append(raw_view[..index], raw_view[index]);
+                ==
+                raw_view[..out_iter.index];
+            }
         } else {
             assert w2 == adjusted_view[index];
         }
-        out_iter := bn_sid_safe(x9, false, 0, x21, true, out_iter);
     }
 
     assert out_iter.buff == out_iter.buff[..NUM_WORDS];

@@ -321,7 +321,7 @@ function seq_addc_512_is_safe(x: seq(uint256), y: seq(uint256)) : bool extern;
 //   assert va_sM == va_s0.eval_SW(grs1, grs2, offset);
 
 procedure lw(out grd: reg32, inline offset: int12, in grs1: reg32)
-    {:instruction Ins32(LW(grd, offset, grs1,))}
+    {:instruction Ins32(LW(grd, offset, grs1))}
     reads
         heap;
     requires

@@ -23,12 +23,12 @@ method printReg32(r:reg32_t)
 method printIns32(ins:ins32)
 {
     match ins
-        case LW(grd, grs1, offset) =>
+        case LW(grd, offset, grs1) =>
             print ("  lw ");
             printReg32(grd); print(", "); print(offset); print("("); printReg32(grs1); print(")");
             print("\n");
 
-        case SW(grs2, grs1, offset) =>
+        case SW(grs2, offset, grs1) =>
             print ("  sw ");
             printReg32(grs2); print(", "); print(offset); print("("); printReg32(grs1); print(")");
             print("\n");

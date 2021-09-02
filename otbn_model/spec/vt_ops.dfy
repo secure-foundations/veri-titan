@@ -705,22 +705,22 @@ module vt_ops {
             print(" fg1 = ");print_as_hex(fgroups.fg1.to_nat(), 4); print("\n"); 
         }
 
-        method dump_wmem(addr: uint32, words: uint32)
-            requires wword_ptr_admissible(addr + words * 32)
+        method dump_mem(addr: uint32, words: uint32)
+            requires xword_ptr_admissible(addr + words * 4)
         {
-            var end := addr + words * 32;
-            var i := 0;
+            var end := addr + words * 4;
             var cur := addr;
+            var i := 0;
 
             while cur < end
-                invariant cur == addr + i * 32
-                invariant wword_ptr_admissible(cur)
+                invariant cur == addr + i * 4
+                invariant xword_ptr_admissible(cur)
                 decreases end - cur
             {
-                var value := read_wword(cur);
+                var value := read_xword(cur);
                 print(cur); print(":"); print_as_hex(value, 4); print("\n");
+                cur := cur + 4;
                 i := i + 1;
-                cur := cur + 32;
             }
         }
     }
