@@ -87,6 +87,11 @@ module rv_ops {
         iter.(index := iter.index + 1)
     }
 
+    function lw_next_iter(iter: iter_t): iter_t
+    {
+        iter.(index := iter.index - 1)
+    }
+
     function sw_next_iter(iter: iter_t, value: uint32): iter_t
         requires iter.index < |iter.buff|
     {
