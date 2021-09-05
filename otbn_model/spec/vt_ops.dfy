@@ -434,12 +434,11 @@ module vt_ops {
                 this.(ok := false)
             else
                 var value := read_wword(addr);
-                // write to wdr[grd]
-                write_reg256(WDR(di), value).
                 // update grd
-                write_reg32(grd, if grd_inc then di + 1 else di).
+                var s := (if grd_inc then write_reg32(grd, di + 1) else this);
                 // update grs
-                write_reg32(grs, if grs_inc then uint32_add(base, 32) else base)
+                var l := (if grs_inc then s.write_reg32(grs, uint32_add(base, 32)) else s);
+                l.write_reg256(WDR(di), value)
         }
 
         function method eval_BN_SID(grs2: reg32_t, grs2_inc: bool, offset: int10, grs1: reg32_t, grs1_inc: bool): state
@@ -451,9 +450,9 @@ module vt_ops {
                 this.(ok := false)
             else
                 var value := read_reg256(WDR(di));
-                write_wword(addr, value).
-                write_reg32(grs1, if grs1_inc then uint32_add(base, 32) else base).
-                write_reg32(grs2, if grs2_inc then di + 1 else di)
+                var s := if grs1_inc then write_reg32(grs1, uint32_add(base, 32)) else this;
+                var l := if grs2_inc then s.write_reg32(grs2, di + 1) else s;
+                l.write_wword(addr, value)
         }
 
         function method eval_BN_ADD(wrd: reg256_t, wrs1: reg256_t, wrs2: 
