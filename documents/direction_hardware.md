@@ -1,5 +1,5 @@
 
-##testing ISA semantics: 
+## testing ISA semantics: 
 
 [ISA Semantics for ARMv8-A, RISC-V, and CHERI-MIPS](https://alastairreid.github.io/papers/popl19-isasemantics.pdf)
 
@@ -7,7 +7,7 @@
 
 [Rigorous engineering for hardware security: Formal modelling and proof in the CHERI design and implementation process](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=9152777)
 
-##proving hardware:
+## proving hardware:
 
 [Kami: A Platform for High-Level Parametric Hardware Specification and Its Modular Verification](https://plv.csail.mit.edu/kami/papers/icfp17.pdf)
 
