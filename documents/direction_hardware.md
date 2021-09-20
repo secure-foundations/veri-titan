@@ -9,8 +9,6 @@
 
 ## proving hardware design/model:
 
-[Instruction-Level Abstraction (ILA): A Uniform Specification for System-on-Chip (SoC) Verification](https://dl.acm.org/doi/pdf/10.1145/3282444)
-
 [PipeProof: Automated Memory Consistency Proofs for Microarchitectural Specifications](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8574586)
 
 [Kami: A Platform for High-Level Parametric Hardware Specification and Its Modular Verification](https://plv.csail.mit.edu/kami/papers/icfp17.pdf)
@@ -18,3 +16,5 @@
 [Verified Compilation on a Verified Processor](https://dl.acm.org/doi/pdf/10.1145/3314221.3314622)
 
 [Integration Verification across Software and Hardware for a Simple Embedded System](https://dl.acm.org/doi/pdf/10.1145/3453483.3454065)
+
+[Instruction-Level Abstraction (ILA): A Uniform Specification for System-on-Chip (SoC) Verification](https://dl.acm.org/doi/pdf/10.1145/3282444)
