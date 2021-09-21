@@ -18,3 +18,11 @@
 [Integration Verification across Software and Hardware for a Simple Embedded System](https://dl.acm.org/doi/pdf/10.1145/3453483.3454065)
 
 [Instruction-Level Abstraction (ILA): A Uniform Specification for System-on-Chip (SoC) Verification](https://dl.acm.org/doi/pdf/10.1145/3282444)
+
+## Hardware-Software Contracts
+
+[For Secure Speculation](https://arxiv.org/pdf/2006.03841.pdf)  S&P'21
+
+[For Safety’s Sake: We Need a New Hardware-Software Contract!](https://trustworthy.systems/publications/csiro_full_text/Heiser_18.pdf)
+Gernot Heiser,
+IEEE Design and Test, 2018
