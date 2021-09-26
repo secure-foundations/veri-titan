@@ -1,0 +1,268 @@
+include "../spec/bv_ops.dfy"
+include "../spec/rsa_ops.dfy"
+include "../lib/powers.dfy"
+
+module ge_mod {
+
+import opened powers
+import opened bv_ops  
+import opened rv_consts
+import opened rsa_ops
+
+// |A[..n]| == n, interp A[..n] as an int 
+function interp(A: seq<uint32>, n: nat) : nat
+    decreases n;
+    requires 0 <= n <= |A|;
+{
+    if n == 0 then 0
+    else word_interp(A, n - 1) + interp(A, n - 1)
+}
+
+lemma {:induction i} prefix_sum_lemma(S: seq<uint32>, S': seq<uint32>, i: nat)
+    requires 0 <= i <= |S| && 0 <= i <= |S'|;
+    requires S[..i] == S'[..i];
+    ensures interp(S, i) == interp(S', i);
+{
+    assert true;
+}
+        
+function word_interp(A: seq<uint32>, i: nat) : nat
+    requires i < |A|;
+{
+    A[i] as nat * postional_weight(i)
+}
+
+function postional_weight(i: nat) : nat
+{
+    power(BASE_32, i) as nat
+}
+
+lemma {:induction A} to_nat_upper_bound_lemma(A: seq<uint32>)
+    ensures to_nat(A) < pow_B32(|A|);
+{
+    if |A| == 0 {
+        reveal power();
+    } else {
+        ghost var A' := A[..(|A| - 1)];
+
+        calc ==> {
+            to_nat(A) == word_interp(A, |A| - 1) + interp(A, |A| - 1);
+            {
+                assert to_nat(A') == interp(A, |A| - 1) by {
+                    prefix_sum_lemma(A, A', |A| - 1);
+                }   
+            }
+            to_nat(A) == word_interp(A, |A| - 1) + to_nat(A');
+            {
+                assert to_nat(A') < power(BASE_32, |A'|) by {
+                    to_nat_upper_bound_lemma(A');
+                }
+            }
+            to_nat(A) < word_interp(A, |A| - 1) + power(BASE_32, |A'|);
+            {
+                assert word_interp(A, |A| - 1) <= power(BASE_32, |A|) - power(BASE_32, |A| - 1) by {
+                    word_interp_upper_bound_lemma(A, |A| - 1);
+                }
+            }
+            to_nat(A) < power(BASE_32, |A|) - power(BASE_32, |A| - 1) + power(BASE_32, |A'|);
+            to_nat(A) < power(BASE_32, |A|);
+        }
+    }
+}
+
+lemma {:induction i} word_interp_upper_bound_lemma(A: seq<uint32>, i: nat)
+    requires i < |A|;
+    ensures word_interp(A, i) <= power(BASE_32, i + 1) - power(BASE_32, i);
+{
+    assert A[i] as int <= BASE_32;
+    calc ==> {
+        A[i] as int <= BASE_32;
+        A[i] as int * postional_weight(i) <= (BASE_32 - 1) * postional_weight(i);
+        {
+            assert word_interp(A, i) == A[i] as int * postional_weight(i);
+        }
+         word_interp(A, i) <= (BASE_32 - 1) * postional_weight(i);
+         word_interp(A, i) <= (BASE_32 - 1) * power(BASE_32, i);
+         word_interp(A, i) <= BASE_32 * power(BASE_32, i) - power(BASE_32, i);
+         {
+            power_add_one_lemma(BASE_32, i);
+         }
+         word_interp(A, i) <= power(BASE_32, i + 1) - power(BASE_32, i);
+    }
+}
+
+lemma cmp_msw_lemma(A: seq<uint32>, B: seq<uint32>)
+    requires |A| == |B| != 0;
+    ensures A[|A| - 1] > B[|B| - 1] ==> (to_nat(A) > to_nat(B));
+    ensures A[|A| - 1] < B[|B| - 1] ==> (to_nat(A) < to_nat(B));
+{
+    var n := |A|;
+    var A' := A[..n-1];
+    var B' := B[..n-1];
+    calc == {
+        to_nat(A) - to_nat(B);
+        {
+            prefix_sum_lemma(A, A', n - 1);
+            prefix_sum_lemma(B, B', n - 1);
+        }
+        interp(A', n - 1) +  word_interp(A, n - 1) - interp(B', n - 1) - word_interp(B, n - 1);
+        to_nat(A') - to_nat(B') + word_interp(A, n - 1) - word_interp(B, n - 1);
+        to_nat(A') - to_nat(B') + (A[n - 1] as int - B[n - 1] as int)  * postional_weight(n - 1);
+    }
+
+    if A[n - 1] > B[n - 1] {
+        calc >= {
+            to_nat(A') - to_nat(B') + (A[n - 1] as int - B[n - 1] as int)  * postional_weight(n - 1);
+            {
+                assert (A[n - 1] as int - B[n - 1] as int) >= 1;
+            }
+            to_nat(A') - to_nat(B') + postional_weight(n - 1);
+            {
+                assert to_nat(A') >= 0;
+            }
+            postional_weight(n - 1) - to_nat(B');
+            power(BASE_32, n - 1) - to_nat(B');
+        }
+
+        assert to_nat(B') < power(BASE_32, n - 1) by {
+            to_nat_upper_bound_lemma(B');
+        }
+
+        assert power(BASE_32, n - 1) - to_nat(B') > 0;
+        assert to_nat(A) > to_nat(B);
+    } else if A[n - 1] < B[n - 1] {
+        calc <= {
+            to_nat(A') - to_nat(B') + (A[n - 1] as int - B[n - 1] as int)  * postional_weight(n - 1);
+            {
+                assert (B[n - 1] as int - A[n - 1] as int) >= 1;
+            }
+            to_nat(A') - to_nat(B') - postional_weight(n - 1);
+            {
+                assert to_nat(B') >= 0;
+            }
+            to_nat(A') - postional_weight(n - 1);
+            to_nat(A') - power(BASE_32, n - 1);
+        }
+
+        assert to_nat(A') < power(BASE_32, n - 1) by {
+            to_nat_upper_bound_lemma(A');
+        }
+
+        assert to_nat(A') - power(BASE_32, n - 1) < 0;
+        assert to_nat(A) < to_nat(B);
+    }
+}
+
+lemma {:induction A, i} cmp_sufficient_lemma(A: seq<uint32>, B: seq<uint32>, i: nat)
+        requires 0 <= i < |A| == |B|;
+        requires forall j :: i < j < |A| ==> (A[j] == B[j]);
+        ensures A[i] > B[i] ==> (to_nat(A) > to_nat(B));
+        ensures A[i] < B[i] ==> (to_nat(A) < to_nat(B));
+    {
+        var n := |A|;
+        if n != 0 {
+            if i == n - 1 {
+                cmp_msw_lemma(A, B);
+            } else {
+                var n := |A|;
+                var A' := A[..n-1];
+                var B' := B[..n-1];
+
+                calc ==> {
+                    A[i] > B[i];
+                    {
+                        cmp_sufficient_lemma(A', B', i);
+                    }
+                    to_nat(A') > to_nat(B');
+                    {
+                        prefix_sum_lemma(A, A', n - 1);
+                        prefix_sum_lemma(B, B', n - 1);
+                    }
+                    interp(A, n - 1) > interp(B, n - 1);
+                    {
+                        assert word_interp(A, n - 1) == word_interp(B, n - 1);
+                    }
+                    interp(A, n - 1) +  word_interp(A, n - 1) > interp(B, n - 1) + word_interp(B, n - 1);
+                    to_nat(A) > to_nat(B);
+                }
+                assert A[i] > B[i] ==> (to_nat(A) > to_nat(B));
+
+                calc ==> {
+                    A[i] < B[i];
+                    {
+                        cmp_sufficient_lemma(A', B', i);
+                    }
+                    to_nat(A') < to_nat(B');
+                    {
+                        prefix_sum_lemma(A, A', n - 1);
+                        prefix_sum_lemma(B, B', n - 1);
+                    }
+                    interp(A, n - 1) < interp(B, n - 1);
+                    {
+                        assert word_interp(A, n - 1) == word_interp(B, n - 1);
+                    }
+                    interp(A, n - 1) +  word_interp(A, n - 1) < interp(B, n - 1) + word_interp(B, n - 1);
+                    to_nat(A) < to_nat(B);
+                }
+                assert A[i] < B[i] ==> (to_nat(A) < to_nat(B));
+            }
+        }
+    }
+
+        
+lemma ge_to_nat(a: seq<uint32>, n: seq<uint32>, i: nat)
+  requires |a| == |n|
+  requires i < |a|
+  requires a[i] < n[i]
+  requires forall j :: i < j < |a| ==> a[j] == n[j]
+  ensures to_nat(a) < to_nat(n)
+{
+  cmp_sufficient_lemma(a, n, i);
+  calc {
+    to_nat(a[..i] + [a[i]] + a[i+1..]) < to_nat(n[..i] + [n[i]] + n[i+1..]);
+    { assert a[..i] + [a[i]] + a[i+1..] == a;
+      assert n[..i] + [n[i]] + n[i+1..] == n;
+    }
+    to_nat(a) < to_nat(n);
+  }
+}
+
+  method ge_mod(a: seq<uint32>, n: seq<uint32>) returns (b:bool)
+    requires |a| == |n| == 384
+    ensures (to_nat(a) >= to_nat(n)) == b
+  {
+    var i := |a| - 1;
+
+    var cond := 1;
+    b := true;
+    
+    while (cond != 0)
+      invariant cond != 0 ==> 0 <= i < |a|
+      invariant cond == 0 ==> -1 <= i < |a|-1
+      invariant cond == 1 ==> a[i+1..] == n[i+1..]
+      invariant !b ==> cond == 0;
+      invariant cond == 0 ==> (b ==> a[i+1] > n[i+1]) || (a == n)
+      invariant cond == 0 ==> (to_nat(a) >= to_nat(n)) == b
+      decreases i
+    {
+
+      var ai := a[i];
+      var ni := n[i];
+
+      cmp_sufficient_lemma(a, n, i);
+
+      if ai != ni {
+        cond := 0;
+      }
+      if ai < ni {
+        b := false;
+      }
+      if i == 0 {
+        cond := 0;
+      }
+
+      i := i - 1;
+    }
+  }
+    
+}

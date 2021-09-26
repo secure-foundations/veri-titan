@@ -203,6 +203,7 @@ procedure ge_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     addi(x15, x15, 380) // pointer to end of n
     addi(x11, x11, 1560) // pointer to beginning of n
     
+    mv(x12, 1);
 
     while (x12 != 0)
     {
