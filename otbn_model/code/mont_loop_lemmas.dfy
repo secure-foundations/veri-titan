@@ -78,7 +78,7 @@ module mont_loop_lemmas {
             }
             reveal cong(); 
         }
-    
+
         calc ==> {
             cong_B256(ui * m0, -p1_full);
             { cong_add_lemma_1(ui * m0, - p1_full, p1.lh, BASE_256); }
@@ -92,6 +92,8 @@ module mont_loop_lemmas {
             }
             cong_B256(ui * m0 + p1.lh, 0);
         }
+
+        assume false;
 
         calc ==> {
             p2.full == ui * m0 + p1.lh;
@@ -175,6 +177,7 @@ module mont_loop_lemmas {
             to_nat([0]) + p2.uh * pow_B256(1) + p1.uh * pow_B256(1);
                 {
                     assert [0] + a[..0] == [0];
+                    assert to_nat([0]) == to_nat([0] + a[..0]);
                 }
             to_nat([0] + a[..0]) + p2.uh * pow_B256(1) + p1.uh * pow_B256(1);
         }
@@ -319,6 +322,60 @@ module mont_loop_lemmas {
         }
     }
 
+    lemma mont_loop_cond_sub_borrow_lemma(xi: uint256,
+        ui: uint256,
+        y: seq<uint256>,
+        m: nat,
+        prev_a: nat,
+        a: seq<uint256>,
+        next_a: seq<uint256>,
+        next_bout: uint1)
+
+        requires m != 0;
+        requires |next_a| == |y| == NUM_WORDS;
+        requires prev_a < m + to_nat(y);
+        requires to_nat(a) * BASE_256 + pow_B256(NUM_WORDS+1)
+            == xi * to_nat(y) + ui * m + prev_a;
+        requires to_nat(next_a) - pow_B256(NUM_WORDS) * next_bout == to_nat(a) - m
+        requires to_nat(a) + pow_B256(NUM_WORDS) < to_nat(y) + m
+
+        ensures to_nat(next_a) < m + to_nat(y)
+        ensures cong(to_nat(next_a) * BASE_256, xi * to_nat(y) + ui * m + prev_a, m)
+    {
+        if to_nat(a) >= m {
+            to_nat_bound_lemma(y);
+            assert to_nat(a) + pow_B256(NUM_WORDS) < to_nat(y) + m;
+            assert false; // prove by contradiction
+        }
+        if next_bout != 1 {
+            to_nat_bound_lemma(next_a);
+            assert false; // prove by contradiction
+        }
+        
+        assert next_bout == 1;
+
+        calc {
+            to_nat(next_a) * BASE_256;
+            to_nat(a) * BASE_256 + pow_B256(NUM_WORDS) * BASE_256 - m * BASE_256;
+                { power_add_one_lemma(BASE_256, NUM_WORDS); }
+            to_nat(a) * BASE_256 + pow_B256(NUM_WORDS+1) - m * BASE_256;
+            xi * to_nat(y) + ui * m + prev_a - m * BASE_256;
+        }
+        
+        calc ==> {
+            true;
+                { reveal cong(); }
+            cong(to_nat(next_a) * BASE_256, xi * to_nat(y) + ui * m + prev_a - m * BASE_256, m);
+                {
+                    cong_add_lemma_5(to_nat(next_a) * BASE_256,
+                        xi * to_nat(y) + ui * m + prev_a - m * BASE_256, BASE_256, m);
+                    assert xi * to_nat(y) + ui * m + prev_a - m * BASE_256 + BASE_256 * m == 
+                        xi * to_nat(y) + ui * m + prev_a;
+                }
+            cong(to_nat(next_a) * BASE_256, xi * to_nat(y) + ui * m + prev_a, m);
+        }
+    }
+
     lemma mont_loop_cond_sub_lemma(
         xi: uint256,
         ui: uint256,
@@ -336,12 +393,12 @@ module mont_loop_lemmas {
         requires to_nat(a) * BASE_256 + bout * pow_B256(NUM_WORDS+1)
             == xi * to_nat(y) + ui * m + prev_a;
         requires bout == 0 ==>
-            to_nat(a) == to_nat(next_a);
+            to_nat(a) == to_nat(next_a)
         requires bout == 1 ==>
-            to_nat(next_a) - pow_B256(NUM_WORDS) * next_bout == to_nat(a) - m;
+            to_nat(next_a) - pow_B256(NUM_WORDS) * next_bout == to_nat(a) - m
 
-        ensures to_nat(next_a) < m + to_nat(y);
-        ensures cong(to_nat(next_a) * BASE_256, xi * to_nat(y) + ui * m + prev_a, m);
+        ensures to_nat(next_a) < m + to_nat(y)
+        ensures cong(to_nat(next_a) * BASE_256, xi * to_nat(y) + ui * m + prev_a, m)
     {
         assert to_nat(a) + bout * pow_B256(NUM_WORDS) < to_nat(y) + m by {
             calc {
@@ -362,34 +419,7 @@ module mont_loop_lemmas {
         }
         
         if bout == 1 {
-            if to_nat(a) >= m {
-                to_nat_bound_lemma(y);
-                assert to_nat(a) + pow_B256(NUM_WORDS) < to_nat(y) + m;
-                assert false; // prove by contradiction
-            }
-            if next_bout != 1 {
-                to_nat_bound_lemma(next_a);
-                assert false; // prove by contradiction
-            }
-
-            calc {
-                to_nat(next_a) * BASE_256;
-                to_nat(a) * BASE_256 + pow_B256(NUM_WORDS) * BASE_256 - m * BASE_256;
-                    { power_add_one_lemma(BASE_256, NUM_WORDS); }
-                to_nat(a) * BASE_256 + pow_B256(NUM_WORDS+1) - m * BASE_256;
-                xi * to_nat(y) + ui * m + prev_a - m * BASE_256;
-            }
-
-            calc ==> {
-                true;
-                    { reveal cong(); }
-                cong(to_nat(next_a) * BASE_256, xi * to_nat(y) + ui * m + prev_a - m * BASE_256, m);
-                    {
-                        cong_add_lemma_5(to_nat(next_a) * BASE_256,
-                            xi * to_nat(y) + ui * m + prev_a - m * BASE_256, BASE_256, m);
-                    }
-                cong(to_nat(next_a) * BASE_256, xi * to_nat(y) + ui * m + prev_a, m);
-            }
+            mont_loop_cond_sub_borrow_lemma(xi, ui, y, m, prev_a, a, next_a, next_bout);
         } else {
             reveal cong();
             assert cong(to_nat(next_a) * BASE_256,

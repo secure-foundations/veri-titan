@@ -1,21 +1,61 @@
-import sys, os, subprocess,re
+import sys, os, subprocess, re
 from subprocess import PIPE, Popen
 
-rules = """
+TOOLS_DIR = "./tools"
+DAFNY_PATH = "./tools/dafny/dafny"
+VALE_PATH = "./tools/vale/bin/vale"
+
+rules = f"""
 rule dafny
-    command = dafny /compile:0 $in /timeLimit:20 /vcsCores:8 && touch $out
+    command = {DAFNY_PATH} $in /compile:0 /timeLimit:20 /vcsCores:2 && touch $out
 
 rule vale
-    command = vale -dafnyText -in $in -out $out
+    command = {VALE_PATH} -dafnyText -in $in -out $out
 
-rule dfydep
-    command = python3 build.py dfydep $in > $out
+rule dd-gen
+    command = python3 build.py dd-gen $in > $out
+
+rule dll-gen
+    command = python3 build.py dll-gen $in
+
+rule dll-run
+    command = dotnet $in > $out
+
+rule otbn-as
+    command = otbn-as $in -o $out
+
+rule otbn-ld
+    command = otbn-ld $in -o $out
 """
 
-oupt_file_name = "build.ninja"
-ninja_content = [rules]
 
-def get_dot_ver_path(dfy_path):
+PRINTER_DFY_PATH = "print.dfy"
+PRINTER_DLL_PATH = "gen/print.dll"
+PRINTER_CONFIG_PATH = "gen/print.runtimeconfig.json"
+
+OUTPUT_ASM_PATH = "gen/output.s"
+TEST_ASM_PATH = "run_modexp.s"
+OUTPUT_ELF_PATH = "gen/run_modexp.elf"
+
+NINJA_PATH = "build.ninja"
+CODE_DIR = "code"
+
+## misc utils
+
+# run command
+
+def os_system(command):
+    print(command)
+    os.system(command)
+
+def subprocess_run(command):
+    # print(command)
+    output = subprocess.run(command, shell=True, stdout=PIPE).stdout
+    return output.decode("utf-8").strip()
+
+# convert path
+
+def get_ver_path(dfy_path):
     dfy_path = os.path.relpath(dfy_path)
     ver_path = dfy_path.replace(".dfy", ".ver")
     if ver_path.startswith("gen"):
@@ -23,7 +63,7 @@ def get_dot_ver_path(dfy_path):
     else:
         return os.path.join("gen", ver_path)
 
-def get_dot_dd_path(dfy_path):
+def get_dd_path(dfy_path):
     dfy_path = os.path.relpath(dfy_path)
     dd_path = dfy_path.replace(".dfy", ".dd")
     if dd_path.startswith("gen"):
@@ -31,27 +71,85 @@ def get_dot_dd_path(dfy_path):
     else:
         return os.path.join("gen", dd_path)
 
-def get_gen_dot_dfy_path(vad_path):
+def get_gen_dfy_path(vad_path):
     assert vad_path.endswith(".vad")
     assert vad_path.startswith("code")
     dfy_path = vad_path.replace("code", "gen")
     return dfy_path.replace(".vad", ".dfy")
 
-def get_dfy_files(include_gen):
-    dfy_files = list()
-    for root, _, files in os.walk("."):
-        # do not include files in ./gen unless specified
-        if  root.startswith("./gen") and not include_gen:
-            continue
-        for file in files:
-            if file.endswith(".dfy"):
-                dfy_path = os.path.relpath(os.path.join(root, file))
-                dfy_files.append(dfy_path)
-    return dfy_files
+def get_o_path(asm_path):
+    asm_path = os.path.relpath(asm_path)
+    assert asm_path.endswith(".s")
+    if not asm_path.startswith("gen"):
+        asm_path = "gen/" + asm_path
+    return asm_path.replace(".s", ".o")
 
-vad_include_pattern = re.compile('include\s+"(.+vad)"')
+## separate command: setup
 
-def get_vad_dependencies(vad_path):
+def setup_tools():
+    # ninja
+    version = subprocess_run("ninja --version")
+    if version != "1.10.1":
+        print("[WARN] ninja not found or uexpected version: " + version)
+
+    # dotnet
+    version = subprocess_run("dotnet --list-sdks")
+    if "5.0" not in version:
+        print("[WARN] dotnet not found or uexpected version: " + version)
+    else:
+        print("[INFO] dotnet version: " + version)
+
+    # nuget
+    version = subprocess_run("nuget help | grep Version")
+    if "5.5" not in version:
+        print("[WARN] nuget not found or uexpected version: " + version)
+    else:
+        print("[INFO] nuget version: " + version)
+
+    path = subprocess_run("which otbn-as")
+
+    if "otbn-as" not in path:
+        print("[WARN] otbn-as not found")
+    else:
+        print("[INFO] otbn-as found")
+
+    path = subprocess_run("which otbn-ld")
+
+    if "otbn-ld" not in path:
+        print("[WARN] otbn-ld not found")
+    else:
+        print("[INFO] otbn-ld found")
+
+    while 1:
+        print("confrim dependecies are installed [y/n] ", end='')
+        choice = input().lower()
+        if choice == "n":
+            return
+        elif choice == "y":
+            break
+
+    if not os.path.exists(TOOLS_DIR):
+        os.makedirs(TOOLS_DIR)
+
+    if os.path.exists(DAFNY_PATH):
+        print("[INFO] dafny binary already exists")
+    else:
+        os.system("wget https://github.com/dafny-lang/dafny/releases/download/v3.0.0/dafny-3.0.0-x64-ubuntu-16.04.zip")
+        os.system(f"unzip dafny-3.0.0-x64-ubuntu-16.04.zip -d {TOOLS_DIR}")
+        os.system(f"rm dafny-3.0.0-x64-ubuntu-16.04.zip")
+
+    if os.path.exists(VALE_PATH):
+        print("[INFO] vale binary already exists")
+    else:
+        os.system("cd tools && git clone git@github.com:project-everest/vale.git")
+        os.system("cd tools/vale && git checkout otbn-custom && ./run_scons.sh")
+        os.system("mv tools/vale/bin/vale.exe tools/vale/bin/vale")
+
+# list dependecy 
+
+VAD_INCLUDE_PATTERN = re.compile('include\s+"(.+vad)"')
+
+def list_vad_deps(vad_path):
     # print("[WARNING] .vad transitive dependencies not included")
     vad_path = os.path.relpath(vad_path)
     vad_dir = os.path.dirname(vad_path)
@@ -63,58 +161,20 @@ def get_vad_dependencies(vad_path):
         line = line.strip()
         if line == "#verbatim":
             break
-        match = re.search(vad_include_pattern, line)
+        match = re.search(VAD_INCLUDE_PATTERN, line)
         if match:
             included = os.path.join(vad_dir, match.group(1))
-            included = get_gen_dot_dfy_path(included)
+            included = get_gen_dfy_path(included)
             vad_dependencies.append(included)
-    return vad_dependencies 
+    return " ".join(vad_dependencies)
 
-def generate_dot_ninja():
-    version = subprocess.run("ninja --version", shell=True, stdout=PIPE).stdout
-    version = version.decode("utf-8").strip()
-    if version != "1.10.1":
-        print("[WARNING] ninja not found or uexpected version: " + version)
-
-    # collect none generated .dfy
-    dfy_files = get_dfy_files(False)
-    code_dir = "code"
-
-    # build .dfy from .vad 
-    for file in os.listdir(code_dir):
-        if file.endswith(".vad"):
-            vad_path = os.path.join(code_dir, file)
-            dfy_path = get_gen_dot_dfy_path(vad_path)
-            vad_deps = get_vad_dependencies(vad_path)
-            vad_deps = " ".join(vad_deps)
-            ninja_content.append(f"build {dfy_path}: vale {vad_path} | {vad_deps}\n")
-            dfy_files.append(dfy_path)
-
-    # build .ver from .dfy
-    for dfy_file in dfy_files:
-        ver_path = get_dot_ver_path(dfy_file)
-        dd_path = get_dot_dd_path(dfy_file)
-
-        ninja_content.append(f"build {dd_path}: dfydep {dfy_file}\n")
-        ninja_content.append(f"build {ver_path}: dafny {dfy_file} || {dd_path}")
-        ninja_content.append(f"    dyndep = {dd_path}\n")
-
-    with open(oupt_file_name, "w") as f:
-        for line in ninja_content:
-            f.write(line + "\n")
-
-def generate_dot_dd(dfy_file):
-    dfy_file = os.path.relpath(dfy_file)
-
-    command = "dafny /printIncludes:Immediate %s" % dfy_file
+def list_dfy_deps(dfy_file):
+    command = f"{DAFNY_PATH} /printIncludes:Immediate %s" % dfy_file
     outputs = subprocess.run(command, shell=True, stdout=PIPE).stdout
     outputs = outputs.decode("utf-8")
 
-    result = "ninja_dyndep_version = 1\n"
-    result += "build " + get_dot_ver_path(dfy_file) + " : dyndep"
-
     if outputs == "":
-        sys.exit()
+        return ""
     outputs = outputs.splitlines()[0].split(";")
     includes = []
 
@@ -124,11 +184,104 @@ def generate_dot_dd(dfy_file):
             pass
             # assert include == dfy_file
         else:
-            include = get_dot_ver_path(include)
+            include = get_ver_path(include)
             includes.append(include)
+    return " ".join(includes)
 
-    result += " | " + " ".join(includes)
-    print(result)
+# list files
+
+def get_dfy_files(include_gen):
+    dfy_files = list()
+    for root, _, files in os.walk("."):
+        if root.startswith(TOOLS_DIR):
+            continue
+        # do not include files in ./gen unless specified
+        if root.startswith("./gen") and not include_gen:
+            continue
+        for file in files:
+            if file.endswith(".dfy"):
+                if file == PRINTER_DFY_PATH:
+                    continue
+                dfy_path = os.path.relpath(os.path.join(root, file))
+                dfy_files.append(dfy_path)
+    return dfy_files
+
+## main command (build)
+
+class Generator():
+    def __init__(self):
+        self.content = [rules]
+        # collect none generated .dfy first
+        self.dfy_files =get_dfy_files(False)
+
+        self.generate_rules()
+        self.write_ninja()
+
+    def generate_vad_rules(self, vad_path):
+        dfy_path = get_gen_dfy_path(vad_path)
+        vad_deps = list_vad_deps(vad_path)
+        self.content.append(f"build {dfy_path}: vale {vad_path} | {vad_deps}\n")
+        # need to add this generated file as well
+        self.dfy_files.append(dfy_path)
+
+    def generate_dfy_rules(self, dfy_file):
+        ver_path = get_ver_path(dfy_file)
+        dd_path = get_dd_path(dfy_file)
+
+        self.content.append(f"build {dd_path}: dd-gen {dfy_file}\n")
+        self.content.append(f"build {ver_path}: dafny {dfy_file} || {dd_path}")
+        self.content.append(f"    dyndep = {dd_path}\n")
+
+    def generate_pinter_rules(self):
+        printer_deps = list_dfy_deps(PRINTER_DFY_PATH)
+        self.content.append(f"build {PRINTER_DLL_PATH}: dll-gen {PRINTER_DFY_PATH} | {printer_deps}\n")
+        self.content.append(f"build {OUTPUT_ASM_PATH}: dll-run {PRINTER_DLL_PATH} \n")
+
+    def generate_elf_rules(self):
+        output_o_path = get_o_path(OUTPUT_ASM_PATH)
+        self.content.append(f"build {output_o_path}: otbn-as {OUTPUT_ASM_PATH}\n")
+        test_o_path = get_o_path(TEST_ASM_PATH)
+        self.content.append(f"build {test_o_path}: otbn-as {TEST_ASM_PATH}\n")
+        self.content.append(f"build {OUTPUT_ELF_PATH}: otbn-ld {test_o_path} {output_o_path}\n")
+
+    def generate_rules(self):
+        # rules to build .dfy from .vad 
+        for file in os.listdir(CODE_DIR):
+            if file.endswith(".vad"):
+                vad_path = os.path.join(CODE_DIR, file)
+                self.generate_vad_rules(vad_path)
+
+        # rules to build .ver from .dfy
+        for dfy_file in self.dfy_files:
+            self.generate_dfy_rules(dfy_file)
+
+        # rules for the printer
+        self.generate_pinter_rules()
+
+        # rules for the elf
+        self.generate_elf_rules()
+
+    def write_ninja(self):
+        with open(NINJA_PATH, "w") as f:
+            for line in self.content:
+                f.write(line + "\n")
+
+## separate command: dd-gen
+
+def generate_dd(dfy_file):
+    dfy_file = os.path.relpath(dfy_file)
+
+    result = "ninja_dyndep_version = 1\n"
+    result += "build " + get_ver_path(dfy_file) + "  : dyndep"
+
+    outputs = list_dfy_deps(dfy_file)
+
+    if outputs == "":
+        sys.exit()
+
+    print(result + " | " + outputs)
+
+## separate command: proc
 
 def verify_dafny_proc(proc):
     dfy_files = get_dfy_files(True)
@@ -139,11 +292,13 @@ def verify_dafny_proc(proc):
 
     for dfy_file in outputs.splitlines():
         print("verify %s in %s" % (proc, dfy_file))
-        command = "time -p dafny /trace /timeLimit:20 /compile:0 /proc:*%s " % proc + dfy_file
+        command = f"time -p {DAFNY_PATH} /trace /timeLimit:20 /compile:0 /proc:*%s " % proc + dfy_file
         # r = subprocess.check_output(command, shell=True).decode("utf-8")
         process = Popen(command, shell=True, stdout=PIPE)
         output = process.communicate()[0].decode("utf-8")
         print(output)
+
+## separate command: ver
 
 def verify_single_file(target):
     if not os.path.exists(target):
@@ -151,31 +306,46 @@ def verify_single_file(target):
     generate_dot_ninja()
     target  = os.path.relpath(target)
     if target.endswith(".dfy"):
-        target = get_dot_ver_path(target)
+        target = get_ver_path(target)
         os.system("ninja -v " + target)
     elif target.endswith(".vad"):
-        target = get_gen_dot_dfy_path(target)
-        target = get_dot_ver_path(target)
+        target = get_gen_dfy_path(target)
+        target = get_ver_path(target)
         # print(target)
         os.system("ninja -v " + target)
+
+## separate command: dll-gen
+
+def generate_print_dll(dfy_path):
+    # ninja sanity check
+    assert dfy_path == PRINTER_DFY_PATH 
+    command = f"dafny {PRINTER_DFY_PATH} /compile:1 /vcsCores:2 /out:temp.dll"
+    command += f" && mv temp.dll {PRINTER_DLL_PATH} && mv temp.runtimeconfig.json {PRINTER_CONFIG_PATH}"
+    os_system(command)
+
+## command line interface
 
 def main():
     # build everything
     if len(sys.argv) == 1:
-        generate_dot_ninja()
-        os.system("ninja -v -j 4")
+        g = Generator()
+        # os.system("ninja -v -j 4")
         return
 
     option = sys.argv[1]
     if option == "ver":
         verify_single_file(sys.argv[2])
-    elif option == "dfydep":
-        generate_dot_dd(sys.argv[2])
     elif option == "proc":
         verify_dafny_proc(sys.argv[2])
+    elif option == "dd-gen":
+        generate_dd(sys.argv[2])
+    elif option == "dll-gen":
+        generate_print_dll(sys.argv[2])
     elif option == "clean":
         os.system("rm -r ./gen")
-        os.system("rm " + oupt_file_name)
+        os.system("rm " + NINJA_PATH)
+    elif option == "setup":
+        setup_tools()
 
 if __name__ == "__main__":
     main()
