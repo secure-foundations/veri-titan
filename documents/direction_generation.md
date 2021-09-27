@@ -1,3 +1,44 @@
+# Proof Generation Proposal:
+----
+
+To provide high assurance, cryptographic libraries are often formally verified for correctness. In some cases the verification is done on the high level source code, then a compiler is entrusted to emit the correct assembly. Alternatively, the verification can also be performed on the assembly code directly, since hand-written assembly can often achieve more optimized performance. 
+
+Writing proofs for assembly is far from trivial. (Insert explanations on why this is hard). Writing proofs for a high level model is easier in comparison, albeit still challenging. (Insert explanations on why this is easier). 
+
+In this work we explore a new approach towards verifying assembly implementations. Given a high-level model that is verified and a assembly implementation that needs to be verified
+, we attempt to automatically derive the proof of correctness for the latter based on the former. Of course the model and the implementation cannot be arbitrary. For our purpose, we require them to be "semantically close", which we will also explore. 
+
+A proof is consisted of pre/post conditions, invariants and additional assertions that helps it to go through. All of these are made up of predicates, which are claims about various subjects. For our purpose, the subjects of the predicates are relatively simple, where they can be:
+* fixed width integers
+* array of fixed width integer representing big integer
+* ghost values that don't exist in the actual program flow
+
+We note that assembly code also operate around these subjects, except that the values and pointers are stored in registers instead of variables in the high-level model. If we are able to find the correspondence, then we should be able to substitute for the subjects in the existing model to generate a proof for the assembly. 
+
+<!-- # Problem:
+We are given:
+* an algorithm `A`: an algorithm to be implemented
+* a model `M`: some Dafny code that gives a high level model of the algorithm `A`
+* a proof `P1`: some Dafny proof around `M`, certifying its correctness
+* a implementation `I`: some assembly implementation of the algorithm `A`
+
+We intend to generate:
+* a proof `P2`: a (Vale/Dafny) proof for the correctness of `I`, based on `M` and `P1`
+
+# Assumption:
+The main assumption is that `M` semantically close to `I`, despite one being written in a high level language and the other in assembly.
+* The subjects in `P1` should be relatively low level, matching the subjects in `P2`. If we are reasoning about mathematical integers in the `P1`, which simply do not fit into the registers in `P2`, it would be challenging to establish the connection.
+* We need to systematically overcome other differences. For example loop predicates typically don't depend on the registers directly, instead operations are performed on the registers, flags are set, and the branching depends on the register. 
+
+# Intuitions:
+* `P1` is closely connected to `M` by nature, since the proof is written alongside with the model.
+* If `M` is semantically close to `I`, then the predicates needed in `P2` should be similar to the ones we need in `P1`.
+* The types of subjects are limited in theses predicates. We need to reason about arrays and fixed width integers. No fancy structures are involved.
+* If we can automatically figure out what the equivalent subjects are, then we can plug in the subject from `I` into `P1`, generating `P2`.
+
+# Proposed Workflow:
+* pre-process`P1` alongside `M`. -->
+
 # Related Works:
 
 ----
@@ -62,31 +103,3 @@ The validation is done through something called block-based semantic equivalence
 * This paper uses the term verification a lot, but it is more general formal analysis. The evaluation section seems a bit short. 
 * It is a fair point that os/hardware specific instructions cannot be lifted/decompiled easily, since there is no correspondence with C.
 ----
-
-## [Certified Verification of Algebraic Properties on LowLevel Mathematical Constructs in Cryptographic Programs](https://dl.acm.org/doi/pdf/10.1145/3133956.3134076)
-
-They develop a certified technique to verify low-level mathematical constructs in X25519. 
-They translate algebraic specification of mathematical constructs into an algebraic problem.
-Algebraic problems are solved by algebra system Singular.
-Range problems are solved by  SMT solvers.
-They certify the translation using Coq.
-
-### Comments:
-* the translation from assembly to bvCryptoLine is pushed into future work
-* moreover, bvCryptoLine is supposedly close to assembly code, but it is unclear how large the gap is. would be interesting to know how well it translates from SIMD extensions for example. 
-* the Gröbner Bases method is sound but incomplete
-* the verification time is pretty long (131 hours), which seems high for interactive development
-
-----
-## [Signed Cryptographic Program Verification with Typed CryptoLine](https://dl.acm.org/doi/pdf/10.1145/3319535.3354199)
-
-### Comments:
-* the extension from CryptoLine seems somewhat incremental
-* the translation from GIMPLE to CryptoLine does not seem to be verified, so the TCB excludes C -> GIMPLE, but includes GIMPLE -> CryptoLine. The GIMPLE -> ASM part is still in the TCB. 
-
-----
-## [Verifying Arithmetic in Cryptographic C Programs](https://www.iis.sinica.edu.tw/~bywang/papers/ase19.pdf)
-
-### Comments:
-* the diff between this work and Signed CryptoLine does not seem very significant. not sure how the LLVM -> CryptoLine differs greatly from GIMPLE -> CryptoLine.
-* instead of a equivalence proof, the translation have a soundness theorem, which is a contribution

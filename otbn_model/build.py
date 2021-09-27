@@ -4,10 +4,11 @@ from subprocess import PIPE, Popen
 TOOLS_DIR = "./tools"
 DAFNY_PATH = "./tools/dafny/dafny"
 VALE_PATH = "./tools/vale/bin/vale"
+DAFNY_LIB_DIR = "./libraries"
 
 rules = f"""
 rule dafny
-    command = {DAFNY_PATH} $in /compile:0 /timeLimit:20 /vcsCores:2 && touch $out
+    command = {DAFNY_PATH} $in /compile:0 /noNLarith /timeLimit:20 /vcsCores:2 && touch $out
 
 rule vale
     command = {VALE_PATH} -dafnyText -in $in -out $out
@@ -16,7 +17,7 @@ rule dd-gen
     command = python3 build.py dd-gen $in > $out
 
 rule dll-gen
-    command = python3 build.py dll-gen $in
+    command = python3 build.py dll-gen $in $out
 
 rule dll-run
     command = dotnet $in > $out
@@ -29,13 +30,18 @@ rule otbn-ld
 """
 
 
-PRINTER_DFY_PATH = "print.dfy"
+PRINTER_DFY_PATH = "tests/print.dfy"
 PRINTER_DLL_PATH = "gen/print.dll"
 PRINTER_CONFIG_PATH = "gen/print.runtimeconfig.json"
 
 OUTPUT_ASM_PATH = "gen/output.s"
-TEST_ASM_PATH = "run_modexp.s"
+TEST_ASM_PATH = "tests/run_modexp.s"
 OUTPUT_ELF_PATH = "gen/run_modexp.elf"
+
+EXE_DFY_PATH = "tests/execute.dfy"
+EXE_DLL_PATH = "gen/execute.dll"
+EXE_CONFIG_PATH = "gen/execute.runtimeconfig.json"
+OUTPUT_DUMP_PATH = "gen/dump.out"
 
 NINJA_PATH = "build.ninja"
 CODE_DIR = "code"
@@ -46,7 +52,8 @@ CODE_DIR = "code"
 
 def os_system(command):
     print(command)
-    os.system(command)
+    code = os.system(command)
+    sys.exit(code)
 
 def subprocess_run(command):
     # print(command)
@@ -128,9 +135,6 @@ def setup_tools():
         elif choice == "y":
             break
 
-    if not os.path.exists(TOOLS_DIR):
-        os.makedirs(TOOLS_DIR)
-
     if os.path.exists(DAFNY_PATH):
         print("[INFO] dafny binary already exists")
     else:
@@ -144,6 +148,11 @@ def setup_tools():
         os.system("cd tools && git clone git@github.com:project-everest/vale.git")
         os.system("cd tools/vale && git checkout otbn-custom && ./run_scons.sh")
         os.system("mv tools/vale/bin/vale.exe tools/vale/bin/vale")
+
+    if os.path.exists(DAFNY_LIB_DIR):
+        print("[INFO] dafny library already exists")
+    else:
+        os.system("git clone https://github.com/secure-foundations/dafny_library.git libraries")
 
 # list dependecy 
 
@@ -180,9 +189,11 @@ def list_dfy_deps(dfy_file):
 
     for (i, include) in enumerate(outputs):
         include = os.path.relpath(include)
+        if include.startswith(DAFNY_LIB_DIR):
+            continue
         if i == 0:
+            # print(dfy_file)
             pass
-            # assert include == dfy_file
         else:
             include = get_ver_path(include)
             includes.append(include)
@@ -195,12 +206,16 @@ def get_dfy_files(include_gen):
     for root, _, files in os.walk("."):
         if root.startswith(TOOLS_DIR):
             continue
+        if root.startswith(DAFNY_LIB_DIR):
+            continue
         # do not include files in ./gen unless specified
         if root.startswith("./gen") and not include_gen:
             continue
         for file in files:
             if file.endswith(".dfy"):
                 if file == PRINTER_DFY_PATH:
+                    continue
+                if file == EXE_DFY_PATH:
                     continue
                 dfy_path = os.path.relpath(os.path.join(root, file))
                 dfy_files.append(dfy_path)
@@ -244,6 +259,11 @@ class Generator():
         self.content.append(f"build {test_o_path}: otbn-as {TEST_ASM_PATH}\n")
         self.content.append(f"build {OUTPUT_ELF_PATH}: otbn-ld {test_o_path} {output_o_path}\n")
 
+    def generate_exe_rules(self):
+        exe_deps = list_dfy_deps(EXE_DFY_PATH)
+        self.content.append(f"build {EXE_DLL_PATH}: dll-gen {EXE_DFY_PATH} | {exe_deps}\n")
+        self.content.append(f"build {OUTPUT_DUMP_PATH}: dll-run {EXE_DLL_PATH} \n")
+
     def generate_rules(self):
         # rules to build .dfy from .vad 
         for file in os.listdir(CODE_DIR):
@@ -260,6 +280,9 @@ class Generator():
 
         # rules for the elf
         self.generate_elf_rules()
+
+        # rules for the exe
+        self.generate_exe_rules()
 
     def write_ninja(self):
         with open(NINJA_PATH, "w") as f:
@@ -316,11 +339,18 @@ def verify_single_file(target):
 
 ## separate command: dll-gen
 
-def generate_print_dll(dfy_path):
-    # ninja sanity check
-    assert dfy_path == PRINTER_DFY_PATH 
-    command = f"dafny {PRINTER_DFY_PATH} /compile:1 /vcsCores:2 /out:temp.dll"
-    command += f" && mv temp.dll {PRINTER_DLL_PATH} && mv temp.runtimeconfig.json {PRINTER_CONFIG_PATH}"
+def generate_dll(dfy_path, dll_path):
+    if dfy_path == PRINTER_DFY_PATH:
+        assert dll_path == PRINTER_DLL_PATH
+        confg_path = PRINTER_CONFIG_PATH
+        temp = "temp1"
+    else:
+        assert dll_path == EXE_DLL_PATH
+        confg_path = EXE_CONFIG_PATH
+        temp = "temp2"
+
+    command = f"dafny {dfy_path} /compile:1 /noNLarith /vcsCores:2 /out:{temp}.dll"
+    command += f" && mv {temp}.dll {dll_path} && mv {temp}.runtimeconfig.json {confg_path}"
     os_system(command)
 
 ## command line interface
@@ -340,7 +370,7 @@ def main():
     elif option == "dd-gen":
         generate_dd(sys.argv[2])
     elif option == "dll-gen":
-        generate_print_dll(sys.argv[2])
+        generate_dll(sys.argv[2], sys.argv[3])
     elif option == "clean":
         os.system("rm -r ./gen")
         os.system("rm " + NINJA_PATH)

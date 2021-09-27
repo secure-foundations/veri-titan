@@ -11,11 +11,15 @@ module cond_sub_to_reg {
 
 import opened bv_ops
 import opened vt_ops
+import opened vt_mem
 import opened rsa_ops
 import opened vt_consts
 import opened vt_vale
 import opened vt_decls
 import opened subb_lemmas
+
+import opened NativeTypes
+import opened BASE_256_Seq
 
 #endverbatim
 
@@ -54,7 +58,7 @@ procedure cond_sub_to_reg_inner(
         x12 == 30;
         x13 == 24;
 
-        iter_safe(iter, wmem, x16);
+        iter_safe(iter, heap, x16);
         seq_len(iter.buff) == NUM_WORDS;
 
         valid_wdr_view(wdrs, prev_view, 4, NUM_WORDS);
@@ -72,7 +76,7 @@ procedure cond_sub_to_reg_inner(
             init_view[..iter.index] == wdrs[4..x8];
     
     reads
-        w3; w31; wmem;
+        w3; w31; mem; heap;
 
     modifies
         x8; x12; x13; x16;
@@ -89,7 +93,7 @@ procedure cond_sub_to_reg_inner(
         w3 == old(w3);
         w31 == old(w31);
 
-        iter_inv(next_iter, wmem, x16);
+        iter_inv(next_iter, heap, x16);
         next_iter == bn_lid_next_iter(iter, true);
 
         valid_wdr_view(wdrs, next_view, 4, NUM_WORDS);
@@ -131,6 +135,16 @@ procedure cond_sub_to_reg_inner(
     ghost if (selection) {
         subb_inv_peri_lemma(next_view, new_carry,
             init_view, next_iter.buff, old_carry, iter.index);
+    } else {
+        calc == {
+            init_view[..next_iter.index];
+            ==
+            seq_append(init_view[..iter.index], init_view[iter.index]);
+            ==
+            seq_append(wdrs[4..x8-1], init_view[iter.index]);
+            ==
+            wdrs[4..x8];
+        }
     }
 }
 
@@ -150,12 +164,12 @@ procedure cond_sub_to_reg(
 
         valid_wdr_view(wdrs, init_view, 4, NUM_WORDS);
         
-        iter_safe(init_iter, wmem, x16);
+        iter_safe(init_iter, heap, x16);
         init_iter.index == 0;
         seq_len(init_iter.buff) == NUM_WORDS;
 
     reads
-        x30; w3; w31; wmem;
+        x30; w3; w31; mem; heap;
 
     modifies
         fgroups;
@@ -168,13 +182,15 @@ procedure cond_sub_to_reg(
         valid_wdr_view(wdrs, curr_view, 4, NUM_WORDS);
 
         selection ==>
-            to_nat(curr_view) == 
-                to_nat(init_view) - to_nat(init_iter.buff) +
+            ToNat(curr_view) == 
+                ToNat(init_view) - ToNat(init_iter.buff) +
                 bool_to_uint1(fgroups.fg0.cf) * pow_B256(NUM_WORDS);
 
         !selection ==>
-            to_nat(curr_view) == to_nat(init_view);
+            ToNat(curr_view) == ToNat(init_view);
 {
+    reveal SeqSub;
+
     /* load pointers to temp regs */
     li(x12, 30);
     li(x13, 24);
@@ -194,7 +210,7 @@ procedure cond_sub_to_reg(
             w3 == old(w3);
             w31 == old(w31);
 
-            iter_inv(iter, wmem, x16);
+            iter_inv(iter, heap, x16);
             iter.buff == init_iter.buff;
             iter.index + loop_ctr == NUM_WORDS;
 

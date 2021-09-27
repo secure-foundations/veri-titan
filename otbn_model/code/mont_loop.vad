@@ -18,12 +18,11 @@ module mont_loop {
 
 import opened bv_ops
 import opened vt_ops
+import opened vt_mem
 import opened rsa_ops
 import opened vt_consts
 import opened vt_vale
 import opened vt_decls
-import opened powers
-import opened congruences
 
 import opened mul256
 import opened addc512
@@ -31,7 +30,13 @@ import opened addc512_lemmas
 import opened cond_sub_to_reg
 import opened mont_loop_lemmas
 
+import opened Mul
+import opened Power
+import opened BASE_256_Seq
+
 #endverbatim
+
+ghost procedure LemmaMulIsCommutativeAuto() extern;
 
 ghost procedure uint512_view_lemma(ghost num: uint512_view_t) extern;
 
@@ -146,14 +151,14 @@ procedure mont_loop_0(
 
         valid_wdr_view(wdrs, curr_view, 4, NUM_WORDS);
 
-        iter_safe(y_it, wmem, x19);
+        iter_safe(y_it, heap, x19);
         seq_len(y_it.buff) == NUM_WORDS;
         y_it.index == 0;
 
     reads
         x16;
         w3; w31;
-        wmem; xmem;
+        mem; heap;
 
     modifies
         x8; x10; x12; x13; x19; x22;
@@ -190,7 +195,7 @@ procedure mont_loop_0(
         cong_B256(w25, p1.full * m0d);
 
         next_y_it == bn_lid_next_iter(y_it, true);
-        iter_safe(next_y_it, wmem, x19);
+        iter_safe(next_y_it, heap, x19);
 {
    /* save pointer to modulus */
     addi(x22, x16, 0);
@@ -211,7 +216,7 @@ procedure mont_loop_0(
 
     /* [w26, w27] = w30*w2 = y[0]*xi */
     mul256_w30xw2();
-    // assert to_nat(seq(w27, w26)) == y_it.buff[0] * w2;
+    // assert ToNat(seq(w27, w26)) == y_it.buff[0] * w2;
 
     /* w24 = w4 = A[0] */ 
     bn_movr(x13, false, x8, true);
@@ -269,9 +274,9 @@ procedure mont_loop_1(
         y_it.index >= 1;
         y_it.index == m_it.index;
 
-        iter_safe(y_it, wmem, x19);
+        iter_safe(y_it, heap, x19);
         seq_len(y_it.buff) == NUM_WORDS;
-        iter_safe(m_it, wmem, x16);
+        iter_safe(m_it, heap, x16);
         seq_len(m_it.buff) == NUM_WORDS;
 
         valid_wdr_view(wdrs, curr_view, 4, NUM_WORDS);
@@ -303,17 +308,17 @@ procedure mont_loop_1(
         w25 == ui;
         w31 == 0;
 
-        wmem == old(wmem);
-        xmem == old(xmem);
+        mem == old(mem);
+        heap == old(heap);
 
         valid_uint512_view(wdrs, next_p1, NA, 29);
         valid_uint512_view(wdrs, next_p2, NA, 28);
 
         next_y_it == bn_lid_next_iter(y_it, true);
-        iter_inv(next_y_it, wmem, x19);
+        iter_inv(next_y_it, heap, x19);
 
         next_m_it == bn_lid_next_iter(m_it, true);
-        iter_inv(next_m_it, wmem, x16);
+        iter_inv(next_m_it, heap, x16);
 
         valid_wdr_view(wdrs, next_view, 4, NUM_WORDS);
         prev_view[j+1..] == next_view[j+1..];
@@ -329,6 +334,7 @@ procedure mont_loop_1(
     /* add limb of buffer: [w26, w27] <- [w26,w27] + w24 = y[j]*xi + A[j] */
     bn_movr(x13, false, x8, true);
 
+    LemmaMulIsCommutativeAuto();
     mont_word_mul_add_bound_lemma_0(seq(w27, w26), seq(w24, w31), y_it.buff[j], xi);
     next_p1 := seq_addc_512_safe(w27, w27, w24, w26, w26, w31);
 
@@ -386,13 +392,13 @@ procedure mont_loop(
         w3 == vars.rsa.M0D;
         w31 == 0;
 
-        iter_inv(x_it, wmem, x20);
+        iter_inv(x_it, heap, x20);
         seq_len(x_it.buff) == NUM_WORDS;
         x_it.index >= 1;
         x_it.buff[x_it.index-1] == xi;
 
         valid_wdr_view(wdrs, prev_view, 4, NUM_WORDS);
-        mvars_inv(vars, wmem, NA, x19, x16, NA, NA, NA);
+        mvars_inv(vars, heap, NA, x19, x16, NA, NA, NA);
         montmul_inv(prev_view, x_it.buff, x_it.index-1, vars.y_it.buff, vars.rsa);
 
     ensures
@@ -414,8 +420,8 @@ procedure mont_loop(
 
         montmul_inv(next_view, x_it.buff, x_it.index, vars.y_it.buff, vars.rsa);
 
-        wmem == old(wmem);
-        xmem == old(xmem);
+        mem == old(mem);
+        heap == old(heap);
 {
     ghost var curr_view := prev_view;
     ghost var p1: uint512_view_t;
@@ -434,12 +440,13 @@ procedure mont_loop(
 
     /* [w26, w27] = w30*w25 = m[0]*ui*/
     mul256_w30xw25();
-    // assert to_nat(seq(w27, w26)) == m_it.buff[0] * ui;
+    // assert ToNat(seq(w27, w26)) == m_it.buff[0] * ui;
 
     /* [w28, w27] = [w26, w27] + w24 = m[0]*ui + (y[0]*xi + A[0] mod b) */
     mont_word_mul_add_bound_lemma_0(seq(w27, w26), seq(w24, w31), m_it.buff[0], ui);
     p2 := seq_addc_512_safe(w27, w27, w24, w28, w26, w31);
 
+    LemmaMulIsCommutativeAuto();
     mont_loop_inv_pre_lemma(xi, ui, vars.rsa.M0D, p1, p2, y_it.buff, m_it.buff, curr_view);
 
     ghost var j: nat := 1;
@@ -466,8 +473,8 @@ procedure mont_loop(
             w25 == ui;
             w31 == 0;
 
-            wmem == old(wmem);
-            xmem == old(xmem);
+            mem == old(mem);
+            heap == old(heap);
 
             valid_uint512_view(wdrs, p1, NA, 29);
             valid_uint512_view(wdrs, p2, NA, 28);
@@ -477,12 +484,12 @@ procedure mont_loop(
             y_it.index >= 1;
             y_it.index == m_it.index;
 
-            iter_inv(y_it, wmem, x19);
+            iter_inv(y_it, heap, x19);
             y_it.buff == vars.y_it.buff;
 
-            iter_inv(m_it, wmem, x16);
+            iter_inv(m_it, heap, x16);
             m_it.buff == vars.m_it.buff;
-            m_it.base_addr == x22;
+            m_it.base_ptr == x22;
 
             valid_wdr_view(wdrs, curr_view, 4, NUM_WORDS);
             seq_len(prev_view) == NUM_WORDS;
@@ -523,15 +530,16 @@ procedure mont_loop(
 
     /* This replaces Step 3 of HAC 14.36 and performs conditional constant-time
      subtraction of the modulus from the output buffer  */
-    m_it := iter_cons(x16, 0, wmem[x16]);
+    m_it := iter_cons(x16, 0, heap[x16].b);
     next_view := cond_sub_to_reg(curr_view, m_it, fgroups.fg1.cf);
 
-    mont_loop_cond_sub_lemma(xi, ui, y_it.buff, to_nat(m_it.buff),
-        to_nat(prev_view), curr_view, next_view, bout, bool_to_uint1(fgroups.fg0.cf));
+    mont_loop_cond_sub_lemma(xi, ui, y_it.buff, ToNat(m_it.buff),
+        ToNat(prev_view), curr_view, next_view, bout, bool_to_uint1(fgroups.fg0.cf));
     
     /* restore pointer */
     li(x8, 4);
 
+    reveal Pow;
     montmul_inv_lemma(prev_view, next_view, x_it.buff, x_it.index-1, ui, y_it.buff, vars.rsa);
 }
 

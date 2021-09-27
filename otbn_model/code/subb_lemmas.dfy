@@ -5,8 +5,9 @@ module subb_lemmas {
     import opened vt_ops
     import opened rsa_ops
     import opened vt_consts
-    import opened powers
-    import opened congruences
+
+    import opened NativeTypes
+    import opened BASE_256_Seq
 
     predicate subb_inv(
         dst: seq<uint256>,
@@ -14,12 +15,11 @@ module subb_lemmas {
         src1: seq<uint256>,
         src2: seq<uint256>,
         index: nat)
-
     requires |dst| == |src1| == |src2|;
     requires index <= |src1|;
     {
         (dst[..index], carry)
-            == seq_subb(src1[..index], src2[..index])
+            == SeqSub(src1[..index], src2[..index])
     }
 
     lemma subb_inv_peri_lemma(
@@ -37,7 +37,8 @@ module subb_lemmas {
         == uint256_subb(src1[index], src2[index], old_carry);
     ensures subb_inv(dst, new_carry, src1, src2, index + 1);
     {
-        var (zs, bin) := seq_subb(src1[..index], src2[..index]);
+        reveal SeqSub();
+        var (zs, bin) := SeqSub(src1[..index], src2[..index]);
         var (z, bout) := uint256_subb(src1[index], src2[index], old_carry);
 
         assert dst[..index+1] == zs + [z];
@@ -53,18 +54,18 @@ module subb_lemmas {
         
     requires |dst| == |src1| == |src2|;
     requires subb_inv(dst, carry, src1, src2, |dst|);
-    ensures to_nat(dst) == to_nat(src1) - to_nat(src2) + carry * pow_B256(|dst|);
-    ensures carry == 0 <==> to_nat(src1) >= to_nat(src2)
+    ensures ToNat(dst) == ToNat(src1) - ToNat(src2) + carry * pow_B256(|dst|);
+    ensures carry == 0 <==> ToNat(src1) >= ToNat(src2)
     {
         var index := |dst|;
         assert dst[..index] == dst;
         assert src1[..index] == src1;
         assert src2[..index] == src2;
     
-        seq_subb_nat_lemma(src1, src2, dst, carry);
+        LemmaSeqSub(src1, src2, dst, carry);
 
-        assert to_nat(src1) - to_nat(src2) + carry * pow_B256(index) == to_nat(dst);
+        assert ToNat(src1) - ToNat(src2) + carry * pow_B256(index) == ToNat(dst);
 
-        to_nat_bound_lemma(dst);
+        LemmaSeqNatBound(dst);
     }
 }

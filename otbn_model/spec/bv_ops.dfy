@@ -1,24 +1,27 @@
 include "vt_consts.dfy"
-include "../lib/powers.dfy"
+include "../libraries/src/NonlinearArithmetic/DivMod.dfy"
+include "../libraries/src/NonlinearArithmetic/Mul.dfy"
+include "../libraries/src/NonlinearArithmetic/Power.dfy"
 
 module bv_ops {
+    import opened NativeTypes
+    import opened DivMod
+    import opened Mul
+    import opened Power
+
     import opened vt_consts
-    import opened powers
-    import opened congruences
 
     type uint1   = i :int | 0 <= i < BASE_1
     type uint2   = i :int | 0 <= i < BASE_2
     type uint4   = i :int | 0 <= i < BASE_4
     type uint5   = i :int | 0 <= i < BASE_5
-    type uint8   = i :int | 0 <= i < BASE_8
-    type uint16  = i :int | 0 <= i < BASE_16
-    type uint32  = i :int | 0 <= i < BASE_32
-    type uint64  = i :int | 0 <= i < BASE_64
+    type uint10  = i :int | 0 <= i < 1024
     type uint128 = i :int | 0 <= i < BASE_128
     type uint256 = i :int | 0 <= i < BASE_256
     type uint512 = i :int | 0 <= i < BASE_512
 
-    type int12     = i :int | -2048 <= i <= 2047
+    type int10   = i :int | -512 <= i <= 511
+    type int12   = i :int | -2048 <= i <= 2047
 
     datatype shift_t = SFT(left: bool, bytes: uint5)
 
@@ -26,17 +29,24 @@ module bv_ops {
 
     predicate cong_B256(a: int, b: int)
     {
-        cong(a, b, BASE_256)
-    }
-    
-    function pow_B256(e: nat): nat
-    {
-        power(BASE_256, e)
+        IsModEquivalent(a, b, BASE_256)
     }
 
-    function bool_to_uint1(i:bool) : uint1
+    function pow_B256(e: nat): nat
+    {
+        LemmaPowPositiveAuto();
+        Pow(BASE_256, e)
+    }
+
+    function method bool_to_uint1(i:bool) : uint1
     {
         if i then 1 else 0
+    }
+
+    function method to_2s_comp_uint32(n: int): uint32
+        requires - BASE_32 < n < BASE_32
+    {
+        if n < 0 then n + BASE_32 else n
     }
 
     function method {:opaque} uint32_and(x:uint32, y:uint32) : uint32
@@ -71,9 +81,19 @@ module bv_ops {
         (x as bv32 << amount) as uint32
     }
 
-    function method {:opaque} uint32_add(x:uint32, y:uint32):uint32
+    function method uint32_add(x:uint32, y:uint32): uint32
     {
-        (x + y) % BASE_32
+        var s: uint64 := x + y;
+        if s < BASE_32 then 
+            s
+        else
+            s - BASE_32
+    }
+
+    function method uint32_addi(x: uint32, imm: int): uint32
+        requires - BASE_32 < imm < BASE_32
+    {
+        uint32_add(x, to_2s_comp_uint32(imm))
     }
 
     function method {:opaque} uint32_sub(x:uint32, y:uint32):uint32
@@ -81,14 +101,25 @@ module bv_ops {
         (x - y) % BASE_32
     }
 
-    function {:extern} uint32_se(x:uint32, size:int):uint32
-    //     requires 0 < size < 32;
-  // {
-  //   var sign : bv32 := (x as bv32 >> (size - 1));
-  //   var ext := if sign == 0 then 0 else (sign << (32 - (size + 1))) - 1;
-  //   (x as bv32 | ext) as uint32
-  //   
-  // }
+    function method {:opaque} uint128_msb(x: uint128): uint1
+    {
+        if ((x as bv128 >> 127) & 1 == 1) then 1 else 0
+    }
+
+    function method {:opaque} uint128_lsb(x: uint128): uint1
+    {
+        x % 2
+    }
+
+    function method {:opaque} uint256_msb(x: uint256): uint1
+    {
+        if ((x as bv256 >> 255) & 1 == 1) then 1 else 0
+    }
+
+    function method {:opaque} uint256_lsb(x: uint256): uint1
+    {
+        x % 2
+    }
 
     function method uint256_mul(x: uint256, y: uint256): uint256
     {
@@ -100,15 +131,13 @@ module bv_ops {
         var sum : int := x + y + cin;
         var sum_out := if sum < BASE_256 then sum else sum - BASE_256;
         var cout := if sum  < BASE_256 then 0 else 1;
-        // assert x + y + cin == sum_out + cout * BASE_256;
         (sum_out, cout)
     }
 
     lemma uint256_addc_cong_lemma(z: uint256, x: uint256, y: uint256)
         requires uint256_addc(x, y, 0).0 == z;
-        ensures cong_B256(z, x + y);
+        ensures IsModEquivalent(z, x + y, BASE_256);
     {
-        reveal cong();
     }
 
     function method uint256_subb(x: uint256, y: uint256, bin: uint1): (uint256, uint1)
@@ -134,16 +163,35 @@ module bv_ops {
         (x as bv256 | y as bv256) as uint256
     }
 
-    function {:extern} {:opaque} uint256_ls(x: uint256, num_bytes: uint5): (r: uint256)
+    function method {:opaque} uint256_not(x: uint256): uint256
+    {
+        !(x as bv256) as uint256
+    }
+
+    lemma {:axiom} left_shift_is_mul(x: uint256, num_bytes: uint5, r: uint256)
+        requires r == (x as bv256 << (num_bytes * 8)) as uint256;
+        ensures (num_bytes == 0) ==> r == x;
         ensures (num_bytes == 8 && x < BASE_192) ==> (r == x * BASE_64);
-    // {
-    //     //assume false;
-    //     (x as bv256 << (num_bytes * 8)) as uint256
-    // }
+        ensures (num_bytes == 16 && x < BASE_128) ==> (r == x * BASE_128);
+        ensures (num_bytes == 24 && x < BASE_64) ==> (r == x * BASE_192);
 
-    function {:extern} {:opaque} uint256_rs(x: uint256, num_bytes: uint5): uint256
+    function method {:opaque} uint256_ls(x: uint256, num_bytes: uint5): (r: uint256)
+        ensures (num_bytes == 0) ==> r == x;
+        ensures (num_bytes == 8 && x < BASE_192) ==> (r == x * BASE_64);
+        ensures (num_bytes == 16 && x < BASE_128) ==> (r == x * BASE_128);
+        ensures (num_bytes == 24 && x < BASE_64) ==> (r == x * BASE_192);
+    {
+        var r := (x as bv256 << (num_bytes * 8)) as uint256;
+        left_shift_is_mul(x, num_bytes, r);
+        r
+    }
 
-    function uint256_sb(b: uint256, shift: shift_t) : uint256
+    function method {:opaque} uint256_rs(x: uint256, num_bytes: uint5): uint256
+    {
+        (x as bv256 >> (num_bytes * 8)) as uint256
+    }
+
+    function method uint256_sb(b: uint256, shift: shift_t) : uint256
     {    
         var count := shift.bytes;
         if count == 0 then b
@@ -168,11 +216,19 @@ module bv_ops {
         reveal uint256_uh();
     }
 
-    function method {:extern} uint256_hwb(x: uint256, v: uint128, lower: bool): (x': uint256)
+    function method {:opaque} uint256_hwb(x: uint256, v: uint128, lower: bool): (x': uint256)
         // overwrites the lower half, keeps the higher half
         ensures lower ==> (uint256_lh(x') == v && uint256_uh(x') == uint256_uh(x));
         // overwrites the higher half, keeps the lower half
         ensures !lower ==> (uint256_uh(x') == v && uint256_lh(x') == uint256_lh(x));
+    {
+        var uh := uint256_uh(x);
+        var lh := uint256_lh(x);
+        reveal uint256_lh();
+        reveal uint256_uh();
+        if lower then v + uh * BASE_128
+        else lh + v * BASE_128
+    }
 
     lemma uint256_hwb_lemma(x1: uint256, x2: uint256, x3: uint256, lo: uint128, hi: uint128)
         requires x2 == uint256_hwb(x1, lo, true);
@@ -194,9 +250,9 @@ module bv_ops {
         requires a <= u;
         requires b <= u;
         ensures a * b <= u * u;
-            {
-        assert true;
-            }
+    {
+        LemmaMulUpperBoundAuto();
+    }
 
     lemma single_digit_lemma_1(a: nat, b: nat, c: nat, u: nat)
         requires a <= u;
@@ -208,9 +264,12 @@ module bv_ops {
             a * b + c;
             <= { single_digit_lemma_0(a, b, u); }
             u * u + c;
-            <= u * u + u;
-            u * (u + 1);
-            < (u + 1) * (u + 1);
+            <=
+            u * u + u;
+            == { LemmaMulIsDistributiveAddAuto(); }
+            u * (u + 1); 
+            <  { LemmaMulLeftInequality(u + 1, u, u + 1); }
+            (u + 1) * (u + 1); 
         }
     }
 
@@ -223,17 +282,25 @@ module bv_ops {
     {
         calc {
             a * b + c + d;
-            <={ single_digit_lemma_0(a, b, u); }
+            <= { single_digit_lemma_0(a, b, u); }
             u * u + c + d;
             <= u * u + u + u;
             u * u + 2 * u;
-            < u * u + 2 * u + 1;
+            < (u * u) + (2 * u) + 1;
+        }
+
+        calc {
             (u + 1) * (u + 1);
+            { LemmaMulIsDistributiveAdd(u + 1, u, 1); }
+            (u + 1) * u + (u + 1) * 1; 
+            u * (u + 1) + u + 1;
+            { LemmaMulIsDistributiveAdd(u, u, 1); }
+            (u * u) + (2 * u) + 1;
         }
     }
 
     function method {:opaque} uint256_qsel(x: uint256, qx: uint2): uint64
-        {
+    {
         if qx == 0 then
             uint256_lh(x) % BASE_64
         else if qx == 1 then
@@ -249,6 +316,7 @@ module bv_ops {
         var src1 := uint256_qsel(x, qx);
         var src2 := uint256_qsel(y, qy);
         single_digit_lemma_0(src1, src2, BASE_64-1);
+        LemmaMulStrictlyIncreasesAuto();
         src1 as uint128 * src2 as uint128
     }
 
@@ -272,25 +340,48 @@ module bv_ops {
         }
     }
 
-    // lemma {:axiom} and_single_bit_lemma(x': uint256, x: uint256, w0: uint256, i: nat)
-    //     requires w0 == power(2, i);
-    //     requires x' == uint256_and(x, w0);
-    //     ensures x' == power(2, i) || x' == 0;
+    function method  {:opaque} uint256_eighth_split(x: uint256, sel: nat): uint32
+        requires 0 <= sel <= 7
+    {
+        if sel == 7 then ((x as bv256 >> 224) as int) % BASE_32
+        else if sel == 6 then ((x as bv256 >> 192) as int) % BASE_32
+        else if sel == 5 then ((x as bv256 >> 160) as int) % BASE_32
+        else if sel == 4 then ((x as bv256 >> 128) as int) % BASE_32
+        else if sel == 3 then ((x as bv256 >> 96) as int) % BASE_32
+        else if sel == 2 then ((x as bv256 >> 64) as int) % BASE_32
+        else if sel == 1 then ((x as bv256 >> 32) as int) % BASE_32
+        else ((x as bv256) as int) % BASE_32
+    }
 
-    // lemma {:axiom} or_zero_nop_lemma(x: uint256, z: uint256)
-    //     requires z == 0;
-    //     ensures uint256_or(x, z) == x;
+    function method {:opaque} uint256_eighth_assemble(
+        p0: uint32, p1: uint32,
+        p2: uint32, p3: uint32,
+        p4: uint32, p5: uint32,
+        p6: uint32, p7: uint32): uint256
+    {
+        ((p7 as bv256 << 224)
+        | (p6 as bv256 << 192) 
+        | (p5 as bv256 << 160) 
+        | (p4 as bv256 << 128) 
+        | (p3 as bv256 << 96) 
+        | (p2 as bv256 << 64) 
+        | (p1 as bv256 << 32) 
+        | (p0 as bv256)) as uint256
+    }
 
-    // lemma {:axiom} or_single_bit_add_lemma(x': uint256, x: uint256, w0: uint256, i: nat)
-    //     requires w0 == power(2, i);
-    //     requires x < power(2, i);
-    //     requires x' == uint256_or(x, w0);
-    //     ensures x' == x + w0;
-    //     ensures x' < power(2, i + 1);
-
-    // lemma {:axiom} odd_and_one_lemma(x: uint256) 
-    //     requires x % 2 == 1;
-    //     ensures uint256_and(x, 1) == 1;
+    lemma uint256_eighth_value(v: uint256)
+        ensures v == uint256_eighth_assemble(
+            uint256_eighth_split(v, 0),
+            uint256_eighth_split(v, 1),
+            uint256_eighth_split(v, 2),
+            uint256_eighth_split(v, 3),
+            uint256_eighth_split(v, 4),
+            uint256_eighth_split(v, 5),
+            uint256_eighth_split(v, 6),
+            uint256_eighth_split(v, 7))
+    {
+        assume false;
+    }
 
     lemma xor_clear_lemma(x: uint256)
         ensures uint256_xor(x, x) == 0;

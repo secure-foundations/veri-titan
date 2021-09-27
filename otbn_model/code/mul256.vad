@@ -18,6 +18,10 @@ import opened vt_vale
 import opened vt_decls
 import opened mul256_lemmas
 
+import opened Mul
+import opened NativeTypes
+import opened BASE_256_Seq
+
 #endverbatim
 
 ghost procedure mul256_correct_lemma(
@@ -55,9 +59,9 @@ procedure mul256_w30xw2()
     reads
         w2; w30;
     modifies
-        w26; w27; wacc;
+        w26; w27; wacc; fgroups;
     ensures
-        to_nat(seq(w27, w26)) == w2 * w30;
+        ToNat(seq(w27, w26)) == w2 * w30;
 {
     ghost var p0 := uint256_qmul(w30, 0, w2, 0);
     ghost var p1 := uint256_qmul(w30, 1, w2, 0);
@@ -86,7 +90,7 @@ procedure mul256_w30xw2()
 
     bn_mulqacc_z(w30, 0, w2, 0, 0);
     bn_mulqacc_safe(w30, 1, w2, 0, 1);
-    bn_mulqacc_so_safe(w27, true, w30, 0, w2, 1, 1);
+    bn_mulqacc_so_safe(w27, true, w30, 0, w2, 1, 1, 0);
 
     ghost var w27_1 := w27;
     assert wacc == uint256_uh(r0);
@@ -99,7 +103,7 @@ procedure mul256_w30xw2()
     bn_mulqacc_safe(w30, 3, w2, 0, 1);
     bn_mulqacc_safe(w30, 2, w2, 1, 1);
     bn_mulqacc_safe(w30, 1, w2, 2, 1);
-    bn_mulqacc_so_safe(w27, false, w30, 0, w2, 3, 1);
+    bn_mulqacc_so_safe(w27, false, w30, 0, w2, 3, 1, 0);
 
     ghost var w27_2 := w27;
     assert wacc == uint256_uh(r1);
@@ -109,13 +113,13 @@ procedure mul256_w30xw2()
     bn_mulqacc_safe(w30, 2, w2, 2, 0);
     bn_mulqacc_safe(w30, 1, w2, 3, 0);
     bn_mulqacc_safe(w30, 3, w2, 2, 1);
-    bn_mulqacc_so_safe(w26, true, w30, 2, w2, 3, 1);
+    bn_mulqacc_so_safe(w26, true, w30, 2, w2, 3, 1, 0);
 
     ghost var w26_1 := w26;
     assert wacc == uint256_uh(r2);
     assert w26_1 == uint256_hwb(w26_0, uint256_lh(r2), true);
 
-    bn_mulqacc_so_safe(w26, false, w30, 3, w2, 3, 0);
+    bn_mulqacc_so_safe(w26, false, w30, 3, w2, 3, 0, 0);
 
     ghost var w26_2 := w26;
     assert wacc == uint256_uh(r3);
@@ -130,9 +134,9 @@ procedure mul256_w30xw25()
     reads
         w25; w30;
     modifies
-        w26; w27; wacc;
+        w26; w27; wacc; fgroups;
     ensures
-        to_nat(seq(w27, w26)) == w30 * w25;
+        ToNat(seq(w27, w26)) == w30 * w25;
 {
     ghost var p0 := uint256_qmul(w30, 0, w25, 0);
     ghost var p1 := uint256_qmul(w30, 1, w25, 0);
@@ -161,7 +165,7 @@ procedure mul256_w30xw25()
 
     bn_mulqacc_z(w30, 0, w25, 0, 0);
     bn_mulqacc_safe(w30, 1, w25, 0, 1);
-    bn_mulqacc_so_safe(w27, true, w30, 0, w25, 1, 1);
+    bn_mulqacc_so_safe(w27, true, w30, 0, w25, 1, 1, 0);
 
     ghost var w27_1 := w27;
     assert wacc == uint256_uh(r0);
@@ -174,7 +178,7 @@ procedure mul256_w30xw25()
     bn_mulqacc_safe(w30, 3, w25, 0, 1);
     bn_mulqacc_safe(w30, 2, w25, 1, 1);
     bn_mulqacc_safe(w30, 1, w25, 2, 1);
-    bn_mulqacc_so_safe(w27, false, w30, 0, w25, 3, 1);
+    bn_mulqacc_so_safe(w27, false, w30, 0, w25, 3, 1, 0);
 
     ghost var w27_2 := w27;
     assert wacc == uint256_uh(r1);
@@ -184,13 +188,13 @@ procedure mul256_w30xw25()
     bn_mulqacc_safe(w30, 2, w25, 2, 0);
     bn_mulqacc_safe(w30, 1, w25, 3, 0);
     bn_mulqacc_safe(w30, 3, w25, 2, 1);
-    bn_mulqacc_so_safe(w26, true, w30, 2, w25, 3, 1);
+    bn_mulqacc_so_safe(w26, true, w30, 2, w25, 3, 1, 0);
 
     ghost var w26_1 := w26;
     assert wacc == uint256_uh(r2);
     assert w26_1 == uint256_hwb(w26_0, uint256_lh(r2), true);
 
-    bn_mulqacc_so_safe(w26, false, w30, 3, w25, 3, 0);
+    bn_mulqacc_so_safe(w26, false, w30, 3, w25, 3, 0, 0);
 
     ghost var w26_2 := w26;
     assert wacc == uint256_uh(r3);
