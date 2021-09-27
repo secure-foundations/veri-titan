@@ -37,7 +37,8 @@ function postional_weight(i: nat) : nat
     power(BASE_32, i) as nat
 }
 
-lemma {:induction A} to_nat_upper_bound_lemma(A: seq<uint32>)
+lemma {:induction A} to_nat_upper_bound_lemma(A: seq<uint32>, n: nat)
+    requires |A| == n;
     ensures to_nat(A) < pow_B32(|A|);
 {
     if |A| == 0 {
@@ -55,7 +56,7 @@ lemma {:induction A} to_nat_upper_bound_lemma(A: seq<uint32>)
             to_nat(A) == word_interp(A, |A| - 1) + to_nat(A');
             {
                 assert to_nat(A') < power(BASE_32, |A'|) by {
-                    to_nat_upper_bound_lemma(A');
+                    to_nat_upper_bound_lemma(A', |A'|);
                 }
             }
             to_nat(A) < word_interp(A, |A| - 1) + power(BASE_32, |A'|);
@@ -125,7 +126,7 @@ lemma cmp_msw_lemma(A: seq<uint32>, B: seq<uint32>)
         }
 
         assert to_nat(B') < power(BASE_32, n - 1) by {
-            to_nat_upper_bound_lemma(B');
+            to_nat_upper_bound_lemma(B', n-1);
         }
 
         assert power(BASE_32, n - 1) - to_nat(B') > 0;
@@ -145,7 +146,7 @@ lemma cmp_msw_lemma(A: seq<uint32>, B: seq<uint32>)
         }
 
         assert to_nat(A') < power(BASE_32, n - 1) by {
-            to_nat_upper_bound_lemma(A');
+            to_nat_upper_bound_lemma(A', n-1);
         }
 
         assert to_nat(A') - power(BASE_32, n - 1) < 0;
