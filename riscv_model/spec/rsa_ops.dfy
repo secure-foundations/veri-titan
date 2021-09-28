@@ -3,6 +3,25 @@ include "bv_ops.dfy"
 include "rv_ops.dfy"
 include "../lib/powers.dfy"
 include "../lib/congruences.dfy"
+include "../../libraries/src/Collections/Sequences/LittleEndianNat.dfy"
+
+module BASE_32_Seq refines LittleEndianNat {
+    import opened BoundedInts
+    import opened rv_ops
+    import opened rv_consts
+    
+    function method BASE(): nat { BASE_32 }
+
+    lemma uint64_view_lemma(num: uint64_view_t)
+        ensures num.full
+            == ToNatRight([num.lh, num.uh])
+            == num.lh + num.uh * BASE_32;
+    {
+        reveal uint64_lh();
+        reveal uint64_uh();
+        LemmaSeqLen2([num.lh, num.uh]);
+    }
+}
 
 module rsa_ops {
     import opened rv_consts
@@ -10,6 +29,11 @@ module rsa_ops {
     import opened rv_ops
     import opened powers
     import opened congruences
+
+    import opened DivMod
+    import opened Power
+    import opened BoundedInts
+    import opened BASE_32_Seq
 
     /* to_nat definions & lemmas */
 

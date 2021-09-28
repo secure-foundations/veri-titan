@@ -1,7 +1,5 @@
 include "rv_consts.dfy"
 include "bv_ops.dfy"
-include "../lib/powers.dfy"
-include "../lib/congruences.dfy"
 
 module rv_ops {
 

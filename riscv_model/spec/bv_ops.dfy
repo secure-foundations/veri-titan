@@ -1,10 +1,17 @@
 include "rv_consts.dfy"
-include "../lib/powers.dfy"
+  
+include "../../libraries/src/NonlinearArithmetic/DivMod.dfy"
+include "../../libraries/src/NonlinearArithmetic/Mul.dfy"
+include "../../libraries/src/NonlinearArithmetic/Power.dfy"
+include "../../libraries/src/NonlinearArithmetic/Power2.dfy"
 
 module bv_ops {
+    import opened Power
+    import opened Power2
+    import opened Mul
+    import opened DivMod
+
     import opened rv_consts
-    import opened powers
-    import opened congruences
 
     type uint1   = i :int | 0 <= i < BASE_1
     type uint2   = i :int | 0 <= i < BASE_2
@@ -26,13 +33,13 @@ module bv_ops {
     /* signed operations */
     function int32_rs(x: int32, shift: nat) : int32
     {
-      x / pow2(shift)
+      x / Pow2(shift)
     }
 
     // right arithmetic shift
     function int64_rs(x: int64, shift: nat) : int64
     {
-      x / pow2(shift)
+      x / Pow2(shift)
     }
 
     function method to_uint32(i: int) : uint32
@@ -82,7 +89,8 @@ module bv_ops {
 
     function pow_B32(e: nat): nat
     {
-        power(BASE_32, e)
+        LemmaPowPositiveAuto();
+        Pow(BASE_32, e)
     }
 
     function bool_to_uint1(i:bool) : uint1
@@ -166,7 +174,7 @@ module bv_ops {
         requires b <= u;
         ensures a * b <= u * u;
     {
-        assert true;
+      LemmaMulUpperBoundAuto();
     }
 
     lemma single_digit_lemma_1(a: nat, b: nat, c: nat, u: nat)
@@ -192,14 +200,16 @@ module bv_ops {
         requires d <= u;
         ensures a * b + c + d < (u + 1) * (u + 1);
     {
-        calc {
-            a * b + c + d;
-            <={ single_digit_lemma_0(a, b, u); }
-            u * u + c + d;
-            <= u * u + u + u;
-            u * u + 2 * u;
-            < u * u + 2 * u + 1;
-            (u + 1) * (u + 1);
+      calc {
+            a * b + c;
+            <= { single_digit_lemma_0(a, b, u); }
+            u * u + c;
+            <=
+            u * u + u;
+            == { LemmaMulIsDistributiveAddAuto(); }
+            u * (u + 1); 
+            <  { LemmaMulLeftInequality(u + 1, u, u + 1); }
+            (u + 1) * (u + 1); 
         }
     }
 
