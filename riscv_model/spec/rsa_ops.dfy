@@ -23,23 +23,21 @@ module rsa_ops {
     import opened DivMod
     import opened Power
     import opened BASE_32_Seq
+    import opened Seq
 
     /* to_nat definions & lemmas */
-
-    function {:opaque} to_nat(xs: seq<uint32>): nat
-    {
-        if |xs| == 0 then 0
-        else
-            var len' := |xs| - 1;
-            ToNatRight(xs[..len']) + xs[len'] * pow_B32(len')
-    }
 
     lemma to_nat_lemma_0(xs: seq<uint32>)
         requires |xs| == 1
         ensures ToNatRight(xs) == xs[0]
     {
         reveal ToNatRight();
-        reveal power();
+        assert BASE() == 0x1_00000000;
+        // assert ToNatRight(DropFirst(xs)) == 0;
+        // assert 0 * BASE() == 0;
+        // assert First(xs) == xs[0];
+        // assert ToNatRight(xs) == ToNatRight(DropFirst(xs)) * BASE() + First(xs);
+        // assert ToNatRight(xs) == xs[0];
     }
 
     lemma to_nat_lemma_1(xs: seq<uint32>)
