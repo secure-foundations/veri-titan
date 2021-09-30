@@ -6,21 +6,11 @@ include "../lib/congruences.dfy"
 include "../../libraries/src/Collections/Sequences/LittleEndianNat.dfy"
 
 module BASE_32_Seq refines LittleEndianNat {
-    import opened BoundedInts
     import opened rv_ops
+    import opened bv_ops
     import opened rv_consts
     
     function method BASE(): nat { BASE_32 }
-
-    lemma uint64_view_lemma(num: uint64_view_t)
-        ensures num.full
-            == ToNatRight([num.lh, num.uh])
-            == num.lh + num.uh * BASE_32;
-    {
-        reveal uint64_lh();
-        reveal uint64_uh();
-        LemmaSeqLen2([num.lh, num.uh]);
-    }
 }
 
 module rsa_ops {
@@ -32,7 +22,6 @@ module rsa_ops {
 
     import opened DivMod
     import opened Power
-    import opened BoundedInts
     import opened BASE_32_Seq
 
     /* to_nat definions & lemmas */
@@ -42,22 +31,22 @@ module rsa_ops {
         if |xs| == 0 then 0
         else
             var len' := |xs| - 1;
-            to_nat(xs[..len']) + xs[len'] * pow_B32(len')
+            ToNatRight(xs[..len']) + xs[len'] * pow_B32(len')
     }
 
     lemma to_nat_lemma_0(xs: seq<uint32>)
         requires |xs| == 1
-        ensures to_nat(xs) == xs[0]
+        ensures ToNatRight(xs) == xs[0]
     {
-        reveal to_nat();
+        reveal ToNatRight();
         reveal power();
     }
 
     lemma to_nat_lemma_1(xs: seq<uint32>)
         requires |xs| == 2
-        ensures to_nat(xs) == xs[0] + xs[1] * BASE_32
+        ensures ToNatRight(xs) == xs[0] + xs[1] * BASE_32
     {
-        reveal to_nat();
+        reveal ToNatRight();
         to_nat_lemma_0(xs[..1]);
         reveal power();
     }
@@ -78,9 +67,9 @@ module rsa_ops {
     lemma seq_subb_nat_lemma(xs: seq<uint32>, ys: seq<uint32>, zs: seq<uint32>, bout: uint1)
         requires |xs| == |ys|
         requires seq_subb(xs, ys) == (zs, bout);
-        ensures to_nat(xs) - to_nat(ys) + bout * pow_B32(|xs|) == to_nat(zs)
+        ensures ToNatRight(xs) - ToNatRight(ys) + bout * pow_B32(|xs|) == ToNatRight(zs)
     {
-        reveal to_nat();
+        reveal ToNatRight();
         if |xs| == 0 {
             reveal power();
         } else {
@@ -90,16 +79,16 @@ module rsa_ops {
             assert bout * BASE_32 + xs[len'] - bin - ys[len'] == z;
 
             calc {
-                to_nat(zs);
-                to_nat(zs') + z * pow_B32(len');
+                ToNatRight(zs);
+                ToNatRight(zs') + z * pow_B32(len');
                     { seq_subb_nat_lemma(xs[..len'], ys[..len'], zs', bin); }
-                to_nat(xs[..len']) - to_nat(ys[..len']) + bin * pow_B32(len') + z * pow_B32(len');
-                to_nat(xs[..len']) - to_nat(ys[..len']) + xs[len'] * pow_B32(len')
+                ToNatRight(xs[..len']) - ToNatRight(ys[..len']) + bin * pow_B32(len') + z * pow_B32(len');
+                ToNatRight(xs[..len']) - ToNatRight(ys[..len']) + xs[len'] * pow_B32(len')
                     - ys[len'] * pow_B32(len') + bout * BASE_32 * pow_B32(len');
-                    { reveal to_nat(); }
-                to_nat(xs) - to_nat(ys) + bout * BASE_32 * pow_B32(len');
+                    { reveal ToNatRight(); }
+                ToNatRight(xs) - ToNatRight(ys) + bout * BASE_32 * pow_B32(len');
                     { reveal power(); }
-                to_nat(xs) - to_nat(ys) + bout * pow_B32(|xs|);
+                ToNatRight(xs) - ToNatRight(ys) + bout * pow_B32(|xs|);
             }
         }
     }

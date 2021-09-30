@@ -30,8 +30,9 @@ module bv_ops {
     type int32  = i :int | -BASE_31 <= i <= (BASE_31 - 1)
     type int64  = i :int | -BASE_63 <= i <= (BASE_63 - 1)
 
+
     /* signed operations */
-    function int32_rs(x: int32, shift: nat) : int32
+    function method int32_rs(x: int32, shift: nat) : int32
     {
       x / Pow2(shift)
     }
@@ -150,7 +151,9 @@ module bv_ops {
     function method uint32_full_mul(x:uint32, y:uint32): (r: uint64)
         ensures r == x * y
     {
+        LemmaMulNonnegative(x, y);
         single_digit_lemma_0(x, y, BASE_32-1);
+        
         x * y
     }
 
