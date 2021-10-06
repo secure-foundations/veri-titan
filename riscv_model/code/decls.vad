@@ -100,6 +100,7 @@ function iter_safe(iter: iter_t, h: mem_t, ptr: int): bool extern;
     
 function iter_cons(base_addr: int, index: nat, buff: seq(uint32)): iter_t extern;
 function lw_next_iter(iter: iter_t): iter_t extern;
+function lw_prev_iter(iter: iter_t): iter_t extern;
 function sw_next_iter(iter: iter_t, value: uint32): iter_t extern;
 function operator(.base_addr) (iter :iter_t): int extern;
 function operator(.index) (iter :iter_t): int extern;
@@ -217,7 +218,8 @@ procedure lw_safe(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: 
     lw(dst, src1, src2, iter);
 }
 
-procedure lw_prev(inout dst: reg32, in src1: reg32, in src2: simm32, ghost iter: iter_t)
+// TOOD: signed integer for src2
+procedure lw_prev(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
     returns (ghost prev_iter: iter_t)
     reads
         mem;
@@ -231,7 +233,7 @@ procedure lw_prev(inout dst: reg32, in src1: reg32, in src2: simm32, ghost iter:
         iter_inv(prev_iter, mem, old(src1) + old(src2) - 4);
         prev_iter == lw_prev_iter(iter);
 {
-    next_iter := iter.(index := iter.index + 1);
+    prev_iter := iter.(index := iter.index - 1);
     lw(dst, src1, src2, iter);
 }
 

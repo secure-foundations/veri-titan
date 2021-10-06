@@ -1,13 +1,14 @@
 include "rv_consts.dfy"
 include "bv_ops.dfy"
 
+include "../libraries/src/NonlinearArithmetic/Power2.dfy"
+
 module rv_ops {
 
     import opened bv_ops // bit-vector operations
     import opened rv_consts // RISC-V constants
 
-    import opened powers
-    import opened congruences
+    import opened Power2
 
     /* registers definitions */
     type reg_index = uint5 // 32 registers
@@ -86,6 +87,7 @@ module rv_ops {
     }
 
     function lw_prev_iter(iter: iter_t): iter_t
+      requires iter.index > 0
     {
         iter.(index := iter.index - 1)
     }

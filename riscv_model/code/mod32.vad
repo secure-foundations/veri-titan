@@ -196,23 +196,24 @@ procedure ge_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         result == to_nat(iter_a.buff) >= to_nat(iter_n.buff);
   {
 
-    lui(x11 ,0x11) // 0x11000 into x11
-    addi(x15, x11, 1560) // n = 71192 into x15
+    lui(x11 ,0x11); // 0x11000 into x11
+    addi(x15, x11, 1560); // n = 71192 into x15
 
-    addi(x10, x10, 380) // pointer to end of a
-    addi(x15, x15, 380) // pointer to end of n
-    addi(x11, x11, 1560) // pointer to beginning of n
+    addi(x10, x10, 380); // pointer to end of a
+    addi(x15, x15, 380); // pointer to end of n
+    addi(x11, x11, 1560); // pointer to beginning of n
     
     mv(x12, 1);
 
     while (x12 != 0)
+    decreases x12;
     {
 
       lw_safe(x13, x10, 0, iter_a); // x13 = a[i] -- 10148
       lw_safe(x14, x15, 0, iter_n); // x14 = n[i]
       
-      addi(x15, x15, -4); // x15 = pointer to n[i-1]
-      addi(x10, x10, -4); // x10 = pointer to a[i-1]
+      addi(x15, x15, (-4)); // x15 = pointer to n[i-1]
+      addi(x10, x10, (-4)); // x10 = pointer to a[i-1]
 
       // if a[i] != n[i]
       sub(x12, x13, x14); // a[i] - n[i]
@@ -225,6 +226,8 @@ procedure ge_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
       sltu(x12, x0, x12); // 1 if 0 < x12, 0 if they're equal 
         
     }
+    
+    assume false;
   }
 
 
@@ -255,7 +258,6 @@ procedure ge_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     //  
     //  li(x10, 1) // 1015a
     //  ret
-
 
 #verbatim
 }

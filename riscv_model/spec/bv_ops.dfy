@@ -1,9 +1,9 @@
 include "rv_consts.dfy"
   
-include "../../libraries/src/NonlinearArithmetic/DivMod.dfy"
-include "../../libraries/src/NonlinearArithmetic/Mul.dfy"
-include "../../libraries/src/NonlinearArithmetic/Power.dfy"
-include "../../libraries/src/NonlinearArithmetic/Power2.dfy"
+include "../libraries/src/NonlinearArithmetic/DivMod.dfy"
+include "../libraries/src/NonlinearArithmetic/Mul.dfy"
+include "../libraries/src/NonlinearArithmetic/Power.dfy"
+include "../libraries/src/NonlinearArithmetic/Power2.dfy"
 
 module bv_ops {
     import opened Power
