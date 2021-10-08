@@ -4,7 +4,6 @@ include "../libraries/src/NonlinearArithmetic/Mul.dfy"
 include "../libraries/src/NonlinearArithmetic/Power.dfy"
 
 module bv_ops {
-    import opened NativeTypes
     import opened DivMod
     import opened Mul
     import opened Power
@@ -16,7 +15,10 @@ module bv_ops {
     type uint4   = i :int | 0 <= i < BASE_4
     type uint5   = i :int | 0 <= i < BASE_5
     type uint10  = i :int | 0 <= i < 1024
+    type uint32  = i :int | 0 <= i < BASE_32
+    type uint64  = i :int | 0 <= i < BASE_64
     type uint128 = i :int | 0 <= i < BASE_128
+    type uint192 = i :int | 0 <= i < BASE_192
     type uint256 = i :int | 0 <= i < BASE_256
     type uint512 = i :int | 0 <= i < BASE_512
 

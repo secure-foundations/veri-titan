@@ -18,7 +18,6 @@ import opened vt_vale
 import opened vt_decls
 import opened subb_lemmas
 
-import opened NativeTypes
 import opened BASE_256_Seq
 
 #endverbatim

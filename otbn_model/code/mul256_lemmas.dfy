@@ -7,7 +7,6 @@ module mul256_lemmas {
     import opened vt_consts
 
     import opened Mul
-    import opened NativeTypes
     import opened BASE_256_Seq
 
     const B  : int := BASE_64;

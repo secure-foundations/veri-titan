@@ -9,7 +9,6 @@ module montmul_lemmas {
 
     import opened DivMod
     import opened Mul
-    import opened NativeTypes
     import opened BASE_256_Seq
 
     lemma montmul_inv_lemma_0(
@@ -27,7 +26,7 @@ module montmul_lemmas {
         ensures montmul_inv(a, x, i, y, rsa);
     {
         assert ToNat(x[..i]) == 0 by {
-            reveal ToNat();
+            reveal ToNatRight();
         }
         assert montmul_inv(a, x, i, y, rsa);
     }

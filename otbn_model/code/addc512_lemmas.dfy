@@ -7,7 +7,6 @@ module addc512_lemmas {
     import opened vt_consts
 
     import opened DivMod
-    import opened NativeTypes
     import opened Power
     import opened Seq
     import opened BASE_256_Seq

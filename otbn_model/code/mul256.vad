@@ -19,7 +19,6 @@ import opened vt_decls
 import opened mul256_lemmas
 
 import opened Mul
-import opened NativeTypes
 import opened BASE_256_Seq
 
 #endverbatim

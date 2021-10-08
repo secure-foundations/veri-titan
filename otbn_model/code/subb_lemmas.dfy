@@ -6,7 +6,6 @@ module subb_lemmas {
     import opened rsa_ops
     import opened vt_consts
 
-    import opened NativeTypes
     import opened BASE_256_Seq
 
     predicate subb_inv(

@@ -10,7 +10,6 @@ module vt_ops {
     import opened vt_mem
 
     import opened Power2
-    import opened NativeTypes
 
 /* registers definions */
 
