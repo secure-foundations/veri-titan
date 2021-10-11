@@ -145,4 +145,40 @@ module mod32_lemmas {
         }
       }
 
+    predicate ge_mod32_loop_inv(
+      iter_a: iter_t,
+      iter_n: iter_t,
+      cond: bool,
+      b: bool)
+    {
+      var i := iter_a.index;
+      && cond != 0 ==> 0 <= i < |a|
+      && cond == 0 ==> -1 <= i < |a|- 1
+      && cond == 1 ==> a[i+1..] == n[i+1..]
+      && (cond == 0 ==> (b ==> a[i+1] > n[i+1]) || (a == n))
+      && cond == 0 ==> (ToNatRight(a) >= ToNatRight(n)) == b
+    }
+
+    lemma lemma_ge_mod32_correct(
+      iter_a: iter_t,
+      iter_n: iter_t,
+      iter_a_prev: iter_t,
+      iter_n_prev: iter_t,
+      cond: reg32,
+      b: bool,
+      i: int)
+      requires
+        && ge_mod32_loop_inv(iter_a, iter_n, cond, b)
+        && iter_a.index < |iter_a.buff|
+        && i == iter_a.index
+
+        && sub == uint32_sub(iter_a.buff[i]), iter_n.buff[i])
+
+        && cond == uint32_lt(uint32_xor(x11, x15)); // cond = x12
+
+        && iter_a_prev == lw_prev_iter(iter_a)
+        && iter_n_prev == lw_prev_iter(iter_n)
+      ensures
+        ge_mod32_loop_inv(iter_a_prev, iter_n_prev)
+
 }
