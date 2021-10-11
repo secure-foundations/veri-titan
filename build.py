@@ -97,7 +97,6 @@ def subprocess_run(command):
 # ## separate command: setup
 
 def setup_tools():
-    print("?")
     # ninja
     version = subprocess_run("ninja --version")
     if version != "1.10.1":
@@ -137,6 +136,9 @@ def setup_tools():
             return
         elif choice == "y":
             break
+
+    if not os.path.exists(TOOLS_DIR):
+        os.mkdir(TOOLS_DIR)
 
     if os.path.exists(DAFNY_PATH):
         print("[INFO] dafny binary already exists")
