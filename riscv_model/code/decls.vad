@@ -179,7 +179,7 @@ function uint32_mul(x: uint32, y: uint32): uint32 extern;
 function uint32_mulhu(x: uint32, y: uint32): uint32 extern;
    
 function int32_rs(x: int32, shift: nat): int32 extern;
-
+function int32_lt(x: int32, y: int32): uint32 extern;
 
 // --------------------------------------------------------------
 // Base Integer Instructions
@@ -309,7 +309,7 @@ procedure lw_prev(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: 
 
 // immediate instructions
     
-procedure addi(inout dst: reg32, in src1: reg32, in src2: imm32)
+procedure addi(inout dst: reg32, in src1: reg32, in src2: simm32)
     {:instruction Ins32(RV_ADDI(dst, src1, src2))}
     requires
        src1 + src2 < 0xffff_ffff;
@@ -339,12 +339,13 @@ procedure slli(inout dst: reg32, in src1: reg32, in src2: imm32)
     assume false;
 }
     
-procedure slti(inout dst: reg32, in src1: reg32, in src2: imm32)
+// signed arguments
+procedure slti(inout dst: reg32, in src1: reg32, in src2: simm32)
     {:instruction Ins32(RV_SLTI(dst, src1, src2))}
     requires
         src2 < 0x1000;
     ensures
-    dst == uint32_lt(old(src1), old(src2));
+    dst == int32_lt(to_int32(old(src1)), old(src2));
 {
     assume false;
 }
@@ -528,7 +529,7 @@ procedure slt(inout dst: reg32, in src1: reg32, in src2: reg32)
     {:instruction Ins32(RV_SLT(dst, src1, src2))}
     ensures
         // < comparison as signed ints
-        dst == uint32_lt(old(src1), old(src2));
+        dst == int32_lt(to_int32(old(src1)), to_int32(old(src2)));
 {
     assume false;
 }

@@ -139,36 +139,6 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     }
 }
     
-// static int ge_mod(const uint32_t *n, const uint32_t *a)
-// {
-//   uint32_t i;
-//   for (i = RSANUMWORDS; i;) {
-//     --i;
-//     if (a[i] < n[i])
-//       return 0;
-//     if (a[i] > n[i])
-//       return 1;
-//   }
-//   return 1;  /* equal */
-// }
-    
-   //  var cond := 1; // x12
-   //  var return := 1; // x10
-   //  while cond != 0 {
-   //      // load a[i], n[i]
-   //      if a[i] != n[i] {
-   //          cond = 0
-   //          }
-   //      if a[i] < n[i] {
-   //          return = 0
-   //      }
-   //      a--;
-   //      n--;
-   //      if n == start_n {
-   //          cond = 0
-   //      }
-   //  }
-    
 procedure ge_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     returns (ghost result: bool)
     requires
@@ -196,21 +166,24 @@ procedure ge_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         result == to_nat(iter_a.buff) >= to_nat(iter_n.buff);
   {
 
-    lui(x11 ,0x11); // 0x11000 into x11
+    lui(x11, 0x11); // 0x11000 into x11
     addi(x15, x11, 1560); // n = 71192 into x15
 
     addi(x10, x10, 380); // pointer to end of a
     addi(x15, x15, 380); // pointer to end of n
     addi(x11, x11, 1560); // pointer to beginning of n
     
-    mv(x12, 1);
+    addi(x12, x0, 1); // move 1 into x12
 
     while (x12 != 0)
+    invariant iter_inv(iter_a, mem, x10);
+    invariant iter_inv(iter_n, mem, x15);
+    invariant iter_a.index == iter_n.index;
     decreases x12;
     {
 
-      lw_safe(x13, x10, 0, iter_a); // x13 = a[i] -- 10148
-      lw_safe(x14, x15, 0, iter_n); // x14 = n[i]
+      let iter_a_prev := lw_safe(x13, x10, 0, iter_a); // x13 = a[i] -- 10148
+      let iter_n_prev := lw_safe(x14, x15, 0, iter_n); // x14 = n[i]
       
       addi(x15, x15, (-4)); // x15 = pointer to n[i-1]
       addi(x10, x10, (-4)); // x10 = pointer to a[i-1]
@@ -220,7 +193,7 @@ procedure ge_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
       sltu(x12, x0, x12); // 0 if a[i] - n[i] = 0, else 1
 
       // a[i] < n[i]
-      slti(x10, x0, x12); // 0 if 0 < a[i] - n[i]
+      slt(x10, x0, x12); // 0 if 0 < a[i] - n[i]
 
       xor(x12, x11, x15);
       sltu(x12, x0, x12); // 1 if 0 < x12, 0 if they're equal 
@@ -229,35 +202,6 @@ procedure ge_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     
     assume false;
   }
-
-
-    //  // jump over branch instructions and mv
-    //  j	10148 <ge_mod.constprop.0+0x1e>
-
-    //  // if n[i] < a[i], return, otherwise they're equal
-    //  bltu	x14,x13,1015a <ge_mod.constprop.0+0x30> // 1013e
-
-    //  // jump to (ret 0) if we're at the end of n
-    //  // pointer to beginning and end of n equal
-    //  beq	x15,x11,1015a <ge_mod.constprop.0+0x30>
-    //  
-    //  mv(x15, x12) // point x15 to n[i-1] for next iteration of loop
-
-    //  // loop body
-    //  lw_safe(x13, x10, 0, iter_a); // x13 = a[i] -- 10148
-    //  lw_safe(x14, x15, 0, iter_n); // x14 = n[i]
-    //  
-    //  addi(x12, x15, -4); // x12 = pointer to n[i-1] (x15 still points to n[i])
-    //  addi(x10, x10, -4); // x10 = pointer to a[i-1]
-    //  
-    //  // loop if a[i] >= n[i]
-    //  bgeu	x13,x14,1013e <ge_mod.constprop.0+0x14>
-    //  
-    //  li(x10, 0)
-    //  ret
-    //  
-    //  li(x10, 1) // 1015a
-    //  ret
 
 #verbatim
 }

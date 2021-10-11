@@ -65,6 +65,11 @@ module bv_ops {
     {
     }
 
+    function int32_lt(x: int32, y: int32) : bool
+    {
+      if x < y then 1 else 0
+    }
+
     function method to_uint64(i: int) : uint64
       requires - BASE_64 < i < BASE_64
     {

@@ -145,25 +145,4 @@ module mod32_lemmas {
         }
       }
 
-    lemma lemma_ge_mod32_correct(
-      A: int64_view_t, // old A
-      A': int64_view_t, // new A
-      iter_a: iter_t,
-      iter_n: iter_t,
-      iter_a': iter_t,
-      iter_a_next: iter_t,
-      iter_n_next: iter_t,
-      iter_a'_next: iter_t,
-      carry_add: int,
-      carry_sub: int,
-      x13: uint32,
-      i: int)
-      requires
-        && sub_mod32_loop_inv(iter_a, iter_n, iter_a', A.full)
-        && iter_a.index < |iter_a.buff|
-        && i == iter_a.index
-        
-}
-      
-
 }

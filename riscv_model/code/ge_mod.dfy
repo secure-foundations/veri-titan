@@ -95,7 +95,6 @@ lemma {:induction A, i} cmp_sufficient_lemma(A: seq<uint32>, B: seq<uint32>, i: 
             }
         }
     }
-
         
   method ge_mod(a: seq<uint32>, n: seq<uint32>) returns (b:bool)
     requires |a| == |n| == 384
@@ -115,7 +114,6 @@ lemma {:induction A, i} cmp_sufficient_lemma(A: seq<uint32>, B: seq<uint32>, i: 
       invariant cond == 0 ==> (ToNatRight(a) >= ToNatRight(n)) == b
       decreases i
     {
-
       var ai := a[i];
       var ni := n[i];
 
@@ -130,7 +128,6 @@ lemma {:induction A, i} cmp_sufficient_lemma(A: seq<uint32>, B: seq<uint32>, i: 
       if i == 0 {
         cond := 0;
       }
-
       i := i - 1;
     }
   }
