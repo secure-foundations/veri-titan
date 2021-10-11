@@ -4,7 +4,6 @@ include "bv_ops.dfy"
 module vt_mem {
     import opened bv_ops
     import opened vt_consts
-    import opened NativeTypes
 
 /* mem_t definion */
 

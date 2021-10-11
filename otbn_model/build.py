@@ -34,6 +34,8 @@ PRINTER_DFY_PATH = "tests/print.dfy"
 PRINTER_DLL_PATH = "gen/print.dll"
 PRINTER_CONFIG_PATH = "gen/print.runtimeconfig.json"
 
+DAFNY_LIB_HASH = "84d160538b6442017a5401feb91265147bf34bfc"
+
 OUTPUT_ASM_PATH = "gen/output.s"
 TEST_ASM_PATH = "tests/run_modexp.s"
 OUTPUT_ELF_PATH = "gen/run_modexp.elf"
@@ -152,7 +154,7 @@ def setup_tools():
     if os.path.exists(DAFNY_LIB_DIR):
         print("[INFO] dafny library already exists")
     else:
-        os.system("git clone https://github.com/secure-foundations/dafny_library.git libraries")
+        os.system(f"git clone git@github.com:secure-foundations/libraries.git libraries && git checkout {DAFNY_LIB_HASH}")
 
 # list dependecy 
 
