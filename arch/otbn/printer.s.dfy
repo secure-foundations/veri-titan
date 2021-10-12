@@ -1,4 +1,4 @@
-include "../code/vale.dfy"
+include "vale.i.dfy"
 include "../gen/modexp_var.dfy"
 
 module otbn_printer {
@@ -13,12 +13,12 @@ method printReg32(r:reg32_t)
         // case RND => print("ERROR: rnd"); // TODO: Are we no longer modeling RND?
 }
 
- method printReg256(r:reg256_t)
- {
-   match r
+method printReg256(r:reg256_t)
+{
+    match r
         case WDR(w) => print("w"); print(w);
         case _ => print("TODO");
- }
+}
 
 method printIns32(ins:ins32)
 {

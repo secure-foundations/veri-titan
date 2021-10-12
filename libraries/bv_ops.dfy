@@ -1,14 +1,26 @@
-include "vt_consts.dfy"
-include "../libraries/src/NonlinearArithmetic/DivMod.dfy"
-include "../libraries/src/NonlinearArithmetic/Mul.dfy"
-include "../libraries/src/NonlinearArithmetic/Power.dfy"
+include "../standard_libraries/src/NonlinearArithmetic/DivMod.dfy"
+include "../standard_libraries/src/NonlinearArithmetic/Mul.dfy"
+include "../standard_libraries/src/NonlinearArithmetic/Power.dfy"
+include "../standard_libraries/src/BoundedInts.dfy"
 
 module bv_ops {
     import opened DivMod
     import opened Mul
     import opened Power
+    import BoundedInts
 
-    import opened vt_consts
+    const BASE_1   : int := BoundedInts.TWO_TO_THE_1
+    const BASE_2   : int := BoundedInts.TWO_TO_THE_2
+    const BASE_4   : int := BoundedInts.TWO_TO_THE_4
+    const BASE_5   : int := BoundedInts.TWO_TO_THE_5
+    const BASE_8   : int := BoundedInts.TWO_TO_THE_8
+    const BASE_16  : int := BoundedInts.TWO_TO_THE_16
+    const BASE_32  : int := BoundedInts.TWO_TO_THE_32
+    const BASE_64  : int := BoundedInts.TWO_TO_THE_64
+    const BASE_128 : int := BoundedInts.TWO_TO_THE_128
+    const BASE_192 : int := 0x1_00000000_00000000_00000000_00000000_00000000_00000000
+    const BASE_256 : int := BoundedInts.TWO_TO_THE_256
+    const BASE_512 : int := BoundedInts.TWO_TO_THE_512
 
     type uint1   = i :int | 0 <= i < BASE_1
     type uint2   = i :int | 0 <= i < BASE_2
@@ -342,7 +354,7 @@ module bv_ops {
         }
     }
 
-    function method  {:opaque} uint256_eighth_split(x: uint256, sel: nat): uint32
+    function method {:opaque} uint256_eighth_split(x: uint256, sel: nat): uint32
         requires 0 <= sel <= 7
     {
         if sel == 7 then ((x as bv256 >> 224) as int) % BASE_32

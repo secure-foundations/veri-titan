@@ -1,16 +1,15 @@
-include "../spec/rsa_ops.dfy"
-include "../libraries/src/NonlinearArithmetic/Mul.dfy"
+include "interp.i.dfy"
+include "../../standard_libraries/src/NonlinearArithmetic/Mul.dfy"
 
-module vt_vale {
-    import opened vt_ops
+module ot_vale {
     import opened bv_ops
-    import opened vt_mem
-    import opened rsa_ops
-    import opened vt_consts
+    import opened ot_machine
+    import opened ot_interp
 
     import opened Mul
 
     function fst<T,Q>(t:(T, Q)) : T { t.0 }
+
     function snd<T,Q>(t:(T, Q)) : Q { t.1 }
 
     function seq_len<T>(s: seq<T>): nat
@@ -28,11 +27,6 @@ module vt_vale {
         xs + [x]
     }
 
-    // type va_operand_imm32 = uint32
-    // predicate va_is_src_imm32(v:uint32, s: va_state) { true }
-    // function va_eval_imm32(s: va_state, v:uint32):uint32 { v }
-    // function method va_const_imm32(n:uint32):uint32 { n }
-
     function va_mul_nat(a: nat, b: nat): nat
     {
         LemmaMulNonnegativeAuto();
@@ -42,7 +36,9 @@ module vt_vale {
     datatype gstate = gstate(ms: state, heap: heap_t)
 
     type va_code = code
+
     type va_codes = codes
+
     type va_state = gstate
 
     // reg32

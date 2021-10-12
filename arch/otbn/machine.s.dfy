@@ -1,15 +1,13 @@
-include "vt_consts.dfy"
-include "bv_ops.dfy"
-include "vt_mem.dfy"
+include "../../libraries/bv_ops.dfy"
 
-include "../libraries/src/NonlinearArithmetic/Power2.dfy"
-
-module vt_ops {
+module ot_machine {
     import opened bv_ops
-    import opened vt_consts
-    import opened vt_mem
 
-    import opened Power2
+    const DMEM_LIMIT: int := 0x8000
+    const NUM_WORDS:  int := 12
+
+    // ignore the mapping
+    const NA :int := -1;
 
 /* registers definions */
 
@@ -35,32 +33,6 @@ module vt_ops {
     type wdrs_t = wdrs : seq<uint256>
         | |wdrs| == 32 witness *
 
-/* wdr_view definion (SHADOW) */
-
-    datatype uint512_raw = uint512_cons(
-        lh: uint256, uh: uint256, full: uint512)
-
-    type uint512_view_t = num: uint512_raw |
-        && num.lh == uint512_lh(num.full)
-        && num.uh == uint512_uh(num.full)
-        witness *
-
-    predicate valid_uint512_view(
-        wdrs: wdrs_t, num: uint512_view_t,
-        li: int, ui: int)
-        requires -1 <= li < BASE_5;
-        requires -1 <= ui < BASE_5;
-    {
-        && (li == NA || wdrs[li] == num.lh)
-        && (ui == NA || wdrs[ui] == num.uh)
-    }
-
-    predicate valid_wdr_view(wdrs: wdrs_t, view: seq<uint256>, start: nat, len: nat)
-    {   
-        && |view| == len
-        && start + len <= 32
-        && wdrs[start..start+len] == view
-    }
 
 /* flags definions */
 
@@ -265,6 +237,65 @@ module vt_ops {
     function method wwrod_offset_ptr(base: uint32, offset: int10): uint32
     {
         uint32_addi(base, offset * 32)
+    }
+
+/* mem_t definion */
+
+    // admissible is aligned and bounded
+    predicate method xword_ptr_admissible(ptr: nat)
+    {
+        && ptr % 4 == 0
+        && ptr < DMEM_LIMIT
+    }
+
+    // admissible is aligned and bounded
+    predicate method wword_ptr_admissible(ptr: nat)
+    {
+        && ptr % 32 == 0
+        && ptr < DMEM_LIMIT
+    }
+
+    type mem_t = map<int, uint32>
+
+    predicate method wword_ptr_valid(mem: mem_t, ptr: nat)
+    {
+        && wword_ptr_admissible(ptr)
+        && ptr + 0 in mem
+        && ptr + 4 in mem
+        && ptr + 8 in mem
+        && ptr + 12 in mem
+        && ptr + 16 in mem
+        && ptr + 20 in mem
+        && ptr + 24 in mem
+        && ptr + 28 in mem
+    }
+
+    function method read_wword(mem: mem_t, ptr: nat): uint256
+        requires wword_ptr_valid(mem, ptr)
+    {
+        var p0 := mem[ptr + 0];
+        var p1 := mem[ptr + 4];
+        var p2 := mem[ptr + 8];
+        var p3 := mem[ptr + 12];
+        var p4 := mem[ptr + 16];
+        var p5 := mem[ptr + 20];
+        var p6 := mem[ptr + 24];
+        var p7 := mem[ptr + 28];
+        uint256_eighth_assemble(p0, p1, p2, p3, p4, p5, p6, p7)
+    }
+
+    function method mem_write_wword(mem: mem_t, ptr: nat, value: uint256): (mem' : mem_t)
+        requires wword_ptr_admissible(ptr)
+        ensures wword_ptr_valid(mem', ptr)
+    {
+        mem[ptr + 0 := uint256_eighth_split(value, 0)]
+            [ptr + 4 := uint256_eighth_split(value, 1)]
+            [ptr + 8 := uint256_eighth_split(value, 2)]
+            [ptr + 12 := uint256_eighth_split(value, 3)]
+            [ptr + 16 := uint256_eighth_split(value, 4)]
+            [ptr + 20 := uint256_eighth_split(value, 5)]
+            [ptr + 24 := uint256_eighth_split(value, 6)]
+            [ptr + 28 := uint256_eighth_split(value, 7)]
     }
 
 /* control flow definions */
