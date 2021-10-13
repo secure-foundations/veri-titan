@@ -32,28 +32,19 @@ rule otbn-ld
     command = otbn-ld $in -o $out
 """
 
-
 OT_PRINTER_DFY_PATH = "arch/otbn/printer.s.dfy"
 OT_SIMULATOR_DFY_PATH = "arch/otbn/simulator.i.dfy"
+DLL_SOURCES = set([OT_PRINTER_DFY_PATH, OT_SIMULATOR_DFY_PATH])
 
-# PRINTER_DLL_PATH = "gen/print.dll"
-# PRINTER_CONFIG_PATH = "gen/print.runtimeconfig.json"
-
-
-# OUTPUT_ASM_PATH = "gen/output.s"
-# TEST_ASM_PATH = "tests/run_modexp.s"
-# OUTPUT_ELF_PATH = "gen/run_modexp.elf"
-
-# EXE_DFY_PATH = "tests/execute.dfy"
-# EXE_DLL_PATH = "gen/execute.dll"
-# EXE_CONFIG_PATH = "gen/execute.runtimeconfig.json"
-# OUTPUT_DUMP_PATH = "gen/dump.out"
+OUTPUT_ASM_PATH = "gen/arch/otbn/printer.s.dll.out"
+TEST_ASM_PATH = "impl/otbn/run_modexp.s"
+OUTPUT_ELF_PATH = "gen/impl/otbn/run_modexp.elf"
 
 NINJA_PATH = "build.ninja"
 CODE_DIRS = ["arch", "impl", "lib"]
 GEN_DIR = "gen"
 
-# misc utils
+## misc utils
 
 # run command
 
@@ -62,9 +53,9 @@ def os_system(command):
     code = os.system(command)
     sys.exit(code)
 
-def subprocess_run(command):
+def subprocess_run(command, cwd=None):
     # print(command)
-    output = subprocess.run(command, shell=True, stdout=PIPE).stdout
+    output = subprocess.run(command, shell=True, stdout=PIPE, cwd=cwd).stdout
     return output.decode("utf-8").strip()
 
 # convert path
@@ -90,12 +81,18 @@ def get_gen_dfy_path(vad_path):
     dfy_path = os.path.join(GEN_DIR, vad_path)
     return dfy_path.replace(".vad", ".dfy")
 
-# def get_o_path(asm_path):
-#     asm_path = os.path.relpath(asm_path)
-#     assert asm_path.endswith(".s")
-#     if not asm_path.startswith(GEN_DIR):
-#         asm_path = "gen/" + asm_path
-#     return asm_path.replace(".s", ".o")
+def get_dll_path(dfy_path):
+    dfy_path = os.path.relpath(dfy_path)
+    dll_path = dfy_path.replace(".dfy", ".dll")
+    assert(not dll_path.startswith(GEN_DIR))
+    return os.path.join(GEN_DIR, dll_path)
+
+def get_o_path(asm_path):
+    asm_path = os.path.relpath(asm_path)
+    # assert asm_path.endswith(".s")
+    if not asm_path.startswith(GEN_DIR):
+        asm_path = os.path.join(GEN_DIR, asm_path)
+    return asm_path.replace(".s", ".o")
 
 ## separate command: setup
 
@@ -164,6 +161,28 @@ def setup_tools():
 
 # list dependecy 
 
+def list_dfy_deps(dfy_file):
+    command = f"{DAFNY_PATH} /printIncludes:Immediate %s" % dfy_file
+    outputs = subprocess.run(command, shell=True, stdout=PIPE).stdout
+    outputs = outputs.decode("utf-8")
+
+    if outputs == "":
+        return ""
+    outputs = outputs.splitlines()[0].split(";")
+    includes = []
+
+    for (i, include) in enumerate(outputs):
+        include = os.path.relpath(include)
+        if include.startswith(DAFNY_LIB_DIR):
+            continue
+        if i == 0:
+            # print(dfy_file)
+            pass
+        else:
+            include = get_ver_path(include)
+            includes.append(include)
+    return " ".join(includes)
+
 VAD_INCLUDE_PATTERN = re.compile('include\s+"(.+vad)"')
 
 def list_vad_deps(vad_path):
@@ -192,28 +211,6 @@ def list_vad_deps(vad_path):
 
     return " ".join(vad_dependencies)
 
-def list_dfy_deps(dfy_file):
-    command = f"{DAFNY_PATH} /printIncludes:Immediate %s" % dfy_file
-    outputs = subprocess.run(command, shell=True, stdout=PIPE).stdout
-    outputs = outputs.decode("utf-8")
-
-    if outputs == "":
-        return ""
-    outputs = outputs.splitlines()[0].split(";")
-    includes = []
-
-    for (i, include) in enumerate(outputs):
-        include = os.path.relpath(include)
-        if include.startswith(DAFNY_LIB_DIR):
-            continue
-        if i == 0:
-            # print(dfy_file)
-            pass
-        else:
-            include = get_ver_path(include)
-            includes.append(include)
-    return " ".join(includes)
-
 # list files
 
 def get_dfy_files(include_gen):
@@ -225,7 +222,6 @@ def get_dfy_files(include_gen):
         target_dirs.add(GEN_DIR)
 
     # do not include special dfy files
-    special_dfy_files = set([OT_PRINTER_DFY_PATH, OT_SIMULATOR_DFY_PATH])
 
     for root, _, files in os.walk("."):
         tpl = "." if root == "." else root.split("/")[1]
@@ -234,7 +230,7 @@ def get_dfy_files(include_gen):
         for file in files:
             if file.endswith(".dfy"):
                 dfy_path = os.path.relpath(os.path.join(root, file))
-                if dfy_path in special_dfy_files:
+                if dfy_path in DLL_SOURCES:
                     continue
                 dfy_files.append(dfy_path)
     return dfy_files
@@ -253,7 +249,7 @@ def get_vad_files():
                 vad_files.append(vad_path)
     return vad_files
 
-# ## main command (build)
+## main command (build)
 
 class Generator():
     def generate_vad_rules(self, vad_path):
@@ -273,10 +269,12 @@ class Generator():
         self.content.append(f"build {ver_path}: dafny {dfy_file} || {dd_path}")
         self.content.append(f"    dyndep = {dd_path}\n")
 
-    def generate_pinter_rules(self):
-        printer_deps = list_dfy_deps(PRINTER_DFY_PATH)
-        self.content.append(f"build {PRINTER_DLL_PATH}: dll-gen {PRINTER_DFY_PATH} | {printer_deps}\n")
-        self.content.append(f"build {OUTPUT_ASM_PATH}: dll-run {PRINTER_DLL_PATH} \n")
+    def generate_dll_rules(self, dafny_path):
+        dfy_deps = list_dfy_deps(dafny_path)
+        dll_path = get_dll_path(dafny_path)
+        self.content.append(f"build {dll_path}: dll-gen {dafny_path} | {dfy_deps}\n")
+        dll_out_path = dll_path + ".out"
+        self.content.append(f"build {dll_out_path}: dll-run {dll_path} \n")
 
     def generate_elf_rules(self):
         output_o_path = get_o_path(OUTPUT_ASM_PATH)
@@ -284,11 +282,6 @@ class Generator():
         test_o_path = get_o_path(TEST_ASM_PATH)
         self.content.append(f"build {test_o_path}: otbn-as {TEST_ASM_PATH}\n")
         self.content.append(f"build {OUTPUT_ELF_PATH}: otbn-ld {test_o_path} {output_o_path}\n")
-
-    def generate_exe_rules(self):
-        exe_deps = list_dfy_deps(EXE_DFY_PATH)
-        self.content.append(f"build {EXE_DLL_PATH}: dll-gen {EXE_DFY_PATH} | {exe_deps}\n")
-        self.content.append(f"build {OUTPUT_DUMP_PATH}: dll-run {EXE_DLL_PATH} \n")
 
     def generate_rules(self):
         # rules to build .dfy from .vad 
@@ -301,14 +294,12 @@ class Generator():
         for dfy_file in self.dfy_files:
             self.generate_dfy_rules(dfy_file)
 
-        # # rules for the printer
-        # self.generate_pinter_rules()
+        # rules for the printer
+        for dll_source in DLL_SOURCES:
+            self.generate_dll_rules(dll_source)
 
-        # # rules for the elf
-        # self.generate_elf_rules()
-
-        # # rules for the exe
-        # self.generate_exe_rules()
+        # rules for the elf
+        self.generate_elf_rules()
 
     def write_ninja(self):
         with open(NINJA_PATH, "w") as f:
@@ -338,56 +329,50 @@ def generate_dd(dfy_file):
 
     print(result + " | " + outputs)
 
-# ## separate command: proc
+## separate command: proc
 
-# def verify_dafny_proc(proc):
-#     dfy_files = get_dfy_files(True)
-#     command = 'grep -e "\(method\|function\|lemma\|predicate\).%s" -l ' % proc + " ".join(dfy_files)
-#     outputs = subprocess.run(command, shell=True, stdout=PIPE).stdout
-#     outputs = outputs.decode("utf-8")
-#     proc = proc.replace("_", "__")
+def verify_dafny_proc(proc):
+    dfy_files = get_dfy_files(True)
+    command = 'grep -e "\(method\|function\|lemma\|predicate\).%s" -l ' % proc + " ".join(dfy_files)
+    outputs = subprocess.run(command, shell=True, stdout=PIPE).stdout
+    outputs = outputs.decode("utf-8")
+    proc = proc.replace("_", "__")
 
-#     for dfy_file in outputs.splitlines():
-#         print("verify %s in %s" % (proc, dfy_file))
-#         command = f"time -p {DAFNY_PATH} /trace /timeLimit:20 /compile:0 /proc:*%s " % proc + dfy_file
-#         # r = subprocess.check_output(command, shell=True).decode("utf-8")
-#         process = Popen(command, shell=True, stdout=PIPE)
-#         output = process.communicate()[0].decode("utf-8")
-#         print(output)
+    for dfy_file in outputs.splitlines():
+        print("verify %s in %s" % (proc, dfy_file))
+        command = f"time -p {DAFNY_PATH} /trace /timeLimit:20 /compile:0 /proc:*%s " % proc + dfy_file
+        # r = subprocess.check_output(command, shell=True).decode("utf-8")
+        process = Popen(command, shell=True, stdout=PIPE)
+        output = process.communicate()[0].decode("utf-8")
+        print(output)
 
-# ## separate command: ver
+## separate command: ver
 
-# def verify_single_file(target):
-#     if not os.path.exists(target):
-#         return
-#     generate_dot_ninja()
-#     target  = os.path.relpath(target)
-#     if target.endswith(".dfy"):
-#         target = get_ver_path(target)
-#         os.system("ninja -v " + target)
-#     elif target.endswith(".vad"):
-#         target = get_gen_dfy_path(target)
-#         target = get_ver_path(target)
-#         # print(target)
-#         os.system("ninja -v " + target)
+def verify_single_file(target):
+    if not os.path.exists(target):
+        return
+    generate_dot_ninja()
+    target  = os.path.relpath(target)
+    if target.endswith(".dfy"):
+        target = get_ver_path(target)
+        os.system("ninja -v " + target)
+    elif target.endswith(".vad"):
+        target = get_gen_dfy_path(target)
+        target = get_ver_path(target)
+        # print(target)
+        os.system("ninja -v " + target)
 
-# ## separate command: dll-gen
+## separate command: dll-gen
 
-# def generate_dll(dfy_path, dll_path):
-#     if dfy_path == PRINTER_DFY_PATH:
-#         assert dll_path == PRINTER_DLL_PATH
-#         confg_path = PRINTER_CONFIG_PATH
-#         temp = "temp1"
-#     else:
-#         assert dll_path == EXE_DLL_PATH
-#         confg_path = EXE_CONFIG_PATH
-#         temp = "temp2"
+def generate_dll(dfy_path, dll_path):
+    dfy_path = os.path.realpath(dfy_path)
+    assert(dll_path.startswith(GEN_DIR) and dll_path.endswith(".dll"))
+    dll_dir = os.path.dirname(dll_path)
+    command = f"dafny /compile:1 /noNLarith /vcsCores:2 {dfy_path} /out:{dll_path}"
+    output = subprocess_run(command, cwd=dll_dir) 
+    print(output)
 
-#     command = f"dafny {dfy_path} /compile:1 /noNLarith /vcsCores:2 /out:{temp}.dll"
-#     command += f" && mv {temp}.dll {dll_path} && mv {temp}.runtimeconfig.json {confg_path}"
-#     os_system(command)
-
-# ## command line interface
+## command line interface
 
 def main():
     # build everything
@@ -406,7 +391,7 @@ def main():
     elif option == "dll-gen":
         generate_dll(sys.argv[2], sys.argv[3])
     elif option == "clean":
-        os.system("rm -r ./gen")
+        os.system(f"rm -r {GEN_DIR}")
         os.system("rm " + NINJA_PATH)
     elif option == "setup":
         setup_tools()

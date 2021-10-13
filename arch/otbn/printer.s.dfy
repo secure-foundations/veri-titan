@@ -1,5 +1,5 @@
 include "vale.i.dfy"
-include "../gen/modexp_var.dfy"
+include "../../gen/impl/otbn/modexp_var.i.dfy"
 
 module otbn_printer {
     import opened bv_ops

@@ -1,10 +1,10 @@
-include "../code/vale.dfy"
-include "../gen/modexp_var.dfy" 
+include "vale.i.dfy"
+include "../../gen/impl/otbn/modexp_var.i.dfy"
 
 module otbn_exe {
     import opened bv_ops
     import opened ot_machine
-    import opened vt_vale
+    import opened ot_vale
     import opened modexp_var
 
 method ExecuteDemo()
