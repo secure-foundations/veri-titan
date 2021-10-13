@@ -31,15 +31,30 @@ module bv_ops {
     type int64  = i :int | -BASE_63 <= i <= (BASE_63 - 1)
 
 
+    lemma div_bound(x: int, n: nat)
+      requires n > 0
+      ensures x >= 0 ==> 0 <= x / n <= x
+      ensures x < 0 ==> 0 > (x / n) >= x
+    {
+      if x >= 0 {
+        LemmaDivNonincreasingAuto();
+        LemmaDivPosIsPosAuto();
+      } else {
+        assume false; // TODO
+      }
+    }
+
     /* signed operations */
     function method int32_rs(x: int32, shift: nat) : int32
     {
+      div_bound(x, Pow2(shift));
       x / Pow2(shift)
     }
 
     // right arithmetic shift
-    function int64_rs(x: int64, shift: nat) : int64
+    function method int64_rs(x: int64, shift: nat) : int64
     {
+      div_bound(x, Pow2(shift));
       x / Pow2(shift)
     }
 
@@ -65,7 +80,7 @@ module bv_ops {
     {
     }
 
-    function int32_lt(x: int32, y: int32) : bool
+    function int32_lt(x: int32, y: int32) : uint32
     {
       if x < y then 1 else 0
     }
@@ -185,22 +200,6 @@ module bv_ops {
       LemmaMulUpperBoundAuto();
     }
 
-    lemma single_digit_lemma_1(a: nat, b: nat, c: nat, u: nat)
-        requires a <= u;
-        requires b <= u;
-        requires c <= u;
-        ensures a * b + c < (u + 1) * (u + 1);
-    {
-        calc {
-            a * b + c;
-            <= { single_digit_lemma_0(a, b, u); }
-            u * u + c;
-            <= u * u + u;
-            u * (u + 1);
-            < (u + 1) * (u + 1);
-        }
-    }
-
     lemma single_digit_lemma_2(a: nat, b: nat, c: nat, d: nat, u: nat)
         requires a <= u;
         requires b <= u;
@@ -208,16 +207,22 @@ module bv_ops {
         requires d <= u;
         ensures a * b + c + d < (u + 1) * (u + 1);
     {
-      calc {
-            a * b + c;
+        calc {
+            a * b + c + d;
             <= { single_digit_lemma_0(a, b, u); }
-            u * u + c;
-            <=
-            u * u + u;
-            == { LemmaMulIsDistributiveAddAuto(); }
-            u * (u + 1); 
-            <  { LemmaMulLeftInequality(u + 1, u, u + 1); }
-            (u + 1) * (u + 1); 
+            u * u + c + d;
+            <= u * u + u + u;
+            u * u + 2 * u;
+            < (u * u) + (2 * u) + 1;
+        }
+
+        calc {
+            (u + 1) * (u + 1);
+            { LemmaMulIsDistributiveAdd(u + 1, u, 1); }
+            (u + 1) * u + (u + 1) * 1; 
+            u * (u + 1) + u + 1;
+            { LemmaMulIsDistributiveAdd(u, u, 1); }
+            (u * u) + (2 * u) + 1;
         }
     }
 
