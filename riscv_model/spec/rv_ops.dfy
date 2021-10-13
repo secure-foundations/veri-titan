@@ -1,8 +1,6 @@
 include "rv_consts.dfy"
 include "bv_ops.dfy"
 
-include "../libraries/src/NonlinearArithmetic/Power2.dfy"
-
 module rv_ops {
 
     import opened bv_ops // bit-vector operations

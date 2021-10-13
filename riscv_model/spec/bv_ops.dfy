@@ -1,10 +1,10 @@
 include "rv_consts.dfy"
 
-include "../libraries/src/BoundedInts.dfy"  
-include "../libraries/src/NonlinearArithmetic/DivMod.dfy"
-include "../libraries/src/NonlinearArithmetic/Mul.dfy"
-include "../libraries/src/NonlinearArithmetic/Power.dfy"
-include "../libraries/src/NonlinearArithmetic/Power2.dfy"
+include "../../standard_libraries/src/BoundedInts.dfy"  
+include "../../standard_libraries/src/NonlinearArithmetic/DivMod.dfy"
+include "../../standard_libraries/src/NonlinearArithmetic/Mul.dfy"
+include "../../standard_libraries/src/NonlinearArithmetic/Power.dfy"
+include "../../standard_libraries/src/NonlinearArithmetic/Power2.dfy"
 
 module bv_ops {
     import opened Power
@@ -12,6 +12,7 @@ module bv_ops {
     import opened Mul
     import opened DivMod
 
+    import opened BoundedInts
     import opened rv_consts
 
     type uint1    = x: int | 0 <= x < BoundedInts.TWO_TO_THE_1
@@ -26,8 +27,6 @@ module bv_ops {
     type uint128  = x: int | 0 <= x < BoundedInts.TWO_TO_THE_128
     type uint256  = x: int | 0 <= x < BoundedInts.TWO_TO_THE_256
     type uint512  = x: int | 0 <= x < BoundedInts.TWO_TO_THE_512
-
-    type uint192  = x: int | 0 <= x < TWO_TO_THE_192
 
     type int12  = i :int | -2048 <= i <= 2047
 

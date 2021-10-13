@@ -1,9 +1,7 @@
 include "rv_consts.dfy"
 include "bv_ops.dfy"
 include "rv_ops.dfy"
-include "../lib/powers.dfy"
-include "../lib/congruences.dfy"
-include "../libraries/src/Collections/Sequences/LittleEndianNat.dfy"
+include "../../standard_libraries/src/Collections/Sequences/LittleEndianNat.dfy"
 
 module BASE_32_Seq refines LittleEndianNat {
     import opened rv_ops
