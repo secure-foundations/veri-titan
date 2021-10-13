@@ -1,13 +1,11 @@
-include "../spec/rsa_ops.dfy"
+include "rsa_ops.i.dfy"
 
 module mod32_lemmas {
 
     import opened bv_ops
-    import opened rv_ops
     import opened rsa_ops
-    import opened rv_consts
-    import opened powers
-    import opened congruences
+    import opened rv_machine
+    import opened BASE_32_Seq
 
     const B  : int := BASE_32;
     const B2 : int := B * B;
@@ -53,7 +51,7 @@ module mod32_lemmas {
       && |iter_a.buff| == |iter_n.buff| == |iter_a'.buff|
       && (i == iter_a'.index == iter_n.index)
       && i <= |iter_a.buff|
-      && seq_subb(iter_a.buff[..i], iter_n.buff[..i]) == (iter_a'.buff[..i], neg1_to_uint1(A))
+      && SeqSub(iter_a.buff[..i], iter_n.buff[..i]) == (iter_a'.buff[..i], neg1_to_uint1(A))
     }
 
     lemma lemma_sub_mod32_correct(
@@ -120,8 +118,8 @@ module mod32_lemmas {
         assert(A'.uh == 0 || A'.uh == 0xffff_ffff);
         assert(A'.full == 0 || A'.full == -1) by { lemma_int64_half_split(A'.full); }
 
-        var (zs_next, bin_next) := seq_subb(iter_a_next.buff[..i+1], iter_n_next.buff[..i+1]);
-        var (zs, bin) := seq_subb(iter_a.buff[..i], iter_n.buff[..i]);
+        var (zs_next, bin_next) := SeqSub(iter_a_next.buff[..i+1], iter_n_next.buff[..i+1]);
+        var (zs, bin) := SeqSub(iter_a.buff[..i], iter_n.buff[..i]);
 
         var (z, bout) := uint32_subb(iter_a_next.buff[i], iter_n_next.buff[i], neg1_to_uint1(A.full));
         assert(z == x13) by { reveal_uint32_sub(); }

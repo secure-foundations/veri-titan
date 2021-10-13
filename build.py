@@ -1,38 +1,41 @@
 import sys, os, subprocess, re
 from subprocess import PIPE, Popen
+from os.path import exists
 
 TOOLS_DIR = "./tools"
 DAFNY_PATH = "./tools/dafny/dafny"
 VALE_PATH = "./tools/vale/bin/vale"
-DAFNY_LIB_DIR = "./standard_libraries"
+DAFNY_LIB_DIR = "./std_lib"
 
 DAFNY_LIB_HASH = "84d160538b6442017a5401feb91265147bf34bfc"
 
-# rules = f"""
-# rule dafny
-#     command = {DAFNY_PATH} $in /compile:0 /noNLarith /timeLimit:20 /vcsCores:2 && touch $out
+rules = f"""
+rule dafny
+    command = {DAFNY_PATH} /compile:0 /noNLarith /timeLimit:20 /vcsCores:2 /noVerify $in && touch $out
 
-# rule vale
-#     command = {VALE_PATH} -dafnyText -in $in -out $out
+rule vale
+    command = {VALE_PATH} -dafnyText -in $in -out $out
 
-# rule dd-gen
-#     command = python3 build.py dd-gen $in > $out
+rule dd-gen
+    command = python3 build.py dd-gen $in > $out
 
-# rule dll-gen
-#     command = python3 build.py dll-gen $in $out
+rule dll-gen
+    command = python3 build.py dll-gen $in $out
 
-# rule dll-run
-#     command = dotnet $in > $out
+rule dll-run
+    command = dotnet $in > $out
 
-# rule otbn-as
-#     command = otbn-as $in -o $out
+rule otbn-as
+    command = otbn-as $in -o $out
 
-# rule otbn-ld
-#     command = otbn-ld $in -o $out
-# """
+rule otbn-ld
+    command = otbn-ld $in -o $out
+"""
 
 
-# PRINTER_DFY_PATH = "tests/print.dfy"
+OT_PRINTER_DFY_PATH = "arch/otbn/printer.s.dfy"
+OT_SIMULATOR_DFY_PATH = "arch/otbn/simulator.i.dfy"
+
 # PRINTER_DLL_PATH = "gen/print.dll"
 # PRINTER_CONFIG_PATH = "gen/print.runtimeconfig.json"
 
@@ -46,10 +49,11 @@ DAFNY_LIB_HASH = "84d160538b6442017a5401feb91265147bf34bfc"
 # EXE_CONFIG_PATH = "gen/execute.runtimeconfig.json"
 # OUTPUT_DUMP_PATH = "gen/dump.out"
 
-# NINJA_PATH = "build.ninja"
-# CODE_DIR = "code"
+NINJA_PATH = "build.ninja"
+CODE_DIRS = ["arch", "impl", "lib"]
+GEN_DIR = "gen"
 
-## misc utils
+# misc utils
 
 # run command
 
@@ -63,38 +67,37 @@ def subprocess_run(command):
     output = subprocess.run(command, shell=True, stdout=PIPE).stdout
     return output.decode("utf-8").strip()
 
-# # convert path
+# convert path
 
-# def get_ver_path(dfy_path):
-#     dfy_path = os.path.relpath(dfy_path)
-#     ver_path = dfy_path.replace(".dfy", ".ver")
-#     if ver_path.startswith("gen"):
-#         return ver_path
-#     else:
-#         return os.path.join("gen", ver_path)
+def get_ver_path(dfy_path):
+    dfy_path = os.path.relpath(dfy_path)
+    ver_path = dfy_path.replace(".dfy", ".ver")
+    if ver_path.startswith(GEN_DIR):
+        return ver_path
+    else:
+        return os.path.join(GEN_DIR, ver_path)
 
-# def get_dd_path(dfy_path):
-#     dfy_path = os.path.relpath(dfy_path)
-#     dd_path = dfy_path.replace(".dfy", ".dd")
-#     if dd_path.startswith("gen"):
-#         return dd_path
-#     else:
-#         return os.path.join("gen", dd_path)
+def get_dd_path(dfy_path):
+    dfy_path = os.path.relpath(dfy_path)
+    dd_path = dfy_path.replace(".dfy", ".dd")
+    if dd_path.startswith(GEN_DIR):
+        return dd_path
+    else:
+        return os.path.join(GEN_DIR, dd_path)
 
-# def get_gen_dfy_path(vad_path):
-#     assert vad_path.endswith(".vad")
-#     assert vad_path.startswith("code")
-#     dfy_path = vad_path.replace("code", "gen")
-#     return dfy_path.replace(".vad", ".dfy")
+def get_gen_dfy_path(vad_path):
+    assert vad_path.endswith(".vad")
+    dfy_path = os.path.join(GEN_DIR, vad_path)
+    return dfy_path.replace(".vad", ".dfy")
 
 # def get_o_path(asm_path):
 #     asm_path = os.path.relpath(asm_path)
 #     assert asm_path.endswith(".s")
-#     if not asm_path.startswith("gen"):
+#     if not asm_path.startswith(GEN_DIR):
 #         asm_path = "gen/" + asm_path
 #     return asm_path.replace(".s", ".o")
 
-# ## separate command: setup
+## separate command: setup
 
 def setup_tools():
     # ninja
@@ -159,155 +162,181 @@ def setup_tools():
     else:
         os.system(f"git clone git@github.com:secure-foundations/libraries.git {DAFNY_LIB_DIR} && cd {DAFNY_LIB_DIR} && git checkout {DAFNY_LIB_HASH}")
 
-# # list dependecy 
+# list dependecy 
 
-# VAD_INCLUDE_PATTERN = re.compile('include\s+"(.+vad)"')
+VAD_INCLUDE_PATTERN = re.compile('include\s+"(.+vad)"')
 
-# def list_vad_deps(vad_path):
-#     # print("[WARNING] .vad transitive dependencies not included")
-#     vad_path = os.path.relpath(vad_path)
-#     vad_dir = os.path.dirname(vad_path)
-#     # print(vad_dir)
-    
-#     vad_dependencies = []
-#     f = open(vad_path)
-#     for line in f:
-#         line = line.strip()
-#         if line == "#verbatim":
-#             break
-#         match = re.search(VAD_INCLUDE_PATTERN, line)
-#         if match:
-#             included = os.path.join(vad_dir, match.group(1))
-#             included = get_gen_dfy_path(included)
-#             vad_dependencies.append(included)
-#     return " ".join(vad_dependencies)
+def list_vad_deps(vad_path):
+    # print("[WARNING] .vad transitive dependencies not included")
+    vad_path = os.path.relpath(vad_path)
+    vad_dir = os.path.dirname(vad_path)
+    # print(vad_dir)
 
-# def list_dfy_deps(dfy_file):
-#     command = f"{DAFNY_PATH} /printIncludes:Immediate %s" % dfy_file
-#     outputs = subprocess.run(command, shell=True, stdout=PIPE).stdout
-#     outputs = outputs.decode("utf-8")
+    vad_dependencies = []
+    f = open(vad_path)
+    for line in f:
+        line = line.strip()
+        if line == "#verbatim":
+            break
+        match = re.search(VAD_INCLUDE_PATTERN, line)
+        if match:
+            included = os.path.join(vad_dir, match.group(1))
+            included = os.path.relpath(included)
+            if not exists(included):
+                print(f"[ERROR] {vad_path} is importing {included} that doesn't exist")
+                sys.exit(-1)
+            vad_dependencies.append(included)
 
-#     if outputs == "":
-#         return ""
-#     outputs = outputs.splitlines()[0].split(";")
-#     includes = []
+            included = get_gen_dfy_path(included)
+            vad_dependencies.append(included)
 
-#     for (i, include) in enumerate(outputs):
-#         include = os.path.relpath(include)
-#         if include.startswith(DAFNY_LIB_DIR):
-#             continue
-#         if i == 0:
-#             # print(dfy_file)
-#             pass
-#         else:
-#             include = get_ver_path(include)
-#             includes.append(include)
-#     return " ".join(includes)
+    return " ".join(vad_dependencies)
 
-# # list files
+def list_dfy_deps(dfy_file):
+    command = f"{DAFNY_PATH} /printIncludes:Immediate %s" % dfy_file
+    outputs = subprocess.run(command, shell=True, stdout=PIPE).stdout
+    outputs = outputs.decode("utf-8")
 
-# def get_dfy_files(include_gen):
-#     dfy_files = list()
-#     for root, _, files in os.walk("."):
-#         if root.startswith(TOOLS_DIR):
-#             continue
-#         if root.startswith(DAFNY_LIB_DIR):
-#             continue
-#         # do not include files in ./gen unless specified
-#         if root.startswith("./gen") and not include_gen:
-#             continue
-#         for file in files:
-#             if file.endswith(".dfy"):
-#                 if file == PRINTER_DFY_PATH:
-#                     continue
-#                 if file == EXE_DFY_PATH:
-#                     continue
-#                 dfy_path = os.path.relpath(os.path.join(root, file))
-#                 dfy_files.append(dfy_path)
-#     return dfy_files
+    if outputs == "":
+        return ""
+    outputs = outputs.splitlines()[0].split(";")
+    includes = []
+
+    for (i, include) in enumerate(outputs):
+        include = os.path.relpath(include)
+        if include.startswith(DAFNY_LIB_DIR):
+            continue
+        if i == 0:
+            # print(dfy_file)
+            pass
+        else:
+            include = get_ver_path(include)
+            includes.append(include)
+    return " ".join(includes)
+
+# list files
+
+def get_dfy_files(include_gen):
+    dfy_files = list()
+    target_dirs = set(CODE_DIRS)
+
+    # do not include files in ./gen unless specified
+    if include_gen:
+        target_dirs.add(GEN_DIR)
+
+    # do not include special dfy files
+    special_dfy_files = set([OT_PRINTER_DFY_PATH, OT_SIMULATOR_DFY_PATH])
+
+    for root, _, files in os.walk("."):
+        tpl = "." if root == "." else root.split("/")[1]
+        if tpl not in target_dirs:
+            continue
+        for file in files:
+            if file.endswith(".dfy"):
+                dfy_path = os.path.relpath(os.path.join(root, file))
+                if dfy_path in special_dfy_files:
+                    continue
+                dfy_files.append(dfy_path)
+    return dfy_files
+
+def get_vad_files():
+    vad_files = list()
+    target_dirs = set(CODE_DIRS)
+
+    for root, _, files in os.walk("."):
+        tpl = "." if root == "." else root.split("/")[1]
+        if tpl not in target_dirs:
+            continue
+        for file in files:
+            if file.endswith(".vad"):
+                vad_path = os.path.relpath(os.path.join(root, file))
+                vad_files.append(vad_path)
+    return vad_files
 
 # ## main command (build)
 
-# class Generator():
-#     def __init__(self):
-#         self.content = [rules]
-#         # collect none generated .dfy first
-#         self.dfy_files =get_dfy_files(False)
+class Generator():
+    def generate_vad_rules(self, vad_path):
+        # print(vad_path)
+        dfy_path = get_gen_dfy_path(vad_path)
+        vad_deps = list_vad_deps(vad_path)
+        # print(vad_path, dfy_path)
+        self.content.append(f"build {dfy_path}: vale {vad_path} | {vad_deps}\n")
+        # need to add this generated file as well
+        self.dfy_files.append(dfy_path)
 
-#         self.generate_rules()
-#         self.write_ninja()
+    def generate_dfy_rules(self, dfy_file):
+        ver_path = get_ver_path(dfy_file)
+        dd_path = get_dd_path(dfy_file)
 
-#     def generate_vad_rules(self, vad_path):
-#         dfy_path = get_gen_dfy_path(vad_path)
-#         vad_deps = list_vad_deps(vad_path)
-#         self.content.append(f"build {dfy_path}: vale {vad_path} | {vad_deps}\n")
-#         # need to add this generated file as well
-#         self.dfy_files.append(dfy_path)
+        self.content.append(f"build {dd_path}: dd-gen {dfy_file}\n")
+        self.content.append(f"build {ver_path}: dafny {dfy_file} || {dd_path}")
+        self.content.append(f"    dyndep = {dd_path}\n")
 
-#     def generate_dfy_rules(self, dfy_file):
-#         ver_path = get_ver_path(dfy_file)
-#         dd_path = get_dd_path(dfy_file)
+    def generate_pinter_rules(self):
+        printer_deps = list_dfy_deps(PRINTER_DFY_PATH)
+        self.content.append(f"build {PRINTER_DLL_PATH}: dll-gen {PRINTER_DFY_PATH} | {printer_deps}\n")
+        self.content.append(f"build {OUTPUT_ASM_PATH}: dll-run {PRINTER_DLL_PATH} \n")
 
-#         self.content.append(f"build {dd_path}: dd-gen {dfy_file}\n")
-#         self.content.append(f"build {ver_path}: dafny {dfy_file} || {dd_path}")
-#         self.content.append(f"    dyndep = {dd_path}\n")
+    def generate_elf_rules(self):
+        output_o_path = get_o_path(OUTPUT_ASM_PATH)
+        self.content.append(f"build {output_o_path}: otbn-as {OUTPUT_ASM_PATH}\n")
+        test_o_path = get_o_path(TEST_ASM_PATH)
+        self.content.append(f"build {test_o_path}: otbn-as {TEST_ASM_PATH}\n")
+        self.content.append(f"build {OUTPUT_ELF_PATH}: otbn-ld {test_o_path} {output_o_path}\n")
 
-#     def generate_pinter_rules(self):
-#         printer_deps = list_dfy_deps(PRINTER_DFY_PATH)
-#         self.content.append(f"build {PRINTER_DLL_PATH}: dll-gen {PRINTER_DFY_PATH} | {printer_deps}\n")
-#         self.content.append(f"build {OUTPUT_ASM_PATH}: dll-run {PRINTER_DLL_PATH} \n")
+    def generate_exe_rules(self):
+        exe_deps = list_dfy_deps(EXE_DFY_PATH)
+        self.content.append(f"build {EXE_DLL_PATH}: dll-gen {EXE_DFY_PATH} | {exe_deps}\n")
+        self.content.append(f"build {OUTPUT_DUMP_PATH}: dll-run {EXE_DLL_PATH} \n")
 
-#     def generate_elf_rules(self):
-#         output_o_path = get_o_path(OUTPUT_ASM_PATH)
-#         self.content.append(f"build {output_o_path}: otbn-as {OUTPUT_ASM_PATH}\n")
-#         test_o_path = get_o_path(TEST_ASM_PATH)
-#         self.content.append(f"build {test_o_path}: otbn-as {TEST_ASM_PATH}\n")
-#         self.content.append(f"build {OUTPUT_ELF_PATH}: otbn-ld {test_o_path} {output_o_path}\n")
+    def generate_rules(self):
+        # rules to build .dfy from .vad 
+        vad_files = get_vad_files()
+        for vad_file in vad_files:
+            # print(vad_file)
+            self.generate_vad_rules(vad_file)
 
-#     def generate_exe_rules(self):
-#         exe_deps = list_dfy_deps(EXE_DFY_PATH)
-#         self.content.append(f"build {EXE_DLL_PATH}: dll-gen {EXE_DFY_PATH} | {exe_deps}\n")
-#         self.content.append(f"build {OUTPUT_DUMP_PATH}: dll-run {EXE_DLL_PATH} \n")
+        # rules to build .ver from .dfy
+        for dfy_file in self.dfy_files:
+            self.generate_dfy_rules(dfy_file)
 
-#     def generate_rules(self):
-#         # rules to build .dfy from .vad 
-#         for file in os.listdir(CODE_DIR):
-#             if file.endswith(".vad"):
-#                 vad_path = os.path.join(CODE_DIR, file)
-#                 self.generate_vad_rules(vad_path)
+        # # rules for the printer
+        # self.generate_pinter_rules()
 
-#         # rules to build .ver from .dfy
-#         for dfy_file in self.dfy_files:
-#             self.generate_dfy_rules(dfy_file)
+        # # rules for the elf
+        # self.generate_elf_rules()
 
-#         # rules for the printer
-#         self.generate_pinter_rules()
+        # # rules for the exe
+        # self.generate_exe_rules()
 
-#         # rules for the elf
-#         self.generate_elf_rules()
+    def write_ninja(self):
+        with open(NINJA_PATH, "w") as f:
+            for line in self.content:
+                f.write(line + "\n")
 
-#         # rules for the exe
-#         self.generate_exe_rules()
+    def __init__(self):
+        self.content = [rules]
+        # collect none generated .dfy first
+        self.dfy_files = get_dfy_files(False)
 
-#     def write_ninja(self):
-#         with open(NINJA_PATH, "w") as f:
-#             for line in self.content:
-#                 f.write(line + "\n")
+        self.generate_rules()
+        self.write_ninja()
 
 # ## separate command: dd-gen
 
-# def generate_dd(dfy_file):
-#     dfy_file = os.path.relpath(dfy_file)
+def generate_dd(dfy_file):
+    dfy_file = os.path.relpath(dfy_file)
 
-#     result = "ninja_dyndep_version = 1\n"
-#     result += "build " + get_ver_path(dfy_file) + "  : dyndep"
+    result = "ninja_dyndep_version = 1\n"
+    result += "build " + get_ver_path(dfy_file) + "  : dyndep"
 
-#     outputs = list_dfy_deps(dfy_file)
+    outputs = list_dfy_deps(dfy_file)
 
-#     if outputs == "":
-#         sys.exit()
+    if outputs == "":
+        sys.exit()
 
-#     print(result + " | " + outputs)
+    print(result + " | " + outputs)
 
 # ## separate command: proc
 

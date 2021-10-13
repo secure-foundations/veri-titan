@@ -1,11 +1,10 @@
-include "../spec/rsa_ops.dfy"
-include "../libraries/src/NonlinearArithmetic/Mul.dfy"
+include "rsa_ops.i.dfy"
 
 module mont_loop_lemmas {
     import opened bv_ops
-    import opened vt_ops
+    import opened ot_machine
+    import opened ot_interp
     import opened rsa_ops
-    import opened vt_consts
 
     import opened DivMod
     import opened Mul

@@ -1,18 +1,40 @@
-include "rv_consts.dfy"
-
-include "../libraries/src/BoundedInts.dfy"  
-include "../libraries/src/NonlinearArithmetic/DivMod.dfy"
-include "../libraries/src/NonlinearArithmetic/Mul.dfy"
-include "../libraries/src/NonlinearArithmetic/Power.dfy"
-include "../libraries/src/NonlinearArithmetic/Power2.dfy"
+include "../std_lib/src/BoundedInts.dfy"  
+include "../std_lib/src/NonlinearArithmetic/DivMod.dfy"
+include "../std_lib/src/NonlinearArithmetic/Power2.dfy"
 
 module bv_ops {
+    import BoundedInts
     import opened Power
     import opened Power2
     import opened Mul
     import opened DivMod
 
-    import opened rv_consts
+    const DMEM_LIMIT: int := 0x8000
+    const NUM_WORDS:  int := 12
+
+    const BASE_1:   int := 2
+    const BASE_2:   int := 4
+    const BASE_4:   int := 16
+    const BASE_5:   int := 32
+    const BASE_8:   int := 0x100
+    const BASE_16:  int := 0x10000
+    const BASE_24:  int := 0x1000000
+    const BASE_32:  int := 0x1_00000000
+    const BASE_40:  int := 0x100_00000000
+    const BASE_48:  int := 0x10000_00000000
+    const BASE_56:  int := 0x1000000_00000000
+    const BASE_64:  int := 0x1_00000000_00000000
+    const BASE_128: int := 0x1_00000000_00000000_00000000_00000000
+    const BASE_192 : int := 0x1_00000000_00000000_00000000_00000000_00000000_00000000
+    const BASE_256: int := 0x1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000
+    const BASE_512: int :=
+      0x1_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000;
+
+    const BASE_31:  int := 0x80000000
+    const BASE_63:  int := 0x80000000_00000000
+
+    // ignore the mapping
+    const NA :int := -1;
 
     type uint1    = x: int | 0 <= x < BoundedInts.TWO_TO_THE_1
     type uint2    = x: int | 0 <= x < BoundedInts.TWO_TO_THE_2
@@ -27,7 +49,7 @@ module bv_ops {
     type uint256  = x: int | 0 <= x < BoundedInts.TWO_TO_THE_256
     type uint512  = x: int | 0 <= x < BoundedInts.TWO_TO_THE_512
 
-    type uint192  = x: int | 0 <= x < TWO_TO_THE_192
+    type uint192  = x: int | 0 <= x < BASE_192
 
     type int12  = i :int | -2048 <= i <= 2047
 
@@ -69,7 +91,7 @@ module bv_ops {
     {
     }
 
-    function int32_lt(x: int32, y: int32) : bool
+    function int32_lt(x: int32, y: int32) : uint32
     {
       if x < y then 1 else 0
     }
@@ -85,7 +107,6 @@ module bv_ops {
       if i > (BASE_63 - 1) then i - BASE_64 else i
     }
 
-
     lemma int64_uint64_inverse_lemma(i:int64)
       ensures to_int64(to_uint64(i)) == i
     {
@@ -95,7 +116,6 @@ module bv_ops {
       ensures to_uint64(to_int64(i)) == i
     {
     }
-
 
     function pow_B32(e: nat): nat
     {

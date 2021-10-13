@@ -1,13 +1,12 @@
-include{: verbatim} "../code/vale.dfy"
-include{: verbatim} "../spec/rsa_ops.dfy"
+include{: verbatim} "../../arch/riscv/vale.i.dfy"
 
 #verbatim
 module rv_decls {
 import opened bv_ops
-import opened rv_ops
-import opened rsa_ops
-import opened rv_consts
+import opened rv_machine
 import opened rv_vale
+
+// import opened rsa_ops
 #endverbatim
 
 type seq(a: Type(0)): Type(0) {: primitive} extern;

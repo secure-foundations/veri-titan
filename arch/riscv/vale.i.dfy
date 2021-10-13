@@ -1,11 +1,8 @@
-include "../spec/rsa_ops.dfy"
+include "machine.s.dfy"
 
 module rv_vale {
-    import opened rv_ops
     import opened bv_ops
-    import opened rsa_ops
-    import opened congruences
-    import opened rv_consts
+    import opened rv_machine
 
     type va_code = code
     type va_codes = codes
@@ -65,6 +62,11 @@ module rv_vale {
         var index := r.index;
         sK.(gprs := sK.gprs[index := sM.gprs[index]])
     }
+
+    type va_operand_simm32 = int32
+    predicate va_is_src_simm32(v:int32, s: va_state) { true }
+    function va_eval_simm32(s: va_state, v:int32):uint32 { v }
+    function method va_const_simm32(n:int32):uint32 { n }
 
     type va_operand_imm32 = uint32
     predicate va_is_src_imm32(v:uint32, s: va_state) { true }

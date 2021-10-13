@@ -3,7 +3,7 @@ include "../gen/modexp_var.dfy"
 
 module otbn_printer {
     import opened bv_ops
-    import opened vt_ops
+    import opened ot_machine
     import opened modexp_var
 
 method printReg32(r:reg32_t)
@@ -186,7 +186,7 @@ method printIns256(ins:ins256)
             printShift(shift); print(", "); printFlags(fg);
             print("\n");
 
-        // TODO: fix otbn_subm in vt_ops file
+        // TODO: fix otbn_subm in ot_machine file
         // case BN_SUBM(dst, src1, src2) =>
         //     print("  bn.subm ");
         //     printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2);

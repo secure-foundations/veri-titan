@@ -1,25 +1,25 @@
 ## Common commands in otbn toolcahin
 
-`rig` uses `123` as seed and `test.yaml` as config, to generate (roughly 1000) instructions as output in `foo.json`
+`rig` uses `123` as seed and `test.yaml` as config, to generate (roughly 1000) instructions as output in `bar.json`
 
-`hw/ip/otbn/dv/rig/otbn-rig gen --seed 123 --config test --size 1000 > foo.json`
+`hw/ip/otbn/dv/rig/otbn-rig gen --seed 123 --config test --size 1000 > bar.json`
 
-`rig` parses `foo.json` to generate `foo.asm` and `foo.ld`
+`rig` parses `bar.json` to generate `bar.asm` and `bar.ld`
 
-`hw/ip/otbn/dv/rig/otbn-rig asm --output foo foo.json`
+`hw/ip/otbn/dv/rig/otbn-rig asm --output bar bar.json`
 
-`rig` parses `foo.json` to generate `foo.dfy` (we hacked on this part)
+`rig` parses `bar.json` to generate `bar.dfy` (we hacked on this part)
 
-`hw/ip/otbn/dv/rig/otbn-rig dfy foo.json`
+`hw/ip/otbn/dv/rig/otbn-rig dfy bar.json`
 
-`otbn-as` assembles `foo.s` into `foo.o`
+`otbn-as` assembles `bar.s` into `bar.o`
 
-`hw/ip/otbn/util/otbn-as -o foo.o foo.s`
+`hw/ip/otbn/util/otbn-as -o bar.o bar.s`
 
-`otbn-as` assembles `foo.s` and `foo.ld` into `foo.elf`
+`otbn-as` assembles `bar.s` and `bar.ld` into `bar.elf`
 
-`hw/ip/otbn/util/otbn-ld -o foo.elf -T foo.ld foo.o`
+`hw/ip/otbn/util/otbn-ld -o bar.elf -T bar.ld bar.o`
 
-the python simulator runs on `foo.elf`, dumps register values in `out.dump`
+the python simulator runs on `bar.elf`, dumps register values in `out.dump`
 
-`hw/ip/otbn/dv/otbnsim/standalone.py --dump-regs out.dump foo.elf`
+`hw/ip/otbn/dv/otbnsim/standalone.py --dump-regs out.dump bar.elf`

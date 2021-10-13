@@ -1,19 +1,18 @@
-include "decls.vad"
+include "../../arch/riscv/decls.i.vad"
 
 #verbatim
-include "../code/vale.dfy"
-include "../gen/decls.dfy"
-include "../spec/rsa_ops.dfy"
-include "../code/mod32_lemmas.dfy"
+include "../../arch/riscv/decls.i.dfy"
+include "../../../impl/riscv/mod32_lemmas.i.dfy"
 
 module mul256 {
 
 import opened bv_ops
-import opened rv_ops
 import opened rsa_ops
-import opened rv_consts
+
+import opened rv_machine
 import opened rv_decls
 import opened rv_vale
+
 import opened mod32_lemmas
 
 #endverbatim
@@ -175,7 +174,7 @@ procedure ge_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     
     addi(x12, x0, 1); // move 1 into x12
 
-    while (x12 != 0)
+    while (x12 != x0)
     invariant iter_inv(iter_a, mem, x10);
     invariant iter_inv(iter_n, mem, x15);
     invariant iter_a.index == iter_n.index;

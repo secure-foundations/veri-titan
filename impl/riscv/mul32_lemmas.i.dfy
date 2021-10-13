@@ -1,13 +1,11 @@
-include "../spec/rsa_ops.dfy"
+include "rsa_ops.i.dfy"
 
 module mul32_lemmas {
   
     import opened bv_ops
-    import opened rv_ops
     import opened rsa_ops
-    import opened rv_consts
-    import opened powers
-    import opened congruences
+    import opened rv_machine
+    import opened BASE_32_Seq
 
     const B  : int := BASE_32;
     const B2 : int := B * B;
@@ -72,7 +70,7 @@ module mul32_lemmas {
           && x15 == uint32_lt(x10, uint32_mul(a, b))
           && x11 == uint32_add(uint32_mulhu(a, b), x15)
         ensures
-            to_nat([x10, x11]) == a * b + c;
+            ToNatRight([x10, x11]) == a * b + c;
     {
       var lh := uint32_mul(a, b);
       var uh := uint32_mulhu(a, b);
@@ -89,9 +87,9 @@ module mul32_lemmas {
       }
 
       calc {
-        to_nat([x10, x11]);
+        ToNatRight([x10, x11]);
         {
-          to_nat_lemma_1([x10, x11]);
+          LemmaSeqLen2([x10, x11]);
         }
         x10 + x11 * B;
         x10 + uint32_add(uh, carry) * B;
@@ -122,7 +120,7 @@ module mul32_lemmas {
         && x10 == uint32_add(uint32_mul(a, b), uint32_add(c, d))
         && x11 == uint32_add(uint32_lt(uint32_add(uint32_mul(a, b), uint32_add(c, d)), uint32_mul(a, b)), x15)
         ensures
-           to_nat([x10, x11]) == a * b + c + d;
+           ToNatRight([x10, x11]) == a * b + c + d;
     {
       var lh := uint32_mul(a, b);
       var uh := uint32_mulhu(a, b);
@@ -132,9 +130,9 @@ module mul32_lemmas {
       var carry2 := uint32_lt(x10, lh);
 
       calc {
-        to_nat([x10, x11]);
+        ToNatRight([x10, x11]);
         {
-          to_nat_lemma_1([x10, x11]);
+          LemmaSeqLen2([x10, x11]);
         }
         x10 + x11 * B;
         x10 + uint32_add(uint32_lt(uint32_add(lh, s), lh), x15) * B;

@@ -1,8 +1,7 @@
 include{: verbatim} "../../arch/otbn/vale.i.dfy"
-// include{: verbatim} "../spec/rsa_ops.dfy"
 
 #verbatim
-module vt_decls {
+module ot_decls {
     import opened bv_ops
     import opened ot_machine
     import opened ot_interp

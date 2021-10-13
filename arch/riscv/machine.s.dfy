@@ -1,14 +1,7 @@
-include "rv_consts.dfy"
-include "bv_ops.dfy"
+include "../../lib/signed_bv_ops.dfy"
 
-include "../libraries/src/NonlinearArithmetic/Power2.dfy"
-
-module rv_ops {
-
+module rv_machine {
     import opened bv_ops // bit-vector operations
-    import opened rv_consts // RISC-V constants
-
-    import opened Power2
 
     /* registers definitions */
     type reg_index = uint5 // 32 registers

@@ -1,4 +1,4 @@
-include "../../libraries/bv_ops.dfy"
+include "../../lib/bv_ops.dfy"
 
 module ot_machine {
     import opened bv_ops

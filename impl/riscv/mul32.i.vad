@@ -1,19 +1,18 @@
-include "decls.vad"
+include "../../arch/riscv/decls.i.vad"
 
 #verbatim
-include "../code/vale.dfy"
-include "../gen/decls.dfy"
-include "../spec/rsa_ops.dfy"
-include "../code/mul32_lemmas.dfy"
+include "../../arch/riscv/decls.i.dfy"
+include "../../../impl/riscv/mul32_lemmas.i.dfy"
 
 module mul256 {
 
 import opened bv_ops
-import opened rv_ops
 import opened rsa_ops
-import opened rv_consts
+
+import opened rv_machine
 import opened rv_decls
 import opened rv_vale
+
 import opened mul32_lemmas
 
 #endverbatim

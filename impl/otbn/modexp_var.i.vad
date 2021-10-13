@@ -1,19 +1,23 @@
-include "decls.vad"
-include "montmul.vad"
+include "../../arch/otbn/decls.i.vad"
+include "montmul.i.vad"
 
 #verbatim
-include "montmul.dfy"
-include "../code/modexp_var_lemmas.dfy"
+
+include "../../arch/otbn/decls.i.dfy"
+
+include "montmul.i.dfy"
+
+include "../../../impl/otbn/modexp_var_lemmas.i.dfy"
 
 module modexp_var {
 
 import opened bv_ops
-import opened vt_ops
-import opened vt_mem
 import opened rsa_ops
-import opened vt_consts
-import opened vt_vale
-import opened vt_decls
+
+import opened ot_machine
+import opened ot_interp
+import opened ot_decls
+import opened ot_vale
 
 import opened mont_loop
 import opened montmul

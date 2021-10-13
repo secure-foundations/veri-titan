@@ -1,16 +1,16 @@
-include "decls.vad"
+include "../../arch/riscv/decls.i.vad"
     
 #verbatim
-include "../code/vale.dfy"
-include "../gen/decls.dfy"
+
+include "../../arch/riscv/decls.i.dfy"
 
 module examples {
 
 import opened bv_ops
-import opened rv_ops
-import opened rv_consts
-import opened rv_vale
+
+import opened rv_machine
 import opened rv_decls
+import opened rv_vale
 
 #endverbatim
 

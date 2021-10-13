@@ -1,10 +1,10 @@
-include "../spec/rsa_ops.dfy"
+include "rsa_ops.i.dfy"
 
 module mul256_lemmas {
     import opened bv_ops
-    import opened vt_ops
+    import opened ot_machine
+    import opened ot_interp
     import opened rsa_ops
-    import opened vt_consts
 
     import opened Mul
     import opened BASE_256_Seq

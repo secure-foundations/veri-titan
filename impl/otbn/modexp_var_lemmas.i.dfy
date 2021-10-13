@@ -1,12 +1,13 @@
-include "../spec/rsa_ops.dfy"
-include "montmul_lemmas.dfy"
-include "subb_lemmas.dfy"
+include "rsa_ops.i.dfy"
+include "montmul_lemmas.i.dfy"
+include "subb_lemmas.i.dfy"
 
 module modexp_var_lemmas {
     import opened bv_ops
-    import opened vt_ops
     import opened rsa_ops
-    import opened vt_consts
+    import opened ot_machine
+    import opened ot_interp
+
     import opened mont_loop_lemmas
     import opened montmul_lemmas
     import opened subb_lemmas

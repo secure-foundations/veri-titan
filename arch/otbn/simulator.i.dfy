@@ -3,7 +3,7 @@ include "../gen/modexp_var.dfy"
 
 module otbn_exe {
     import opened bv_ops
-    import opened vt_ops
+    import opened ot_machine
     import opened vt_vale
     import opened modexp_var
 

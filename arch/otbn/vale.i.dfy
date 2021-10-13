@@ -1,5 +1,5 @@
 include "interp.i.dfy"
-include "../../standard_libraries/src/NonlinearArithmetic/Mul.dfy"
+include "../../std_lib/src/NonlinearArithmetic/Mul.dfy"
 
 module ot_vale {
     import opened bv_ops

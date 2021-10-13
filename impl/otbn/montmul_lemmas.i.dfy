@@ -1,10 +1,10 @@
-include "mont_loop_lemmas.dfy"
+include "mont_loop_lemmas.i.dfy"
 
 module montmul_lemmas {
     import opened bv_ops
-    import opened vt_ops
+    import opened ot_machine
+    import opened ot_interp
     import opened rsa_ops
-    import opened vt_consts
     import opened mont_loop_lemmas
 
     import opened DivMod

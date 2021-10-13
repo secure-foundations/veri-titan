@@ -1,7 +1,7 @@
-include "../standard_libraries/src/NonlinearArithmetic/DivMod.dfy"
-include "../standard_libraries/src/NonlinearArithmetic/Mul.dfy"
-include "../standard_libraries/src/NonlinearArithmetic/Power.dfy"
-include "../standard_libraries/src/BoundedInts.dfy"
+include "../std_lib/src/NonlinearArithmetic/DivMod.dfy"
+include "../std_lib/src/NonlinearArithmetic/Mul.dfy"
+include "../std_lib/src/NonlinearArithmetic/Power.dfy"
+include "../std_lib/src/BoundedInts.dfy"
 
 module bv_ops {
     import opened DivMod

@@ -1,13 +1,9 @@
-include "../spec/bv_ops.dfy"
-include "../spec/rsa_ops.dfy"
-include "../lib/powers.dfy"
-include "../libraries/src/Collections/Sequences/LittleEndianNat.dfy"
+include "rsa_ops.i.dfy"
+include "../../std_lib/src/Collections/Sequences/LittleEndianNat.dfy"
 
 module ge_mod {
 
-import opened powers
 import opened bv_ops  
-import opened rv_consts
 import opened rsa_ops
 
 import opened DivMod

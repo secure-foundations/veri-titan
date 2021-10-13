@@ -1,20 +1,17 @@
-include "vt_consts.dfy"
-include "bv_ops.dfy"
-include "vt_ops.dfy"
-include "../libraries/src/Collections/Sequences/LittleEndianNat.dfy"
+include "../../arch/otbn/interp.i.dfy"
+include "../../std_lib/src/Collections/Sequences/LittleEndianNat.dfy"
 
 module BASE_256_Seq refines LittleEndianNat {
-    import opened vt_consts
+    import opened bv_ops
     
     function method BASE(): nat { BASE_256 }
 }
 
 module rsa_ops {
-    import opened vt_consts
     import opened bv_ops
-    import opened vt_ops
-    import opened vt_mem
-
+    import opened ot_machine
+    import opened ot_interp
+    
     import opened DivMod
     import opened Power
     import opened BASE_256_Seq
