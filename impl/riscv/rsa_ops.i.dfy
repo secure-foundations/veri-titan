@@ -23,6 +23,7 @@ module rsa_ops {
     }
 
     function seq_subb(xs: seq<uint32>, ys: seq<uint32>): (seq<uint32>, uint1)
+        requires |xs| == |ys|
     {
         SeqSub(xs, ys)
     }
@@ -41,9 +42,7 @@ module rsa_ops {
         requires |xs| == 2
         ensures ToNatRight(xs) == xs[0] + xs[1] * BASE_32
     {
-        reveal ToNatRight();
-        to_nat_lemma_0(xs[..1]);
-        reveal Pow();
+        LemmaSeqLen2(xs);
     }
 // 
 //     function seq_subb(xs: seq<uint32>, ys: seq<uint32>) : (seq<uint32>, uint1)
