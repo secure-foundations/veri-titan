@@ -34,33 +34,6 @@ module bv_ops {
     type int64  = i :int | -BASE_63 <= i <= (BASE_63 - 1)
 
 
-    lemma div_bound(x: int, n: nat)
-      requires n > 0
-      ensures x >= 0 ==> 0 <= x/n <= x
-      ensures x < 0 ==> 0 > (x/n) >= x
-    {
-      if x >= 0 {
-        LemmaDivNonincreasingAuto();
-        LemmaDivPosIsPosAuto();
-      } else {
-        assume false; // TODO
-      }
-    }
-
-    /* signed operations */
-    function method int32_rs(x: int32, shift: nat) : int32
-    {
-      div_bound(x, Pow2(shift));
-      x / Pow2(shift)
-    }
-
-    // right arithmetic shift
-    function method int64_rs(x: int64, shift: nat) : int64
-    {
-      div_bound(x, Pow2(shift));
-      x / Pow2(shift)
-    }
-
     function method to_uint32(i: int) : uint32
       requires - BASE_32 < i < BASE_32
     {
@@ -252,6 +225,12 @@ module bv_ops {
         var diff_out := if diff >= 0 then diff else diff + BASE_32;
         var bout := if diff >= 0 then 0 else 1;
         (diff_out, bout)
+
+      // var cin : int := x - y - cin;
+      // var (diff_out, cout) := if x >= y + cin
+      //                         then (x - y - cin, 0)
+      //                         else (BASE() + x - y - cin, 1);
+      // (diff_out, cout)
     }
 
     // signed integer views
