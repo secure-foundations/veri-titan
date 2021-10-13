@@ -46,6 +46,16 @@ ghost procedure lemma_sub_mod32_correct(
       ghost x13: uint32,
       ghost i: int
 ) extern;
+    
+ghost procedure lemma_ge_mod32_correct(
+      ghost iter_a: iter_t,
+      ghost iter_n: iter_t,
+      ghost iter_a_prev: iter_t,
+      ghost iter_n_prev: iter_t,
+      ghost cond: uint32,
+      ghost b: uint32,
+      ghost i: int
+) extern;
 
 procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     returns (ghost iter_a': iter_t)
@@ -175,13 +185,15 @@ procedure ge_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     
     addi(x12, x0, 1); // move 1 into x12 -- x12 = cond
 
+    ghost var iter_a := iter_a;
+    ghost var iter_n := iter_n;
     while (x12 != 0)
     invariant iter_inv(iter_a, mem, x10);
     invariant iter_inv(iter_n, mem, x15);
     invariant iter_a.index == iter_n.index;
     decreases x12;
     {
-
+      
       let iter_a_prev := lw_prev(x13, x10, 0, iter_a); // x13 = a[i] -- 10148
       let iter_n_prev := lw_prev(x14, x15, 0, iter_n); // x14 = n[i]
       
@@ -192,17 +204,20 @@ procedure ge_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
       sub(x12, x13, x14); // a[i] - n[i]
       sltu(x12, x0, x12); // 0 if a[i] - n[i] = 0, else 1
 
-      
-      slt(x10, x0, x12); // 0 if 0 < a[i] - n[i]
+      slt(x13, x0, x12); // 0 if 0 < a[i] - n[i]
 
       xor(x12, x11, x15);
       sltu(x12, x0, x12); // 1 if 0 < x12, 0 if they're equal 
     
       iter_a := iter_a_prev;
       iter_n := iter_n_prev;
+    
+      // x12 = cond, x13 = b
+      lemma_ge_mod32_correct(iter_a, iter_n, iter_a_prev, iter_n_prev, x12, x13, iter_a.index);
     }
     
-    lemma_ge_mod32_correct(iter_a, iter_n, iter_a_prev, iter_n_prev, x12, x10);
+    // move b value to expected result register
+    mv(x10, x13);
   }
 
 #verbatim

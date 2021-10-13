@@ -6,11 +6,12 @@ module mod32_lemmas {
     import opened rv_ops
     import opened rsa_ops
     import opened rv_consts
-    import opened powers
-    import opened congruences
 
-    const B  : int := BASE_32;
-    const B2 : int := B * B;
+    import opened Power2
+    import opened DivMod
+
+    import opened Seq
+    import opened BASE_32_Seq
 
     lemma sub_mod32_A_bound_lemma(A:int, a:int, n:int)
       requires
@@ -115,9 +116,17 @@ module mod32_lemmas {
           assert(A'.lh == ca_plus_Auh_minus_cs);
         }
 
+        assert ca_plus_Auh_minus_cs == 0 ==> int32_rs(to_int32(ca_plus_Auh_minus_cs), 31) == 0 by { LemmaDivBasicsAuto(); }
+
+        assert ca_plus_Auh_minus_cs == 0xffff_ffff ==> to_int32(ca_plus_Auh_minus_cs) == -1;
+        assert ca_plus_Auh_minus_cs == 0xffff_ffff ==> int32_rs(to_int32(ca_plus_Auh_minus_cs), 31) == -1
+          by { div_bound((-1), Pow2(31)); }
+        
         assert(to_uint32(int32_rs(to_int32(ca_plus_Auh_minus_cs), 31)) == 0 ||
                to_uint32(int32_rs(to_int32(ca_plus_Auh_minus_cs), 31)) == 0xffff_ffff);
+               
         assert(A'.uh == 0 || A'.uh == 0xffff_ffff);
+               
         assert(A'.full == 0 || A'.full == -1) by { lemma_int64_half_split(A'.full); }
 
         var (zs_next, bin_next) := seq_subb(iter_a_next.buff[..i+1], iter_n_next.buff[..i+1]);
@@ -128,7 +137,8 @@ module mod32_lemmas {
 
         calc {
           zs_next;
-          { assert(iter_a_next.buff[..i+1][..i] == iter_a.buff[..i]);
+          {
+            assert(iter_a_next.buff[..i+1][..i] == iter_a.buff[..i]);
             assert(iter_n_next.buff[..i+1][..i] == iter_n.buff[..i]);
           }
           zs + [x13];
@@ -138,7 +148,8 @@ module mod32_lemmas {
 
         calc {
           bin_next;
-          { assert(iter_a_next.buff[..i+1][..i] == iter_a.buff[..i]);
+          {
+            assert(iter_a_next.buff[..i+1][..i] == iter_a.buff[..i]);
             assert(iter_n_next.buff[..i+1][..i] == iter_n.buff[..i]);
           }
           neg1_to_uint1(A'.full);
@@ -148,15 +159,15 @@ module mod32_lemmas {
     predicate ge_mod32_loop_inv(
       iter_a: iter_t,
       iter_n: iter_t,
-      cond: bool,
+      cond: uint1,
       b: bool)
     {
       var i := iter_a.index;
-      && cond != 0 ==> 0 <= i < |a|
-      && cond == 0 ==> -1 <= i < |a|- 1
-      && cond == 1 ==> a[i+1..] == n[i+1..]
-      && (cond == 0 ==> (b ==> a[i+1] > n[i+1]) || (a == n))
-      && cond == 0 ==> (ToNatRight(a) >= ToNatRight(n)) == b
+      && cond != 0 ==> 0 <= i < |iter_a.buff|
+      && cond == 0 ==> -1 <= i < |iter_a.buff|- 1
+      && cond == 1 ==> iter_a.buff[i+1..] == iter_n.buff[i+1..]
+      && (cond == 0 ==> (b ==> iter_a.buff[i+1] > iter_n.buff[i+1]) || (iter_a.buff == iter_n.buff))
+      && cond == 0 ==> (ToNatRight(iter_a.buff) >= ToNatRight(iter_n.buff)) == b
     }
 
     lemma lemma_ge_mod32_correct(
@@ -164,21 +175,23 @@ module mod32_lemmas {
       iter_n: iter_t,
       iter_a_prev: iter_t,
       iter_n_prev: iter_t,
-      cond: reg32,
+      cond: uint1,
       b: bool,
       i: int)
       requires
         && ge_mod32_loop_inv(iter_a, iter_n, cond, b)
+
         && iter_a.index < |iter_a.buff|
         && i == iter_a.index
 
-        && sub == uint32_sub(iter_a.buff[i]), iter_n.buff[i])
-
-        && cond == uint32_lt(uint32_xor(x11, x15)); // cond = x12
+        //&& cond == uint32_lt(0, uint32_xor(x11, x15)) // cond = x12
 
         && iter_a_prev == lw_prev_iter(iter_a)
         && iter_n_prev == lw_prev_iter(iter_n)
       ensures
-        ge_mod32_loop_inv(iter_a_prev, iter_n_prev)
+        ge_mod32_loop_inv(iter_a_prev, iter_n_prev, cond, b)
+    {
+      assume false;
+    }
 
 }

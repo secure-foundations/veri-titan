@@ -33,8 +33,8 @@ module bv_ops {
 
     lemma div_bound(x: int, n: nat)
       requires n > 0
-      ensures x >= 0 ==> 0 <= x / n <= x
-      ensures x < 0 ==> 0 > (x / n) >= x
+      ensures x >= 0 ==> 0 <= x/n <= x
+      ensures x < 0 ==> 0 > (x/n) >= x
     {
       if x >= 0 {
         LemmaDivNonincreasingAuto();

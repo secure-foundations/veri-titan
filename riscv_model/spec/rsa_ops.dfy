@@ -17,8 +17,6 @@ module rsa_ops {
     import opened rv_consts
     import opened bv_ops
     import opened rv_ops
-    import opened powers
-    import opened congruences
 
     import opened DivMod
     import opened Power
@@ -35,27 +33,18 @@ module rsa_ops {
          assert BASE() == 0x1_00000000;
      }
  
-//     lemma to_nat_lemma_1(xs: seq<uint32>)
-//         requires |xs| == 2
-//         ensures ToNatRight(xs) == xs[0] + xs[1] * BASE_32
-//     {
-//         reveal ToNatRight();
-//         to_nat_lemma_0(xs[..1]);
-//         reveal Pow();
-//     }
-// 
-//     function seq_subb(xs: seq<uint32>, ys: seq<uint32>) : (seq<uint32>, uint1)
-//         requires |xs| == |ys|
-//         ensures var (zs, bout) := seq_subb(xs, ys);
-//             && |zs| == |xs|
-//     {
-//         if |xs| == 0 then ([], 0)
-//         else
-//             var len' := |xs| - 1;
-//             var (zs, bin) := seq_subb(xs[..len'], ys[..len']);
-//             var (z, bout) := uint32_subb(xs[len'], ys[len'], bin);
-//             (zs + [z], bout)
-//     }
+    function seq_subb(xs: seq<uint32>, ys: seq<uint32>) : (seq<uint32>, uint1)
+        requires |xs| == |ys|
+        ensures var (zs, bout) := seq_subb(xs, ys);
+            && |zs| == |xs|
+    {
+        if |xs| == 0 then ([], 0)
+        else
+            var len' := |xs| - 1;
+            var (zs, bin) := seq_subb(xs[..len'], ys[..len']);
+            var (z, bout) := uint32_subb(xs[len'], ys[len'], bin);
+            (zs + [z], bout)
+    }
 // 
 //     lemma seq_subb_nat_lemma(xs: seq<uint32>, ys: seq<uint32>, zs: seq<uint32>, bout: uint1)
 //         requires |xs| == |ys|

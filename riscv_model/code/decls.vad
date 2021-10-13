@@ -187,7 +187,7 @@ function int32_lt(x: int32, y: int32): uint32 extern;
     
 // load instructions
     
-procedure lw(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
+procedure lw(inout dst: reg32, in src1: reg32, in src2: simm32, ghost iter: iter_t)
     {:instruction Ins32(RV_LW(dst, src1, src2))}
     reads
         mem;
@@ -201,7 +201,7 @@ procedure lw(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_
     assume false;
 }
 
-procedure lw_safe(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
+procedure lw_safe(inout dst: reg32, in src1: reg32, in src2: simm32, ghost iter: iter_t)
     returns (ghost next_iter: iter_t)
     reads
         mem;
