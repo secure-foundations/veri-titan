@@ -13,7 +13,6 @@ module modexp_var_lemmas {
 
     import opened DivMod
     import opened Mul
-    import opened NativeTypes
     import opened Power
     import opened BASE_256_Seq
 

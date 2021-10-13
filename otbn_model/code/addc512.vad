@@ -18,7 +18,6 @@ import opened vt_decls
 import opened addc512_lemmas
 
 import opened DivMod
-import opened NativeTypes
 import opened Power
 import opened Seq
 import opened BASE_256_Seq
@@ -38,6 +37,7 @@ ghost procedure seq_addc_512_safe_nat_lemma(
     ghost cout: uint1) extern;
 
 ghost procedure LemmaSeqAppendZero #[a:Type(0)](ghost xs: seq(a)) extern;
+ghost procedure LemmaSeqLen1 #[a:Type(0)](ghost xs: seq(a)) extern;
 
 procedure seq_addc_512(
     inout dst1: reg256, in src1a: reg256, in src1b: reg256,
@@ -129,7 +129,7 @@ procedure seq_addc_512_safe(
             LemmaSeqAppendZero(seq(s1b));
         }
         ToNat(seq(s1a, s2a)) + ToNat(seq(s1b));
-        == { reveal ToNat; reveal Pow; }
+        == { LemmaSeqLen1(seq(s1b)); }
         ToNat(seq(s1a, s2a)) + s1b;
     }
 

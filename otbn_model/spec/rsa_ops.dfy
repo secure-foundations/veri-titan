@@ -1,12 +1,12 @@
 include "vt_consts.dfy"
 include "bv_ops.dfy"
 include "vt_ops.dfy"
-include "../libraries/src/Collections/Sequences/NatSeq.dfy"
+include "../libraries/src/Collections/Sequences/LittleEndianNat.dfy"
 
-module BASE_256_Seq refines NatSeq {
-    import opened NativeTypes
+module BASE_256_Seq refines LittleEndianNat {
+    import opened vt_consts
     
-    function method BOUND(): nat { BASE_256 }
+    function method BASE(): nat { BASE_256 }
 }
 
 module rsa_ops {
@@ -17,8 +17,13 @@ module rsa_ops {
 
     import opened DivMod
     import opened Power
-    import opened NativeTypes
     import opened BASE_256_Seq
+
+    function ToNat(xs: seq<BASE_256_Seq.uint>): nat
+    {
+        assert BASE() == BASE_256;
+        BASE_256_Seq.ToNatRight(xs)
+    }
 
     lemma uint512_view_lemma(num: uint512_view_t)
         ensures num.full

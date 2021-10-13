@@ -9,7 +9,6 @@ module vt_vale {
     import opened vt_consts
 
     import opened Mul
-    import opened NativeTypes
 
     function fst<T,Q>(t:(T, Q)) : T { t.0 }
     function snd<T,Q>(t:(T, Q)) : Q { t.1 }
