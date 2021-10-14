@@ -20,7 +20,7 @@ rule vale
     command = {VALE_PATH} -dafnyText -in $in -out $out
 
 rule dd-gen
-    command = python3 build.py dd-gen $in > $out
+    command = python3 build.py dd-gen $in $out
 
 rule dll-gen
     command = python3 build.py dll-gen $in $out
@@ -180,11 +180,11 @@ def list_dfy_deps(dfy_file):
 
     for (i, include) in enumerate(outputs):
         include = os.path.relpath(include)
-        if include.startswith(DAFNY_LIB_DIR):
+        if "std_lib" in include:
             continue
         if i == 0:
             # print(dfy_file)
-            pass
+            continue 
         else:
             include = get_ver_path(include)
             includes.append(include)
@@ -326,18 +326,14 @@ class Generator():
 
 # ## separate command: dd-gen
 
-def generate_dd(dfy_file):
+def generate_dd(dfy_file, dd_file):
     dfy_file = os.path.relpath(dfy_file)
 
     result = "ninja_dyndep_version = 1\n"
     result += "build " + get_ver_path(dfy_file) + "  : dyndep"
-
     outputs = list_dfy_deps(dfy_file)
 
-    if outputs == "":
-        sys.exit()
-
-    print(result + " | " + outputs)
+    open(dd_file, "w").write(result + " | " + outputs + "\n")
 
 ## separate command: proc
 
@@ -397,7 +393,7 @@ def main():
     elif option == "proc":
         verify_dafny_proc(sys.argv[2])
     elif option == "dd-gen":
-        generate_dd(sys.argv[2])
+        generate_dd(sys.argv[2], sys.argv[3])
     elif option == "dll-gen":
         generate_dll(sys.argv[2], sys.argv[3])
     elif option == "clean":
