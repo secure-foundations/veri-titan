@@ -1,0 +1,501 @@
+include "../../arch/otbn/decls.i.vad"
+include "montmul.i.vad"
+
+#verbatim
+
+include "../../arch/otbn/decls.i.dfy"
+
+include "montmul.i.dfy"
+
+include "../../../impl/otbn/modexp_var_lemmas.i.dfy"
+
+module modexp_var {
+
+import opened bv_ops
+import opened rsa_ops
+
+import opened ot_machine
+import opened ot_abstraction
+import opened ot_decls
+import opened ot_vale
+
+import opened mont_loop
+import opened montmul
+import opened mont_loop_lemmas
+import opened modexp_var_lemmas
+import opened subb_lemmas
+
+import opened Power
+import opened BASE_256_Seq
+
+#endverbatim
+
+ghost procedure xor_clear_lemma(ghost x: uint256) extern;
+
+function modexp_var_inv(a: nat, sig: nat, i: nat, rsa: rsa_params): bool extern;
+
+ghost procedure modexp_var_inv_pre_lemma(
+    ghost a_view: seq(uint256),
+    ghost rr: seq(uint256),
+    ghost sig: seq(uint256),
+    ghost rsa: rsa_params) extern;
+
+ghost procedure modexp_var_inv_peri_lemma(
+    ghost a_view: seq(uint256),
+    ghost next_a_view: seq(uint256),
+    ghost sig: nat,
+    ghost i: nat,
+    ghost rsa: rsa_params) extern;
+
+ghost procedure modexp_var_inv_post_lemma(
+    ghost a_view: seq(uint256),
+    ghost next_a_view: seq(uint256),
+    ghost sig: seq(uint256),
+    ghost rsa: rsa_params) extern;
+
+function subb_inv(dst: seq(uint256),
+    carry: uint1,
+    src1: seq(uint256),
+    src2: seq(uint256),
+    index: int) : bool extern;
+
+ghost procedure subb_inv_peri_lemma(
+    ghost dst: seq(uint256),
+    ghost new_carry: uint1,
+    ghost src1: seq(uint256),
+    ghost src2: seq(uint256),
+    ghost old_carry: uint1,
+    ghost index: int) extern;
+
+ghost procedure subb_inv_post_lemma(
+    ghost dst: seq(uint256),
+    ghost carry: uint1,
+    ghost src1: seq(uint256),
+    ghost src2: seq(uint256)) extern;
+
+ghost procedure modexp_var_correct_lemma(
+    ghost raw_view: nat,
+    ghost adjusted_view: nat,
+    ghost carry: bool,
+    ghost rsa: rsa_params) extern;
+
+function mod(a: int, n: int): int extern;
+
+function mvars_init(
+    vars: mvars,
+    heap: heap_t,
+    m_ptr: uint32,
+    m0d_ptr: uint32,
+    rr_ptr: uint32,
+    sig_ptr: uint32,
+    out_ptr: uint32) : bool extern;
+
+procedure modexp_var_0(
+    ghost init_vars: mvars,
+    ghost m_ptr: uint32,
+    ghost m0d_ptr: uint32,
+    ghost rr_ptr: uint32,
+    ghost sig_ptr: uint32,
+    ghost out_ptr: uint32)
+
+    requires
+        mvars_init(init_vars, heap,
+            m_ptr, m0d_ptr, rr_ptr, sig_ptr, out_ptr);
+
+    reads
+        x0;
+        mem; heap;
+
+    modifies
+        fgroups;
+        x8; x9; x10; x11; x16; x17; x18; x29; x30; x31;
+        w31;
+
+    ensures
+        x8 == 4;
+        x9 == 3;
+        x10 == 4;
+        x11 == 2;
+        x29 == init_vars.rsa.E0;
+        x30 == NUM_WORDS;
+        x31 == NUM_WORDS - 1;
+
+        w31 == 0;
+
+        mvars_inv(init_vars, heap, NA, NA, x16, x17, x18, NA);
+{
+    xor_clear_lemma(w31);
+    bn_xor(w31, w31, w31, SFT_DFT, 0);
+
+    lw(x30, 4, x0);
+
+    addi(x31, x30, (-1));
+
+    lw(x16, 16, x0);
+    lw(x17, 8, x0);
+    lw(x18, 12, x0);
+    lw(x29, 0, x0);
+
+    li(x8, 4);
+    li(x9, 3);
+    li(x10, 4);
+    li(x11, 2);
+}
+
+procedure sub_mod(
+    ghost raw_view: seq(uint256),
+    ghost initial_m_it: iter_t)
+
+    returns (ghost adjusted_view: seq(uint256))
+
+    requires
+        x8 == 4;
+        x9 == 3;
+        x11 == 2;
+        x30 == NUM_WORDS;
+
+        w31 == 0;
+
+        mvars_iter_init(initial_m_it, heap, x16, NA);
+        valid_wdr_view(wdrs, raw_view, 4, NUM_WORDS);
+
+    reads
+        x30;
+        mem; heap;
+
+    modifies
+        x8; x9; x11; x16; x17;
+        w2; w3; w31;
+        fgroups; wdrs;
+
+    ensures
+        valid_wdr_view(wdrs, raw_view, 4, NUM_WORDS);
+        valid_wdr_view(wdrs, adjusted_view, 16, NUM_WORDS);
+
+        !fgroups.fg0.cf ==> ToNat(raw_view) - ToNat(initial_m_it.buff) == ToNat(adjusted_view);
+        fgroups.fg0.cf ==> ToNat(raw_view) < ToNat(initial_m_it.buff);
+{
+    reveal SeqSub;
+
+    bn_add(w31, w31, w31, SFT_DFT, 0);
+    assert fgroups.fg0.cf == false;
+
+    li(x17, 16);
+    ghost var m_it := initial_m_it;
+    adjusted_view := wdrs[16..16+NUM_WORDS];
+
+    while (Loop(x30))
+        invariant
+            iter_inv(m_it, heap, x16);
+            m_it.base_ptr == initial_m_it.base_ptr;
+            m_it.index == NUM_WORDS - loop_ctr;
+            seq_len(m_it.buff) == NUM_WORDS;
+
+            x9 == 3;
+            x11 == 2;
+            x8 == 4 + m_it.index;
+            x17 == 16 + m_it.index;
+
+            valid_wdr_view(wdrs, raw_view, 4, NUM_WORDS);
+            valid_wdr_view(wdrs, adjusted_view, 16, NUM_WORDS);
+
+            subb_inv(adjusted_view, bool_to_uint1(fgroups.fg0.cf),
+                raw_view, m_it.buff, m_it.index);
+
+        decreases
+            loop_ctr;
+    {
+        ghost var index := m_it.index;
+        bn_movr(x11, false, x8, true);
+
+        m_it := bn_lid_safe(x9, false, 0, x16, true, m_it);
+
+        let old_carry := bool_to_uint1(fgroups.fg0.cf);
+        bn_subb(w2, w2, w3, SFT_DFT, 0);
+        let new_carry := bool_to_uint1(fgroups.fg0.cf);
+
+        bn_movr(x17, true, x11, false);
+        adjusted_view := adjusted_view[index := w2];
+
+        assert tuple(w2, new_carry) ==
+            uint256_subb(raw_view[index], m_it.buff[index], old_carry);
+
+        subb_inv_peri_lemma(adjusted_view, new_carry, raw_view, m_it.buff, old_carry, index);
+    }
+    
+    let new_carry := bool_to_uint1(fgroups.fg0.cf);
+    subb_inv_post_lemma(adjusted_view, new_carry, raw_view, m_it.buff);
+}
+
+procedure write_to_dmem(ghost iter: iter_t)
+    returns (ghost next_iter: iter_t)
+
+    requires
+        x8 == 4;
+        x30 == NUM_WORDS;
+
+        iter_safe(iter, heap, x21);
+        seq_len(iter.buff) == NUM_WORDS;
+        iter.index == 0;
+    
+    modifies
+        x8; x21; mem; heap;
+
+    reads
+        x30; wdrs;
+
+    ensures
+        iter_inv(next_iter, heap, iter.base_ptr);
+        next_iter.base_ptr == iter.base_ptr;
+        seq_len(next_iter.buff) == NUM_WORDS;
+        next_iter.buff == wdrs[4..4+NUM_WORDS];
+        heap == old(heap)[next_iter.base_ptr := WBUFF(next_iter.buff)];
+{
+    next_iter := iter;
+
+    while (Loop(x30))
+        invariant
+            x8 == 4 + next_iter.index;
+
+            iter_inv(next_iter, heap, x21);
+            next_iter.index + loop_ctr == NUM_WORDS;
+            seq_len(next_iter.buff) == NUM_WORDS;
+
+            next_iter.buff[..next_iter.index] == wdrs[4..4+next_iter.index];
+            wdrs == old(wdrs);
+
+            next_iter.base_ptr == iter.base_ptr;
+            heap == old(heap)[next_iter.base_ptr := WBUFF(next_iter.buff)];
+
+        decreases
+            loop_ctr;
+    {   
+        ghost var index := next_iter.index;
+        ghost var last_iter := next_iter;
+
+        next_iter := bn_sid_safe(x8, false, 0, x21, true, next_iter);
+        addi(x8, x8, 1);
+
+        ghost var item := next_iter.buff[index];
+        assert next_iter.buff[index] == wdrs[4+index];
+
+        calc == {
+            next_iter.buff[..next_iter.index];
+            ==
+            seq_append(last_iter.buff[..index], item);
+            ==
+            seq_append(wdrs[4..4+index], item);
+            ==
+            wdrs[4..4+index+1];
+            ==
+            wdrs[4..4+next_iter.index];
+        }
+    }
+    next_iter := next_iter.(index := 0);
+}
+
+procedure modexp_var_1(
+    ghost raw_view: seq(uint256),
+    ghost adjusted_view: seq(uint256),
+    ghost carry: bool,
+    ghost sig: nat,
+    ghost rsa: rsa_params)
+returns (ghost out_iter: iter_t)
+
+    {:frame false }
+
+    requires
+        xword_ptr_valid(heap, 28); // out
+        buff_base_ptr_valid(heap, heap[28].v);
+        let loc := #nat(heap[28].v);
+        seq_len(heap[loc].b) == NUM_WORDS;
+
+        NUM_WORDS == x30;
+
+        rsa_params_inv(rsa);
+
+        valid_wdr_view(wdrs, raw_view, 4, NUM_WORDS);
+        valid_wdr_view(wdrs, adjusted_view, 16, NUM_WORDS);
+
+        carry == fgroups.fg0.cf;
+        carry ==> ToNat(raw_view) == mod(Pow(sig, rsa.E), rsa.M);
+        !carry ==> ToNat(adjusted_view) == mod(Pow(sig, rsa.E), rsa.M);
+    
+    ensures
+        iter_inv(out_iter, heap, x21);
+        ToNat(out_iter.buff) == mod(Pow(sig, rsa.E), rsa.M);
+        heap == old(heap)[out_iter.base_ptr := WBUFF(out_iter.buff)];
+{
+    lw(x21, 28, x0);
+    li(x8, 4);
+    li(x9, 2);
+    li(x10, 3);
+    li(x17, 16);
+
+    out_iter := iter_cons(x21, 0, heap[x21].b);
+
+    while (Loop(x30))
+        invariant
+            x9 == 2;
+            x8 == 4 + out_iter.index;
+            x10 == 3;
+            x17 == 16 + out_iter.index;
+            carry == fgroups.fg0.cf;
+
+            iter_inv(out_iter, heap, x21);
+            out_iter.index + loop_ctr == NUM_WORDS;
+            seq_len(out_iter.buff) == NUM_WORDS;
+
+            valid_wdr_view(wdrs, raw_view, 4, NUM_WORDS);
+            valid_wdr_view(wdrs, adjusted_view, 16, NUM_WORDS);
+
+            carry ==> out_iter.buff[..out_iter.index] == raw_view[..out_iter.index];
+            !carry ==> out_iter.buff[..out_iter.index] == adjusted_view[..out_iter.index];
+
+            heap == old(heap)[out_iter.base_ptr := WBUFF(out_iter.buff)];
+        decreases
+            loop_ctr;
+    {
+        let index := out_iter.index;
+        bn_movr(x9, false, x8, true);
+        assert w2 == raw_view[index];
+
+        bn_movr(x10, false, x17, true);
+        assert w3 == adjusted_view[index];
+   
+        bn_sel(w2, w2, w3, 0, 0);
+
+        out_iter := bn_sid_safe(x9, false, 0, x21, true, out_iter);
+
+        ghost if (carry) {
+            assert w2 == raw_view[index];
+            calc == {
+                out_iter.buff[..out_iter.index];
+                ==
+                seq_append(out_iter.buff[..index], raw_view[index]);
+                ==
+                seq_append(raw_view[..index], raw_view[index]);
+                ==
+                raw_view[..out_iter.index];
+            }
+        } else {
+            assert w2 == adjusted_view[index];
+        }
+    }
+
+    assert out_iter.buff == out_iter.buff[..NUM_WORDS];
+    assert raw_view == raw_view[..out_iter.index];
+    assert adjusted_view == adjusted_view[..out_iter.index];
+}
+
+procedure modexp_var(
+    ghost init_vars: mvars,
+    ghost m_ptr: uint32,
+    ghost m0d_ptr: uint32,
+    ghost rr_ptr: uint32,
+    ghost sig_ptr: uint32,
+    ghost out_ptr: uint32)
+
+    returns (ghost out_iter: iter_t)
+
+    {:frame false}
+
+    requires
+        mvars_init(init_vars, heap,
+            m_ptr, m0d_ptr, rr_ptr, sig_ptr, out_ptr);
+
+    ensures
+        // out_iter contains a valid view of memory
+        iter_inv(out_iter, heap, x21);
+        // out_iter contains the right value
+        let rsa := init_vars.rsa in 
+        ToNat(out_iter.buff) == mod(Pow(rsa.SIG, rsa.E), rsa.M);
+{
+    ghost var a_view: seq(uint256);
+    modexp_var_0(init_vars, m_ptr, m0d_ptr, rr_ptr, sig_ptr, out_ptr);
+
+    lw(x19, 20, x0);
+    addi(x20, x18, 0);
+    lw(x21, 28, x0);
+
+    let sig_iter := init_vars.sig_it;
+    let rr_iter := init_vars.rr_it;
+
+    ghost var vars := init_vars.(x_it := rr_iter).(y_it := sig_iter);
+    a_view := montmul(vars);
+
+    out_iter := iter_cons(out_ptr, 0, heap[out_ptr].b);
+    out_iter := write_to_dmem(out_iter);
+
+    vars := vars.(x_it := out_iter).(y_it := out_iter);
+
+    modexp_var_inv_pre_lemma(a_view, rr_iter.buff, sig_iter.buff, vars.rsa);
+    
+    ghost var i : nat := 0;
+
+    while (Loop(x29))
+        invariant
+            x9 == 3;
+            x10 == 4;
+            x11 == 2;
+            x30 == NUM_WORDS;
+            x31 == NUM_WORDS - 1;
+
+            w31 == 0;
+
+            init_vars.rsa == vars.rsa;
+            init_vars.sig_it== vars.sig_it;
+
+            mvars_iter_init(out_iter, heap, out_ptr, NA);
+            out_iter.buff == a_view;
+
+            mvars_inv(vars, heap, out_ptr, out_ptr, x16, x17, rr_ptr, sig_ptr);
+            modexp_var_inv(ToNat(a_view), vars.rsa.SIG, i, vars.rsa);
+            mvars_init(init_vars, heap, m_ptr, m0d_ptr, rr_ptr, sig_ptr, out_ptr);
+
+            out_ptr != x16;
+            out_ptr != x17;
+
+            i + loop_ctr == vars.rsa.E0; 
+
+        decreases
+            loop_ctr;
+    {
+        lw(x20, 28, x0);
+        lw(x19, 28, x0);
+        lw(x21, 28, x0);
+
+        let prev_a_view := a_view;
+        a_view := montmul(vars);
+
+        out_iter := write_to_dmem(out_iter);
+        
+        vars := vars.(x_it := out_iter).(y_it := out_iter);
+
+        modexp_var_inv_peri_lemma(prev_a_view, a_view, vars.rsa.SIG, i, vars.rsa);
+    
+        i := i + 1;
+    }
+
+    lw(x19, 20, x0);
+    lw(x20, 28, x0);
+    lw(x21, 28, x0);
+    let prev_a_view := a_view;
+
+    vars := vars.(x_it := out_iter).(y_it := sig_iter);
+    a_view := montmul(vars);
+
+    modexp_var_inv_post_lemma(prev_a_view, a_view, sig_iter.buff, vars.rsa);
+
+    ghost var raw_view := wdrs[4..4+NUM_WORDS];
+    let adjusted_view := sub_mod(raw_view, vars.m_it);
+    
+    let carry := fgroups.fg0.cf;
+    modexp_var_correct_lemma(ToNat(raw_view), ToNat(adjusted_view), carry, vars.rsa);
+
+    out_iter := modexp_var_1(raw_view, adjusted_view, carry, vars.rsa.SIG, vars.rsa);
+}
+
+#verbatim
+}
+#endverbatim

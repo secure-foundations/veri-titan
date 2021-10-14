@@ -13,7 +13,27 @@
 
 [OTBN spec](https://docs.opentitan.org/hw/ip/otbn/doc/)
 
-[Calling Convention](https://docs.google.com/document/d/1aXaWaXGvGPB9rdF4x1r6weH69l0ghYDevhTZqEtJ8DU)
+<!-- [Calling Convention](https://docs.google.com/document/d/1aXaWaXGvGPB9rdF4x1r6weH69l0ghYDevhTZqEtJ8DU) -->
+
+## Dependecies
+
+We assume the following packages are installed:
+
+`ninja`
+
+[`dotnet`](https://dotnet.microsoft.com/download) 
+
+[`nuget`](https://www.nuget.org/downloads)
+
+`otbn-as`
+
+`otbn-ld`
+
+The setup script will install:
+
+`dafny`
+
+`vale`
 
 ## Research Potentials:
 
@@ -26,4 +46,3 @@ Making Assembly Proofs Easier
 Building a Verified Hardware Root of Trust
 
 [Closing the Hardware/Software Gap](https://github.com/secure-foundations/veri-titan/blob/master/documents/direction_hardware.md)
-

@@ -1,0 +1,135 @@
+include "../../arch/otbn/decls.i.vad"
+
+#verbatim
+
+include "../../arch/otbn/decls.i.dfy"
+
+module examples {
+
+import opened bv_ops
+
+import opened ot_machine
+import opened ot_abstraction
+import opened ot_decls
+import opened ot_vale
+
+#endverbatim
+    
+procedure double()
+    requires
+        x2 + x2 < 0x1_0000_0000;
+    ensures
+        x2 = old(x2) + old(x2);
+    modifies
+        x2;
+{
+    add(x2, x2, x2);
+}
+
+procedure double_reg(inout dst:reg32, in src:reg32)
+    requires
+        src + src < 0x1_0000_0000;
+    ensures
+        dst = old(src) + old(src);
+{
+    add(dst, src, src);
+}
+
+procedure loop_imm(inout dst:reg32)
+    requires
+        dst == 0;
+    modifies
+        fgroups;
+    ensures
+        dst == 6;
+{
+    while (LoopImm(3))
+        invariant dst == (3 - loop_ctr) * 2;
+        decreases loop_ctr;
+    {
+        addi(dst, dst, 2);
+    }
+}
+
+procedure loop_reg(inout dst:reg32, in cnt:reg32)
+    requires
+        dst == 0;
+        cnt == 3;
+    modifies
+        fgroups;
+    ensures
+        dst == 6;
+{
+    while (Loop(cnt))
+        invariant dst == (3 - loop_ctr) * 2;
+        decreases loop_ctr;
+    {
+        addi(dst, dst, 2);
+    }
+}
+
+// procedure barrett384()
+//     reads
+//         w12; w13; w14; w15; w31;
+//     modifies
+//         w8; w9; w10; w11; w16; w17; w18; w19; 
+//         w20; w21; w22; w23; w24; w25; w29; w30; 
+//         fgroups; wacc;
+// {
+
+//     // bn_subi(w30, w31, 1, 0);
+//     bn_rshi(w30, w30, w31, 127);
+
+//     bn_sel(w24, w14, w31, 0, 2); 
+//     bn_sel(w25, w16, w31, 0, 2); 
+
+//     bn_mov(w21, w16);
+//     bn_and(w22, w17, w30, SFT_DFT);
+
+//     bn_rshi(w9, w18, w31, 127);
+//     bn_rshi(w8, w17, w18, 127);
+
+//     bn_mov(w10, w14);
+//     bn_mov(w11, w15);
+
+//     bn_rshi(w20, w18, w31, 128);
+//     bn_rshi(w19, w17, w18, 128);
+//     bn_add(w19, w19, w8, SFT_DFT, 0);
+//     bn_addc(w20, w20, w9, SFT_DFT, 0);
+//     bn_add(w19, w19, w24, SFT_DFT, 0);
+//     bn_addc(w20, w20, w25, SFT_DFT, 0);
+//     bn_rshi(w9, w20, w31, 1);
+//     bn_rshi(w8, w19, w20, 1);
+
+//     bn_mov(w10, w12);
+//     bn_mov(w11, w13);
+//     bn_and(w17, w17, w30, SFT_DFT);
+//     bn_sub(w21, w21, w16, SFT_DFT, 0);
+//     bn_subb(w22, w22, w17, SFT_DFT, 0);
+
+//     // bn_addi(w30, w30, 1, 0);
+//     bn_add(w30, w30, w22, SFT_DFT, 0);
+//     bn_sel(w22, w30, w22, 0, 3);
+// }
+
+
+// procedure copy()
+//     requires
+//         xmem_addr_valid(xmem, x0 + 0);
+//         xmem_addr_valid(xmem, x0 + 4);
+//     reads
+//         x0;
+//     ensures
+//         xmem_addr_valid(xmem, x0 + 0);
+//         xmem_addr_valid(xmem, x0 + 4);
+//         xmem == old(xmem[x0 + 4 := xmem[x0 + 0]]);
+//     modifies
+//         xmem; x2;
+// {
+//     lw(x2, 0, x0);
+//     sw(x2, 4, x0);
+// }
+
+#verbatim
+}
+#endverbatim
