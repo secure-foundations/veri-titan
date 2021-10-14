@@ -186,7 +186,7 @@ function int32_lt(x: int32, y: int32): uint32 extern;
     
 // load instructions
     
-procedure lw(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
+procedure lw(inout dst: reg32, in src1: reg32, in src2: simm32, ghost iter: iter_t)
     {:instruction Ins32(RV_LW(dst, src1, src2))}
     reads
         mem;
@@ -200,7 +200,7 @@ procedure lw(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_
     assume false;
 }
 
-procedure lw_safe(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
+procedure lw_safe(inout dst: reg32, in src1: reg32, in src2: simm32, ghost iter: iter_t)
     returns (ghost next_iter: iter_t)
     reads
         mem;
@@ -218,7 +218,7 @@ procedure lw_safe(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: 
 }
 
 // TOOD: signed integer for src2
-procedure lw_prev(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
+procedure lw_prev(inout dst: reg32, in src1: reg32, in src2: simm32, ghost iter: iter_t)
     returns (ghost prev_iter: iter_t)
     reads
         mem;
@@ -300,11 +300,7 @@ procedure lw_prev(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: 
     // assume false;
 // }
 // 
-// --------------------------------------------------------------
 
-// todo(?): fence fencei
-
-// --------------------------------------------------------------
 
 // immediate instructions
     
@@ -409,23 +405,6 @@ procedure srai(inout dst: reg32, in src1: reg32, in src2: imm32)
 {
     assume false;
 }
-
-
-// "forms 32-bit offset from 20-bit immediate, filling in the
-// lowest 12 bits with zeros, adds this offset to the pc, and
-// puts the result in dst"
-// procedure auipc(inout dst: reg32, in src: imm32)
-//     {:instruction Ins32(RV_AUIPC(dst, src))}
-//     modifies
-//         pc; 
-//     requires
-//         src < 0x100000; // 20-bit immediate
-//     ensures
-//         pc = old(pc) + uint32_sl(old(src), 12);
-//         dst == pc; // TODO: Is this ok/is the PC updated at this point?
-// {
-//     assume false;
-// }
 
 
 // --------------------------------------------------------------
@@ -607,109 +586,6 @@ procedure li(inout dst: reg32, in src: imm32)
     assume false;
 }
 
-// --------------------------------------------------------------
-    
-// branch instructions
-    
-// procedure beq(in src1: reg32, in src2: reg32, in imm: imm32)
-//     {:instruction Ins32(RV_BEQ(src1, src2, imm))}
-//     requires
-//         imm < 0x1000; // 12-bit immediate
-//     ensures
-//         let new_pc := old(pc) + old(imm);
-//         if (old(src1) == old(src2)) then dst == new_pc else dst == old(dst);
-// {
-//     assume false;
-// }
-// 
-// procedure bne(in src1: reg32, in src2: reg32, in imm: imm32)
-//     {:instruction Ins32(RV_BNE(src1, src2, imm))}
-//     requires
-//         imm < 0x1000; // 12-bit immediate
-//     ensures
-//         let new_pc := old(pc) + old(imm);
-//         if (old(src1) == old(src2)) then dst == old(dst) else dst == new_pc;
-// {
-//     assume false;
-// }
-//     
-// procedure blt(in src1: reg32, in src2: reg32, in imm: imm32)
-//     {:instruction Ins32(RV_BLT(src1, src2, imm))}
-//     requires
-//         imm < 0x1000; // 12-bit immediate
-//     ensures
-//         let new_pc := old(pc) + old(imm);
-//         if (old(src1) < old(src2)) then dst == new_pc else dst == old(dst);
-// {
-//     assume false;
-// }
-//     
-// procedure bge(in src1: reg32, in src2: reg32, in imm: imm32)
-//     {:instruction Ins32(RV_BGE(src1, src2, imm))}
-//     requires
-//         imm < 0x1000; // 12-bit immediate
-//     ensures
-//         let new_pc := old(pc) + old(imm);
-//         if (old(src1) >= old(src2)) then dst == new_pc else dst == old(dst);
-// {
-//     assume false;
-// }
-//     
-// procedure bltu(in src1: reg32, in src2: reg32, in imm: imm32)
-//     {:instruction Ins32(RV_BLTU(src1, src2, imm))}
-//     requires
-//         imm < 0x1000; // 12-bit immediate
-//     ensures
-//         let new_pc := old(pc) + old(imm);
-//         if (old(src1) < old(src2)) then dst == new_pc else dst == old(dst);
-// {
-//     assume false;
-// }
-//     
-// procedure bgeu(in src1: reg32, in src2: reg32, in imm: imm32)
-//     {:instruction Ins32(RV_BGEU(src1, src2, imm))}
-//     requires
-//         imm < 0x1000; // 12-bit immediate
-//     ensures
-//         let new_pc := old(pc) + old(imm);
-//         if (old(src1) >= old(src2)) then dst == new_pc else dst == old(dst);
-// {
-//     assume false;
-// }
-//     
-// // --------------------------------------------------------------
-//     
-// // jump instructions
-// 
-// procedure jalr(inout dst: reg32, in src1: reg32, in src2: imm32)
-//     {:instruction Ins32(RV_JALR(dst, src1, src2))}
-//     requires
-//         src < 0x1000; // 12-bit immediate
-//     ensures
-//         dst == old(pc) + 4;
-// {
-//     assume false;
-// }
-// 
-// // standard convention uses x1 as the return address register and x5
-// // as an alternate link register
-// procedure jal(inout dst: reg32, in src: imm32)
-//     {:instruction Ins32(RV_JAL(dst, src))}
-//     modifies
-//         pc;
-//     requires
-//         // src encodes a signed offset in multiples of 2 bytes
-//         src < 0x100000; // 20-bit immediate
-//     ensures
-//         // stores address of the instruction following the jump (pc + 4) in dst
-//         dst == old(pc) + 4;
-//         // offset is added to src and least significant bit set to 0
-//         // TODO: check for new pc % 2 == 1
-//         pc == old(src) + src;
-// {
-//     assume false;
-// }
-// 
 
 // --------------------------------------------------------------
 // Integer Multiplication and Division Extension

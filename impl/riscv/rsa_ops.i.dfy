@@ -37,14 +37,15 @@ module rsa_ops {
          reveal ToNatRight();
          assert BASE() == 0x1_00000000;
      }
- 
+
     lemma to_nat_lemma_1(xs: seq<uint32>)
         requires |xs| == 2
         ensures ToNatRight(xs) == xs[0] + xs[1] * BASE_32
     {
         LemmaSeqLen2(xs);
     }
-// 
+
+// <<<<<<< HEAD:impl/riscv/rsa_ops.i.dfy
 //     function seq_subb(xs: seq<uint32>, ys: seq<uint32>) : (seq<uint32>, uint1)
 //         requires |xs| == |ys|
 //         ensures var (zs, bout) := seq_subb(xs, ys);
@@ -57,6 +58,7 @@ module rsa_ops {
 //             var (z, bout) := uint32_subb(xs[len'], ys[len'], bin);
 //             (zs + [z], bout)
 //     }
+
 // 
 //     lemma seq_subb_nat_lemma(xs: seq<uint32>, ys: seq<uint32>, zs: seq<uint32>, bout: uint1)
 //         requires |xs| == |ys|
