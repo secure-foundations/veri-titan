@@ -14,6 +14,7 @@ import opened rv_decls
 import opened rv_vale
 
 import opened mod32_lemmas
+import opened mod32_nl_lemmas
 
 #endverbatim
 

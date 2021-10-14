@@ -29,13 +29,6 @@ module rv_machine {
         && uh == num.uh
     }
 
-    // predicate valid_gpr_view(gprs: gprs_t, view: seq<uint32>, start: nat, len: nat)
-    // {   
-    //     && |view| == len
-    //     && start + len <= 32
-    //     && gprs[start..start+len] == view
-    // }
-
     /* int64 views are constructed from UNSIGNED uint32 values in
     registers, so that we always keep the assumption that values in a
     register are unsigned but can be VIEWED as signed */
@@ -53,6 +46,13 @@ module rv_machine {
         reveal uint64_lh();
         reveal uint64_uh();
         // assert num.lh + num.uh * BASE_32 == to_2s_complement_bv64(num.full);
+    }
+    predicate valid_int64_view(
+        num: int64_view_t,
+        lh: uint32, uh: uint32)
+    {
+        && lh == num.lh
+        && uh == num.uh
     }
     
     lemma lemma_int64_negative_one(num: int64_view_t)
