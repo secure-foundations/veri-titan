@@ -11,7 +11,10 @@ DAFNY_LIB_HASH = "84d160538b6442017a5401feb91265147bf34bfc"
 
 rules = f"""
 rule dafny
-    command = {DAFNY_PATH} /compile:0 /noNLarith /timeLimit:20 /vcsCores:2 /noVerify $in && touch $out
+    command = {DAFNY_PATH} /compile:0 /noNLarith /timeLimit:20 /vcsCores:2 $in && touch $out
+
+rule dafny-nl
+    command = {DAFNY_PATH} /compile:0 /timeLimit:20 /vcsCores:2 $in && touch $out
 
 rule vale
     command = {VALE_PATH} -dafnyText -in $in -out $out
@@ -34,7 +37,7 @@ rule otbn-ld
 
 OT_PRINTER_DFY_PATH = "arch/otbn/printer.s.dfy"
 OT_SIMULATOR_DFY_PATH = "arch/otbn/simulator.i.dfy"
-DLL_SOURCES = set([OT_PRINTER_DFY_PATH, OT_SIMULATOR_DFY_PATH])
+DLL_SOURCES = {OT_PRINTER_DFY_PATH, OT_SIMULATOR_DFY_PATH}
 
 OUTPUT_ASM_PATH = "gen/arch/otbn/printer.s.dll.out"
 TEST_ASM_PATH = "impl/otbn/run_modexp.s"
@@ -43,6 +46,10 @@ OUTPUT_ELF_PATH = "gen/impl/otbn/run_modexp.elf"
 NINJA_PATH = "build.ninja"
 CODE_DIRS = ["arch", "impl", "lib"]
 GEN_DIR = "gen"
+
+
+NL_FILES = {"arch/riscv/vale.i.dfy",
+    "impl/riscv/mod32_lemmas.i.dfy"}
 
 ## misc utils
 
@@ -266,7 +273,10 @@ class Generator():
         dd_path = get_dd_path(dfy_file)
 
         self.content.append(f"build {dd_path}: dd-gen {dfy_file}\n")
-        self.content.append(f"build {ver_path}: dafny {dfy_file} || {dd_path}")
+        if dfy_file in NL_FILES:
+            self.content.append(f"build {ver_path}: dafny-nl {dfy_file} || {dd_path}")
+        else:
+            self.content.append(f"build {ver_path}: dafny {dfy_file} || {dd_path}")
         self.content.append(f"    dyndep = {dd_path}\n")
 
     def generate_dll_rules(self, dafny_path):

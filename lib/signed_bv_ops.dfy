@@ -56,6 +56,16 @@ module bv_ops {
     type int32  = i :int | -BASE_31 <= i <= (BASE_31 - 1)
     type int64  = i :int | -BASE_63 <= i <= (BASE_63 - 1)
 
+    lemma div_negative_one(a: nat)
+      requires a > 1
+      ensures -1 / a == -1
+    {
+    }
+
+    function to_2s_complement_bv64(val: int64): uint64
+    {
+        if val >= 0 then val else val + BASE_64
+    }
 
     /* signed operations */
     function method int32_rs(x: int32, shift: nat) : int32
@@ -172,9 +182,10 @@ module bv_ops {
         if r >= BASE_32 then (r - BASE_32) else r
     }
 
-    function method {:opaque} uint32_sub(x:uint32, y:uint32) : uint32
+    function method uint32_sub(x:uint32, y:uint32) : uint32
     {
-        (x - y) % BASE_32
+        var diff := x - y;
+        if diff >= 0 then diff else diff + BASE_32
     }
 
     function method uint32_full_mul(x:uint32, y:uint32): (r: uint64)
@@ -265,27 +276,8 @@ module bv_ops {
     function method uint32_subb(x: uint32, y: uint32, bin: uint1): (uint32, uint1)
     {
       var diff : int := x - y - bin;
-        var diff_out := if diff >= 0 then diff else diff + BASE_32;
-        var bout := if diff >= 0 then 0 else 1;
-        (diff_out, bout)
+      var diff_out := if diff >= 0 then diff else diff + BASE_32;
+      var bout := if diff >= 0 then 0 else 1;
+      (diff_out, bout)
     }
-
-    // signed integer views
-    function method {:opaque} int64_lh(x: int64): uint32
-    {
-        to_uint64(x) % BASE_32
-    }
-
-    function method {:opaque} int64_uh(x: int64): uint32
-    {
-        to_uint64(x) / BASE_32
-    }
-
-    lemma lemma_int64_half_split(x: int64)
-        ensures x == to_int64(int64_lh(x) + int64_uh(x) * BASE_32);
-    {
-        reveal int64_lh();
-        reveal int64_uh();
-    }
-
 } // end module ops

@@ -29,13 +29,12 @@ module rv_machine {
         && uh == num.uh
     }
 
-    predicate valid_gpr_view(gprs: gprs_t, view: seq<uint32>, start: nat, len: nat)
-    {   
-        && |view| == len
-        && start + len <= 32
-        && gprs[start..start+len] == view
-    }
-
+    // predicate valid_gpr_view(gprs: gprs_t, view: seq<uint32>, start: nat, len: nat)
+    // {   
+    //     && |view| == len
+    //     && start + len <= 32
+    //     && gprs[start..start+len] == view
+    // }
 
     /* int64 views are constructed from UNSIGNED uint32 values in
     registers, so that we always keep the assumption that values in a
@@ -44,18 +43,28 @@ module rv_machine {
         lh: uint32, uh: uint32, full: int64)
 
     type int64_view_t = num: int64_raw |
-        && num.lh == to_uint32(int64_lh(num.full))
-        && num.uh == to_uint32(int64_uh(num.full))
+        && num.lh == uint64_lh(to_2s_complement_bv64(num.full))
+        && num.uh == uint64_uh(to_2s_complement_bv64(num.full)) 
         witness *
 
-    predicate valid_int64_view(
-        num: int64_view_t,
-        lh: uint32, uh: uint32)
+    lemma lemma_int64_half_split(num: int64_view_t)
+        ensures num.lh + num.uh * BASE_32 == to_2s_complement_bv64(num.full);
     {
-        && lh == num.lh
-        && uh == num.uh
+        reveal uint64_lh();
+        reveal uint64_uh();
+        // assert num.lh + num.uh * BASE_32 == to_2s_complement_bv64(num.full);
     }
-
+    
+    lemma lemma_int64_negative_one(num: int64_view_t)
+        requires num.lh == BASE_32 - 1
+        requires num.uh == BASE_32 - 1
+        ensures num.full == -1
+    {
+        lemma_int64_half_split(num);
+        assert num.lh + num.uh * BASE_32 == to_2s_complement_bv64(num.full);
+        assert num.lh + num.uh * BASE_32 == BASE_64 - 1;
+        assert num.full == -1;
+    }
 
    /* memory definitions */ 
 

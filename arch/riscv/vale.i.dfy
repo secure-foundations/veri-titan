@@ -65,8 +65,8 @@ module rv_vale {
 
     type va_operand_simm32 = int32
     predicate va_is_src_simm32(v:int32, s: va_state) { true }
-    function va_eval_simm32(s: va_state, v:int32):uint32 { v }
-    function method va_const_simm32(n:int32):uint32 { n }
+    function va_eval_simm32(s: va_state, v:int32):int32 { v }
+    function method va_const_simm32(n:int32):int32 { n }
 
     type va_operand_imm32 = uint32
     predicate va_is_src_imm32(v:uint32, s: va_state) { true }
