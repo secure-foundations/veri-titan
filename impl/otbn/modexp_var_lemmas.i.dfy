@@ -6,7 +6,7 @@ module modexp_var_lemmas {
     import opened bv_ops
     import opened rsa_ops
     import opened ot_machine
-    import opened ot_interp
+    import opened ot_abstraction
 
     import opened mont_loop_lemmas
     import opened montmul_lemmas

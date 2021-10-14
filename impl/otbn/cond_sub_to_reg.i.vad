@@ -10,7 +10,7 @@ import opened bv_ops
 import opened rsa_ops
 
 import opened ot_machine
-import opened ot_interp
+import opened ot_abstraction
 import opened ot_decls
 import opened ot_vale
 

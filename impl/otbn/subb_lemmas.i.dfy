@@ -3,7 +3,7 @@ include "rsa_ops.i.dfy"
 module subb_lemmas {
     import opened bv_ops
     import opened ot_machine
-    import opened ot_interp
+    import opened ot_abstraction
     import opened rsa_ops
 
     import opened BASE_256_Seq

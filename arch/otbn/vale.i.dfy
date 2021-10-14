@@ -1,10 +1,10 @@
-include "interp.i.dfy"
+include "abstraction.i.dfy"
 include "../../std_lib/src/NonlinearArithmetic/Mul.dfy"
 
 module ot_vale {
     import opened bv_ops
     import opened ot_machine
-    import opened ot_interp
+    import opened ot_abstraction
 
     import opened Mul
 

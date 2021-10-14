@@ -1,4 +1,4 @@
-include "../../arch/otbn/interp.i.dfy"
+include "../../arch/otbn/abstraction.i.dfy"
 include "../../std_lib/src/Collections/Sequences/LittleEndianNat.dfy"
 
 module BASE_256_Seq refines LittleEndianNat {
@@ -10,7 +10,7 @@ module BASE_256_Seq refines LittleEndianNat {
 module rsa_ops {
     import opened bv_ops
     import opened ot_machine
-    import opened ot_interp
+    import opened ot_abstraction
     
     import opened DivMod
     import opened Power

@@ -1,10 +1,10 @@
 include "rsa_ops.i.dfy"
-include "../../arch/otbn/interp.i.dfy"
+include "../../arch/otbn/abstraction.i.dfy"
 
 module addc512_lemmas {
     import opened bv_ops
     import opened ot_machine
-    import opened ot_interp
+    import opened ot_abstraction
     import opened rsa_ops
 
     import opened DivMod

@@ -1,6 +1,6 @@
 include "machine.s.dfy"
 
-module ot_interp {
+module ot_abstraction {
     import opened bv_ops
     import opened ot_machine
 
