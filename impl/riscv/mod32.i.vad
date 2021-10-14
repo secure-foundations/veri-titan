@@ -1,0 +1,229 @@
+include "../../arch/riscv/decls.i.vad"
+
+#verbatim
+include "../../arch/riscv/decls.i.dfy"
+include "../../../impl/riscv/mod32_lemmas.i.dfy"
+
+module mul256 {
+
+import opened bv_ops
+import opened rsa_ops
+
+import opened rv_machine
+import opened rv_decls
+import opened rv_vale
+
+import opened mod32_lemmas
+import opened mod32_nl_lemmas
+
+#endverbatim
+
+ghost procedure lemma_uint64_half_split(ghost x: nat) extern;
+ghost procedure sub_mod32_correct_lemma(
+       ghost a: uint32,
+       ghost b: uint32,
+       ghost c: uint32,
+       ghost x10: uint32,
+       ghost x11: uint32,
+       ghost x15: uint32
+) extern;
+
+function seq_subb(xs: seq(uint32), ys: seq(uint32)) : tuple(seq(uint32), uint1) extern;
+function int64_rs(x: int64, shift: nat) : int64 extern;
+function sub_mod32_update_A(A: int, a: int, n: int) : int64 extern;
+
+ghost procedure lemma_sub_mod32_correct(
+      ghost A: int64_view_t, // old A
+      ghost A': int64_view_t, // new A
+      ghost iter_a: iter_t,
+      ghost iter_n: iter_t,
+      ghost iter_a': iter_t,
+      ghost iter_a_next: iter_t,
+      ghost iter_n_next: iter_t,
+      ghost iter_a'_next: iter_t,
+      ghost carry_add: int,
+      ghost carry_sub: int,
+      ghost x13: uint32,
+      ghost i: int
+) extern;
+    
+ghost procedure lemma_ge_mod32_correct(
+      ghost iter_a: iter_t,
+      ghost iter_n: iter_t,
+      ghost iter_a_prev: iter_t,
+      ghost iter_n_prev: iter_t,
+      ghost cond: uint32,
+      ghost b: uint32,
+      ghost i: int
+) extern;
+
+procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
+    returns (ghost iter_a': iter_t)
+    requires
+        iter_safe(iter_n, mem, 71192);
+        seq_len(iter_n.buff) == 384;
+
+        iter_safe(iter_a, mem, x10);
+        seq_len(iter_a.buff) == 384;
+    modifies
+        x10; x11; x12; x13; x14; x15; x16; mem;
+    ensures
+        // iter valid for n
+        iter_safe(iter_n, mem, 71192);
+        seq_len(iter_n.buff) == 384 ;
+
+        // iter valid for a
+        iter_safe(iter_a, mem, 71192);
+        seq_len(iter_a.buff) == 384 ;
+
+        to_nat(iter_a'.buff) == (to_nat(iter_a.buff) - to_nat(iter_n.buff));
+{
+    ghost var a := x10;
+    ghost var n := x12;
+
+    // load address of n
+    lui(x12, 0x11); // 0x11000 into x12
+    addi(x12, x12, 1560); // 71192 in x12
+
+    // pointer to end of n
+    addi(x16 ,x12, 384);  // 71575 in x16
+
+    // set A to 0
+    li(x15, 0); // 0 in x15 -- lower half of A
+    li(x11, 0); // 0 in x11 -- upper half of A
+
+    ghost var A := int64_cons(x15, x11, 0);
+    assert(valid_int64_view(A, x15, x11));
+
+    iter_a' := iter_a;
+    ghost var iter_a := iter_a;
+    ghost var iter_n := iter_n;
+    while (x12 != x16)
+        invariant iter_inv(iter_a', mem, x10);
+        invariant iter_inv(iter_n, mem, x12);
+        invariant valid_int64_view(A, x15, x11);
+        invariant ((-1) <= A.full);
+        invariant (A.full <= 0);
+        invariant iter_a.index == iter_a'.index;
+        invariant iter_a'.index == iter_n.index;
+        invariant seq_subb(iter_a.buff[0..iter_a.index], iter_n.buff[0..iter_n.index]) == tuple(iter_a'.buff[0..iter_a'.index], neg1_to_uint1(A.full));
+        decreases x16 - x12;
+    {
+        let _ := lw_safe(x14, x10, 0, iter_a'); // load mem from x10 to x14 (x14 == a[i])
+        let iter_a_next := lw_next_iter(iter_a);
+        let iter_n_next := lw_safe(x13, x12, 0, iter_n); // load mem from x12 into x13 (x13 == n[i])
+
+        addi(x12, x12, 4); // increment n pointer
+
+        add(x15, x15, x14); // lower half of A += a[i]
+        sub(x13, x15, x13); // lower half of A -= n[i]
+
+        sltu(x14, x15, x14); // overflow check from add
+        let carry_add := x14;
+        add(x14, x14, x11); // add carry bit to upper half of A
+
+        sltu(x15, x15, x13); // underflow check from sub
+        let carry_sub := x15;
+
+        // a[i] == lower half of A
+        // storing lower old(A) + a[i] - n[i]
+        let iter_a'_next := sw(x13, x10, 0, iter_a');
+
+        sub(x15, x14, x15); // subtract underflow carry from upper half of A
+
+        // srai is sign-preserving, so shifting by 31 bits results in all 0's or all 1's
+        srai(x11, x15, 0x1f); // right arith shift by 31 -- x11 == uh(A)
+
+        // new A is signed old A, shifted by 32
+        ghost var A' := int64_cons(x15, x11, int64_rs(sub_mod32_update_A(A.full, a, n), 32));
+
+        addi(x10, x10, 4); // increment a pointer
+
+        lemma_sub_mod32_correct(A, A', iter_a, iter_n, iter_a', iter_a_next, iter_n_next, iter_a'_next, carry_add, carry_sub, x13, iter_a.index);
+
+        // update variables for next loop
+        A := A';
+        iter_a := iter_a_next;
+        iter_n := iter_n_next;
+        iter_a' := iter_a'_next;
+    }
+}
+    
+procedure ge_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
+    returns (ghost result: bool)
+    requires
+        iter_safe(iter_n, mem, 71192);
+        seq_len(iter_n.buff) == 384;
+
+        iter_safe(iter_a, mem, x10);
+        seq_len(iter_a.buff) == 384;
+    
+        // TODO: should be hard-coded in the semantics
+        x0 == 0;
+    reads
+        x0; mem;
+    modifies
+        x10; x11; x12; x13; x14; x15;
+    ensures
+        // iter valid for n
+        iter_safe(iter_n, mem, 71192);
+        seq_len(iter_n.buff) == 384 ;
+
+        // iter valid for a
+        iter_safe(iter_a, mem, 71192);
+        seq_len(iter_a.buff) == 384 ;
+    
+        result == to_nat(iter_a.buff) >= to_nat(iter_n.buff);
+  {
+
+    lui(x11, 0x11); // 0x11000 into x11
+    addi(x15, x11, 1560); // n = 71192 into x15
+
+    addi(x10, x10, 380); // pointer to end of a
+    addi(x15, x15, 380); // pointer to end of n
+    addi(x11, x11, 1560); // pointer to beginning of n
+    
+    addi(x12, x0, 1); // move 1 into x12 -- x12 = cond
+
+    ghost var iter_a := iter_a;
+    ghost var iter_n := iter_n;
+// <<<<<<< HEAD:impl/riscv/mod32.i.vad
+    while (x12 != x0)
+// =======
+//     while (x12 != 0)
+// >>>>>>> master:riscv_model/code/mod32.vad
+    invariant iter_inv(iter_a, mem, x10);
+    invariant iter_inv(iter_n, mem, x15);
+    invariant iter_a.index == iter_n.index;
+    decreases x12;
+    {
+      
+      let iter_a_prev := lw_prev(x13, x10, 0, iter_a); // x13 = a[i] -- 10148
+      let iter_n_prev := lw_prev(x14, x15, 0, iter_n); // x14 = n[i]
+      
+      addi(x15, x15, (-4)); // x15 = pointer to n[i-1]
+      addi(x10, x10, (-4)); // x10 = pointer to a[i-1]
+
+      // if a[i] != n[i]
+      sub(x12, x13, x14); // a[i] - n[i]
+      sltu(x12, x0, x12); // 0 if a[i] - n[i] = 0, else 1
+
+      slt(x13, x0, x12); // 0 if 0 < a[i] - n[i]
+
+      xor(x12, x11, x15);
+      sltu(x12, x0, x12); // 1 if 0 < x12, 0 if they're equal 
+    
+      iter_a := iter_a_prev;
+      iter_n := iter_n_prev;
+    
+      // x12 = cond, x13 = b
+    //   lemma_ge_mod32_correct(iter_a, iter_n, iter_a_prev, iter_n_prev, x12, x13, iter_a.index);
+    }
+    
+    // move b value to expected result register
+    mv(x10, x13);
+  }
+
+#verbatim
+}
+#endverbatim
