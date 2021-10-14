@@ -191,6 +191,7 @@ procedure ge_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     invariant iter_inv(iter_a, mem, x10);
     invariant iter_inv(iter_n, mem, x15);
     invariant iter_a.index == iter_n.index;
+    invariant iter_a.index > 0;
     decreases x12;
     {
       

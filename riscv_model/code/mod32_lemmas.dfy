@@ -1,8 +1,11 @@
 include "../spec/rsa_ops.dfy"
+include "../spec/bv_ops_nl.dfy"
 
 module mod32_lemmas {
 
     import opened bv_ops
+    import opened bv_ops_nl
+
     import opened rv_ops
     import opened rsa_ops
     import opened rv_consts
@@ -54,7 +57,7 @@ module mod32_lemmas {
       && |iter_a.buff| == |iter_n.buff| == |iter_a'.buff|
       && (i == iter_a'.index == iter_n.index)
       && i <= |iter_a.buff|
-      && seq_subb(iter_a.buff[..i], iter_n.buff[..i]) == (iter_a'.buff[..i], neg1_to_uint1(A))
+      && SeqSub(iter_a.buff[..i], iter_n.buff[..i]) == (iter_a'.buff[..i], neg1_to_uint1(A))
     }
 
     lemma lemma_sub_mod32_correct(
@@ -129,8 +132,8 @@ module mod32_lemmas {
                
         assert(A'.full == 0 || A'.full == -1) by { lemma_int64_half_split(A'.full); }
 
-        var (zs_next, bin_next) := seq_subb(iter_a_next.buff[..i+1], iter_n_next.buff[..i+1]);
-        var (zs, bin) := seq_subb(iter_a.buff[..i], iter_n.buff[..i]);
+        var (zs_next, bin_next) := SeqSub(iter_a_next.buff[..i+1], iter_n_next.buff[..i+1]);
+        var (zs, bin) := SeqSub(iter_a.buff[..i], iter_n.buff[..i]);
 
         var (z, bout) := uint32_subb(iter_a_next.buff[i], iter_n_next.buff[i], neg1_to_uint1(A.full));
         assert(z == x13) by { reveal_uint32_sub(); }
@@ -155,43 +158,5 @@ module mod32_lemmas {
           neg1_to_uint1(A'.full);
         }
       }
-
-    // predicate ge_mod32_loop_inv(
-    //   iter_a: iter_t,
-    //   iter_n: iter_t,
-    //   cond: uint1,
-    //   b: bool)
-    // {
-    //   var i := iter_a.index;
-    //   && cond != 0 ==> 0 <= i < |iter_a.buff|
-    //   && cond == 0 ==> -1 <= i < |iter_a.buff|- 1
-    //   && cond == 1 ==> iter_a.buff[i+1..] == iter_n.buff[i+1..]
-    //   && (cond == 0 ==> (b ==> iter_a.buff[i+1] > iter_n.buff[i+1]) || (iter_a.buff == iter_n.buff))
-    //   && cond == 0 ==> (ToNatRight(iter_a.buff) >= ToNatRight(iter_n.buff)) == b
-    // }
-
-    // lemma lemma_ge_mod32_correct(
-    //   iter_a: iter_t,
-    //   iter_n: iter_t,
-    //   iter_a_prev: iter_t,
-    //   iter_n_prev: iter_t,
-    //   cond: uint1,
-    //   b: bool,
-    //   i: int)
-    //   requires
-    //     && ge_mod32_loop_inv(iter_a, iter_n, cond, b)
-
-    //     && iter_a.index < |iter_a.buff|
-    //     && i == iter_a.index
-
-    //     //&& cond == uint32_lt(0, uint32_xor(x11, x15)) // cond = x12
-
-    //     && iter_a_prev == lw_prev_iter(iter_a)
-    //     && iter_n_prev == lw_prev_iter(iter_n)
-    //   ensures
-    //     ge_mod32_loop_inv(iter_a_prev, iter_n_prev, cond, b)
-    // {
-    //   assume false;
-    // }
 
 }
