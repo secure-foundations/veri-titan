@@ -145,16 +145,16 @@ module rv_machine {
     datatype ins32 =
     | RV_LB(rd: reg32_t, rs1: reg32_t, oimm12: uint32)
     | RV_LH (rd: reg32_t, rs1: reg32_t, oimm12: uint32)
-    | RV_LW (rd: reg32_t, rs1: reg32_t, oimm12: uint32)
+    | RV_LW (rd: reg32_t, rs1: reg32_t, simm12: int32)
     | RV_LBU (rd: reg32_t, rs1: reg32_t, oimm12: uint32)
     | RV_LHU (rd: reg32_t, rs1: reg32_t, oimm12: uint32)
 
     | RV_FENCE (pred: uint32, succ: uint32)
     | RV_FENCE_I
 
-    | RV_ADDI (rd: reg32_t, rs1: reg32_t, imm12: uint32) // sign extends, ignore overflow
+    | RV_ADDI (rd: reg32_t, rs1: reg32_t, simm12: int32) // sign extends, ignore overflow
     | RV_SLLI (rd: reg32_t, rs1: reg32_t, shamt6: uint32) // logical left shift
-    | RV_SLTI (rd: reg32_t, rs1: reg32_t, imm12: uint32) // sign extend, 1 if rs1 (signed) < imm, else 0
+    | RV_SLTI (rd: reg32_t, rs1: reg32_t, simm12: int32) // sign extend, 1 if rs1 (signed) < imm, else 0
     | RV_SLTIU (rd: reg32_t, rs1: reg32_t, imm12: uint32) // compare both vals as unsigned.
     | RV_XORI (rd: reg32_t, rs1: reg32_t, imm12: uint32)
     | RV_ORI (rd: reg32_t, rs1: reg32_t, imm12: uint32)
@@ -164,9 +164,9 @@ module rv_machine {
 
     | RV_AUIPC (rd: reg32_t, oimm20: uint32)
 
-    | RV_SB (rs1: reg32_t, rs2: reg32_t, simm12: uint32)
-    | RV_SH (rs1: reg32_t, rs2: reg32_t, simm12: uint32)
-    | RV_SW (rs1: reg32_t, rs2: reg32_t, simm12: uint32)
+    | RV_SB (rs1: reg32_t, rs2: reg32_t, simm12: int32)
+    | RV_SH (rs1: reg32_t, rs2: reg32_t, simm12: int32)
+    | RV_SW (rs1: reg32_t, rs2: reg32_t, simm12: int32)
 
     | RV_ADD (rd: reg32_t, rs1: reg32_t, rs2: reg32_t) // ignore overflow
     | RV_SUB (rd: reg32_t, rs1: reg32_t, rs2: reg32_t) // ignore overflow

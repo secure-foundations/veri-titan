@@ -5,6 +5,7 @@ module ge_mod {
 
 import opened bv_ops  
 import opened rsa_ops
+import opened rv_machine
 
 import opened DivMod
 import opened Power
@@ -165,8 +166,6 @@ lemma {:induction A, i} cmp_sufficient_lemma(A: seq<uint32>, B: seq<uint32>, i: 
       ensures
         ge_mod32_loop_inv(iter_a_prev, iter_n_prev, cond, b)
     {
-
     }
 
-    
 }

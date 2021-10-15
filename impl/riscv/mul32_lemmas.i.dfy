@@ -1,11 +1,14 @@
 include "rsa_ops.i.dfy"
+include "../../lib/bv_ops_nl.dfy"
 
 module mul32_lemmas {
   
     import opened bv_ops
+    import opened bv_ops_nl
     import opened rsa_ops
     import opened rv_machine
-    import opened BASE_32_Seq
+
+    import opened DivModNeg
 
     import opened Seq
     import opened BASE_32_Seq

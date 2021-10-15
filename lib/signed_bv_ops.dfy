@@ -1,6 +1,7 @@
 include "../std_lib/src/BoundedInts.dfy"  
 include "../std_lib/src/NonlinearArithmetic/DivMod.dfy"
 include "../std_lib/src/NonlinearArithmetic/Power2.dfy"
+include "DivModNeg.dfy"
 
 module bv_ops {
     import BoundedInts
@@ -8,6 +9,7 @@ module bv_ops {
     import opened Power2
     import opened Mul
     import opened DivMod
+    import opened DivModNeg
 
     const DMEM_LIMIT: int := 0x8000
     const NUM_WORDS:  int := 12
@@ -56,17 +58,25 @@ module bv_ops {
     type int32  = i :int | -BASE_31 <= i <= (BASE_31 - 1)
     type int64  = i :int | -BASE_63 <= i <= (BASE_63 - 1)
 
-    lemma div_negative_one(a: nat)
-      requires a > 1
-      ensures -1 / a == -1
-    {
-    }
-
     function to_2s_complement_bv64(val: int64): uint64
     {
         if val >= 0 then val else val + BASE_64
     }
 
+    /* signed operations */
+    function method int32_rs(x: int32, shift: nat) : int32
+    {
+      LemmaDivBounded(x, Pow2(shift));
+      x / Pow2(shift)
+    }
+
+    // right arithmetic shift
+    function method int64_rs(x: int64, shift: nat) : int64
+    {
+      LemmaDivBounded(x, Pow2(shift));
+      x / Pow2(shift)
+    }
+    
     function method to_uint32(i: int) : uint32
       requires - BASE_32 < i < BASE_32
     {

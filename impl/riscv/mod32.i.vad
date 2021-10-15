@@ -3,9 +3,12 @@ include "../../arch/riscv/decls.i.vad"
 #verbatim
 include "../../arch/riscv/decls.i.dfy"
 include "../../../impl/riscv/mod32_lemmas.i.dfy"
+include "../../../impl/riscv/ge_mod.i.dfy"
 
 module mul256 {
 
+import opened ge_mod
+    
 import opened bv_ops
 import opened rsa_ops
 
@@ -187,11 +190,7 @@ procedure ge_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
 
     ghost var iter_a := iter_a;
     ghost var iter_n := iter_n;
-// <<<<<<< HEAD:impl/riscv/mod32.i.vad
     while (x12 != x0)
-// =======
-//     while (x12 != 0)
-// >>>>>>> master:riscv_model/code/mod32.vad
     invariant iter_inv(iter_a, mem, x10);
     invariant iter_inv(iter_n, mem, x15);
     invariant iter_a.index == iter_n.index;
@@ -218,7 +217,7 @@ procedure ge_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
       iter_n := iter_n_prev;
     
       // x12 = cond, x13 = b
-    //   lemma_ge_mod32_correct(iter_a, iter_n, iter_a_prev, iter_n_prev, x12, x13, iter_a.index);
+      //lemma_ge_mod32_correct(iter_a, iter_n, iter_a_prev, iter_n_prev, x12, x13, iter_a.index);
     }
     
     // move b value to expected result register
