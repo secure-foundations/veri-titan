@@ -3,6 +3,8 @@ include "../../lib/signed_bv_ops.dfy"
 module rv_machine {
     import opened bv_ops // bit-vector operations
 
+    const DMEM_LIMIT: int := 0x80000
+
     /* registers definitions */
     type reg_index = uint5 // 32 registers
       
