@@ -140,9 +140,9 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         // new A is signed old A, shifted by 32
         ghost var A' := int64_cons(x15, x11, int64_rs(sub_mod32_update_A(A.full, a, n), 32));
 
-        addi(x10, x10, 4); // increment a pointer
+        // addi(x10, x10, 4); // increment a pointer
 
-        lemma_sub_mod32_correct(A, A', iter_a, iter_n, iter_a', iter_a_next, iter_n_next, iter_a'_next, carry_add, carry_sub, x13, iter_a.index);
+        // lemma_sub_mod32_correct(A, A', iter_a, iter_n, iter_a', iter_a_next, iter_n_next, iter_a'_next, carry_add, carry_sub, x13, iter_a.index);
 
         // update variables for next loop
         A := A';
