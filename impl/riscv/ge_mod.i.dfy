@@ -5,7 +5,6 @@ module ge_mod {
 
 import opened bv_ops  
 import opened rsa_ops
-import opened rv_machine
 
 import opened DivMod
 import opened Power

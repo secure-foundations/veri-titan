@@ -186,12 +186,12 @@ function int32_lt(x: int32, y: int32): uint32 extern;
     
 // load instructions
     
-procedure lw(inout dst: reg32, in src1: reg32, in src2: simm32, ghost iter: iter_t)
+procedure lw(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
     {:instruction Ins32(RV_LW(dst, src1, src2))}
     reads
         mem;
     requires
-        src2 < 0x1000; // 12-bit
+        src2 < 4096; // 12-bit
         iter_safe(iter, mem, src1 + src2);
     ensures
         // mem location = src + sign-extended immediate
@@ -200,12 +200,12 @@ procedure lw(inout dst: reg32, in src1: reg32, in src2: simm32, ghost iter: iter
     assume false;
 }
 
-procedure lw_safe(inout dst: reg32, in src1: reg32, in src2: simm32, ghost iter: iter_t)
+procedure lw_safe(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
     returns (ghost next_iter: iter_t)
     reads
         mem;
     requires
-        src2 < 0x1000; // 12-bit
+        src2 < 4096; // 12-bit
         iter_safe(iter, mem, src1 + src2);
     ensures
         // mem location = src + sign-extended immediate
@@ -217,14 +217,12 @@ procedure lw_safe(inout dst: reg32, in src1: reg32, in src2: simm32, ghost iter:
     lw(dst, src1, src2, iter);
 }
 
-// TOOD: signed integer for src2
-procedure lw_prev(inout dst: reg32, in src1: reg32, in src2: simm32, ghost iter: iter_t)
+procedure lw_prev(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
     returns (ghost prev_iter: iter_t)
     reads
         mem;
     requires
-        src2 < 0x1000; // 12-bit
-        // TODO: deal with signed integers
+        src2 < 4096; // 12-bit
         iter_safe(iter, mem, src1 + src2);
         iter.index > 0;
     ensures
@@ -308,7 +306,8 @@ procedure lw_prev(inout dst: reg32, in src1: reg32, in src2: simm32, ghost iter:
 procedure addi(inout dst: reg32, in src1: reg32, in src2: simm32)
     {:instruction Ins32(RV_ADDI(dst, src1, src2))}
     requires
-       src1 + src2 < 0xffff_ffff;
+       (src1 + src2) >= (-(2147483648));
+       src1 + src2 <= 2147483647;
     ensures
         dst == old(src1) + old(src2);
 {
@@ -339,7 +338,8 @@ procedure slli(inout dst: reg32, in src1: reg32, in src2: imm32)
 procedure slti(inout dst: reg32, in src1: reg32, in src2: simm32)
     {:instruction Ins32(RV_SLTI(dst, src1, src2))}
     requires
-        src2 < 0x1000;
+        src2 <= 2047;
+        src2 >= (-(2048));
     ensures
     dst == int32_lt(to_int32(old(src1)), old(src2));
 {
@@ -413,15 +413,14 @@ procedure srai(inout dst: reg32, in src1: reg32, in src2: imm32)
 // store instructions
     
 // TODO: double-check semantics
-procedure sw(in rs2: reg32, in base: reg32, in offset: simm32, ghost iter: iter_t)
+procedure sw(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: iter_t)
     returns (ghost next_iter: iter_t)
     {:instruction Ins32(RV_SW(rs2, base, offset))}
     modifies
         mem;
     requires
         iter_safe(iter, mem, base + offset);
-        offset < 0x1000;
-        offset > 0xffff;
+        offset < 4096;
     ensures
         // store rs2 at mem[base + offset]
         mem == old(mem[iter.base_addr := mem[iter.base_addr][iter.index := rs2]]);

@@ -145,7 +145,7 @@ module rv_machine {
     datatype ins32 =
     | RV_LB(rd: reg32_t, rs1: reg32_t, oimm12: uint32)
     | RV_LH (rd: reg32_t, rs1: reg32_t, oimm12: uint32)
-    | RV_LW (rd: reg32_t, rs1: reg32_t, simm12: int32)
+    | RV_LW (rd: reg32_t, rs1: reg32_t, oimm12: uint32)
     | RV_LBU (rd: reg32_t, rs1: reg32_t, oimm12: uint32)
     | RV_LHU (rd: reg32_t, rs1: reg32_t, oimm12: uint32)
 
@@ -164,9 +164,9 @@ module rv_machine {
 
     | RV_AUIPC (rd: reg32_t, oimm20: uint32)
 
-    | RV_SB (rs1: reg32_t, rs2: reg32_t, simm12: int32)
-    | RV_SH (rs1: reg32_t, rs2: reg32_t, simm12: int32)
-    | RV_SW (rs1: reg32_t, rs2: reg32_t, simm12: int32)
+    | RV_SB (rs1: reg32_t, rs2: reg32_t, imm12: uint32)
+    | RV_SH (rs1: reg32_t, rs2: reg32_t, imm12: uint32)
+    | RV_SW (rs1: reg32_t, rs2: reg32_t, imm12: uint32)
 
     | RV_ADD (rd: reg32_t, rs1: reg32_t, rs2: reg32_t) // ignore overflow
     | RV_SUB (rd: reg32_t, rs1: reg32_t, rs2: reg32_t) // ignore overflow
