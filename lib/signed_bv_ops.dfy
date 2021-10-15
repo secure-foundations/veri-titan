@@ -167,10 +167,18 @@ module bv_ops {
         (x as bv32 >> amount) as uint32
     }
 
-    function method {:opaque} uint32_ls(x:uint32, amount:uint32) : uint32
+    function method {:opaque} uint32_ls(x:uint32, amount:uint32) : (r: uint32)
         requires amount < 32;
     {
-        (x as bv32 << amount) as uint32
+      (x as bv32 << amount) as uint32
+    }
+
+    lemma left_shift_is_mul(x:uint32, amount:uint32)
+      requires amount < 32
+      requires x as int * Pow2(amount as nat) < BASE_32
+      ensures uint32_ls(x, amount) == x * Pow2(amount)
+    {
+      assume false;
     }
 
     function method uint32_add(x:uint32, y:uint32):uint32

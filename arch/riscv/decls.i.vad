@@ -91,6 +91,8 @@ function valid_uint64_view(view: uint64_view_t, lh: uint32, uh: uint32) : bool e
 type int64_view_t: Type(0) extern;
 function int64_cons(lh: uint32, uh: uint32, full: int64) : int64_view_t extern;
 function valid_int64_view(view: int64_view_t, lh: uint32, uh: uint32) : bool extern;
+function operator(.lh) (num: int64_view_t) : uint32 extern;
+function operator(.uh) (num: int64_view_t) : uint32 extern;
 function operator(.full) (num: int64_view_t) : int extern;
 
 type iter_t: Type(0) extern;
@@ -165,6 +167,7 @@ operand_type simm32: int32 := const;
 function uint32_lt(x: uint32, y: uint32): uint32 extern;
     
 function uint32_add(x: uint32, y: uint32): uint32 extern;
+function uint32_sub(x: uint32, y: uint32): uint32 extern;
 function uint32_xor(x: uint32, y: uint32): uint32 extern;
 function uint32_or(x: uint32, y: uint32): uint32 extern;
 function uint32_and(x: uint32, y: uint32): uint32 extern;
@@ -399,7 +402,7 @@ procedure srli(inout dst: reg32, in src1: reg32, in src2: imm32)
 procedure srai(inout dst: reg32, in src1: reg32, in src2: imm32)
     {:instruction Ins32(RV_SRAI(dst, src1, src2))}
     requires
-        0 <= src2 < 31;
+        0 <= src2 <= 31;
     ensures
         dst == to_uint32(int32_rs(to_int32(old(src1)), old(src2)));
 {
@@ -467,10 +470,10 @@ procedure sw(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: iter_t
     
 procedure add(inout dst: reg32, in src1: reg32, in src2: reg32)
     {:instruction Ins32(RV_ADD(dst, src1, src2))}
-    requires
-       src1 + src2 < 0xffff_ffff;
+    // requires
+    //    src1 + src2 < 0xffff_ffff;
     ensures
-        dst == old(src1 + src2);
+        dst == uint32_add(old(src1), old(src2));
 {
     assume false;
 }
@@ -486,10 +489,10 @@ procedure add_wrap(inout dst: reg32, in src1: reg32, in src2: reg32)
 
 procedure sub(inout dst: reg32, in src1: reg32, in src2: reg32)
     {:instruction Ins32(RV_SUB(dst, src1, src2))}
-    requires
-        src1 - src2 >= 0;
+    // requires
+    //     src1 - src2 >= 0;
     ensures
-        dst == old(src1 - src2);
+        dst == uint32_sub(old(src1), old(src2));
 {
     assume false;
 }

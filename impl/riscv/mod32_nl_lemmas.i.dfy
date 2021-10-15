@@ -9,14 +9,23 @@ module mod32_nl_lemmas {
     import opened BASE_32_Seq
     import Power2
 
-    lemma refine_int64_view(lh: uint32, uh: uint32, full: int64) returns (R': int64_view_t)
-      ensures valid_int64_view(R', lh, uh)
+    lemma refine_int64_view(lh: uint32, uh: uint32, full: int64) returns (R: int64_view_t)
+      requires lh == uint64_lh(to_2s_complement_bv64(full));
+      requires uh == uint64_uh(to_2s_complement_bv64(full));
+      ensures valid_int64_view(R, lh, uh)
     {
-      var R := int64_cons(lh, uh, full);
+      R := int64_cons(lh, uh, full);
       lemma_int64_half_split(R);
-      assert R.lh == int64_lh(to_2s_complement_bv64(R.full));
-      assert R.uh == uint64_uh(to_2s_complement_bv64(R.full));
       assert valid_int64_view(R, lh, uh);
+    }
+
+    lemma trivial() returns (r: int64_view_t)
+    ensures r == int64_cons(0, 0, 0);
+    {
+        reveal uint64_lh();
+        reveal uint64_uh();
+        r := refine_int64_view(0, 0, 0);
+        assert valid_int64_view(r, 0, 0);
     }
 
     lemma uinteresting(lh: uint32, uh: uint32)
@@ -96,4 +105,31 @@ module mod32_nl_lemmas {
         ensures bin_next == neg1_to_uint1(A')
     {
     }
+
+    lemma sub_mod32_update_A_correct(
+        A: int64_view_t,
+        x15: uint32,
+        x11: uint32,
+        a_i: uint32,
+        n_i: uint32,
+        carry_add: uint32,
+
+        A': int64_view_t,
+        x15': uint32,
+        x11': uint32,
+
+    )
+        requires valid_int64_view(A, x15, x11)
+        requires carry_add == uint32_lt(uint32_add(A.lh, a_i), a_i);
+
+
+        requires x11' == to_uint32(int32_rs(to_int32(v2), 31));
+        
+        ensures valid_int64_view(A', x15', x11')
+
+    //     requires 
+    // {
+        
+    // }
+
 }
