@@ -47,8 +47,9 @@ module rv_machine {
     {
         reveal uint64_lh();
         reveal uint64_uh();
-        // assert num.lh + num.uh * BASE_32 == to_2s_complement_bv64(num.full);
+        assert num.lh + num.uh * BASE_32 == to_2s_complement_bv64(num.full);
     }
+
     predicate valid_int64_view(
         num: int64_view_t,
         lh: uint32, uh: uint32)

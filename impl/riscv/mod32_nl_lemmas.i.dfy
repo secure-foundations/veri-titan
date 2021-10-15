@@ -9,6 +9,16 @@ module mod32_nl_lemmas {
     import opened BASE_32_Seq
     import Power2
 
+    lemma refine_int64_view(lh: uint32, uh: uint32, full: int64) returns (R': int64_view_t)
+      ensures valid_int64_view(R', lh, uh)
+    {
+      var R := int64_cons(lh, uh, full);
+      lemma_int64_half_split(R);
+      assert R.lh == int64_lh(to_2s_complement_bv64(R.full));
+      assert R.uh == uint64_uh(to_2s_complement_bv64(R.full));
+      assert valid_int64_view(R, lh, uh);
+    }
+
     lemma uinteresting(lh: uint32, uh: uint32)
         requires lh == 0xffff_ffff || lh == 0
         requires uh == to_uint32(int32_rs(to_int32(lh), 31))

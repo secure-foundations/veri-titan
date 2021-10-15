@@ -302,14 +302,14 @@ procedure lw_prev(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: 
 
 
 // immediate instructions
+// all immediate instructions take a 12-bit immediate and sign extend it
     
 procedure addi(inout dst: reg32, in src1: reg32, in src2: simm32)
     {:instruction Ins32(RV_ADDI(dst, src1, src2))}
     requires
-       (src1 + src2) >= (-(2147483648));
-       src1 + src2 <= 2147483647;
+    src1 + to_uint32(src2) < 0x1_0000_0000; // assume no overflow
     ensures
-        dst == old(src1) + old(src2);
+        dst == old(src1) + to_uint32(old(src2));
 {
     assume false;
 }
@@ -339,7 +339,6 @@ procedure slti(inout dst: reg32, in src1: reg32, in src2: simm32)
     {:instruction Ins32(RV_SLTI(dst, src1, src2))}
     requires
         src2 <= 2047;
-        src2 >= (-(2048));
     ensures
     dst == int32_lt(to_int32(old(src1)), old(src2));
 {
