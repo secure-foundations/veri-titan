@@ -11,7 +11,6 @@ module bv_ops {
     import opened DivMod
     import opened DivModNeg
 
-    const DMEM_LIMIT: int := 0x8000
     const NUM_WORDS:  int := 12
 
     const BASE_1:   int := 2
