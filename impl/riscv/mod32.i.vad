@@ -42,24 +42,7 @@ function sub_mod32_loop_inv(
     A: int64_view_t): bool extern;
 
 function seq_subb(xs: seq(uint32), ys: seq(uint32)) : tuple(seq(uint32), uint1) extern;
-function int64_rs(x: int64, shift: nat) : int64 extern;
-function sub_mod32_update_A(A: int, a: int, n: int) : int64 extern;
 
-// ghost procedure lemma_sub_mod32_correct(
-//       ghost A: int64_view_t, // old A
-//       ghost A': int64_view_t, // new A
-//       ghost iter_a: iter_t,
-//       ghost iter_n: iter_t,
-//       ghost iter_a': iter_t,
-//       ghost iter_a_next: iter_t,
-//       ghost iter_n_next: iter_t,
-//       ghost iter_a'_next: iter_t,
-//       ghost carry_add: int,
-//       ghost carry_sub: int,
-//       ghost x13: uint32,
-//       ghost i: int
-// ) extern;
-    
 function lemma_sub_mod32_correct(
     A: int64_view_t,
     iter_a: iter_t,
@@ -103,8 +86,14 @@ ghost procedure lemma_ge_mod32_correct(
 //     }
 // }
 
+ghost sub_mod32_post_lemma(
+    ghost iter_a: iter_t,
+    ghost iter_n: iter_t,
+    ghost iter_a': iter_t,
+    ghost A: int64_view_t) extern;
+
 procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
-//     returns (ghost iter_a': iter_t)
+    returns (ghost iter_a': iter_t)
     requires
         iter_safe(iter_n, mem, 71192);
         seq_len(iter_n.buff) == 384;
@@ -117,16 +106,9 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         iter_n.base_addr != iter_a.base_addr;
     modifies
         x10; x11; x12; x13; x14; x15; x16; mem;
-    // ensures
-        // // iter valid for n
-        // iter_safe(iter_n, mem, 71192);
-        // seq_len(iter_n.buff) == 384 ;
-
-        // // iter valid for a
-        // iter_safe(iter_a, mem, 71192);
-        // seq_len(iter_a.buff) == 384 ;
-
-        // to_nat(iter_a'.buff) == (to_nat(iter_a.buff) - to_nat(iter_n.buff));
+    ensures
+        iter_inv(iter_a', mem, x10);
+        mem == old(mem)[iter_a.base_addr := iter_a'.buff];
 {
     // load address of n
     lui(x12, 0x11); // 0x11000 into x12
@@ -145,7 +127,7 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     ghost var A: int64_view_t;
     A := trivial();
 
-    ghost var iter_a' := iter_a;
+    iter_a' := iter_a;
     ghost var iter_a := iter_a;
     ghost var iter_n := iter_n;
     
@@ -166,7 +148,7 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         invariant iter_inv(iter_n, mem, x12);
         invariant iter_n.base_addr == n_ptr;
         invariant iter_n.index == i;
-        invariant mem[n_ptr] == old(mem[n_ptr]);
+        invariant mem == old(mem)[a_ptr := iter_a'.buff];
 
         invariant iter_inv(iter_a', mem, x10);
         invariant seq_len(iter_a'.buff) == 384;
@@ -184,6 +166,7 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     {
         lw(x14, x10, 0, iter_a');
         assume x14 == iter_a.buff[i] ;
+
         let iter_a_next := lw_next_iter(iter_a);
         // load mem from x10 to x14 (x14 == a[i])
 
@@ -203,7 +186,6 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
 
         sltu(x14, x15, x14); // overflow check from add
         let carry_add := x14;
-
         // assert carry_add == uint32_lt(uint32_add(A.lh, a_i), a_i);
 
         add(x14, x14, x11); // add carry bit to upper half of A
@@ -215,29 +197,25 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         
         let carry_sub := x15;
 
-        // assert carry_sub == uint32_lt(uint32_add(A.lh, a_i), uint32_sub(uint32_add(A.lh, a_i), n_i));
-    
         let iter_a'_next := sw(x13, x10, 0, iter_a');
+
         addi(x10, x10, 4); // increment a pointer
-
         sub(x15, x14, x15); // subtract underflow carry from upper half of A
-        // ghost var v2 := x15;
-
-        // assert v2 == uint32_sub(v1, carry_sub);
-
-        // srai is sign-preserving, so shifting by 31 bits results in all 0's or all 1's
-        srai(x11, x15, 0x1f); // right arith shift by 31 -- x11 == uh(A)
+        srai(x11, x15, 0x1f); 
 
         // assert x11 == to_uint32(int32_rs(to_int32(v2), 31));
 
-        A := lemma_sub_mod32_correct(A, iter_a, iter_n, iter_a', iter_a_next, iter_n_next, iter_a'_next, v0, v1, x15, x11, carry_add, carry_sub, x13, i);
+        A := lemma_sub_mod32_correct(A, iter_a, iter_n, iter_a',
+            iter_a_next, iter_n_next, iter_a'_next,
+            v0, v1, x15, x11, carry_add, carry_sub, x13, i);
 
-        // update variables for next loop
         iter_n := iter_n_next;
         iter_a' := iter_a'_next;
         iter_a := iter_a_next;
         i := i + 1;
     }
+
+    sub_mod32_post_lemma(iter_a, iter_n, iter_a', A);
 }
     
     

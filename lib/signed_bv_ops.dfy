@@ -135,12 +135,6 @@ module bv_ops {
         if i then 1 else 0
     }
 
-    function neg1_to_uint1(i:int) : uint1
-      requires -1 <= i <= 0;
-    {
-      if i == -1 then 1 else 0
-    }
-
     function method {:opaque} uint32_and(x:uint32, y:uint32) : uint32
     {
         (x as bv32 & y as bv32) as uint32

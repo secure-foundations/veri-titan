@@ -75,7 +75,7 @@ function fst #[a: Type(0), b: Type(0)](m: tuple(a, b)): a extern;
 function snd #[a: Type(0), b: Type(0)](m: tuple(a, b)): b extern;
 
 function bool_to_uint1(i:bool) : uint1 extern;
-function neg1_to_uint1(i:int) : uint1 extern;
+function A_as_carry(i:int) : uint1 extern;
 
 var gprs: gprs_t {:state gprs()};
 

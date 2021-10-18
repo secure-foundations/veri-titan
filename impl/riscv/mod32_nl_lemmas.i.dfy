@@ -38,6 +38,12 @@ module mod32_nl_lemmas {
         // assert valid_int64_view(r, 0, 0);
     }
 
+    function A_as_carry(i:int) : uint1
+      requires -1 <= i <= 0;
+    {
+      if i == -1 then 1 else 0
+    }
+
     lemma A_halves_equal(lh: uint32, uh: uint32)
         requires lh == 0xffff_ffff || lh == 0
         requires uh == to_uint32(int32_rs(to_int32(lh), 31))
@@ -103,9 +109,9 @@ module mod32_nl_lemmas {
     lemma sub_mod32_update_A_lemma(A: int, A': int, a_i: uint32, n_i: uint32, bin_next: uint1)
         requires A == 0 || A == -1
         requires A' == 0 || A' == -1
-        requires bin_next == if a_i >= n_i + neg1_to_uint1(A) then 0 else 1
+        requires bin_next == if a_i >= n_i + A_as_carry(A) then 0 else 1
         requires A' == sub_mod32_update_A(A, a_i, n_i)
-        ensures bin_next == neg1_to_uint1(A')
+        ensures bin_next == A_as_carry(A')
     {
     }
 
