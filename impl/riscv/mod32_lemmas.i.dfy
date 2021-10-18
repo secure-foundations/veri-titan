@@ -36,7 +36,7 @@ module mod32_lemmas {
     v0: uint32, v1: uint32,
     lh: uint32, uh: uint32,
     carry_add: int, carry_sub: int,
-    x12: uint32, x13: uint32,
+    x13: uint32,
     i: int)
 
   returns  (A': int64_view_t)
@@ -60,6 +60,8 @@ module mod32_lemmas {
     requires iter_a'_next == sw_next_iter(iter_a', x13)
 
     ensures sub_mod32_loop_inv(iter_a_next, iter_n_next, iter_a'_next, A')
+    ensures A' == int64_cons(lh, uh, A'.full)
+    ensures (lh == uh == 0) || (lh == uh == 0xffff_ffff)
     {
       var a_i := iter_a_next.buff[i];
       var n_i := iter_n_next.buff[i];

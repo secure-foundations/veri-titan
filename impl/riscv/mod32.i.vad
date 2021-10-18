@@ -17,7 +17,7 @@ import opened rv_vale
 import opened mod32_lemmas
 import opened mod32_nl_lemmas
 
-// import opened BASE_32_Seq
+import opened BASE_32_Seq
 
 #endverbatim
     
@@ -87,32 +87,21 @@ ghost procedure lemma_ge_mod32_correct(
       ghost i: int
 ) extern;
 
-// ghost procedure sub_mod32_update_A_correct(
-//     ghost A: int64_view_t,
-//     ghost a_i: uint32,
-//     ghost n_i: uint32,
-//     ghost v0: uint32,
-//     ghost v1: uint32,
-//     ghost v2: uint32,
-//     ghost carry_add: uint32,
-//     ghost carry_sub: uint32,
-//     ghost x11: uint32) extern;
+// procedure loop_reg(inout src1:reg32, in src2:reg32, inline count: nat)
+//     requires src2 == src1 + 4 * count;
+// {
+//     ghost var i: int := 0;
+//     ghost var saved := src1;
 
-procedure loop_reg(inout src1:reg32, in src2:reg32, inline count: nat)
-    requires src2 == src1 + 4 * count;
-{
-    ghost var i: int := 0;
-    ghost var saved := src1;
-
-    while (src1 != src2)
-        invariant src1 <= src2;
-        invariant src1 == saved + i * 4;
-        decreases loop_ctr;
-    {
-        addi(src1, src1, 4);
-        i := i + 1;
-    }
-}
+//     while (src1 != src2)
+//         invariant src1 <= src2;
+//         invariant src1 == saved + i * 4;
+//         decreases loop_ctr;
+//     {
+//         addi(src1, src1, 4);
+//         i := i + 1;
+//     }
+// }
 
 procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
 //     returns (ghost iter_a': iter_t)
@@ -128,16 +117,16 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         iter_n.base_addr != iter_a.base_addr;
     modifies
         x10; x11; x12; x13; x14; x15; x16; mem;
-//     // ensures
-//         // // iter valid for n
-//         // iter_safe(iter_n, mem, 71192);
-//         // seq_len(iter_n.buff) == 384 ;
+    // ensures
+        // // iter valid for n
+        // iter_safe(iter_n, mem, 71192);
+        // seq_len(iter_n.buff) == 384 ;
 
-//         // // iter valid for a
-//         // iter_safe(iter_a, mem, 71192);
-//         // seq_len(iter_a.buff) == 384 ;
+        // // iter valid for a
+        // iter_safe(iter_a, mem, 71192);
+        // seq_len(iter_a.buff) == 384 ;
 
-//         // to_nat(iter_a'.buff) == (to_nat(iter_a.buff) - to_nat(iter_n.buff));
+        // to_nat(iter_a'.buff) == (to_nat(iter_a.buff) - to_nat(iter_n.buff));
 {
     // load address of n
     lui(x12, 0x11); // 0x11000 into x12
@@ -153,24 +142,22 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     li(x15, 0); // 0 in x15 -- lower half of A
     li(x11, 0); // 0 in x11 -- upper half of A
 
-    // ghost var A: int64_view_t;
-    // A := trivial();
+    ghost var A: int64_view_t;
+    A := trivial();
 
     ghost var iter_a' := iter_a;
+    ghost var iter_a := iter_a;
     ghost var iter_n := iter_n;
     
-//     // assert sub_mod32_loop_inv(iter_a, iter_n, iter_a', A) by {
-//     //     reveal SeqSub;
-//     // }
+    assert sub_mod32_loop_inv(iter_a, iter_n, iter_a', A) by {
+        reveal SeqSub;
+    }
 
     ghost var i: int := 0;
     ghost var n_ptr := iter_n.base_addr;
     ghost var a_ptr := iter_a.base_addr;
 
     while (x12 != x16)
-        // invariant seq_len(iter_n.buff) == 384;
-        // invariant iter_n.index == i;
-        // invariant iter_inv(iter_a', mem, x10);
         invariant x12 <= x16;
         invariant x12 == 71192 + 4 * i;
         invariant x16 == 71576;
@@ -186,54 +173,53 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         invariant iter_a'.base_addr == a_ptr;
         invariant iter_a'.index == i;
 
+        invariant iter_a.index == i;
+
         invariant a_ptr != n_ptr;
 
-        // invariant valid_int64_view(A, x15, x11);
-        // invariant sub_mod32_loop_inv(iter_a, iter_n, iter_a', A);
+        invariant valid_int64_view(A, x15, x11);
+        invariant sub_mod32_loop_inv(iter_a, iter_n, iter_a', A);
 
         decreases loop_ctr;
     {
         lw(x14, x10, 0, iter_a');
+        assume x14 == iter_a.buff[i] ;
+        let iter_a_next := lw_next_iter(iter_a);
         // load mem from x10 to x14 (x14 == a[i])
 
         let iter_n_next := lw_safe(x13, x12, 0, iter_n); 
         // load mem from x12 into x13 (x13 == n[i])
         addi(x12, x12, 4); // increment n pointer
-        assert iter_inv(iter_n_next, mem, x12);
 
-        // ghost var a_i := old_a[i];
-        // ghost var n_i := iter_n.buff[i];
+        ghost var a_i := iter_a.buff[i];
+        ghost var n_i := iter_n.buff[i];
 
-        /*
         add(x15, x15, x14); // lower half of A += a[i]
         // assert x15 == uint32_add(A.lh, a_i);
-        // ghost var v0 := uint32_add(A.lh, a_i);
+        ghost var v0 := uint32_add(A.lh, a_i);
 
         sub(x13, x15, x13); // lower half of A -= n[i]
         // assert x13 == uint32_sub(uint32_add(A.lh, a_i), n_i);
 
         sltu(x14, x15, x14); // overflow check from add
-        // let carry_add := x14;
+        let carry_add := x14;
 
         // assert carry_add == uint32_lt(uint32_add(A.lh, a_i), a_i);
 
         add(x14, x14, x11); // add carry bit to upper half of A
 
-        // ghost var v1 := x14;
+        ghost var v1 := x14;
         // assert v1 == uint32_add(A.uh, carry_add);
 
         sltu(x15, x15, x13); // underflow check from sub
         
-        // let carry_sub := x15;
+        let carry_sub := x15;
 
         // assert carry_sub == uint32_lt(uint32_add(A.lh, a_i), uint32_sub(uint32_add(A.lh, a_i), n_i));
-        */
     
         let iter_a'_next := sw(x13, x10, 0, iter_a');
         addi(x10, x10, 4); // increment a pointer
 
-        assert iter_inv(iter_a'_next, mem, x10);
-        /*
         sub(x15, x14, x15); // subtract underflow carry from upper half of A
         // ghost var v2 := x15;
 
@@ -244,12 +230,12 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
 
         // assert x11 == to_uint32(int32_rs(to_int32(v2), 31));
 
-        // A := lemma_sub_mod32_correct(A, iter_a, iter_n, iter_a', iter_a_next, iter_n_next, iter_a'_next, v0, v1, x15, x11, carry_add, carry_sub, x13, i);
-        */
+        A := lemma_sub_mod32_correct(A, iter_a, iter_n, iter_a', iter_a_next, iter_n_next, iter_a'_next, v0, v1, x15, x11, carry_add, carry_sub, x13, i);
 
         // update variables for next loop
         iter_n := iter_n_next;
         iter_a' := iter_a'_next;
+        iter_a := iter_a_next;
         i := i + 1;
     }
 }
