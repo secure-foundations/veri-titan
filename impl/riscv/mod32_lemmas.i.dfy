@@ -30,13 +30,16 @@ module mod32_lemmas {
   }
 
   lemma lemma_sub_mod32_correct(
-    A: int64_view_t, A': int64_view_t,
+    A: int64_view_t,
     iter_a: iter_t, iter_n: iter_t, iter_a': iter_t,
     iter_a_next: iter_t, iter_n_next: iter_t, iter_a'_next: iter_t,
     v0: uint32, v1: uint32,
+    lh: uint32, uh: uint32,
     carry_add: int, carry_sub: int,
-    x13: uint32,
+    x12: uint32, x13: uint32,
     i: int)
+
+  returns  (A': int64_view_t)
 
     requires sub_mod32_loop_inv(iter_a, iter_n, iter_a', A)
     requires iter_a.index < |iter_a.buff|
@@ -48,9 +51,9 @@ module mod32_lemmas {
     requires carry_add == uint32_lt(v0, iter_a.buff[i]);
     requires carry_sub == uint32_lt(v0, x13);
     requires v1 == uint32_add(A.uh, carry_add);
-  
-    requires A'.lh == uint32_sub(v1, carry_sub);
-    requires A'.uh == to_uint32(int32_rs(to_int32(A'.lh), 31));
+
+    requires lh == uint32_sub(v1, carry_sub);
+    requires uh == to_uint32(int32_rs(to_int32(lh), 31));
 
     requires iter_a_next == lw_next_iter(iter_a)
     requires iter_n_next == lw_next_iter(iter_n)
@@ -64,7 +67,7 @@ module mod32_lemmas {
       var (zs_next, bin_next) := SeqSub(iter_a_next.buff[..i+1], iter_n_next.buff[..i+1]);
       var (zs, _) := SeqSub(iter_a.buff[..i], iter_n.buff[..i]);
 
-      update_A_correct(A, A', a_i, n_i, v0, v1, carry_add, carry_sub);
+      A' := update_A_correct(A, a_i, n_i, v0, v1, uh, lh, carry_add, carry_sub);
       assume (A.full == A.lh == A.uh == 0) || (A.full == -1 <==> (A.lh == A.uh == 0xffff_ffff));
 
       var (z, bout) := uint32_subb(a_i, n_i, neg1_to_uint1(A.full));

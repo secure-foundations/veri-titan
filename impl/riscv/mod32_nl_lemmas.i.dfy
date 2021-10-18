@@ -28,6 +28,16 @@ module mod32_nl_lemmas {
         assert valid_int64_view(r, 0, 0);
     }
 
+    lemma trivial2() returns (r: int64_view_t)
+    ensures r == int64_cons(0xffff_ffff, 0xffff_ffff, -1);
+    {
+        assume false;
+        // reveal uint64_lh();
+        // reveal uint64_uh();
+        // r := refine_int64_view(0, 0, 0);
+        // assert valid_int64_view(r, 0, 0);
+    }
+
     lemma A_halves_equal(lh: uint32, uh: uint32)
         requires lh == 0xffff_ffff || lh == 0
         requires uh == to_uint32(int32_rs(to_int32(lh), 31))
@@ -116,29 +126,29 @@ module mod32_nl_lemmas {
     // TODO: refactor
     lemma update_A_correct(
         A: int64_view_t,
-        A': int64_view_t,
-        a_i: uint32,
-        n_i: uint32,
-        v0: uint32,
-        v1: uint32,
+        a_i: uint32, n_i: uint32,
+        v0: uint32, v1: uint32,
+        lh: uint32, uh: uint32,
         carry_add: uint32,
         carry_sub: uint32)
+    returns (A': int64_view_t)
 
         requires (A.lh == A.uh == 0) || (A.lh == A.uh == 0xffff_ffff)
         requires v0 == uint32_add(A.lh, a_i);
         requires carry_add == uint32_lt(v0, a_i);
         requires carry_sub == uint32_lt(v0, uint32_sub(v0, n_i));
         requires v1 == uint32_add(A.uh, carry_add);
-        requires A'.lh == uint32_sub(v1, carry_sub);
-        requires A'.uh == to_uint32(int32_rs(to_int32(A'.lh), 31));
+        requires lh == uint32_sub(v1, carry_sub);
+        requires uh == to_uint32(int32_rs(to_int32(lh), 31));
 
         ensures A.full == 0 || A.full == -1
         ensures A'.full == 0 || A'.full == -1
-        ensures (A'.lh == A'.uh == 0) || (A'.lh == A'.uh == 0xffff_ffff)
+        ensures (lh == uh == 0) || (lh == uh == 0xffff_ffff)
+        ensures A' == int64_cons(lh, uh, A'.full)
         ensures A'.full == sub_mod32_update_A(A.full, a_i, n_i);
     {
-        A_halves_equal(A'.lh, A'.uh);
-        A_value_special(A');
+        A_halves_equal(lh, uh);
+        // A_value_special(A');
         A_value_special(A);
 
         if A.lh == 0xffff_ffff {
@@ -149,39 +159,44 @@ module mod32_nl_lemmas {
                 assert v1 == uint32_add(0xffff_ffff, 1) == 0;
                 if pre_shift >= 0 {
                     // assert carry_sub == 0;
-                    assert A'.lh == 0;
-                    assert A'.full == 0;
+                    assert lh == uh == 0;
+                    // assert A'.full == 0;
                     int64_rs_properties(pre_shift, a_i, n_i);
+                    A' := trivial();
                 } else {
                     // assert carry_sub == 1;
-                    assert A'.lh == uint32_sub(0, 1) == 0xffff_ffff;
-                    assert A'.full == -1;
+                    assert lh == uh == 0xffff_ffff;
+                    // assert A'.full == -1;
                     int64_rs_properties(pre_shift, a_i, n_i);
+                    A' := trivial2();
                 }
             } else {
                 assert pre_shift < 0;
                 assert v0 == 0xffff_ffff + a_i;
                 assert v1 == uint32_add(0xffff_ffff, 0) == 0xffff_ffff;
                 assert carry_sub == 0;
-                assert A'.lh == 0xffff_ffff;
-                assert A'.full == -1;
+                assert lh == uh == 0xffff_ffff;
+                // assert A'.full == -1;
                 int64_rs_properties(pre_shift, a_i, n_i);
+                A' := trivial2();
             }
-            assert A'.full == int64_rs(A.full + a_i - n_i, 32);
+            // assert A'.full == int64_rs(A.full + a_i - n_i, 32);
         } else {
             ghost var pre_shift := a_i - n_i;
         
             if pre_shift < 0 {
                 assert a_i - n_i < 0;
                 assert carry_sub == 1;
-                assert A'.lh == A'.uh == 0xffff_ffff;
-                assert A'.full == -1;
+                assert lh == uh == 0xffff_ffff;
+                // assert A'.full == -1;
                 int64_rs_properties(pre_shift, a_i, n_i);
+                A' := trivial2();
             } else {
                 assert carry_sub == 0;
-                assert A'.lh == A'.uh == 0;
-                assert A'.full == 0;
+                assert lh == uh == 0;
+                // assert A'.full == 0;
                 int64_rs_properties(pre_shift, a_i, n_i);
+                A' := trivial();
             }
         }
     }
