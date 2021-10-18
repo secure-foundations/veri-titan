@@ -18,12 +18,15 @@ import opened mod32_lemmas
 import opened mod32_nl_lemmas
 
 import opened BASE_32_Seq
+import opened Power
 
 #endverbatim
     
 // ghost procedure refine_int64_view(ghost lh: uint32, ghost uh: uint32, ghost full: int64) 
 // returns (ghost ref: int64_view_t)
 ghost procedure trivial() returns (ghost ref: int64_view_t) extern;
+
+function Pow(b: int, e: nat): int extern;
 
 ghost procedure lemma_uint64_half_split(ghost x: nat) extern;
 ghost procedure sub_mod32_correct_lemma(
@@ -86,14 +89,14 @@ ghost procedure lemma_ge_mod32_correct(
 //     }
 // }
 
-ghost sub_mod32_post_lemma(
+ghost procedure sub_mod32_post_lemma(
     ghost iter_a: iter_t,
     ghost iter_n: iter_t,
     ghost iter_a': iter_t,
     ghost A: int64_view_t) extern;
 
 procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
-    returns (ghost iter_a': iter_t)
+    returns (ghost iter_a': iter_t, ghost A: int64_view_t)
     requires
         iter_safe(iter_n, mem, 71192);
         seq_len(iter_n.buff) == 384;
@@ -108,7 +111,11 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         x10; x11; x12; x13; x14; x15; x16; mem;
     ensures
         iter_inv(iter_a', mem, x10);
+        seq_len(iter_a'.buff) == 384;
         mem == old(mem)[iter_a.base_addr := iter_a'.buff];
+        (A.full == (-1) || A.full == 0); 
+        to_nat(iter_a'.buff) ==
+            to_nat(iter_a.buff) - to_nat(iter_n.buff) + A_as_carry(A.full) * Pow(BASE_32, 384);
 {
     // load address of n
     lui(x12, 0x11); // 0x11000 into x12
@@ -124,7 +131,6 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     li(x15, 0); // 0 in x15 -- lower half of A
     li(x11, 0); // 0 in x11 -- upper half of A
 
-    ghost var A: int64_view_t;
     A := trivial();
 
     iter_a' := iter_a;
@@ -215,6 +221,8 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         i := i + 1;
     }
 
+    assume i == 384;
+    assert false;
     sub_mod32_post_lemma(iter_a, iter_n, iter_a', A);
 }
     
