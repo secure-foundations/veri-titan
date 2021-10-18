@@ -18,16 +18,81 @@ module mod32_lemmas {
     iter_a: iter_t,
     iter_n: iter_t,
     iter_a': iter_t,
-    A: int64)
+    A: int64_view_t)
   {
-    && (A == 0 || A == -1)
+    && (A.full == 0 || A.full == -1)
+    && ((A.lh == A.uh == 0) || (A.lh == A.uh == 0xffff_ffff))
     && var i := iter_a.index;
     && |iter_a.buff| == |iter_n.buff| == |iter_a'.buff|
     && (i == iter_a'.index == iter_n.index)
     && i <= |iter_a.buff|
-    && SeqSub(iter_a.buff[..i], iter_n.buff[..i]) == (iter_a'.buff[..i], neg1_to_uint1(A))
+    && SeqSub(iter_a.buff[..i], iter_n.buff[..i]) == (iter_a'.buff[..i], neg1_to_uint1(A.full))
   }
 
+  lemma lemma_sub_mod32_correct(
+    A: int64_view_t, A': int64_view_t,
+    iter_a: iter_t, iter_n: iter_t, iter_a': iter_t,
+    iter_a_next: iter_t, iter_n_next: iter_t, iter_a'_next: iter_t,
+    v0: uint32, v1: uint32,
+    carry_add: int, carry_sub: int,
+    x13: uint32,
+    i: int)
+
+    requires sub_mod32_loop_inv(iter_a, iter_n, iter_a', A)
+    requires iter_a.index < |iter_a.buff|
+    requires i == iter_a.index
+
+    requires v0 == uint32_add(A.lh, iter_a.buff[i]);
+    requires x13 == uint32_sub(v0, iter_n.buff[i]);
+  
+    requires carry_add == uint32_lt(v0, iter_a.buff[i]);
+    requires carry_sub == uint32_lt(v0, x13);
+    requires v1 == uint32_add(A.uh, carry_add);
+  
+    requires A'.lh == uint32_sub(v1, carry_sub);
+    requires A'.uh == to_uint32(int32_rs(to_int32(A'.lh), 31));
+
+    requires iter_a_next == lw_next_iter(iter_a)
+    requires iter_n_next == lw_next_iter(iter_n)
+    requires iter_a'_next == sw_next_iter(iter_a', x13)
+
+    ensures sub_mod32_loop_inv(iter_a_next, iter_n_next, iter_a'_next, A')
+    {
+      var a_i := iter_a_next.buff[i];
+      var n_i := iter_n_next.buff[i];
+
+      var (zs_next, bin_next) := SeqSub(iter_a_next.buff[..i+1], iter_n_next.buff[..i+1]);
+      var (zs, _) := SeqSub(iter_a.buff[..i], iter_n.buff[..i]);
+
+      update_A_correct(A, A', a_i, n_i, v0, v1, carry_add, carry_sub);
+      assume (A.full == A.lh == A.uh == 0) || (A.full == -1 <==> (A.lh == A.uh == 0xffff_ffff));
+
+      var (z, bout) := uint32_subb(a_i, n_i, neg1_to_uint1(A.full));
+
+      calc {
+        zs_next;
+        {
+          assert(iter_a_next.buff[..i+1][..i] == iter_a.buff[..i]);
+          assert(iter_n_next.buff[..i+1][..i] == iter_n.buff[..i]);
+          reveal SeqSub();
+        }
+        zs + [x13];
+        iter_a'.buff[..i] + [x13];
+        iter_a'_next.buff[..i+1];
+      }
+
+      assert bin_next == if a_i >= n_i + neg1_to_uint1(A.full) then 0 else 1 by {
+        assert(iter_a_next.buff[..i+1][..i] == iter_a.buff[..i]);
+        assert(iter_n_next.buff[..i+1][..i] == iter_n.buff[..i]);
+        reveal SeqSub();
+      }
+
+      assert bin_next == neg1_to_uint1(A'.full) by {
+        sub_mod32_update_A_lemma(A.full, A'.full, a_i, n_i, bin_next);
+      }
+    }
+  
+/*
   lemma lemma_sub_mod32_A_inv(
     A: int64_view_t, // old A
     A': int64_view_t, // new A
@@ -76,77 +141,7 @@ module mod32_lemmas {
       assert A'.full == -1;
     }
   }
-
-  lemma lemma_sub_mod32_correct(
-    A: int64_view_t, // old A
-    A': int64_view_t, // new A
-    iter_a: iter_t,
-    iter_n: iter_t,
-    iter_a': iter_t,
-    iter_a_next: iter_t,
-    iter_n_next: iter_t,
-    iter_a'_next: iter_t,
-    carry_add: int,
-    carry_sub: int,
-    x13: uint32,
-    i: int)
-    requires
-      && sub_mod32_loop_inv(iter_a, iter_n, iter_a', A.full)
-      && iter_a.index < |iter_a.buff|
-      && i == iter_a.index
-
-      // x13 == A.lh + a[i] - n[i]
-      && x13 == uint32_sub(uint32_add(A.lh, iter_a.buff[i]), iter_n.buff[i])
-
-      && carry_add == uint32_lt(uint32_add(A.lh, iter_a.buff[i]), iter_a.buff[i]) // overflow bit
-      && carry_sub == uint32_lt(uint32_add(A.lh, iter_a.buff[i]), x13) // underflow bit
-
-      && A'.lh == uint32_sub(uint32_add(carry_add, A.uh), carry_sub) // either 0 or -1
-      && A'.uh == to_uint32(int32_rs(to_int32(A'.lh), 31)) // just a sign value
-      && A'.full == sub_mod32_update_A(A.full, iter_a.buff[i], iter_n.buff[i])
-
-      && iter_a_next == lw_next_iter(iter_a)
-      && iter_n_next == lw_next_iter(iter_n)
-      && iter_a'_next == sw_next_iter(iter_a', x13)
-    ensures
-      sub_mod32_loop_inv(iter_a_next, iter_n_next, iter_a'_next, A'.full)
-    {
-      var (zs_next, bin_next) := SeqSub(iter_a_next.buff[..i+1], iter_n_next.buff[..i+1]);
-      var (zs, _) := SeqSub(iter_a.buff[..i], iter_n.buff[..i]);
-
-      var a_i := iter_a_next.buff[i];
-      var n_i := iter_n_next.buff[i];
-
-      var (z, bout) := uint32_subb(a_i, n_i, neg1_to_uint1(A.full));
-      assert x13 == uint32_sub(uint32_add(A.lh, a_i), n_i);
-
-      uninteresting2(A);
-      lemma_sub_mod32_A_inv(A, A', a_i, x13, carry_add, carry_sub);
-
-      assert(z == x13);
-
-      calc {
-        zs_next;
-        {
-          assert(iter_a_next.buff[..i+1][..i] == iter_a.buff[..i]);
-          assert(iter_n_next.buff[..i+1][..i] == iter_n.buff[..i]);
-          reveal SeqSub();
-        }
-        zs + [x13];
-        iter_a'.buff[..i] + [x13];
-        iter_a'_next.buff[..i+1];
-      }
-
-      assert bin_next == if a_i >= n_i + neg1_to_uint1(A.full) then 0 else 1 by {
-        assert(iter_a_next.buff[..i+1][..i] == iter_a.buff[..i]);
-        assert(iter_n_next.buff[..i+1][..i] == iter_n.buff[..i]);
-        reveal SeqSub();
-      }
-
-      assert bin_next == neg1_to_uint1(A'.full) by {
-        sub_mod32_update_A_lemma(A.full, A'.full, a_i, n_i, bin_next);
-      }
-    }
+*/
 
     // predicate ge_mod32_loop_inv(
     //   iter_a: iter_t,

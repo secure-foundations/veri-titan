@@ -39,7 +39,7 @@ function sub_mod32_loop_inv(
     iter_a: iter_t,
     iter_n: iter_t,
     iter_a': iter_t,
-    A: int): bool extern;
+    A: int64_view_t): bool extern;
 
 function seq_subb(xs: seq(uint32), ys: seq(uint32)) : tuple(seq(uint32), uint1) extern;
 function int64_rs(x: int64, shift: nat) : int64 extern;
@@ -69,6 +69,17 @@ ghost procedure lemma_ge_mod32_correct(
       ghost b: uint32,
       ghost i: int
 ) extern;
+
+ghost procedure sub_mod32_update_A_correct(
+    ghost A: int64_view_t,
+    ghost a_i: uint32,
+    ghost n_i: uint32,
+    ghost v0: uint32,
+    ghost v1: uint32,
+    ghost v2: uint32,
+    ghost carry_add: uint32,
+    ghost carry_sub: uint32,
+    ghost x11: uint32) extern;
 
 procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     returns (ghost iter_a': iter_t)
@@ -118,21 +129,16 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     ghost var iter_a := iter_a;
     ghost var iter_n := iter_n;
     
-    assert sub_mod32_loop_inv(iter_a, iter_n, iter_a', A.full) by {
+    assert sub_mod32_loop_inv(iter_a, iter_n, iter_a', A) by {
         reveal SeqSub;
     }
-    
+
     while (x12 != x16)
         invariant iter_inv(iter_a', mem, x10);
         invariant iter_inv(iter_n, mem, x12);
         invariant valid_int64_view(A, x15, x11);
-        invariant sub_mod32_loop_inv(iter_a, iter_n, iter_a', A.full);
+        invariant sub_mod32_loop_inv(iter_a, iter_n, iter_a', A);
 
-        // invariant ((-1) <= A.full);
-        // invariant (A.full <= 0);
-        // invariant iter_a.index == iter_a'.index;
-        // invariant iter_a'.index == iter_n.index;
-        // invariant seq_subb(iter_a.buff[0..iter_a.index], iter_n.buff[0..iter_n.index]) == tuple(iter_a'.buff[0..iter_a'.index], neg1_to_uint1(A.full));
         decreases x16 - x12;
     {
         let _ := lw_safe(x14, x10, 0, iter_a'); // load mem from x10 to x14 (x14 == a[i])
@@ -144,13 +150,14 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         ghost var a_i := iter_a.buff[i];
         ghost var n_i := iter_n.buff[i];
 
-        // assert x14 == iter_a.buff[i];
-        // assert x13 == iter_n.buff[i];
+        ghost var old_x15 := x15;
+        ghost var old_x11 := x11;
 
         addi(x12, x12, 4); // increment n pointer
 
         add(x15, x15, x14); // lower half of A += a[i]
         // assert x15 == uint32_add(A.lh, a_i);
+        ghost var v0 := uint32_add(A.lh, a_i);
 
         sub(x13, x15, x13); // lower half of A -= n[i]
         // assert x13 == uint32_sub(uint32_add(A.lh, a_i), n_i);
@@ -186,9 +193,7 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         assert x11 == to_uint32(int32_rs(to_int32(v2), 31));
 
         // new A is signed old A, shifted by 32
-
-        // int64_rs(A + a - n, 32);
-        // assert x15 == 
+    
         assume false;
 
         ghost var A' := int64_cons(x15, x11, sub_mod32_update_A(A.full, a, n));

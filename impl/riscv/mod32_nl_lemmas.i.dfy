@@ -28,12 +28,10 @@ module mod32_nl_lemmas {
         assert valid_int64_view(r, 0, 0);
     }
 
-    lemma uinteresting(lh: uint32, uh: uint32)
+    lemma A_halves_equal(lh: uint32, uh: uint32)
         requires lh == 0xffff_ffff || lh == 0
         requires uh == to_uint32(int32_rs(to_int32(lh), 31))
-        ensures lh == 0 ==> uh == 0
-        ensures lh == 0xffff_ffff ==> uh == 0xffff_ffff
-        ensures uh == 0 || uh == 0xffff_ffff
+        ensures lh == uh
     {
         if lh == 0 {
             assert uh == to_uint32(int32_rs(0, 31));
@@ -55,20 +53,15 @@ module mod32_nl_lemmas {
         }
     }
 
-    lemma uninteresting2(num: int64_view_t)
-        ensures num.full == -1 ==> num.lh == 0xffff_ffff;
-        ensures num.full == 0 ==> num.lh == 0;
+    lemma A_value_special(A: int64_view_t)
+        requires A.lh == A.uh 
+        ensures (A.lh == 0xffff_ffff) <==> A.full == -1
+        ensures (A.lh == 0) <==> A.full == 0
     {
-        lemma_int64_half_split(num);
-        assert num.lh + num.uh * BASE_32 == to_2s_complement_bv64(num.full);
-
-        if num.full == 0 {
-            assert num.lh == 0;
-        }
-        
-        if num.full == -1 {
-            assert to_2s_complement_bv64(num.full) == BASE_64 - 1;
-            if num.lh != 0xffff_ffff {
+        lemma_int64_half_split(A);
+        if A.full == -1 {
+            assert to_2s_complement_bv64(A.full) == BASE_64 - 1;
+            if A.lh != 0xffff_ffff {
                 assert false;
             }
         }
@@ -106,30 +99,90 @@ module mod32_nl_lemmas {
     {
     }
 
-    lemma sub_mod32_update_A_correct(
+    lemma int64_rs_properties(pre_shift: int, a: uint32, n: uint32)
+        requires pre_shift == a - n - 1 || pre_shift == a - n;
+        ensures pre_shift >= 0 ==> int64_rs(pre_shift, 32) == 0;
+        ensures pre_shift < 0 ==> int64_rs(pre_shift, 32) == -1;
+    {
+        Power2.Lemma2To64();
+        if pre_shift >= 0 {
+            assert 0 <= pre_shift <= BASE_32 - 1;
+            assert int64_rs(pre_shift, 32) == 0;
+        } else {
+            assert int64_rs(pre_shift, 32) == -1;
+        }
+    }
+
+    // TODO: refactor
+    lemma update_A_correct(
         A: int64_view_t,
-        x15: uint32,
-        x11: uint32,
+        A': int64_view_t,
         a_i: uint32,
         n_i: uint32,
+        v0: uint32,
+        v1: uint32,
         carry_add: uint32,
+        carry_sub: uint32)
 
-        A': int64_view_t,
-        x15': uint32,
-        x11': uint32,
+        requires (A.lh == A.uh == 0) || (A.lh == A.uh == 0xffff_ffff)
+        requires v0 == uint32_add(A.lh, a_i);
+        requires carry_add == uint32_lt(v0, a_i);
+        requires carry_sub == uint32_lt(v0, uint32_sub(v0, n_i));
+        requires v1 == uint32_add(A.uh, carry_add);
+        requires A'.lh == uint32_sub(v1, carry_sub);
+        requires A'.uh == to_uint32(int32_rs(to_int32(A'.lh), 31));
 
-    )
-        requires valid_int64_view(A, x15, x11)
-        requires carry_add == uint32_lt(uint32_add(A.lh, a_i), a_i);
+        ensures A.full == 0 || A.full == -1
+        ensures A'.full == 0 || A'.full == -1
+        ensures (A'.lh == A'.uh == 0) || (A'.lh == A'.uh == 0xffff_ffff)
+        ensures A'.full == sub_mod32_update_A(A.full, a_i, n_i);
+    {
+        A_halves_equal(A'.lh, A'.uh);
+        A_value_special(A');
+        A_value_special(A);
 
+        if A.lh == 0xffff_ffff {
+            ghost var pre_shift := a_i - n_i - 1;
 
-        requires x11' == to_uint32(int32_rs(to_int32(v2), 31));
+            if carry_add == 1 {
+                assert v0 == a_i - 1;
+                assert v1 == uint32_add(0xffff_ffff, 1) == 0;
+                if pre_shift >= 0 {
+                    // assert carry_sub == 0;
+                    assert A'.lh == 0;
+                    assert A'.full == 0;
+                    int64_rs_properties(pre_shift, a_i, n_i);
+                } else {
+                    // assert carry_sub == 1;
+                    assert A'.lh == uint32_sub(0, 1) == 0xffff_ffff;
+                    assert A'.full == -1;
+                    int64_rs_properties(pre_shift, a_i, n_i);
+                }
+            } else {
+                assert pre_shift < 0;
+                assert v0 == 0xffff_ffff + a_i;
+                assert v1 == uint32_add(0xffff_ffff, 0) == 0xffff_ffff;
+                assert carry_sub == 0;
+                assert A'.lh == 0xffff_ffff;
+                assert A'.full == -1;
+                int64_rs_properties(pre_shift, a_i, n_i);
+            }
+            assert A'.full == int64_rs(A.full + a_i - n_i, 32);
+        } else {
+            ghost var pre_shift := a_i - n_i;
         
-        ensures valid_int64_view(A', x15', x11')
-
-    //     requires 
-    // {
-        
-    // }
-
+            if pre_shift < 0 {
+                assert a_i - n_i < 0;
+                assert carry_sub == 1;
+                assert A'.lh == A'.uh == 0xffff_ffff;
+                assert A'.full == -1;
+                int64_rs_properties(pre_shift, a_i, n_i);
+            } else {
+                assert carry_sub == 0;
+                assert A'.lh == A'.uh == 0;
+                assert A'.full == 0;
+                int64_rs_properties(pre_shift, a_i, n_i);
+            }
+        }
+    }
 }
