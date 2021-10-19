@@ -28,7 +28,6 @@ ghost procedure A_zero() returns (ghost ref: int64_view_t) extern;
 
 function Pow(b: int, e: nat): int extern;
 
-ghost procedure lemma_uint64_half_split(ghost x: nat) extern;
 ghost procedure sub_mod32_correct_lemma(
        ghost a: uint32,
        ghost b: uint32,
@@ -39,39 +38,24 @@ ghost procedure sub_mod32_correct_lemma(
 ) extern;
 
 function sub_mod32_loop_inv(
-    iter_a: iter_t,
-    iter_n: iter_t,
-    iter_a': iter_t,
-    A: int64_view_t): bool extern;
+    old_a: seq(uint32),
+    n: seq(uint32),
+    a: seq(uint32),
+    i: nat,
+    A: int64_view_t) : bool extern;
 
 function seq_subb(xs: seq(uint32), ys: seq(uint32)) : tuple(seq(uint32), uint1) extern;
 
 function lemma_sub_mod32_correct(
     A: int64_view_t,
-    iter_a: iter_t,
-    iter_n: iter_t,
-    iter_a': iter_t,
-    iter_a_next: iter_t,
-    iter_n_next: iter_t,
-    iter_a'_next: iter_t,
-    v0: uint32,
-    v1: uint32,
-    lh: uint32,
-    uh: uint32,
-    carry_add: int,
-    carry_sub: int,
+    old_a: seq(uint32),
+    n: seq(uint32),
+    a: seq(uint32),
+    v0: uint32, v1: uint32,
+    lh: uint32, uh: uint32,
+    carry_add: int, carry_sub: int,
     x13: uint32,
-    i: int) : int64_view_t extern;
-
-ghost procedure lemma_ge_mod32_correct(
-      ghost iter_a: iter_t,
-      ghost iter_n: iter_t,
-      ghost iter_a_prev: iter_t,
-      ghost iter_n_prev: iter_t,
-      ghost cond: uint32,
-      ghost b: uint32,
-      ghost i: int
-) extern;
+    i: nat) : int64_view_t extern;
 
 // procedure loop_reg(inout src1:reg32, in src2:reg32, inline count: nat)
 //     requires src2 == src1 + 4 * count;
@@ -90,9 +74,9 @@ ghost procedure lemma_ge_mod32_correct(
 // }
 
 ghost procedure sub_mod32_post_lemma(
-    ghost iter_a: iter_t,
-    ghost iter_n: iter_t,
-    ghost iter_a': iter_t,
+    ghost iter_a: seq(uint32),
+    ghost iter_n: seq(uint32),
+    ghost iter_a': seq(uint32),
     ghost A: int64_view_t) extern;
 
 procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
@@ -133,16 +117,15 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
 
     A := A_zero();
 
+    ghost var i: nat := 0;
     iter_a' := iter_a;
     ghost var old_a := iter_a.buff;
-    ghost var iter_a := iter_a;
     ghost var iter_n := iter_n;
     
-    assert sub_mod32_loop_inv(iter_a, iter_n, iter_a', A) by {
+    assert sub_mod32_loop_inv(old_a, iter_n.buff, iter_a'.buff, i, A) by {
         reveal SeqSub;
     }
 
-    ghost var i: int := 0;
     ghost var n_ptr := iter_n.base_addr;
     ghost var a_ptr := iter_a.base_addr;
 
@@ -162,13 +145,10 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         invariant iter_a'.base_addr == a_ptr;
         invariant iter_a'.index == i;
 
-        invariant iter_a.index == i;
-        invariant iter_a.buff == old_a;
-
         invariant a_ptr != n_ptr;
 
         invariant valid_int64_view(A, x15, x11);
-        invariant sub_mod32_loop_inv(iter_a, iter_n, iter_a', A);
+        invariant sub_mod32_loop_inv(old_a, iter_n.buff, iter_a'.buff, i, A);
 
         decreases loop_ctr;
     {
@@ -210,23 +190,29 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         sub(x15, x14, x15); // subtract underflow carry from upper half of A
         srai(x11, x15, 0x1f); 
 
-        // assert x11 == to_uint32(int32_rs(to_int32(v2), 31));
-
-        A := lemma_sub_mod32_correct(A, iter_a, iter_n, iter_a',
-            iter_a_next, iter_n_next, iter_a'_next,
+        A := lemma_sub_mod32_correct(A, old_a, iter_n.buff, iter_a'.buff,
             v0, v1, x15, x11, carry_add, carry_sub, x13, i);
 
         iter_n := iter_n_next;
         iter_a' := iter_a'_next;
-        iter_a := iter_a_next;
         i := i + 1;
     }
 
-    sub_mod32_post_lemma(iter_a, iter_n, iter_a', A);
+    sub_mod32_post_lemma(old_a, iter_n.buff, iter_a'.buff, A);
     assert to_nat(iter_a'.buff) ==
             to_nat(old_a) - to_nat(iter_n.buff) + A_as_carry(A.full) * Pow(BASE_32, 96);
 }
-    
+
+ghost procedure lemma_ge_mod32_correct(
+      ghost iter_a: iter_t,
+      ghost iter_n: iter_t,
+      ghost iter_a_prev: iter_t,
+      ghost iter_n_prev: iter_t,
+      ghost cond: uint32,
+      ghost b: uint32,
+      ghost i: int
+) extern;
+
     
 // procedure ge_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
 //     returns (ghost result: bool)
