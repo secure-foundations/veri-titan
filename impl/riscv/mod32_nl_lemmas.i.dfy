@@ -38,12 +38,12 @@ module mod32_nl_lemmas {
         // assert valid_int64_view(r, 0, 0);
     }
 
-    // predicate sub_mod32_A_inv(A: int64_raw)
-    // {
-    //     && A.lh == uint64_lh(A.full)
-    //     && A.uh == uint64_uh(A.full)
-    //     && ((A.full == A.lh == A.uh == 0) || (A.full == -1 && (A.lh == A.uh == 0xffff_ffff))
-    // }
+    predicate sub_mod32_A_inv(A: int64_raw)
+    {
+        && A.lh == uint64_lh(to_2s_complement_bv64(A.full))
+        && A.uh == uint64_uh(to_2s_complement_bv64(A.full))
+        && ((A.full == A.lh == A.uh == 0) || (A.full == -1 && (A.lh == A.uh == 0xffff_ffff)))
+    }
 
     function A_as_carry(A: int) : uint1
       requires -1 <= A <= 0;
@@ -146,7 +146,7 @@ module mod32_nl_lemmas {
         carry_sub: uint32)
     returns (A': int64_view_t)
 
-        requires (A.lh == A.uh == 0) || (A.lh == A.uh == 0xffff_ffff)
+        requires sub_mod32_A_inv(A)
         requires v0 == uint32_add(A.lh, a_i);
         requires carry_add == uint32_lt(v0, a_i);
         requires carry_sub == uint32_lt(v0, uint32_sub(v0, n_i));
@@ -154,9 +154,7 @@ module mod32_nl_lemmas {
         requires lh == uint32_sub(v1, carry_sub);
         requires uh == to_uint32(int32_rs(to_int32(lh), 31));
 
-        ensures A.full == 0 || A.full == -1
-        ensures A'.full == 0 || A'.full == -1
-        ensures (lh == uh == 0) || (lh == uh == 0xffff_ffff)
+        ensures sub_mod32_A_inv(A')
         ensures A' == int64_cons(lh, uh, A'.full)
         ensures A'.full == sub_mod32_update_A(A.full, a_i, n_i);
     {

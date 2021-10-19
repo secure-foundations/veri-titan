@@ -21,8 +21,7 @@ module mod32_lemmas {
     iter_a': iter_t,
     A: int64_view_t)
   {
-    && (A.full == 0 || A.full == -1)
-    && ((A.lh == A.uh == 0) || (A.lh == A.uh == 0xffff_ffff))
+    && sub_mod32_A_inv(A)
     && var i := iter_a.index;
     && |iter_a.buff| == |iter_n.buff| == |iter_a'.buff|
     && (i == iter_a'.index == iter_n.index)
@@ -61,7 +60,6 @@ module mod32_lemmas {
 
   ensures sub_mod32_loop_inv(iter_a_next, iter_n_next, iter_a'_next, A')
   ensures A' == int64_cons(lh, uh, A'.full)
-  ensures (lh == uh == 0) || (lh == uh == 0xffff_ffff)
   {
     var a_i := iter_a_next.buff[i];
     var n_i := iter_n_next.buff[i];
@@ -70,7 +68,6 @@ module mod32_lemmas {
     var (zs, _) := SeqSub(iter_a.buff[..i], iter_n.buff[..i]);
     
     A' := update_A_correct(A, a_i, n_i, v0, v1, lh, uh, carry_add, carry_sub);
-    assume (A.full == A.lh == A.uh == 0) || (A.full == -1 && (A.lh == A.uh == 0xffff_ffff));
 
     var (z, bout) := uint32_subb(a_i, n_i, A_as_carry(A.full));
 
