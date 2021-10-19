@@ -2,10 +2,9 @@ include "../../arch/riscv/decls.i.vad"
 
 #verbatim
 include "../../arch/riscv/decls.i.dfy"
-include "../../../impl/riscv/mod32_lemmas.i.dfy"
-include "../../../impl/riscv/ge_mod.i.dfy"
+include "../../../impl/riscv/sub_mod_lemmas.i.dfy"
 
-module mul256 {
+module sub_mod {
 
 import opened bv_ops
 import opened rsa_ops
@@ -14,8 +13,8 @@ import opened rv_machine
 import opened rv_decls
 import opened rv_vale
 
-import opened mod32_lemmas
-import opened mod32_nl_lemmas
+import opened sub_mod_lemmas
+import opened sub_mod_nl_lemmas
 
 import opened BASE_32_Seq
 import opened Power
@@ -28,7 +27,7 @@ ghost procedure A_zero() returns (ghost ref: int64_view_t) extern;
 
 function Pow(b: int, e: nat): int extern;
 
-ghost procedure sub_mod32_correct_lemma(
+ghost procedure sub_mod_correct_lemma(
        ghost a: uint32,
        ghost b: uint32,
        ghost c: uint32,
@@ -37,7 +36,7 @@ ghost procedure sub_mod32_correct_lemma(
        ghost x15: uint32
 ) extern;
 
-function sub_mod32_loop_inv(
+function sub_mod_loop_inv(
     old_a: seq(uint32),
     n: seq(uint32),
     a: seq(uint32),
@@ -46,7 +45,7 @@ function sub_mod32_loop_inv(
 
 function seq_subb(xs: seq(uint32), ys: seq(uint32)) : tuple(seq(uint32), uint1) extern;
 
-function lemma_sub_mod32_correct(
+function lemma_sub_mod_correct(
     A: int64_view_t,
     old_a: seq(uint32),
     n: seq(uint32),
@@ -73,13 +72,13 @@ function lemma_sub_mod32_correct(
 //     }
 // }
 
-ghost procedure sub_mod32_post_lemma(
+ghost procedure sub_mod_post_lemma(
     ghost iter_a: seq(uint32),
     ghost iter_n: seq(uint32),
     ghost iter_a': seq(uint32),
     ghost A: int64_view_t) extern;
 
-procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
+procedure sub_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
     returns (ghost iter_a': iter_t, ghost A: int64_view_t)
     requires
         iter_safe(iter_n, mem, 71192);
@@ -122,7 +121,7 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     ghost var old_a := iter_a.buff;
     ghost var iter_n := iter_n;
     
-    assert sub_mod32_loop_inv(old_a, iter_n.buff, iter_a'.buff, i, A) by {
+    assert sub_mod_loop_inv(old_a, iter_n.buff, iter_a'.buff, i, A) by {
         reveal SeqSub;
     }
 
@@ -148,7 +147,7 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         invariant a_ptr != n_ptr;
 
         invariant valid_int64_view(A, x15, x11);
-        invariant sub_mod32_loop_inv(old_a, iter_n.buff, iter_a'.buff, i, A);
+        invariant sub_mod_loop_inv(old_a, iter_n.buff, iter_a'.buff, i, A);
 
         decreases loop_ctr;
     {
@@ -190,7 +189,7 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         sub(x15, x14, x15); // subtract underflow carry from upper half of A
         srai(x11, x15, 0x1f); 
 
-        A := lemma_sub_mod32_correct(A, old_a, iter_n.buff, iter_a'.buff,
+        A := lemma_sub_mod_correct(A, old_a, iter_n.buff, iter_a'.buff,
             v0, v1, x15, x11, carry_add, carry_sub, x13, i);
 
         iter_n := iter_n_next;
@@ -198,7 +197,7 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         i := i + 1;
     }
 
-    sub_mod32_post_lemma(old_a, iter_n.buff, iter_a'.buff, A);
+    sub_mod_post_lemma(old_a, iter_n.buff, iter_a'.buff, A);
     assert to_nat(iter_a'.buff) ==
             to_nat(old_a) - to_nat(iter_n.buff) + A_as_carry(A.full) * Pow(BASE_32, 96);
 }
@@ -212,79 +211,6 @@ ghost procedure lemma_ge_mod32_correct(
       ghost b: uint32,
       ghost i: int
 ) extern;
-
-    
-// procedure ge_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
-//     returns (ghost result: bool)
-//     requires
-//         iter_safe(iter_n, mem, 71192);
-//         seq_len(iter_n.buff) == 384;
-// 
-//         iter_safe(iter_a, mem, x10);
-//         seq_len(iter_a.buff) == 384;
-//     
-//         // TODO: should be hard-coded in the semantics
-//         x0 == 0;
-//     reads
-//         x0; mem;
-//     modifies
-//         x10; x11; x12; x13; x14; x15;
-//     ensures
-//         // iter valid for n
-//         iter_safe(iter_n, mem, 71192);
-//         seq_len(iter_n.buff) == 384 ;
-// 
-//         // iter valid for a
-//         iter_safe(iter_a, mem, 71192);
-//         seq_len(iter_a.buff) == 384 ;
-//     
-//         result == to_nat(iter_a.buff) >= to_nat(iter_n.buff);
-//   {
-// 
-//     lui(x11, 0x11); // 0x11000 into x11
-//     addi(x15, x11, 1560); // n = 71192 into x15
-// 
-//     addi(x10, x10, 380); // pointer to end of a
-//     addi(x15, x15, 380); // pointer to end of n
-//     addi(x11, x11, 1560); // pointer to beginning of n
-//     
-//     addi(x12, x0, 1); // move 1 into x12 -- x12 = cond
-// 
-//     ghost var iter_a := iter_a;
-//     ghost var iter_n := iter_n;
-//     while (x12 != x0)
-//     invariant iter_inv(iter_a, mem, x10);
-//     invariant iter_inv(iter_n, mem, x15);
-//     invariant iter_a.index == iter_n.index;
-//     invariant iter_a.index > 0;
-//     decreases x12;
-//     {
-//       
-//       let iter_a_prev := lw_prev(x13, x10, 0, iter_a); // x13 = a[i] -- 10148
-//       let iter_n_prev := lw_prev(x14, x15, 0, iter_n); // x14 = n[i]
-//       
-//       addi(x15, x15, (-4)); // x15 = pointer to n[i-1]
-//       addi(x10, x10, (-4)); // x10 = pointer to a[i-1]
-// 
-//       // if a[i] != n[i]
-//       sub(x12, x13, x14); // a[i] - n[i]
-//       sltu(x12, x0, x12); // 0 if a[i] - n[i] = 0, else 1
-// 
-//       slt(x13, x0, x12); // 0 if 0 < a[i] - n[i]
-// 
-//       xor(x12, x11, x15);
-//       sltu(x12, x0, x12); // 1 if 0 < x12, 0 if they're equal 
-//     
-//       iter_a := iter_a_prev;
-//       iter_n := iter_n_prev;
-//     
-//       // x12 = cond, x13 = b
-//       //lemma_ge_mod32_correct(iter_a, iter_n, iter_a_prev, iter_n_prev, x12, x13, iter_a.index);
-//     }
-//     
-//     // move b value to expected result register
-//     mv(x10, x13);
-//   }
 
 #verbatim
 }

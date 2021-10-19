@@ -1,7 +1,7 @@
 include "rsa_ops.i.dfy"
 include "../../lib/bv_ops_nl.dfy"
 
-module mod32_nl_lemmas {
+module sub_mod_nl_lemmas {
     import opened bv_ops
     import opened bv_ops_nl
     import opened rsa_ops
@@ -35,7 +35,7 @@ module mod32_nl_lemmas {
         r := refine_int64_view(0xffff_ffff, 0xffff_ffff, -1);
     }
 
-    predicate sub_mod32_A_inv(A: int64_raw)
+    predicate sub_mod_A_inv(A: int64_raw)
     {
         && A.lh == uint64_lh(to_2s_complement_bv64(A.full))
         && A.uh == uint64_uh(to_2s_complement_bv64(A.full))
@@ -87,7 +87,7 @@ module mod32_nl_lemmas {
         }
     }
 
-    lemma sub_mod32_A_bound_lemma(A: int, a: uint32, n: uint32)
+    lemma sub_mod_A_bound_lemma(A: int, a: uint32, n: uint32)
     requires A == 0 || A == -1
     ensures -BASE_63 <= (A + a - n) <= BASE_63 - 1
     {
@@ -103,18 +103,18 @@ module mod32_nl_lemmas {
         }
     }
 
-    function sub_mod32_update_A(A: int64, a: uint32, n: uint32) : int64
+    function sub_mod_update_A(A: int64, a: uint32, n: uint32) : int64
     requires A == 0 || A == -1
     {
-        sub_mod32_A_bound_lemma(A, a, n);
+        sub_mod_A_bound_lemma(A, a, n);
         int64_rs(A + a - n, 32)
     }
 
-    lemma sub_mod32_update_A_lemma(A: int, A': int, a_i: uint32, n_i: uint32, bin_next: uint1)
+    lemma sub_mod_update_A_lemma(A: int, A': int, a_i: uint32, n_i: uint32, bin_next: uint1)
         requires A == 0 || A == -1
         requires A' == 0 || A' == -1
         requires bin_next == if a_i >= n_i + A_as_carry(A) then 0 else 1
-        requires A' == sub_mod32_update_A(A, a_i, n_i)
+        requires A' == sub_mod_update_A(A, a_i, n_i)
         ensures bin_next == A_as_carry(A')
     {
     }
@@ -142,7 +142,7 @@ module mod32_nl_lemmas {
         carry_sub: uint32)
     returns (A': int64_view_t)
 
-        requires sub_mod32_A_inv(A)
+        requires sub_mod_A_inv(A)
         requires v0 == uint32_add(A.lh, a_i);
         requires carry_add == uint32_lt(v0, a_i);
         requires carry_sub == uint32_lt(v0, uint32_sub(v0, n_i));
@@ -150,9 +150,9 @@ module mod32_nl_lemmas {
         requires lh == uint32_sub(v1, carry_sub);
         requires uh == to_uint32(int32_rs(to_int32(lh), 31));
 
-        ensures sub_mod32_A_inv(A')
+        ensures sub_mod_A_inv(A')
         ensures A' == int64_cons(lh, uh, A'.full)
-        ensures A'.full == sub_mod32_update_A(A.full, a_i, n_i);
+        ensures A'.full == sub_mod_update_A(A.full, a_i, n_i);
     {
         A_halves_equal(lh, uh);
         // A_value_special(A');

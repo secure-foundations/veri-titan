@@ -1,0 +1,72 @@
+
+// procedure ge_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
+//     returns (ghost result: bool)
+//     requires
+//         iter_safe(iter_n, mem, 71192);
+//         seq_len(iter_n.buff) == 384;
+// 
+//         iter_safe(iter_a, mem, x10);
+//         seq_len(iter_a.buff) == 384;
+//     
+//         // TODO: should be hard-coded in the semantics
+//         x0 == 0;
+//     reads
+//         x0; mem;
+//     modifies
+//         x10; x11; x12; x13; x14; x15;
+//     ensures
+//         // iter valid for n
+//         iter_safe(iter_n, mem, 71192);
+//         seq_len(iter_n.buff) == 384 ;
+// 
+//         // iter valid for a
+//         iter_safe(iter_a, mem, 71192);
+//         seq_len(iter_a.buff) == 384 ;
+//     
+//         result == to_nat(iter_a.buff) >= to_nat(iter_n.buff);
+//   {
+// 
+//     lui(x11, 0x11); // 0x11000 into x11
+//     addi(x15, x11, 1560); // n = 71192 into x15
+// 
+//     addi(x10, x10, 380); // pointer to end of a
+//     addi(x15, x15, 380); // pointer to end of n
+//     addi(x11, x11, 1560); // pointer to beginning of n
+//     
+//     addi(x12, x0, 1); // move 1 into x12 -- x12 = cond
+// 
+//     ghost var iter_a := iter_a;
+//     ghost var iter_n := iter_n;
+//     while (x12 != x0)
+//     invariant iter_inv(iter_a, mem, x10);
+//     invariant iter_inv(iter_n, mem, x15);
+//     invariant iter_a.index == iter_n.index;
+//     invariant iter_a.index > 0;
+//     decreases x12;
+//     {
+//       
+//       let iter_a_prev := lw_prev(x13, x10, 0, iter_a); // x13 = a[i] -- 10148
+//       let iter_n_prev := lw_prev(x14, x15, 0, iter_n); // x14 = n[i]
+//       
+//       addi(x15, x15, (-4)); // x15 = pointer to n[i-1]
+//       addi(x10, x10, (-4)); // x10 = pointer to a[i-1]
+// 
+//       // if a[i] != n[i]
+//       sub(x12, x13, x14); // a[i] - n[i]
+//       sltu(x12, x0, x12); // 0 if a[i] - n[i] = 0, else 1
+// 
+//       slt(x13, x0, x12); // 0 if 0 < a[i] - n[i]
+// 
+//       xor(x12, x11, x15);
+//       sltu(x12, x0, x12); // 1 if 0 < x12, 0 if they're equal 
+//     
+//       iter_a := iter_a_prev;
+//       iter_n := iter_n_prev;
+//     
+//       // x12 = cond, x13 = b
+//       //lemma_ge_mod32_correct(iter_a, iter_n, iter_a_prev, iter_n_prev, x12, x13, iter_a.index);
+//     }
+//     
+//     // move b value to expected result register
+//     mv(x10, x13);
+//   }

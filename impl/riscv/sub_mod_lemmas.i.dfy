@@ -1,12 +1,12 @@
 include "rsa_ops.i.dfy"
-include "mod32_nl_lemmas.i.dfy"
+include "sub_mod_nl_lemmas.i.dfy"
 
-module mod32_lemmas {
+module sub_mod_lemmas {
   import opened bv_ops
   import opened rsa_ops
   import opened rv_machine
 
-  import opened mod32_nl_lemmas
+  import opened sub_mod_nl_lemmas
 
   import opened BASE_32_Seq
   import Power2
@@ -15,21 +15,21 @@ module mod32_lemmas {
   const B  : int := BASE_32;
   const B2 : int := B * B;
 
-  predicate sub_mod32_loop_inv(
+  predicate sub_mod_loop_inv(
     old_a: seq<uint32>,
     n: seq<uint32>,
     a: seq<uint32>,
     i: nat,
     A: int64_view_t)
   {
-    && sub_mod32_A_inv(A)
+    && sub_mod_A_inv(A)
     && |old_a| == |a| == |n|
     && 0 <= i <= |a|
     && old_a[i..] == a[i..]
     && SeqSub(old_a[..i], n[..i]) == (a[..i], A_as_carry(A.full))
   }
 
-  lemma lemma_sub_mod32_correct(
+  lemma lemma_sub_mod_correct(
     A: int64_view_t,
     old_a: seq<uint32>, n: seq<uint32>, a: seq<uint32>,
     v0: uint32, v1: uint32,
@@ -39,7 +39,7 @@ module mod32_lemmas {
     i: nat)
   returns  (A': int64_view_t)
 
-  requires sub_mod32_loop_inv(old_a, n, a, i, A)
+  requires sub_mod_loop_inv(old_a, n, a, i, A)
   requires i < |a|
 
   requires v0 == uint32_add(A.lh, old_a[i]);
@@ -53,7 +53,7 @@ module mod32_lemmas {
   requires uh == to_uint32(int32_rs(to_int32(lh), 31));
 
   ensures A' == int64_cons(lh, uh, A'.full)
-  ensures sub_mod32_loop_inv(old_a, n, a[i := x13], i + 1, A')
+  ensures sub_mod_loop_inv(old_a, n, a[i := x13], i + 1, A')
   {
     var a_i := old_a[i];
     var n_i := n[i];
@@ -88,12 +88,12 @@ module mod32_lemmas {
     }
 
     assert bin_next == A_as_carry(A'.full) by {
-      sub_mod32_update_A_lemma(A.full, A'.full, a_i, n_i, bin_next);
+      sub_mod_update_A_lemma(A.full, A'.full, a_i, n_i, bin_next);
     }
   }
 
-  lemma sub_mod32_post_lemma(old_a: seq<uint32>, n: seq<uint32>, a: seq<uint32>, A: int64_view_t)
-    requires sub_mod32_loop_inv(old_a, n, a, |a|, A);
+  lemma sub_mod_post_lemma(old_a: seq<uint32>, n: seq<uint32>, a: seq<uint32>, A: int64_view_t)
+    requires sub_mod_loop_inv(old_a, n, a, |a|, A);
     ensures to_nat(a) ==
       to_nat(old_a) - to_nat(n) + A_as_carry(A.full) * Power.Pow(BASE_32, |old_a|)
   {
