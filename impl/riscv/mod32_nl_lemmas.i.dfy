@@ -38,10 +38,17 @@ module mod32_nl_lemmas {
         // assert valid_int64_view(r, 0, 0);
     }
 
-    function A_as_carry(i:int) : uint1
-      requires -1 <= i <= 0;
+    // predicate sub_mod32_A_inv(A: int64_raw)
+    // {
+    //     && A.lh == uint64_lh(A.full)
+    //     && A.uh == uint64_uh(A.full)
+    //     && ((A.full == A.lh == A.uh == 0) || (A.full == -1 && (A.lh == A.uh == 0xffff_ffff))
+    // }
+
+    function A_as_carry(A: int) : uint1
+      requires -1 <= A <= 0;
     {
-      if i == -1 then 1 else 0
+      if A == -1 then 1 else 0
     }
 
     lemma A_halves_equal(lh: uint32, uh: uint32)

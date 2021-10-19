@@ -99,11 +99,11 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     returns (ghost iter_a': iter_t, ghost A: int64_view_t)
     requires
         iter_safe(iter_n, mem, 71192);
-        seq_len(iter_n.buff) == 384;
+        seq_len(iter_n.buff) == 96;
         iter_n.index == 0; 
 
         iter_safe(iter_a, mem, x10);
-        seq_len(iter_a.buff) == 384;
+        seq_len(iter_a.buff) == 96;
         iter_a.index == 0;
 
         iter_n.base_addr != iter_a.base_addr;
@@ -111,11 +111,11 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         x10; x11; x12; x13; x14; x15; x16; mem;
     ensures
         iter_inv(iter_a', mem, x10);
-        seq_len(iter_a'.buff) == 384;
+        seq_len(iter_a'.buff) == 96;
         mem == old(mem)[iter_a.base_addr := iter_a'.buff];
         (A.full == (-1) || A.full == 0); 
         to_nat(iter_a'.buff) ==
-            to_nat(iter_a.buff) - to_nat(iter_n.buff) + A_as_carry(A.full) * Pow(BASE_32, 384);
+            to_nat(iter_a.buff) - to_nat(iter_n.buff) + A_as_carry(A.full) * Pow(BASE_32, 96);
 {
     // load address of n
     lui(x12, 0x11); // 0x11000 into x12
@@ -134,6 +134,7 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     A := trivial();
 
     iter_a' := iter_a;
+    ghost var old_a := iter_a.buff;
     ghost var iter_a := iter_a;
     ghost var iter_n := iter_n;
     
@@ -149,7 +150,7 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         invariant x12 <= x16;
         invariant x12 == 71192 + 4 * i;
         invariant x16 == 71576;
-        invariant 0 <= i <= 384;
+        invariant 0 <= i <= 96;
 
         invariant iter_inv(iter_n, mem, x12);
         invariant iter_n.base_addr == n_ptr;
@@ -157,11 +158,12 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         invariant mem == old(mem)[a_ptr := iter_a'.buff];
 
         invariant iter_inv(iter_a', mem, x10);
-        invariant seq_len(iter_a'.buff) == 384;
+        invariant seq_len(iter_a'.buff) == 96;
         invariant iter_a'.base_addr == a_ptr;
         invariant iter_a'.index == i;
 
         invariant iter_a.index == i;
+        invariant iter_a.buff == old_a;
 
         invariant a_ptr != n_ptr;
 
@@ -221,9 +223,10 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         i := i + 1;
     }
 
-    assume i == 384;
-    assert false;
     sub_mod32_post_lemma(iter_a, iter_n, iter_a', A);
+
+    assert to_nat(iter_a'.buff) ==
+            to_nat(old_a) - to_nat(iter_n.buff) + A_as_carry(A.full) * Pow(BASE_32, 96);
 }
     
     
