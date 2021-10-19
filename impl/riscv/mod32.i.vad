@@ -24,7 +24,7 @@ import opened Power
     
 // ghost procedure refine_int64_view(ghost lh: uint32, ghost uh: uint32, ghost full: int64) 
 // returns (ghost ref: int64_view_t)
-ghost procedure trivial() returns (ghost ref: int64_view_t) extern;
+ghost procedure A_zero() returns (ghost ref: int64_view_t) extern;
 
 function Pow(b: int, e: nat): int extern;
 
@@ -131,7 +131,7 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     li(x15, 0); // 0 in x15 -- lower half of A
     li(x11, 0); // 0 in x11 -- upper half of A
 
-    A := trivial();
+    A := A_zero();
 
     iter_a' := iter_a;
     ghost var old_a := iter_a.buff;
@@ -173,7 +173,6 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
         decreases loop_ctr;
     {
         lw(x14, x10, 0, iter_a');
-        assume x14 == iter_a.buff[i] ;
 
         let iter_a_next := lw_next_iter(iter_a);
         // load mem from x10 to x14 (x14 == a[i])
@@ -224,7 +223,6 @@ procedure sub_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     }
 
     sub_mod32_post_lemma(iter_a, iter_n, iter_a', A);
-
     assert to_nat(iter_a'.buff) ==
             to_nat(old_a) - to_nat(iter_n.buff) + A_as_carry(A.full) * Pow(BASE_32, 96);
 }

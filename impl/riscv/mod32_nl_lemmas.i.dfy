@@ -9,33 +9,30 @@ module mod32_nl_lemmas {
     import opened BASE_32_Seq
     import Power2
 
-    lemma refine_int64_view(lh: uint32, uh: uint32, full: int64) returns (R: int64_view_t)
+    lemma refine_int64_view(lh: uint32, uh: uint32, full: int64) returns (r: int64_view_t)
       requires lh == uint64_lh(to_2s_complement_bv64(full));
       requires uh == uint64_uh(to_2s_complement_bv64(full));
-      ensures valid_int64_view(R, lh, uh)
+      ensures valid_int64_view(r, lh, uh)
     {
-      R := int64_cons(lh, uh, full);
-      lemma_int64_half_split(R);
-      assert valid_int64_view(R, lh, uh);
+      r := int64_cons(lh, uh, full);
+      lemma_int64_half_split(r);
+      assert valid_int64_view(r, lh, uh);
     }
 
-    lemma trivial() returns (r: int64_view_t)
+    lemma A_zero() returns (r: int64_view_t)
     ensures r == int64_cons(0, 0, 0);
     {
         reveal uint64_lh();
         reveal uint64_uh();
         r := refine_int64_view(0, 0, 0);
-        assert valid_int64_view(r, 0, 0);
     }
 
-    lemma trivial2() returns (r: int64_view_t)
+    lemma A_neg_one() returns (r: int64_view_t)
     ensures r == int64_cons(0xffff_ffff, 0xffff_ffff, -1);
     {
-        assume false;
-        // reveal uint64_lh();
-        // reveal uint64_uh();
-        // r := refine_int64_view(0, 0, 0);
-        // assert valid_int64_view(r, 0, 0);
+        reveal uint64_lh();
+        reveal uint64_uh();
+        r := refine_int64_view(0xffff_ffff, 0xffff_ffff, -1);
     }
 
     predicate sub_mod32_A_inv(A: int64_raw)
@@ -136,7 +133,6 @@ module mod32_nl_lemmas {
         }
     }
 
-    // TODO: refactor
     lemma update_A_correct(
         A: int64_view_t,
         a_i: uint32, n_i: uint32,
@@ -173,13 +169,13 @@ module mod32_nl_lemmas {
                     assert lh == uh == 0;
                     // assert A'.full == 0;
                     int64_rs_properties(pre_shift, a_i, n_i);
-                    A' := trivial();
+                    A' := A_zero();
                 } else {
                     // assert carry_sub == 1;
                     assert lh == uh == 0xffff_ffff;
                     // assert A'.full == -1;
                     int64_rs_properties(pre_shift, a_i, n_i);
-                    A' := trivial2();
+                    A' := A_neg_one();
                 }
             } else {
                 assert pre_shift < 0;
@@ -189,7 +185,7 @@ module mod32_nl_lemmas {
                 assert lh == uh == 0xffff_ffff;
                 // assert A'.full == -1;
                 int64_rs_properties(pre_shift, a_i, n_i);
-                A' := trivial2();
+                A' := A_neg_one();
             }
             // assert A'.full == int64_rs(A.full + a_i - n_i, 32);
         } else {
@@ -201,13 +197,13 @@ module mod32_nl_lemmas {
                 assert lh == uh == 0xffff_ffff;
                 // assert A'.full == -1;
                 int64_rs_properties(pre_shift, a_i, n_i);
-                A' := trivial2();
+                A' := A_neg_one();
             } else {
                 assert carry_sub == 0;
                 assert lh == uh == 0;
                 // assert A'.full == 0;
                 int64_rs_properties(pre_shift, a_i, n_i);
-                A' := trivial();
+                A' := A_zero();
             }
         }
     }

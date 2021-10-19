@@ -26,6 +26,7 @@ module mod32_lemmas {
     && |iter_a.buff| == |iter_n.buff| == |iter_a'.buff|
     && (i == iter_a'.index == iter_n.index)
     && i <= |iter_a.buff|
+    && iter_a.buff[i..] == iter_a'.buff[i..]
     && SeqSub(iter_a.buff[..i], iter_n.buff[..i]) == (iter_a'.buff[..i], A_as_carry(A.full))
   }
 
