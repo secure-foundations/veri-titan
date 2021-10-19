@@ -221,12 +221,12 @@ module rv_machine {
     | RISC_CSRRCI (rd: reg32_t, zimm: uint32, csr12: uint32)
 
     predicate eval_ins32(ins: ins32, s: state, r: state)
-        {
-            if !s.ok then
-                !r.ok
-            else
-                r.ok && (valid_state(s) ==> valid_state(r))
-        }
+    {
+        if !s.ok then
+            !r.ok
+        else
+            r.ok && (valid_state(s) ==> valid_state(r))
+    }
 
     /* control flow definitions */
 
@@ -238,6 +238,7 @@ module rv_machine {
     | Ins32(ins: ins32)
     | Block(block: codes)
     | While(whileCond: cond, whileBody: code)
+    | IfElse(ifCond: cond, ifTrue:code, ifFalse:code)
     // | Procedure(proc: codes, name: string) // TODO: direct call semantics
     | Comment(com: string)
 
@@ -245,7 +246,7 @@ module rv_machine {
       | CNil
       | va_CCons(hd: code, tl: codes)
 
-predicate eval_block(block: codes, s: state, r: state)
+    predicate eval_block(block: codes, s: state, r: state)
     {
         if block.CNil? then
             r == s
@@ -269,6 +270,15 @@ predicate eval_block(block: codes, s: state, r: state)
         eval_cmp(s, c.op, c.r1, c.r2)
     }
 
+    predicate eval_if_else(cond:cond, ifT:code, ifF:code, s:state, r:state)
+        decreases if eval_cond(s, cond) then ifT else ifF
+    {
+        if s.ok then
+            (if eval_cond(s, cond) then eval_code(ifT, s, r) else eval_code(ifF, s, r))
+        else
+            !r.ok
+    }
+
     predicate eval_while(condition:cond, body:code, n: nat, s: state, r: state)
         decreases body, n
     {
@@ -290,6 +300,7 @@ predicate eval_block(block: codes, s: state, r: state)
             case Ins32(ins) => eval_ins32(ins, s, r)
             case Block(block) => eval_block(block, s, r)
             case While(condition, body) => exists n:nat :: eval_while(condition, body, n, s, r)
+            case IfElse(cond, ifT, ifF) => eval_if_else(cond, ifT, ifF, s, r)
             case Comment(com) => s == r
     }
 }

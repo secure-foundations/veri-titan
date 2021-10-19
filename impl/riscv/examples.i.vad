@@ -66,7 +66,20 @@ procedure loop_sub(inout src1:reg32, in src2:reg32)
     }
 }
 
+procedure if_else(inout src1:reg32, inout src2:reg32)
+    requires @src1 != @src2;
+{
+    ghost var old_src1 := src1;
 
+    if (src1 >= src2)
+    {
+        sub(src1, src1, src2);
+    } else {
+        sub(src2, src2, src1);
+    }
+
+    assert src1 <= old_src1;
+}
 
 #verbatim
 }

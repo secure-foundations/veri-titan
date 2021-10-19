@@ -75,6 +75,7 @@ module rv_vale {
 
     function va_mul_nat(a: nat, b: nat): nat
     {
+        assume false;
         a * b
     }
 
@@ -169,10 +170,14 @@ module rv_vale {
     function method va_op_reg32_reg32_t(r: reg32_t): reg32_t { r }
     function method va_Block(block:codes):code { Block(block) }
     function method va_While(wcond:cond, wcode:code):code { While(wcond, wcode) }
+    function method va_IfElse(ifb:cond, ift:code, iff:code):code { IfElse(ifb, ift, iff) }
 
     function method va_get_block(c:code):codes requires c.Block? { c.block }
     function method va_get_whileCond(c:code):cond requires c.While? {c.whileCond }
     function method va_get_whileBody(c:code):code requires c.While? { c.whileBody }
+    function method va_get_ifCond(c:code):cond requires c.IfElse? { c.ifCond }
+    function method va_get_ifTrue(c:code):code requires c.IfElse? { c.ifTrue }
+    function method va_get_ifFalse(c:code):code requires c.IfElse? { c.ifFalse }
 
     lemma lemma_FailurePreservedByBlock(block:codes, s:state, r:state)
         requires eval_block(block, s, r);
@@ -186,7 +191,6 @@ module rv_vale {
         }
     }
 
-
     lemma lemma_FailurePreservedByCode(c:code, s:state, r:state)
         requires eval_code(c, s, r);
         ensures !s.ok ==> !r.ok;
@@ -197,6 +201,9 @@ module rv_vale {
             }
             case While(c, b) => {
                 var n :| eval_while(c, b, n, s, r);
+            }
+            case IfElse(cond, ifT, ifF) => {
+                var r' :| eval_if_else(cond, ifT, ifF, s, r');
             }
             case Ins32(i) => {
                 var r' :| eval_code(c, s, r');
@@ -277,9 +284,9 @@ module rv_vale {
         requires b.va_CCons?
         requires eval_code_lax(Block(b), s0, r)
         ensures  b == va_CCons(c0, b1)
-        ensures  eval_code_lax(c0, s0, r1)
-            ensures valid_state_opaque(s0) && r1.ok ==> valid_state_opaque(r1);
-        ensures  eval_code_lax(Block(b1), r1, r)
+        ensures eval_code_lax(c0, s0, r1)
+        ensures valid_state_opaque(s0) && r1.ok ==> valid_state_opaque(r1);
+        ensures eval_code_lax(Block(b1), r1, r)
     {
         reveal_eval_code_opaque();
         c0 := b.hd;
@@ -300,6 +307,32 @@ module rv_vale {
             // so we ensure r1.ok is false, and hence eval_code_lax(*, r1, *) is trivially true
             r1 := s0;
         }
+    }
+
+    lemma va_lemma_ifElse(ifb:cond, ct:code, cf:code, s:va_state, r:va_state) returns(cond:bool, s':va_state)
+        requires valid_state_opaque(s);
+        requires eval_code_lax(IfElse(ifb, ct, cf), s, r)
+        ensures  if s.ok then
+                    && s'.ok
+                    && valid_state_opaque(s')
+                    && cond == eval_cond(s, ifb) 
+                    && s' == s
+                    && (if cond then eval_code_lax(ct, s', r) else eval_code_lax(cf, s', r))
+                else
+                    true
+    {
+        reveal_eval_code_opaque();
+        reveal_valid_state_opaque();
+        cond := eval_cond(s, ifb);
+        if s.ok {
+            assert eval_code(IfElse(ifb, ct, cf), s, r);
+            if cond {
+                code_state_validity(ct, s, r);
+            } else {
+                code_state_validity(cf, s, r);
+            }
+        }
+        s' := s;
     }
 
     predicate {:opaque} eval_while_opaque(w:cond, c:code, n:nat, s:state, r:state)
