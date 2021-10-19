@@ -70,3 +70,13 @@
 //     // move b value to expected result register
 //     mv(x10, x13);
 //   }
+
+// ghost procedure lemma_ge_mod32_correct(
+//       ghost iter_a: iter_t,
+//       ghost iter_n: iter_t,
+//       ghost iter_a_prev: iter_t,
+//       ghost iter_n_prev: iter_t,
+//       ghost cond: uint32,
+//       ghost b: uint32,
+//       ghost i: int
+// ) extern;
