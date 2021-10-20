@@ -142,41 +142,42 @@ lemma {:induction A, i} cmp_sufficient_lemma(A: seq<uint32>, B: seq<uint32>, i: 
   }
 
   predicate ge_mod32_loop_inv(
-    old_a: iter_t,
-    n: iter_t,
+    iter_a: iter_t,
+    iter_n: iter_t,
     cond: uint1,
     b: bool)
   {
-    var i := old_a.index;
-    && cond != 0 ==> 0 <= i < |old_a.buff|
-    && cond == 0 ==> -1 <= i < |old_a.buff|- 1
-    && cond == 1 ==> old_a.buff[i+1..] == n.buff[i+1..]
-    && (cond == 0 ==> (b ==> old_a.buff[i+1] > n.buff[i+1]) || (old_a.buff == n.buff))
-    && cond == 0 ==> (ToNatRight(old_a.buff) >= ToNatRight(n.buff)) == b
+    var i := iter_a.index;
+    && cond != 0 ==> 0 <= i < |iter_a.buff|
+    && cond == 0 ==> -1 <= i < |iter_a.buff| - 1
+    && cond == 1 ==> iter_a.buff[i+1..] == iter_n.buff[i+1..]
+    && (cond == 0 ==> (b ==> iter_a.buff[i+1] > iter_n.buff[i+1]) || (iter_a.buff == iter_n.buff))
+    && cond == 0 ==> (ToNatRight(iter_a.buff) >= ToNatRight(iter_n.buff)) == b
   }
 
   lemma lemma_ge_mod32_correct(
-    old_a: iter_t,
-    n: iter_t,
-    old_a_prev: iter_t,
+    iter_a: iter_t,
+    iter_n: iter_t,
+    a_prev: iter_t,
     n_prev: iter_t,
     cond: uint1, // uint1
     b: bool, // bool
     i: int)
     requires
-      && ge_mod32_loop_inv(old_a, n, cond, b)
+      && ge_mod32_loop_inv(iter_a, iter_n, cond, b)
 
-      && old_a.index < |old_a.buff|
-      && i == old_a.index == n.index
+      && iter_a.index < |iter_a.buff|
+      && i == iter_a.index == iter_n.index
       && i > 0
 
-      && cond == n.index == |n.buff| - 1
+      && cond == iter_n.index == |iter_n.buff| - 1
 
-      && old_a_prev == lw_prev_iter(old_a)
-      && n_prev == lw_prev_iter(n)
+      && a_prev == lw_prev_iter(iter_a)
+      && n_prev == lw_prev_iter(iter_n)
     ensures
-      ge_mod32_loop_inv(old_a_prev, n_prev, cond, b)
+      ge_mod32_loop_inv(a_prev, n_prev, cond, b)
   {
+    assume false;
   }
 
 }
