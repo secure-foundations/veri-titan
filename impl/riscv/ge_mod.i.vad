@@ -42,10 +42,12 @@ ghost procedure lemma_ge_mod32_correct(
 procedure ge_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     returns (ghost result: bool)
     requires
+        // spans from 71192 to 71576
         iter_safe(iter_n, mem, 71192);
         seq_len(iter_n.buff) == 96;
         iter_n.index == 95; // end of buff
 
+        // spans from x10 to x10 + 96*4
         iter_safe(iter_a, mem, x10);
         seq_len(iter_a.buff) == 96;
         iter_a.index == 95; // end of buff
@@ -76,10 +78,10 @@ procedure ge_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     addi(x15, x11, 1560); // n = 71192 into x15
     assert x15 == 71192;
 
-    addi(x10, x10, 384); // pointer to end of a
+    addi(x10, x10, 380); // pointer to last entry of a
 
-    addi(x15, x15, 384); // pointer to end of n
-    assert x15 == 71576;
+    addi(x15, x15, 380); // pointer to last entry of n
+    assert x15 == 71572;
     
     addi(x11, x11, 1560); // pointer to beginning of n
     assert x11 == 71192;
@@ -90,7 +92,7 @@ procedure ge_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     ghost var iter_n := iter_n;
     ghost var cond : uint1 := 1;
     ghost var b : bool := true;
-    ghost var i: int := 96;
+    ghost var i: int := 0;
     
     assert ge_mod32_loop_inv(iter_a, iter_n, cond, b);
 
@@ -98,20 +100,20 @@ procedure ge_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
     ghost var a_ptr := iter_a.base_addr;
 
     while (x12 != x0)
-    invariant x15 == 71576 - 4 * i;
+    invariant x15 == 71572 - 4 * i;
     invariant x11 == 71192;
-    invariant 0 < i <= 96;
+    invariant 0 <= i < 96;
 
     invariant x12 >= 0;
     invariant x0 == 0;
 
-    invariant iter_inv(iter_a, mem, x10);
     invariant iter_a.base_addr == a_ptr;
-    invariant iter_a.index == i - 1;
+    invariant iter_a.index == 95 - i;
+    invariant iter_inv(iter_a, mem, x10);
     
-    invariant iter_inv(iter_n, mem, x15);
     invariant iter_n.base_addr == n_ptr;
-    invariant iter_n.index == i - 1;
+    invariant iter_n.index == 95 - i;
+    invariant iter_inv(iter_n, mem, x15);
     
     invariant ge_mod32_loop_inv(iter_a, iter_n, cond, b);
     decreases loop_ctr;
