@@ -1,10 +1,11 @@
 include "rsa_ops.i.dfy"
 include "../../std_lib/src/Collections/Sequences/LittleEndianNat.dfy"
 
-module ge_mod {
+module ge_mod_lemmas {
 
 import opened bv_ops  
 import opened rsa_ops
+import opened rv_machine
 
 import opened DivMod
 import opened Power
@@ -126,6 +127,56 @@ lemma {:induction A, i} cmp_sufficient_lemma(A: seq<uint32>, B: seq<uint32>, i: 
       }
       i := i - 1;
     }
+  }
+
+  function method uint32_to_bool(x: uint32) : bool
+  requires x == 0 || x == 1;
+  {
+    if x == 0 then false else true
+  }
+
+  function method uint32_to_uint1(x: uint32) : uint1
+  requires x == 0 || x == 1;
+  {
+    if x == 0 then 0 else 1
+  }
+
+  predicate ge_mod32_loop_inv(
+    old_a: iter_t,
+    n: iter_t,
+    cond: uint1,
+    b: bool)
+  {
+    var i := old_a.index;
+    && cond != 0 ==> 0 <= i < |old_a.buff|
+    && cond == 0 ==> -1 <= i < |old_a.buff|- 1
+    && cond == 1 ==> old_a.buff[i+1..] == n.buff[i+1..]
+    && (cond == 0 ==> (b ==> old_a.buff[i+1] > n.buff[i+1]) || (old_a.buff == n.buff))
+    && cond == 0 ==> (ToNatRight(old_a.buff) >= ToNatRight(n.buff)) == b
+  }
+
+  lemma lemma_ge_mod32_correct(
+    old_a: iter_t,
+    n: iter_t,
+    old_a_prev: iter_t,
+    n_prev: iter_t,
+    cond: uint1, // uint1
+    b: bool, // bool
+    i: int)
+    requires
+      && ge_mod32_loop_inv(old_a, n, cond, b)
+
+      && old_a.index < |old_a.buff|
+      && i == old_a.index == n.index
+      && i > 0
+
+      && cond == n.index == |n.buff| - 1
+
+      && old_a_prev == lw_prev_iter(old_a)
+      && n_prev == lw_prev_iter(n)
+    ensures
+      ge_mod32_loop_inv(old_a_prev, n_prev, cond, b)
+  {
   }
 
 }
