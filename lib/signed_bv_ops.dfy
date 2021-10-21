@@ -75,7 +75,7 @@ module bv_ops {
       LemmaDivBounded(x, Pow2(shift));
       x / Pow2(shift)
     }
-    
+
     function method to_uint32(i: int) : uint32
       requires - BASE_32 < i < BASE_32
     {
@@ -210,6 +210,11 @@ module bv_ops {
     function uint32_lt(x:uint32, y:uint32) : uint32
     {
         if x < y then 1 else 0
+    }
+
+    function uint32_le(x: uint32, y: uint32) : uint32
+    {
+      if x <= y then 1 else 0
     }
 
     lemma single_digit_lemma_0(a: nat, b: nat, u: nat)

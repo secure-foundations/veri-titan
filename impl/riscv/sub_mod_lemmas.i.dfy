@@ -106,43 +106,4 @@ module sub_mod_lemmas {
     LemmaSeqSub(old_a, n, a, cout);
   }
 
-    // predicate ge_mod32_loop_inv(
-    //   old_a: iter_t,
-    //   n: iter_t,
-    //   cond: uint1,
-    //   b: bool)
-    // {
-    //   var i := old_a.index;
-    //   && cond != 0 ==> 0 <= i < |old_a|
-    //   && cond == 0 ==> -1 <= i < |old_a|- 1
-    //   && cond == 1 ==> old_a[i+1..] == n[i+1..]
-    //   && (cond == 0 ==> (b ==> old_a[i+1] > n[i+1]) || (old_a == n))
-    //   && cond == 0 ==> (ToNatRight(old_a) >= ToNatRight(n)) == b
-    // }
-
-    // lemma lemma_ge_mod32_correct(
-    //   old_a: iter_t,
-    //   n: iter_t,
-    //   old_a_prev: iter_t,
-    //   n_prev: iter_t,
-    //   cond: uint1,
-    //   b: bool,
-    //   i: int)
-    //   requires
-    //     && ge_mod32_loop_inv(old_a, n, cond, b)
-
-    //     && old_a.index < |old_a|
-    //     && i == old_a.index == n.index
-    //     && i > 0
-
-    //     //&& cond == uint32_lt(0, uint32_xor(x11, x15)) // cond = x12
-    //     && cond == n.index == |n| - 1
-
-    //     && old_a_prev == lw_prev_iter(old_a)
-    //     && n_prev == lw_prev_iter(n)
-    //   ensures
-    //     ge_mod32_loop_inv(old_a_prev, n_prev, cond, b)
-    // {
-    // }
-
 }

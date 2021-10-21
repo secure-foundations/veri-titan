@@ -56,22 +56,6 @@ function lemma_sub_mod_correct(
     x13: uint32,
     i: nat) : int64_view_t extern;
 
-// procedure loop_reg(inout src1:reg32, in src2:reg32, inline count: nat)
-//     requires src2 == src1 + 4 * count;
-// {
-//     ghost var i: int := 0;
-//     ghost var saved := src1;
-
-//     while (src1 != src2)
-//         invariant src1 <= src2;
-//         invariant src1 == saved + i * 4;
-//         decreases loop_ctr;
-//     {
-//         addi(src1, src1, 4);
-//         i := i + 1;
-//     }
-// }
-
 ghost procedure sub_mod_post_lemma(
     ghost iter_a: seq(uint32),
     ghost iter_n: seq(uint32),

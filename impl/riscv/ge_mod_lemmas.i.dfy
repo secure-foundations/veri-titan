@@ -151,7 +151,7 @@ lemma {:induction A, i} cmp_sufficient_lemma(A: seq<uint32>, B: seq<uint32>, i: 
     if x == 0 then 0 else 1
   }
 
-  lemma lemma_ge_mod32_correct(
+  lemma lemma_ge_mod_correct(
     a: seq<uint32>,
     n: seq<uint32>,
     i: nat,

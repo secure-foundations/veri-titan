@@ -119,7 +119,7 @@ procedure ge_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
     }
 
     mv(x10, x13);
-    lemma_ge_mod32_correct(a, n, i+1, x10);
+    lemma_ge_mod_correct(a, n, i+1, x10);
   }
 
 
