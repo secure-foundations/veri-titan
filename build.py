@@ -399,6 +399,7 @@ def main():
     # build everything
     if len(sys.argv) == 1:
         g = Generator()
+        print("Wrote out build.ninja.  Now run: ninja -v -j4")
         # os.system("ninja -v -j 4")
         return
 
