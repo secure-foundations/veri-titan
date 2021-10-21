@@ -92,9 +92,11 @@ module rv_machine {
     }
 
     function lw_prev_iter(iter: iter_t): iter_t
-      requires iter.index > 0
     {
-        iter.(index := iter.index - 1)
+        if iter.index == 0 then
+            iter
+        else
+            iter.(index := iter.index - 1)
     }
 
     function sw_next_iter(iter: iter_t, value: uint32): iter_t

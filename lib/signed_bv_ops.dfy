@@ -81,12 +81,11 @@ module bv_ops {
     {
       if i < 0 then i + BASE_32 else i
     }
-
+    
     function method to_int32(i:uint32) : int32
     {
-      if i > (BASE_31 - 1) then i - BASE_32 else i
+      if i < BASE_31 then i else i - BASE_32
     }
-
 
     lemma int32_uint32_inverse_lemma(i:int32)
       ensures to_int32(to_uint32(i)) == i
@@ -151,7 +150,9 @@ module bv_ops {
     }
 
     function method {:opaque} uint32_xor(x:uint32, y:uint32) : uint32
+      ensures (x == y) <==> (uint32_xor(x, y) == 0)
     {
+        assume false;
         (x as bv32 ^ y as bv32) as uint32
     }
 

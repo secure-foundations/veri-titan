@@ -227,14 +227,15 @@ procedure lw_prev(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: 
     requires
         src2 < 4096; // 12-bit
         iter_safe(iter, mem, src1 + src2);
-        iter.index > 0;
     ensures
         // mem location = src + sign-extended immediate
         dst == old(mem[iter.base_addr][iter.index]);
-        iter_inv(prev_iter, mem, old(src1) + old(src2) - 4);
         prev_iter == lw_prev_iter(iter);
+        old(src1) + old(src2) != iter.base_addr
+            ==>
+        iter_inv(prev_iter, mem, old(src1) + old(src2) - 4);
 {
-    prev_iter := iter.(index := iter.index - 1);
+    prev_iter := lw_prev_iter(iter);
     lw(dst, src1, src2, iter);
 }
 
@@ -309,10 +310,10 @@ procedure lw_prev(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: 
     
 procedure addi(inout dst: reg32, in src1: reg32, in src2: simm32)
     {:instruction Ins32(RV_ADDI(dst, src1, src2))}
-    requires
-    src1 + to_uint32(src2) < 0x1_0000_0000; // assume no overflow
+    // requires
+    // src1 + to_uint32(src2) < 0x1_0000_0000
     ensures
-        dst == old(src1) + to_uint32(old(src2));
+        dst == uint32_add(old(src1), to_uint32(old(src2)));
 {
     assume false;
 }

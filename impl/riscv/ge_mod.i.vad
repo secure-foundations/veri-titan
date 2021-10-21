@@ -1,82 +1,128 @@
+include "../../arch/riscv/decls.i.vad"
 
-// procedure ge_mod32(ghost iter_n: iter_t, ghost iter_a: iter_t)
-//     returns (ghost result: bool)
-//     requires
-//         iter_safe(iter_n, mem, 71192);
-//         seq_len(iter_n.buff) == 384;
-// 
-//         iter_safe(iter_a, mem, x10);
-//         seq_len(iter_a.buff) == 384;
-//     
-//         // TODO: should be hard-coded in the semantics
-//         x0 == 0;
-//     reads
-//         x0; mem;
-//     modifies
-//         x10; x11; x12; x13; x14; x15;
-//     ensures
-//         // iter valid for n
-//         iter_safe(iter_n, mem, 71192);
-//         seq_len(iter_n.buff) == 384 ;
-// 
-//         // iter valid for a
-//         iter_safe(iter_a, mem, 71192);
-//         seq_len(iter_a.buff) == 384 ;
-//     
-//         result == to_nat(iter_a.buff) >= to_nat(iter_n.buff);
-//   {
-// 
-//     lui(x11, 0x11); // 0x11000 into x11
-//     addi(x15, x11, 1560); // n = 71192 into x15
-// 
-//     addi(x10, x10, 380); // pointer to end of a
-//     addi(x15, x15, 380); // pointer to end of n
-//     addi(x11, x11, 1560); // pointer to beginning of n
-//     
-//     addi(x12, x0, 1); // move 1 into x12 -- x12 = cond
-// 
-//     ghost var iter_a := iter_a;
-//     ghost var iter_n := iter_n;
-//     while (x12 != x0)
-//     invariant iter_inv(iter_a, mem, x10);
-//     invariant iter_inv(iter_n, mem, x15);
-//     invariant iter_a.index == iter_n.index;
-//     invariant iter_a.index > 0;
-//     decreases x12;
-//     {
-//       
-//       let iter_a_prev := lw_prev(x13, x10, 0, iter_a); // x13 = a[i] -- 10148
-//       let iter_n_prev := lw_prev(x14, x15, 0, iter_n); // x14 = n[i]
-//       
-//       addi(x15, x15, (-4)); // x15 = pointer to n[i-1]
-//       addi(x10, x10, (-4)); // x10 = pointer to a[i-1]
-// 
-//       // if a[i] != n[i]
-//       sub(x12, x13, x14); // a[i] - n[i]
-//       sltu(x12, x0, x12); // 0 if a[i] - n[i] = 0, else 1
-// 
-//       slt(x13, x0, x12); // 0 if 0 < a[i] - n[i]
-// 
-//       xor(x12, x11, x15);
-//       sltu(x12, x0, x12); // 1 if 0 < x12, 0 if they're equal 
-//     
-//       iter_a := iter_a_prev;
-//       iter_n := iter_n_prev;
-//     
-//       // x12 = cond, x13 = b
-//       //lemma_ge_mod32_correct(iter_a, iter_n, iter_a_prev, iter_n_prev, x12, x13, iter_a.index);
-//     }
-//     
-//     // move b value to expected result register
-//     mv(x10, x13);
-//   }
+#verbatim
+include "../../arch/riscv/decls.i.dfy"
+include "../../../impl/riscv/ge_mod_lemmas.i.dfy"
 
-// ghost procedure lemma_ge_mod32_correct(
-//       ghost iter_a: iter_t,
-//       ghost iter_n: iter_t,
-//       ghost iter_a_prev: iter_t,
-//       ghost iter_n_prev: iter_t,
-//       ghost cond: uint32,
-//       ghost b: uint32,
-//       ghost i: int
-// ) extern;
+module ge_mod {
+
+import opened bv_ops
+import opened rsa_ops
+
+import opened rv_machine
+import opened rv_decls
+import opened rv_vale
+
+import opened ge_mod_lemmas
+
+import opened BASE_32_Seq
+import opened Power
+
+#endverbatim
+
+ghost procedure lemma_ge_mod_correct(
+    ghost a: seq(uint32),
+    ghost n: seq(uint32),
+    ghost j: int,
+    ghost result: uint32) extern; 
+
+procedure ge_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
+    returns (ghost result: bool)
+    requires
+        iter_safe(iter_n, mem, 71192);
+        seq_len(iter_n.buff) == 96;
+        iter_n.index == 0;
+
+        iter_safe(iter_a, mem, x10);
+        seq_len(iter_a.buff) == 96;
+        iter_a.index == 0;
+
+        // TODO: should be hard-coded in the semantics
+        x0 == 0;
+    reads
+        x0; mem;
+    modifies
+        x10; x11; x12; x13; x14; x15;
+    ensures
+      x10 == 1 ==> to_nat(iter_a.buff) < to_nat(iter_n.buff);
+      x10 == 0 ==> to_nat(iter_a.buff) >= to_nat(iter_n.buff);
+  {
+    lui(x11, 0x11); // 0x11000 into x11
+    assume 0x11000 == x11;
+
+    addi(x15, x11, 1560); // n = 71192 into x15
+
+    addi(x10, x10, 380); // pointer to end of a
+    ghost var iter_a := iter_a.(index := 95);
+    // assert iter_safe(iter_a, mem, x10);
+
+    addi(x15, x15, 380); // pointer to end of n
+    ghost var iter_n := iter_n.(index := 95);
+    // assert iter_safe(iter_n, mem, x15);
+
+    addi(x11, x11, 1560); // pointer to beginning of n
+    // assert x11 == 71192;
+
+    addi(x12, x0, 1); // move 1 into x12 -- x12 = cond
+
+    ghost var i: int := 95;
+    ghost var a_ptr := iter_a.base_addr;
+    ghost var a := iter_a.buff;
+    ghost var n := iter_n.buff;
+  
+    while (x12 != x0)
+      invariant x0 == 0;
+      invariant iter_n.base_addr == x11;
+      invariant iter_n.buff == n;
+      invariant iter_a.base_addr == a_ptr;
+      invariant iter_a.buff == a;
+      invariant (x12 != x0) ==> 
+        (iter_inv(iter_n, mem, x15) &&
+        iter_n.index == i &&
+        iter_inv(iter_a, mem, x10) &&
+        iter_a.index == i);
+      invariant seq_len(iter_n.buff) == 96;
+      invariant seq_len(iter_a.buff) == 96;
+
+      invariant x12 != 0 ==> 0 <= i <= 95;
+      invariant x12 != 0 ==> (a[i+1..] == n[i+1..]);
+      invariant x12 == 0 ==> (-1) <= i < 95;
+      invariant x12 == 0 ==> (a[i+2..] == n[i+2..]);
+      invariant x12 == 0 ==> (a[i+1] != n[i+1] || i == (-1));
+      invariant x12 == 0 ==> (x13 != 0 <==> a[i+1] < n[i+1]);
+      invariant (x12 == 0 && i != (-1)) ==> (x13 == 0 ==> a[i+1] > n[i+1]);
+      invariant (x12 == 0 && i == (-1)) ==> (x13 == 0 ==> a[i+1] >= n[i+1]);
+      decreases i;
+    {
+      let iter_a_prev := lw_prev(x13, x10, 0, iter_a); // x13 = a[i]
+      // let a_i := a[i];
+
+      let iter_n_prev := lw_prev(x14, x15, 0, iter_n); // x14 = n[i]
+      // let n_i := n[i];
+
+      sub(x12, x13, x14);
+      sltu(x13, x13, x14);
+      sltu(x14, x0, x12);
+      xor(x12, x11, x15);
+
+      if (x14 != x0) {
+        add(x12, x0, x0);
+      }
+
+      addi(x10, x10, (-4));  
+      addi(x15, x15, (-4));
+
+      iter_a := iter_a_prev;
+      iter_n := iter_n_prev;
+
+      i := i - 1;
+    }
+
+    mv(x10, x13);
+    lemma_ge_mod32_correct(a, n, i+1, x10);
+  }
+
+
+#verbatim
+}
+#endverbatim

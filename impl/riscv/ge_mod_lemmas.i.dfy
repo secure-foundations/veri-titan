@@ -1,7 +1,7 @@
 include "rsa_ops.i.dfy"
 include "../../std_lib/src/Collections/Sequences/LittleEndianNat.dfy"
 
-module ge_mod {
+module ge_mod_lemmas {
 
 import opened bv_ops  
 import opened rsa_ops
@@ -91,7 +91,8 @@ lemma {:induction A, i} cmp_sufficient_lemma(A: seq<uint32>, B: seq<uint32>, i: 
             }
         }
     }
-        
+
+  /*   
   method ge_mod(a: seq<uint32>, n: seq<uint32>) returns (b:bool)
     requires |a| == |n| == 384
     ensures (ToNatRight(a) >= ToNatRight(n)) == b
@@ -102,12 +103,7 @@ lemma {:induction A, i} cmp_sufficient_lemma(A: seq<uint32>, B: seq<uint32>, i: 
     b := true;
     
     while (cond != 0)
-      invariant cond != 0 ==> 0 <= i < |a|
-      invariant cond == 0 ==> -1 <= i < |a|-1
-      invariant cond == 1 ==> a[i+1..] == n[i+1..]
-      invariant !b ==> cond == 0;
-      invariant cond == 0 ==> (b ==> a[i+1] > n[i+1]) || (a == n)
-      invariant cond == 0 ==> (ToNatRight(a) >= ToNatRight(n)) == b
+      invariant ge_mod32_loop_inv(a, n, cond, b, i);
       decreases i
     {
       var ai := a[i];
@@ -115,17 +111,77 @@ lemma {:induction A, i} cmp_sufficient_lemma(A: seq<uint32>, B: seq<uint32>, i: 
 
       cmp_sufficient_lemma(a, n, i);
 
-      if ai != ni {
-        cond := 0;
-      }
       if ai < ni {
         b := false;
       }
       if i == 0 {
         cond := 0;
       }
+      if ai != ni {
+        cond := 0;
+      }
       i := i - 1;
     }
+  }
+
+  predicate ge_mod32_loop_inv(
+    a: seq<uint32>,
+    n: seq<uint32>,
+    cond: uint1,
+    b: bool,
+    i: int)
+  {
+    && |a| == |n|
+    && (cond != 0 ==> 0 <= i < |a|)
+    && (cond == 0 ==> -1 <= i < |a|-1)
+    && (cond == 1 ==> a[i+1..] == n[i+1..])
+    && (!b ==> cond == 0)
+    && (cond == 0 ==> (b ==> a[i+1] > n[i+1]) || (a == n))
+    && (cond == 0 ==> (ToNatRight(a) >= ToNatRight(n)) == b)
+  }
+  */
+
+  function uint32_to_bool(x: uint32) : bool
+  {
+    if x == 0 then false else true
+  }
+
+  function uint32_to_uint1(x: uint32) : uint1
+  {
+    if x == 0 then 0 else 1
+  }
+
+  lemma lemma_ge_mod32_correct(
+    a: seq<uint32>,
+    n: seq<uint32>,
+    i: nat,
+    result: uint32)
+    requires |a| == |n|
+    requires 0 <= i < |a|
+    requires a[i+1..] == n[i+1..]
+    requires result != 0 ==> a[i] < n[i]
+    requires i != 0 ==> (result == 0 ==> a[i] > n[i])
+    requires i == 0 ==> (result == 0 ==> a[i] >= n[i])
+
+    ensures result == 1 ==> ToNatRight(a) < ToNatRight(n);
+    ensures result == 0 ==> ToNatRight(a) >= ToNatRight(n);
+  {
+    cmp_sufficient_lemma(a, n, i);
+    
+    assert result != 0 ==> ToNatRight(a) < ToNatRight(n);
+    if i != 0 {
+      assert result == 0 ==> ToNatRight(a) >= ToNatRight(n);
+    } else {
+      if a[i] > n[i] {
+        assert result == 0 ==> ToNatRight(a) >= ToNatRight(n);
+      } else {
+        assert result == 0 ==> a[i] == n[i];
+        assert result == 0 ==> a == n;
+        assert result == 0 ==> ToNatRight(a) >= ToNatRight(n);
+      }
+    }
+
+    // assume false;
   }
 
 }
