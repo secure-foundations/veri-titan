@@ -1,4 +1,6 @@
-import sys, os, subprocess, re
+#!/usr/bin/env python
+
+import sys, os, subprocess, re, platform
 from subprocess import PIPE, Popen
 from os.path import exists
 
@@ -9,7 +11,14 @@ DAFNY_LIB_DIR = "./std_lib"
 
 DAFNY_LIB_HASH = "84d160538b6442017a5401feb91265147bf34bfc"
 
-rules = f"""
+DAFNY_ZIP_LINUX = "dafny-3.0.0-x64-ubuntu-16.04.zip"
+DAFNY_ZIP_MACOS = "dafny-3.0.0-x64-osx-10.14.2.zip"
+
+def rules():
+    vale = "" if platform.system() == "Linux" else "mono"
+    vale += " " + VALE_PATH
+
+    return f"""
 rule dafny
     command = {DAFNY_PATH} /compile:0 /noNLarith /timeLimit:20 /vcsCores:2 $in && touch $out
 
@@ -17,7 +26,7 @@ rule dafny-nl
     command = {DAFNY_PATH} /compile:0 /timeLimit:20 /vcsCores:2 $in && touch $out
 
 rule vale
-    command = {VALE_PATH} -dafnyText -in $in -out $out
+    command = {vale} -dafnyText -in $in -out $out
 
 rule dd-gen
     command = python3 build.py dd-gen $in $out
@@ -107,23 +116,25 @@ def get_o_path(asm_path):
 ## separate command: setup
 
 def setup_tools():
+    os_type = platform.system()
+
     # ninja
     version = subprocess_run("ninja --version")
-    if version != "1.10.1":
-        print("[WARN] ninja not found or uexpected version: " + version)
+    if not version.startswith("1.10."):
+        print("[WARN] ninja not found or unexpected version.  Expected 1.10.*, found: " + version)
     # dotnet
     version = subprocess_run("dotnet --list-sdks")
     if "5.0" not in version:
-        print("[WARN] dotnet not found or uexpected version: " + version)
+        print("[WARN] dotnet not found or unexpected version. Expected 5.0, found: " + version)
     else:
-        print("[INFO] dotnet version: " + version)
+        print("[INFO] Found dotnet version: " + version)
 
     # nuget
     version = subprocess_run("nuget help | grep Version")
     if "5.5" not in version:
-        print("[WARN] nuget not found or uexpected version: " + version)
+        print("[WARN] nuget not found or unexpected version.  Expected 5.5, found: " + version)
     else:
-        print("[INFO] nuget version: " + version)
+        print("[INFO] Found nuget version: " + version)
 
     path = subprocess_run("which otbn-as")
 
@@ -140,7 +151,7 @@ def setup_tools():
         print("[INFO] otbn-ld found")
 
     while 1:
-        print("confrim dependecies are installed [y/n] ", end='')
+        print("confirm dependecies are installed [y/n] ", end='')
         choice = input().lower()
         if choice == "n":
             return
@@ -150,18 +161,19 @@ def setup_tools():
     if not os.path.exists(TOOLS_DIR):
         os.mkdir(TOOLS_DIR)
 
+    dafny_zip = DAFNY_ZIP_LINUX if os_type == "Linux" else DAFNY_ZIP_MACOS
     if os.path.exists(DAFNY_PATH):
         print("[INFO] dafny binary already exists")
     else:
-        os.system("wget https://github.com/dafny-lang/dafny/releases/download/v3.0.0/dafny-3.0.0-x64-ubuntu-16.04.zip")
-        os.system(f"unzip dafny-3.0.0-x64-ubuntu-16.04.zip -d {TOOLS_DIR}")
-        os.system(f"rm dafny-3.0.0-x64-ubuntu-16.04.zip")
+        os.system(f"wget https://github.com/dafny-lang/dafny/releases/download/v3.0.0/{dafny_zip}")
+        os.system(f"unzip {dafny_zip} -d {TOOLS_DIR}")
+        os.system(f"rm {dafny_zip}")
 
     if os.path.exists(VALE_PATH):
         print("[INFO] vale binary already exists")
     else:
         os.system("cd tools && git clone git@github.com:project-everest/vale.git")
-        os.system("cd tools/vale && git checkout otbn-custom && ./run_scons.sh")
+        os.system("cd tools/vale && git checkout otbn-custom && bash ./run_scons.sh")
         os.system("mv tools/vale/bin/vale.exe tools/vale/bin/vale")
 
     if os.path.exists(DAFNY_LIB_DIR):
@@ -320,7 +332,7 @@ class Generator():
                 f.write(line + "\n")
 
     def __init__(self):
-        self.content = [rules]
+        self.content = [rules()]
         # collect none generated .dfy first
         self.dfy_files = get_dfy_files(False)
 
