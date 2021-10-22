@@ -19,15 +19,17 @@
 
 We assume the following packages are installed:
 
-`ninja`
+`ninja` (1.10.+)
 
 [`dotnet`](https://dotnet.microsoft.com/download) 
 
 [`nuget`](https://www.nuget.org/downloads)
 
-`otbn-as`
+We also assume some otbn tools are available:
 
-`otbn-ld`
+[`otbn-as`](https://github.com/lowRISC/opentitan/tree/master/hw/ip/otbn/util)
+
+[`otbn-ld`](https://github.com/lowRISC/opentitan/tree/master/hw/ip/otbn/util)
 
 The setup script will install:
 
