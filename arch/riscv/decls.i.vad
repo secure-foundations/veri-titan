@@ -213,7 +213,7 @@ procedure lw_iter(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: 
         // mem location = src + sign-extended immediate
         dst == old(mem[iter.base_addr][iter.index]);
 {
-    lw(dst, src1, src2);
+    assume false;
 }
 
 procedure lw_next(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
