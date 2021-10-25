@@ -135,12 +135,12 @@ procedure sub_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
 
         decreases loop_ctr;
     {
-        lw(x14, x10, 0, iter_a');
+        lw_iter(x14, x10, 0, iter_a');
 
         let iter_a_next := lw_next_iter(iter_a);
         // load mem from x10 to x14 (x14 == a[i])
 
-        let iter_n_next := lw_safe(x13, x12, 0, iter_n); 
+        let iter_n_next := lw_next(x13, x12, 0, iter_n); 
         // load mem from x12 into x13 (x13 == n[i])
         addi(x12, x12, 4); // increment n pointer
 

@@ -180,8 +180,6 @@ lemma {:induction A, i} cmp_sufficient_lemma(A: seq<uint32>, B: seq<uint32>, i: 
         assert result == 0 ==> ToNatRight(a) >= ToNatRight(n);
       }
     }
-
-    // assume false;
   }
 
 }
