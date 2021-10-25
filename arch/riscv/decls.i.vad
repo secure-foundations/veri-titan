@@ -188,7 +188,6 @@ function int32_lt(x: int32, y: int32): uint32 extern;
 // --------------------------------------------------------------
     
 // load instructions
-
 procedure lw_stack(inout dst: reg32, in src2: imm32, ghost index: nat)
     {:instruction Ins32(RV_LW(dst, GPR(2), src2))}
     reads

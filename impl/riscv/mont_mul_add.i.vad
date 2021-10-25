@@ -132,7 +132,6 @@ procedure mont_mul_add(ghost d0inv: uint32, ghost iter_stack: iter_t, ghost iter
     // lw    s6,16(x2)
     // addi    x2,x2,48
     // j    1015e <sub_mod.constprop.0>
-
   }
 
 #verbatim
