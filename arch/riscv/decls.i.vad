@@ -188,16 +188,18 @@ function int32_lt(x: int32, y: int32): uint32 extern;
 // --------------------------------------------------------------
     
 // load instructions
-    
-procedure lw(inout dst: reg32, in src1: reg32, in src2: imm32)
-    {:instruction Ins32(RV_LW(dst, src1, src2))}
+procedure lw_stack(inout dst: reg32, in src2: imm32, ghost index: nat)
+    {:instruction Ins32(RV_LW(dst, GPR(2), src2))}
     reads
-        mem;
+        x2; mem;
     requires
         src2 < 4096; // 12-bit
+        4 * index == src2;
+        mem?[x2];
+        index < seq_len(mem[x2]);
     ensures
         // mem location = src + sign-extended immediate
-        dst == old(mem[src1 + src2][0]);
+        dst == old(mem[x2][index]);
 {
     assume false;
 }
@@ -426,6 +428,21 @@ procedure srai(inout dst: reg32, in src1: reg32, in src2: imm32)
     
 // store instructions
     
+procedure sw_stack(in rs2: reg32, in offset: imm32, inline index: nat)
+    modifies
+    mem;
+    reads x2;
+    requires
+        4 * index == offset;
+        mem?[x2];
+        index < seq_len(mem[x2]);
+        offset < 4096;
+    ensures
+        mem == old(mem[x2 := mem[x2][index := rs2]]);
+        {
+            assume false;
+        }
+
 // TODO: double-check semantics
 procedure sw(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: iter_t)
     returns (ghost next_iter: iter_t)

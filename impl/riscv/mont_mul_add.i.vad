@@ -6,14 +6,14 @@ include "../../arch/riscv/decls.i.dfy"
 module mont_mul_add {
 
 import opened bv_ops
-import opened rsa_ops
+// import opened rsa_ops
 
 import opened rv_machine
 import opened rv_decls
 import opened rv_vale
 
-import opened BASE_32_Seq
-import opened Power
+// import opened BASE_32_Seq
+// import opened Power
 
 #endverbatim
 
@@ -40,91 +40,98 @@ import opened Power
 //     sub_mod(n, c);
 // }
     
-procedure mont_mul_add(ghost d0inv: uint32, ghost iter_n: iter_t, ghost iter_a: iter_t, ghost iter_b: iter_t, ghost iter_c: iter_t)
+procedure mont_mul_add(ghost d0inv: uint32, ghost iter_stack: iter_t, ghost iter_a: iter_t, ghost iter_b: iter_t, ghost iter_c: iter_t)
     returns (ghost iter_c' : iter_t)
-    requires
-    reads
-    modifies
-    ensures
-  {
-	// addi sp,sp,-48
-	// sw	s6,16(sp)
-	// mv	s6,a1
-	// sw	s7,12(sp)
-	// lw	a1,0(a3)
-	// mv	s7,a2
-    // lw	a2,0(s6)
-	// sw	s5,20(sp)
-	// mv	s5,a0
-	// mv	a0,s7
-	// sw	ra,44(sp)
-	// sw	s0,40(sp)
-	// sw	s1,36(sp)
-	// sw	s2,32(sp)
-	// sw	s3,28(sp)
-	// sw	s4,24(sp)
-	// sw	s8,8(sp)
-	// mv	s4,a3
-	// jal	101a0 <mula32>
-    // mul	s5,a0,s5
-	// lui	s8,0x11
-    // addi s8,s8,1560 # 11618 <n>
-	// mv	s0,a1
-    // lw	a1,0(s8)
-	// mv	a2,a0
-    // addi s2,s8,4
-	// addi s4,s4,4
-	// mv	s3,s6
-    // addis8,s8,384
-	// mv	a0,s5
-	// jal	101a0 <mula32>
-	// mv	s1,a1
-    // lw	a2,4(s3)
-    // lw	a1,0(s4)
-	// mv	a3,s0
-	// mv	a0,s7
-	// jal	101b4 <mulaa32>
-	// mv	s0,a1
-    // lw	a1,0(s2)
-	// mv	a2,a0
-	// mv	a3,s1
-	// mv	a0,s5
-	// jal	101b4 <mulaa32>
-    // sw	a0,0(s3)
-	// addi	s2,s2,4
-	// mv	s1,a1
-	// addi	s4,s4,4
-	// addi	s3,s3,4
-    // bne	s8,s2,1021c <mont_mul_add.constprop.0+0x4c>
-	// add	s0,s0,a1
-    // sw	s0,380(s6)
-    // bltu	s0,a1,1026a <mont_mul_add.constprop.0+0x9a>
-	// lw	ra,44(sp)
-	// lw	s0,40(sp)
-	// lw	s1,36(sp)
-	// lw	s2,32(sp)
-	// lw	s3,28(sp)
-	// lw	s4,24(sp)
-	// lw	s5,20(sp)
-	// lw	s6,16(sp)
-	// lw	s7,12(sp)
-	// lw	s8,8(sp)
-	// addi	sp,sp,48
-	// ret
-	// lw	s0,40(sp)
-	// lw	ra,44(sp)
-	// lw	s1,36(sp)
-	// lw	s2,32(sp)
-	// lw	s3,28(sp)
-	// lw	s4,24(sp)
-	// lw	s5,20(sp)
-	// lw	s7,12(sp)
-	// lw	s8,8(sp)
-	// mv	a0,s6
-	// lw	s6,16(sp)
-	// addi	sp,sp,48
-	// j	1015e <sub_mod.constprop.0>
+    requires x2 > 48;
+    requires iter_safe(iter_stack, mem, x2-48);
+    requires seq_len(iter_stack.buff) == 12;
+    requires iter_stack.index == 0;
+    // requires iter_stack.buff[2] == 123;
 
+    modifies x2; x22; mem;
+    // , mem
+    // ensures
+  {
+    let sp := x2;
+    addi(x2, x2, (-48));
+
+    sw_stack(x22, 16, 4);
+
+    // mv    s6,a1
+    // sw    s7,12(x2)
+    // lw    a1,0(a3)
+    // mv    s7,a2
+    // lw    a2,0(s6)
+    // sw    s5,20(x2)
+    // mv    s5,a0
+    // mv    a0,s7
+    // sw    ra,44(x2)
+    // sw    s0,40(x2)
+    // sw    s1,36(x2)
+    // sw    s2,32(x2)
+    // sw    s3,28(x2)
+    // sw    s4,24(x2)
+    // sw    s8,8(x2)
+    // mv    s4,a3
+    // jal    101a0 <mula32>
+    // mul    s5,a0,s5
+    // lui    s8,0x11
+    // addi s8,s8,1560 # 11618 <n>
+    // mv    s0,a1
+    // lw    a1,0(s8)
+    // mv    a2,a0
+    // addi s2,s8,4
+    // addi s4,s4,4
+    // mv    s3,s6
+    // addis8,s8,384
+    // mv    a0,s5
+    // jal    101a0 <mula32>
+    // mv    s1,a1
+    // lw    a2,4(s3)
+    // lw    a1,0(s4)
+    // mv    a3,s0
+    // mv    a0,s7
+    // jal    101b4 <mulaa32>
+    // mv    s0,a1
+    // lw    a1,0(s2)
+    // mv    a2,a0
+    // mv    a3,s1
+    // mv    a0,s5
+    // jal    101b4 <mulaa32>
+    // sw    a0,0(s3)
+    // addi    s2,s2,4
+    // mv    s1,a1
+    // addi    s4,s4,4
+    // addi    s3,s3,4
+    // bne    s8,s2,1021c <mont_mul_add.constprop.0+0x4c>
+    // add    s0,s0,a1
+    // sw    s0,380(s6)
+    // bltu    s0,a1,1026a <mont_mul_add.constprop.0+0x9a>
+    // lw    ra,44(x2)
+    // lw    s0,40(x2)
+    // lw    s1,36(x2)
+    // lw    s2,32(x2)
+    // lw    s3,28(x2)
+    // lw    s4,24(x2)
+    // lw    s5,20(x2)
+    // lw    s6,16(x2)
+    // lw    s7,12(x2)
+    // lw    s8,8(x2)
+    // addi    x2,x2,48
+    // ret
+    // lw    s0,40(x2)
+    // lw    ra,44(x2)
+    // lw    s1,36(x2)
+    // lw    s2,32(x2)
+    // lw    s3,28(x2)
+    // lw    s4,24(x2)
+    // lw    s5,20(x2)
+    // lw    s7,12(x2)
+    // lw    s8,8(x2)
+    // mv    a0,s6
+    // lw    s6,16(x2)
+    // addi    x2,x2,48
+    // j    1015e <sub_mod.constprop.0>
   }
 
 #verbatim
