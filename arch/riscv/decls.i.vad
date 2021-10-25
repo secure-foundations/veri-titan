@@ -189,7 +189,20 @@ function int32_lt(x: int32, y: int32): uint32 extern;
     
 // load instructions
     
-procedure lw(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
+procedure lw(inout dst: reg32, in src1: reg32, in src2: imm32)
+    {:instruction Ins32(RV_LW(dst, src1, src2))}
+    reads
+        mem;
+    requires
+        src2 < 4096; // 12-bit
+    ensures
+        // mem location = src + sign-extended immediate
+        dst == old(mem[src1 + src2][0]);
+{
+    assume false;
+}
+
+procedure lw_iter(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
     {:instruction Ins32(RV_LW(dst, src1, src2))}
     reads
         mem;
@@ -203,7 +216,7 @@ procedure lw(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_
     assume false;
 }
 
-procedure lw_safe(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
+procedure lw_next(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
     returns (ghost next_iter: iter_t)
     reads
         mem;
@@ -211,13 +224,12 @@ procedure lw_safe(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: 
         src2 < 4096; // 12-bit
         iter_safe(iter, mem, src1 + src2);
     ensures
-        // mem location = src + sign-extended immediate
         dst == old(mem[iter.base_addr][iter.index]);
-        iter_inv(next_iter, mem, old(src1) + old(src2) + 4);
         next_iter == lw_next_iter(iter);
+        iter_inv(next_iter, mem, old(src1) + old(src2) + 4);
 {
-    next_iter := iter.(index := iter.index + 1);
-    lw(dst, src1, src2, iter);
+    next_iter := lw_next_iter(iter);
+    lw_iter(dst, src1, src2, iter);
 }
 
 procedure lw_prev(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
@@ -228,7 +240,6 @@ procedure lw_prev(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: 
         src2 < 4096; // 12-bit
         iter_safe(iter, mem, src1 + src2);
     ensures
-        // mem location = src + sign-extended immediate
         dst == old(mem[iter.base_addr][iter.index]);
         prev_iter == lw_prev_iter(iter);
         old(src1) + old(src2) != iter.base_addr
@@ -236,7 +247,7 @@ procedure lw_prev(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: 
         iter_inv(prev_iter, mem, old(src1) + old(src2) - 4);
 {
     prev_iter := lw_prev_iter(iter);
-    lw(dst, src1, src2, iter);
+    lw_iter(dst, src1, src2, iter);
 }
 
 // procedure lh(inout dst: reg32, in src1: reg32, in src2: imm32)

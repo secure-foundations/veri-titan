@@ -1,0 +1,132 @@
+include "../../arch/riscv/decls.i.vad"
+
+#verbatim
+include "../../arch/riscv/decls.i.dfy"
+
+module mont_mul_add {
+
+import opened bv_ops
+import opened rsa_ops
+
+import opened rv_machine
+import opened rv_decls
+import opened rv_vale
+
+import opened BASE_32_Seq
+import opened Power
+
+#endverbatim
+
+// /**
+//  * Montgomery c[] += a * b[] / R % mod
+//  */
+// static void mont_mul_add(const uint32_t d0inv, const uint32_t *n,
+//        uint32_t *c,
+//        const uint32_t a,
+//        const uint32_t *b)
+// {
+//   uint64_t A = mula32(a, b[0], c[0]);
+//   uint32_t d0 = (uint32_t)A * d0inv;
+//   uint64_t B = mula32(d0, n[0], (uint32_t)A);
+//   uint32_t i;
+//   for (i = 1; i < RSANUMWORDS; ++i) {
+//     A = mulaa32(a, b[i], c[i], A >> 32);
+//     B = mulaa32(d0, n[i], (uint32_t)A, B >> 32);
+//     c[i - 1] = (uint32_t)B;
+//   }
+//   A = (A >> 32) + (B >> 32);
+//   c[i - 1] = (uint32_t)A;
+//   if (A >> 32)
+//     sub_mod(n, c);
+// }
+    
+procedure mont_mul_add(ghost d0inv: uint32, ghost iter_n: iter_t, ghost iter_a: iter_t, ghost iter_b: iter_t, ghost iter_c: iter_t)
+    returns (ghost iter_c' : iter_t)
+    requires
+    reads
+    modifies
+    ensures
+  {
+	// addi sp,sp,-48
+	// sw	s6,16(sp)
+	// mv	s6,a1
+	// sw	s7,12(sp)
+	// lw	a1,0(a3)
+	// mv	s7,a2
+    // lw	a2,0(s6)
+	// sw	s5,20(sp)
+	// mv	s5,a0
+	// mv	a0,s7
+	// sw	ra,44(sp)
+	// sw	s0,40(sp)
+	// sw	s1,36(sp)
+	// sw	s2,32(sp)
+	// sw	s3,28(sp)
+	// sw	s4,24(sp)
+	// sw	s8,8(sp)
+	// mv	s4,a3
+	// jal	101a0 <mula32>
+    // mul	s5,a0,s5
+	// lui	s8,0x11
+    // addi s8,s8,1560 # 11618 <n>
+	// mv	s0,a1
+    // lw	a1,0(s8)
+	// mv	a2,a0
+    // addi s2,s8,4
+	// addi s4,s4,4
+	// mv	s3,s6
+    // addis8,s8,384
+	// mv	a0,s5
+	// jal	101a0 <mula32>
+	// mv	s1,a1
+    // lw	a2,4(s3)
+    // lw	a1,0(s4)
+	// mv	a3,s0
+	// mv	a0,s7
+	// jal	101b4 <mulaa32>
+	// mv	s0,a1
+    // lw	a1,0(s2)
+	// mv	a2,a0
+	// mv	a3,s1
+	// mv	a0,s5
+	// jal	101b4 <mulaa32>
+    // sw	a0,0(s3)
+	// addi	s2,s2,4
+	// mv	s1,a1
+	// addi	s4,s4,4
+	// addi	s3,s3,4
+    // bne	s8,s2,1021c <mont_mul_add.constprop.0+0x4c>
+	// add	s0,s0,a1
+    // sw	s0,380(s6)
+    // bltu	s0,a1,1026a <mont_mul_add.constprop.0+0x9a>
+	// lw	ra,44(sp)
+	// lw	s0,40(sp)
+	// lw	s1,36(sp)
+	// lw	s2,32(sp)
+	// lw	s3,28(sp)
+	// lw	s4,24(sp)
+	// lw	s5,20(sp)
+	// lw	s6,16(sp)
+	// lw	s7,12(sp)
+	// lw	s8,8(sp)
+	// addi	sp,sp,48
+	// ret
+	// lw	s0,40(sp)
+	// lw	ra,44(sp)
+	// lw	s1,36(sp)
+	// lw	s2,32(sp)
+	// lw	s3,28(sp)
+	// lw	s4,24(sp)
+	// lw	s5,20(sp)
+	// lw	s7,12(sp)
+	// lw	s8,8(sp)
+	// mv	a0,s6
+	// lw	s6,16(sp)
+	// addi	sp,sp,48
+	// j	1015e <sub_mod.constprop.0>
+
+  }
+
+#verbatim
+}
+#endverbatim
