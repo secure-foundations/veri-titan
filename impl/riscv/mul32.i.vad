@@ -4,7 +4,7 @@ include "../../arch/riscv/decls.i.vad"
 include "../../arch/riscv/decls.i.dfy"
 include "../../../impl/riscv/mul32_lemmas.i.dfy"
 
-module mul256 {
+module mul32 {
 
 import opened bv_ops
 import opened rsa_ops

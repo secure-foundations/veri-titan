@@ -1,7 +1,9 @@
 include "../../arch/riscv/decls.i.vad"
+include "mul32.i.vad"
 
 #verbatim
 include "../../arch/riscv/decls.i.dfy"
+include "../../impl/riscv/mul32.i.dfy"
 
 module mont_mul_add {
 
@@ -12,8 +14,7 @@ import opened rv_machine
 import opened rv_decls
 import opened rv_vale
 
-// import opened BASE_32_Seq
-// import opened Power
+import opened mul32
 
 #endverbatim
 
@@ -40,58 +41,147 @@ import opened rv_vale
 //     sub_mod(n, c);
 // }
     
-procedure mont_mul_add(ghost d0inv: uint32, ghost iter_stack: iter_t, ghost iter_a: iter_t, ghost iter_b: iter_t, ghost iter_c: iter_t)
+procedure mont_mul_add(ghost d0inv: uint32, ghost iter_stack: iter_t, ghost iter_a: iter_t, ghost iter_b: iter_t, ghost iter_c: iter_t, ghost iter_n: iter_t)
     returns (ghost iter_c' : iter_t)
-    requires x2 > 48;
-    requires iter_safe(iter_stack, mem, x2-48);
+    lets sp @= x2; // stack pointer
+         s0 @= x16; s1 @= x17;
+         s2 @= x18; s3 @= x19; s4 @= x20; s5 @= x21; s6 @= x22;
+         s7 @= x23; s8 @= x24; // saved registers
+         a0 @= x10; a1 @= x11; a2 @= x12; a3 @= x13; // fn args and return values
+         ra @= x1; //return addr
+    requires sp > 48;
+    requires iter_safe(iter_stack, mem, sp-48);
     requires seq_len(iter_stack.buff) == 12;
     requires iter_stack.index == 0;
-    // requires iter_stack.buff[2] == 123;
 
-    modifies x2; x22; mem;
-    // , mem
+    modifies sp; s0; s1; s2; s3; s4; s5; s6; s7; s8; a0; a1; a2; a3;
+             x14; x15;
+             ra; mem;
     // ensures
   {
-    let sp := x2;
-    addi(x2, x2, (-48));
+    
+    ghost var iter_n := iter_n;
+    ghost var iter_a := iter_a;
+    ghost var iter_b := iter_b;
+    ghost var iter_c := iter_c;
+    
+    // starting values
+    // a0 = d0inv
+    // a1 = pointer to c
+    // a2 = a
+    // a3 = pointer to b
 
-    sw_stack(x22, 16, 4);
+    // sp to start of stack
+    addi(sp, sp, (-48));
 
-    // mv    s6,a1
-    // sw    s7,12(x2)
-    // lw    a1,0(a3)
-    // mv    s7,a2
-    // lw    a2,0(s6)
-    // sw    s5,20(x2)
-    // mv    s5,a0
-    // mv    a0,s7
-    // sw    ra,44(x2)
-    // sw    s0,40(x2)
-    // sw    s1,36(x2)
-    // sw    s2,32(x2)
-    // sw    s3,28(x2)
-    // sw    s4,24(x2)
-    // sw    s8,8(x2)
-    // mv    s4,a3
-    // jal    101a0 <mula32>
-    // mul    s5,a0,s5
-    // lui    s8,0x11
-    // addi s8,s8,1560 # 11618 <n>
-    // mv    s0,a1
-    // lw    a1,0(s8)
-    // mv    a2,a0
-    // addi s2,s8,4
-    // addi s4,s4,4
-    // mv    s3,s6
-    // addis8,s8,384
-    // mv    a0,s5
-    // jal    101a0 <mula32>
-    // mv    s1,a1
-    // lw    a2,4(s3)
-    // lw    a1,0(s4)
-    // mv    a3,s0
-    // mv    a0,s7
-    // jal    101b4 <mulaa32>
+    // store s6 to sp[4]
+    sw_stack(s6, 16, 4);
+
+    // s6 <- a1
+    mv(s6, a1);
+
+    // store store s7 sp[3]
+    sw_stack(s7, 12, 3);
+
+    // a1 <- a3 = b[0]
+    lw_iter(a1, a3, 0, iter_b);
+
+    //s7 <- a2 = "a"
+    mv(s7, a2);
+
+    // a2 <- original a1 = c[0]
+    lw_iter(a2, s6, 0, iter_c);
+
+    // store s5 to sp+20
+    sw_stack(s5, 20, 5);
+
+    // s5 <- a0 = d0inv
+    mv(s5, a0);
+
+    // a0 <- original a2 == "a"
+    mv(a0, s7);
+
+    sw_stack(ra, 44, 11);
+    sw_stack(s0, 40, 10);
+    sw_stack(s1, 36, 9);
+    sw_stack(s2, 32, 8);
+    sw_stack(s3, 28, 7);
+    sw_stack(s4, 24, 6);
+    sw_stack(s8, 8, 2);
+
+    // s4 <- pointer to b
+    mv(s4, a3);
+    
+    // ** before mula32 call:
+    //      sp[2..10] = s8, s7, ..., s10
+    //      sp[11] = ra
+
+    //      a0 = a, a1 = b[0], a2 = c[0]
+    //      s6 = pointer to c
+    //      s5 = d0inv
+    //      s4 = pointer to b
+    //      s7 = a
+
+    // a0(lh), a1(uh) = A == a * b[0] + c[0]
+    mula32();
+
+    // s5 <- A(lh) * d0inv
+    mul(s5, a0, s5);
+
+    // s8 <- pointer to n (71192)
+    lui(s8, 0x11);
+    addi(s8, s8, 1560);
+
+    // s0 <- A(uh)
+    mv(s0, a1);
+    // a1 <- n[0]
+    lw_iter(a1, s8, 0, iter_n);
+    // a2 <- A(lh)
+    mv(a2, a0);
+
+    // s2 <- pointer to n[1]
+    addi(s2, s8, 4);
+    // s4 <- pointer to b[1]
+    addi(s4, s4, 4);
+
+    // s3 <- pointer to c
+    mv(s3, s6);
+
+    // s8 <- pointer to end of n
+    addi(s8, s8, 384);
+    
+    // a0 = d0
+    mv(a0, s5);
+    
+    // a0(lh), a1(uh) = B == d0 * n[0] + A(lh)
+    mula32();
+
+    // s1 <- B(uh)
+    mv(s1, a1);
+
+    // a2 <- c[1]
+    lw_iter(a2, s3, 4, iter_c);
+    
+    // a1 <- b[1]
+    lw_iter(a1, s4, 0, iter_b);
+
+    // a3 <- A(lh)
+    mv(a3, s0);
+
+    // a0 <- a
+    mv(a0, s7);
+
+    // registers going into loop:
+    // a0 = a, a1 = b[1], a2 = c[1], a3 = A(lh)
+    // s0 = A(uh)
+    // s1 = B(uh)
+    // s2 = pointer to n[1]
+    // s3 = pointer to c[1]
+    // s4 = pointer to b[1]
+    // s5 = d0;
+    // s8 = pointer to end of n
+    mulaa32();
+
     // mv    s0,a1
     // lw    a1,0(s2)
     // mv    a2,a0
@@ -107,30 +197,30 @@ procedure mont_mul_add(ghost d0inv: uint32, ghost iter_stack: iter_t, ghost iter
     // add    s0,s0,a1
     // sw    s0,380(s6)
     // bltu    s0,a1,1026a <mont_mul_add.constprop.0+0x9a>
-    // lw    ra,44(x2)
-    // lw    s0,40(x2)
-    // lw    s1,36(x2)
-    // lw    s2,32(x2)
-    // lw    s3,28(x2)
-    // lw    s4,24(x2)
-    // lw    s5,20(x2)
-    // lw    s6,16(x2)
-    // lw    s7,12(x2)
-    // lw    s8,8(x2)
-    // addi    x2,x2,48
+    // lw    ra,44(sp)
+    // lw    s0,40(sp)
+    // lw    s1,36(sp)
+    // lw    s2,32(sp)
+    // lw    s3,28(sp)
+    // lw    s4,24(sp)
+    // lw    s5,20(sp)
+    // lw    s6,16(sp)
+    // lw    s7,12(sp)
+    // lw    s8,8(sp)
+    // addi    sp,sp,48
     // ret
-    // lw    s0,40(x2)
-    // lw    ra,44(x2)
-    // lw    s1,36(x2)
-    // lw    s2,32(x2)
-    // lw    s3,28(x2)
-    // lw    s4,24(x2)
-    // lw    s5,20(x2)
-    // lw    s7,12(x2)
-    // lw    s8,8(x2)
+    // lw    s0,40(sp)
+    // lw    ra,44(sp)
+    // lw    s1,36(sp)
+    // lw    s2,32(sp)
+    // lw    s3,28(sp)
+    // lw    s4,24(sp)
+    // lw    s5,20(sp)
+    // lw    s7,12(sp)
+    // lw    s8,8(sp)
     // mv    a0,s6
-    // lw    s6,16(x2)
-    // addi    x2,x2,48
+    // lw    s6,16(sp)
+    // addi    sp,sp,48
     // j    1015e <sub_mod.constprop.0>
   }
 
