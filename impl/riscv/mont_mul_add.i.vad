@@ -117,7 +117,7 @@ procedure mont_mul_add(ghost d0inv: uint32, ghost iter_stack: iter_t, ghost iter
     //      sp[11] = ra
 
     //      a0 = a, a1 = b[0], a2 = c[0]
-    //      s6 = pointer to c
+    //      s6 = pointer to (beginning of) c
     //      s5 = d0inv
     //      s4 = pointer to b
     //      s7 = a
@@ -165,63 +165,117 @@ procedure mont_mul_add(ghost d0inv: uint32, ghost iter_stack: iter_t, ghost iter
     // a1 <- b[1]
     lw_iter(a1, s4, 0, iter_b);
 
-    // a3 <- A(lh)
+    // a3 <- A(uh)
     mv(a3, s0);
 
     // a0 <- a
     mv(a0, s7);
 
     // registers going into loop:
-    // a0 = a, a1 = b[1], a2 = c[1], a3 = A(lh)
+    // a0 = a, a1 = b[1], a2 = c[1], a3 = A(uh)
     // s0 = A(uh)
     // s1 = B(uh)
     // s2 = pointer to n[1]
-    // s3 = pointer to c[1]
+    // s3 = pointer to c[0]
     // s4 = pointer to b[1]
     // s5 = d0;
     // s8 = pointer to end of n
+
+    // a0(lh), a1(uh) = A == a * b[i] + c[i] + A(uh)
     mulaa32();
 
-    // mv    s0,a1
-    // lw    a1,0(s2)
-    // mv    a2,a0
-    // mv    a3,s1
-    // mv    a0,s5
-    // jal    101b4 <mulaa32>
-    // sw    a0,0(s3)
-    // addi    s2,s2,4
-    // mv    s1,a1
-    // addi    s4,s4,4
-    // addi    s3,s3,4
-    // bne    s8,s2,1021c <mont_mul_add.constprop.0+0x4c>
-    // add    s0,s0,a1
-    // sw    s0,380(s6)
-    // bltu    s0,a1,1026a <mont_mul_add.constprop.0+0x9a>
-    // lw    ra,44(sp)
-    // lw    s0,40(sp)
-    // lw    s1,36(sp)
-    // lw    s2,32(sp)
-    // lw    s3,28(sp)
-    // lw    s4,24(sp)
-    // lw    s5,20(sp)
-    // lw    s6,16(sp)
-    // lw    s7,12(sp)
-    // lw    s8,8(sp)
-    // addi    sp,sp,48
+    // s0 <- A(uh)
+    mv(s0, a1);
+
+    // a1 <- n[i]
+    lw_iter(a1, s2, 0, iter_n);
+
+    // a2 <- A(lh)
+    mv(a2, a0);
+
+    // a3 <- B(uh)
+    mv(a3, s1);
+
+    // a0 <- d0
+    mv(a0, s5);
+
+    // a0(lh), a1(uh) = B == d0 * n[i] + A(lh) + B(uh)
+    mulaa32();
+
+    // c[i-1] <- B(lh) -- store to c
+    sw(a0, s3, 0, iter_c);
+
+    // s2 <- n[i+1] -- increment pointer to n
+    addi(s2, s2, 4);
+    
+    // s1 <- B(uh)
+    mv(s1, a1);
+    
+    // s4 <- b[i+1] -- increment pointer to b
+    addi(s4, s4, 4);
+    // s3 <- c[i] -- increment pointer to c
+    addi(s3, s3, 4);
+
+    // loop if s8 != s2 (if n[i+1] not at end of n)
+    // bne    s8, s2, mont_mul_add.constprop.0+0x4c> <-- mulaa32();
+
+    // end of loop:
+    // c[0..i-1] computed
+
+    // s1 = B(uh)
+    // s2 = end of n
+    // s3 = last spot of c
+    // s4 = end of b
+
+    // s0 <- lower half of A(uh) + B(uh) == A'
+    add(s0, s0, a1);
+
+    // c[i] <- s0 -- store to last spot of c
+    sw(s0, s6, 380, iter_c);
+
+    // true when A(uh) > 0, causing lh(A(uh + B(uh) to overflow
+    // lh(A(uh + B(uh)) < B(uh) <-- happens when A'(uh) is non-empty
+    // TODO: if/else?
+    // bltu    s0, a1, 1026a <mont_mul_add.constprop.0+0x9a>
+
+    // A'(lh) <= 0 case:
+    // recover stack
+    lw_stack(ra, 44, 11);
+    lw_stack(s0, 40, 10);
+    lw_stack(s1, 36, 9);
+    lw_stack(s2, 32, 8);
+    lw_stack(s3, 28, 7);
+    lw_stack(s4, 24, 6);
+    lw_stack(s5, 20, 5);
+    lw_stack(s6, 16, 4);
+    lw_stack(s7, 12, 3);
+    lw_stack(s8, 8, 2);
+
+    // recover initial sp
+    addi(sp, sp, 48);
     // ret
-    // lw    s0,40(sp)
-    // lw    ra,44(sp)
-    // lw    s1,36(sp)
-    // lw    s2,32(sp)
-    // lw    s3,28(sp)
-    // lw    s4,24(sp)
-    // lw    s5,20(sp)
-    // lw    s7,12(sp)
-    // lw    s8,8(sp)
-    // mv    a0,s6
-    // lw    s6,16(sp)
-    // addi    sp,sp,48
-    // j    1015e <sub_mod.constprop.0>
+   
+    // A'(lh) > case:
+    lw_stack(s0, 40, 10);
+    lw_stack(ra, 44, 11);
+    lw_stack(s1, 36, 9);
+    lw_stack(s2, 32, 8);
+    lw_stack(s3, 28, 7);
+    lw_stack(s4, 24, 6);
+    lw_stack(s5, 20, 5);
+    lw_stack(s7, 12, 3);
+    lw_stack(s8, 8, 2);
+    
+    // a0 <- pointer to start of c
+    mv(a0, s6);
+
+    lw_stack(s6, 16, 4);
+
+    // recover initial sp
+    addi(sp, sp, 48);
+
+    // a0 = sub_mod(n, c) == 1 if c >= n else 0
+    sub_mod();
   }
 
 #verbatim
