@@ -13,6 +13,8 @@ module mul32_lemmas {
     import opened Seq
     import opened BASE_32_Seq
 
+    import Power
+
     lemma mulhu_bound(x: uint32, y: uint32)
       ensures uint32_mulhu(x, y) + 1 < BASE_32;
     {
@@ -68,12 +70,13 @@ module mul32_lemmas {
         x11: uint32,
         x15: uint32
         )
+    returns (A: uint64_view_t)
         requires
           && x10 == uint32_add(uint32_mul(a, b), c)
           && x15 == uint32_lt(x10, uint32_mul(a, b))
           && x11 == uint32_add(uint32_mulhu(a, b), x15)
-        ensures
-            ToNatRight([x10, x11]) == a * b + c;
+        ensures valid_uint64_view(A, x10, x11);
+        ensures A.full == ToNatRight([x10, x11]) == a * b + c;
     {
       var lh := uint32_mul(a, b);
       var uh := uint32_mulhu(a, b);
@@ -107,6 +110,22 @@ module mul32_lemmas {
         a * b + c;
       }
 
+      LemmaSeqNatBound([x10, x11]);
+      assert Power.Pow(BASE_32, 2) == BASE_64 by {
+        reveal Power.Pow();
+      }
+      var value := a * b + c;
+      
+      LemmaSeqLen2([x10, x11]);
+
+      assert x10 == uint64_lh(value) by {
+        reveal uint64_lh();
+      }
+      assert x11 == uint64_uh(value) by {
+        reveal uint64_uh();
+      } 
+
+      A := uint64_cons(x10, x11, value);
     }
 
     lemma mulaa32_correct_lemma(

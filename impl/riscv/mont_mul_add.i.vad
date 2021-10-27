@@ -54,14 +54,23 @@ procedure mont_mul_add(ghost d0inv: uint32, ghost iter_stack: iter_t, ghost iter
     requires seq_len(iter_stack.buff) == 12;
     requires iter_stack.index == 0;
 
+    requires iter_safe(iter_b, mem, a3);
+    requires seq_len(iter_b.buff) == 96;
+    requires iter_b.index == 0;
+
+    requires iter_safe(iter_c, mem, a1);
+    requires seq_len(iter_c.buff) == 96;
+    requires iter_b.index == 0;
+
     modifies sp; s0; s1; s2; s3; s4; s5; s6; s7; s8; a0; a1; a2; a3;
              x14; x15;
              ra; mem;
-    // ensures
+    ensures
+      s7 == old(s7);
   {
     
     ghost var iter_n := iter_n;
-    ghost var iter_a := iter_a;
+
     ghost var iter_b := iter_b;
     ghost var iter_c := iter_c;
     
@@ -79,20 +88,23 @@ procedure mont_mul_add(ghost d0inv: uint32, ghost iter_stack: iter_t, ghost iter
 
     // s6 <- a1
     mv(s6, a1);
+    assert iter_safe(iter_c, mem, s6);
 
-    // store store s7 sp[3]
+    // store s7 to sp[3]
     sw_stack(s7, 12, 3);
 
     // a1 <- a3 = b[0]
     lw_iter(a1, a3, 0, iter_b);
+    assert a1 == iter_b.buff[0];
 
     //s7 <- a2 = "a"
     mv(s7, a2);
 
     // a2 <- original a1 = c[0]
     lw_iter(a2, s6, 0, iter_c);
+    assert a2 == iter_c.buff[0];
 
-    // store s5 to sp+20
+    // store s5 to sp[5]
     sw_stack(s5, 20, 5);
 
     // s5 <- a0 = d0inv
@@ -122,8 +134,8 @@ procedure mont_mul_add(ghost d0inv: uint32, ghost iter_stack: iter_t, ghost iter
     //      s4 = pointer to b
     //      s7 = a
 
+    ghost var A := mula32();
     // a0(lh), a1(uh) = A == a * b[0] + c[0]
-    mula32();
 
     // s5 <- A(lh) * d0inv
     mul(s5, a0, s5);
@@ -203,7 +215,7 @@ procedure mont_mul_add(ghost d0inv: uint32, ghost iter_stack: iter_t, ghost iter
     mulaa32();
 
     // c[i-1] <- B(lh) -- store to c
-    sw(a0, s3, 0, iter_c);
+    let _ := sw(a0, s3, 0, iter_c);
 
     // s2 <- n[i+1] -- increment pointer to n
     addi(s2, s2, 4);
@@ -231,7 +243,7 @@ procedure mont_mul_add(ghost d0inv: uint32, ghost iter_stack: iter_t, ghost iter
     add(s0, s0, a1);
 
     // c[i] <- s0 -- store to last spot of c
-    sw(s0, s6, 380, iter_c);
+    let _ := sw(s0, s6, 380, iter_c);
 
     // true when A(uh) > 0, causing lh(A(uh + B(uh) to overflow
     // lh(A(uh + B(uh)) < B(uh) <-- happens when A'(uh) is non-empty
@@ -275,7 +287,7 @@ procedure mont_mul_add(ghost d0inv: uint32, ghost iter_stack: iter_t, ghost iter
     addi(sp, sp, 48);
 
     // a0 = sub_mod(n, c) == 1 if c >= n else 0
-    sub_mod();
+    // sub_mod();
   }
 
 #verbatim
