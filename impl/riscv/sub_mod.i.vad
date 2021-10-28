@@ -21,8 +21,6 @@ import opened Power
 
 #endverbatim
     
-// ghost procedure refine_int64_view(ghost lh: uint32, ghost uh: uint32, ghost full: int64) 
-// returns (ghost ref: int64_view_t)
 ghost procedure A_zero() returns (ghost ref: int64_view_t) extern;
 
 function Pow(b: int, e: nat): int extern;

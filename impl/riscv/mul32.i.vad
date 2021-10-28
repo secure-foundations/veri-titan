@@ -69,7 +69,7 @@ procedure mula32() returns (ghost A: uint64_view_t)
     modifies
         x10; x11; x15;
     ensures
-        // to_nat(seq(x10, x11)) == old(x11) * old(x10) + old(x12);
+        to_nat(seq(x10, x11)) == old(x11) * old(x10) + old(x12);
         valid_uint64_view(A, x10, x11);
 {
     ghost var a := x10;

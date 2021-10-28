@@ -183,8 +183,12 @@ function uint32_mulhu(x: uint32, y: uint32): uint32 extern;
 function int32_rs(x: int32, shift: nat): int32 extern;
 function int32_lt(x: int32, y: int32): uint32 extern;
 
-function uint64_uh(v: uint64):  uint32 extern;
-function uint64_lh(v: uint64):  uint32 extern;
+function uint64_uh(v: uint64) : uint32 extern;
+function uint64_lh(v: uint64) : uint32 extern;
+function operator(.lh) (value : uint64_view_t): uint32 extern;
+function operator(.uh) (value : uint64_view_t): uint32 extern;
+function operator(.full) (value : uint64_view_t): uint64 extern;
+
 // --------------------------------------------------------------
 // Base Integer Instructions
 // --------------------------------------------------------------
