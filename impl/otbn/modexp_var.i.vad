@@ -398,6 +398,7 @@ procedure modexp_var(
 
     returns (ghost out_iter: iter_t)
 
+    {:noInline}
     {:frame false}
 
     requires
