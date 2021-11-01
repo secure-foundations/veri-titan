@@ -26,7 +26,7 @@ module mont_mul_add_lemmas {
     reveal uint64_uh();
     r := refine_uint64_view(0, 0, 0);
   }
-
+  
   predicate mont_mul_add_loop_inv(
     A: uint64_view_t,
     B: uint64_view_t,

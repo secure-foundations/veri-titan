@@ -63,9 +63,9 @@ procedure mont_mul_add_loop(
     ghost B_prev: uint64_view_t,
     ghost iter_b: iter_t, ghost iter_c: iter_t, ghost iter_n: iter_t,
     ghost a: uint32, ghost d0: uint32, ghost i: nat)
-    lets s0 @= x16; s1 @= x17; s2 @= x18; s3 @= x19; s4 @= x20; s5 @= x21; s8 @= x24;
+    lets s0 @= x16; s1 @= x17; s2 @= x18; s3 @= x19; s4 @= x20; s5 @= x21; s7 @= x23; s8 @= x24;
          a0 @= x10; a1 @= x11; a2 @= x12; a3 @= x13;
-    modifies s0; s1; s2; s3; s4; s5; s8; a0; a1; a2; a3;
+    modifies s0; s1; s2; s3; s4; s5; s7; s8; a0; a1; a2; a3;
              x14; x15; mem;
 
     // ** registers going into loop:
@@ -90,10 +90,7 @@ procedure mont_mul_add_loop(
     requires seq_len(iter_c.buff) == 96;
     requires iter_safe(iter_c, mem, s3);
 
-    requires a0 == a;
-    requires a1 == iter_b.buff[1];
-    requires a2 == iter_c.buff[1];
-    requires a3 == A.uh;
+    requires s7 == a;
     
     requires s0 == A.uh;
     requires s1 == B.uh;
@@ -113,6 +110,8 @@ procedure mont_mul_add_loop(
     // ensures mont_mul_add_loop_inv(A, B, A_prev, B_prev, iter_n.buff, iter_b.buff, iter_c.buff, a, d0, i);
 {
 
+   ghost var A := A;
+   ghost var B := B;
    ghost var A_prev := A_prev;
    ghost var B_prev := B_prev;
     
@@ -122,22 +121,36 @@ procedure mont_mul_add_loop(
     
    ghost var i := i;
    assert i == 1;
-   assume false;
     
    while (s8 != s2)
-       invariant 0 < i < 96;
+       invariant 0 < i < 96; // not maintained
+
+       invariant seq_len(iter_n.buff) == 96;
+       invariant iter_inv(iter_n, mem, s2); //nm
+    
+       invariant seq_len(iter_b.buff) == 96;
+       invariant iter_inv(iter_b, mem, s4); //nm
+
+       invariant seq_len(iter_c.buff) == 96;
+       invariant iter_safe(iter_c, mem, s3); // nm
 
        invariant s2 == 71192 + 4 * i;
        invariant s8 == 71576;
+
+       invariant s5 == d0;
+       invariant s7 == a;
     
-       iter_n.index == iter_b.index;
-       iter_n.index == i;
-       iter_c.index == i-1;
+       invariant s0 == A.uh;
+       invariant s1 == B.uh;
     
-       invariant s2 == iter_n.buff[i];
-       invariant s4 == iter_b.buff[i];
-       invariant s3 == iter_c.buff[i-1];
-    
+       invariant iter_n.index == iter_b.index;
+       invariant iter_n.index == i;
+       invariant iter_c.index == i-1;
+
+       invariant s2 == iter_n.base_addr + 4 * iter_n.index;
+       invariant s3 == iter_c.base_addr + 4 * iter_c.index;
+       invariant s4 == iter_b.base_addr + 4 * iter_b.index;
+
        invariant mont_mul_add_loop_inv(A, B, A_prev, B_prev, iter_n.buff, iter_b.buff, iter_c.buff, a, d0, i);
 
        decreases s8 - s2;
@@ -145,14 +158,29 @@ procedure mont_mul_add_loop(
         A_prev := A;
         B_prev := B;
 
+        // a2 <- c[i]
+        lw_iter(a2, s3, 4, lw_next_iter(iter_c));
+        assert a2 == iter_c.buff[i];
+        
+        // a1 <- b[i]
+        lw_iter(a1, s4, 0, iter_b);
+        assert a1 == iter_b.buff[i];
+
+        // a3 <- A(uh)
+        mv(a3, s0);
+
+        // a0 <- a
+        mv(a0, s7);
+
         // a0(lh), a1(uh) = A == a * b[i] + c[i] + A_prev(uh)
-        let A := mulaa32();
+        A := mulaa32();
         assert a0 == A.lh;
         assert a1 == A.uh;
         assert A.full == a * iter_b.buff[i] + iter_c.buff[i] + A_prev.uh;
     
         // s0 <- A(uh)
         mv(s0, a1);
+        assert s0 == A.uh;
 
         // a1 <- n[i]
         lw_iter(a1, s2, 0, iter_n);
@@ -166,9 +194,13 @@ procedure mont_mul_add_loop(
 
         // a0 <- d0
         mv(a0, s5);
+    
+        assert a0 == d0;
+        assert a2 == A.lh;
+        assert a3 == B.uh;
 
         // a0(lh), a1(uh) = B == d0 * n[i] + A(lh) + B(uh)
-        let B := mulaa32();
+        B := mulaa32();
         assert a0 == B.lh;
         assert a1 == B.uh;
         assert B.full == d0 * iter_n.buff[i] + A.lh + B_prev.uh;
@@ -183,6 +215,7 @@ procedure mont_mul_add_loop(
 
         // s1 <- B(uh)
         mv(s1, a1);
+        assert s1 == B.uh;
 
         // s4 <- b[i+1] -- increment pointer to b
         addi(s4, s4, 4);
@@ -192,9 +225,12 @@ procedure mont_mul_add_loop(
         addi(s3, s3, 4);
         iter_c := lw_next_iter(iter_c);
         
-        i := i + 1;
         assert i < 96;
-
+        i := i + 1;
+    
+        assume iter_inv(iter_n, mem, s2);
+        assume iter_inv(iter_b, mem, s4);
+        assume iter_safe(iter_c, mem, s3);
     }
 }
     
@@ -357,29 +393,6 @@ procedure mont_mul_add(ghost d0inv: uint32, ghost iter_stack: iter_t, ghost iter
     // s1 <- B(uh)
     mv(s1, a1);
 
-    // a2 <- c[1]
-    lw_iter(a2, s3, 4, lw_next_iter(iter_c));
-    assert a2 == iter_c.buff[1];
-    
-    // a1 <- b[1]
-    lw_iter(a1, s4, 0, iter_b);
-    assert a1 == iter_b.buff[1];
-
-    // a3 <- A(uh)
-    mv(a3, s0);
-
-    // a0 <- a
-    mv(a0, s7);
-
-    // ** registers going into loop:
-    //       a0 = a, a1 = b[1], a2 = c[1], a3 = A(uh)
-    //       s0 = A(uh)
-    //       s1 = B(uh)
-    //       s2 = pointer to n[1]
-    //       s3 = pointer to c[0]
-    //       s4 = pointer to b[1]
-    //       s5 = d0;
-    //       s8 = pointer to end of n
     assert s2 == 71196;
     assert s3 == iter_c.base_addr;
     assert s4 == iter_b.base_addr + 4;
