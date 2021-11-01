@@ -305,6 +305,7 @@ module ot_machine {
         | Ins256(bn_ins: ins256)
         | Block(block: codes)
         | While(whileCond: whileCond, whileBody: code)
+        | Function(name: string, functionBody: codes)
         | Comment(com: string)
 
     datatype codes = 
@@ -699,6 +700,7 @@ module ot_machine {
                 case Ins256(ins) => eval_ins256(ins)
                 case Block(block) => eval_block(block)
                 case While(cond, body) => eval_while(body, eval_cond(cond))
+                case Function(name, body) => eval_block(body)
                 case Comment(com) => this
         }
 
