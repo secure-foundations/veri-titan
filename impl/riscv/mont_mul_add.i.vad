@@ -107,7 +107,7 @@ procedure mont_mul_add_loop(
     requires i == 1;
     requires mont_mul_add_loop_inv(A, B, A_prev, B_prev, iter_n.buff, iter_b.buff, iter_c.buff, a, d0, i);
 
-    // ensures mont_mul_add_loop_inv(A, B, A_prev, B_prev, iter_n.buff, iter_b.buff, iter_c.buff, a, d0, i);
+    ensures mont_mul_add_loop_inv(A, B, A_prev, B_prev, iter_n.buff, iter_b.buff, iter_c.buff, a, d0, i);
 {
 
    ghost var A := A;
@@ -122,17 +122,8 @@ procedure mont_mul_add_loop(
    ghost var i := i;
    assert i == 1;
     
-   while (s8 != s2)
-       invariant 0 < i < 96; // not maintained
-
-       invariant seq_len(iter_n.buff) == 96;
-       invariant iter_inv(iter_n, mem, s2); //nm
-    
-       invariant seq_len(iter_b.buff) == 96;
-       invariant iter_inv(iter_b, mem, s4); //nm
-
-       invariant seq_len(iter_c.buff) == 96;
-       invariant iter_safe(iter_c, mem, s3); // nm
+   while (s2 != s8)
+       invariant 0 < i <= 96; // not maintained?
 
        invariant s2 == 71192 + 4 * i;
        invariant s8 == 71576;
@@ -142,7 +133,7 @@ procedure mont_mul_add_loop(
     
        invariant s0 == A.uh;
        invariant s1 == B.uh;
-    
+
        invariant iter_n.index == iter_b.index;
        invariant iter_n.index == i;
        invariant iter_c.index == i-1;
@@ -150,6 +141,15 @@ procedure mont_mul_add_loop(
        invariant s2 == iter_n.base_addr + 4 * iter_n.index;
        invariant s3 == iter_c.base_addr + 4 * iter_c.index;
        invariant s4 == iter_b.base_addr + 4 * iter_b.index;
+
+       invariant seq_len(iter_n.buff) == 96;
+       invariant iter_inv(iter_n, mem, s2); //nm
+    
+       invariant seq_len(iter_b.buff) == 96;
+       invariant iter_inv(iter_b, mem, s4); //nm
+
+       invariant seq_len(iter_c.buff) == 96;
+       invariant iter_safe(iter_c, mem, s3); // nm
 
        invariant mont_mul_add_loop_inv(A, B, A_prev, B_prev, iter_n.buff, iter_b.buff, iter_c.buff, a, d0, i);
 
@@ -161,6 +161,7 @@ procedure mont_mul_add_loop(
         // a2 <- c[i]
         lw_iter(a2, s3, 4, lw_next_iter(iter_c));
         assert a2 == iter_c.buff[i];
+        assert iter_c.index == i-1;
         
         // a1 <- b[i]
         lw_iter(a1, s4, 0, iter_b);
@@ -206,7 +207,7 @@ procedure mont_mul_add_loop(
         assert B.full == d0 * iter_n.buff[i] + A.lh + B_prev.uh;
 
         // c[i-1] <- B(lh) -- store to c
-        iter_c := sw(a0, s3, 0, iter_c);
+        sw_iter(a0, s3, 0, iter_c);
         assert iter_c.buff[i-1] == B.lh;
     
         // s2 <- n[i+1] -- increment pointer to n
@@ -220,14 +221,16 @@ procedure mont_mul_add_loop(
         // s4 <- b[i+1] -- increment pointer to b
         addi(s4, s4, 4);
         iter_b := lw_next_iter(iter_b);
-
-        // s3 <- c[i] -- increment pointer to c
-        addi(s3, s3, 4);
-        iter_c := lw_next_iter(iter_c);
         
         assert i < 96;
         i := i + 1;
     
+        assert (s2 == s8 <==> i == 96);
+    
+        // s3 <- c[i] -- increment pointer to c
+        addi(s3, s3, 4);
+        iter_c := lw_next_iter(iter_c);
+
         assume iter_inv(iter_n, mem, s2);
         assume iter_inv(iter_b, mem, s4);
         assume iter_safe(iter_c, mem, s3);
@@ -419,7 +422,7 @@ procedure mont_mul_add(ghost d0inv: uint32, ghost iter_stack: iter_t, ghost iter
     add(s0, s0, a1);
 
     // c[i] <- s0 -- store to last spot of c
-    let _ := sw(s0, s6, 380, iter_c);
+    sw_iter(s0, s6, 380, iter_c);
 
     // true when A(uh) > 0, causing lh(A(uh + B(uh) to overflow
     // lh(A(uh + B(uh)) < B(uh) <-- happens when A'(uh) is non-empty

@@ -99,6 +99,12 @@ module rv_machine {
             iter.(index := iter.index - 1)
     }
 
+    function sw_iter(iter: iter_t, value: uint32): iter_t
+        requires iter.index < |iter.buff|
+    {
+        iter.(buff := iter.buff[iter.index := value])
+    }
+    
     function sw_next_iter(iter: iter_t, value: uint32): iter_t
         requires iter.index < |iter.buff|
     {

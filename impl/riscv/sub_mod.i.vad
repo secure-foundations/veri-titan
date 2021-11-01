@@ -165,7 +165,7 @@ procedure sub_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
         
         let carry_sub := x15;
 
-        let iter_a'_next := sw(x13, x10, 0, iter_a');
+        let iter_a'_next := sw_next(x13, x10, 0, iter_a');
 
         addi(x10, x10, 4); // increment a pointer
         sub(x15, x14, x15); // subtract underflow carry from upper half of A

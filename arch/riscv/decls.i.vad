@@ -449,8 +449,22 @@ procedure sw_stack(in rs2: reg32, in offset: imm32, inline index: nat)
             assume false;
         }
 
-// TODO: double-check semantics
-procedure sw(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: iter_t)
+procedure sw_iter(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: iter_t)
+    {:instruction Ins32(RV_SW(rs2, base, offset))}
+    modifies
+        mem;
+    requires
+        iter_safe(iter, mem, base + offset);
+        offset < 4096;
+    ensures
+        // store rs2 at mem[base + offset]
+        mem == old(mem[iter.base_addr := mem[iter.base_addr][iter.index := rs2]]);
+        iter_safe(iter, mem, base + offset);
+{
+    assume false;
+}
+
+procedure sw_next(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: iter_t)
     returns (ghost next_iter: iter_t)
     {:instruction Ins32(RV_SW(rs2, base, offset))}
     modifies
