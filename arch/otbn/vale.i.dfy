@@ -335,10 +335,14 @@ module ot_vale {
 
     predicate cTailIs(b: codes, t: codes) { b.va_CCons? && b.tl == t }
 
-    predicate va_require(b0: codes, c1: code, s0: va_state, sN: va_state)
+    predicate va_require(
+        complete_block: codes,
+        head_code: code,
+        s0: va_state,
+        sN: va_state)
     {
-        && cHeadIs(b0, c1)
-        && eval_code_lax(Block(b0), s0, sN)
+        && cHeadIs(complete_block, head_code)
+        && eval_code_lax(Block(complete_block), s0, sN)
         && valid_state_opaque(s0)
     }
 
@@ -368,13 +372,16 @@ module ot_vale {
 
     function method va_op_reg32_reg32_t(r: reg32_t): reg32_t { r }
     function method va_op_reg256_reg256_t(r :reg256_t): reg256_t { r }
+
     function method va_Block(block:codes): code { Block(block) }
     function method va_While(wcond: whileCond, wcode: code): code { While(wcond, wcode) }
+    function method va_Function(name: string, body: codes): code { Function(name, body) }
 
-    function method va_get_block(c: code): codes requires c.Block? { c.block }
+    function method va_get_block(c: code): codes requires c.Block? || c.Function? { 
+        if c.Block? then c.block else c.functionBody }
     function method va_get_whileCond(c: code): whileCond requires c.While? {c.whileCond }
     function method va_get_whileBody(c: code): code requires c.While? { c.whileBody }
-
+    
     lemma lemma_FailurePreservedByBlock(block: codes, s: state, r: state)
         requires r == s.eval_block(block);
         ensures !s.ok ==> !r.ok;
@@ -393,6 +400,9 @@ module ot_vale {
     {
         match c {
             case Block(b) => {
+                lemma_FailurePreservedByBlock(b, s, r);
+            }
+            case Function(_, b) => {
                 lemma_FailurePreservedByBlock(b, s, r);
             }
             case While(c, b) => {
@@ -472,29 +482,36 @@ module ot_vale {
         r' := s;
     }
 
-    lemma va_lemma_block(b: codes, s0: va_state, r: va_state) returns(r1: va_state, c0:code, b1:codes)
-        requires b.va_CCons?
-        requires eval_code_lax(Block(b), s0, r)
-        ensures b == va_CCons(c0, b1)
-        ensures eval_code_lax(c0, s0, r1)
-        // ensures valid_state_opaque(s0) && r1.ok ==> valid_state_opaque(r1);
-        ensures eval_code_lax(Block(b1), r1, r)
+    lemma va_lemma_block(
+        complete_block: codes,
+        s0: va_state,
+        r: va_state)
+    returns(r1: va_state, current:code, rest:codes)
+
+        requires complete_block.va_CCons?
+        requires eval_code_lax(Block(complete_block), s0, r)
+
+        ensures complete_block == va_CCons(current, rest)
+        ensures eval_code_lax(current, s0, r1)
+        ensures current.Function? ==>
+            eval_code_lax(Block(current.functionBody), s0, r1)
+        ensures eval_code_lax(Block(rest), r1, r)
     {
         reveal_eval_code_opaque();
-        c0 := b.hd;
-        b1 := b.tl;
+        current := complete_block.hd;
+        rest := complete_block.tl;
         if s0.ms.ok {
-            assert r.ms == s0.ms.eval_block(b);
-            var r':state :| r' == s0.ms.eval_code(b.hd) && r.ms == r'.eval_block(b.tl);
-            c0 := b.hd;
-            b1 := b.tl;
+            assert r.ms == s0.ms.eval_block(complete_block);
+            var r':state :| r' == s0.ms.eval_code(complete_block.hd) && r.ms == r'.eval_block(complete_block.tl);
+            current := complete_block.hd;
+            rest := complete_block.tl;
             r1 := gstate(r', s0.heap);
             // r1 := gstate(r'.gprs, r'.wdrs, r'.wmod, r'.wrnd, r'.wacc, r'.fgroups, r'.mem, r'.wmem, r'.ok);
             if valid_state_opaque(s0) {
                 reveal_valid_state_opaque();
-                code_state_validity(c0, s0.ms, r1.ms);
+                code_state_validity(current, s0.ms, r1.ms);
             }
-            assert eval_code_lax(c0, s0, r1);
+            assert eval_code_lax(current, s0, r1);
         } else {
             // If s0 isn't okay, we can do whatever we want,
             // so we ensure r1.ok is false, and hence eval_code_lax(*, r1, *) is trivially true

@@ -149,8 +149,9 @@ procedure cond_sub_to_reg(
     ghost init_view: seq(uint256),
     ghost init_iter: iter_t,
     ghost selection: bool)
-
     returns (ghost curr_view: seq(uint256))
+
+    {:noInline}
 
     requires
         x8 == 4;

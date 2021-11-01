@@ -54,6 +54,8 @@ ghost procedure mul256_correct_lemma(
     ghost wacc: uint256) extern;
 
 procedure mul256_w30xw2()
+    {:noInline}
+
     reads
         w2; w30;
     modifies
@@ -129,6 +131,8 @@ procedure mul256_w30xw2()
 }
 
 procedure mul256_w30xw25()
+    {:noInline}
+
     reads
         w25; w30;
     modifies

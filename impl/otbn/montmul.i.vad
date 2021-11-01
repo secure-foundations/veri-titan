@@ -114,6 +114,7 @@ procedure montmul_0(ghost vars: mvars)
 procedure montmul(ghost vars: mvars)
     returns (ghost a_view: seq(uint256))
 
+    {:noInline}
     {:frame false}
 
     requires

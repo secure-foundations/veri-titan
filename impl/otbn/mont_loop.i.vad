@@ -381,6 +381,7 @@ procedure mont_loop(
 
     returns (ghost next_view: seq(uint256))
 
+    {:noInline}
     {:frame false}
 
     requires
