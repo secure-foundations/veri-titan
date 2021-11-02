@@ -47,17 +47,4 @@ module mont_mul_add_lemmas {
     && (i > 0 ==> c[i-1] == B.lh)
   }
 
-  lemma mont_mul_add_loop_mem_ok(
-    iter_x : iter_t,
-    mem : mem_t,
-    r : uint32,
-    i : nat
-    )
-    requires i < 96;
-    requires iter_safe(iter_x, mem, r);
-    requires |iter_x.buff| == 96;
-    ensures i < 95 ==> iter_inv(lw_next_iter(iter_x), mem, r+4);
-  {
-  }
-
 }
