@@ -1,9 +1,11 @@
 include "../../arch/riscv/decls.i.vad"
 include "mul32.i.vad"
+include "sub_mod.i.vad"
 
 #verbatim
 include "../../arch/riscv/decls.i.dfy"
 include "../../impl/riscv/mul32.i.dfy"
+include "../../impl/riscv/sub_mod.i.dfy"
 include "../../../impl/riscv/mont_mul_add_lemmas.i.dfy"
 
 module mont_mul_add {
@@ -15,6 +17,7 @@ import opened rv_decls
 import opened rv_vale
 
 import opened mul32
+import opened sub_mod
 import opened mont_mul_add_lemmas
 
 #endverbatim
@@ -283,7 +286,17 @@ procedure mont_mul_add(ghost d0inv: uint32, ghost iter_stack: iter_t, ghost iter
              x14; x15;
              ra; mem;
     ensures
+      ra == old(ra);
+      s0 == old(s0);
+      s1 == old(s1);
+      s2 == old(s2);
+      s3 == old(s3);
+      s4 == old(s4);
+      s5 == old(s5);
+      s6 == old(s6);
       s7 == old(s7);
+      s8 == old(s8);
+      // sp == old(sp); // causes timeout :(
   {
     
     ghost var iter_n := iter_n;
@@ -339,6 +352,8 @@ procedure mont_mul_add(ghost d0inv: uint32, ghost iter_stack: iter_t, ghost iter
     sw_stack(s3, 28, 7);
     sw_stack(s4, 24, 6);
     sw_stack(s8, 8, 2);
+    
+    let old_stack := mem[sp];
 
     // s4 <- pointer to b
     mv(s4, a3);
@@ -437,57 +452,72 @@ procedure mont_mul_add(ghost d0inv: uint32, ghost iter_stack: iter_t, ghost iter
     // s0 <- lower half of A(uh) + B(uh) == A'
     add(s0, s0, a1);
     assert s0 == uint32_add(A'.uh, B'.uh);
+    assert a1 == B'.uh;
+    let A_cmp := s0;
 
     // TODO: need to show that iter_c.base_addr == iter_c'.base_addr
     assume iter_c.base_addr == iter_c'.base_addr;
-    
     sw_iter(s0, s6, 380, iter_c');
-    assume false;
-
-
-    // true when A(uh) > 0, causing lh(A(uh + B(uh) to overflow
+    
+    // if stmt true when A(uh) > 0, causing lh(A(uh + B(uh) to overflow
     // lh(A(uh + B(uh)) < B(uh) <-- happens when A'(uh) is non-empty
-    // TODO: if/else?
     // bltu    s0, a1, 1026a <mont_mul_add.constprop.0+0x9a>
 
-    // A'(lh) <= 0 case:
-    // recover stack
-    lw_stack(ra, 44, 11);
-    lw_stack(s0, 40, 10);
-    lw_stack(s1, 36, 9);
-    lw_stack(s2, 32, 8);
-    lw_stack(s3, 28, 7);
-    lw_stack(s4, 24, 6);
-    lw_stack(s5, 20, 5);
-    lw_stack(s6, 16, 4);
-    lw_stack(s7, 12, 3);
-    lw_stack(s8, 8, 2);
-
-    // recover initial sp
-    addi(sp, sp, 48);
-    // ret
-   
-    // A'(lh) > case:
-    lw_stack(s0, 40, 10);
-    lw_stack(ra, 44, 11);
-    lw_stack(s1, 36, 9);
-    lw_stack(s2, 32, 8);
-    lw_stack(s3, 28, 7);
-    lw_stack(s4, 24, 6);
-    lw_stack(s5, 20, 5);
-    lw_stack(s7, 12, 3);
-    lw_stack(s8, 8, 2);
+    // TODO: show that mem[sp] isn't changed from mont_mul_add_loop call
+    assume mem?[sp];
+    assume old_stack == mem[sp];
+    assume seq_len(mem[sp]) == 12;
     
-    // a0 <- pointer to start of c
-    mv(a0, s6);
+    if (s0 < a1) {
+        // A'(lh) > case:
+        // assert A_cmp > 0;
 
-    lw_stack(s6, 16, 4);
+        lw_stack(s0, 40, 10);
+        lw_stack(ra, 44, 11);
+        lw_stack(s1, 36, 9);
+        lw_stack(s2, 32, 8);
+        lw_stack(s3, 28, 7);
+        lw_stack(s4, 24, 6);
+        lw_stack(s5, 20, 5);
+        lw_stack(s7, 12, 3);
+        lw_stack(s8, 8, 2);
+    
+        // a0 <- pointer to start of c
+        mv(a0, s6);
 
-    // recover initial sp
-    addi(sp, sp, 48);
+        lw_stack(s6, 16, 4);
 
-    // a0 = sub_mod(n, c) == 1 if c >= n else 0
-    // sub_mod();
+        // recover initial sp
+        addi(sp, sp, 48);
+    
+        // TODO: meet preconditions for sub_mod
+        // reset iter_n.index
+        // reset iter_c'.index
+        // iter_c.base_addr != iter_c'.base_addr
+
+        // a0 = sub_mod(n, c) == 1 if c >= n else 0
+        // ghost var A_sm : int64_view_t;
+        // iter_c', A_sm := sub_mod(iter_n, iter_c');
+
+    } else {
+        // A'(lh) == 0 case:
+        // assert A_cmp == 0;
+    
+        lw_stack(ra, 44, 11);
+        lw_stack(s0, 40, 10);
+        lw_stack(s1, 36, 9);
+        lw_stack(s2, 32, 8);
+        lw_stack(s3, 28, 7);
+        lw_stack(s4, 24, 6);
+        lw_stack(s5, 20, 5);
+        lw_stack(s6, 16, 4);
+        lw_stack(s7, 12, 3);
+        lw_stack(s8, 8, 2);
+        
+        // recover initial sp
+        addi(sp, sp, 48);
+        // ret
+    }
   }
 
 #verbatim
