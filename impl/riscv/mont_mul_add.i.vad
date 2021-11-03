@@ -61,8 +61,9 @@ procedure mont_mul_add_loop(
     ghost B: uint64_view_t,
     ghost A_prev: uint64_view_t,
     ghost B_prev: uint64_view_t,
-    ghost iter_b: iter_t, ghost iter_c: iter_t, ghost iter_n: iter_t,
+    ghost iter_n: iter_t, ghost iter_b: iter_t, ghost iter_c: iter_t,
     ghost a: uint32, ghost d0: uint32, ghost i: nat)
+    returns (ghost iter_c' : iter_t, ghost A' : uint64_view_t, ghost B' : uint64_view_t)
     lets s0 @= x16; s1 @= x17; s2 @= x18; s3 @= x19; s4 @= x20; s5 @= x21; s7 @= x23; s8 @= x24;
          a0 @= x10; a1 @= x11; a2 @= x12; a3 @= x13;
     modifies s0; s1; s2; s3; s4; s5; s7; s8; a0; a1; a2; a3;
@@ -108,6 +109,14 @@ procedure mont_mul_add_loop(
     requires mont_mul_add_loop_inv(A, B, A_prev, B_prev, iter_n.buff, iter_b.buff, iter_c.buff, a, d0, i);
 
     ensures mont_mul_add_loop_inv(A, B, A_prev, B_prev, iter_n.buff, iter_b.buff, iter_c.buff, a, d0, i);
+
+    ensures s3 == iter_c'.base_addr + 4 * 95;
+    ensures iter_c'.index == 95;
+    ensures seq_len(iter_c'.buff) == 96;
+    ensures iter_safe(iter_c', mem, s3);
+
+    ensures s0 == A'.uh;
+    ensures a1 == B'.uh;
 {
 
    ghost var A := A;
@@ -151,6 +160,7 @@ procedure mont_mul_add_loop(
        invariant iter_safe(iter_c, mem, s3);
 
        invariant mont_mul_add_loop_inv(A, B, A_prev, B_prev, iter_n.buff, iter_b.buff, iter_c.buff, a, d0, i);
+       invariant (i == 95 ==> a1 == B.uh);
 
        decreases s8 - s2;
 { 
@@ -218,6 +228,7 @@ procedure mont_mul_add_loop(
         // s1 <- B(uh)
         mv(s1, a1);
         assert s1 == B.uh;
+        assert a1 == B.uh;
 
         // s4 <- b[i+1] -- increment pointer to b
         addi(s4, s4, 4);
@@ -229,7 +240,18 @@ procedure mont_mul_add_loop(
         
         i := i + 1;
         assert mont_mul_add_loop_inv(A, B, A_prev, B_prev, iter_n.buff, iter_b.buff, iter_c.buff, a, d0, i);
+        assert a1 == B.uh;
     }
+    A' := A;
+    B' := B;
+
+    assert i == 95;
+    assert s3 == iter_c.base_addr + 4 * 95;
+    
+    assert s0 == A'.uh;
+    assert a1 == B'.uh;
+    
+    iter_c' := iter_c;
 }
     
 procedure mont_mul_add(ghost d0inv: uint32, ghost iter_stack: iter_t, ghost iter_b: iter_t, ghost iter_c: iter_t, ghost iter_n: iter_t)
@@ -394,14 +416,16 @@ procedure mont_mul_add(ghost d0inv: uint32, ghost iter_stack: iter_t, ghost iter
     assert s2 == 71196;
     assert s3 == iter_c.base_addr;
     assert s4 == iter_b.base_addr + 4;
+    assert s5 == d0;
 
     ghost var i:nat := 0;
     ghost var zero64 := uint64_view_zero();
 
-    assert mont_mul_add_loop_inv(A, B, zero64, zero64, iter_n.buff, iter_b.buff, iter_c.buff, a, d0, i); // i == 0
+    assert mont_mul_add_loop_inv(A, B, zero64, zero64, iter_n.buff, iter_b.buff, iter_c.buff, a, d0, i);
 
-    //let iter_c' := mont_mul_add_loop(A, B, zero64, zero64, iter_n.buff, iter_b.buff, iter_c.buff, a, d0inv, i);
-    assume false;
+    ghost var A' : uint64_view_t;
+    ghost var B' : uint64_view_t;
+    iter_c', A', B' := mont_mul_add_loop(A, B, zero64, zero64, iter_n, iter_b, iter_c, a, d0, i);
 
     // ** end of loop:
     //      c[0..i-1] computed
@@ -410,14 +434,16 @@ procedure mont_mul_add(ghost d0inv: uint32, ghost iter_stack: iter_t, ghost iter
     //      s3 = last spot of c
     //      s4 = end of b
 
-    // TODO
-    // mont_mul_add_post_lemma();
-
     // s0 <- lower half of A(uh) + B(uh) == A'
     add(s0, s0, a1);
+    assert s0 == uint32_add(A'.uh, B'.uh);
 
-    // c[i] <- s0 -- store to last spot of c
-    sw_iter(s0, s6, 380, iter_c);
+    // TODO: need to show that iter_c.base_addr == iter_c'.base_addr
+    assume iter_c.base_addr == iter_c'.base_addr;
+    
+    sw_iter(s0, s6, 380, iter_c');
+    assume false;
+
 
     // true when A(uh) > 0, causing lh(A(uh + B(uh) to overflow
     // lh(A(uh + B(uh)) < B(uh) <-- happens when A'(uh) is non-empty
