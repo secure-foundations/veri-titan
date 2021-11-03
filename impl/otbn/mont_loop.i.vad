@@ -236,6 +236,73 @@ procedure mont_loop_0(
     mont_loop_cong_lemma(p1, curr_view[0], y_it.buff[0], xi, w25, w26, m0d);
 }
 
+procedure mula512_w30xw2(ghost a: uint256, ghost b: uint256)
+    returns (ghost next_p: uint512_view_t)
+
+    requires
+        w30 == a;
+        w2 == b;
+        w31 == 0;
+    reads
+        w2; w30; w31; wdrs; 
+    modifies
+        w24; w26; w27; w29; wacc; fgroups;
+    ensures
+        valid_uint512_view(wdrs, next_p, 24, 29);
+        next_p.full == a * b + old(w24) + old(w29);
+{
+    LemmaMulIsCommutativeAuto();
+
+    mul256_w30xw2();
+    // assert ToNat(seq(w27, w26)) == a * b;
+
+    mont_word_mul_add_bound_lemma_0(seq(w27, w26), seq(w24, w31), a, b);
+
+    /* add limb of buffer: [w26, w27] <- [w26,w27] + w24 = y[j]*xi + A[j] */
+    next_p := seq_addc_512_safe(w27, w27, w24, w26, w26, w31);
+
+    uint512_view_lemma(next_p);
+    mont_word_mul_add_bound_lemma_1(seq(w27, w26), seq(w29, w31), a, b, w24);
+
+    /* add carry word from previous cycle:
+       [c_xy, a_tmp] = [w29, w24] <- [w26,w27] + w29 = y[j]*xi + A[j] + c_xy*/
+    next_p := seq_addc_512_safe(w24, w27, w29, w29, w26, w31);
+}
+
+procedure mula512_w30xw25(ghost a: uint256, ghost b: uint256)
+    returns (ghost next_p: uint512_view_t)
+
+    requires
+        w30 == a;
+        w25 == b;
+        w31 == 0;
+    reads
+        w25; w30; w31; wdrs; 
+    modifies
+        w24; w26; w27; w28; wacc; fgroups;
+    ensures
+        valid_uint512_view(wdrs, next_p, 24, 28);
+        next_p.full == a * b + old(w24) + old(w28);
+{
+    LemmaMulIsCommutativeAuto();
+
+    mul256_w30xw25();
+    assert ToNat(seq(w27, w26)) == a * b;
+
+    /* add result from first step
+       [w26, w27] <- [w26, w27] + w24 = m[j]*ui + a_tmp */
+    mont_word_mul_add_bound_lemma_0(seq(w27, w26), seq(w24, w31), a, b);
+    next_p := seq_addc_512_safe(w27, w27, w24, w26, w26, w31);
+    // assert next_p.full == a * b + old(w24);
+
+    /* [c_m, A[j-1]] = [w28, w24] = m[j]*ui + a_tmp + c_m */
+    uint512_view_lemma(next_p);
+
+    mont_word_mul_add_bound_lemma_1(seq(w27, w26), seq(w28, w31), a, b, w24);
+    next_p := seq_addc_512_safe(w24, w27, w28, w28, w26, w31);
+    // assert next_p.full == a * b + old(w24) + old(w28);
+}
+
 procedure mont_loop_1(
     ghost ui: uint256,
     ghost xi: uint256,
@@ -328,37 +395,16 @@ procedure mont_loop_1(
     ghost var j := y_it.index;
     /* load limb of y (operand a) and mult. with xi: [w26, w27] <- y[j]*xi */
     next_y_it := bn_lid_safe(x12, false, 0, x19, true, y_it);
-    mul256_w30xw2();
 
-    /* add limb of buffer: [w26, w27] <- [w26,w27] + w24 = y[j]*xi + A[j] */
     bn_movr(x13, false, x8, true);
 
-    LemmaMulIsCommutativeAuto();
-    mont_word_mul_add_bound_lemma_0(seq(w27, w26), seq(w24, w31), y_it.buff[j], xi);
-    next_p1 := seq_addc_512_safe(w27, w27, w24, w26, w26, w31);
-
-    /* add carry word from previous cycle:
-       [c_xy, a_tmp] = [w29, w24] <- [w26,w27] + w29 = y[j]*xi + A[j] + c_xy*/
-    uint512_view_lemma(next_p1);
-
-    mont_word_mul_add_bound_lemma_1(seq(w27, w26), seq(w29, w31), y_it.buff[j], xi, w24);
-    next_p1 := seq_addc_512_safe(w24, w27, w29, w29, w26, w31);
+    next_p1 := mula512_w30xw2(y_it.buff[j], xi);
 
     /* load limb m[j] of modulus and multiply with ui:
        [w26, w27] = w30*w25 = m[j]*ui */
     next_m_it := bn_lid_safe(x12, false, 0, x16, true, m_it);
-    mul256_w30xw25();
 
-    /* add result from first step
-       [w26, w27] <- [w26,w27] + w24 = m[j]*ui + a_tmp */
-    mont_word_mul_add_bound_lemma_0(seq(w27, w26), seq(w24, w31), m_it.buff[j], ui);
-    next_p2 := seq_addc_512_safe(w27, w27, w24, w26, w26, w31);
-
-    /* [c_m, A[j-1]] = [w28, w24] = m[j]*ui + a_tmp + c_m */
-    uint512_view_lemma(next_p2);
-
-    mont_word_mul_add_bound_lemma_1(seq(w27, w26), seq(w28, w31), m_it.buff[j], ui, w24);
-    next_p2 := seq_addc_512_safe(w24, w27, w28, w28, w26, w31);
+    next_p2 := mula512_w30xw25(m_it.buff[j], ui);
 
     bn_movr(x10, true, x13, false);
     next_view := curr_view[j-1 := w24];
