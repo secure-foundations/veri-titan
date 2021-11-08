@@ -1,7 +1,12 @@
-include "../../lib/bv_ops.dfy"
+include "../../lib/bv32_ops.dfy"
+include "../../lib/bv256_ops.dfy"
 
 module ot_machine {
-    import opened bv_ops
+    import Mul
+
+    import bv32_ops
+    import bv256_ops
+    import opened integers
 
     const DMEM_LIMIT: int := 0x8000
     const NUM_WORDS:  int := 12
@@ -9,7 +14,7 @@ module ot_machine {
     // ignore the mapping
     const NA :int := -1;
 
-/* registers definions */
+/* registers definitions */
 
     type reg_index = uint5
 
@@ -34,7 +39,7 @@ module ot_machine {
         | |wdrs| == 32 witness *
 
 
-/* flags definions */
+/* flags definitions */
 
     // datatype flag = CF | MSB | LSB | ZERO
     datatype flags_t = flags_t(cf: bool, msb: bool, lsb: bool, zero: bool)
@@ -73,7 +78,13 @@ module ot_machine {
         if which_group == 0 then fgps.(fg0 := new_flags) else fgps.(fg1 := new_flags)
     }
 
-/* instruction definions */
+/* shift definitions */
+
+    datatype shift_t = SFT(left: bool, bytes: uint5)
+
+    const SFT_DFT :shift_t := SFT(true, 0);
+
+/* instruction definitions */
 
     datatype ins32 =
         | ADD(xrd: reg32_t, xrs1: reg32_t, xrs2: reg32_t)
@@ -115,29 +126,52 @@ module ot_machine {
 
 /* stateless semantic functions  */
 
-    function mod_add(a: nat, b: nat, m: nat): nat 
-        requires a < m && b < m;
-    {
-        if a + b > m then a + b - m else a + b
-    }
-
     function method set_mlz_flags(carry: uint1, value: uint256): flags_t
     {
-        flags_t(carry == 1, uint256_msb(value) == 1, uint256_lsb(value) == 1, value == 0)
+        flags_t(carry == 1, bv256_ops.msb(value) == 1, bv256_ops.lsb(value) == 1, value == 0)
+    }
+
+    function method otbn_shift(b: uint256, shift: shift_t) : uint256
+    {
+        var num_bits := (shift.bytes as int) * 8;
+        if num_bits == 0 then b
+        else if shift.left then bv256_ops.ls(b, num_bits)
+        else bv256_ops.rs(b, num_bits)
     }
 
     function method otbn_addc(x: uint256, y: uint256, shift: shift_t, carry: bool) : (uint256, flags_t)
     {
         var cin := if carry then 1 else 0;
-        var (sum, cout) := uint256_addc(x, uint256_sb(y, shift), cin);
+        var (sum, cout) := bv256_ops.addc(x, otbn_shift(y, shift), cin);
         (sum, set_mlz_flags(cout, sum))
     }
 
     function method otbn_subb(x: uint256, y: uint256, shift: shift_t, borrow: bool) : (uint256, flags_t)
     {
         var cf := if borrow then 1 else 0;
-        var (diff, cout) := uint256_subb(x, uint256_sb(y, shift), cf);
+        var (diff, cout) := bv256_ops.subb(x, otbn_shift(y, shift), cf);
         (diff, set_mlz_flags(cout, diff))
+    }
+
+    function method {:opaque} otbn_qsel(x: uint256, qx: uint2): uint64
+    {
+        if qx == 0 then
+            bv256_ops.lh(x) % BASE_64
+        else if qx == 1 then
+            bv256_ops.lh(x) / BASE_64
+        else if qx == 2 then
+            bv256_ops.uh(x) % BASE_64
+        else
+            bv256_ops.uh(x) / BASE_64
+    }
+
+    function method {:opaque} otbn_qmul(x: uint256, qx: uint2, y: uint256, qy: uint2): uint128
+    {
+        var src1 := otbn_qsel(x, qx);
+        var src2 := otbn_qsel(y, qy);
+        assume src1 as nat * src2 as nat < BASE_128;
+        Mul.LemmaMulStrictlyIncreasesAuto();
+        src1 as uint128 * src2 as uint128
     }
 
     function method otbn_mulqacc(
@@ -147,56 +181,9 @@ module ot_machine {
         shift: uint2,
         acc: uint256) : uint256
     {
-        var product := uint256_qmul(x, qx, y, qy);
-        var shift := uint256_sb(product, SFT(true, shift * 8));
-        if zero then shift else (acc + shift) % BASE_256
-    }
-
-    predicate otbn_mulqacc_is_safe(shift: uint2, acc: uint256)
-    {
-        // make sure no overflow from shift (product needs to be 128 bits)
-        && (shift <= 2) 
-        // make sure no overflow from addtion
-        && (acc + otbn_qshift_safe(BASE_128 - 1, shift) < BASE_256)
-    }
-
-    // quater shift but no overflow
-    function otbn_qshift_safe(x: uint256, q: uint2): (r: uint256)
-        requires (q == 1) ==> (x < BASE_192);
-        requires (q == 2) ==> (x < BASE_128);
-        requires (q == 3) ==> (x < BASE_64);
-    {
-        if q == 0 then x
-        else if q == 1 then x * BASE_64
-        else if q == 2 then x * BASE_128
-        else x * BASE_192
-    }
-
-    // mulquacc but no overflow
-    function otbn_mulqacc_safe(
-        zero: bool,
-        x: uint256, qx: uint2,
-        y: uint256, qy: uint2,
-        shift: uint2,
-        acc: uint256) : uint256
-
-        requires otbn_mulqacc_is_safe(shift, acc);
-    {
-        var product := uint256_qmul(x, qx, y, qy);
-        var shift := otbn_qshift_safe(product, shift);
-        if zero then shift else acc + shift
-    }
-
-    lemma otbn_mulqacc_safe_correct(
-        zero: bool,
-        x: uint256, qx: uint2,
-        y: uint256, qy: uint2,
-        shift: uint2,
-        acc: uint256)
-        requires otbn_mulqacc_is_safe(shift, acc);
-        ensures otbn_mulqacc_safe(zero, x, qx, y, qy, shift, acc)
-            == otbn_mulqacc(zero, x, qx, y, qy, shift, acc);
-    {
+        var product := otbn_qmul(x, qx, y, qy);
+        var shift := otbn_shift(product, SFT(true, shift * 8));
+        if zero then shift else bv256_ops.add(acc, shift)
     }
 
     datatype mulqacc_so_result_t = mulqacc_so_result_t(
@@ -204,29 +191,82 @@ module ot_machine {
         new_dst: uint256,
         new_flags: flags_t)
 
+    function method {:opaque} otbn_hwb(x: uint256, v: uint128, lower: bool): (x': uint256)
+        // overwrites the lower half, keeps the higher half
+        ensures lower ==> (bv256_ops.lh(x') == v && bv256_ops.uh(x') == bv256_ops.uh(x));
+        // overwrites the higher half, keeps the lower half
+        ensures !lower ==> (bv256_ops.uh(x') == v && bv256_ops.lh(x') == bv256_ops.lh(x));
+    {
+        var uh, lh := bv256_ops.uh(x), bv256_ops.lh(x);
+        reveal bv256_ops.lh();
+        reveal bv256_ops.uh();
+        if lower then v + uh * BASE_128
+        else lh + v * BASE_128
+    }
+
+    // lemma hwb_lemma(x1: uint256, x2: uint256, x3: uint256, lo: uint128, hi: uint128)
+    //     requires x2 == hwb(x1, lo, true);
+    //     requires x3 == hwb(x2, hi, false);
+    //     ensures x3 == lo + hi * BASE_128;
+    // {
+    //     calc == {
+    //         x3;
+    //             { half_split_lemma(x3); }
+    //         lh(x3) + uh(x3) * BASE_128;
+    //             { assert uh(x3) == hi && lh(x3) == lh(x2); }
+    //         lh(x2) + hi * BASE_128;
+    //             { assert lh(x2) == lo; }
+    //         lo + hi * BASE_128;
+    //     }
+    // }
+
+/* start: I don't want to write other bv modules just for two operations */
+
+    function method {:opaque} uint128_msb(x: uint128): uint1
+    {
+        if ((x as bv128 >> 127) & 1 == 1) then 1 else 0
+    }
+
+    function method {:opaque} uint128_lsb(x: uint128): uint1
+    {
+        x % 2
+    }
+
+    function method {:opaque} uint512_lh(x: uint512): uint256
+    {
+        x % BASE_256
+    }
+
+    function method {:opaque} uint512_uh(x: uint512): uint256
+    {
+        x / BASE_256
+    }
+
+/* end: I don't want to write other bv modules just for two operations */
+
     function method otbn_mulqacc_so(product: uint256, z: uint256, lower: bool, flags: flags_t) : mulqacc_so_result_t
     {
-        var lh, uh := uint256_lh(product), uint256_uh(product);
+        var lh, uh := bv256_ops.lh(product), bv256_ops.uh(product);
         var new_flags :=
             (if lower then
                 flags_t(flags.cf, flags.msb, uint128_lsb(lh) == 1, lh == 0)
             else
                 flags_t(flags.cf, uint128_msb(lh) == 1, flags.lsb, (lh == 0) && flags.zero));
-        mulqacc_so_result_t(uh, uint256_hwb(z, lh, lower), new_flags)
+        mulqacc_so_result_t(uh, otbn_hwb(z, lh, lower), new_flags)
     }
 
     function method otbn_not(x: uint256, shift: shift_t, carry: bool): (uint256, flags_t)
     {
-        var result := uint256_not(uint256_sb(x, shift));
+        var result := bv256_ops.not(otbn_shift(x, shift));
         // keep the old carry
-        (result, set_mlz_flags(bool_to_uint1(carry), result))
+        (result, set_mlz_flags(bv256_ops.bool_to_uint1(carry), result))
     }
 
     function method otbn_xor(x: uint256, y: uint256, shift: shift_t, carry: bool): (uint256, flags_t)
     {
-        var result := uint256_xor(x, uint256_sb(y, shift));
+        var result := bv256_ops.xor(x, otbn_shift(y, shift));
         // keep the old carry
-        (result, set_mlz_flags(bool_to_uint1(carry), result))
+        (result, set_mlz_flags(bv256_ops.bool_to_uint1(carry), result))
     }
 
     function method otbn_sel(x: uint256, y: uint256, sel: bool): uint256
@@ -236,7 +276,7 @@ module ot_machine {
 
     function method wwrod_offset_ptr(base: uint32, offset: int10): uint32
     {
-        uint32_addi(base, offset * 32)
+        bv32_ops.addi(base, offset * 32)
     }
 
 /* mem_t definion */
@@ -281,24 +321,24 @@ module ot_machine {
         var p5 := mem[ptr + 20];
         var p6 := mem[ptr + 24];
         var p7 := mem[ptr + 28];
-        uint256_eighth_assemble(p0, p1, p2, p3, p4, p5, p6, p7)
+        bv256_ops.eighth_assemble(p0, p1, p2, p3, p4, p5, p6, p7)
     }
 
     function method mem_write_wword(mem: mem_t, ptr: nat, value: uint256): (mem' : mem_t)
         requires wword_ptr_admissible(ptr)
         ensures wword_ptr_valid(mem', ptr)
     {
-        mem[ptr + 0 := uint256_eighth_split(value, 0)]
-            [ptr + 4 := uint256_eighth_split(value, 1)]
-            [ptr + 8 := uint256_eighth_split(value, 2)]
-            [ptr + 12 := uint256_eighth_split(value, 3)]
-            [ptr + 16 := uint256_eighth_split(value, 4)]
-            [ptr + 20 := uint256_eighth_split(value, 5)]
-            [ptr + 24 := uint256_eighth_split(value, 6)]
-            [ptr + 28 := uint256_eighth_split(value, 7)]
+        mem[ptr + 0 := bv256_ops.eighth_split(value, 0)]
+            [ptr + 4 := bv256_ops.eighth_split(value, 1)]
+            [ptr + 8 := bv256_ops.eighth_split(value, 2)]
+            [ptr + 12 := bv256_ops.eighth_split(value, 3)]
+            [ptr + 16 := bv256_ops.eighth_split(value, 4)]
+            [ptr + 20 := bv256_ops.eighth_split(value, 5)]
+            [ptr + 24 := bv256_ops.eighth_split(value, 6)]
+            [ptr + 28 := bv256_ops.eighth_split(value, 7)]
     }
 
-/* control flow definions */
+/* control flow definitions */
 
     datatype code =
         | Ins32(ins: ins32)
@@ -316,7 +356,7 @@ module ot_machine {
         | RegCond(r: reg32_t)
         | ImmCond(c: uint32)
 
-/* state definions */
+/* state definitions */
 
     datatype state = state(
         gprs: gprs_t, // 32-bit registers
@@ -377,7 +417,7 @@ module ot_machine {
             var p5 := read_xword(addr + 20);
             var p6 := read_xword(addr + 24);
             var p7 := read_xword(addr + 28);
-            uint256_eighth_assemble(p0, p1, p2, p3, p4, p5, p6, p7)
+            bv256_ops.eighth_assemble(p0, p1, p2, p3, p4, p5, p6, p7)
         }
 
         function method write_wword(addr: uint32, v: uint256): state
@@ -391,21 +431,21 @@ module ot_machine {
         {
             var v1 := read_reg32(xrs1);
             var v2 := read_reg32(xrs2);
-            var sum := uint32_add(v1, v2);
+            var sum := bv32_ops.add(v1, v2);
             write_reg32(xrd, sum)
         }
 
         function method eval_ADDI(xrd: reg32_t, xrs1: reg32_t, imm: int12): state
         {
             var v1 := read_reg32(xrs1);
-            var sum := uint32_addi(v1, imm);
+            var sum := bv32_ops.addi(v1, imm);
             write_reg32(xrd, sum)
         }
 
         function method eval_LW(xrd: reg32_t, offset: int12, xrs1: reg32_t): state
         {
             var base := read_reg32(xrs1);
-            var addr := uint32_addi(base, offset);
+            var addr := bv32_ops.addi(base, offset);
             if !xword_ptr_admissible(addr) then this.(ok := false)
             else write_reg32(xrd, read_xword(addr))
         }
@@ -413,7 +453,7 @@ module ot_machine {
         function method eval_SW(xrs2: reg32_t, offset: int12, xrs1: reg32_t): state
         {
             var base := read_reg32(xrs1);
-            var addr := uint32_addi(base, offset);
+            var addr := bv32_ops.addi(base, offset);
             if !xword_ptr_admissible(addr) then this.(ok := false)
             else write_xword(addr, read_reg32(xrs2))
         }
@@ -468,7 +508,7 @@ module ot_machine {
                 // update grd
                 var s := (if grd_inc then write_reg32(grd, di + 1) else this);
                 // update grs
-                var l := (if grs_inc then s.write_reg32(grs, uint32_add(base, 32)) else s);
+                var l := (if grs_inc then s.write_reg32(grs, bv32_ops.add(base, 32)) else s);
                 l.write_reg256(WDR(di), value)
         }
 
@@ -481,7 +521,7 @@ module ot_machine {
                 this.(ok := false)
             else
                 var value := read_reg256(WDR(di));
-                var s := if grs1_inc then write_reg32(grs1, uint32_add(base, 32)) else this;
+                var s := if grs1_inc then write_reg32(grs1, bv32_ops.add(base, 32)) else this;
                 var l := if grs2_inc then s.write_reg32(grs2, di + 1) else s;
                 l.write_wword(addr, value)
         }
@@ -704,105 +744,6 @@ module ot_machine {
                 case Comment(com) => this
         }
 
-        method dump_regs()
-        {
-            var i := 0;
-            while i < 32
-            {
-                print(" x"); print(i); 
-                if i < 10 {
-                    print("  = ");
-                } else {
-                    print(" = ");
-                }
-                print_as_hex(read_reg32(GPR(i)), 4); print("\n"); 
-                i := i + 1;
-            }
-
-            i := 0;
-            while i < 32
-            {
-                print(" w"); print(i);
-                if i < 10 {
-                    print("  = ");
-                } else {
-                    print(" = ");
-                }
-                print_as_hex(read_reg256(WDR(i)), 32); print("\n"); 
-                i := i + 1;
-            }
-
-            print(" fg0 = ");print_as_hex(fgroups.fg0.to_nat(), 4); print("\n"); 
-            print(" fg1 = ");print_as_hex(fgroups.fg1.to_nat(), 4); print("\n"); 
-        }
-
-        method dump_mem(addr: uint32, words: uint32)
-            requires xword_ptr_admissible(addr + words * 4)
-        {
-            var end := addr + words * 4;
-            var cur := addr;
-            var i := 0;
-
-            while cur < end
-                invariant cur == addr + i * 4
-                invariant xword_ptr_admissible(cur)
-                decreases end - cur
-            {
-                var value := read_xword(cur);
-                print(cur); print(":"); print_as_hex(value, 4); print("\n");
-                cur := cur + 4;
-                i := i + 1;
-            }
-        }
-    }
-
-    method print_as_hex(a: nat, bytes: nat)
-    {
-        var val := a;
-        var num_digits := bytes * 2;
-        var i := 0;
-        var result := "";
-        while i < num_digits
-            decreases num_digits - i
-        {
-            var digit := val % 16;
-            if digit == 0 {
-                result := "0" + result;
-            } else if digit == 1 {
-                result := "1" + result;
-            } else if digit == 2 {
-                result := "2" + result;
-            } else if digit == 3 {
-                result := "3" + result;
-            } else if digit == 4 {
-                result := "4" + result;
-            } else if digit == 5 {
-                result := "5" + result;
-            } else if digit == 6 {
-                result := "6" + result;
-            } else if digit == 7 {
-                result := "7" + result;
-            } else if digit == 8 {
-                result := "8" + result;
-            } else if digit == 9 {
-                result := "9" + result;
-            } else if digit == 10 {
-                result := "a" + result;
-            } else if digit == 11 {
-                result := "b" + result;
-            } else if digit == 12 {
-                result := "c" + result;
-            } else if digit == 13 {
-                result := "d" + result;
-            } else if digit == 14 {
-                result := "e" + result;
-            } else if digit == 15 {
-                result := "f" + result;
-            }
-            val := val / 16;
-            i := i + 1;
-        }
-        print("0x"); print(result);
     }
 
     predicate valid_state(s: state)
