@@ -38,53 +38,42 @@ module ot_abstraction {
         assert otbn_qshift_safe(x, q) == otbn_shift(x, shift);
     }
 
-    // predicate otbn_mulqacc_is_safe(acc: uint256, shift: uint2, x:)
-    // {
-    //     // make sure no overflow from shift (product needs to be 128 bits)
-    //     && (shift <= 2) 
-    //     // make sure no overflow from addtion
-    //     && (acc + otbn_qshift_safe(x, shift) < BASE_256)
-    // }
+    predicate otbn_mulqacc_is_safe(shift: uint2, acc: uint256)
+    {
+        // make sure no overflow from shift (product needs to be 128 bits)
+        && (shift <= 2) 
+        // make sure no overflow from addtion
+        && (acc + otbn_qshift_safe(BASE_128 - 1, shift) < BASE_256)
+    }
 
-    // // mulqacc but no overflow
-    // function otbn_mulqacc_safe(
-    //     zero: bool,
-    //     x: uint256, qx: uint2,
-    //     y: uint256, qy: uint2,
-    //     shift: uint2,
-    //     acc: uint256) : uint256
+    // mulqacc but no overflow
+    function otbn_mulqacc_safe(
+        zero: bool,
+        x: uint256, qx: uint2,
+        y: uint256, qy: uint2,
+        shift: uint2,
+        acc: uint256) : uint256
 
-    //     requires otbn_mulqacc_is_safe(shift, acc);
-    // {
-    //     var product := otbn_qmul(x, qx, y, qy);
-    //     var shift := otbn_qshift_safe(product, shift * 8);
-    //     if zero then shift else acc + shift
-    // }
+        requires otbn_mulqacc_is_safe(shift, acc);
+    {
+        var product := otbn_qmul(x, qx, y, qy);
+        var shift := otbn_qshift_safe(product, shift);
+        if zero then shift else acc + shift
+    }
 
-    // lemma otbn_mulqacc_safe_correct_lemma(
-    //     zero: bool,
-    //     x: uint256, qx: uint2,
-    //     y: uint256, qy: uint2,
-    //     shift: uint2,
-    //     acc: uint256)
-    //     requires otbn_mulqacc_is_safe(shift, acc);
-    //     ensures otbn_mulqacc_safe(zero, x, qx, y, qy, shift, acc)
-    //         == otbn_mulqacc(zero, x, qx, y, qy, shift, acc);
-    // {
-    //     // var result1 := otbn_mulqacc_safe(zero, x, qx, y, qy, shift, acc);
-    //     // // var result2 := otbn_mulqacc(zero, x, qx, y, qy, shift, acc);
-
-    //     // var product := otbn_qmul(x, qx, y, qy);
-    //     // var shifted1 := otbn_qshift_safe(product, shift);
-    //     // assert result1 == if zero then shifted1 else acc + shifted1;
-
-    //     // otbn_qshift_safe_correct_lemma(x, shift);
-
-    //     // var shifted2 := otbn_qshift_safe(product, shift);
-    //     // assert result2 == if zero then shift else bv256_ops.add(acc, shift);
-
-    //     assume false;
-    // }
+    lemma otbn_mulqacc_safe_correct_lemma(
+        zero: bool,
+        x: uint256, qx: uint2,
+        y: uint256, qy: uint2,
+        shift: uint2,
+        acc: uint256)
+        requires otbn_mulqacc_is_safe(shift, acc);
+        ensures otbn_mulqacc_safe(zero, x, qx, y, qy, shift, acc)
+            == otbn_mulqacc(zero, x, qx, y, qy, shift, acc);
+    {
+        var product := otbn_qmul(x, qx, y, qy);
+        otbn_qshift_safe_correct_lemma(product, shift);
+    }
 
 /* wdr_view definion (SHADOW) */
 
