@@ -2,7 +2,8 @@ include{: verbatim} "../../arch/otbn/vale.i.dfy"
 
 #verbatim
 module ot_decls {
-    import opened bv_ops
+    // import opened bv_ops
+    import opened integers
     import opened ot_machine
     import opened ot_abstraction
     import opened ot_vale
@@ -495,7 +496,7 @@ procedure bn_mulqacc_z(
     this := this.(heap := old(this).heap);
 }
 
-ghost procedure otbn_mulqacc_safe_correct(
+ghost procedure otbn_mulqacc_safe_correct_lemma(
     ghost zero: bool,
     ghost x: uint256,
     ghost qx: uint2,
@@ -516,7 +517,7 @@ procedure bn_mulqacc_safe(
         wacc == otbn_mulqacc_safe(false, old(src1), qwsel1, old(src2), qwsel2, shift, old(wacc));
 {
     // not sure why this lemma call is needed
-    otbn_mulqacc_safe_correct(false, src1, qwsel1, src2, qwsel2, shift, wacc);
+    otbn_mulqacc_safe_correct_lemma(false, src1, qwsel1, src2, qwsel2, shift, wacc);
     bn_mulqacc(src1, qwsel1, src2, qwsel2, shift);
 }
 
@@ -565,7 +566,7 @@ procedure bn_mulqacc_so_safe(
         && fgroups == update_fgroups(old(fgroups), fg, result.new_flags);
 {
     // not sure why this lemma call is needed
-    otbn_mulqacc_safe_correct(false, src1, qwsel1, src2, qwsel2, shift, wacc);
+    otbn_mulqacc_safe_correct_lemma(false, src1, qwsel1, src2, qwsel2, shift, wacc);
     bn_mulqacc_so(dst, lower, src1, qwsel1, src2, qwsel2, shift, fg);
 }
 

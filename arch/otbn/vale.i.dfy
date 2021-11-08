@@ -2,11 +2,15 @@ include "abstraction.i.dfy"
 include "../../std_lib/src/NonlinearArithmetic/Mul.dfy"
 
 module ot_vale {
-    import opened bv_ops
+    // import opened bv_ops
+    import opened integers
     import opened ot_machine
     import opened ot_abstraction
+    import bv32_ops
 
-    import opened Mul
+    import Mul
+
+    //  pair/seq
 
     function fst<T,Q>(t:(T, Q)) : T { t.0 }
 
@@ -27,11 +31,25 @@ module ot_vale {
         xs + [x]
     }
 
+    // need this for mul
+
     function va_mul_nat(a: nat, b: nat): nat
     {
-        LemmaMulNonnegativeAuto();
+        Mul.LemmaMulNonnegativeAuto();
         a * b
     }
+
+    function method uint32_addi(x: uint32, y: bv32_ops.sint): uint32
+    {
+        bv32_ops.addi(x, y)
+    }
+
+    function method uint32_add(x: uint32, y: uint32): uint32
+    {
+        bv32_ops.add(x, y)
+    }
+
+    // otbn state realted
 
     datatype gstate = gstate(ms: state, heap: heap_t)
 
@@ -176,9 +194,9 @@ module ot_vale {
         returns (new_heap: heap_t)
 
         requires valid_state_opaque(gs)
-        requires write_ptr == uint32_addi(gs.ms.read_reg32(grs1), offset);
+        requires write_ptr == bv32_ops.addi(gs.ms.read_reg32(grs1), offset);
         requires xword_ptr_valid(gs.heap, write_ptr);
-        
+
         ensures
             var r := gs.ms.eval_SW(grs2, offset, grs1);
             var gr := gstate(r, new_heap);

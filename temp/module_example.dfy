@@ -70,7 +70,7 @@ abstract module generic_callee
 
     function method callee(x: uint, y: uint): uint
     {
-        uint_xor(x, uint_xor(x, y))
+        uint_xor(x, uint_addc(x, y, 0))
     }
 }
 

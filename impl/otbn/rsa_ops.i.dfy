@@ -1,14 +1,7 @@
 include "../../arch/otbn/abstraction.i.dfy"
 include "../../std_lib/src/Collections/Sequences/LittleEndianNat.dfy"
 
-module BASE_256_Seq refines LittleEndianNat {
-    import opened bv_ops
-    
-    function method BASE(): nat { BASE_256 }
-}
-
 module rsa_ops {
-    import opened bv_ops
     import opened ot_machine
     import opened ot_abstraction
     
