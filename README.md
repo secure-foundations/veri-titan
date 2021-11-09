@@ -48,7 +48,7 @@ verification routines. The OTBN implementation is based off of the code
 and the RISC-V implementation is based off of the code
 [here](https://github.com/secure-foundations/veri-titan/blob/master/temp/crypto_examples/rsa_verify/rv32imc/dump.asm).
 
-
+<!--
 ## Signature Validation Implementations:
 
 [C implementation](https://android.googlesource.com/platform/system/core.git/+/android-4.2.2_r1/libmincrypt/rsa_e_3.c)
@@ -61,30 +61,35 @@ and the RISC-V implementation is based off of the code
 
 [OTBN spec](https://docs.opentitan.org/hw/ip/otbn/doc/)
 
-<!-- [Calling Convention](https://docs.google.com/document/d/1aXaWaXGvGPB9rdF4x1r6weH69l0ghYDevhTZqEtJ8DU) -->
+ [Calling Convention](https://docs.google.com/document/d/1aXaWaXGvGPB9rdF4x1r6weH69l0ghYDevhTZqEtJ8DU) -->
 
-## Dependecies
+## Build Instructions 
 
-We assume the following packages are installed:
-
+We assume the following packages are installed by the user:
 `ninja` (1.10.+)
-
 [`dotnet`](https://dotnet.microsoft.com/download) 
-
 [`nuget`](https://www.nuget.org/downloads)
 
 We also assume some otbn tools are available:
-
 [`otbn-as`](https://github.com/lowRISC/opentitan/tree/master/hw/ip/otbn/util)
-
 [`otbn-ld`](https://github.com/lowRISC/opentitan/tree/master/hw/ip/otbn/util)
 
-The setup script will install:
+To prepare for the build process, run: 
+```
+python3 build.py setup
+```
+The setup will install custom versions of `dafny` and `vale`, and download a version of Dafny standard library. The setup should only need to be ran once. 
 
-`dafny`
-
-`vale`
-
+We rely on `ninja` for building the project. To generate a `build.ninja` file for this project, run:
+```
+python3 build.py
+```
+Then run: 
+```
+ninja -v -j4
+```
+This will start the build using 4 threads. The build output are all in the `gen` directory. `gen/arch/otbn/printer.s.dll.out` contains the printer output assembly code form the project. `gen/impl/otbn/run_modexp.elf` is currently the linked `elf` file assembled from the printer output. 
+ 
 ## Research Potentials:
 
 Making Assembly Proofs Easier
