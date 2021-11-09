@@ -66,12 +66,17 @@ and the RISC-V implementation is based off of the code
 ## Build Instructions 
 
 We assume the following packages are installed by the user:
+
 `ninja` (1.10.+)
+
 [`dotnet`](https://dotnet.microsoft.com/download) 
+
 [`nuget`](https://www.nuget.org/downloads)
 
 We also assume some otbn tools are available:
+
 [`otbn-as`](https://github.com/lowRISC/opentitan/tree/master/hw/ip/otbn/util)
+
 [`otbn-ld`](https://github.com/lowRISC/opentitan/tree/master/hw/ip/otbn/util)
 
 To prepare for the build process, run: 
