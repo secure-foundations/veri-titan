@@ -33,12 +33,12 @@ The `otbn-custom` branch builds directly on top of the `dafny-legacy` branch,
 and exposes additional Dafny language features within Vale procedures.
 
 ## Repository Organization
-The `arch` directory contains the trusted code describing the machine models for OTBN and RISC-V. In particular, for each architecture:
+The `arch` directory contains the code describing the machine models for OTBN and RISC-V. In particular, for each architecture:
 1. A `machine.s.dfy` file describes the machine model, which describes the
    architecture's maintained machine state (registers, flags, and instruction
-format).
-2. A `decls.s.dfy` file describes the semantics for each instruction in the form of
-   a Hoare triple.
+format). It also contains the executable semantics for the architecture.
+2. A `decls.i.dfy` file describes the semantics for each instruction in the form of
+   a Hoare triple. These definitions are untrusted, and implemented using the trusted operations defined in `machine.s.dfy`.
 3. A 'vale.s.dfy' file that contains architecture-specific, user-defined types,
    functions, and lemmas which are used in generated Dafny files.
 
@@ -47,6 +47,8 @@ verification routines. The OTBN implementation is based off of the code
 [here](https://github.com/lowRISC/opentitan/tree/master/sw/otbn/code-snippets)
 and the RISC-V implementation is based off of the code
 [here](https://github.com/secure-foundations/veri-titan/blob/master/temp/crypto_examples/rsa_verify/rv32imc/dump.asm).
+
+Note that one central convention is that all trusted specification files end in `.s.dfy.` Everything else should be a `.i.dfy` file and will be verified for correctness.
 
 <!--
 ## Signature Validation Implementations:
