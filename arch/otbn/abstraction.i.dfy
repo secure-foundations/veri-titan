@@ -77,24 +77,6 @@ module ot_abstraction {
 
 /* wdr_view definion (SHADOW) */
 
-    datatype uint512_raw = uint512_cons(
-        lh: uint256, uh: uint256, full: uint512)
-
-    type uint512_view_t = num: uint512_raw |
-        && num.lh == uint512_lh(num.full)
-        && num.uh == uint512_uh(num.full)
-        witness *
-
-    predicate valid_uint512_view(
-        wdrs: wdrs_t, num: uint512_view_t,
-        li: int, ui: int)
-        requires -1 <= li < BASE_5;
-        requires -1 <= ui < BASE_5;
-    {
-        && (li == NA || wdrs[li] == num.lh)
-        && (ui == NA || wdrs[ui] == num.uh)
-    }
-
     predicate valid_wdr_view(wdrs: wdrs_t, view: seq<uint256>, start: nat, len: nat)
     {   
         && |view| == len

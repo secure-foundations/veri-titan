@@ -129,34 +129,36 @@ abstract module generic_bv_ops
 
 /* upper/lower half split */
 
+    lemma upper_half_bound_lemma(x: nat, base: nat, half_base: nat)
+        requires x < base
+        requires 1 < half_base
+        requires base == half_base * half_base
+        ensures 0 <= x / half_base < half_base
+    {
+        var lh, uh := x % half_base, x / half_base;
+
+        DivMod.LemmaFundamentalDivMod(x, half_base);
+
+        assert x == half_base * uh + lh;
+
+        if uh > half_base {
+            Mul.LemmaMulIsCommutativeAuto();
+            Mul.LemmaMulInequalityAuto();
+            assert false;
+        }
+        DivMod.LemmaDivPosIsPos(x, half_base);
+    }
+
     function method {:opaque} lh(x: uint): uint
         ensures lh(x) < HW_BASE()
     {
         x % HW_BASE()
     }
 
-    lemma upper_half_bound_lemma(x: uint)
-        ensures 0 <= x / HW_BASE() < HW_BASE()
-    {
-        var d := HW_BASE();
-        var lh, uh := x % d, x / d;
-
-        DivMod.LemmaFundamentalDivMod(x, d);
-
-        assert x == lh + uh * d;
-
-        if uh > HW_BASE() {
-            Mul.LemmaMulIsCommutativeAuto();
-            Mul.LemmaMulInequalityAuto();
-            assert false;
-        }
-        DivMod.LemmaDivPosIsPos(x, d);
-    }
-
     function method {:opaque} uh(x: uint): uint
         ensures uh(x) < HW_BASE()
     {
-        upper_half_bound_lemma(x);
+        upper_half_bound_lemma(x, BASE(), HW_BASE());
         x / HW_BASE()
     }
 
@@ -167,6 +169,19 @@ abstract module generic_bv_ops
         Mul.LemmaMulIsCommutativeAuto();
         reveal lh();
         reveal uh();
+    }
+
+    function method {:opaque} dw_lh(x: nat): uint
+        requires x < DW_BASE()
+    {
+        x % BASE()
+    }
+
+    function method {:opaque} dw_uh(x: nat): uint
+        requires x < DW_BASE()
+    {
+        upper_half_bound_lemma(x, DW_BASE(), BASE());
+        x / BASE()
     }
 
 /* mul_add bounds */

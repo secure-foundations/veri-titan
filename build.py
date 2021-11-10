@@ -20,10 +20,10 @@ def rules():
 
     return f"""
 rule dafny
-    command = {DAFNY_PATH} /compile:0 /noNLarith /timeLimit:20 /vcsCores:2 $in && touch $out
+    command = {DAFNY_PATH} /compile:0 /noNLarith /timeLimit:20 /vcsCores:4 $in && touch $out
 
 rule dafny-nl
-    command = {DAFNY_PATH} /compile:0 /timeLimit:20 /vcsCores:2 $in && touch $out
+    command = {DAFNY_PATH} /compile:0 /timeLimit:20 /vcsCores:4 $in && touch $out
 
 rule vale
     command = {vale} -dafnyText -in $in -out $out

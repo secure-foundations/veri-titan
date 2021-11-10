@@ -1,5 +1,3 @@
-include "rsa_ops.i.dfy"
-
 module mul256_lemmas {
     import opened bv_ops
     import opened ot_machine

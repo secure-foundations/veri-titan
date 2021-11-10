@@ -9,7 +9,6 @@ module ot_machine {
     import opened integers
 
     const DMEM_LIMIT: int := 0x8000
-    const NUM_WORDS:  int := 12
 
     // ignore the mapping
     const NA :int := -1;
@@ -165,6 +164,26 @@ module ot_machine {
             bv256_ops.uh(x) / BASE_64
     }
 
+    lemma uint256_quarter_split_lemma(x: uint256)
+        ensures x == otbn_qsel(x, 0) +
+            otbn_qsel(x, 1) * BASE_64 + 
+            otbn_qsel(x, 2) * BASE_128 + 
+            otbn_qsel(x, 3) * BASE_192;
+    {
+        reveal otbn_qsel();
+        assert otbn_qsel(x, 0) + otbn_qsel(x, 1) * BASE_64 == bv256_ops.lh(x);
+        assert otbn_qsel(x, 2) + otbn_qsel(x, 3) * BASE_64 == bv256_ops.uh(x);
+
+        calc == {
+            otbn_qsel(x, 0) + otbn_qsel(x, 1) * BASE_64 + otbn_qsel(x, 2) * BASE_128 + otbn_qsel(x, 3) * BASE_192;
+             bv256_ops.lh(x) + otbn_qsel(x, 2) * BASE_128 + otbn_qsel(x, 3) * BASE_192;
+             bv256_ops.lh(x) + (otbn_qsel(x, 2) + otbn_qsel(x, 3) * BASE_64) * BASE_128;
+             bv256_ops.lh(x) + bv256_ops.uh(x) * BASE_128;
+                { reveal bv256_ops.lh(); reveal bv256_ops.uh(); }
+            x;
+        }
+    }
+
     function method {:opaque} otbn_qmul(x: uint256, qx: uint2, y: uint256, qy: uint2): uint128
     {
         var src1 := otbn_qsel(x, qx);
@@ -204,21 +223,21 @@ module ot_machine {
         else lh + v * BASE_128
     }
 
-    // lemma hwb_lemma(x1: uint256, x2: uint256, x3: uint256, lo: uint128, hi: uint128)
-    //     requires x2 == hwb(x1, lo, true);
-    //     requires x3 == hwb(x2, hi, false);
-    //     ensures x3 == lo + hi * BASE_128;
-    // {
-    //     calc == {
-    //         x3;
-    //             { half_split_lemma(x3); }
-    //         lh(x3) + uh(x3) * BASE_128;
-    //             { assert uh(x3) == hi && lh(x3) == lh(x2); }
-    //         lh(x2) + hi * BASE_128;
-    //             { assert lh(x2) == lo; }
-    //         lo + hi * BASE_128;
-    //     }
-    // }
+    lemma otbn_hwb_lemma(x1: uint256, x2: uint256, x3: uint256, lo: uint128, hi: uint128)
+        requires x2 == otbn_hwb(x1, lo, true);
+        requires x3 == otbn_hwb(x2, hi, false);
+        ensures x3 == lo + hi * BASE_128;
+    {
+        calc == {
+            x3;
+                { bv256_ops.half_split_lemma(x3); }
+            bv256_ops.lh(x3) + bv256_ops.uh(x3) * BASE_128;
+                { assert bv256_ops.uh(x3) == hi && bv256_ops.lh(x3) == bv256_ops.lh(x2); }
+            bv256_ops.lh(x2) + hi * BASE_128;
+                { assert bv256_ops.lh(x2) == lo; }
+            lo + hi * BASE_128;
+        }
+    }
 
 /* start: I don't want to write other bv modules just for two operations */
 

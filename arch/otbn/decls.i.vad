@@ -37,8 +37,8 @@ type int12:  Type(0) := int_range((-2048), 2048);
 
 function Pow(b: int, e: nat) : int extern;
 function IsModEquivalent(a: int, b: int, n: int) : bool extern;
-function cong_B256(a: int, b: int) : bool extern;
-function pow_B256(e: nat): nat extern;
+function cong_BASE(a: int, b: int) : bool extern;
+function pow_BASE(e: nat): nat extern;
 
 const BASE_32:  nat extern;
 const BASE_64:  nat extern; 
@@ -165,7 +165,7 @@ type string: Type(0) extern;
 function fst #[a: Type(0), b: Type(0)](m: tuple(a, b)): a extern;
 function snd #[a: Type(0), b: Type(0)](m: tuple(a, b)): b extern;
 
-function ToNat #[a: Type(0)] (s: seq(a)): nat extern;
+function to_nat #[a: Type(0)] (s: seq(a)): nat extern;
 ghost procedure LemmaSeqLen2 #[a: Type(0)] (ghost xs: seq(a)) extern;
 
 var x0: uint32 {:state reg32_t(GPR(0))};

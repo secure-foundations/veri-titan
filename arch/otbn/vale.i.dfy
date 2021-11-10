@@ -7,6 +7,7 @@ module ot_vale {
     import opened ot_machine
     import opened ot_abstraction
     import bv32_ops
+    import bv256_seq
 
     import Mul
 
@@ -31,12 +32,28 @@ module ot_vale {
         xs + [x]
     }
 
+    function ToNat(xs: seq<uint256>): nat
+    {
+        bv256_seq.ToNatRight(xs)
+    }
+
+    function mod(a: int, n: nat): int
+        requires n != 0;
+    {
+        a % n
+    }
+
     // need this for mul
 
     function va_mul_nat(a: nat, b: nat): nat
     {
         Mul.LemmaMulNonnegativeAuto();
         a * b
+    }
+
+    function method bool_to_uint1(b: bool): uint1
+    {
+        bv256_ops.bool_to_uint1(b)
     }
 
     function method uint32_addi(x: uint32, y: bv32_ops.sint): uint32
