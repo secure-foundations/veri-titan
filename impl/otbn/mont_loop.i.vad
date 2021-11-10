@@ -14,9 +14,6 @@ include "../../../lib/generic_mm_lemmas.dfy"
 
 module mont_loop {
 
-import opened bv_ops
-import opened rsa_ops
-
 import opened ot_machine
 import opened ot_abstraction
 import opened ot_decls
@@ -24,20 +21,19 @@ import opened ot_vale
 
 import opened mul256
 import opened addc512
-import opened addc512_lemmas
 import opened cond_sub_to_reg
-import opened mont_loop_lemmas
 
 import opened Mul
 import opened Power
 
+import opened integers
 import opened bv256_mm_lemmas
 
 #endverbatim
 
 ghost procedure LemmaMulIsCommutativeAuto() extern;
 
-ghost procedure uint512_view_lemma(ghost num: uint512_view_t) extern;
+ghost procedure dw_view_lemma(ghost num: uint512_view_t) extern;
 
 ghost procedure mont_word_mul_add_bound_lemma_0(
     ghost xs: seq(uint256),
@@ -261,7 +257,7 @@ procedure mula512_w30xw2(ghost a: uint256, ghost b: uint256)
     /* add limb of buffer: [w26, w27] <- [w26,w27] + w24 = y[j]*xi + A[j] */
     next_p := seq_addc_512_safe(w27, w27, w24, w26, w26, w31);
 
-    uint512_view_lemma(next_p);
+    dw_view_lemma(next_p);
     mont_word_mul_add_bound_lemma_1(seq(w27, w26), seq(w29, w31), a, b, w24);
 
     /* add carry word from previous cycle:
@@ -296,7 +292,7 @@ procedure mula512_w30xw25(ghost a: uint256, ghost b: uint256)
     // assert next_p.full == a * b + old(w24);
 
     /* [c_m, A[j-1]] = [w28, w24] = m[j]*ui + a_tmp + c_m */
-    uint512_view_lemma(next_p);
+    dw_view_lemma(next_p);
 
     mont_word_mul_add_bound_lemma_1(seq(w27, w26), seq(w28, w31), a, b, w24);
     next_p := seq_addc_512_safe(w24, w27, w28, w28, w26, w31);

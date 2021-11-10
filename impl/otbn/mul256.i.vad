@@ -56,7 +56,7 @@ procedure mul256_w30xw2()
     modifies
         w26; w27; wacc; fgroups;
     ensures
-        to_nat(seq(w27, w26)) == w2 * w30;
+        to_nat(seq(w27, w26)) == w30 * w2;
 {
     // ghost var p0 := uint256_qmul(w30, 0, w2, 0);
     // ghost var p1 := uint256_qmul(w30, 1, w2, 0);

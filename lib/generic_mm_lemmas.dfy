@@ -1,6 +1,6 @@
 include "generic_bv_ops.dfy"
 include "bv256_ops.dfy"
-include "../arch/otbn/machine.s.dfy"
+include "../arch/otbn/abstraction.i.dfy"
 
 abstract module generic_mm_lemmas {
     import opened GBV: generic_bv_ops
@@ -103,6 +103,7 @@ abstract module generic_mm_lemmas {
         ensures z.full == to_nat([z_lh, z_uh]) == to_nat([x_lh, x_uh]) + to_nat([y_lh, y_uh]);
         ensures z.lh ==  z_lh;
         ensures z.uh ==  z_uh;
+        ensures y_uh == 0 ==> z.full == to_nat([x_lh, x_uh]) + y_lh;
     {
         var x_full := to_nat([x_lh, x_uh]);
         var y_full := to_nat([y_lh, y_uh]);
@@ -120,6 +121,12 @@ abstract module generic_mm_lemmas {
 
         assert to_nat([z_lh, z_uh]) + c2 * Pow(GBV.BVSEQ.BASE(), 2) == x_full + to_nat([y_lh, y_uh]) by {
             GBV.BVSEQ.LemmaSeqAdd([x_lh, x_uh], [y_lh, y_uh], [z_lh, z_uh], c2);
+        }
+
+        if y_uh == 0 {
+            GBV.BVSEQ.LemmaSeqLen2([y_lh, y_uh]);
+            LemmaMulBasicsAuto();
+            assert to_nat([y_lh, y_uh]) == y_lh;
         }
 
         if c2 != 0 {
@@ -1009,6 +1016,7 @@ abstract module generic_mm_lemmas {
 module bv256_mm_lemmas refines generic_mm_lemmas {
     import opened GBV = bv256_ops
     import opened ot_machine
+    import opened ot_abstraction
 
     type uint512_view_t = dw_view_t
 
@@ -1143,5 +1151,101 @@ module bv256_mm_lemmas refines generic_mm_lemmas {
         assert to_nat([t2, u2]) == x * y by {
             GBV.BVSEQ.LemmaSeqLen2([t2, u2]);
         }
+    }
+
+    datatype mvars = mvars(
+        x_it: iter_t,
+        y_it: iter_t,
+
+        m_it: iter_t,
+        m0d_it: iter_t,
+        rr_it: iter_t,
+        sig_it: iter_t,
+        rsa: rsa_params)
+
+    predicate mvars_iter_init(iter: iter_t, heap: heap_t, address: int, value: int)
+    {
+        && (address >= 0 ==> iter_inv(iter, heap, address))
+        && (value >= 0 ==> to_nat(iter.buff) == value)
+        && iter.index == 0
+        && |iter.buff| == NUM_WORDS
+    }
+
+    predicate m0d_it_inv(iter: iter_t, heap: heap_t, address: int)
+    {
+        && (address >= 0 ==> iter_inv(iter, heap, address))
+        && iter.index == 0
+        && |iter.buff| == 1
+    }
+
+    predicate mvars_inv(
+        vars: mvars,
+        heap: heap_t,
+        x_ptr: int,
+        y_ptr: int,
+        m_ptr: int,
+        m0d_ptr: int,
+        rr_ptr: int,
+        sig_ptr: int)
+    {
+        && rsa_params_inv(vars.rsa)
+
+        && mvars_iter_init(vars.x_it, heap, x_ptr, NA)
+        && mvars_iter_init(vars.y_it, heap, y_ptr, NA)
+        && mvars_iter_init(vars.sig_it, heap, sig_ptr, vars.rsa.SIG)
+        && mvars_iter_init(vars.m_it, heap, m_ptr, vars.rsa.M)
+        && mvars_iter_init(vars.rr_it, heap, rr_ptr, vars.rsa.RR)
+
+        && m0d_it_inv(vars.m0d_it, heap, m0d_ptr)
+        && vars.m0d_it.buff[0] == vars.rsa.M0D
+    }
+
+    predicate mvars_init(
+        vars: mvars,
+        heap: heap_t,
+        m_ptr: uint32,
+        m0d_ptr: uint32,
+        rr_ptr: uint32,
+        sig_ptr: uint32,
+        out_ptr: uint32)
+    {
+        && rsa_params_inv(vars.rsa)
+        && vars.rsa.E0 < BASE_32
+        && is_xword_pointee(heap, 0, vars.rsa.E0)
+        && is_xword_pointee(heap, 4, NUM_WORDS)
+        && is_xword_pointee(heap, 16, m_ptr)
+        && is_xword_pointee(heap, 8, m0d_ptr)
+        && is_xword_pointee(heap, 12, rr_ptr)
+        && is_xword_pointee(heap, 20, sig_ptr)
+        && is_xword_pointee(heap, 28, out_ptr)
+
+        && mvars_inv(vars, heap, NA, NA, m_ptr, m0d_ptr, rr_ptr, sig_ptr)
+        && buff_base_ptr_valid(heap, out_ptr)
+        && |heap[out_ptr].b| == NUM_WORDS
+
+        && out_ptr != m0d_ptr
+        && out_ptr != rr_ptr
+        && out_ptr != m_ptr
+        && out_ptr != sig_ptr
+    }
+
+    lemma mont_word_mul_add_bound_lemma_0(
+        xs: seq<uint256>, ys: seq<uint256>, a: uint256, b: uint256)
+        requires |xs| == |ys| == 2;
+        requires to_nat(xs) == a * b;
+        requires ys[1] == 0;
+        ensures dw_add_is_safe(xs[0], xs[1], ys[0], ys[1]);
+    {
+        assume false;
+    }
+
+    lemma mont_word_mul_add_bound_lemma_1(
+        xs: seq<uint256>, ys: seq<uint256>, a: uint256, b: uint256, c: uint256)
+        requires |xs| == |ys| == 2;
+        requires to_nat(xs) == a * b + c;
+        requires ys[1] == 0;
+        ensures dw_add_is_safe(xs[0], xs[1], ys[0], ys[1]);
+    {
+        assume false;
     }
 }

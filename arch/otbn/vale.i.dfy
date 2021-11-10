@@ -37,11 +37,19 @@ module ot_vale {
         bv256_seq.ToNatRight(xs)
     }
 
+    function SeqZero(n: nat): seq<uint256>
+    {
+        bv256_seq.SeqZero(n)
+    }
+
     function mod(a: int, n: nat): int
         requires n != 0;
     {
         a % n
     }
+
+    lemma xor_clear_lemma(x: uint256)
+        ensures bv256_ops.xor(x, x) == 0;
 
     // need this for mul
 
