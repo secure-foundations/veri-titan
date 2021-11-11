@@ -105,4 +105,9 @@ module bv256_ops refines generic_bv_ops
             eighth_split(v, 5),
             eighth_split(v, 6),
             eighth_split(v, 7))
+    
+    lemma single_digit_lemma_0(a: nat, b: nat, u: nat)
+        requires a <= u;
+        requires b <= u;
+        ensures a * b <= u * u;
 }

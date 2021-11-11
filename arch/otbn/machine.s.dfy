@@ -188,8 +188,8 @@ module ot_machine {
     {
         var src1 := otbn_qsel(x, qx);
         var src2 := otbn_qsel(y, qy);
-        assume src1 as nat * src2 as nat < BASE_128;
-        Mul.LemmaMulStrictlyIncreasesAuto();
+        Mul.LemmaMulStrictUpperBound(src1, BASE_64, src2, BASE_64);
+        Mul.LemmaMulIncreasesAuto();
         src1 as uint128 * src2 as uint128
     }
 

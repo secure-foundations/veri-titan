@@ -1,13 +1,17 @@
 include "rsa_ops.i.dfy"
-include "../../lib/bv_ops_nl.dfy"
 
 module sub_mod_nl_lemmas {
     import opened bv_ops
-    import opened bv_ops_nl
     import opened rsa_ops
     import opened rv_machine
     import opened BASE_32_Seq
     import Power2
+
+    lemma div_negative_one(a: nat)
+      requires a > 1
+      ensures -1 / a == -1
+    {
+    }
 
     lemma refine_int64_view(lh: uint32, uh: uint32, full: int64) returns (r: int64_view_t)
       requires lh == uint64_lh(to_2s_complement_bv64(full));
