@@ -80,7 +80,10 @@ abstract module generic_mm_lemmas {
         == to_nat([num.lh, num.uh])
         == num.lh + num.uh * BASE();
     {
-        assume false;
+        reveal dw_lh();
+        reveal dw_uh();
+        LemmaFundamentalDivMod(num.full, BASE());
+        GBV.BVSEQ.LemmaSeqLen2([num.lh, num.uh]);
     }
 
     predicate dw_add_is_safe(
@@ -263,7 +266,7 @@ abstract module generic_mm_lemmas {
             cong_BASE(a0 + y0 * xi, p1.full);
                 { dw_view_lemma(p1); }
             cong_BASE(a0 + y0 * xi, p1.lh + p1.uh * BASE());
-                { LemmaAddMulModNoop(p1.lh, p1.uh, BASE()); }
+                { LemmaModMultiplesVanish(p1.uh, p1.lh, BASE()); }
             cong_BASE(a0 + y0 * xi, p1.lh);
             cong_BASE(p1.lh, a0 + y0 * xi);
                 { LemmaModMulEquivalentAuto(); }
@@ -276,7 +279,7 @@ abstract module generic_mm_lemmas {
             w25 + w26 * BASE() == p1.lh * m0d;
             cong_BASE(w25 + w26 * BASE(), p1.lh * m0d);
             cong_BASE(w25 + w26 * BASE(), (a0 + y0 * xi) * m0d);
-                { LemmaAddMulModNoop(w25, w26, BASE()); }
+                { LemmaModMultiplesVanish(w26, w25, BASE()); }
             cong_BASE(w25, (a0 + y0 * xi) * m0d);
         }
     }
@@ -316,7 +319,7 @@ abstract module generic_mm_lemmas {
                 { assert - (p1.uh as int * BASE())== - 1 * (p1.uh as int * BASE()); }
                 { LemmaMulIsAssociativeAuto(); }
             cong_BASE(ui * m0 + p1.lh, - (p1.uh as int) * BASE());
-                { LemmaMulModZero(- (p1.uh as int), BASE()); }
+                { LemmaModMultiplesVanish(- (p1.uh as int), 0, BASE()); }
             cong_BASE(ui * m0 + p1.lh, 0);
         }
 
@@ -326,7 +329,7 @@ abstract module generic_mm_lemmas {
             p2.lh + p2.uh * BASE() == ui * m0 + p1.lh;
             cong_BASE(p2.lh + p2.uh * BASE(), ui * m0 + p1.lh);
             cong_BASE(ui * m0 + p1.lh, p2.lh + p2.uh * BASE());
-                { LemmaAddMulModNoop(p2.lh, p2.uh, BASE()); }
+                { LemmaModMultiplesVanish(p2.uh, p2.lh, BASE()); }
             cong_BASE(ui * m0 + p1.lh, p2.lh);
             cong_BASE(p2.lh, 0);
         }
@@ -1117,7 +1120,12 @@ module bv256_mm_lemmas refines generic_mm_lemmas {
         requires ys[1] == 0;
         ensures dw_add_is_safe(xs[0], xs[1], ys[0], ys[1]);
     {
-        assume false;
+        mul_add_bound_lemma(a, b, ys[0]);
+        assert xs == [xs[0], xs[1]];
+        assert to_nat([ys[0], ys[1]]) == ys[0] by {
+            GBV.BVSEQ.LemmaSeqLen2([ys[0], ys[1]]);
+        }
+        assert to_nat([xs[0], xs[1]]) + to_nat([ys[0], ys[1]]) < DW_BASE();
     }
 
     lemma mont_word_mul_add_bound_lemma_1(
@@ -1127,7 +1135,12 @@ module bv256_mm_lemmas refines generic_mm_lemmas {
         requires ys[1] == 0;
         ensures dw_add_is_safe(xs[0], xs[1], ys[0], ys[1]);
     {
-        assume false;
+        mul_double_add_bound_lemma(a, b, c, ys[0]);
+        assert xs == [xs[0], xs[1]];
+        assert to_nat([ys[0], ys[1]]) == ys[0] by {
+            GBV.BVSEQ.LemmaSeqLen2([ys[0], ys[1]]);
+        }
+        assert to_nat([xs[0], xs[1]]) + to_nat([ys[0], ys[1]]) < DW_BASE();
     }
 
     lemma mul256_correct_lemma(

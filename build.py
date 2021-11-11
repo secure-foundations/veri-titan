@@ -59,7 +59,7 @@ GEN_DIR = "gen"
 
 NL_FILES = {
     "impl/riscv/sub_mod_nl_lemmas.i.dfy",
-    "lib/mul256_nl_lemma.dfy"}
+    "lib/mul256_nl_lemma.i.dfy"}
 
 ## misc utils
 

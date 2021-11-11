@@ -3,7 +3,7 @@ include "../../arch/otbn/decls.i.vad"
 #verbatim
 
 include "../../arch/otbn/decls.i.dfy"
-include "../../../impl/otbn/mul256_lemma.dfy"
+include "../../../lib/generic_mm_lemmas.dfy"
 
 module mul256 {
 
@@ -14,7 +14,7 @@ import opened ot_vale
 
 import opened integers
 import opened bv256_ops
-import opened mul256_lemmas
+import opened bv256_mm_lemmas
 
 #endverbatim
 
