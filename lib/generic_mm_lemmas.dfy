@@ -1250,9 +1250,10 @@ module bv256_mm_lemmas refines generic_mm_lemmas {
         }
 
         assert wacc == 0 by {
-            assume false;
-            // single_digit_lemma_0(x, y, B4-1);
-            // assert x * y <= B8;
+            assert x * y <= (B4 - 1) * (B4 - 1) by {
+                Mul.LemmaMulUpperBoundAuto();
+            }
+            assert x * y <= B8;
         }
 
         assert to_nat([t2, u2]) == x * y by {
