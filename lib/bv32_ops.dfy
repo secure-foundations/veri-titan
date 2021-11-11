@@ -40,6 +40,11 @@ module bv32_ops refines generic_bv_ops
        (x as bv32 ^ y as bv32) as uint
     }
 
+    lemma xor_clear_lemma(x: uint)
+    {
+        reveal xor();
+    }
+
     predicate valid_shift(amount: uint)
     {
         amount <= 32
@@ -54,4 +59,9 @@ module bv32_ops refines generic_bv_ops
     {
         (x as bv32 << amount) as uint
     }
-} 
+
+    function method {:opaque} msb(x: uint): uint1
+    {
+        if ((x as bv256 >> 32) & 1 == 1) then 1 else 0
+    }
+}

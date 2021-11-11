@@ -58,10 +58,8 @@ GEN_DIR = "gen"
 
 
 NL_FILES = {
-    # "arch/riscv/vale.i.dfy",
     "impl/riscv/sub_mod_nl_lemmas.i.dfy",
-    # "impl/riscv/sub_mod_lemmas.i.dfy",
-    "lib/bv_ops_nl.dfy"}
+    "lib/mul256_nl_lemma.dfy"}
 
 ## misc utils
 
