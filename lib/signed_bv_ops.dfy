@@ -62,6 +62,11 @@ module bv_ops {
         if val >= 0 then val else val + BASE_64
     }
 
+    predicate cong_B32(a: int, b: int)
+    {
+        IsModEquivalent(a, b, BASE_32)
+    }
+
     /* signed operations */
     function method int32_rs(x: int32, shift: nat) : int32
     {
