@@ -36,6 +36,7 @@ type int64:  Type(0) := int_range((-0x80000000_00000000), 0x7fffffff_ffffffff);
     
 function power(b: int, e: nat) : int extern;
 function cong(a: int, b: int, n: int) : bool extern;
+function cong_B32(a: int, b: int): bool extern;
 
 const BASE_32:  nat extern;
 const BASE_64:  nat extern; 
@@ -112,6 +113,8 @@ function operator(.buff := ) (iter :iter_t, buff: seq(uint32)): iter_t extern;
 function to_nat(s: seq(uint32)): nat extern;
 ghost procedure to_nat_lemma_1(ghost xs: seq(uint32)) extern;
  
+
+
 type string: Type(0) extern;
 
 var x0: uint32 {:state reg32_t(GPR(0))};

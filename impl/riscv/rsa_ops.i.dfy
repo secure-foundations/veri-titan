@@ -17,7 +17,7 @@ module rsa_ops {
     import opened BASE_32_Seq
     import opened Seq
 
-    function ToNat(xs: seq<BASE_32_Seq.uint>): nat
+    function to_nat(xs: seq<BASE_32_Seq.uint>): nat
     {
         assert BASE() == BASE_32;
         BASE_32_Seq.ToNatRight(xs)
@@ -93,7 +93,7 @@ module rsa_ops {
     predicate mvars_iter_init(iter: iter_t, mem: mem_t, address: int, value: int)
     {
         && (address >= 0 ==> iter_inv(iter, mem, address))
-        && (value >= 0 ==> ToNat(iter.buff) == value)
+        && (value >= 0 ==> to_nat(iter.buff) == value)
         && iter.index == 0
         && |iter.buff| == NUM_WORDS
     }

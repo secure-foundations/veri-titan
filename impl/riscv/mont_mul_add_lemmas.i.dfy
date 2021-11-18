@@ -6,8 +6,10 @@ module mont_mul_add_lemmas {
   import opened rv_machine
 
   import opened BASE_32_Seq
+  import opened Mul
   import Power2
   import Power
+  import opened DivMod
 
   lemma refine_uint64_view(lh: uint32, uh: uint32, full: uint64) returns (r: uint64_view_t)
     requires lh == uint64_lh(full);
@@ -27,59 +29,111 @@ module mont_mul_add_lemmas {
     r := refine_uint64_view(0, 0, 0);
   }
   
- //  predicate mont_mul_add_loop_inv(
- //    A: uint64_view_t,
- //    B: uint64_view_t,
- //    A_prev: uint64_view_t,
- //    B_prev: uint64_view_t,
- //    n: seq<uint32>,
- //    b: seq<uint32>,
- //    c: seq<uint32>,
- //    a: uint32,
- //    d0: uint32,
- //    i: nat)
- //  {
- //    && |n| == |b| == |c|
- //    && 0 <= i < |n|
+  // predicate mont_mul_add_loop_inv(
+  //   A: uint64_view_t,
+  //   B: uint64_view_t,
+  //   A_prev: uint64_view_t,
+  //   B_prev: uint64_view_t,
+  //   n: seq<uint32>,
+  //   b: seq<uint32>,
+  //   c: seq<uint32>,
+  //   a: uint32,
+  //   d0: uint32,
+  //   i: nat)
+  // {
+  //   && |n| == |b| == |c|
+  //   && 0 <= i < |n|
 
- //    && A.full == a * b[i] + c[i] + A_prev.uh
- //    && B.full == d0 * n[i] + A.lh + B_prev.uh
- //    && (i > 0 ==> c[i-1] == B.lh)
- //  }
+  //   && A.full == a * b[i] + c[i] + A_prev.uh
+  //   && B.full == d0 * n[i] + A.lh + B_prev.uh
+  //   && (i > 0 ==> c[i-1] == B.lh)
+  // }
 
-    lemma mont_loop_cong_lemma(
-        p1: uint64_view_t,
-        a0: uint32,
-        y0: uint32,
+    predicate mont_loop_inv(
         xi: uint32,
-        w25: uint32,
-        w26: uint32,
-        m0d: uint32)
-
-        requires a0 + y0 * xi == p1.full;
-        requires ToNat([w25, w26]) == p1.lh * m0d; 
-        ensures cong_B32(w25, (a0 + y0 * xi) * m0d);
+        ui: uint32,
+        p1: uint64_view_t,
+        p2: uint64_view_t,
+        y: seq<uint32>,
+        m: seq<uint32>,
+        prev_a: seq<uint32>,
+        next_a: seq<uint32>,
+        j: nat)
     {
-        calc ==> {
-            true;
-            cong_B32(a0 + y0 * xi, p1.full);
-                { uint64_view_lemma(p1); }
-            cong_B32(a0 + y0 * xi, p1.lh + p1.uh * BASE_32);
-            cong_B32(a0 + y0 * xi, p1.lh);
-            cong_B32(p1.lh, a0 + y0 * xi);
-                { LemmaModMulEquivalentAuto(); }
-            cong_B32(p1.lh * m0d, (a0 + y0 * xi) * m0d);
-        }
-
-        calc ==> {
-            true;
-                { LemmaSeqLen2([w25, w26]); }
-            w25 + w26 * BASE_32 == p1.lh * m0d;
-            cong_B32(w25 + w26 * BASE_32, p1.lh * m0d);
-            cong_B32(w25 + w26 * BASE_32, (a0 + y0 * xi) * m0d);
-            cong_B32(w25, (a0 + y0 * xi) * m0d);
-        }
+        && |m| == |next_a| == |y| == |prev_a| == NUM_WORDS
+        && (1 <= j <= NUM_WORDS)
+        && (xi * to_nat(y[..j]) + ui * to_nat(m[..j]) + to_nat(prev_a[..j]) 
+            == 
+        to_nat([0] + next_a[..j-1]) + p2.uh * pow_B32(j) + p1.uh * pow_B32(j))
     }
+
+    lemma mont_loop_inv_pre_lemma(
+        xi: uint32, // a
+        ui: uint32, //d0
+        m0d: uint32, //d0inv
+        p1: uint64_view_t, // A
+        p2: uint64_view_t, // B
+        y: seq<uint32>, // b
+        m: seq<uint32>, // n
+        a: seq<uint32>) // c
+        requires |m| == |a| == |y| == NUM_WORDS;
+        requires p1.full == xi * y[0] + a[0]; // A
+        requires p2.full == ui * m[0] + p1.lh; // B == d0 * n[0] + A.lh
+        requires cong_B32(m0d * to_nat(m), -1);
+        requires p1.full == a[0] + y[0] * xi;
+        requires ui == uint32_mul(p1.lh, m0d); 
+        ensures mont_loop_inv(xi, ui, p1, p2, y, m, a, a, 1)
+    // {
+    //     assert cong_B32(ui, (a[0] + y[0] * xi) * m0d) by {
+    //       calc ==> {
+    //         ui == uint32_mul(p1.lh, m0d);
+    //         {
+    //           reveal uint64_lh();
+    //         }
+    //         cong_B32(ui, p1.lh * m0d);
+    //         cong_B32(ui, uint64_lh(p1.full) * m0d);
+    //         {
+    //           reveal uint64_lh();
+    //           LemmaMulModNoopLeftAuto();
+    //         }
+    //         cong_B32(ui, p1.full * m0d);
+    //       }
+    //     }
+
+    //     assert cong_B32(m0d * m[0], -1) by {
+    //         LemmaSeqLswModEquivalence(m);
+    //         LemmaModMulEquivalent(to_nat(m), m[0], m0d, BASE_32);
+    //         LemmaMulIsCommutativeAuto();
+    //     }
+
+    //     mont_loop_divisible_lemma(ui, m0d, p1, p2, m[0]);
+
+    //     LemmaSeqLen1(y[..1]);
+    //     LemmaSeqLen1(m[..1]);
+    //     LemmaSeqLen1(a[..1]);
+
+    //     assert p2.full == p2.uh * BASE_32 by {
+    //         uint64_view_lemma(p2);
+    //     }
+
+    //     uint64_view_lemma(p1);
+
+    //     calc {
+    //         xi * to_nat(y[..1]) + ui * to_nat(m[..1]) + to_nat(a[..1]);
+    //             { reveal Pow(); }
+    //         p2.uh * pow_B32(1) + p1.uh * pow_B32(1);
+    //             {
+    //                 reveal ToNatRight();
+    //                 assert to_nat([0]) == 0;
+    //             }
+    //         to_nat([0]) + p2.uh * pow_B32(1) + p1.uh * pow_B32(1);
+    //             {
+    //                 assert [0] + a[..0] == [0];
+    //                 assert to_nat([0]) == to_nat([0] + a[..0]);
+    //             }
+    //         to_nat([0] + a[..0]) + p2.uh * pow_B32(1) + p1.uh * pow_B32(1);
+    //     }
+    // }
 
     lemma mont_loop_divisible_lemma(
         ui: int,
@@ -129,78 +183,4 @@ module mont_mul_add_lemmas {
 
         assert cong_B32(p2.lh, 0);
     }
-
-    predicate mont_loop_inv(
-        xi: uint32,
-        ui: uint32,
-        p1: uint512_view_t,
-        p2: uint512_view_t,
-        y: seq<uint32>,
-        m: seq<uint32>,
-        prev_a: seq<uint32>,
-        next_a: seq<uint32>,
-        j: nat)
-    {
-        && |m| == |next_a| == |y| == |prev_a| == NUM_WORDS
-        && (1 <= j <= NUM_WORDS)
-        && (xi * ToNat(y[..j]) + ui * ToNat(m[..j]) + ToNat(prev_a[..j]) 
-            == 
-        ToNat([0] + next_a[..j-1]) + p2.uh * pow_B32(j) + p1.uh * pow_B32(j))
-    }
-
-
-    lemma mont_loop_inv_pre_lemma(
-        xi: uint32, // a
-        ui: uint32, //d0
-        m0d: uint32, //d0inv
-        p1: uint64_view_t, // A
-        p2: uint64_view_t, // B
-        y: seq<uint32>, // b
-        m: seq<uint32>, // n
-        a: seq<uint32>) // c
-        requires |m| == |a| == |y| == NUM_WORDS;
-        requires p1.full == xi * y[0] + a[0]; // A
-        requires p2.full == ui * m[0] + p1.lh; // B == d0 * n[0] + A.lh
-        requires cong_B32(m0d * ToNat(m), -1);
-        requires cong_B32(ui, (a[0] + y[0] * xi) * m0d);
-
-        ensures mont_loop_inv(xi, ui, p1, p2, y, m, a, a, 1)
-    {
-        assert cong_B32(m0d * m[0], -1) by {
-            LemmaSeqLswModEquivalence(m);
-            LemmaModMulEquivalent(ToNat(m), m[0], m0d, BASE_32);
-            LemmaMulIsCommutativeAuto();
-        }
-
-        mont_loop_divisible_lemma(ui, m0d, p1, p2, m[0]);
-
-        LemmaSeqLen1(y[..1]);
-        LemmaSeqLen1(m[..1]);
-        LemmaSeqLen1(a[..1]);
-
-        assert p2.full == p2.uh * BASE_32 by {
-            uint64_view_lemma(p2);
-        }
-
-        uint64_view_lemma(p1);
-
-        calc {
-            xi * ToNat(y[..1]) + ui * ToNat(m[..1]) + ToNat(a[..1]);
-                { reveal Pow(); }
-            p2.uh * pow_B32(1) + p1.uh * pow_B32(1);
-                {
-                    reveal ToNatRight();
-                    assert ToNat([0]) == 0;
-                }
-            ToNat([0]) + p2.uh * pow_B32(1) + p1.uh * pow_B32(1);
-                {
-                    assert [0] + a[..0] == [0];
-                    assert ToNat([0]) == ToNat([0] + a[..0]);
-                }
-            ToNat([0] + a[..0]) + p2.uh * pow_B32(1) + p1.uh * pow_B32(1);
-
-        }
-    }
-
-
 }

@@ -11,7 +11,7 @@ module bv_ops {
     import opened DivMod
     import opened DivModNeg
 
-    const NUM_WORDS:  int := 12
+    const NUM_WORDS:  int := 96
 
     const BASE_1:   int := 2
     const BASE_2:   int := 4
