@@ -103,3 +103,11 @@ The validation is done through something called block-based semantic equivalence
 * This paper uses the term verification a lot, but it is more general formal analysis. The evaluation section seems a bit short. 
 * It is a fair point that os/hardware specific instructions cannot be lifted/decompiled easily, since there is no correspondence with C.
 ----
+
+## [HACLxN: Verified Generic SIMD Crypto](https://eprint.iacr.org/2020/572.pdf)
+
+## [The Last Mile: High-Assurance and High-Speed Cryptographic Implementations](https://arxiv.org/pdf/1904.04606.pdf)
+
+## [Simple High-Level Code For Cryptographic Arithmetic – With Proofs, Without Compromises](http://adam.chlipala.net/papers/FiatCryptoSP19/FiatCryptoSP19.pdf)
+
+
