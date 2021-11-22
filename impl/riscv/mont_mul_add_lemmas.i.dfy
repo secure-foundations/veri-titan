@@ -56,13 +56,14 @@ module mont_mul_add_lemmas {
         p2: uint64_view_t,
         y: seq<uint32>,
         m: seq<uint32>,
-        prev_a: seq<uint32>,
+        old_a: seq<uint32>,
         next_a: seq<uint32>,
         j: nat)
     {
-        && |m| == |next_a| == |y| == |prev_a| == NUM_WORDS
+        && |m| == |next_a| == |y| == |old_a| == NUM_WORDS
         && (1 <= j <= NUM_WORDS)
-        && (xi * to_nat(y[..j]) + ui * to_nat(m[..j]) + to_nat(prev_a[..j]) 
+        && old_a[j..] == next_a[j..]
+        && (xi * to_nat(y[..j]) + ui * to_nat(m[..j]) + to_nat(old_a[..j]) 
             == 
         to_nat([0] + next_a[..j-1]) + p2.uh * pow_B32(j) + p1.uh * pow_B32(j))
     }
@@ -83,57 +84,6 @@ module mont_mul_add_lemmas {
         requires p1.full == a[0] + y[0] * xi;
         requires ui == uint32_mul(p1.lh, m0d); 
         ensures mont_loop_inv(xi, ui, p1, p2, y, m, a, a, 1)
-    // {
-    //     assert cong_B32(ui, (a[0] + y[0] * xi) * m0d) by {
-    //       calc ==> {
-    //         ui == uint32_mul(p1.lh, m0d);
-    //         {
-    //           reveal uint64_lh();
-    //         }
-    //         cong_B32(ui, p1.lh * m0d);
-    //         cong_B32(ui, uint64_lh(p1.full) * m0d);
-    //         {
-    //           reveal uint64_lh();
-    //           LemmaMulModNoopLeftAuto();
-    //         }
-    //         cong_B32(ui, p1.full * m0d);
-    //       }
-    //     }
-
-    //     assert cong_B32(m0d * m[0], -1) by {
-    //         LemmaSeqLswModEquivalence(m);
-    //         LemmaModMulEquivalent(to_nat(m), m[0], m0d, BASE_32);
-    //         LemmaMulIsCommutativeAuto();
-    //     }
-
-    //     mont_loop_divisible_lemma(ui, m0d, p1, p2, m[0]);
-
-    //     LemmaSeqLen1(y[..1]);
-    //     LemmaSeqLen1(m[..1]);
-    //     LemmaSeqLen1(a[..1]);
-
-    //     assert p2.full == p2.uh * BASE_32 by {
-    //         uint64_view_lemma(p2);
-    //     }
-
-    //     uint64_view_lemma(p1);
-
-    //     calc {
-    //         xi * to_nat(y[..1]) + ui * to_nat(m[..1]) + to_nat(a[..1]);
-    //             { reveal Pow(); }
-    //         p2.uh * pow_B32(1) + p1.uh * pow_B32(1);
-    //             {
-    //                 reveal ToNatRight();
-    //                 assert to_nat([0]) == 0;
-    //             }
-    //         to_nat([0]) + p2.uh * pow_B32(1) + p1.uh * pow_B32(1);
-    //             {
-    //                 assert [0] + a[..0] == [0];
-    //                 assert to_nat([0]) == to_nat([0] + a[..0]);
-    //             }
-    //         to_nat([0] + a[..0]) + p2.uh * pow_B32(1) + p1.uh * pow_B32(1);
-    //     }
-    // }
 
     lemma mont_loop_divisible_lemma(
         ui: int,
@@ -183,4 +133,102 @@ module mont_mul_add_lemmas {
 
         assert cong_B32(p2.lh, 0);
     }
+
+    lemma mont_loop_inv_peri_lemma(
+        xi: uint32,
+        ui: uint32,
+        p1: uint64_view_t,
+        p2: uint64_view_t,
+        next_p1: uint64_view_t,
+        next_p2: uint64_view_t,
+        y: seq<uint32>,
+        m: seq<uint32>,
+        old_a: seq<uint32>,
+        a: seq<uint32>,
+        next_a: seq<uint32>,
+        j: nat)
+
+        requires 1 <= j < NUM_WORDS; // this is in the loop itself
+        requires mont_loop_inv(xi, ui, p1, p2, y, m, old_a, a, j);
+        requires a[j] == old_a[j];
+        requires |next_a| == NUM_WORDS;
+        requires next_p1.full == p1.uh + xi * y[j]  + a[j];
+        requires next_p2.full == ui * m[j] + next_p1.lh + p2.uh;
+        requires next_a == a[j-1 := next_p2.lh];
+        ensures mont_loop_inv(xi, ui, next_p1, next_p2, y, m, old_a, next_a, j+1);
+
+    lemma mont_loop_inv_post_lemma(
+        xi: uint32,
+        ui: uint32,
+        p1: uint64_view_t,
+        p2: uint64_view_t,
+        y: seq<uint32>,
+        m: seq<uint32>,
+        prev_a: seq<uint32>,
+        a: seq<uint32>,
+        bout: uint1)
+
+        requires mont_loop_inv(xi, ui, p1, p2, y, m, prev_a, a, NUM_WORDS);
+        requires uint32_addc(p1.uh, p2.uh, 0) == (a[NUM_WORDS-1], bout);
+
+        ensures to_nat(a) * BASE_32 + bout * pow_B32(NUM_WORDS+1)
+            == xi * to_nat(y) + ui * to_nat(m) + to_nat(prev_a);
+
+    lemma mont_loop_cond_sub_lemma(
+        xi: uint32,
+        ui: uint32,
+        y: seq<uint32>,
+        m: seq<uint32>,
+        prev_a: seq<uint32>,
+        a: seq<uint32>,
+        next_a: seq<uint32>,
+        bout: uint1,
+        next_bout: uint1)
+
+        requires to_nat(m) != 0;
+        requires |next_a| == |y| == NUM_WORDS;
+        requires to_nat(prev_a) < to_nat(m) + to_nat(y);
+        requires to_nat(a) * BASE_32 + bout * pow_B32(NUM_WORDS+1)
+            == xi * to_nat(y) + ui * to_nat(m) + to_nat(prev_a);
+        requires bout == 0 ==>
+            to_nat(a) == to_nat(next_a)
+        requires bout == 1 ==>
+            to_nat(next_a) - pow_B32(NUM_WORDS) * next_bout == to_nat(a) - to_nat(m)
+
+        ensures to_nat(next_a) < to_nat(m) + to_nat(y)
+        ensures IsModEquivalent(to_nat(next_a) * BASE_32, xi * to_nat(y) + ui * to_nat(m) + to_nat(prev_a), to_nat(m))
+
+
+    predicate montmul_inv(
+        a: seq<uint32>,
+        x: seq<uint32>,
+        i: nat,
+        y: seq<uint32>,
+        rsa: rsa_params)
+    {
+        && |a| == |y| == |x| == NUM_WORDS
+        && i <= |x|
+        && rsa_params_inv(rsa)
+        && to_nat(a) < rsa.M + to_nat(y)
+        && IsModEquivalent(to_nat(a) * pow_B32(i), to_nat(x[..i]) * to_nat(y), rsa.M)
+    }
+
+    lemma montmul_inv_lemma(
+        prev_a: seq<uint32>,
+        a: seq<uint32>,
+        x: seq<uint32>, 
+        i: nat,
+        ui: int,
+        y: seq<uint32>,
+        rsa: rsa_params)
+
+        requires montmul_inv(prev_a, x, i, y, rsa);
+        requires |a| == NUM_WORDS;
+        requires i < |x|;
+        requires to_nat(a) < rsa.M + to_nat(y);
+        requires IsModEquivalent(to_nat(a) * BASE_32,
+                x[i] * to_nat(y) + ui * rsa.M + to_nat(prev_a), rsa.M);
+        ensures montmul_inv(a, x, i+1, y, rsa);
+
+
 }

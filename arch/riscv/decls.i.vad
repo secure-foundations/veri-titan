@@ -112,8 +112,18 @@ function operator(.buff := ) (iter :iter_t, buff: seq(uint32)): iter_t extern;
 
 function to_nat(s: seq(uint32)): nat extern;
 ghost procedure to_nat_lemma_1(ghost xs: seq(uint32)) extern;
- 
 
+type rsa_params: Type(0) extern;
+function operator(.E0) (rsa: rsa_params): nat extern;
+function operator(.E) (rsa: rsa_params): nat extern;
+function operator(.M) (rsa: rsa_params): nat extern;
+function operator(.SIG) (rsa: rsa_params): nat extern;
+function operator(.M0D) (rsa: rsa_params): uint32 extern;
+function operator(.B256_INV) (rsa: rsa_params): nat extern;
+function operator(.R) (rsa: rsa_params): nat extern;
+function operator(.RR) (rsa: rsa_params): nat extern;
+function operator(.R_INV) (rsa: rsa_params): nat extern;
+function rsa_params_inv(rsa: rsa_params): bool extern;
 
 type string: Type(0) extern;
 
@@ -438,19 +448,21 @@ procedure srai(inout dst: reg32, in src1: reg32, in src2: imm32)
 // store instructions
     
 procedure sw_stack(in rs2: reg32, in offset: imm32, inline index: nat)
-    modifies
-    mem;
-    reads x2;
+    // returns (ghost new_stack: seq(uint32))
     requires
         4 * index == offset;
         mem?[x2];
         index < seq_len(mem[x2]);
         offset < 4096;
+    reads
+        x2;
+    modifies
+        mem;
     ensures
         mem == old(mem[x2 := mem[x2][index := rs2]]);
-        {
-            assume false;
-        }
+    {
+        assume false;
+    }
 
 procedure sw_iter(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: iter_t)
     {:instruction Ins32(RV_SW(rs2, base, offset))}
@@ -462,7 +474,7 @@ procedure sw_iter(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: i
     ensures
         // store rs2 at mem[base + offset]
         mem == old(mem[iter.base_addr := mem[iter.base_addr][iter.index := rs2]]);
-        iter_safe(iter, mem, base + offset);
+        iter_safe(iter.(buff := iter.buff[iter.index := rs2]), mem, base + offset);
 {
     assume false;
 }

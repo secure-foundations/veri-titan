@@ -187,6 +187,12 @@ module bv_ops {
         if r >= BASE_32 then (r - BASE_32) else r
     }
 
+    function method uint32_addc(x:uint32, y:uint32, c:uint1): (uint32, uint1)
+    {
+         var r := x as int + y as int + c as int;
+        if r >= BASE_32 then (r - BASE_32, 1) else (r, 0)
+    }
+
     function method uint32_sub(x:uint32, y:uint32) : uint32
     {
         var diff := x - y;
