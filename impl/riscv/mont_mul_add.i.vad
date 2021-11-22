@@ -128,7 +128,7 @@ procedure mont_mul_add_loop(
 
     assert a3 == A_prev.uh;
 
-    // a0(lh), a1(uh) = A == a * b[i+1] + c[i+1] + A_prev(uh)
+    // a0(lh), a1(uh) = A == a * b[i] + c[i] + A_prev(uh)
     let A := mulaa32();
     assert a0 == A.lh;
     assert a1 == A.uh;
@@ -138,10 +138,9 @@ procedure mont_mul_add_loop(
     mv(s0, a1);
     assert s0 == A.uh;
 
-    // a1 <- n[i+1]
+    // a1 <- n[i]
     lw_iter(a1, s2, 0, iter_n);
     assert a1 == iter_n.buff[i];
-    assume false;
 
     // a2 <- A(lh)
     mv(a2, a0);
@@ -156,15 +155,15 @@ procedure mont_mul_add_loop(
     assert a2 == A.lh;
     assert a3 == B.uh;
 
-    // a0(lh), a1(uh) = B == d0 * n[i+1] + A(lh) + B(uh)
+    // a0(lh), a1(uh) = B == d0 * n[i] + A(lh) + B(uh)
     let B := mulaa32();
     assert a0 == B.lh;
     assert a1 == B.uh;
-    assert B.full == d0 * iter_n.buff[i+1] + A.lh + B_prev.uh;
+    assert B.full == d0 * iter_n.buff[i] + A.lh + B_prev.uh;
 
     // c[i-1] <- B(lh) -- store to c
     sw_iter(a0, s3, 0, iter_c);
-    assert iter_c.buff[i] == B.lh;
+    assert iter_c.buff[i-1] == B.lh;
 
     // s2 <- n[i+1] -- increment pointer to n
     addi(s2, s2, 4);
