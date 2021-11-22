@@ -108,6 +108,10 @@ procedure mont_mul_add_loop(
     requires s7 == a;
 
     // requires cong_B32(d0inv * to_nat(iter_n.buff), (-1));
+
+    // ensures s0 == A.uh;
+    // ensures a1 == B.uh;
+    // ensures mont_loop_inv(a, d0, A, B, iter_b.buff, iter_n.buff, TODO, TODO, i);
 {
     ghost var A_prev := A;
     ghost var B_prev := B;
@@ -180,11 +184,9 @@ procedure mont_mul_add_loop(
     
     // s3 <- c[i] -- increment pointer to c
     addi(s3, s3, 4);
-    let iter_c := lw_next_iter(iter_c);
+    let iter_c' := lw_next_iter(iter_c);
     
     let i := i + 1;
-    // assert mont_mul_add_loop_inv(A, B, A_prev, B_prev, iter_n.buff, iter_b.buff, iter_c.buff, a, d0, i);
-    assert a1 == B.uh;
 }
     
 // procedure mont_mul_add_loop(
@@ -365,7 +367,6 @@ procedure mont_mul_add(ghost d0inv: uint32,
     //   s8 == old(s8);
       // sp == old(sp); // causes timeout :(
   {
-    // ghost old_c := iter_c.
     ghost var iter_n := iter_n;
     ghost var iter_n_copy := iter_n;
 
