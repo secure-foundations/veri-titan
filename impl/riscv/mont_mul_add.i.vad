@@ -406,6 +406,8 @@ procedure mont_mul_add(
     requires a0 == rsa.M0D;
     requires a2 == vars.a_i;
 
+    requires vars.i < NUM_WORDS;    
+
     requires mma_vars_inv(vars, mem, 71192, 0, /* n */ a1, 0, /* c */ a3, 0, /* b */ rsa);
 
     requires montmul_inv(vars.iter_c.buff, vars.iter_a.buff, vars.i, vars.iter_b.buff, rsa);
@@ -434,6 +436,9 @@ procedure mont_mul_add(
         mem == old(mem)[vars.frame_ptr := mem[vars.frame_ptr]]
             [next_iter_c.base_addr := next_iter_c.buff];
 
+        mma_vars_inv(vars.(iter_c := next_iter_c), mem, 71192, 0, /* n */ old(a1), 0, /* c */ old(a3), 0, /* b */ rsa);
+
+    ensures
         montmul_inv(next_iter_c.buff, vars.iter_a.buff, vars.i+1, vars.iter_b.buff, rsa);
 {
     ghost var A: uint64_view_t;
@@ -514,6 +519,8 @@ procedure mont_mul_add(
         next_vars.iter_c.buff, bout, next_bout);
 
     montmul_inv_lemma(original_c, next_iter_c.buff, next_vars.iter_a.buff, next_vars.i, s5, next_vars.iter_b.buff, rsa);
+
+    next_iter_c := next_iter_c.(index := 0);
 
     lw_stack(ra, 44, 11);
     lw_stack(s0, 40, 10);

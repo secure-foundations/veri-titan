@@ -29,6 +29,46 @@ module mont_mul_add_lemmas {
     r := refine_uint64_view(0, 0, 0);
   }
   
+    datatype mma_vars = mma_vars(
+        frame_ptr: uint32, // writable
+        iter_a: iter_t,
+        a_i: uint32,
+        i: nat,
+        // d0: uint32,
+        iter_b: iter_t,
+        iter_c: iter_t, // writable
+        iter_n: iter_t
+    )
+
+    predicate mma_vars_inv(
+        vars: mma_vars,
+        mem: mem_t,
+        n_ptr: int, n_idx: int,
+        c_ptr: int, c_idx: int,
+        b_ptr: int, b_idx: int,
+        rsa: rsa_params)
+    {
+        && valid_frame_ptr(mem, vars.frame_ptr, 12)
+
+        && mvar_iter_inv(mem, vars.iter_a, -1, vars.i, NA)
+        && vars.i <= NUM_WORDS
+        && (vars.i < NUM_WORDS ==> vars.iter_a.buff[vars.i] == vars.a_i)
+        && mvar_iter_inv(mem, vars.iter_n, n_ptr, n_idx, rsa.M)
+        && mvar_iter_inv(mem, vars.iter_c, c_ptr, c_idx, NA)
+        && mvar_iter_inv(mem, vars.iter_b, b_ptr, b_idx, NA)
+
+        && vars.iter_c.base_addr != vars.iter_a.base_addr
+        && vars.iter_c.base_addr != vars.iter_n.base_addr
+        && vars.iter_c.base_addr != vars.iter_b.base_addr
+        && vars.iter_c.base_addr != vars.frame_ptr
+
+        && vars.frame_ptr != vars.iter_a.base_addr
+        && vars.frame_ptr != vars.iter_n.base_addr
+        && vars.frame_ptr != vars.iter_b.base_addr
+
+        && rsa_params_inv(rsa)
+    }
+
   // predicate mont_mul_add_loop_inv(
   //   A: uint64_view_t,
   //   B: uint64_view_t,
