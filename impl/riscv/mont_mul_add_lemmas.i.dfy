@@ -81,7 +81,6 @@ module mont_mul_add_lemmas {
         requires p1.full == xi * y[0] + a[0]; // A
         requires p2.full == ui * m[0] + p1.lh; // B == d0 * n[0] + A.lh
         requires cong_B32(m0d * to_nat(m), -1);
-        requires p1.full == a[0] + y[0] * xi;
         requires ui == uint32_mul(p1.lh, m0d); 
         ensures mont_loop_inv(xi, ui, p1, p2, y, m, a, a, 1)
 
@@ -197,7 +196,6 @@ module mont_mul_add_lemmas {
 
         ensures to_nat(next_a) < to_nat(m) + to_nat(y)
         ensures IsModEquivalent(to_nat(next_a) * BASE_32, xi * to_nat(y) + ui * to_nat(m) + to_nat(prev_a), to_nat(m))
-
 
     predicate montmul_inv(
         a: seq<uint32>,
