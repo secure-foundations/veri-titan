@@ -47,6 +47,18 @@ function mm_vars_inv(
     b_ptr: int, b_idx: int,
     rsa: rsa_params): bool extern;
 
+function montmul_inv_lemma_0(
+    a: seq(uint32),
+    x: seq(uint32), 
+    y: seq(uint32), 
+    rsa: rsa_params): void extern;
+
+ function montmul_inv_lemma_1(
+    a_view: seq(uint32),
+    x: seq(uint32),
+    y: seq(uint32),
+    rsa: rsa_params): void extern;
+
 procedure mont_mul_0(ghost iter_c: iter_t)
     returns (ghost next_iter_c: iter_t)
     lets s1 @= x17; s4 @= x20;
@@ -98,6 +110,7 @@ procedure mont_mul_0(ghost iter_c: iter_t)
 procedure mont_mul(
     ghost vars: mm_vars,
     ghost rsa: rsa_params)
+    returns (ghost next_iter_c : iter_t)
 
     lets sp @= x2; // stack pointer
         s0 @= x16; s1 @= x17;
@@ -120,6 +133,32 @@ procedure mont_mul(
 
     modifies sp; s0; s1; s2; s3; s4; s5; s6; s7; s8; a0; a1; a2; a3;
              x14; x15; ra; mem;
+    
+    ensures
+        ra == old(ra);
+        s0 == old(s0);
+        s1 == old(s1);
+        s2 == old(s2);
+        s3 == old(s3);
+        s4 == old(s4);
+        s5 == old(s5);
+        s6 == old(s6);
+        s7 == old(s7);
+        s8 == old(s8);
+        sp == old(sp); 
+
+        next_iter_c.base_addr == vars.iter_c.base_addr;
+
+        mem?[vars.mma_frame_ptr];
+        mem?[vars.mm_frame_ptr];
+        mem?[next_iter_c.base_addr];
+    
+        mem == old(mem)[vars.mma_frame_ptr := mem[vars.mma_frame_ptr]]
+                [vars.mm_frame_ptr := mem[vars.mm_frame_ptr]]
+                [next_iter_c.base_addr := next_iter_c.buff];
+
+        // montmul_inv(a_view, vars.x_it.buff, NUM_WORDS, vars.y_it.buff, vars.rsa);
+        montmul_inv(next_iter_c.buff, vars.iter_a.buff, NUM_WORDS, vars.iter_b.buff, rsa);
 {
     addi(sp, sp, (-32));
 
@@ -138,7 +177,7 @@ procedure mont_mul(
     addi(s4, s1, 384);
 
     ghost var mut_vars := vars;
-    ghost var next_iter_c := vars.iter_c;
+    next_iter_c := vars.iter_c;
 
     next_iter_c := mont_mul_0(next_iter_c);
     mut_vars := mut_vars.(iter_c := next_iter_c);
@@ -150,7 +189,7 @@ procedure mont_mul(
 
     ghost var i: nat := 0;
 
-    assume montmul_inv(mut_vars.iter_c.buff, mut_vars.iter_a.buff, 0, mut_vars.iter_b.buff, rsa);
+    montmul_inv_lemma_0(mut_vars.iter_c.buff, mut_vars.iter_a.buff, mut_vars.iter_b.buff, rsa);
 
     while (s2 < s4) 
         invariant
@@ -165,6 +204,11 @@ procedure mont_mul(
 
             sp >= 48;
             sp-48 == mut_vars.mma_frame_ptr;
+
+            s5 == old(s5);
+            s6 == old(s6);
+            s7 == old(s7);
+            s8 == old(s8);
 
             mm_vars_inv(mut_vars, mem,
             s2, i /* a */, 71192, 0, /* n */ s1, 0, /* c */ s3, 0, /* b */ rsa);
@@ -190,36 +234,24 @@ procedure mont_mul(
 
         let next_iter_a := lw_next(a2, s2, 0, mut_vars.iter_a);
 
-        let iter_c := mont_mul_add(to_mma_vars(mut_vars, a2), rsa);
+        next_iter_c := mont_mul_add(to_mma_vars(mut_vars, a2), rsa);
 
         addi(s2, s2, 4);
         i := i + 1;
 
-        mut_vars := mut_vars.(iter_c := iter_c).(iter_a := next_iter_a);
-        
-        // let next_sub_vars := to_mma_vars(mut_vars);
-        // assert mma_vars_inv(next_sub_vars, mem, 71192, 0, s1, 0, s3, 0, rsa);
-        // assert montmul_inv(mut_vars.iter_c.buff, mut_vars.iter_a.buff, mut_vars.iter_a.index, mut_vars.iter_b.buff, rsa);
+        mut_vars := mut_vars.(iter_c := next_iter_c).(iter_a := next_iter_a);
     }
 
-    // assert mm_vars_inv(vars, mem,
-    //     s2, 1, /* a */ 71192, 0, /* n */ s1, 0, /* c */ s3, 0, /* b */ rsa);
+    next_iter_c := mut_vars.iter_c;
+    // montmul_inv_lemma_1(mut_vars.iter_c.buff, mut_vars.iter_a.buff, mut_vars.iter_b.buff, rsa);
 
-
-    // iter_a := next_iter_a;
-
-
-
-    // assert false;
-
-//     assume montmul_inv(iter_c.buff, iter_a.buff, 0, iter_b.buff, rsa);
-
-
-
-
-//     {
-
-//     }
+    lw_stack(ra, 28, 7);
+    lw_stack(s0, 24, 6);
+    lw_stack(s1, 20, 5);
+    lw_stack(s2, 16, 4);
+    lw_stack(s3, 12, 3);
+    lw_stack(s4, 8, 2);
+    addi(sp, sp, 32);
 }
 
 

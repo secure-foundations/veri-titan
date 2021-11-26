@@ -49,4 +49,25 @@ module mont_mul_lemmas {
         && vars.mm_frame_ptr != vars.iter_c.base_addr
         && vars.mm_frame_ptr != vars.iter_n.base_addr
     }
+
+    lemma montmul_inv_lemma_0(
+        a: seq<uint32>,
+        x: seq<uint32>, 
+        y: seq<uint32>, 
+        rsa: rsa_params)
+
+        requires |a| == |x| == |y| == NUM_WORDS;
+        requires a == SeqZero(NUM_WORDS);
+        requires rsa_params_inv(rsa);
+        ensures montmul_inv(a, x, 0, y, rsa);
+
+    lemma montmul_inv_lemma_1(
+        a_view: seq<uint32>,
+        x: seq<uint32>,
+        y: seq<uint32>,
+        rsa: rsa_params)
+    
+        requires montmul_inv(a_view, x, NUM_WORDS, y, rsa);
+        ensures IsModEquivalent(to_nat(a_view), to_nat(x) * to_nat(y) * rsa.R_INV, rsa.M);
+
 }
