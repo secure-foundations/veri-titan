@@ -90,7 +90,7 @@ function modexp_var_correct_lemma(
     rsa: rsa_params): void extern;
 
 procedure mod_pow_0(ghost vars: mp_vars, ghost rsa: rsa_params)
-    returns (ghost mut_vars: mp_vars)
+    returns (ghost mut_vars: mp_vars, ghost saved: seq(uint32))
 
     lets sp @= x2; // stack pointer
         s0 @= x8; s1 @= x9;
@@ -131,11 +131,18 @@ procedure mod_pow_0(ghost vars: mp_vars, ghost rsa: rsa_params)
         mut_vars.iter_ar.base_addr == vars.iter_ar.base_addr;
 
     ensures
+        saved == seq(old(mem)[vars.mp_frame_ptr][0], old(s5), old(s4), old(s3), old(s2), old(s1), old(s0), old(ra));
+
         mem == old(mem)
-                [vars.mp_frame_ptr := mem[vars.mp_frame_ptr]]
+                [vars.mp_frame_ptr := saved]
                 [vars.mma_frame_ptr := mem[vars.mma_frame_ptr]]
                 [vars.mm_frame_ptr := mem[vars.mm_frame_ptr]]
                 [vars.iter_ar.base_addr := mut_vars.iter_ar.buff];
+    ensures
+        s6 == old(s6);
+        s7 == old(s7);
+        s8 == old(s8);
+
     ensures
         modexp_var_inv(mut_vars.iter_ar.buff, rsa, 0);
 {
@@ -148,6 +155,9 @@ procedure mod_pow_0(ghost vars: mp_vars, ghost rsa: rsa_params)
     sw_stack(s3, 12, 3);
     sw_stack(s4, 8, 2);
     sw_stack(s5, 4, 1);
+
+    saved := seq(old(mem)[vars.mp_frame_ptr][0], s5, s4, s3, s2, s1, s0, ra);
+    assert mem[vars.mp_frame_ptr] == saved;
 
     lui(a3, 0x11);
     assume 0x11000 == a3;
@@ -346,6 +356,19 @@ procedure mod_pow_2(ghost vars: mp_vars, ghost rsa: rsa_params)
     ensures
         sp == old(sp);
         to_nat(mut_vars.iter_out.buff) == mod(Pow(rsa.SIG, 65537), rsa.M);
+
+    ensures
+        ra == old(ra);
+        s0 == old(s0);
+        s1 == old(s1);
+        s2 == old(s2);
+        s3 == old(s3);
+        s4 == old(s4);
+        s5 == old(s5);
+        s6 == old(s6);
+        s7 == old(s7);
+        s8 == old(s8);
+        sp == old(sp);
 {
     mv(a0, s3);
     mv(a3, s5);
@@ -420,10 +443,23 @@ procedure mod_pow(ghost vars: mp_vars, ghost rsa: rsa_params)
         x14; x15; x16; ra; mem;
 
     ensures
+        ra == old(ra);
+        s0 == old(s0);
+        s1 == old(s1);
+        s2 == old(s2);
+        s3 == old(s3);
+        s4 == old(s4);
+        s5 == old(s5);
+        s6 == old(s6);
+        s7 == old(s7);
+        s8 == old(s8);
+        sp == old(sp);
+
         mut_vars.iter_out.base_addr == vars.iter_out.base_addr;
         to_nat(mut_vars.iter_out.buff) == mod(Pow(rsa.SIG, 65537), rsa.M);
 {
-    mut_vars := mod_pow_0(vars, rsa);
+    ghost var saved: seq(uint32);
+    mut_vars, saved := mod_pow_0(vars, rsa);
 
     let mem1 := mem;
 
@@ -440,8 +476,14 @@ procedure mod_pow(ghost vars: mp_vars, ghost rsa: rsa_params)
             s1 == 8 - i;
             x0 == 0;
 
+            s6 == old(s6);
+            s7 == old(s7);
+            s8 == old(s8);
+
             mp_vars_inv(mut_vars, mem, 71576 /* rr */, 71192 /* n */, s5 /* in */,
                 s0 /* ar */, s2 /*aar */, s4 /* out_ptr */, rsa);
+
+            mem[mut_vars.mp_frame_ptr] == saved;
 
             mut_vars == vars.(iter_ar := mut_vars.iter_ar)
                 .(iter_aar := mut_vars.iter_aar);
@@ -472,6 +514,7 @@ procedure mod_pow(ghost vars: mp_vars, ghost rsa: rsa_params)
     lw_stack(s2, 16, 4);
     lw_stack(s3, 12, 3);
     lw_stack(s4, 8, 2);
+    lw_stack(s5, 4, 1);
     addi(sp, sp, 32);
 }
 
