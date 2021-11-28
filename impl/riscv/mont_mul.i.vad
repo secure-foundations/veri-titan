@@ -68,7 +68,7 @@ function IsModEquivalent(
 
 procedure mont_mul_0(ghost iter_c: iter_t)
     returns (ghost next_iter_c: iter_t)
-    lets s1 @= x17; s4 @= x20;
+    lets s1 @= x9; s4 @= x20;
 
     requires iter_safe(iter_c, mem, s1);
     requires seq_len(iter_c.buff) == 96;
@@ -120,7 +120,7 @@ procedure mont_mul(
     returns (ghost next_iter_c : iter_t)
 
     lets sp @= x2; // stack pointer
-        s0 @= x16; s1 @= x17;
+        s0 @= x8; s1 @= x9;
         s2 @= x18; s3 @= x19; s4 @= x20; s5 @= x21; s6 @= x22;
         s7 @= x23; s8 @= x24; // saved registers
         a0 @= x10; a1 @= x11; a2 @= x12; a3 @= x13; // fn args and return values
@@ -139,7 +139,7 @@ procedure mont_mul(
     reads x0;
 
     modifies sp; s0; s1; s2; s3; s4; s5; s6; s7; s8; a0; a1; a2; a3;
-             x14; x15; ra; mem;
+             x14; x15; x16; ra; mem;
     
     ensures
         ra == old(ra);
