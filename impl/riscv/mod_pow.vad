@@ -455,8 +455,22 @@ procedure mod_pow(ghost vars: mp_vars, ghost rsa: rsa_params)
         s8 == old(s8);
         sp == old(sp);
 
+    ensures
+        mp_vars_inv(mut_vars, mem, 71576 /* rr */, 71192 /* n */, 71960 /* in */,
+            old(a2) /* ar */, old(a2) + NUM_WORDS * 4 /*aar */, old(a1) /* out_ptr */, rsa);
+
+    ensures
+        mem == old(mem)[vars.mp_frame_ptr := mem[mut_vars.mp_frame_ptr]]
+            [vars.mma_frame_ptr := mem[mut_vars.mma_frame_ptr]]
+            [vars.mm_frame_ptr := mem[mut_vars.mm_frame_ptr]]
+            [mut_vars.iter_out.base_addr := mut_vars.iter_out.buff]
+            [mut_vars.iter_ar.base_addr := mut_vars.iter_ar.buff]
+            [mut_vars.iter_aar.base_addr := mut_vars.iter_aar.buff];
+
+    ensures
         mut_vars.iter_out.base_addr == vars.iter_out.base_addr;
         to_nat(mut_vars.iter_out.buff) == mod(Pow(rsa.SIG, 65537), rsa.M);
+
 {
     ghost var saved: seq(uint32);
     mut_vars, saved := mod_pow_0(vars, rsa);
