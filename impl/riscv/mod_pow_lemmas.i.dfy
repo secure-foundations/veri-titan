@@ -145,7 +145,7 @@ module mod_pow_lemmas {
     ensures carry ==> raw_val == Pow(rsa.SIG, 65537) % rsa.M;
     ensures !carry ==> adjusted_val == Pow(rsa.SIG, 65537) % rsa.M;
 
-    function mod(a: nat, m: nat): int
+    function mod(a: int, m: nat): int
         requires m != 0;
     {
         a % m

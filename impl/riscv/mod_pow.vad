@@ -314,6 +314,7 @@ procedure mod_pow_2(ghost vars: mp_vars, ghost rsa: rsa_params)
 
     requires
         sp > 80;
+        sp == vars.mp_frame_ptr;
         sp-32 == vars.mm_frame_ptr;
         sp-80 == vars.mma_frame_ptr;
 
@@ -336,12 +337,15 @@ procedure mod_pow_2(ghost vars: mp_vars, ghost rsa: rsa_params)
 
     ensures
         mut_vars.iter_out.base_addr == vars.iter_out.base_addr;
-        // mp_vars_inv(mut_vars, mem, 71576 /* rr */, 71192 /* n */, s5 /* in */,
-        //     s0 /* ar */, s2 /*aar */, s4 /* out_ptr */, rsa);
-        // mem == old(mem)[vars.mma_frame_ptr := mem[vars.mma_frame_ptr]]
-        //     [vars.mm_frame_ptr := mem[vars.mm_frame_ptr]]
-        //     [mut_vars.iter_out.base_addr := mut_vars.iter_out.buff];
-        // mvar_iter_inv(mem, iter_out, s4, 0, mod(Pow(rsa.SIG, 65537), rsa.M));
+        mut_vars == vars.(iter_out := mut_vars.iter_out);
+        mp_vars_inv(mut_vars, mem, 71576 /* rr */, 71192 /* n */, s5 /* in */,
+            s0 /* ar */, s2 /*aar */, s4 /* out_ptr */, rsa);
+        mem == old(mem)[vars.mma_frame_ptr := mem[mut_vars.mma_frame_ptr]]
+            [vars.mm_frame_ptr := mem[mut_vars.mm_frame_ptr]]
+            [mut_vars.iter_out.base_addr := mut_vars.iter_out.buff];
+    ensures
+        sp == old(sp);
+        to_nat(mut_vars.iter_out.buff) == mod(Pow(rsa.SIG, 65537), rsa.M);
 {
     mv(a0, s3);
     mv(a3, s5);
@@ -362,9 +366,6 @@ procedure mod_pow_2(ghost vars: mp_vars, ghost rsa: rsa_params)
     iter_out := mont_mul(mmvars, rsa);
     mut_vars := mut_vars.(iter_out := iter_out);
 
-    // assert mp_vars_inv(mut_vars, mem, 71576 /* rr */, 71192 /* n */, s5 /* in */,
-    //        s0 /* ar */, s2 /*aar */, s4 /* out_ptr */, rsa);
-
     modexp_var_inv_post_lemma(
         mut_vars.iter_ar.buff,
         iter_out.buff,
@@ -380,31 +381,19 @@ procedure mod_pow_2(ghost vars: mp_vars, ghost rsa: rsa_params)
         mv(a0, s4);
         ghost var borrow: nat;
         iter_out, borrow := sub_mod(mut_vars.iter_n, iter_out);
-        mut_vars := mut_vars.(iter_out := iter_out);
-
-        assert mp_vars_inv(mut_vars, mem, 71576 /* rr */, 71192 /* n */, s5 /* in */,
-           s0 /* ar */, s2 /*aar */, s4 /* out_ptr */, rsa);
-
+        // assert mp_vars_inv(mut_vars, mem, 71576 /* rr */, 71192 /* n */, s5 /* in */,
+        //    s0 /* ar */, s2 /*aar */, s4 /* out_ptr */, rsa);
         assume borrow == 0;
     }
 
-    assert iter_out.base_addr == vars.iter_out.base_addr;
-
+    mut_vars := mut_vars.(iter_out := iter_out);
     modexp_var_correct_lemma(raw_val, to_nat(iter_out.buff), !sub, rsa);
 
-
-    // lw_stack(ra, 28, 7);
-    // lw_stack(s0, 24, 6);
-    // lw_stack(s1, 20, 5);
-    // lw_stack(s2, 16, 4);
-    // lw_stack(s3, 12, 3);
-    // lw_stack(s4, 8, 2);
-    // addi(sp, sp, 32);
+    // assert to_nat(mut_vars.iter_out.buff) == mod(Pow(rsa.SIG, 65537), rsa.M);
 }
 
-procedure mod_pow(
-    ghost vars: mp_vars,
-    ghost rsa: rsa_params)
+procedure mod_pow(ghost vars: mp_vars, ghost rsa: rsa_params)
+    returns (ghost mut_vars:  mp_vars)
 
     lets sp @= x2; // stack pointer
         s0 @= x8; s1 @= x9;
@@ -429,8 +418,11 @@ procedure mod_pow(
         sp; s0; s1; s2; s3; s4; s5; s6; s7; s8;
         a0; a1; a2; a3;
         x14; x15; x16; ra; mem;
+
+    ensures
+        mut_vars.iter_out.base_addr == vars.iter_out.base_addr;
+        to_nat(mut_vars.iter_out.buff) == mod(Pow(rsa.SIG, 65537), rsa.M);
 {
-    ghost var mut_vars := vars;
     mut_vars := mod_pow_0(vars, rsa);
 
     let mem1 := mem;
@@ -440,6 +432,7 @@ procedure mod_pow(
     while (s1 > x0)
         invariant
             sp > 80;
+            sp == mut_vars.mp_frame_ptr;
             sp-32 == vars.mm_frame_ptr;
             sp-80 == vars.mma_frame_ptr;
         
@@ -471,7 +464,15 @@ procedure mod_pow(
         i := i + 1;
     }
 
-    let iter_out := mod_pow_2(mut_vars, rsa);
+    mut_vars := mod_pow_2(mut_vars, rsa);
+
+    lw_stack(ra, 28, 7);
+    lw_stack(s0, 24, 6);
+    lw_stack(s1, 20, 5);
+    lw_stack(s2, 16, 4);
+    lw_stack(s3, 12, 3);
+    lw_stack(s4, 8, 2);
+    addi(sp, sp, 32);
 }
 
 
