@@ -19,6 +19,8 @@ import opened mont_mul_add
 import opened mont_mul_add_lemmas
 import opened mont_mul_lemmas
 
+import opened DivMod
+
 #endverbatim
 
 function SeqZero #[a: Type(0)](len: int): seq(a) extern;
@@ -58,6 +60,11 @@ function montmul_inv_lemma_0(
     x: seq(uint32),
     y: seq(uint32),
     rsa: rsa_params): void extern;
+
+function IsModEquivalent(
+    a: nat,
+    b: nat,
+    n: nat): bool extern;
 
 procedure mont_mul_0(ghost iter_c: iter_t)
     returns (ghost next_iter_c: iter_t)
@@ -147,18 +154,17 @@ procedure mont_mul(
         s8 == old(s8);
         sp == old(sp); 
 
-        next_iter_c.base_addr == vars.iter_c.base_addr;
+        valid_frame_ptr(mem, vars.mma_frame_ptr, 12);
+        valid_frame_ptr(mem, vars.mm_frame_ptr, 8);
+        mvar_iter_inv(mem, next_iter_c, (vars.iter_c.base_addr), 0, NA);
 
-        mem?[vars.mma_frame_ptr];
-        mem?[vars.mm_frame_ptr];
-        mem?[next_iter_c.base_addr];
-    
         mem == old(mem)[vars.mma_frame_ptr := mem[vars.mma_frame_ptr]]
                 [vars.mm_frame_ptr := mem[vars.mm_frame_ptr]]
                 [next_iter_c.base_addr := next_iter_c.buff];
 
-        // montmul_inv(a_view, vars.x_it.buff, NUM_WORDS, vars.y_it.buff, vars.rsa);
         montmul_inv(next_iter_c.buff, vars.iter_a.buff, NUM_WORDS, vars.iter_b.buff, rsa);
+        // IsModEquivalent(to_nat(next_iter_c.buff),
+        //     to_nat(vars.iter_a.buff) * to_nat(vars.iter_b.buff) * rsa.R_INV, rsa.M);
 {
     addi(sp, sp, (-32));
 
@@ -243,7 +249,7 @@ procedure mont_mul(
     }
 
     next_iter_c := mut_vars.iter_c;
-    // montmul_inv_lemma_1(mut_vars.iter_c.buff, mut_vars.iter_a.buff, mut_vars.iter_b.buff, rsa);
+    montmul_inv_lemma_1(mut_vars.iter_c.buff, mut_vars.iter_a.buff, mut_vars.iter_b.buff, rsa);
 
     lw_stack(ra, 28, 7);
     lw_stack(s0, 24, 6);

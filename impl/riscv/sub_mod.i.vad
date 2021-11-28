@@ -75,12 +75,13 @@ procedure sub_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
     modifies
         x10; x11; x12; x13; x14; x15; x16; mem;
     ensures
-        iter_inv(iter_a', mem, x10);
+        // iter_inv(iter_a', mem, x10);
         seq_len(iter_a'.buff) == 96;
         mem == old(mem)[iter_a.base_addr := iter_a'.buff];
         to_nat(iter_a'.buff) ==
             to_nat(iter_a.buff) - to_nat(iter_n.buff) + borrow * Pow(BASE_32, 96);
         iter_a'.base_addr == iter_a.base_addr;
+        iter_a'.index == 0;
 {
     // load address of n
     lui(x12, 0x11); // 0x11000 into x12
@@ -180,6 +181,7 @@ procedure sub_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
         i := i + 1;
     }
 
+    iter_a' := iter_a'.(index := 0);
     sub_mod_post_lemma(old_a, iter_n.buff, iter_a'.buff, A);
     borrow := if A.full == (-1) then 1 else 0;
     assert to_nat(iter_a'.buff) ==

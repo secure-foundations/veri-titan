@@ -13,7 +13,7 @@ module mont_mul_lemmas {
     
     import opened mont_mul_add_lemmas
 
-    datatype mm_vars = mm_vars(
+    datatype mm_vars = mm_vars_cons(
         mm_frame_ptr: uint32, // writable
         mma_frame_ptr: uint32, // writable
         iter_a: iter_t,
@@ -32,22 +32,36 @@ module mont_mul_lemmas {
     predicate mm_vars_inv(
         vars: mm_vars,
         mem: mem_t,
-        a_ptr: int, a_idx: int,
+        a_ptr: int, a_idx: nat,
         n_ptr: int, n_idx: int,
         c_ptr: int, c_idx: int,
         b_ptr: int, b_idx: int,
         rsa: rsa_params)
     {
+        && valid_frame_ptr(mem, vars.mm_frame_ptr, 8)
+        && valid_frame_ptr(mem, vars.mma_frame_ptr, 12)
+
         && mvar_iter_inv(mem, vars.iter_a, a_ptr, a_idx, NA)
-        && var a_i := if 0 <= a_idx < NUM_WORDS then vars.iter_a.buff[a_idx] else 0;
-        && var mma := to_mma_vars(vars, a_i);
-        && mma_vars_inv(mma, mem, n_ptr, n_idx, c_ptr, c_idx, b_ptr, b_idx, rsa)
-        && valid_frame_ptr(mem, vars.mm_frame_ptr, 12)
+        && mvar_iter_inv(mem, vars.iter_c, c_ptr, c_idx, NA)
+        && mvar_iter_inv(mem, vars.iter_b, b_ptr, b_idx, NA)
+        && mvar_iter_inv(mem, vars.iter_n, n_ptr, n_idx, rsa.M)
+
+        && vars.iter_c.base_addr != vars.iter_a.base_addr
+        && vars.iter_c.base_addr != vars.iter_n.base_addr
+        && vars.iter_c.base_addr != vars.iter_b.base_addr
+        && vars.iter_c.base_addr != vars.mma_frame_ptr
+
         && vars.mm_frame_ptr != vars.mma_frame_ptr
         && vars.mm_frame_ptr != vars.iter_a.base_addr
         && vars.mm_frame_ptr != vars.iter_b.base_addr
         && vars.mm_frame_ptr != vars.iter_c.base_addr
         && vars.mm_frame_ptr != vars.iter_n.base_addr
+
+        && vars.mma_frame_ptr != vars.iter_a.base_addr
+        && vars.mma_frame_ptr != vars.iter_n.base_addr
+        && vars.mma_frame_ptr != vars.iter_b.base_addr
+
+        && rsa_params_inv(rsa)
     }
 
     lemma montmul_inv_lemma_0(

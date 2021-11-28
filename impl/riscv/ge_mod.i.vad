@@ -44,7 +44,8 @@ procedure ge_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
     modifies
         x10; x11; x12; x13; x14; x15;
     ensures
-      x10 == 1 ==> to_nat(iter_a.buff) < to_nat(iter_n.buff);
+      result == (x10 == 0);
+      x10 != 0 ==> to_nat(iter_a.buff) < to_nat(iter_n.buff);
       x10 == 0 ==> to_nat(iter_a.buff) >= to_nat(iter_n.buff);
   {
     lui(x11, 0x11); // 0x11000 into x11
@@ -120,6 +121,8 @@ procedure ge_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
 
     mv(x10, x13);
     lemma_ge_mod_correct(a, n, i+1, x10);
+
+    result := if x10 == 0 then true else false;
   }
 
 

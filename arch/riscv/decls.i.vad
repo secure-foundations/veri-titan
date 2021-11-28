@@ -34,7 +34,7 @@ type uint256: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff_ffff
 type int32:  Type(0) := int_range((-0x80000000), 0x7fffffff);
 type int64:  Type(0) := int_range((-0x80000000_00000000), 0x7fffffff_ffffffff);
     
-function power(b: int, e: nat) : int extern;
+function power(b: int, e: nat) : nat extern;
 function cong(a: int, b: int, n: int) : bool extern;
 function cong_B32(a: int, b: int): bool extern;
 

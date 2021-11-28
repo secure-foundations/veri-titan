@@ -163,7 +163,7 @@ lemma {:induction A, i} cmp_sufficient_lemma(A: seq<uint32>, B: seq<uint32>, i: 
     requires i != 0 ==> (result == 0 ==> a[i] > n[i])
     requires i == 0 ==> (result == 0 ==> a[i] >= n[i])
 
-    ensures result == 1 ==> ToNatRight(a) < ToNatRight(n);
+    ensures result != 0 ==> ToNatRight(a) < ToNatRight(n);
     ensures result == 0 ==> ToNatRight(a) >= ToNatRight(n);
   {
     cmp_sufficient_lemma(a, n, i);
