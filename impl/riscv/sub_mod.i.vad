@@ -80,6 +80,7 @@ procedure sub_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
         mem == old(mem)[iter_a.base_addr := iter_a'.buff];
         to_nat(iter_a'.buff) ==
             to_nat(iter_a.buff) - to_nat(iter_n.buff) + borrow * Pow(BASE_32, 96);
+        to_nat(iter_a.buff) >= to_nat(iter_n.buff) ==> borrow == 0;
         iter_a'.base_addr == iter_a.base_addr;
         iter_a'.index == 0;
 {

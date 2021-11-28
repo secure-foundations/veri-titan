@@ -383,7 +383,7 @@ procedure mod_pow_2(ghost vars: mp_vars, ghost rsa: rsa_params)
         iter_out, borrow := sub_mod(mut_vars.iter_n, iter_out);
         // assert mp_vars_inv(mut_vars, mem, 71576 /* rr */, 71192 /* n */, s5 /* in */,
         //    s0 /* ar */, s2 /*aar */, s4 /* out_ptr */, rsa);
-        assume borrow == 0;
+        assert borrow == 0;
     }
 
     mut_vars := mut_vars.(iter_out := iter_out);
