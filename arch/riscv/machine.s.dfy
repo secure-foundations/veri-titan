@@ -132,6 +132,12 @@ module rv_machine {
         && iter.index < |iter.buff|
     }
 
+    predicate valid_frame_ptr(mem: mem_t, address: int, words: nat)
+    {
+        && address in mem
+        && address >= 0
+        && |mem[address]| == words
+    }
 
     /* state definition */
 

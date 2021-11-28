@@ -4,7 +4,6 @@ include "../../lib/bv_ops_nl.dfy"
 module sub_mod_nl_lemmas {
     import opened bv_ops
     import opened bv_ops_nl
-    import opened rsa_ops
     import opened rv_machine
     import opened BASE_32_Seq
     import Power2

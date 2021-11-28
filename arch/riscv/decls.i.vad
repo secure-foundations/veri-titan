@@ -34,7 +34,7 @@ type uint256: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff_ffff
 type int32:  Type(0) := int_range((-0x80000000), 0x7fffffff);
 type int64:  Type(0) := int_range((-0x80000000_00000000), 0x7fffffff_ffffffff);
     
-function power(b: int, e: nat) : int extern;
+function power(b: int, e: nat) : nat extern;
 function cong(a: int, b: int, n: int) : bool extern;
 function cong_B32(a: int, b: int): bool extern;
 
@@ -47,6 +47,8 @@ const NUM_WORDS:nat extern;
     
 const BASE_31:  int extern;
 const BASE_63:  int extern; 
+
+const NA: int extern;
     
 function to_uint32(i:int) : uint32 extern;
 function to_int32(i:uint32) : int32 extern;
@@ -62,6 +64,9 @@ type reg32_t: Type(0) extern;
 
 type mem_t: Type(0) := map(int, seq(uint32));
     
+
+function valid_frame_ptr(mem: mem_t, address: int, words: nat): bool extern;
+
 function mem_base_addr_valid(wmem: mem_t, ptr: int, size: nat): bool extern;
 
 type gprs_t: Type(0) extern;
@@ -124,6 +129,8 @@ function operator(.R) (rsa: rsa_params): nat extern;
 function operator(.RR) (rsa: rsa_params): nat extern;
 function operator(.R_INV) (rsa: rsa_params): nat extern;
 function rsa_params_inv(rsa: rsa_params): bool extern;
+
+function mvar_iter_inv(mem: mem_t, iter: iter_t, address: int, index: int, value: int): bool extern;
 
 type string: Type(0) extern;
 
@@ -340,7 +347,7 @@ procedure lw_prev(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: 
 // immediate instructions
 // all immediate instructions take a 12-bit immediate and sign extend it
     
-procedure addi(inout dst: reg32, in src1: reg32, in src2: simm32)
+procedure addi(inout dst: reg32, in src1: reg32, inline src2: int32)
     {:instruction Ins32(RV_ADDI(dst, src1, src2))}
     // requires
     // src1 + to_uint32(src2) < 0x1_0000_0000
@@ -560,6 +567,13 @@ procedure sub(inout dst: reg32, in src1: reg32, in src2: reg32)
 {
     assume false;
 }
+
+// procedure subi(inout dst: reg32, in src1: reg32, in src2: int16)
+
+// {
+//     assume false;
+//     // addi(dst, src1, -src2);
+// }
 
 procedure sll(inout dst: reg32, in src1: reg32, in src2: reg32)
     {:instruction Ins32(RV_SLL(dst, src1, src2))}

@@ -90,55 +90,44 @@ module rsa_ops {
         sig_it: iter_t,
         rsa: rsa_params)
 
-    predicate mvars_iter_init(iter: iter_t, mem: mem_t, address: int, value: int)
+    predicate mvar_iter_inv(mem: mem_t, iter: iter_t, address: int, index: int, value: int)
     {
         && (address >= 0 ==> iter_inv(iter, mem, address))
         && (value >= 0 ==> to_nat(iter.buff) == value)
-        && iter.index == 0
+        && (index >= 0 ==> iter.index == index)
         && |iter.buff| == NUM_WORDS
     }
 
-    predicate m0d_it_inv(iter: iter_t, mem: mem_t, address: int)
-    {
-        && (address >= 0 ==> iter_inv(iter, mem, address))
-        && iter.index == 0
-        && |iter.buff| == 1
-    }
+    // predicate mvars_inv(
+    //     vars: mvars,
+    //     mem: mem_t,
+    //     x_ptr: int,
+    //     y_ptr: int,
+    //     m_ptr: int,
+    //     rr_ptr: int,
+    //     sig_ptr: int)
+    // {
+    //     && rsa_params_inv(vars.rsa)
 
-    predicate mvars_inv(
-        vars: mvars,
-        mem: mem_t,
-        x_ptr: int,
-        y_ptr: int,
-        m_ptr: int,
-        rr_ptr: int,
-        sig_ptr: int)
-    {
-        && rsa_params_inv(vars.rsa)
+    //     && mvars_iter_init(vars.x_it, mem, x_ptr, NA)
+    //     && mvars_iter_init(vars.y_it, mem, y_ptr, NA)
+    //     && mvars_iter_init(vars.sig_it, mem, sig_ptr, vars.rsa.SIG)
+    //     && mvars_iter_init(vars.m_it, mem, m_ptr, vars.rsa.M)
+    //     && mvars_iter_init(vars.rr_it, mem, rr_ptr, vars.rsa.RR)
+    // }
 
-        && mvars_iter_init(vars.x_it, mem, x_ptr, NA)
-        && mvars_iter_init(vars.y_it, mem, y_ptr, NA)
-        && mvars_iter_init(vars.sig_it, mem, sig_ptr, vars.rsa.SIG)
-        && mvars_iter_init(vars.m_it, mem, m_ptr, vars.rsa.M)
-        && mvars_iter_init(vars.rr_it, mem, rr_ptr, vars.rsa.RR)
-    }
+    // predicate mvars_init(
+    //     vars: mvars,
+    //     mem: mem_t,
+    //     m_ptr: uint32,
+    //     rr_ptr: uint32,
+    //     sig_ptr: uint32,
+    //     out_ptr: uint32)
+    // {
+    //     && rsa_params_inv(vars.rsa)
 
-    predicate mvars_init(
-        vars: mvars,
-        mem: mem_t,
-        m_ptr: uint32,
-        rr_ptr: uint32,
-        sig_ptr: uint32,
-        out_ptr: uint32)
-    {
-        && rsa_params_inv(vars.rsa)
+    //     && mvars_inv(vars, mem, NA, NA, m_ptr, rr_ptr, sig_ptr)
 
-        && mvars_inv(vars, mem, NA, NA, m_ptr, rr_ptr, sig_ptr)
-        && out_ptr in mem
-        && |mem[out_ptr]| == NUM_WORDS
 
-        && out_ptr != rr_ptr
-        && out_ptr != m_ptr
-        && out_ptr != sig_ptr
-    }
+    // }
 }
