@@ -68,7 +68,6 @@ function IsModEquivalent(
 
 procedure mont_mul_0(ghost iter_c: iter_t)
     returns (ghost next_iter_c: iter_t)
-    lets s1 @= x9; s4 @= x20;
 
     requires iter_safe(iter_c, mem, s1);
     requires seq_len(iter_c.buff) == 96;
@@ -94,7 +93,6 @@ procedure mont_mul_0(ghost iter_c: iter_t)
 
     while (s1 < s4) 
         invariant
-            x0 == 0;
             s4 == ptr_c + 384;
             s1 == ptr_c + 4 * iter_c.index;
 
@@ -119,27 +117,21 @@ procedure mont_mul(
     ghost rsa: rsa_params)
     returns (ghost next_iter_c : iter_t)
 
-    lets sp @= x2; // stack pointer
-        s0 @= x8; s1 @= x9;
-        s2 @= x18; s3 @= x19; s4 @= x20; s5 @= x21; s6 @= x22;
-        s7 @= x23; s8 @= x24; // saved registers
-        a0 @= x10; a1 @= x11; a2 @= x12; a3 @= x13; // fn args and return values
-        ra @= x1; //return addr
+    {:timeLimitMultiplier 2} 
 
     requires sp > 80;
     requires sp-32 == vars.mm_frame_ptr;
     requires sp-80 == vars.mma_frame_ptr;
 
     requires a0 == rsa.M0D;
-    requires x0 == 0;
 
     requires mm_vars_inv(vars, mem,
         a2, 0 /* a */, 71192, 0, /* n */ a1, 0, /* c */ a3, 0, /* b */ rsa);
 
     reads x0;
 
-    modifies sp; s0; s1; s2; s3; s4; s5; s6; s7; s8; a0; a1; a2; a3;
-             x14; x15; x16; ra; mem;
+    modifies sp; s0; s1; s2; s3; s4; s5; s6; s7; s8;
+            a0; a1; a2; a3; a4; a5; a6; ra; mem;
     
     ensures
         ra == old(ra);

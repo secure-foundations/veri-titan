@@ -92,20 +92,12 @@ function modexp_var_correct_lemma(
 procedure mod_pow_0(ghost vars: mp_vars, ghost rsa: rsa_params)
     returns (ghost mut_vars: mp_vars, ghost saved: seq(uint32))
 
-    lets sp @= x2; // stack pointer
-        s0 @= x8; s1 @= x9;
-        s2 @= x18; s3 @= x19; s4 @= x20; s5 @= x21; s6 @= x22;
-        s7 @= x23; s8 @= x24; // saved registers
-        a0 @= x10; a1 @= x11; a2 @= x12; a3 @= x13; // fn args and return values
-        ra @= x1; //return addr
-
     requires sp > 112;
     requires sp-32 == vars.mp_frame_ptr;
     requires sp-64 == vars.mm_frame_ptr;
     requires sp-112 == vars.mma_frame_ptr;
 
     requires a0 == rsa.M0D;
-    requires x0 == 0;
 
     requires mp_vars_inv(vars, mem, 71576 /* rr */, 71192 /* n */, 71960 /* in */,
             a2 /* ar */, a2 + NUM_WORDS * 4 /*aar */, a1 /* out_ptr */, rsa);
@@ -114,8 +106,7 @@ procedure mod_pow_0(ghost vars: mp_vars, ghost rsa: rsa_params)
 
     modifies
         sp; s0; s1; s2; s3; s4; s5; s6; s7; s8;
-        a0; a1; a2; a3;
-        x14; x15; x16; ra; mem;
+        a0; a1; a2; a3; a4; a5; a6; ra; mem;
 
     ensures
         sp == old(sp) - 32;
@@ -202,13 +193,6 @@ procedure mod_pow_0(ghost vars: mp_vars, ghost rsa: rsa_params)
 procedure mod_pow_1(ghost vars: mp_vars, ghost rsa: rsa_params, ghost i: nat)
     returns (ghost mut_vars: mp_vars)
 
-    lets sp @= x2; // stack pointer
-        s0 @= x8; s1 @= x9;
-        s2 @= x18; s3 @= x19; s4 @= x20; s5 @= x21; s6 @= x22;
-        s7 @= x23; s8 @= x24; // saved registers
-        a0 @= x10; a1 @= x11; a2 @= x12; a3 @= x13; // fn args and return values
-        ra @= x1; //return addr
-
     requires
         sp > 80;
         sp-32 == vars.mm_frame_ptr;
@@ -216,7 +200,6 @@ procedure mod_pow_1(ghost vars: mp_vars, ghost rsa: rsa_params, ghost i: nat)
 
     requires
         s3 == rsa.M0D;
-        x0 == 0;
 
         mp_vars_inv(vars, mem, 71576 /* rr */, 71192 /* n */, s5 /* in */,
             s0 /* ar */, s2 /*aar */, s4 /* out_ptr */, rsa);
@@ -228,8 +211,7 @@ procedure mod_pow_1(ghost vars: mp_vars, ghost rsa: rsa_params, ghost i: nat)
 
     modifies
         sp; s0; s1; s2; s3; s4; s5; s6; s7; s8;
-        a0; a1; a2; a3;
-        x14; x15; x16; ra; mem;
+        a0; a1; a2; a3; a4; a5; a6; ra; mem;
 
     ensures
         ra == old(ra);
@@ -315,13 +297,6 @@ function mod(a: int, m: int): int extern;
 procedure mod_pow_2(ghost vars: mp_vars, ghost rsa: rsa_params)
     returns (ghost mut_vars:  mp_vars)
 
-    lets sp @= x2; // stack pointer
-        s0 @= x8; s1 @= x9;
-        s2 @= x18; s3 @= x19; s4 @= x20; s5 @= x21; s6 @= x22;
-        s7 @= x23; s8 @= x24; // saved registers
-        a0 @= x10; a1 @= x11; a2 @= x12; a3 @= x13; // fn args and return values
-        ra @= x1; //return addr
-
     requires
         sp > 80;
         sp == vars.mp_frame_ptr;
@@ -330,7 +305,6 @@ procedure mod_pow_2(ghost vars: mp_vars, ghost rsa: rsa_params)
 
     requires
         s3 == rsa.M0D;
-        x0 == 0;
 
         mp_vars_inv(vars, mem, 71576 /* rr */, 71192 /* n */, s5 /* in */,
             s0 /* ar */, s2 /*aar */, s4 /* out_ptr */, rsa);
@@ -342,8 +316,7 @@ procedure mod_pow_2(ghost vars: mp_vars, ghost rsa: rsa_params)
 
     modifies
         sp; s0; s1; s2; s3; s4; s5; s6; s7; s8;
-        a0; a1; a2; a3;
-        x14; x15; x16; ra; mem;
+        a0; a1; a2; a3; a4; a5; a6; ra; mem;
 
     ensures
         mut_vars.iter_out.base_addr == vars.iter_out.base_addr;
@@ -400,7 +373,7 @@ procedure mod_pow_2(ghost vars: mp_vars, ghost rsa: rsa_params)
 
     ghost var raw_val := to_nat(iter_out.buff);
 
-    if (x10 == x0) {
+    if (a0 == x0) {
         mv(a0, s4);
         ghost var borrow: nat;
         iter_out, borrow := sub_mod(mut_vars.iter_n, iter_out);
@@ -418,20 +391,12 @@ procedure mod_pow_2(ghost vars: mp_vars, ghost rsa: rsa_params)
 procedure mod_pow(ghost vars: mp_vars, ghost rsa: rsa_params)
     returns (ghost mut_vars:  mp_vars)
 
-    lets sp @= x2; // stack pointer
-        s0 @= x8; s1 @= x9;
-        s2 @= x18; s3 @= x19; s4 @= x20; s5 @= x21; s6 @= x22;
-        s7 @= x23; s8 @= x24; // saved registers
-        a0 @= x10; a1 @= x11; a2 @= x12; a3 @= x13; // fn args and return values
-        ra @= x1; //return addr
-
     requires sp > 112;
     requires sp-32 == vars.mp_frame_ptr;
     requires sp-64 == vars.mm_frame_ptr;
     requires sp-112 == vars.mma_frame_ptr;
 
     requires a0 == rsa.M0D;
-    requires x0 == 0;
 
     requires mp_vars_inv(vars, mem, 71576 /* rr */, 71192 /* n */, 71960 /* in */,
             a2 /* ar */, a2 + NUM_WORDS * 4 /*aar */, a1 /* out_ptr */, rsa);
@@ -439,8 +404,7 @@ procedure mod_pow(ghost vars: mp_vars, ghost rsa: rsa_params)
     reads x0;
     modifies
         sp; s0; s1; s2; s3; s4; s5; s6; s7; s8;
-        a0; a1; a2; a3;
-        x14; x15; x16; ra; mem;
+        a0; a1; a2; a3; a4; a5; a6; ra; mem;
 
     ensures
         ra == old(ra);
@@ -488,7 +452,6 @@ procedure mod_pow(ghost vars: mp_vars, ghost rsa: rsa_params)
         
             s3 == rsa.M0D;
             s1 == 8 - i;
-            x0 == 0;
 
             s6 == old(s6);
             s7 == old(s7);
