@@ -7,7 +7,7 @@ include "../../arch/otbn/decls.i.dfy"
 
 include "montmul.i.dfy"
 
-include "../../../lib/generic_mm_lemmas.dfy"
+include "../../../lib/bv256_mm_lemmas.s.dfy"
 
 module modexp_var {
 

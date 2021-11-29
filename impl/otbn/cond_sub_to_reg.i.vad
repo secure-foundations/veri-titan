@@ -1,8 +1,9 @@
 include "../../arch/otbn/decls.i.vad"
 
 #verbatim
+
 include "../../arch/otbn/decls.i.dfy"
-include "../../../lib/generic_mm_lemmas.dfy"
+include "../../../lib/bv256_mm_lemmas.s.dfy"
 
 module cond_sub_to_reg {
 

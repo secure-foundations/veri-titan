@@ -1,7 +1,7 @@
 include "machine.s.dfy"
 
 module rv_vale {
-    import opened bv_ops
+    import opened integers
     import opened rv_machine
 
     type va_code = code

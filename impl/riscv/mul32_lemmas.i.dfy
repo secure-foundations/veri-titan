@@ -1,16 +1,11 @@
-include "rsa_ops.i.dfy"
+include "../lib/bv32_mm_lemmas.i.dfy"
 
 module mul32_lemmas {
-  
-    import opened bv_ops
-    import opened rsa_ops
     import opened rv_machine
+    // import opened DivModNeg
 
-    import opened DivModNeg
-
-    import opened Seq
-    import opened BASE_32_Seq
-
+    // import opened Seq
+    // import opened BASE_32_Seq
     import Power
 
     lemma mulhu_bound(x: uint32, y: uint32)

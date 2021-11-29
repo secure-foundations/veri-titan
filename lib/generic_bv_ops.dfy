@@ -11,7 +11,9 @@ module integers
     const BASE_5   : int := BoundedInts.TWO_TO_THE_5
     const BASE_8   : int := BoundedInts.TWO_TO_THE_8
     const BASE_16  : int := BoundedInts.TWO_TO_THE_16
+    const BASE_31  : int := 0x80000000
     const BASE_32  : int := BoundedInts.TWO_TO_THE_32
+    const BASE_63  : int := 0x80000000_00000000
     const BASE_64  : int := BoundedInts.TWO_TO_THE_64
     const BASE_128 : int := BoundedInts.TWO_TO_THE_128
     const BASE_192 : int := 0x1_00000000_00000000_00000000_00000000_00000000_00000000
@@ -32,6 +34,8 @@ module integers
 
     type int10   = i :int | -512 <= i <= 511
     type int12   = i :int | -2048 <= i <= 2047
+    type int32   = i :int | -BASE_31 <= i <= (BASE_31 - 1)
+    type int64   = i :int | -BASE_63 <= i <= (BASE_63 - 1)
 }
 
 abstract module generic_bv_ops
@@ -45,7 +49,7 @@ abstract module generic_bv_ops
     type uint1 = integers.uint1
 
     // the singed version of uint
-    type sint = i: int | -(BASE() as int) < i < BASE() as int
+    type sint = i: int | -(BASE()/2 as int) <= i < BASE()/2 as int
 
     // half word base
     function method HW_BASE(): nat
@@ -187,11 +191,21 @@ abstract module generic_bv_ops
         x / BASE()
     }
 
+    lemma dw_split_lemma(x: nat)
+        requires x < DW_BASE()
+        ensures x == dw_lh(x) + dw_uh(x) * BASE();
+    {
+        DivMod.LemmaFundamentalDivMod(x, BASE());
+        Mul.LemmaMulIsCommutativeAuto();
+        reveal dw_lh();
+        reveal dw_uh();
+    }
+
 /* mul_add bounds */
 
     lemma full_mul_bound_lemma(a: uint, b: uint)
-        ensures a * b < DW_BASE();
-        ensures a * b <= (BASE() - 1) * (BASE() - 1)
+        ensures 0 <= a * b < DW_BASE();
+        ensures 0 <= a * b <= (BASE() - 1) * (BASE() - 1)
     {
         var full := a * b;
 
@@ -213,6 +227,8 @@ abstract module generic_bv_ops
                 BASE() * BASE() - 2 * BASE() + 1;
             }
         }
+
+        Mul.LemmaMulStrictlyPositiveAuto();
     }
 
     lemma mul_add_bound_lemma(a: uint, b: uint, c: uint)
