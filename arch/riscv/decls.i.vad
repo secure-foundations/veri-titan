@@ -134,58 +134,55 @@ function mvar_iter_inv(mem: mem_t, iter: iter_t, address: int, index: int, value
 
 type string: Type(0) extern;
 
-var x0: uint32 {:state reg32_t(GPR(0))};
-var x1: uint32 {:state reg32_t(GPR(1))};
-var x2: uint32 {:state reg32_t(GPR(2))};
-var x3: uint32 {:state reg32_t(GPR(3))};
-var x4: uint32 {:state reg32_t(GPR(4))};
-var x5: uint32 {:state reg32_t(GPR(5))};
-var x6: uint32 {:state reg32_t(GPR(6))};
-var x7: uint32 {:state reg32_t(GPR(7))};
-var x8: uint32 {:state reg32_t(GPR(8))};
-var x9: uint32 {:state reg32_t(GPR(9))};
-var x10: uint32 {:state reg32_t(GPR(10))};
-var x11: uint32 {:state reg32_t(GPR(11))};
-var x12: uint32 {:state reg32_t(GPR(12))};
-var x13: uint32 {:state reg32_t(GPR(13))};
-var x14: uint32 {:state reg32_t(GPR(14))};
-var x15: uint32 {:state reg32_t(GPR(15))};
-var x16: uint32 {:state reg32_t(GPR(16))};
-var x17: uint32 {:state reg32_t(GPR(17))};
-var x18: uint32 {:state reg32_t(GPR(18))};
-var x19: uint32 {:state reg32_t(GPR(19))};
-var x20: uint32 {:state reg32_t(GPR(20))};
-var x21: uint32 {:state reg32_t(GPR(21))};
-var x22: uint32 {:state reg32_t(GPR(22))};
-var x23: uint32 {:state reg32_t(GPR(23))};
-var x24: uint32 {:state reg32_t(GPR(24))};
-var x25: uint32 {:state reg32_t(GPR(25))};
-var x26: uint32 {:state reg32_t(GPR(26))};
-var x27: uint32 {:state reg32_t(GPR(27))};
-var x28: uint32 {:state reg32_t(GPR(28))};
-var x29: uint32 {:state reg32_t(GPR(29))};
-var x30: uint32 {:state reg32_t(GPR(30))};
-var x31: uint32 {:state reg32_t(GPR(31))};
+var x0: uint32 {:state reg32_t(X0)};
+var ra: uint32 {:state reg32_t(RA)};
+var sp: uint32 {:state reg32_t(SP)};
+var gp: uint32 {:state reg32_t(GP)};
+var tp: uint32 {:state reg32_t(TP)};
+var t0: uint32 {:state reg32_t(T0)};
+var t1: uint32 {:state reg32_t(T1)};
+var t2: uint32 {:state reg32_t(T2)};
+var s0: uint32 {:state reg32_t(S0)};
+var s1: uint32 {:state reg32_t(S1)};
+var a0: uint32 {:state reg32_t(A0)};
+var a1: uint32 {:state reg32_t(A1)};
+var a2: uint32 {:state reg32_t(A2)};
+var a3: uint32 {:state reg32_t(A3)};
+var a4: uint32 {:state reg32_t(A4)};
+var a5: uint32 {:state reg32_t(A5)};
+var a6: uint32 {:state reg32_t(A6)};
+var a7: uint32 {:state reg32_t(A7)};
+var s2: uint32 {:state reg32_t(S2)};
+var s3: uint32 {:state reg32_t(S3)};
+var s4: uint32 {:state reg32_t(S4)};
+var s5: uint32 {:state reg32_t(S5)};
+var s6: uint32 {:state reg32_t(S6)};
+var s7: uint32 {:state reg32_t(S7)};
+var s8: uint32 {:state reg32_t(S8)};
+var s9: uint32 {:state reg32_t(S9)};
+var s1: uint32 {:state reg32_t(S10)};
+var s1: uint32 {:state reg32_t(S11)};
+var t3: uint32 {:state reg32_t(T3)};
+var t4: uint32 {:state reg32_t(T4)};
+var t5: uint32 {:state reg32_t(T5)};
+var t6: uint32 {:state reg32_t(T6)};
 
 operand_type reg32: uint32 @ reg32_t :=
-| inout x0 | inout x1 | inout x2 | inout x3
-| inout x4 | inout x5 | inout x6 | inout x7
-| inout x8 | inout x9 | inout x10 | inout x11
-| inout x12 | inout x13 | inout x14 | inout x15
-| inout x16 | inout x17 | inout x18 | inout x19
-| inout x20 | inout x21 | inout x22 | inout x23
-| inout x24 | inout x25 | inout x26 | inout x27
-| inout x28 | inout x29 | inout x30 | inout x31;
+| inout x0 | inout ra | inout sp | inout gp | inout tp 
+| inout t0 | inout t1 | inout t2 | inout s0 | inout s1 
+| inout a0 | inout a1 | inout a2 | inout a3 | inout a4 
+| inout a5 | inout a6 | inout a7 | inout s2 | inout s3 
+| inout s4 | inout s5 | inout s6 | inout s7 | inout s8 
+| inout s9 | inout s10 | inout s11 | inout t3 | inout t4 
+| inout t5 | inout t6;
 
 operand_type imm128: uint128 := const;
 operand_type imm32: uint32 := const;
-operand_type imm2: uint2 := const;
     
 // signed immediate
 operand_type simm32: int32 := const;
 
 function uint32_lt(x: uint32, y: uint32): uint32 extern;
-    
 function uint32_add(x: uint32, y: uint32): uint32 extern;
 function uint32_sub(x: uint32, y: uint32): uint32 extern;
 function uint32_xor(x: uint32, y: uint32): uint32 extern;
@@ -199,7 +196,6 @@ function uint32_rs(x: uint32, y: uint32): uint32 extern;
 function uint32_arith_rs(x: uint32, y: uint32): uint32 extern;
 function uint32_mul(x: uint32, y: uint32): uint32 extern;
 function uint32_mulhu(x: uint32, y: uint32): uint32 extern;
-   
 function int32_rs(x: int32, shift: nat): int32 extern;
 function int32_lt(x: int32, y: int32): uint32 extern;
 
@@ -215,17 +211,17 @@ function operator(.full) (value : uint64_view_t): uint64 extern;
     
 // load instructions
 procedure lw_stack(inout dst: reg32, in src2: imm32, ghost index: nat)
-    {:instruction Ins32(RV_LW(dst, GPR(2), src2))}
+    {:instruction Ins32(RV_LW(dst, SP, src2))}
     reads
-        x2; mem;
+        sp; mem;
     requires
         src2 < 4096; // 12-bit
         4 * index == src2;
-        mem?[x2];
-        index < seq_len(mem[x2]);
+        mem?[sp];
+        index < seq_len(mem[sp]);
     ensures
         // mem location = src + sign-extended immediate
-        dst == old(mem[x2][index]);
+        dst == old(mem[sp][index]);
 {
     assume false;
 }
@@ -277,72 +273,6 @@ procedure lw_prev(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: 
     prev_iter := lw_prev_iter(iter);
     lw_iter(dst, src1, src2, iter);
 }
-
-// procedure lh(inout dst: reg32, in src1: reg32, in src2: imm32)
-    // {:instruction Ins32(RV_LH(dst, src1, src2))}
-    // reads
-        // mem;
-    // requires
-        // mem_addr_valid(mem, src1 + src2);
-        // src1 < 0x10000; // 16-bit
-        // src2 < 0x1000;  // 12-bit
-    // ensures
-        // mem_addr_valid(mem, old(src1) + old(src2));
-        // // mem location = sign-extended src + sign-extended immediate
-        // dst == mem[old(src1) + old(src2)];
-// {
-    // assume false;
-// }
-// 
-// procedure lhu(inout dst: reg32, in src1: reg32, in src2: imm32)
-    // {:instruction Ins32(RV_LHU(dst, src1, src2))}
-    // reads
-        // mem;
-    // requires
-        // mem_addr_valid(mem, src1 + src2);
-        // src1 < 0x10000; // 16-bit
-        // src2 < 0x1000;  // 12-bit
-    // ensures
-        // mem_addr_valid(mem, old(src1) + old(src2));
-        // // mem location = zero-extended src + zero-extended immediate
-        // dst == mem[old(src1) + old(src2)];
-// {
-    // assume false;
-// }
-// 
-// procedure lb(inout dst: reg32, in src1: reg32, in src2: imm32)
-    // {:instruction Ins32(RV_LB(dst, src1, src2))}
-    // reads
-        // mem;
-    // requires
-        // mem_addr_valid(mem, src1 + src2);
-        // src1 < 0x100; // 8-bit
-        // src2 < 0x1000;  // 12-bit
-    // ensures
-        // mem_addr_valid(mem, old(src1) + old(src2));
-        // // mem location = sign-extended src + sign-extended immediate
-        // dst == mem[old(src1) + old(src2)];
-// {
-    // assume false;
-// }
-// 
-// procedure lbu(inout dst: reg32, in src1: reg32, in src2: imm32)
-    // {:instruction Ins32(RV_LBU(dst, src1, src2))}
-    // reads
-        // mem;
-    // requires
-        // mem_addr_valid(mem, src1 + src2);
-        // src1 < 0x100; // 8-bit
-        // src2 < 0x1000;  // 12-bit
-    // ensures
-        // mem_addr_valid(mem, old(src1) + old(src2));
-        // // mem location = zero-extended src + zero-extended immediate
-        // dst == mem[old(src1) + old(src2)];
-// {
-    // assume false;
-// }
-// 
-
 
 // immediate instructions
 // all immediate instructions take a 12-bit immediate and sign extend it
@@ -455,18 +385,18 @@ procedure srai(inout dst: reg32, in src1: reg32, in src2: imm32)
 // store instructions
     
 procedure sw_stack(in rs2: reg32, in offset: imm32, inline index: nat)
-    // returns (ghost new_stack: seq(uint32))
+    {:instruction Ins32(RV_SW(rs2, SP, offset))}
     requires
         4 * index == offset;
-        mem?[x2];
-        index < seq_len(mem[x2]);
+        mem?[sp];
+        index < seq_len(mem[sp]);
         offset < 4096;
     reads
-        x2;
+        sp;
     modifies
         mem;
     ensures
-        mem == old(mem[x2 := mem[x2][index := rs2]]);
+        mem == old(mem[sp := mem[sp][index := rs2]]);
     {
         assume false;
     }

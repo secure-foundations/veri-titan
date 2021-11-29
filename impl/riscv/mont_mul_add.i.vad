@@ -125,13 +125,6 @@ procedure mont_mul_add_0(
         ghost B: uint64_view_t,
         ghost next_vars: mma_vars)
 
-    lets sp @= x2; // stack pointer
-         s0 @= x8; s1 @= x9;
-         s2 @= x18; s3 @= x19; s4 @= x20; s5 @= x21; s6 @= x22;
-         s7 @= x23; s8 @= x24; // saved registers
-         a0 @= x10; a1 @= x11; a2 @= x12; a3 @= x13; // fn args and return values
-         ra @= x1; //return addr
-    
     requires sp > 48;
     requires sp - 48 == vars.frame_ptr;
 
@@ -142,8 +135,7 @@ procedure mont_mul_add_0(
 
     modifies
         sp; s0; s1; s2; s3; s4; s5; s6; s7; s8;
-        a0; a1; a2; a3;
-        x14; x15; ra; mem;
+        a0; a1; a2; a3; a4; a5; a6; ra; mem;
 
     ensures
         s0 == A.uh;
@@ -288,10 +280,10 @@ procedure mont_mul_add_1(
         ghost next_A: uint64_view_t,
         ghost next_B: uint64_view_t)
 
-    lets s0 @= x8; s1 @= x9; s2 @= x18; s3 @= x19; s4 @= x20; s5 @= x21; s7 @= x23;
-         a0 @= x10; a1 @= x11; a2 @= x12; a3 @= x13;
-    modifies s0; s1; s2; s3; s4; s5; s7; a0; a1; a2; a3;
-             x14; x15; mem;
+    modifies
+        s0; s1; s2; s3; s4; s5; s7;
+        a0; a1; a2; a3; a4; a5; a6; mem;
+
     requires
         1 <= j < NUM_WORDS;
         s0 == A.uh;
@@ -393,13 +385,6 @@ procedure mont_mul_add(
     ghost rsa: rsa_params)
     returns (ghost next_iter_c : iter_t)
 
-    lets sp @= x2; // stack pointer
-         s0 @= x8; s1 @= x9;
-         s2 @= x18; s3 @= x19; s4 @= x20; s5 @= x21; s6 @= x22;
-         s7 @= x23; s8 @= x24; // saved registers
-         a0 @= x10; a1 @= x11; a2 @= x12; a3 @= x13; // fn args and return values
-         ra @= x1; //return addr
-
     requires sp > 48;
     requires sp - 48 == vars.frame_ptr;
 
@@ -413,7 +398,8 @@ procedure mont_mul_add(
     requires montmul_inv(vars.iter_c.buff, vars.iter_a.buff, vars.i, vars.iter_b.buff, rsa);
 
     modifies
-        sp; s0; s1; s2; s3; s4; s5; s6; s7; s8; a0; a1; a2; a3; x14; x15; x16; ra; mem;
+        sp; s0; s1; s2; s3; s4; s5; s6; s7; s8;
+        a0; a1; a2; a3; a4; a5; a6; ra; mem;
 
     ensures
         ra == old(ra);
