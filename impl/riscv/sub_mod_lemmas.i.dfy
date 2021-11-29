@@ -96,6 +96,8 @@ module sub_mod_lemmas {
     requires sub_mod_loop_inv(old_a, n, a, |a|, A);
     ensures to_nat(a) ==
       to_nat(old_a) - to_nat(n) + A_as_carry(A.full) * Power.Pow(BASE_32, |old_a|)
+    ensures
+      to_nat(old_a) >= to_nat(n) ==> A_as_carry(A.full) == 0;
   {
     var i := |old_a|;
     assert old_a[..i] == old_a;
@@ -104,6 +106,14 @@ module sub_mod_lemmas {
     var cout := A_as_carry(A.full);
     assert SeqSub(old_a, n) == (a, cout);
     LemmaSeqSub(old_a, n, a, cout);
+
+    // assume false;
+    if to_nat(old_a) >= to_nat(n) {
+      LemmaSeqNatBound(old_a);
+      LemmaSeqNatBound(n);
+      LemmaSeqNatBound(a);
+      assert cout == 0;
+    }
   }
 
 }

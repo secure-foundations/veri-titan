@@ -61,7 +61,7 @@ ghost procedure sub_mod_post_lemma(
     ghost A: int64_view_t) extern;
 
 procedure sub_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
-    returns (ghost iter_a': iter_t, ghost A: int64_view_t)
+    returns (ghost iter_a': iter_t, ghost borrow: uint1)
     requires
         iter_safe(iter_n, mem, 71192);
         seq_len(iter_n.buff) == 96;
@@ -75,12 +75,14 @@ procedure sub_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
     modifies
         x10; x11; x12; x13; x14; x15; x16; mem;
     ensures
-        iter_inv(iter_a', mem, x10);
+        // iter_inv(iter_a', mem, x10);
         seq_len(iter_a'.buff) == 96;
         mem == old(mem)[iter_a.base_addr := iter_a'.buff];
-        (A.full == (-1) || A.full == 0); 
         to_nat(iter_a'.buff) ==
-            to_nat(iter_a.buff) - to_nat(iter_n.buff) + A_as_carry(A.full) * Pow(BASE_32, 96);
+            to_nat(iter_a.buff) - to_nat(iter_n.buff) + borrow * Pow(BASE_32, 96);
+        to_nat(iter_a.buff) >= to_nat(iter_n.buff) ==> borrow == 0;
+        iter_a'.base_addr == iter_a.base_addr;
+        iter_a'.index == 0;
 {
     // load address of n
     lui(x12, 0x11); // 0x11000 into x12
@@ -96,6 +98,7 @@ procedure sub_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
     li(x15, 0); // 0 in x15 -- lower half of A
     li(x11, 0); // 0 in x11 -- upper half of A
 
+    ghost var A : int64_view_t;
     A := A_zero();
 
     ghost var i: nat := 0;
@@ -179,9 +182,11 @@ procedure sub_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
         i := i + 1;
     }
 
+    iter_a' := iter_a'.(index := 0);
     sub_mod_post_lemma(old_a, iter_n.buff, iter_a'.buff, A);
+    borrow := if A.full == (-1) then 1 else 0;
     assert to_nat(iter_a'.buff) ==
-            to_nat(old_a) - to_nat(iter_n.buff) + A_as_carry(A.full) * Pow(BASE_32, 96);
+            to_nat(old_a) - to_nat(iter_n.buff) + borrow * Pow(BASE_32, 96);
 }
 
 #verbatim

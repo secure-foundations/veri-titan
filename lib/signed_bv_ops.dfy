@@ -11,7 +11,7 @@ module bv_ops {
     import opened DivMod
     import opened DivModNeg
 
-    const NUM_WORDS:  int := 12
+    const NUM_WORDS:  int := 96
 
     const BASE_1:   int := 2
     const BASE_2:   int := 4
@@ -60,6 +60,11 @@ module bv_ops {
     function to_2s_complement_bv64(val: int64): uint64
     {
         if val >= 0 then val else val + BASE_64
+    }
+
+    predicate cong_B32(a: int, b: int)
+    {
+        IsModEquivalent(a, b, BASE_32)
     }
 
     /* signed operations */
@@ -180,6 +185,12 @@ module bv_ops {
     {
         var r := x as int + y as int;
         if r >= BASE_32 then (r - BASE_32) else r
+    }
+
+    function method uint32_addc(x:uint32, y:uint32, c:uint1): (uint32, uint1)
+    {
+         var r := x as int + y as int + c as int;
+        if r >= BASE_32 then (r - BASE_32, 1) else (r, 0)
     }
 
     function method uint32_sub(x:uint32, y:uint32) : uint32

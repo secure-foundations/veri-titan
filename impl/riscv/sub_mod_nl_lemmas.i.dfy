@@ -2,7 +2,6 @@ include "rsa_ops.i.dfy"
 
 module sub_mod_nl_lemmas {
     import opened bv_ops
-    import opened rsa_ops
     import opened rv_machine
     import opened BASE_32_Seq
     import Power2
