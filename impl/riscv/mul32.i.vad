@@ -20,148 +20,148 @@ import opened mul32_lemmas
 ghost procedure lemma_uint64_half_split(ghost x: nat) extern;
 
 function mula32_correct_lemma(
-    a: uint32, // x10
-    b: uint32, // x11
-    c: uint32, // x12
-    x10: uint32,
-    x11: uint32,
-    x15: uint32
+    a: uint32, // a0
+    b: uint32, // a1
+    c: uint32, // a2
+    a0: uint32,
+    a1: uint32,
+    a5: uint32
 ) : (uint64_view_t) extern;
 
 function mulaa32_correct_lemma(
-       a: uint32, // x10
-       b: uint32, // x11
-       c: uint32, // x12
-       d: uint32, // x13
-       x10: uint32,
-       x11: uint32,
-       x15: uint32
+       a: uint32, // a0
+       b: uint32, // a1
+       c: uint32, // a2
+       d: uint32, // a3
+       a0: uint32,
+       a1: uint32,
+       a5: uint32
 ) : (uint64_view_t) extern;
 
 
 procedure mul32()
     modifies
-        x10; x11; x15;
+        a0; a1; a5;
     ensures
-        to_nat(seq(x10, x11)) == old(x11) * old(x10);
+        to_nat(seq(a0, a1)) == old(a1) * old(a0);
 {
-    ghost var a := x10;
-    ghost var b := x11;
+    ghost var a := a0;
+    ghost var b := a1;
     ghost var r := a * b;
 
-    // move starting x11 into x15
-    mv(x15, x11);
+    // move starting a1 into a5
+    mv(a5, a1);
 
-    // put upper-half of multiplication of x11 and x10 into x11
-    mulhu(x11, x10, x15);
-    assert x11 == uint32_mulhu(a, b);
+    // put upper-half of multiplication of a1 and a0 into a1
+    mulhu(a1, a0, a5);
+    assert a1 == uint32_mulhu(a, b);
 
-    // put lower-half of x11 and x10 into x10
-    mul(x10, x10, x15);
-    assert x10 == uint32_mul(a, b);
+    // put lower-half of a1 and a0 into a0
+    mul(a0, a0, a5);
+    assert a0 == uint32_mul(a, b);
 
-    // end result: x10 * x11 in x11-x10, x15 has old(x11)
+    // end result: a0 * a1 in a1-a0, a5 has old(a1)
     lemma_uint64_half_split(r);
-    to_nat_lemma_1(seq(x10, x11));
+    to_nat_lemma_1(seq(a0, a1));
 }
   
 procedure mula32() returns (ghost A: uint64_view_t)
     reads
-        x12;
+        a2;
     modifies
-        x10; x11; x15;
+        a0; a1; a5;
     ensures
-        valid_uint64_view(A, x10, x11);
-        A.full == old(x10) * old(x11) + old(x12);
+        valid_uint64_view(A, a0, a1);
+        A.full == old(a0) * old(a1) + old(a2);
 {
-    ghost var a := x10;
-    ghost var b := x11;
-    ghost var c := x12;
+    ghost var a := a0;
+    ghost var b := a1;
+    ghost var c := a2;
     ghost var r := a * b;
     ghost var s := r + c;
    
-    // bottom half of x10 * x11 in x15 
-    mul(x15, x10, x11);
-    assert x15 = uint32_mul(a, b);
+    // bottom half of a0 * a1 in a5 
+    mul(a5, a0, a1);
+    assert a5 = uint32_mul(a, b);
     
-    // top half of x10 * x11 in x11
-    mulhu(x11, x10, x11);
-    assert x11 == uint32_mulhu(a, b);
+    // top half of a0 * a1 in a1
+    mulhu(a1, a0, a1);
+    assert a1 == uint32_mulhu(a, b);
 
-    // bottom half + x12 value in x10
-    add_wrap(x10, x15, x12);
-    assert x10 == uint32_add(uint32_mul(a, b), c);
+    // bottom half + a2 value in a0
+    add_wrap(a0, a5, a2);
+    assert a0 == uint32_add(uint32_mul(a, b), c);
 
-    // if x10 now less than x15 it's because we overflowed
-    // so we need to add 1 to x11
-    sltu(x15, x10, x15);
-    assert x15 == uint32_lt(x10, uint32_mul(a, b));
+    // if a0 now less than a5 it's because we overflowed
+    // so we need to add 1 to a1
+    sltu(a5, a0, a5);
+    assert a5 == uint32_lt(a0, uint32_mul(a, b));
     
     // add 1 to top half if needed
-    add_wrap(x11, x11, x15);
-    assert x11 == uint32_add(uint32_mulhu(a, b), x15);
+    add_wrap(a1, a1, a5);
+    assert a1 == uint32_add(uint32_mulhu(a, b), a5);
     
-    // result: x10 * x11 + x12
-    A := mula32_correct_lemma(a, b, c, x10, x11, x15);
+    // result: a0 * a1 + a2
+    A := mula32_correct_lemma(a, b, c, a0, a1, a5);
 }
     
 procedure mulaa32() returns (ghost A: uint64_view_t)
     modifies
-        x10; x11; x12; x13; x14; x15;
+        a0; a1; a2; a3; a4; a5;
     ensures
         // a * b + c + d
-        // x10 * x11 + (x12 + x13)
-        valid_uint64_view(A, x10, x11);
-        A.full == old(x10) * old(x11) + old(x12) + old(x13);
+        // a0 * a1 + (a2 + a3)
+        valid_uint64_view(A, a0, a1);
+        A.full == old(a0) * old(a1) + old(a2) + old(a3);
 {
-    ghost var a := x10;
-    ghost var b := x11;
-    ghost var c := x12;
-    ghost var d := x13;
+    ghost var a := a0;
+    ghost var b := a1;
+    ghost var c := a2;
+    ghost var d := a3;
 
     ghost var r := a * b;
     ghost var s := c + d;
 
     ghost var t := r + s;
     
-    // don't care about starting x14
-    // bottom half of x10 * x11 in x14'
-    mul(x14, x10, x11);
-    assert x14 == uint32_mul(a, b);
+    // don't care about starting a4
+    // bottom half of a0 * a1 in a4'
+    mul(a4, a0, a1);
+    assert a4 == uint32_mul(a, b);
 
-    // x12 + x13 in x13'
-    add_wrap(x13, x13, x12);
-    assert x13 == uint32_add(c, d);
+    // a2 + a3 in a3'
+    add_wrap(a3, a3, a2);
+    assert a3 == uint32_add(c, d);
 
-    // if x13' < x12, then addition overflowed
-    // if we overflowed, x12' is 1
-    sltu(x12, x13, x12);
-    assert x12 == uint32_lt(uint32_add(c, d), c);
+    // if a3' < a2, then addition overflowed
+    // if we overflowed, a2' is 1
+    sltu(a2, a3, a2);
+    assert a2 == uint32_lt(uint32_add(c, d), c);
 
-    // top half of x10 * x11 in x15'
-    mulhu(x15, x10, x11);
-    assert x15 == uint32_mulhu(a, b);
+    // top half of a0 * a1 in a5'
+    mulhu(a5, a0, a1);
+    assert a5 == uint32_mulhu(a, b);
 
-    // x10' == add (x13 + x12) to bottom half of (x10 * x11)
-    add_wrap(x10, x14, x13);
-    assert x10 == uint32_add(uint32_mul(a, b), uint32_add(c, d));
+    // a0' == add (a3 + a2) to bottom half of (a0 * a1)
+    add_wrap(a0, a4, a3);
+    assert a0 == uint32_add(uint32_mul(a, b), uint32_add(c, d));
 
-    // if x10' < x14' then addition overflowed bottom mul
-    // if overflowed, x11' == 1
-    sltu(x11, x10, x14);
-    assert x11 == uint32_lt(uint32_add(uint32_mul(a, b), uint32_add(c, d)), uint32_mul(a, b));
+    // if a0' < a4' then addition overflowed bottom mul
+    // if overflowed, a1' == 1
+    sltu(a1, a0, a4);
+    assert a1 == uint32_lt(uint32_add(uint32_mul(a, b), uint32_add(c, d)), uint32_mul(a, b));
 
     // add top half of mul and first overflow result
-    add_wrap(x15, x15, x12);
-    assert x15 == uint32_add(uint32_mulhu(a, b), uint32_lt(uint32_add(c, d), c));
+    add_wrap(a5, a5, a2);
+    assert a5 == uint32_add(uint32_mulhu(a, b), uint32_lt(uint32_add(c, d), c));
 
     // add top half and second overflow result
-    add_wrap(x11, x11, x15);
-    assert x11 == uint32_add(uint32_lt(uint32_add(uint32_mul(a, b), uint32_add(c, d)), uint32_mul(a, b)), x15);
+    add_wrap(a1, a1, a5);
+    assert a1 == uint32_add(uint32_lt(uint32_add(uint32_mul(a, b), uint32_add(c, d)), uint32_mul(a, b)), a5);
     
-    A := mulaa32_correct_lemma(a, b, c, d, x10, x11, x15);
+    A := mulaa32_correct_lemma(a, b, c, d, a0, a1, a5);
 }
-        
+
 #verbatim
 }
 #endverbatim
