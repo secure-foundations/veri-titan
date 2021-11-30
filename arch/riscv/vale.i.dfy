@@ -26,6 +26,12 @@ module rv_vale {
         xs + [x]
     }
 
+    function mod(a: int, n: nat): int
+        requires n != 0;
+    {
+        a % n
+    }
+
     function mod_add(a: nat, b: nat, m: nat): nat 
         requires a < m && b < m;
     {

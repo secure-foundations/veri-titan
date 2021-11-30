@@ -879,13 +879,12 @@ abstract module generic_mm_lemmas {
 
     predicate modexp_var_inv(
         a: nat,
-        sig: nat,
         i: nat,
         rsa: rsa_params)
-        requires rsa.M != 0;
     {
         LemmaPowPositiveAuto();
-        IsModEquivalent(a, Pow(sig, Pow(2, i)) * rsa.R, rsa.M)
+        && rsa_params_inv(rsa)
+        && IsModEquivalent(a, Pow(rsa.SIG, Pow(2, i)) * rsa.R, rsa.M)
     }
 
     lemma modexp_var_inv_pre_lemma(
@@ -894,10 +893,15 @@ abstract module generic_mm_lemmas {
         sig: seq<uint>,
         rsa: rsa_params)
 
-    requires montmul_inv(a_view, rr, NUM_WORDS, sig, rsa);
+    requires montmul_inv(a_view, rr, NUM_WORDS, sig, rsa)
+        || montmul_inv(a_view, sig, NUM_WORDS, rr, rsa);
+    requires to_nat(sig) == rsa.SIG;
     requires to_nat(rr) == rsa.RR;
-    ensures modexp_var_inv(to_nat(a_view), to_nat(sig), 0, rsa);
+    ensures modexp_var_inv(to_nat(a_view), 0, rsa);
     {
+        assume montmul_inv(a_view, sig, NUM_WORDS, rr, rsa) 
+            ==> montmul_inv(a_view, rr, NUM_WORDS, sig, rsa);
+
         var m := rsa.M;
         var a := to_nat(a_view);
         var s := to_nat(sig);
@@ -929,19 +933,18 @@ abstract module generic_mm_lemmas {
     lemma modexp_var_inv_peri_lemma(
         a_view: seq<uint>,
         next_a_view: seq<uint>,
-        sig: nat,
         i: nat,
         rsa: rsa_params)
 
         requires montmul_inv(next_a_view, a_view, NUM_WORDS, a_view, rsa);
-        requires sig > 0;
-        requires modexp_var_inv(to_nat(a_view), sig, i, rsa);
-        ensures modexp_var_inv(to_nat(next_a_view), sig, i + 1, rsa);
+        requires modexp_var_inv(to_nat(a_view), i, rsa);
+        ensures modexp_var_inv(to_nat(next_a_view), i + 1, rsa);
     {
         var m := rsa.M;
         var a := to_nat(a_view);
         var next_a := to_nat(next_a_view);
-
+        var sig := rsa.SIG;
+    
         LemmaPowPositiveAuto();
         // LemmaPowNonnegativeAuto();
         LemmaMulNonnegativeAuto();
@@ -984,8 +987,9 @@ abstract module generic_mm_lemmas {
         rsa: rsa_params)
 
         requires montmul_inv(next_a_view, a_view, NUM_WORDS, sig, rsa);
-        requires modexp_var_inv(to_nat(a_view), to_nat(sig), rsa.E0, rsa);
-        ensures IsModEquivalent(to_nat(next_a_view), Pow(to_nat(sig), rsa.E), rsa.M);
+        requires to_nat(sig) == rsa.SIG;
+        requires modexp_var_inv(to_nat(a_view), rsa.E0, rsa);
+        ensures IsModEquivalent(to_nat(next_a_view), Pow(rsa.SIG, rsa.E), rsa.M);
     {
         var m := rsa.M;
         var a := to_nat(a_view);
