@@ -134,6 +134,12 @@ abstract module generic_bv_ops
         subb(x, y, 0).0
     }
 
+    function method mul(x: uint, y: uint): uint
+    {
+        full_mul_bound_lemma(x, y);
+        dw_lh(x * y)
+    }
+
 /* upper/lower half split */
 
     lemma upper_half_bound_lemma(x: nat, base: nat, half_base: nat)

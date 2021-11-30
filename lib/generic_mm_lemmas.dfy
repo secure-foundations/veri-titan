@@ -288,41 +288,41 @@ abstract module generic_mm_lemmas {
 
 /* begin section on mont loop */
 
-    lemma mont_loop_cong_lemma(
-        p1: dw_view_t,
-        a0: uint,
-        y0: uint,
-        xi: uint,
-        w25: uint,
-        w26: uint,
-        m0d: uint)
+    // lemma mont_loop_cong_lemma(
+    //     p1: dw_view_t,
+    //     a0: uint,
+    //     y0: uint,
+    //     xi: uint,
+    //     w25: uint,
+    //     w26: uint,
+    //     m0d: uint)
 
-        requires a0 + y0 * xi == p1.full;
-        requires to_nat([w25, w26]) == p1.lh * m0d;
-        ensures cong_BASE(w25, (a0 + y0 * xi) * m0d);
-    {
-        calc ==> {
-            true;
-            cong_BASE(a0 + y0 * xi, p1.full);
-                { dw_view_lemma(p1); }
-            cong_BASE(a0 + y0 * xi, p1.lh + p1.uh * BASE());
-                { LemmaModMultiplesVanish(p1.uh, p1.lh, BASE()); }
-            cong_BASE(a0 + y0 * xi, p1.lh);
-            cong_BASE(p1.lh, a0 + y0 * xi);
-                { LemmaModMulEquivalentAuto(); }
-            cong_BASE(p1.lh * m0d, (a0 + y0 * xi) * m0d);
-        }
+    //     requires a0 + y0 * xi == p1.full;
+    //     requires to_nat([w25, w26]) == p1.lh * m0d;
+    //     ensures cong_BASE(w25, (a0 + y0 * xi) * m0d);
+    // {
+    //     calc ==> {
+    //         true;
+    //         cong_BASE(a0 + y0 * xi, p1.full);
+    //             { dw_view_lemma(p1); }
+    //         cong_BASE(a0 + y0 * xi, p1.lh + p1.uh * BASE());
+    //             { LemmaModMultiplesVanish(p1.uh, p1.lh, BASE()); }
+    //         cong_BASE(a0 + y0 * xi, p1.lh);
+    //         cong_BASE(p1.lh, a0 + y0 * xi);
+    //             { LemmaModMulEquivalentAuto(); }
+    //         cong_BASE(p1.lh * m0d, (a0 + y0 * xi) * m0d);
+    //     }
 
-        calc ==> {
-            true;
-                { BVSEQ.LemmaSeqLen2([w25, w26]); }
-            w25 + w26 * BASE() == p1.lh * m0d;
-            cong_BASE(w25 + w26 * BASE(), p1.lh * m0d);
-            cong_BASE(w25 + w26 * BASE(), (a0 + y0 * xi) * m0d);
-                { LemmaModMultiplesVanish(w26, w25, BASE()); }
-            cong_BASE(w25, (a0 + y0 * xi) * m0d);
-        }
-    }
+    //     calc ==> {
+    //         true;
+    //             { BVSEQ.LemmaSeqLen2([w25, w26]); }
+    //         w25 + w26 * BASE() == p1.lh * m0d;
+    //         cong_BASE(w25 + w26 * BASE(), p1.lh * m0d);
+    //         cong_BASE(w25 + w26 * BASE(), (a0 + y0 * xi) * m0d);
+    //             { LemmaModMultiplesVanish(w26, w25, BASE()); }
+    //         cong_BASE(w25, (a0 + y0 * xi) * m0d);
+    //     }
+    // }
 
     lemma mont_loop_divisible_lemma(
         ui: int,
@@ -391,6 +391,7 @@ abstract module generic_mm_lemmas {
     {
         && |m| == |next_a| == |y| == |prev_a| == NUM_WORDS
         && (1 <= j <= NUM_WORDS)
+        && prev_a[j..] == next_a[j..]
         && (xi * to_nat(y[..j]) + ui * to_nat(m[..j]) + to_nat(prev_a[..j]) 
             == 
         to_nat([0] + next_a[..j-1]) + p2.uh * pow_BASE(j) + p1.uh * pow_BASE(j))
@@ -410,10 +411,13 @@ abstract module generic_mm_lemmas {
         requires p1.full == xi * y[0] + a[0];
         requires p2.full == ui * m[0] + p1.lh;
         requires cong_BASE(m0d * to_nat(m), -1);
-        requires cong_BASE(ui, (a[0] + y[0] * xi) * m0d);
+        requires ui == mul(p1.lh, m0d); 
+        // requires cong_BASE(ui, (a[0] + y[0] * xi) * m0d);
 
         ensures mont_loop_inv(xi, ui, p1, p2, y, m, a, a, 1)
     {
+        assume false; // FIX
+
         assert cong_BASE(m0d * m[0], -1) by {
             GBV.BVSEQ.LemmaSeqLswModEquivalence(m);
             LemmaModMulEquivalent(to_nat(m), m[0], m0d, BASE());
@@ -435,17 +439,17 @@ abstract module generic_mm_lemmas {
         calc {
             xi * to_nat(y[..1]) + ui * to_nat(m[..1]) + to_nat(a[..1]);
                 { reveal Pow(); }
-            p2.uh * pow_BASE(1) + p1.uh * pow_BASE(1);
+            p2.uh * BASE() + p1.uh * BASE();
                 {
                     reveal GBV.BVSEQ.ToNatRight();
                     assert to_nat([0]) == 0;
                 }
-            to_nat([0]) + p2.uh * pow_BASE(1) + p1.uh * pow_BASE(1);
+            to_nat([0]) + p2.uh * BASE() + p1.uh * BASE();
                 {
                     assert [0] + a[..0] == [0];
                     assert to_nat([0]) == to_nat([0] + a[..0]);
                 }
-            to_nat([0] + a[..0]) + p2.uh * pow_BASE(1) + p1.uh * pow_BASE(1);
+            to_nat([0] + a[..0]) + p2.uh * BASE() + p1.uh * BASE();
         }
     }
 
@@ -467,7 +471,7 @@ abstract module generic_mm_lemmas {
         requires mont_loop_inv(xi, ui, p1, p2, y, m, prev_a, a, j);
         requires a[j] == prev_a[j];
         requires |next_a| == NUM_WORDS;
-        requires next_p1.full == p1.uh + y[j] * xi + a[j];
+        requires next_p1.full == y[j] * xi + p1.uh + a[j];
         requires next_p2.full == m[j] * ui + next_p1.lh + p2.uh;
         requires next_a == a[j-1 := next_p2.lh];
         ensures mont_loop_inv(xi, ui, next_p1, next_p2, y, m, prev_a, next_a, j+1);
@@ -771,24 +775,24 @@ abstract module generic_mm_lemmas {
         requires |a| == NUM_WORDS;
         requires i < |x|;
         requires to_nat(a) < rsa.M + to_nat(y);
-        requires IsModEquivalent(to_nat(a) * pow_BASE(1),
+        requires IsModEquivalent(to_nat(a) * BASE(),
                 x[i] * to_nat(y) + ui * rsa.M + to_nat(prev_a), rsa.M);
         ensures montmul_inv(a, x, i+1, y, rsa);
     {
         var curr_a := to_nat(a);
         var prev_a := to_nat(prev_a);
         calc ==> {
-            IsModEquivalent(curr_a * pow_BASE(1), x[i] * to_nat(y) + ui * rsa.M + prev_a, rsa.M);
+            IsModEquivalent(curr_a * BASE(), x[i] * to_nat(y) + ui * rsa.M + prev_a, rsa.M);
                 {
                     LemmaMulIsCommutativeAuto();
                     LemmaModMultiplesVanish(ui, x[i] * to_nat(y) + prev_a, rsa.M);
                 }
-            IsModEquivalent(curr_a * pow_BASE(1), x[i] * to_nat(y) + prev_a, rsa.M);
+            IsModEquivalent(curr_a * BASE(), x[i] * to_nat(y) + prev_a, rsa.M);
                 {
-                    LemmaModMulEquivalent(curr_a * pow_BASE(1), x[i] * to_nat(y) + prev_a, pow_BASE(i), rsa.M);
+                    LemmaModMulEquivalent(curr_a * BASE(), x[i] * to_nat(y) + prev_a, pow_BASE(i), rsa.M);
                     LemmaMulIsDistributiveAuto();
                 }
-            IsModEquivalent(curr_a * pow_BASE(1) * pow_BASE(i), x[i] * to_nat(y) * pow_BASE(i) + prev_a * pow_BASE(i), rsa.M);
+            IsModEquivalent(curr_a * BASE() * pow_BASE(i), x[i] * to_nat(y) * pow_BASE(i) + prev_a * pow_BASE(i), rsa.M);
                 {
                     reveal Pow();
                     LemmaMulIsAssociativeAuto();

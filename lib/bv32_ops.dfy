@@ -88,8 +88,7 @@ module bv32_ops refines generic_bv_ops
 
     function method uint32_mul(x: uint, y: uint): uint
     {
-        full_mul_bound_lemma(x, y);
-        dw_lh(x * y)
+        mul(x, y)
     }
 
     function method uint32_mulhu(x: uint, y: uint): uint
