@@ -819,21 +819,19 @@ abstract module generic_mm_lemmas {
     lemma montmul_inv_lemma_0(
         a: seq<uint>,
         x: seq<uint>, 
-        i: nat,
         y: seq<uint>, 
         rsa: rsa_params)
 
         requires |a| == |x| == |y| == NUM_WORDS;
-        requires to_nat(a) == 0;
+        requires a == GBV.BVSEQ.SeqZero(NUM_WORDS);
         requires rsa_params_inv(rsa);
-        requires i == 0;
         
-        ensures montmul_inv(a, x, i, y, rsa);
+        ensures montmul_inv(a, x, 0, y, rsa);
     {
-        assert to_nat(x[..i]) == 0 by {
+        assert to_nat(x[..0]) == 0 by {
             reveal GBV.BVSEQ.ToNatRight();
         }
-        assert montmul_inv(a, x, i, y, rsa);
+        assert montmul_inv(a, x, 0, y, rsa);
     }
 
     lemma r_r_inv_cancel_lemma(a: nat, b: nat, rsa: rsa_params)
