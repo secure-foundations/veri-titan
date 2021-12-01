@@ -20,7 +20,7 @@ import opened bv256_mm_lemmas
 function dw_add_is_safe(x_lh: int, x_uh: int, y_lh: int, y_uh: int): bool extern;
 
 function dw_add_lemma(x_lh: int, x_uh: int,
-    y_lh: int, y_uh: int, c1: uint1, c2: uint1, z_lh: int, z_uh: int): uint512_view_t extern;
+    y_lh: int, y_uh: int, c1: uint1): uint512_view_t extern;
 
 procedure seq_addc_512_safe(
     inout dst1: reg256, in src1a: reg256, in src1b: reg256,
@@ -56,9 +56,8 @@ procedure seq_addc_512_safe(
     bn_add(dst1, src1a, src1b, SFT_DFT, 0);
     ghost var c1 := bool_to_uint1(fgroups.fg0.cf);
     bn_addc(dst2, src2a, src2b, SFT_DFT, 0);
-    ghost var c2 := bool_to_uint1(fgroups.fg0.cf);
 
-    sum := dw_add_lemma(x_lh, x_uh, y_lh, y_uh, c1, c2, dst1, dst2);
+    sum := dw_add_lemma(x_lh, x_uh, y_lh, y_uh, c1);
 }
 
 #verbatim

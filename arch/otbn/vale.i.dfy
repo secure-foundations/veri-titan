@@ -51,7 +51,7 @@ module ot_vale {
     lemma xor_clear_lemma(x: uint256)
         ensures bv256_ops.xor(x, x) == 0;
     {
-        bv256_ops.xor_clear_lemma(x);
+        bv256_ops.xor_clear_lemma(x, x);
     }
 
     // need this for mul
