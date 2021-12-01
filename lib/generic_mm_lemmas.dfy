@@ -412,11 +412,30 @@ abstract module generic_mm_lemmas {
         requires p2.full == ui * m[0] + p1.lh;
         requires cong_BASE(m0d * to_nat(m), -1);
         requires ui == mul(p1.lh, m0d); 
-        // requires cong_BASE(ui, (a[0] + y[0] * xi) * m0d);
-
         ensures mont_loop_inv(xi, ui, p1, p2, y, m, a, a, 1)
     {
-        assume false; // FIX
+        assert cong_BASE(ui, (a[0] + y[0] * xi) * m0d) by {
+            calc ==> {
+                ui == mul(p1.lh, m0d);
+                {
+                    full_mul_bound_lemma(p1.lh, m0d);
+                }
+                cong_BASE(ui, dw_lh(p1.lh * m0d));
+                {
+                    reveal dw_lh();
+                }
+                cong_BASE(ui, (p1.lh * m0d) % BASE());
+                {
+                    LemmaModBasicsAuto();
+                }
+                cong_BASE(ui, p1.lh * m0d);
+                {
+                    reveal dw_lh();
+                    LemmaMulModNoopLeftAuto();
+                }
+                cong_BASE(ui, p1.full * m0d);
+            }
+        }
 
         assert cong_BASE(m0d * m[0], -1) by {
             GBV.BVSEQ.LemmaSeqLswModEquivalence(m);
@@ -450,6 +469,10 @@ abstract module generic_mm_lemmas {
                     assert to_nat([0]) == to_nat([0] + a[..0]);
                 }
             to_nat([0] + a[..0]) + p2.uh * BASE() + p1.uh * BASE();
+        }
+
+        assert pow_BASE(1) == BASE() by {
+            reveal Pow();
         }
     }
 
