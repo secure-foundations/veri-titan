@@ -14,15 +14,15 @@ import opened rv_decls
 import opened rv_vale
 
 import opened bv32_mm_lemmas
+import opened sub_mod_nl_lemmas
 
-// import opened sub_mod_lemmas
-// import opened sub_mod_nl_lemmas
+import opened bv32_ops
 
 import opened Power
 
 #endverbatim
 
-// ghost procedure A_zero() returns (ghost ref: int64_view_t) extern;
+ghost procedure A_zero() returns (ghost ref: int64_view_t) extern;
 
 function Pow(b: int, e: nat): int extern;
 
@@ -85,110 +85,109 @@ procedure sub_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
         iter_a'.base_addr == iter_a.base_addr;
         iter_a'.index == 0;
 {
-    assume false;
-//     // load address of n
-//     lui(a2, 0x11); // 0x11000 into a2
-//     assume 0x11000 == a2;
+    // load address of n
+    lui(a2, 0x11); // 0x11000 into a2
+    assume 0x11000 == a2;
 
-//     addi(a2, a2, 1560); // 71192 in a2
-//     assert a2 == 71192;
+    addi(a2, a2, 1560); // 71192 in a2
+    assert a2 == 71192;
 
-//     addi(a6 ,a2, 384);  // 71576 in a6
-//     assert a6 == 71576;
+    addi(a6 ,a2, 384);  // 71576 in a6
+    assert a6 == 71576;
 
-//     // set A to 0
-//     li(a5, 0); // 0 in a5 -- lower half of A
-//     li(a1, 0); // 0 in a1 -- upper half of A
+    // set A to 0
+    li(a5, 0); // 0 in a5 -- lower half of A
+    li(a1, 0); // 0 in a1 -- upper half of A
 
-//     ghost var A : int64_view_t;
-//     A := A_zero();
+    ghost var A : int64_view_t;
+    A := A_zero();
 
-//     ghost var i: nat := 0;
-//     iter_a' := iter_a;
-//     ghost var old_a := iter_a.buff;
-//     ghost var iter_n := iter_n;
+    ghost var i: nat := 0;
+    iter_a' := iter_a;
+    ghost var old_a := iter_a.buff;
+    ghost var iter_n := iter_n;
     
-//     assert sub_mod_loop_inv(old_a, iter_n.buff, iter_a'.buff, i, A) by {
-//         reveal SeqSub;
-//     }
+    assert sub_mod_loop_inv(old_a, iter_n.buff, iter_a'.buff, i, A) by {
+        assume false;
+    }
 
-//     ghost var n_ptr := iter_n.base_addr;
-//     ghost var a_ptr := iter_a.base_addr;
+    ghost var n_ptr := iter_n.base_addr;
+    ghost var a_ptr := iter_a.base_addr;
 
-//     while (a2 != a6)
-//         invariant a2 <= a6;
-//         invariant a2 == 71192 + 4 * i;
-//         invariant a6 == 71576;
-//         invariant 0 <= i <= 96;
+    while (a2 != a6)
+        invariant a2 <= a6;
+        invariant a2 == 71192 + 4 * i;
+        invariant a6 == 71576;
+        invariant 0 <= i <= 96;
 
-//         invariant iter_inv(iter_n, mem, a2);
-//         invariant iter_n.base_addr == n_ptr;
-//         invariant iter_n.index == i;
-//         invariant mem == old(mem)[a_ptr := iter_a'.buff];
+        invariant iter_inv(iter_n, mem, a2);
+        invariant iter_n.base_addr == n_ptr;
+        invariant iter_n.index == i;
+        invariant mem == old(mem)[a_ptr := iter_a'.buff];
 
-//         invariant iter_inv(iter_a', mem, a0);
-//         invariant seq_len(iter_a'.buff) == 96;
-//         invariant iter_a'.base_addr == a_ptr;
-//         invariant iter_a'.index == i;
+        invariant iter_inv(iter_a', mem, a0);
+        invariant seq_len(iter_a'.buff) == 96;
+        invariant iter_a'.base_addr == a_ptr;
+        invariant iter_a'.index == i;
 
-//         invariant a_ptr != n_ptr;
+        invariant a_ptr != n_ptr;
 
-//         invariant valid_int64_view(A, a5, a1);
-//         invariant sub_mod_loop_inv(old_a, iter_n.buff, iter_a'.buff, i, A);
+        invariant valid_int64_view(A, a5, a1);
+        invariant sub_mod_loop_inv(old_a, iter_n.buff, iter_a'.buff, i, A);
 
-//         decreases loop_ctr;
-//     {
-//         lw_iter(a4, a0, 0, iter_a');
+        decreases loop_ctr;
+    {
+        lw_iter(a4, a0, 0, iter_a');
 
-//         let iter_a_next := lw_next_iter(iter_a);
-//         // load mem from a0 to a4 (a4 == a[i])
+        let iter_a_next := lw_next_iter(iter_a);
+        // load mem from a0 to a4 (a4 == a[i])
 
-//         let iter_n_next := lw_next(a3, a2, 0, iter_n); 
-//         // load mem from a2 into a3 (a3 == n[i])
-//         addi(a2, a2, 4); // increment n pointer
+        let iter_n_next := lw_next(a3, a2, 0, iter_n); 
+        // load mem from a2 into a3 (a3 == n[i])
+        addi(a2, a2, 4); // increment n pointer
 
-//         ghost var a_i := iter_a.buff[i];
-//         ghost var n_i := iter_n.buff[i];
+        ghost var a_i := iter_a.buff[i];
+        ghost var n_i := iter_n.buff[i];
 
-//         add(a5, a5, a4); // lower half of A += a[i]
-//         // assert a5 == uint32_add(A.lh, a_i);
-//         ghost var v0 := uint32_add(A.lh, a_i);
+        add(a5, a5, a4); // lower half of A += a[i]
+        // assert a5 == uint32_add(A.lh, a_i);
+        ghost var v0 := uint32_add(A.lh, a_i);
 
-//         sub(a3, a5, a3); // lower half of A -= n[i]
-//         // assert a3 == uint32_sub(uint32_add(A.lh, a_i), n_i);
+        sub(a3, a5, a3); // lower half of A -= n[i]
+        // assert a3 == uint32_sub(uint32_add(A.lh, a_i), n_i);
 
-//         sltu(a4, a5, a4); // overflow check from add
-//         let carry_add := a4;
-//         // assert carry_add == uint32_lt(uint32_add(A.lh, a_i), a_i);
+        sltu(a4, a5, a4); // overflow check from add
+        let carry_add := a4;
+        // assert carry_add == uint32_lt(uint32_add(A.lh, a_i), a_i);
 
-//         add(a4, a4, a1); // add carry bit to upper half of A
+        add(a4, a4, a1); // add carry bit to upper half of A
 
-//         ghost var v1 := a4;
-//         // assert v1 == uint32_add(A.uh, carry_add);
+        ghost var v1 := a4;
+        // assert v1 == uint32_add(A.uh, carry_add);
 
-//         sltu(a5, a5, a3); // underflow check from sub
+        sltu(a5, a5, a3); // underflow check from sub
         
-//         let carry_sub := a5;
+        let carry_sub := a5;
 
-//         let iter_a'_next := sw_next(a3, a0, 0, iter_a');
+        let iter_a'_next := sw_next(a3, a0, 0, iter_a');
 
-//         addi(a0, a0, 4); // increment a pointer
-//         sub(a5, a4, a5); // subtract underflow carry from upper half of A
-//         srai(a1, a5, 0x1f); 
+        addi(a0, a0, 4); // increment a pointer
+        sub(a5, a4, a5); // subtract underflow carry from upper half of A
+        srai(a1, a5, 0x1f); 
 
-//         A := lemma_sub_mod_correct(A, old_a, iter_n.buff, iter_a'.buff,
-//             v0, v1, a5, a1, carry_add, carry_sub, a3, i);
+        A := lemma_sub_mod_correct(A, old_a, iter_n.buff, iter_a'.buff,
+            v0, v1, a5, a1, carry_add, carry_sub, a3, i);
 
-//         iter_n := iter_n_next;
-//         iter_a' := iter_a'_next;
-//         i := i + 1;
-//     }
+        iter_n := iter_n_next;
+        iter_a' := iter_a'_next;
+        i := i + 1;
+    }
 
-//     iter_a' := iter_a'.(index := 0);
-//     sub_mod_post_lemma(old_a, iter_n.buff, iter_a'.buff, A);
-//     borrow := if A.full == (-1) then 1 else 0;
-//     assert to_nat(iter_a'.buff) ==
-//             to_nat(old_a) - to_nat(iter_n.buff) + borrow * Pow(BASE_32, 96);
+    iter_a' := iter_a'.(index := 0);
+    sub_mod_post_lemma(old_a, iter_n.buff, iter_a'.buff, A);
+    borrow := if A.full == (-1) then 1 else 0;
+    assert to_nat(iter_a'.buff) ==
+            to_nat(old_a) - to_nat(iter_n.buff) + borrow * Pow(BASE_32, 96);
 }
 
 #verbatim
