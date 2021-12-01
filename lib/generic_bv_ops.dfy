@@ -76,8 +76,8 @@ abstract module generic_bv_ops
 
     function method xor(x: uint, y: uint): uint
 
-    lemma xor_clear_lemma(x: uint)
-        ensures xor(x, x) == 0;
+    lemma {:axiom} xor_clear_lemma(x: uint, y: uint)
+        ensures (x == y) <==> (xor(x, y) == 0)
 
     predicate valid_shift(amount: uint)
 

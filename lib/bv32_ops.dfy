@@ -44,11 +44,6 @@ module bv32_ops refines generic_bv_ops
        (x as bv32 ^ y as bv32) as uint
     }
 
-    lemma xor_clear_lemma(x: uint)
-    {
-        reveal xor();
-    }
-
     predicate valid_shift(amount: uint)
     {
         amount <= 32

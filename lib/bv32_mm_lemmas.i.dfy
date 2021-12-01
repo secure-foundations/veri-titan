@@ -214,4 +214,127 @@ module bv32_mm_lemmas refines generic_mm_lemmas {
         && rsa_params_inv(rsa)
     }
 
+    lemma {:induction A, i} cmp_sufficient_lemma(A: seq<uint32>, B: seq<uint32>, i: nat)
+        requires 0 <= i < |A| == |B|;
+        requires forall j :: i < j < |A| ==> (A[j] == B[j]);
+        ensures A[i] > B[i] ==> (to_nat(A) > to_nat(B));
+        ensures A[i] < B[i] ==> (to_nat(A) < to_nat(B));
+    {
+        var n := |A|;
+        if n != 0 {
+            if i == n - 1 {
+                if A[n-1] > B[n-1] {
+                    GBV.BVSEQ.LemmaSeqMswInequality(B, A);
+                } else if A[n-1] < B[n-1] {
+                    GBV.BVSEQ.LemmaSeqMswInequality(A, B);
+                }
+            } else {
+                var n := |A|;
+                var A' := A[..n-1];
+                var B' := B[..n-1];
+
+                calc ==> {
+                    A[i] > B[i];
+                    {
+                      cmp_sufficient_lemma(A', B', i);
+                    }
+                    to_nat(A') > to_nat(B');
+                    {
+                        GBV.BVSEQ.LemmaSeqPrefix(A, n-1);
+                        GBV.BVSEQ.LemmaSeqPrefix(B, n-1);
+                    }
+                    to_nat(A[..n-1]) > to_nat(B[..n-1]);
+                    {
+                      assert A[n-1] * Pow(BASE(), n-1) == B[n-1] * Pow(BASE(), n-1);
+                    }
+                    to_nat(A[..n-1]) + A[n-1] * Pow(BASE(), n-1) > to_nat(B[..n-1]) + B[n-1] * Pow(BASE(), n-1);
+                    {
+                      assert A[..n-1] + [A[n-1]] == A;
+                      assert B[..n-1] + [B[n-1]] == B;
+                    }
+                    to_nat(A[..n-1]) + to_nat(A[n-1..]) * Pow(BASE(), n-1) > to_nat(B[..n-1]) + to_nat(B[n-1..]) * Pow(BASE(), n-1);
+                    {
+                        GBV.BVSEQ.LemmaSeqPrefix(A, n-1);
+                        GBV.BVSEQ.LemmaSeqPrefix(B, n-1);
+                        assert to_nat(A[..n-1]) + to_nat(A[n-1..]) * Pow(BASE(), n-1) == to_nat(A);
+                        assert to_nat(B[..n-1]) + to_nat(B[n-1..]) * Pow(BASE(), n-1) == to_nat(B);
+                    }
+                    to_nat(A) > to_nat(B);
+                }
+                assert A[n-1] > B[n-1] ==> (to_nat(A) > to_nat(B));
+
+                calc ==> {
+                    A[i] < B[i];
+                    {
+                      cmp_sufficient_lemma(A', B', i);
+                    }
+                    to_nat(A') < to_nat(B');
+                    {
+                        GBV.BVSEQ.LemmaSeqPrefix(A, n-1);
+                        GBV.BVSEQ.LemmaSeqPrefix(B, n-1);
+                    }
+                    to_nat(A[..n-1]) < to_nat(B[..n-1]);
+                    {
+                      assert A[n-1] * Pow(BASE(), n-1) == B[n-1] * Pow(BASE(), n-1);
+                    }
+                    to_nat(A[..n-1]) + A[n-1] * Pow(BASE(), n-1) < to_nat(B[..n-1]) + B[n-1] * Pow(BASE(), n-1);
+                    {
+                      assert A[..n-1] + [A[n-1]] == A;
+                      assert B[..n-1] + [B[n-1]] == B;
+                    }
+                    to_nat(A[..n-1]) + to_nat(A[n-1..]) * Pow(BASE(), n-1) < to_nat(B[..n-1]) + to_nat(B[n-1..]) * Pow(BASE(), n-1);
+                    {
+                        GBV.BVSEQ.LemmaSeqPrefix(A, n-1);
+                        GBV.BVSEQ.LemmaSeqPrefix(B, n-1);
+                        assert to_nat(A[..n-1]) + to_nat(A[n-1..]) * Pow(BASE(), n-1) == to_nat(A);
+                        assert to_nat(B[..n-1]) + to_nat(B[n-1..]) * Pow(BASE(), n-1) == to_nat(B);
+                    }
+                    to_nat(A) < to_nat(B);
+                }
+                assert A[n-1] < B[n-1] ==> (to_nat(A) < to_nat(B));
+            }
+        }
+    }
+
+    function uint32_to_bool(x: uint32) : bool
+    {
+        if x == 0 then false else true
+    }
+
+    function uint32_to_uint1(x: uint32) : uint1
+    {
+        if x == 0 then 0 else 1
+    }
+
+    lemma lemma_ge_mod_correct(
+        a: seq<uint32>,
+        n: seq<uint32>,
+        i: nat,
+        result: uint32)
+        requires |a| == |n|
+        requires 0 <= i < |a|
+        requires a[i+1..] == n[i+1..]
+        requires result != 0 ==> a[i] < n[i]
+        requires i != 0 ==> (result == 0 ==> a[i] > n[i])
+        requires i == 0 ==> (result == 0 ==> a[i] >= n[i])
+
+        ensures result != 0 ==> to_nat(a) < to_nat(n);
+        ensures result == 0 ==> to_nat(a) >= to_nat(n);
+    {
+        cmp_sufficient_lemma(a, n, i);
+        
+        assert result != 0 ==> to_nat(a) < to_nat(n);
+        if i != 0 {
+        assert result == 0 ==> to_nat(a) >= to_nat(n);
+        } else {
+        if a[i] > n[i] {
+            assert result == 0 ==> to_nat(a) >= to_nat(n);
+        } else {
+            assert result == 0 ==> a[i] == n[i];
+            assert result == 0 ==> a == n;
+            assert result == 0 ==> to_nat(a) >= to_nat(n);
+        }
+        }
+    }
+
 }
