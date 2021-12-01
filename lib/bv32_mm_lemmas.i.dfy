@@ -313,6 +313,7 @@ module bv32_mm_lemmas refines generic_mm_lemmas {
         n: seq<uint32>,
         i: nat,
         result: uint32)
+
         requires |a| == |n|
         requires 0 <= i < |a|
         requires a[i+1..] == n[i+1..]
@@ -339,93 +340,154 @@ module bv32_mm_lemmas refines generic_mm_lemmas {
         }
     }
 
+    predicate sub_mod_A_inv(lh: uint32, uh: uint32)
+    {
+        || (lh == uh == 0)
+        || (lh == uh == 0xffff_ffff)
+    }
+
+    function A_as_carry(lh: uint32, uh: uint32): (c: uint1)
+        requires sub_mod_A_inv(lh, uh)
+    {
+        if lh == 0 then 0 else 1
+    }
+
     predicate sub_mod_loop_inv(
         old_a: seq<uint32>,
         n: seq<uint32>,
         a: seq<uint32>,
         i: nat,
-        A: int64_view_t)
+        lh: uint32,
+        uh: uint32)
     {
-        && sub_mod_A_inv(A)
+        && sub_mod_A_inv(lh, uh)
         && |old_a| == |a| == |n|
         && 0 <= i <= |a|
         && old_a[i..] == a[i..]
-        && GBV.BVSEQ.SeqSub(old_a[..i], n[..i]) == (a[..i], A_as_carry(A.full))
+        && GBV.BVSEQ.SeqSub(old_a[..i], n[..i]) == (a[..i], A_as_carry(lh, uh))
+    }
+
+    lemma halves_equal_neg_one(lh: uint32, uh: uint32)
+        requires lh == 0xffff_ffff
+        requires uh == to_uint32(int32_rs(to_int32(lh), 31))
+        ensures lh == uh
+    {
+        calc == {
+            uh;
+            to_uint32(int32_rs(to_int32(lh), 31));
+            {
+                assert to_int32(lh) == -1;
+            }
+            to_uint32(int32_rs(-1, 31));
+            to_uint32(-1 / Power2.Pow2(31));
+            {
+                Power2.Lemma2To64();
+                div_negative_one(Power2.Pow2(31));
+            }
+            to_uint32(-1);
+            0xffff_ffff;
+        }
+    }
+
+    lemma halves_equal_zero(lh: uint32, uh: uint32)
+        requires lh == 0
+        requires uh == to_uint32(int32_rs(to_int32(lh), 31))
+        ensures uh == 0
+    {
+        assert uh == to_uint32(int32_rs(0, 31));
+        assume int32_rs(0, 31) == 0;
+    }
+
+    lemma halves_equal(lh: uint32, uh: uint32)
+        requires lh == 0xffff_ffff || lh == 0
+        requires uh == to_uint32(int32_rs(to_int32(lh), 31))
+        ensures uh == lh
+    {
+        if lh == 0xffff_ffff {
+            halves_equal_neg_one(lh, uh);
+        } else {
+            halves_equal_zero(lh, uh);
+        }
     }
 
     lemma lemma_sub_mod_correct(
-        A: int64_view_t,
         old_a: seq<uint32>, n: seq<uint32>, a: seq<uint32>,
         v0: uint32, v1: uint32,
         lh: uint32, uh: uint32,
+        lh': uint32, uh': uint32,
         carry_add: int, carry_sub: int,
         x13: uint32,
         i: nat)
-    returns  (A': int64_view_t)
 
-    requires sub_mod_loop_inv(old_a, n, a, i, A)
-    requires i < |a|
+        requires sub_mod_loop_inv(old_a, n, a, i, lh, uh)
+        requires i < |a|
 
-    requires v0 == uint32_add(A.lh, old_a[i]);
-    requires x13 == uint32_sub(v0, n[i]);
+        requires v0 == uint32_add(lh, old_a[i]);
+        requires x13 == uint32_sub(v0, n[i]);
 
-    requires carry_add == uint32_lt(v0, old_a[i]);
-    requires carry_sub == uint32_lt(v0, x13);
-    requires v1 == uint32_add(A.uh, carry_add);
+        requires carry_add == uint32_lt(v0, old_a[i]);
+        requires carry_sub == uint32_lt(v0, x13);
+        requires v1 == uint32_add(uh, carry_add);
 
-    requires lh == uint32_sub(v1, carry_sub);
-    requires uh == to_uint32(int32_rs(to_int32(lh), 31));
+        requires lh' == uint32_sub(v1, carry_sub);
+        requires uh' == to_uint32(int32_rs(to_int32(lh'), 31));
 
-    ensures A' == int64_cons(lh, uh, A'.full)
-    ensures sub_mod_loop_inv(old_a, n, a[i := x13], i + 1, A')
-    // {
-    //     var a_i := old_a[i];
-    //     var n_i := n[i];
+        ensures sub_mod_loop_inv(old_a, n, a[i := x13], i + 1, lh', uh')
+    {
+        var a_i := old_a[i];
+        var n_i := n[i];
 
-    //     assert a_i == a[i];
+        var (zs, old_carry) := GBV.BVSEQ.SeqSub(old_a[..i], n[..i]);
+        assert A_as_carry(lh, uh) == old_carry;
 
-    //     var (zs_next, bin_next) := GBV.BVSEQ.SeqSub(old_a[..i+1], n[..i+1]);
-    //     var (zs, _) := GBV.BVSEQ.SeqSub(old_a[..i], n[..i]);
+        var (z, carry) := subb(a_i, n_i, old_carry);
 
-    //     A' := update_A_correct(A, a_i, n_i, v0, v1, lh, uh, carry_add, carry_sub);
-    //     var (z, bout) := uint32_subb(a_i, n_i, A_as_carry(A.full));
+        var (zs_next, next_carry) := GBV.BVSEQ.SeqSub(old_a[..i+1], n[..i+1]);
 
-    //     calc {
-    //         zs_next;
-    //         {
-    //             assert(old_a[..i+1][..i] == old_a[..i]);
-    //             assert(n[..i+1][..i] == n[..i]);
-    //             reveal GBV.BVSEQ.SeqSub();
-    //         }
-    //         zs + [x13];
-    //         {
-    //             assert zs == a[..i];
-    //         }
-    //         a[..i] + [x13];
-    //         a[i := x13][..i+1];
-    //     }
+        calc {
+            zs_next;
+            {
+                assert(old_a[..i+1][..i] == old_a[..i]);
+                assert(n[..i+1][..i] == n[..i]);
+                reveal GBV.BVSEQ.SeqSub();
+            }
+            zs + [x13];
+            {
+                assert zs == a[..i];
+            }
+            a[..i] + [x13];
+            a[i := x13][..i+1];
+        }
 
-    //     assert bin_next == if a_i >= n_i + A_as_carry(A.full) then 0 else 1 by {
-    //         assert(old_a[..i+1][..i] == old_a[..i]);
-    //         assert(n[..i+1][..i] == n[..i]);
-    //         reveal GBV.BVSEQ.SeqSub();
-    //     }
+        assert carry == next_carry by {
+            assert old_a[..i+1][..i] == old_a[..i];
+            assert n[..i+1][..i] == n[..i];
+            reveal GBV.BVSEQ.SeqSub();
+        }
 
-    //     assert bin_next == A_as_carry(A'.full) by {
-    //     sub_mod_update_A_lemma(A.full, A'.full, a_i, n_i, bin_next);
-    //     }
-    // }
+        if uh == 0 {
+            assert v1 == 0 || v1 == 1;
+        } else {
+            assert v1 == 0 || v1 == 0xffff_ffff;
+        }
+        assert lh' == 0 || lh' == 0xffff_ffff;
 
-    lemma sub_mod_post_lemma(old_a: seq<uint32>, n: seq<uint32>, a: seq<uint32>, A: int64_view_t)
-        requires sub_mod_loop_inv(old_a, n, a, |a|, A);
-        ensures to_nat(a) == to_nat(old_a) - to_nat(n) + A_as_carry(A.full) * Power.Pow(BASE_32, |old_a|)
-        ensures to_nat(old_a) >= to_nat(n) ==> A_as_carry(A.full) == 0;
+        halves_equal(lh', uh');
+        assert sub_mod_A_inv(lh', uh');
+        
+        assert A_as_carry(lh', uh') == carry;
+    }
+
+    lemma sub_mod_post_lemma(old_a: seq<uint32>, n: seq<uint32>, a: seq<uint32>, lh: uint32, uh: uint32)
+        requires sub_mod_loop_inv(old_a, n, a, |a|, lh, uh);
+        ensures to_nat(a) == to_nat(old_a) - to_nat(n) + A_as_carry(lh, uh) * Power.Pow(BASE_32, |old_a|)
+        ensures to_nat(old_a) >= to_nat(n) ==> A_as_carry(lh, uh) == 0;
     {
         var i := |old_a|;
         assert old_a[..i] == old_a;
         assert n[..i] == n;
         assert a[..i] == a;
-        var cout := A_as_carry(A.full);
+        var cout := A_as_carry(lh, uh);
         assert GBV.BVSEQ.SeqSub(old_a, n) == (a, cout);
         GBV.BVSEQ.LemmaSeqSub(old_a, n, a, cout);
 
@@ -435,7 +497,5 @@ module bv32_mm_lemmas refines generic_mm_lemmas {
             GBV.BVSEQ.LemmaSeqNatBound(a);
             assert cout == 0;
         }
-  }
-
-
+    }
 }
