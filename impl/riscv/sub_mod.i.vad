@@ -61,6 +61,11 @@ function sub_mod_post_lemma(
     iter_a': seq(uint32),
     lh: uint32, uh: uint32): void extern;
 
+function subb_inv_pre_lemma(
+    dst: seq(uint32),
+    src1: seq(uint32),
+    src2: seq(uint32)): void extern;
+
 function A_as_carry(lh: uint32, uh: uint32): uint1 extern;
 
 procedure sub_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
@@ -107,7 +112,7 @@ procedure sub_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
     ghost var iter_n := iter_n;
     
     assert sub_mod_loop_inv(old_a, iter_n.buff, iter_a'.buff, i, 0, 0) by {
-        assume false;
+        subb_inv_pre_lemma(iter_a'.buff, old_a, iter_n.buff);
     }
 
     ghost var n_ptr := iter_n.base_addr;

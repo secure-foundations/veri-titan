@@ -170,6 +170,7 @@ abstract module generic_mm_lemmas {
         ensures (z.lh, carry) == GBV.addc(xs[0], ys[0], 0);
         ensures (z.uh, 0) == GBV.addc(xs[1], ys[1], carry);
         ensures z.full == to_nat(xs) + ys[0];
+        ensures dw_add_is_safe(xs[0], xs[1], ys[0], ys[1]);
     {
         assert xs == [xs[0], xs[1]];
         mul_add_bound_lemma(a, b, ys[0]);
@@ -288,41 +289,35 @@ abstract module generic_mm_lemmas {
 
 /* begin section on mont loop */
 
-    // lemma mont_loop_cong_lemma(
-    //     p1: dw_view_t,
-    //     a0: uint,
-    //     y0: uint,
-    //     xi: uint,
-    //     w25: uint,
-    //     w26: uint,
-    //     m0d: uint)
-
-    //     requires a0 + y0 * xi == p1.full;
-    //     requires to_nat([w25, w26]) == p1.lh * m0d;
-    //     ensures cong_BASE(w25, (a0 + y0 * xi) * m0d);
-    // {
-    //     calc ==> {
-    //         true;
-    //         cong_BASE(a0 + y0 * xi, p1.full);
-    //             { dw_view_lemma(p1); }
-    //         cong_BASE(a0 + y0 * xi, p1.lh + p1.uh * BASE());
-    //             { LemmaModMultiplesVanish(p1.uh, p1.lh, BASE()); }
-    //         cong_BASE(a0 + y0 * xi, p1.lh);
-    //         cong_BASE(p1.lh, a0 + y0 * xi);
-    //             { LemmaModMulEquivalentAuto(); }
-    //         cong_BASE(p1.lh * m0d, (a0 + y0 * xi) * m0d);
-    //     }
-
-    //     calc ==> {
-    //         true;
-    //             { BVSEQ.LemmaSeqLen2([w25, w26]); }
-    //         w25 + w26 * BASE() == p1.lh * m0d;
-    //         cong_BASE(w25 + w26 * BASE(), p1.lh * m0d);
-    //         cong_BASE(w25 + w26 * BASE(), (a0 + y0 * xi) * m0d);
-    //             { LemmaModMultiplesVanish(w26, w25, BASE()); }
-    //         cong_BASE(w25, (a0 + y0 * xi) * m0d);
-    //     }
-    // }
+    lemma mont_loop_cong_lemma(
+        p1: dw_view_t,
+        a0: uint,
+        y0: uint,
+        xi: uint,
+        w25: uint,
+        w26: uint,
+        m0d: uint)
+        requires to_nat([w25, w26]) == p1.lh * m0d;
+        ensures w25 == mul(p1.lh, m0d); 
+    {
+        calc == {
+            mul(p1.lh, m0d);
+            {
+                full_mul_bound_lemma(p1.lh, m0d);
+                reveal dw_lh();
+            }
+            (p1.lh * m0d) % BASE();
+            to_nat([w25, w26]) % BASE();
+                { BVSEQ.LemmaSeqLen2([w25, w26]); }
+            (w25 + w26 * BASE()) % BASE();
+                { LemmaMulIsCommutativeAuto(); }
+            (w25 + BASE() * w26) % BASE();
+                { LemmaModMultiplesVanish(w26, w25, BASE()); }
+            w25 % BASE();
+                { LemmaSmallMod(w25, BASE()); }
+            w25;
+        }
+    }
 
     lemma mont_loop_divisible_lemma(
         ui: int,

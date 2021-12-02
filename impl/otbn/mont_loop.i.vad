@@ -31,10 +31,6 @@ import opened bv256_mm_lemmas
 
 #endverbatim
 
-ghost procedure LemmaMulIsCommutativeAuto() extern;
-
-ghost procedure dw_view_lemma(ghost num: uint512_view_t) extern;
-
 ghost procedure mont_word_mul_add_bound_lemma_0(
     ghost xs: seq(uint256),
     ghost ys: seq(uint256),
@@ -121,14 +117,16 @@ ghost procedure montmul_inv_lemma(
     ghost y: seq(uint256),
     ghost rsa: rsa_params) extern;
 
-ghost procedure mont_loop_cong_lemma(
-    ghost p1: uint512_view_t,
-    ghost a0: uint256,
-    ghost y0: uint256,
-    ghost xi: uint256,
-    ghost w25: uint256,
-    ghost w26: uint256,
-    ghost m0d: nat) extern;
+function mont_loop_cong_lemma(
+    p1: uint512_view_t,
+    a0: uint256,
+    y0: uint256,
+    xi: uint256,
+    w25: uint256,
+    w26: uint256,
+    m0d: nat): void extern;
+
+function half_mul_256(a: int, b: int): uint256 extern;
 
 procedure mont_loop_0(
     ghost curr_view: seq(uint256),
@@ -187,7 +185,7 @@ procedure mont_loop_0(
         valid_uint512_view(wdrs, p1, 30, 29);
 
         p1.full == curr_view[0] + y_it.buff[0] * xi;
-        cong_BASE(w25, p1.full * m0d);
+        w25 == half_mul_256(p1.lh, m0d);
 
         next_y_it == bn_lid_next_iter(y_it, true);
         iter_safe(next_y_it, heap, x19);
@@ -217,8 +215,9 @@ procedure mont_loop_0(
     bn_movr(x13, false, x8, true);
 
     /* add A[0]: [w29, w30] = [w26, w27] + w24 = y[0]*xi + A[0] */
-    mont_word_mul_add_bound_lemma_0(seq(w27, w26), seq(w24, w31), y_it.buff[0], w2);
-    p1 := seq_addc_512_safe(w30, w27, w24, w29, w26, w31);
+    p1 := mul_add_512(w30, w27, w24, w29, w26, w31, y_it.buff[0], w2);
+
+    dw_view_lemma(p1);
 
     /* w25 = w3 = m0d */
     bn_mov(w25, w3);
@@ -232,72 +231,6 @@ procedure mont_loop_0(
     mont_loop_cong_lemma(p1, curr_view[0], y_it.buff[0], xi, w25, w26, m0d);
 }
 
-procedure mula512_w30xw2(ghost a: uint256, ghost b: uint256)
-    returns (ghost next_p: uint512_view_t)
-
-    requires
-        w30 == a;
-        w2 == b;
-        w31 == 0;
-    reads
-        w2; w30; w31; wdrs; 
-    modifies
-        w24; w26; w27; w29; wacc; fgroups;
-    ensures
-        valid_uint512_view(wdrs, next_p, 24, 29);
-        next_p.full == a * b + old(w24) + old(w29);
-{
-    LemmaMulIsCommutativeAuto();
-
-    mul256_w30xw2();
-    // assert to_nat(seq(w27, w26)) == a * b;
-
-    mont_word_mul_add_bound_lemma_0(seq(w27, w26), seq(w24, w31), a, b);
-
-    /* add limb of buffer: [w26, w27] <- [w26,w27] + w24 = y[j]*xi + A[j] */
-    next_p := seq_addc_512_safe(w27, w27, w24, w26, w26, w31);
-
-    dw_view_lemma(next_p);
-    mont_word_mul_add_bound_lemma_1(seq(w27, w26), seq(w29, w31), a, b, w24);
-
-    /* add carry word from previous cycle:
-       [c_xy, a_tmp] = [w29, w24] <- [w26,w27] + w29 = y[j]*xi + A[j] + c_xy*/
-    next_p := seq_addc_512_safe(w24, w27, w29, w29, w26, w31);
-}
-
-procedure mula512_w30xw25(ghost a: uint256, ghost b: uint256)
-    returns (ghost next_p: uint512_view_t)
-
-    requires
-        w30 == a;
-        w25 == b;
-        w31 == 0;
-    reads
-        w25; w30; w31; wdrs; 
-    modifies
-        w24; w26; w27; w28; wacc; fgroups;
-    ensures
-        valid_uint512_view(wdrs, next_p, 24, 28);
-        next_p.full == a * b + old(w24) + old(w28);
-{
-    LemmaMulIsCommutativeAuto();
-
-    mul256_w30xw25();
-    assert to_nat(seq(w27, w26)) == a * b;
-
-    /* add result from first step
-       [w26, w27] <- [w26, w27] + w24 = m[j]*ui + a_tmp */
-    mont_word_mul_add_bound_lemma_0(seq(w27, w26), seq(w24, w31), a, b);
-    next_p := seq_addc_512_safe(w27, w27, w24, w26, w26, w31);
-    // assert next_p.full == a * b + old(w24);
-
-    /* [c_m, A[j-1]] = [w28, w24] = m[j]*ui + a_tmp + c_m */
-    dw_view_lemma(next_p);
-
-    mont_word_mul_add_bound_lemma_1(seq(w27, w26), seq(w28, w31), a, b, w24);
-    next_p := seq_addc_512_safe(w24, w27, w28, w28, w26, w31);
-    // assert next_p.full == a * b + old(w24) + old(w28);
-}
 
 procedure mont_loop_1(
     ghost ui: uint256,
@@ -485,8 +418,7 @@ procedure mont_loop(
     // assert to_nat(seq(w27, w26)) == m_it.buff[0] * ui;
 
     /* [w28, w27] = [w26, w27] + w24 = m[0]*ui + (y[0]*xi + A[0] mod b) */
-    mont_word_mul_add_bound_lemma_0(seq(w27, w26), seq(w24, w31), m_it.buff[0], ui);
-    p2 := seq_addc_512_safe(w27, w27, w24, w28, w26, w31);
+    p2 := mul_add_512(w27, w27, w24, w28, w26, w31, w30, w25);
 
     LemmaMulIsCommutativeAuto();
     mont_loop_inv_pre_lemma(xi, ui, vars.rsa.M0D, p1, p2, y_it.buff, m_it.buff, curr_view);

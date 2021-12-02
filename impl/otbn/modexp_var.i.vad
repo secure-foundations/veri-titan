@@ -28,7 +28,7 @@ import opened bv256_mm_lemmas
 
 ghost procedure xor_clear_lemma(ghost x: uint256) extern;
 
-function modexp_var_inv(a: nat, sig: nat, i: nat, rsa: rsa_params): bool extern;
+function modexp_var_inv(a: nat, i: nat, rsa: rsa_params): bool extern;
 
 ghost procedure modexp_var_inv_pre_lemma(
     ghost a_view: seq(uint256),
@@ -39,7 +39,6 @@ ghost procedure modexp_var_inv_pre_lemma(
 ghost procedure modexp_var_inv_peri_lemma(
     ghost a_view: seq(uint256),
     ghost next_a_view: seq(uint256),
-    ghost sig: nat,
     ghost i: nat,
     ghost rsa: rsa_params) extern;
 
@@ -447,7 +446,7 @@ procedure modexp_var(
             out_iter.buff == a_view;
 
             mvars_inv(vars, heap, out_ptr, out_ptr, x16, x17, rr_ptr, sig_ptr);
-            modexp_var_inv(to_nat(a_view), vars.rsa.SIG, i, vars.rsa);
+            modexp_var_inv(to_nat(a_view), i, vars.rsa);
             mvars_init(init_vars, heap, m_ptr, m0d_ptr, rr_ptr, sig_ptr, out_ptr);
 
             out_ptr != x16;
@@ -469,7 +468,7 @@ procedure modexp_var(
         
         vars := vars.(x_it := out_iter).(y_it := out_iter);
 
-        modexp_var_inv_peri_lemma(prev_a_view, a_view, vars.rsa.SIG, i, vars.rsa);
+        modexp_var_inv_peri_lemma(prev_a_view, a_view, i, vars.rsa);
     
         i := i + 1;
     }

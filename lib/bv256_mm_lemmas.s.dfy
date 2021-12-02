@@ -99,7 +99,10 @@ module bv256_mm_lemmas refines generic_mm_lemmas {
         && out_ptr != sig_ptr
     }
 
-  
+    function method half_mul_256(a: uint256, b: uint256): uint256
+    {
+        mul(a, b)
+    }
 
     lemma mul256_correct_lemma(
         p0: uint256, p1: uint256, p2: uint256, p3: uint256,
