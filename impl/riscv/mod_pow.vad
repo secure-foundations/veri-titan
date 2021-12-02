@@ -115,7 +115,8 @@ procedure mod_pow_0(ghost vars: mp_vars, ghost rsa: rsa_params)
         mut_vars.iter_ar.base_addr == vars.iter_ar.base_addr;
 
     ensures
-        saved == seq(old(mem)[vars.mp_frame_ptr][0], old(s5), old(s4), old(s3), old(s2), old(s1), old(s0), old(ra));
+        saved == seq(old(mem)[vars.mp_frame_ptr][0],
+            old(s5), old(s4), old(s3), old(s2), old(s1), old(s0), old(ra));
 
         mem == old(mem)
                 [vars.mp_frame_ptr := saved]
@@ -143,16 +144,17 @@ procedure mod_pow_0(ghost vars: mp_vars, ghost rsa: rsa_params)
     saved := seq(old(mem)[vars.mp_frame_ptr][0], s5, s4, s3, s2, s1, s0, ra);
     assert mem[vars.mp_frame_ptr] == saved;
 
-    lui(a3, 0x11);
-    assume 0x11000 == a3;
-    addi(a3, a3, 1560);
-    assert a3 == 71192;
-
     mv(s0, a2);
-    addi(s5, a3, 768);
-    addi(a3, a3, 384);
+    lui(a2, 0x11);
+    assume 0x11000 == a2;
+    addi(a2, a2, 1560);
+    assert a2 == 71192;
+
+    addi(s5, a2, 768);
+    addi(a2, a2, 384);
+
     mv(s4 ,a1);
-    mv(a2 ,s5);
+    mv(a3 ,s5);
     mv(a1 ,s0);
     mv(s3 ,a0);
     addi(s2, s0, 384);
@@ -162,10 +164,11 @@ procedure mod_pow_0(ghost vars: mp_vars, ghost rsa: rsa_params)
     let mmvars := mm_vars_cons(
         vars.mm_frame_ptr,
         vars.mma_frame_ptr,
-        vars.iter_in,
         vars.iter_rr,
+        vars.iter_in,
         vars.iter_ar,
         vars.iter_n);
+
     iter_temp := mont_mul(mmvars, rsa);
     mut_vars := vars.(iter_ar := iter_temp);
 
@@ -174,7 +177,7 @@ procedure mod_pow_0(ghost vars: mp_vars, ghost rsa: rsa_params)
     li(s1, 8);
 
     assert montmul_inv(mut_vars.iter_ar.buff,
-        mut_vars.iter_in.buff, NUM_WORDS, mut_vars.iter_rr.buff, rsa);
+        mut_vars.iter_rr.buff, NUM_WORDS, mut_vars.iter_in.buff, rsa);
 
     modexp_var_inv_pre_lemma(
         mut_vars.iter_ar.buff,

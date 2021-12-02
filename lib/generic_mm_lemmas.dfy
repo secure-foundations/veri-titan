@@ -911,14 +911,16 @@ abstract module generic_mm_lemmas {
         sig: seq<uint>,
         rsa: rsa_params)
 
-    requires montmul_inv(a_view, rr, NUM_WORDS, sig, rsa)
-        || montmul_inv(a_view, sig, NUM_WORDS, rr, rsa);
+    requires montmul_inv(a_view, rr, NUM_WORDS, sig, rsa);
+        // || montmul_inv(a_view, sig, NUM_WORDS, rr, rsa);
     requires to_nat(sig) == rsa.SIG;
     requires to_nat(rr) == rsa.RR;
     ensures modexp_var_inv(to_nat(a_view), 0, rsa);
     {
-        assume montmul_inv(a_view, sig, NUM_WORDS, rr, rsa) 
-            ==> montmul_inv(a_view, rr, NUM_WORDS, sig, rsa);
+        // assert montmul_inv(a_view, sig, NUM_WORDS, rr, rsa) 
+        //     ==> montmul_inv(a_view, rr, NUM_WORDS, sig, rsa) by {
+        //     LemmaMulIsCommutativeAuto() 
+        // }
 
         var m := rsa.M;
         var a := to_nat(a_view);
