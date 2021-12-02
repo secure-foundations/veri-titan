@@ -2,36 +2,37 @@ include "../../arch/riscv/decls.i.vad"
 
 #verbatim
 include "../../arch/riscv/decls.i.dfy"
-include "../../../impl/riscv/sub_mod_lemmas.i.dfy"
+include "../../../lib/bv32_mm_lemmas.i.dfy"
+
+// include "../../../impl/riscv/sub_mod_lemmas.i.dfy"
 
 module sub_mod {
 
-import opened bv_ops
-import opened rsa_ops
-
+import opened integers
 import opened rv_machine
 import opened rv_decls
 import opened rv_vale
 
-import opened sub_mod_lemmas
+import opened bv32_mm_lemmas
 import opened sub_mod_nl_lemmas
 
-import opened BASE_32_Seq
+import opened bv32_ops
+
 import opened Power
 
 #endverbatim
-    
-ghost procedure A_zero() returns (ghost ref: int64_view_t) extern;
+
+// ghost procedure A_zero() returns (ghost ref: int64_view_t) extern;
 
 function Pow(b: int, e: nat): int extern;
 
 ghost procedure sub_mod_correct_lemma(
-       ghost a: uint32,
-       ghost b: uint32,
-       ghost c: uint32,
-       ghost a0: uint32,
-       ghost a1: uint32,
-       ghost a5: uint32
+    ghost a: uint32,
+    ghost b: uint32,
+    ghost c: uint32,
+    ghost a0: uint32,
+    ghost a1: uint32,
+    ghost a5: uint32
 ) extern;
 
 function sub_mod_loop_inv(
@@ -39,26 +40,33 @@ function sub_mod_loop_inv(
     n: seq(uint32),
     a: seq(uint32),
     i: nat,
-    A: int64_view_t) : bool extern;
+    lh: uint32, uh: uint32) : bool extern;
 
 function seq_subb(xs: seq(uint32), ys: seq(uint32)) : tuple(seq(uint32), uint1) extern;
 
 function lemma_sub_mod_correct(
-    A: int64_view_t,
     old_a: seq(uint32),
     n: seq(uint32),
     a: seq(uint32),
     v0: uint32, v1: uint32,
     lh: uint32, uh: uint32,
+    lh': uint32, uh': uint32,
     carry_add: int, carry_sub: int,
     a3: uint32,
-    i: nat) : int64_view_t extern;
+    i: nat): void extern;
 
-ghost procedure sub_mod_post_lemma(
-    ghost iter_a: seq(uint32),
-    ghost iter_n: seq(uint32),
-    ghost iter_a': seq(uint32),
-    ghost A: int64_view_t) extern;
+function sub_mod_post_lemma(
+    iter_a: seq(uint32),
+    iter_n: seq(uint32),
+    iter_a': seq(uint32),
+    lh: uint32, uh: uint32): void extern;
+
+function subb_inv_pre_lemma(
+    dst: seq(uint32),
+    src1: seq(uint32),
+    src2: seq(uint32)): void extern;
+
+function A_as_carry(lh: uint32, uh: uint32): uint1 extern;
 
 procedure sub_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
     returns (ghost iter_a': iter_t, ghost borrow: uint1)
@@ -98,16 +106,13 @@ procedure sub_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
     li(a5, 0); // 0 in a5 -- lower half of A
     li(a1, 0); // 0 in a1 -- upper half of A
 
-    ghost var A : int64_view_t;
-    A := A_zero();
-
     ghost var i: nat := 0;
     iter_a' := iter_a;
     ghost var old_a := iter_a.buff;
     ghost var iter_n := iter_n;
     
-    assert sub_mod_loop_inv(old_a, iter_n.buff, iter_a'.buff, i, A) by {
-        reveal SeqSub;
+    assert sub_mod_loop_inv(old_a, iter_n.buff, iter_a'.buff, i, 0, 0) by {
+        subb_inv_pre_lemma(iter_a'.buff, old_a, iter_n.buff);
     }
 
     ghost var n_ptr := iter_n.base_addr;
@@ -131,11 +136,13 @@ procedure sub_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
 
         invariant a_ptr != n_ptr;
 
-        invariant valid_int64_view(A, a5, a1);
-        invariant sub_mod_loop_inv(old_a, iter_n.buff, iter_a'.buff, i, A);
+        invariant sub_mod_loop_inv(old_a, iter_n.buff, iter_a'.buff, i, a5, a1);
 
         decreases loop_ctr;
     {
+        let lh := a5;
+        let uh := a1;
+    
         lw_iter(a4, a0, 0, iter_a');
 
         let iter_a_next := lw_next_iter(iter_a);
@@ -150,7 +157,7 @@ procedure sub_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
 
         add(a5, a5, a4); // lower half of A += a[i]
         // assert a5 == uint32_add(A.lh, a_i);
-        ghost var v0 := uint32_add(A.lh, a_i);
+        ghost var v0 := uint32_add(lh, a_i);
 
         sub(a3, a5, a3); // lower half of A -= n[i]
         // assert a3 == uint32_sub(uint32_add(A.lh, a_i), n_i);
@@ -174,8 +181,8 @@ procedure sub_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
         sub(a5, a4, a5); // subtract underflow carry from upper half of A
         srai(a1, a5, 0x1f); 
 
-        A := lemma_sub_mod_correct(A, old_a, iter_n.buff, iter_a'.buff,
-            v0, v1, a5, a1, carry_add, carry_sub, a3, i);
+        lemma_sub_mod_correct(old_a, iter_n.buff, iter_a'.buff,
+            v0, v1, lh, uh, a5, a1, carry_add, carry_sub, a3, i);
 
         iter_n := iter_n_next;
         iter_a' := iter_a'_next;
@@ -183,8 +190,11 @@ procedure sub_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
     }
 
     iter_a' := iter_a'.(index := 0);
-    sub_mod_post_lemma(old_a, iter_n.buff, iter_a'.buff, A);
-    borrow := if A.full == (-1) then 1 else 0;
+
+    sub_mod_post_lemma(old_a, iter_n.buff, iter_a'.buff, a5, a1);
+
+    borrow := A_as_carry(a5, a1);
+
     assert to_nat(iter_a'.buff) ==
             to_nat(old_a) - to_nat(iter_n.buff) + borrow * Pow(BASE_32, 96);
 }

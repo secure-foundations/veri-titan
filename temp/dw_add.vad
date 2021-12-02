@@ -1,0 +1,59 @@
+include "../../arch/otbn/decls.i.vad"
+
+#verbatim
+
+include "../../arch/otbn/decls.i.dfy"
+include "../../../impl/dafny/dw_add_lemmas.dfy"
+
+module dw_add_512 refines dw_add {
+
+import opened bv_ops
+
+import opened ot_machine
+import opened ot_abstraction
+import opened ot_decls
+import opened ot_vale
+
+function method BASE(): nat
+{
+    BASE_256
+}
+
+#endverbatim
+
+function ToNatRight #[a: Type(0)] (s: seq(a)): nat extern;
+
+function uint_dw_add_is_safe(
+    x_lh: uint256, x_uh: uint256,
+    y_lh: uint256, y_uh: uint256
+): bool extern;
+
+function uint_dw_add_correct(
+    x_lh: uint256, x_uh: uint256,
+    y_lh: uint256, y_uh: uint256,
+    c1: uint1, c2: uint1,
+    z_lh: uint256, z_uh: uint256): void extern;
+
+procedure seq_addc_512()
+    requires
+        uint_dw_add_is_safe(w3, w4, w6, w7);
+    modifies
+        w2; w5; fgroups;
+    reads
+        w3; w4; w6; w7;
+    ensures
+        ToNatRight(seq(w2, w5)) == ToNatRight(seq(w3, w4)) + ToNatRight(seq(w6, w7));
+{
+    bn_add(w2, w3, w6, SFT_DFT, 0);
+    ghost var c1 := bool_to_uint1(fgroups.fg0.cf);
+
+    bn_addc(w5, w4, w7, SFT_DFT, 0);
+    ghost var c2 := bool_to_uint1(fgroups.fg0.cf);
+
+    uint_dw_add_correct(w3, w4, w6, w7, c1, c2, w2, w5);
+}
+
+#verbatim
+}
+#endverbatim
+

@@ -1,7 +1,7 @@
 include "machine.s.dfy"
 
 module rv_vale {
-    import opened bv_ops
+    import opened integers
     import opened rv_machine
 
     type va_code = code
@@ -24,6 +24,12 @@ module rv_vale {
     function seq_append<T>(xs: seq<T>, x: T): seq<T>
     {
         xs + [x]
+    }
+
+    function mod(a: int, n: nat): int
+        requires n != 0;
+    {
+        a % n
     }
 
     function mod_add(a: nat, b: nat, m: nat): nat 

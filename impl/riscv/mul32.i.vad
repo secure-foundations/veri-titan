@@ -2,164 +2,95 @@ include "../../arch/riscv/decls.i.vad"
 
 #verbatim
 include "../../arch/riscv/decls.i.dfy"
-include "../../../impl/riscv/mul32_lemmas.i.dfy"
+include "../../../lib/bv32_mm_lemmas.i.dfy"
 
 module mul32 {
 
-import opened bv_ops
-import opened rsa_ops
-
+import opened integers
 import opened rv_machine
 import opened rv_decls
 import opened rv_vale
 
-import opened mul32_lemmas
+import opened bv32_mm_lemmas
 
 #endverbatim
 
-ghost procedure lemma_uint64_half_split(ghost x: nat) extern;
+function mul32_correct_lemma(a: uint32, b: uint32, c: uint32, d: uint32): void extern;
 
-function mula32_correct_lemma(
-    a: uint32, // a0
-    b: uint32, // a1
-    c: uint32, // a2
-    a0: uint32,
-    a1: uint32,
-    a5: uint32
-) : (uint64_view_t) extern;
+function valid_uint64_view(num: uint64_view_t, lh: uint32, uh: uint32): bool extern;
 
-function mulaa32_correct_lemma(
-       a: uint32, // a0
-       b: uint32, // a1
-       c: uint32, // a2
-       d: uint32, // a3
-       a0: uint32,
-       a1: uint32,
-       a5: uint32
-) : (uint64_view_t) extern;
+function dw_view_lemma(num: uint64_view_t): void extern;
 
+function mul_add_lemma(xs: seq(uint32), ys: seq(uint32),
+    carry: nat, a: uint32, b: uint32): uint64_view_t extern;
 
-procedure mul32()
-    modifies
-        a0; a1; a5;
-    ensures
-        to_nat(seq(a0, a1)) == old(a1) * old(a0);
-{
-    ghost var a := a0;
-    ghost var b := a1;
-    ghost var r := a * b;
+function mul_double_add_lemma(xs: seq(uint32), ys: seq(uint32),
+    carry: nat, a: uint32, b: uint32, c: uint32): uint64_view_t extern;
 
-    // move starting a1 into a5
-    mv(a5, a1);
-
-    // put upper-half of multiplication of a1 and a0 into a1
-    mulhu(a1, a0, a5);
-    assert a1 == uint32_mulhu(a, b);
-
-    // put lower-half of a1 and a0 into a0
-    mul(a0, a0, a5);
-    assert a0 == uint32_mul(a, b);
-
-    // end result: a0 * a1 in a1-a0, a5 has old(a1)
-    lemma_uint64_half_split(r);
-    to_nat_lemma_1(seq(a0, a1));
-}
-  
-procedure mula32() returns (ghost A: uint64_view_t)
+procedure mula32() returns (ghost sum: uint64_view_t)
     reads
         a2;
     modifies
         a0; a1; a5;
     ensures
-        valid_uint64_view(A, a0, a1);
-        A.full == old(a0) * old(a1) + old(a2);
+        valid_uint64_view(sum, a0, a1);
+        sum.full == old(a0) * old(a1) + old(a2);
+        sum.full == old(a1) * old(a0) + old(a2);
 {
     ghost var a := a0;
     ghost var b := a1;
-    ghost var c := a2;
-    ghost var r := a * b;
-    ghost var s := r + c;
+    // ghost var c := a2;
    
     // bottom half of a0 * a1 in a5 
     mul(a5, a0, a1);
-    assert a5 = uint32_mul(a, b);
     
     // top half of a0 * a1 in a1
     mulhu(a1, a0, a1);
-    assert a1 == uint32_mulhu(a, b);
+
+    mul32_correct_lemma(a, b, a5, a1);
+    let x_lh := a5;
+    let x_uh := a1;
 
     // bottom half + a2 value in a0
-    add_wrap(a0, a5, a2);
-    assert a0 == uint32_add(uint32_mul(a, b), c);
+    add(a0, a5, a2);
 
     // if a0 now less than a5 it's because we overflowed
     // so we need to add 1 to a1
     sltu(a5, a0, a5);
-    assert a5 == uint32_lt(a0, uint32_mul(a, b));
+    let c1 := a5;
     
     // add 1 to top half if needed
-    add_wrap(a1, a1, a5);
-    assert a1 == uint32_add(uint32_mulhu(a, b), a5);
-    
-    // result: a0 * a1 + a2
-    A := mula32_correct_lemma(a, b, c, a0, a1, a5);
+    add(a1, a1, a5);
+
+    sum := mul_add_lemma(seq(x_lh, x_uh), seq(a2, 0), c1, a, b);
 }
-    
-procedure mulaa32() returns (ghost A: uint64_view_t)
+
+procedure mulaa32() returns (ghost sum: uint64_view_t)
     modifies
-        a0; a1; a2; a3; a4; a5;
+        a0; a1; a2; a3; a5;
     ensures
-        // a * b + c + d
-        // a0 * a1 + (a2 + a3)
-        valid_uint64_view(A, a0, a1);
-        A.full == old(a0) * old(a1) + old(a2) + old(a3);
+        valid_uint64_view(sum, a0, a1);
+        sum.full == old(a0) * old(a1) + old(a2) + old(a3);
+        sum.full == old(a1) * old(a0) + old(a2) + old(a3);
 {
     ghost var a := a0;
     ghost var b := a1;
     ghost var c := a2;
     ghost var d := a3;
 
-    ghost var r := a * b;
-    ghost var s := c + d;
+    sum := mula32();
+    let x_lh := a0;
+    let x_uh := a1;
 
-    ghost var t := r + s;
-    
-    // don't care about starting a4
-    // bottom half of a0 * a1 in a4'
-    mul(a4, a0, a1);
-    assert a4 == uint32_mul(a, b);
+    dw_view_lemma(sum);
 
-    // a2 + a3 in a3'
-    add_wrap(a3, a3, a2);
-    assert a3 == uint32_add(c, d);
+    add(a0, a0, a3);
+    sltu(a5, a0, a3);
+    let c1 := a5;
 
-    // if a3' < a2, then addition overflowed
-    // if we overflowed, a2' is 1
-    sltu(a2, a3, a2);
-    assert a2 == uint32_lt(uint32_add(c, d), c);
+    add(a1, a1, a5);
 
-    // top half of a0 * a1 in a5'
-    mulhu(a5, a0, a1);
-    assert a5 == uint32_mulhu(a, b);
-
-    // a0' == add (a3 + a2) to bottom half of (a0 * a1)
-    add_wrap(a0, a4, a3);
-    assert a0 == uint32_add(uint32_mul(a, b), uint32_add(c, d));
-
-    // if a0' < a4' then addition overflowed bottom mul
-    // if overflowed, a1' == 1
-    sltu(a1, a0, a4);
-    assert a1 == uint32_lt(uint32_add(uint32_mul(a, b), uint32_add(c, d)), uint32_mul(a, b));
-
-    // add top half of mul and first overflow result
-    add_wrap(a5, a5, a2);
-    assert a5 == uint32_add(uint32_mulhu(a, b), uint32_lt(uint32_add(c, d), c));
-
-    // add top half and second overflow result
-    add_wrap(a1, a1, a5);
-    assert a1 == uint32_add(uint32_lt(uint32_add(uint32_mul(a, b), uint32_add(c, d)), uint32_mul(a, b)), a5);
-    
-    A := mulaa32_correct_lemma(a, b, c, d, a0, a1, a5);
+    sum := mul_double_add_lemma(seq(x_lh, x_uh), seq(d, 0), c1, a, b, c);
 }
 
 #verbatim

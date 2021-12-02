@@ -5,24 +5,20 @@ include "sub_mod.i.vad"
 #verbatim
 include "../../impl/riscv/mul32.i.dfy"
 include "../../impl/riscv/sub_mod.i.dfy"
-include "../../../impl/riscv/mont_mul_add_lemmas.i.dfy"
+include "../../../lib/bv32_mm_lemmas.i.dfy"
 
 module mont_mul_add {
 
-import opened bv_ops
-
+import opened integers
 import opened rv_machine
 import opened rv_decls
 import opened rv_vale
 
 import opened mul32
 import opened sub_mod
-import opened mont_mul_add_lemmas
-import opened rsa_ops
+import opened bv32_mm_lemmas
 
 #endverbatim
-
-function uint64_view_zero() : uint64_view_t extern;
 
 function mont_loop_inv(
     xi: uint32,
@@ -74,8 +70,8 @@ function mont_loop_cond_sub_lemma(
     xi: uint32,
     ui: uint32,
     y: seq(uint32),
-    m: seq(uint32),
-    prev_a: seq(uint32),
+    m: nat,
+    prev_a: nat,
     a: seq(uint32),
     next_a: seq(uint32),
     bout: uint1,
@@ -384,6 +380,7 @@ procedure mont_mul_add(
     ghost vars: mma_vars,
     ghost rsa: rsa_params)
     returns (ghost next_iter_c : iter_t)
+    {:timeLimitMultiplier 2}
 
     requires sp > 48;
     requires sp - 48 == vars.frame_ptr;
@@ -501,7 +498,7 @@ procedure mont_mul_add(
     next_vars := next_vars.(iter_c := next_iter_c);
 
     mont_loop_cond_sub_lemma(next_vars.a_i, s5,
-        next_vars.iter_b.buff, next_vars.iter_n.buff, original_c, presub_c,
+        next_vars.iter_b.buff, to_nat(next_vars.iter_n.buff), to_nat(original_c), presub_c,
         next_vars.iter_c.buff, bout, next_bout);
 
     montmul_inv_lemma(original_c, next_iter_c.buff, next_vars.iter_a.buff, next_vars.i, s5, next_vars.iter_b.buff, rsa);

@@ -3,27 +3,23 @@ include "mont_mul_add.i.vad"
 
 #verbatim
 include "../../impl/riscv/mont_mul_add.i.dfy"
-include "../../../impl/riscv/mont_mul_lemmas.i.dfy"
+include "../../../lib/bv32_mm_lemmas.i.dfy"
 
 module mont_mul {
 
-import opened bv_ops
-
+import opened integers
 import opened rv_machine
 import opened rv_decls
 import opened rv_vale
 
-import opened rsa_ops
-import opened BASE_32_Seq
+import opened mul32
+import opened sub_mod
 import opened mont_mul_add
-import opened mont_mul_add_lemmas
-import opened mont_mul_lemmas
-
-import opened DivMod
+import opened bv32_mm_lemmas
 
 #endverbatim
 
-function SeqZero #[a: Type(0)](len: int): seq(a) extern;
+function seq_zero #[a: Type(0)](len: int): seq(a) extern;
 
 type mm_vars: Type(0) extern;
 function operator(.mm_frame_ptr) (vars: mm_vars): nat extern;
@@ -85,11 +81,13 @@ procedure mont_mul_0(ghost iter_c: iter_t)
         next_iter_c.base_addr == iter_c.base_addr;
         iter_inv(next_iter_c, mem, old(s1));
         seq_len(next_iter_c.buff) == 96;
-        next_iter_c.buff == SeqZero(96);
+        next_iter_c.buff == seq_zero(96);
         next_iter_c.index == 0;
 {
     let ptr_c := iter_c.base_addr;
     ghost var iter_c := iter_c;
+
+    assume iter_c.buff[..0] == seq_zero(0);
 
     while (s1 < s4) 
         invariant
@@ -102,7 +100,7 @@ procedure mont_mul_0(ghost iter_c: iter_t)
             
             mem == old(mem[ptr_c := iter_c.buff]);
 
-            iter_c.buff[..iter_c.index] == SeqZero(iter_c.index);
+            iter_c.buff[..iter_c.index] == seq_zero(iter_c.index);
         decreases
             s4 - s1;
     {

@@ -6,8 +6,6 @@ include "../../arch/otbn/decls.i.dfy"
 
 module examples {
 
-import opened bv_ops
-
 import opened ot_machine
 import opened ot_abstraction
 import opened ot_decls

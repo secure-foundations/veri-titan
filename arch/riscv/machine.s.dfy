@@ -1,7 +1,8 @@
-include "../../lib/signed_bv_ops.dfy"
+include "../../lib/bv32_ops.dfy"
 
 module rv_machine {
-    import opened bv_ops // bit-vector operations
+    import opened integers
+    import opened bv32_ops
 
     const DMEM_LIMIT: int := 0x80000
 
@@ -80,61 +81,13 @@ module rv_machine {
         }
     }
 
-    /* gpr_view definion */
+    // datatype uint64_raw = uint64_cons(
+    //     lh: uint32, uh: uint32, full: uint64)
 
-    datatype uint64_raw = uint64_cons(
-        lh: uint32, uh: uint32, full: uint64)
-
-    type uint64_view_t = num: uint64_raw |
-        && num.lh == uint64_lh(num.full)
-        && num.uh == uint64_uh(num.full)
-        witness *
-
-    predicate valid_uint64_view(
-        num: uint64_view_t,
-        lh: uint32, uh: uint32)
-    {
-        && lh == num.lh
-        && uh == num.uh
-    }
-
-    /* int64 views are constructed from UNSIGNED uint32 values in
-    registers, so that we always keep the assumption that values in a
-    register are unsigned but can be VIEWED as signed */
-    datatype int64_raw = int64_cons(
-        lh: uint32, uh: uint32, full: int64)
-
-    type int64_view_t = num: int64_raw |
-        && num.lh == uint64_lh(to_2s_complement_bv64(num.full))
-        && num.uh == uint64_uh(to_2s_complement_bv64(num.full)) 
-        witness *
-
-    lemma lemma_int64_half_split(num: int64_view_t)
-        ensures num.lh + num.uh * BASE_32 == to_2s_complement_bv64(num.full);
-    {
-        reveal uint64_lh();
-        reveal uint64_uh();
-        assert num.lh + num.uh * BASE_32 == to_2s_complement_bv64(num.full);
-    }
-
-    predicate valid_int64_view(
-        num: int64_view_t,
-        lh: uint32, uh: uint32)
-    {
-        && lh == num.lh
-        && uh == num.uh
-    }
-    
-    lemma lemma_int64_negative_one(num: int64_view_t)
-        requires num.lh == BASE_32 - 1
-        requires num.uh == BASE_32 - 1
-        ensures num.full == -1
-    {
-        lemma_int64_half_split(num);
-        assert num.lh + num.uh * BASE_32 == to_2s_complement_bv64(num.full);
-        assert num.lh + num.uh * BASE_32 == BASE_64 - 1;
-        assert num.full == -1;
-    }
+    // type uint64_view_t = num: uint64_raw |
+    //     && num.lh == dw_lh(num.full)
+    //     && num.uh == dw_uh(num.full)
+    //     witness *
 
    /* memory definitions */ 
 
