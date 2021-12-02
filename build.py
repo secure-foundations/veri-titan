@@ -20,10 +20,10 @@ def rules():
 
     return f"""
 rule dafny
-    command = {DAFNY_PATH} /compile:0 /noNLarith /timeLimit:20 /vcsCores:2 $in && touch $out
+    command = {DAFNY_PATH} /compile:0 /noNLarith /timeLimit:20 /vcsCores:4 $in && touch $out
 
 rule dafny-nl
-    command = {DAFNY_PATH} /compile:0 /timeLimit:20 /vcsCores:2 $in && touch $out
+    command = {DAFNY_PATH} /compile:0 /timeLimit:20 /vcsCores:4 $in && touch $out
 
 rule vale
     command = {vale} -dafnyText -in $in -out $out
@@ -58,10 +58,8 @@ GEN_DIR = "gen"
 
 
 NL_FILES = {
-    # "arch/riscv/vale.i.dfy",
-    "impl/riscv/sub_mod_nl_lemmas.i.dfy",
-    # "impl/riscv/sub_mod_lemmas.i.dfy",
-    "lib/bv_ops_nl.dfy"}
+    "lib/sub_mod_nl_lemmas.i.dfy",
+    "lib/mul256_nl_lemma.i.dfy"}
 
 ## misc utils
 

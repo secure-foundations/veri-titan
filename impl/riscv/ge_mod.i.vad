@@ -2,21 +2,17 @@ include "../../arch/riscv/decls.i.vad"
 
 #verbatim
 include "../../arch/riscv/decls.i.dfy"
-include "../../../impl/riscv/ge_mod_lemmas.i.dfy"
+include "../../../lib/bv32_mm_lemmas.i.dfy"
 
 module ge_mod {
 
-import opened bv_ops
-import opened rsa_ops
-
+import opened integers
 import opened rv_machine
 import opened rv_decls
 import opened rv_vale
 
-import opened ge_mod_lemmas
-
-import opened BASE_32_Seq
-import opened Power
+import opened bv32_ops
+import opened bv32_mm_lemmas
 
 #endverbatim
 
@@ -26,6 +22,8 @@ ghost procedure lemma_ge_mod_correct(
     ghost j: int,
     ghost result: uint32) extern; 
 
+function xor_clear_lemma(x: uint32, y: uint32): void extern;
+
 procedure ge_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
     returns (ghost result: bool)
     requires
@@ -33,95 +31,97 @@ procedure ge_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
         seq_len(iter_n.buff) == 96;
         iter_n.index == 0;
 
-        iter_safe(iter_a, mem, x10);
+        iter_safe(iter_a, mem, a0);
         seq_len(iter_a.buff) == 96;
         iter_a.index == 0;
 
-        // TODO: should be hard-coded in the semantics
-        x0 == 0;
     reads
         x0; mem;
     modifies
-        x10; x11; x12; x13; x14; x15;
+        a0; a1; a2; a3; a4; a5;
     ensures
-      x10 == 1 ==> to_nat(iter_a.buff) < to_nat(iter_n.buff);
-      x10 == 0 ==> to_nat(iter_a.buff) >= to_nat(iter_n.buff);
-  {
-    lui(x11, 0x11); // 0x11000 into x11
-    assume 0x11000 == x11;
+      result == (a0 == 0);
+      a0 != 0 ==> to_nat(iter_a.buff) < to_nat(iter_n.buff);
+      a0 == 0 ==> to_nat(iter_a.buff) >= to_nat(iter_n.buff);
+{
+    lui(a1, 0x11); // 0a1000 into a1
+    assume 0x11000 == a1;
 
-    addi(x15, x11, 1560); // n = 71192 into x15
+    addi(a5, a1, 1560); // n = 71192 into a5
 
-    addi(x10, x10, 380); // pointer to end of a
+    addi(a0, a0, 380); // pointer to end of a
     ghost var iter_a := iter_a.(index := 95);
-    // assert iter_safe(iter_a, mem, x10);
+    assert iter_safe(iter_a, mem, a0);
 
-    addi(x15, x15, 380); // pointer to end of n
+    addi(a5, a5, 380); // pointer to end of n
     ghost var iter_n := iter_n.(index := 95);
-    // assert iter_safe(iter_n, mem, x15);
+    assert iter_safe(iter_n, mem, a5);
 
-    addi(x11, x11, 1560); // pointer to beginning of n
-    // assert x11 == 71192;
+    addi(a1, a1, 1560); // pointer to beginning of n
+    assert a1 == 71192;
 
-    addi(x12, x0, 1); // move 1 into x12 -- x12 = cond
+    addi(a2, x0, 1); // move 1 into a2 -- a2 = cond
 
     ghost var i: int := 95;
     ghost var a_ptr := iter_a.base_addr;
     ghost var a := iter_a.buff;
     ghost var n := iter_n.buff;
   
-    while (x12 != x0)
-      invariant x0 == 0;
-      invariant iter_n.base_addr == x11;
-      invariant iter_n.buff == n;
-      invariant iter_a.base_addr == a_ptr;
-      invariant iter_a.buff == a;
-      invariant (x12 != x0) ==> 
-        (iter_inv(iter_n, mem, x15) &&
-        iter_n.index == i &&
-        iter_inv(iter_a, mem, x10) &&
-        iter_a.index == i);
-      invariant seq_len(iter_n.buff) == 96;
-      invariant seq_len(iter_a.buff) == 96;
+    while (a2 != x0)
+        invariant iter_n.base_addr == a1;
+        invariant iter_n.buff == n;
+        invariant iter_a.base_addr == a_ptr;
+        invariant iter_a.buff == a;
+        invariant seq_len(iter_n.buff) == 96;
+        invariant seq_len(iter_a.buff) == 96;
+        invariant (a2 != 0) ==> iter_inv(iter_n, mem, a5); 
+        invariant (a2 != 0) ==> iter_n.index == i; 
+        invariant (a2 != 0) ==> iter_inv(iter_a, mem, a0);
+        invariant (a2 != 0) ==> iter_a.index == i;
 
-      invariant x12 != 0 ==> 0 <= i <= 95;
-      invariant x12 != 0 ==> (a[i+1..] == n[i+1..]);
-      invariant x12 == 0 ==> (-1) <= i < 95;
-      invariant x12 == 0 ==> (a[i+2..] == n[i+2..]);
-      invariant x12 == 0 ==> (a[i+1] != n[i+1] || i == (-1));
-      invariant x12 == 0 ==> (x13 != 0 <==> a[i+1] < n[i+1]);
-      invariant (x12 == 0 && i != (-1)) ==> (x13 == 0 ==> a[i+1] > n[i+1]);
-      invariant (x12 == 0 && i == (-1)) ==> (x13 == 0 ==> a[i+1] >= n[i+1]);
-      decreases i;
+        invariant a2 != 0 ==> 0 <= i <= 95;
+        invariant a2 != 0 ==> (a[i+1..] == n[i+1..]);
+        invariant a2 == 0 ==> (-1) <= i < 95;
+        invariant a2 == 0 ==> (a[i+2..] == n[i+2..]);
+        invariant a2 == 0 ==> (a[i+1] != n[i+1] || i == (-1));
+        invariant a2 == 0 ==> (a3 != 0 <==> a[i+1] < n[i+1]);
+        invariant (a2 == 0 && i != (-1)) ==> (a3 == 0 ==> a[i+1] > n[i+1]);
+        invariant (a2 == 0 && i == (-1)) ==> (a3 == 0 ==> a[i+1] >= n[i+1]);
+        decreases i;
     {
-      let iter_a_prev := lw_prev(x13, x10, 0, iter_a); // x13 = a[i]
-      // let a_i := a[i];
+        let iter_a_prev := lw_prev(a3, a0, 0, iter_a); // a3 = a[i]
+        // let a_i := a[i];
 
-      let iter_n_prev := lw_prev(x14, x15, 0, iter_n); // x14 = n[i]
-      // let n_i := n[i];
+        let iter_n_prev := lw_prev(a4, a5, 0, iter_n); // a4 = n[i]
+        // let n_i := n[i];
 
-      sub(x12, x13, x14);
-      sltu(x13, x13, x14);
-      sltu(x14, x0, x12);
-      xor(x12, x11, x15);
+        sub(a2, a3, a4);
+        sltu(a3, a3, a4);
 
-      if (x14 != x0) {
-        add(x12, x0, x0);
-      }
+        sltu(a4, x0, a2);
 
-      addi(x10, x10, (-4));  
-      addi(x15, x15, (-4));
+        xor(a2, a1, a5);
 
-      iter_a := iter_a_prev;
-      iter_n := iter_n_prev;
+        xor_clear_lemma(a1, a5);
 
-      i := i - 1;
+        if (a4 != x0) {
+            add(a2, x0, x0);
+        }
+
+        addi(a0, a0, (-4));
+        addi(a5, a5, (-4));
+
+        iter_a := iter_a_prev;
+        iter_n := iter_n_prev;
+
+        i := i - 1;
     }
 
-    mv(x10, x13);
-    lemma_ge_mod_correct(a, n, i+1, x10);
-  }
+    mv(a0, a3);
+    lemma_ge_mod_correct(a, n, i+1, a0);
 
+    result := if a0 == 0 then true else false;
+}
 
 #verbatim
 }

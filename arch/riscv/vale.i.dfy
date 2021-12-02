@@ -1,7 +1,7 @@
 include "machine.s.dfy"
 
 module rv_vale {
-    import opened bv_ops
+    import opened integers
     import opened rv_machine
 
     type va_code = code
@@ -26,6 +26,12 @@ module rv_vale {
         xs + [x]
     }
 
+    function mod(a: int, n: nat): int
+        requires n != 0;
+    {
+        a % n
+    }
+
     function mod_add(a: nat, b: nat, m: nat): nat 
         requires a < m && b < m;
     {
@@ -39,7 +45,12 @@ module rv_vale {
 
     function va_get_reg32_t(r : reg32_t, s: va_state): uint32
     {
-        s.eval_reg32(r)
+        s.read_reg32(r)
+    }
+
+    function va_eval_reg32(s: va_state, r : reg32_t): uint32
+    {
+        s.read_reg32(r)
     }
 
     function va_get_mem(s: va_state): mem_t
@@ -59,8 +70,8 @@ module rv_vale {
 
     function va_update_reg32_t(r: reg32_t, sM: va_state, sK: va_state): va_state
     {
-        var index := r.index;
-        sK.(gprs := sK.gprs[index := sM.gprs[index]])
+        var index := reg32_to_index(r);
+        sK.(regs := sK.regs[index := sM.regs[index]])
     }
 
     type va_operand_simm32 = int32
@@ -92,12 +103,12 @@ module rv_vale {
 
     predicate va_is_dst_reg32(r: reg32_t, s: va_state)
     {
-        true
+        !r.X0?
     }
 
-    function va_eval_reg32(s: va_state, r : reg32_t):uint32
+    function va_read_reg32(s: va_state, r : reg32_t):uint32
     {
-        s.eval_reg32(r)
+        s.read_reg32(r)
     }
 
     function va_update_operand_reg32(r: reg32_t, sM: va_state, sK: va_state): va_state
@@ -113,7 +124,7 @@ module rv_vale {
     predicate va_state_eq(s0: va_state, s1: va_state)
     {
         // s0 == s1
-        && s0.gprs == s1.gprs
+        && s0.regs == s1.regs
         && s0.mem == s1.mem
         && s0.ok == s1.ok
     }
@@ -296,7 +307,7 @@ module rv_vale {
             var r':state :| eval_code(b.hd, s0, r') && eval_block(b.tl, r', r);
             c0 := b.hd;
             b1 := b.tl;
-            r1 := state(r'.gprs, r'.mem, r'.ok);
+            r1 := state(r'.regs, r'.mem, r'.ok);
             if valid_state_opaque(s0) {
                 reveal_valid_state_opaque();
                 code_state_validity(c0, s0, r1);

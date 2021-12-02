@@ -2,7 +2,8 @@ include{: verbatim} "../../arch/otbn/vale.i.dfy"
 
 #verbatim
 module ot_decls {
-    import opened bv_ops
+    // import opened bv_ops
+    import opened integers
     import opened ot_machine
     import opened ot_abstraction
     import opened ot_vale
@@ -36,8 +37,8 @@ type int12:  Type(0) := int_range((-2048), 2048);
 
 function Pow(b: int, e: nat) : int extern;
 function IsModEquivalent(a: int, b: int, n: int) : bool extern;
-function cong_B256(a: int, b: int) : bool extern;
-function pow_B256(e: nat): nat extern;
+function cong_BASE(a: int, b: int) : bool extern;
+function pow_BASE(e: nat): nat extern;
 
 const BASE_32:  nat extern;
 const BASE_64:  nat extern; 
@@ -164,7 +165,7 @@ type string: Type(0) extern;
 function fst #[a: Type(0), b: Type(0)](m: tuple(a, b)): a extern;
 function snd #[a: Type(0), b: Type(0)](m: tuple(a, b)): b extern;
 
-function ToNat #[a: Type(0)] (s: seq(a)): nat extern;
+function to_nat #[a: Type(0)] (s: seq(a)): nat extern;
 ghost procedure LemmaSeqLen2 #[a: Type(0)] (ghost xs: seq(a)) extern;
 
 var x0: uint32 {:state reg32_t(GPR(0))};
@@ -495,7 +496,7 @@ procedure bn_mulqacc_z(
     this := this.(heap := old(this).heap);
 }
 
-ghost procedure otbn_mulqacc_safe_correct(
+ghost procedure otbn_mulqacc_safe_correct_lemma(
     ghost zero: bool,
     ghost x: uint256,
     ghost qx: uint2,
@@ -516,7 +517,7 @@ procedure bn_mulqacc_safe(
         wacc == otbn_mulqacc_safe(false, old(src1), qwsel1, old(src2), qwsel2, shift, old(wacc));
 {
     // not sure why this lemma call is needed
-    otbn_mulqacc_safe_correct(false, src1, qwsel1, src2, qwsel2, shift, wacc);
+    otbn_mulqacc_safe_correct_lemma(false, src1, qwsel1, src2, qwsel2, shift, wacc);
     bn_mulqacc(src1, qwsel1, src2, qwsel2, shift);
 }
 
@@ -565,7 +566,7 @@ procedure bn_mulqacc_so_safe(
         && fgroups == update_fgroups(old(fgroups), fg, result.new_flags);
 {
     // not sure why this lemma call is needed
-    otbn_mulqacc_safe_correct(false, src1, qwsel1, src2, qwsel2, shift, wacc);
+    otbn_mulqacc_safe_correct_lemma(false, src1, qwsel1, src2, qwsel2, shift, wacc);
     bn_mulqacc_so(dst, lower, src1, qwsel1, src2, qwsel2, shift, fg);
 }
 

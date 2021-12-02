@@ -2,36 +2,37 @@ include "../../arch/riscv/decls.i.vad"
 
 #verbatim
 include "../../arch/riscv/decls.i.dfy"
-include "../../../impl/riscv/sub_mod_lemmas.i.dfy"
+include "../../../lib/bv32_mm_lemmas.i.dfy"
+
+// include "../../../impl/riscv/sub_mod_lemmas.i.dfy"
 
 module sub_mod {
 
-import opened bv_ops
-import opened rsa_ops
-
+import opened integers
 import opened rv_machine
 import opened rv_decls
 import opened rv_vale
 
-import opened sub_mod_lemmas
+import opened bv32_mm_lemmas
 import opened sub_mod_nl_lemmas
 
-import opened BASE_32_Seq
+import opened bv32_ops
+
 import opened Power
 
 #endverbatim
-    
-ghost procedure A_zero() returns (ghost ref: int64_view_t) extern;
+
+// ghost procedure A_zero() returns (ghost ref: int64_view_t) extern;
 
 function Pow(b: int, e: nat): int extern;
 
 ghost procedure sub_mod_correct_lemma(
-       ghost a: uint32,
-       ghost b: uint32,
-       ghost c: uint32,
-       ghost x10: uint32,
-       ghost x11: uint32,
-       ghost x15: uint32
+    ghost a: uint32,
+    ghost b: uint32,
+    ghost c: uint32,
+    ghost a0: uint32,
+    ghost a1: uint32,
+    ghost a5: uint32
 ) extern;
 
 function sub_mod_loop_inv(
@@ -39,149 +40,163 @@ function sub_mod_loop_inv(
     n: seq(uint32),
     a: seq(uint32),
     i: nat,
-    A: int64_view_t) : bool extern;
+    lh: uint32, uh: uint32) : bool extern;
 
 function seq_subb(xs: seq(uint32), ys: seq(uint32)) : tuple(seq(uint32), uint1) extern;
 
 function lemma_sub_mod_correct(
-    A: int64_view_t,
     old_a: seq(uint32),
     n: seq(uint32),
     a: seq(uint32),
     v0: uint32, v1: uint32,
     lh: uint32, uh: uint32,
+    lh': uint32, uh': uint32,
     carry_add: int, carry_sub: int,
-    x13: uint32,
-    i: nat) : int64_view_t extern;
+    a3: uint32,
+    i: nat): void extern;
 
-ghost procedure sub_mod_post_lemma(
-    ghost iter_a: seq(uint32),
-    ghost iter_n: seq(uint32),
-    ghost iter_a': seq(uint32),
-    ghost A: int64_view_t) extern;
+function sub_mod_post_lemma(
+    iter_a: seq(uint32),
+    iter_n: seq(uint32),
+    iter_a': seq(uint32),
+    lh: uint32, uh: uint32): void extern;
+
+function subb_inv_pre_lemma(
+    dst: seq(uint32),
+    src1: seq(uint32),
+    src2: seq(uint32)): void extern;
+
+function A_as_carry(lh: uint32, uh: uint32): uint1 extern;
 
 procedure sub_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
-    returns (ghost iter_a': iter_t, ghost A: int64_view_t)
+    returns (ghost iter_a': iter_t, ghost borrow: uint1)
     requires
         iter_safe(iter_n, mem, 71192);
         seq_len(iter_n.buff) == 96;
         iter_n.index == 0; 
 
-        iter_safe(iter_a, mem, x10);
+        iter_safe(iter_a, mem, a0);
         seq_len(iter_a.buff) == 96;
         iter_a.index == 0;
 
         iter_n.base_addr != iter_a.base_addr;
     modifies
-        x10; x11; x12; x13; x14; x15; x16; mem;
+        a0; a1; a2; a3; a4; a5; a6; mem;
     ensures
-        iter_inv(iter_a', mem, x10);
+        // iter_inv(iter_a', mem, a0);
         seq_len(iter_a'.buff) == 96;
         mem == old(mem)[iter_a.base_addr := iter_a'.buff];
-        (A.full == (-1) || A.full == 0); 
         to_nat(iter_a'.buff) ==
-            to_nat(iter_a.buff) - to_nat(iter_n.buff) + A_as_carry(A.full) * Pow(BASE_32, 96);
+            to_nat(iter_a.buff) - to_nat(iter_n.buff) + borrow * Pow(BASE_32, 96);
+        to_nat(iter_a.buff) >= to_nat(iter_n.buff) ==> borrow == 0;
+        iter_a'.base_addr == iter_a.base_addr;
+        iter_a'.index == 0;
 {
     // load address of n
-    lui(x12, 0x11); // 0x11000 into x12
-    assume 0x11000 == x12;
+    lui(a2, 0x11); // 0x11000 into a2
+    assume 0x11000 == a2;
 
-    addi(x12, x12, 1560); // 71192 in x12
-    assert x12 == 71192;
+    addi(a2, a2, 1560); // 71192 in a2
+    assert a2 == 71192;
 
-    addi(x16 ,x12, 384);  // 71576 in x16
-    assert x16 == 71576;
+    addi(a6 ,a2, 384);  // 71576 in a6
+    assert a6 == 71576;
 
     // set A to 0
-    li(x15, 0); // 0 in x15 -- lower half of A
-    li(x11, 0); // 0 in x11 -- upper half of A
-
-    A := A_zero();
+    li(a5, 0); // 0 in a5 -- lower half of A
+    li(a1, 0); // 0 in a1 -- upper half of A
 
     ghost var i: nat := 0;
     iter_a' := iter_a;
     ghost var old_a := iter_a.buff;
     ghost var iter_n := iter_n;
     
-    assert sub_mod_loop_inv(old_a, iter_n.buff, iter_a'.buff, i, A) by {
-        reveal SeqSub;
+    assert sub_mod_loop_inv(old_a, iter_n.buff, iter_a'.buff, i, 0, 0) by {
+        subb_inv_pre_lemma(iter_a'.buff, old_a, iter_n.buff);
     }
 
     ghost var n_ptr := iter_n.base_addr;
     ghost var a_ptr := iter_a.base_addr;
 
-    while (x12 != x16)
-        invariant x12 <= x16;
-        invariant x12 == 71192 + 4 * i;
-        invariant x16 == 71576;
+    while (a2 != a6)
+        invariant a2 <= a6;
+        invariant a2 == 71192 + 4 * i;
+        invariant a6 == 71576;
         invariant 0 <= i <= 96;
 
-        invariant iter_inv(iter_n, mem, x12);
+        invariant iter_inv(iter_n, mem, a2);
         invariant iter_n.base_addr == n_ptr;
         invariant iter_n.index == i;
         invariant mem == old(mem)[a_ptr := iter_a'.buff];
 
-        invariant iter_inv(iter_a', mem, x10);
+        invariant iter_inv(iter_a', mem, a0);
         invariant seq_len(iter_a'.buff) == 96;
         invariant iter_a'.base_addr == a_ptr;
         invariant iter_a'.index == i;
 
         invariant a_ptr != n_ptr;
 
-        invariant valid_int64_view(A, x15, x11);
-        invariant sub_mod_loop_inv(old_a, iter_n.buff, iter_a'.buff, i, A);
+        invariant sub_mod_loop_inv(old_a, iter_n.buff, iter_a'.buff, i, a5, a1);
 
         decreases loop_ctr;
     {
-        lw_iter(x14, x10, 0, iter_a');
+        let lh := a5;
+        let uh := a1;
+    
+        lw_iter(a4, a0, 0, iter_a');
 
         let iter_a_next := lw_next_iter(iter_a);
-        // load mem from x10 to x14 (x14 == a[i])
+        // load mem from a0 to a4 (a4 == a[i])
 
-        let iter_n_next := lw_next(x13, x12, 0, iter_n); 
-        // load mem from x12 into x13 (x13 == n[i])
-        addi(x12, x12, 4); // increment n pointer
+        let iter_n_next := lw_next(a3, a2, 0, iter_n); 
+        // load mem from a2 into a3 (a3 == n[i])
+        addi(a2, a2, 4); // increment n pointer
 
         ghost var a_i := iter_a.buff[i];
         ghost var n_i := iter_n.buff[i];
 
-        add(x15, x15, x14); // lower half of A += a[i]
-        // assert x15 == uint32_add(A.lh, a_i);
-        ghost var v0 := uint32_add(A.lh, a_i);
+        add(a5, a5, a4); // lower half of A += a[i]
+        // assert a5 == uint32_add(A.lh, a_i);
+        ghost var v0 := uint32_add(lh, a_i);
 
-        sub(x13, x15, x13); // lower half of A -= n[i]
-        // assert x13 == uint32_sub(uint32_add(A.lh, a_i), n_i);
+        sub(a3, a5, a3); // lower half of A -= n[i]
+        // assert a3 == uint32_sub(uint32_add(A.lh, a_i), n_i);
 
-        sltu(x14, x15, x14); // overflow check from add
-        let carry_add := x14;
+        sltu(a4, a5, a4); // overflow check from add
+        let carry_add := a4;
         // assert carry_add == uint32_lt(uint32_add(A.lh, a_i), a_i);
 
-        add(x14, x14, x11); // add carry bit to upper half of A
+        add(a4, a4, a1); // add carry bit to upper half of A
 
-        ghost var v1 := x14;
+        ghost var v1 := a4;
         // assert v1 == uint32_add(A.uh, carry_add);
 
-        sltu(x15, x15, x13); // underflow check from sub
+        sltu(a5, a5, a3); // underflow check from sub
         
-        let carry_sub := x15;
+        let carry_sub := a5;
 
-        let iter_a'_next := sw_next(x13, x10, 0, iter_a');
+        let iter_a'_next := sw_next(a3, a0, 0, iter_a');
 
-        addi(x10, x10, 4); // increment a pointer
-        sub(x15, x14, x15); // subtract underflow carry from upper half of A
-        srai(x11, x15, 0x1f); 
+        addi(a0, a0, 4); // increment a pointer
+        sub(a5, a4, a5); // subtract underflow carry from upper half of A
+        srai(a1, a5, 0x1f); 
 
-        A := lemma_sub_mod_correct(A, old_a, iter_n.buff, iter_a'.buff,
-            v0, v1, x15, x11, carry_add, carry_sub, x13, i);
+        lemma_sub_mod_correct(old_a, iter_n.buff, iter_a'.buff,
+            v0, v1, lh, uh, a5, a1, carry_add, carry_sub, a3, i);
 
         iter_n := iter_n_next;
         iter_a' := iter_a'_next;
         i := i + 1;
     }
 
-    sub_mod_post_lemma(old_a, iter_n.buff, iter_a'.buff, A);
+    iter_a' := iter_a'.(index := 0);
+
+    sub_mod_post_lemma(old_a, iter_n.buff, iter_a'.buff, a5, a1);
+
+    borrow := A_as_carry(a5, a1);
+
     assert to_nat(iter_a'.buff) ==
-            to_nat(old_a) - to_nat(iter_n.buff) + A_as_carry(A.full) * Pow(BASE_32, 96);
+            to_nat(old_a) - to_nat(iter_n.buff) + borrow * Pow(BASE_32, 96);
 }
 
 #verbatim

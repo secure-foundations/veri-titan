@@ -1,86 +1,86 @@
-include "../../arch/riscv/decls.i.vad"
+// include "../../arch/riscv/decls.i.vad"
     
-#verbatim
+// #verbatim
 
-include "../../arch/riscv/decls.i.dfy"
+// include "../../arch/riscv/decls.i.dfy"
 
-module examples {
+// module examples {
 
-import opened bv_ops
+// import opened bv_ops
 
-import opened rv_machine
-import opened rv_decls
-import opened rv_vale
+// import opened rv_machine
+// import opened rv_decls
+// import opened rv_vale
 
-#endverbatim
+// #endverbatim
 
-procedure double()
-    requires
-        x2 + x2 < 0x1_0000_0000;
-    ensures
-        x2 = old(x2) + old(x2);
-    modifies
-        x2;
-{
-    add(x2, x2, x2);
-}
+// // procedure double()
+// //     requires
+// //         x2 + x2 < 0x1_0000_0000;
+// //     ensures
+// //         x2 = old(x2) + old(x2);
+// //     modifies
+// //         x2;
+// // {
+// //     add(x2, x2, x2);
+// // }
 
-procedure double_reg(inout dst:reg32, in src:reg32)
-    requires
-        src + src < 0x1_0000_0000;
-    ensures
-        dst = old(src) + old(src);
-{
-    add(dst, src, src);
-}
+// procedure double_reg(inout dst:reg32, in src:reg32)
+//     requires
+//         src + src < 0x1_0000_0000;
+//     ensures
+//         dst = old(src) + old(src);
+// {
+//     add(dst, src, src);
+// }
 
-procedure loop_reg(inout src1:reg32, in src2:reg32)
-    requires
-        src1 == 0;
-        src2 == 3;
-    ensures
-        src1 == 3;
-{
-    while (src1 < src2)
-        invariant src1 <= src2;
-        decreases src2 - src1;
-    {
-        addi(src1, src1, 1);
-    }
-}
+// procedure loop_reg(inout src1:reg32, in src2:reg32)
+//     requires
+//         src1 == 0;
+//         src2 == 3;
+//     ensures
+//         src1 == 3;
+// {
+//     while (src1 < src2)
+//         invariant src1 <= src2;
+//         decreases src2 - src1;
+//     {
+//         addi(src1, src1, 1);
+//     }
+// }
     
-procedure loop_sub(inout src1:reg32, in src2:reg32)
-    requires
-        src1 == 3;
-        src2 == 1;
-    ensures
-        src1 == 0;
-        src2 == 1;
-{
-    while (src1 >= src2)
-        invariant (src1 >= 0);
-        invariant (src2 == 1);
-        decreases src1;
-    {
-        sub(src1, src1, src2);
-    }
-}
+// procedure loop_sub(inout src1:reg32, in src2:reg32)
+//     requires
+//         src1 == 3;
+//         src2 == 1;
+//     ensures
+//         src1 == 0;
+//         src2 == 1;
+// {
+//     while (src1 >= src2)
+//         invariant (src1 >= 0);
+//         invariant (src2 == 1);
+//         decreases src1;
+//     {
+//         sub(src1, src1, src2);
+//     }
+// }
 
-procedure if_else(inout src1:reg32, inout src2:reg32)
-    requires @src1 != @src2;
-{
-    ghost var old_src1 := src1;
+// procedure if_else(inout src1:reg32, inout src2:reg32)
+//     requires @src1 != @src2;
+// {
+//     ghost var old_src1 := src1;
 
-    if (src1 >= src2)
-    {
-        sub(src1, src1, src2);
-    } else {
-        sub(src2, src2, src1);
-    }
+//     if (src1 >= src2)
+//     {
+//         sub(src1, src1, src2);
+//     } else {
+//         sub(src2, src2, src1);
+//     }
 
-    assert src1 <= old_src1;
-}
+//     assert src1 <= old_src1;
+// }
 
-#verbatim
-}
-#endverbatim
+// #verbatim
+// }
+// #endverbatim

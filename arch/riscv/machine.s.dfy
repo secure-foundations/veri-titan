@@ -1,73 +1,93 @@
-include "../../lib/signed_bv_ops.dfy"
+include "../../lib/bv32_ops.dfy"
 
 module rv_machine {
-    import opened bv_ops // bit-vector operations
+    import opened integers
+    import opened bv32_ops
 
     const DMEM_LIMIT: int := 0x80000
 
     /* registers definitions */
-    type reg_index = uint5 // 32 registers
-      
-    datatype reg32_t = | GPR(index: reg_index) // 32 32-bit registers, x0 is always zero
 
-    type gprs_t = gprs : seq<uint32> | |gprs| == 32 witness *
+    datatype reg32_t =  
+        | X0 // hardwired to 0, ignores writes	n/a
+        | RA // x1		return address for jumps	no
+        | SP // x2		stack pointer	yes
+        | GP // x3		global pointer	n/a
+        | TP // x4		thread pointer	n/a
+        | T0 // x5		temporary register 0	no
+        | T1 // x6		temporary register 1	no
+        | T2 // x7		temporary register 2	no
+        | S0 // x8	 	saved register 0 or frame pointer	yes
+        | S1 // x9		saved register 1	yes
+        | A0 // x10		return value or function argument 0	no
+        | A1 // x11		return value or function argument 1	no
+        | A2 // x12		function argument 2	no
+        | A3 // x13		function argument 3	no
+        | A4 // x14		function argument 4	no
+        | A5 // x15		function argument 5	no
+        | A6 // x16		function argument 6	no
+        | A7 // x17		function argument 7	no
+        | S2 // x18		saved register 2	yes
+        | S3 // x19		saved register 3	yes
+        | S4 // x20		saved register 4	yes
+        | S5 // x21		saved register 5	yes
+        | S6 // x22		saved register 6	yes
+        | S7 // x23		saved register 7	yes
+        | S8 // x24		saved register 8	yes
+        | S9 // x25		saved register 9	yes
+        | S10// x26		saved register 10	yes
+        | S11// x27		saved register 11	yes
+        | T3 // x28		temporary register 3	no
+        | T4 // x29		temporary register 4	no
+        | T5 // x30		temporary register 5	no
+        | T6 // x31		temporary register 6	no
+        // pc	(none)	program counter	n/a
 
-    
-    /* gpr_view definion */
-
-    datatype uint64_raw = uint64_cons(
-        lh: uint32, uh: uint32, full: uint64)
-
-    type uint64_view_t = num: uint64_raw |
-        && num.lh == uint64_lh(num.full)
-        && num.uh == uint64_uh(num.full)
-        witness *
-
-    predicate valid_uint64_view(
-        num: uint64_view_t,
-        lh: uint32, uh: uint32)
+    function method reg32_to_index(r: reg32_t): nat
     {
-        && lh == num.lh
-        && uh == num.uh
+        match r {
+            case X0 => 0
+            case RA => 1
+            case SP => 2
+            case GP => 3
+            case TP => 4
+            case T0 => 5
+            case T1 => 6
+            case T2 => 7
+            case S0 => 8
+            case S1 => 9
+            case A0 => 10
+            case A1 => 11
+            case A2 => 12
+            case A3 => 13
+            case A4 => 14
+            case A5 => 15
+            case A6 => 16
+            case A7 => 17
+            case S2 => 18
+            case S3 => 19
+            case S4 => 20
+            case S5 => 21
+            case S6 => 22
+            case S7 => 23
+            case S8 => 24
+            case S9 => 25
+            case S10 => 26
+            case S11 => 27
+            case T3 => 28
+            case T4 => 29
+            case T5 => 30
+            case T6 => 31
+        }
     }
 
-    /* int64 views are constructed from UNSIGNED uint32 values in
-    registers, so that we always keep the assumption that values in a
-    register are unsigned but can be VIEWED as signed */
-    datatype int64_raw = int64_cons(
-        lh: uint32, uh: uint32, full: int64)
+    // datatype uint64_raw = uint64_cons(
+    //     lh: uint32, uh: uint32, full: uint64)
 
-    type int64_view_t = num: int64_raw |
-        && num.lh == uint64_lh(to_2s_complement_bv64(num.full))
-        && num.uh == uint64_uh(to_2s_complement_bv64(num.full)) 
-        witness *
-
-    lemma lemma_int64_half_split(num: int64_view_t)
-        ensures num.lh + num.uh * BASE_32 == to_2s_complement_bv64(num.full);
-    {
-        reveal uint64_lh();
-        reveal uint64_uh();
-        assert num.lh + num.uh * BASE_32 == to_2s_complement_bv64(num.full);
-    }
-
-    predicate valid_int64_view(
-        num: int64_view_t,
-        lh: uint32, uh: uint32)
-    {
-        && lh == num.lh
-        && uh == num.uh
-    }
-    
-    lemma lemma_int64_negative_one(num: int64_view_t)
-        requires num.lh == BASE_32 - 1
-        requires num.uh == BASE_32 - 1
-        ensures num.full == -1
-    {
-        lemma_int64_half_split(num);
-        assert num.lh + num.uh * BASE_32 == to_2s_complement_bv64(num.full);
-        assert num.lh + num.uh * BASE_32 == BASE_64 - 1;
-        assert num.full == -1;
-    }
+    // type uint64_view_t = num: uint64_raw |
+    //     && num.lh == dw_lh(num.full)
+    //     && num.uh == dw_uh(num.full)
+    //     witness *
 
    /* memory definitions */ 
 
@@ -132,18 +152,31 @@ module rv_machine {
         && iter.index < |iter.buff|
     }
 
+    predicate valid_frame_ptr(mem: mem_t, address: int, words: nat)
+    {
+        && address in mem
+        && address >= 0
+        && |mem[address]| == words
+    }
 
     /* state definition */
 
+    type regs_t = regs : seq<uint32> | |regs| == 32 witness *
+
     datatype state = state(
-        gprs: gprs_t, // 32-bit registers
+        regs: regs_t, // 32-bit registers
         mem: mem_t,
         ok: bool)
     {
-        function eval_reg32(r: reg32_t) : uint32
+        function read_reg32(r: reg32_t) : uint32
         {
-            if r.index == 0 then 0
-            else gprs[r.index]
+            if r.X0? then 0 
+            else regs[reg32_to_index(r)]
+        }
+
+        function write_reg32(r: reg32_t, value: uint32): state
+        {
+            this.(regs := this.regs[reg32_to_index(r) := value])
         }
     }
 
@@ -265,12 +298,12 @@ module rv_machine {
     function eval_cmp(s:state, c:cmp, r1:reg32_t, r2:reg32_t):bool
     {
         match c
-          case Eq  => s.eval_reg32(r1) == s.eval_reg32(r2)
-          case Ne => s.eval_reg32(r1) != s.eval_reg32(r2)
-          case Le  => s.eval_reg32(r1) <= s.eval_reg32(r2)
-          case Ge  => s.eval_reg32(r1) >= s.eval_reg32(r2)
-          case Lt  => s.eval_reg32(r1) < s.eval_reg32(r2)
-          case Gt  => s.eval_reg32(r1) > s.eval_reg32(r2)
+          case Eq  => s.read_reg32(r1) == s.read_reg32(r2)
+          case Ne => s.read_reg32(r1) != s.read_reg32(r2)
+          case Le  => s.read_reg32(r1) <= s.read_reg32(r2)
+          case Ge  => s.read_reg32(r1) >= s.read_reg32(r2)
+          case Lt  => s.read_reg32(r1) < s.read_reg32(r2)
+          case Gt  => s.read_reg32(r1) > s.read_reg32(r2)
     }
 
     function eval_cond(s:state, c:cond):bool

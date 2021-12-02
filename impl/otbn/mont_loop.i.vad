@@ -10,13 +10,9 @@ include "mul256.i.dfy"
 include "addc512.i.dfy"
 include "cond_sub_to_reg.i.dfy"
 
-include "../../../impl/otbn/mont_loop_lemmas.i.dfy"
-include "../../../impl/otbn/rsa_ops.i.dfy"
+include "../../../lib/bv256_mm_lemmas.s.dfy"
 
 module mont_loop {
-
-import opened bv_ops
-import opened rsa_ops
 
 import opened ot_machine
 import opened ot_abstraction
@@ -25,19 +21,15 @@ import opened ot_vale
 
 import opened mul256
 import opened addc512
-import opened addc512_lemmas
 import opened cond_sub_to_reg
-import opened mont_loop_lemmas
 
 import opened Mul
 import opened Power
-import opened BASE_256_Seq
+
+import opened integers
+import opened bv256_mm_lemmas
 
 #endverbatim
-
-ghost procedure LemmaMulIsCommutativeAuto() extern;
-
-ghost procedure uint512_view_lemma(ghost num: uint512_view_t) extern;
 
 ghost procedure mont_word_mul_add_bound_lemma_0(
     ghost xs: seq(uint256),
@@ -125,14 +117,16 @@ ghost procedure montmul_inv_lemma(
     ghost y: seq(uint256),
     ghost rsa: rsa_params) extern;
 
-ghost procedure mont_loop_cong_lemma(
-    ghost p1: uint512_view_t,
-    ghost a0: uint256,
-    ghost y0: uint256,
-    ghost xi: uint256,
-    ghost w25: uint256,
-    ghost w26: uint256,
-    ghost m0d: nat) extern;
+function mont_loop_cong_lemma(
+    p1: uint512_view_t,
+    a0: uint256,
+    y0: uint256,
+    xi: uint256,
+    w25: uint256,
+    w26: uint256,
+    m0d: nat): void extern;
+
+function half_mul_256(a: int, b: int): uint256 extern;
 
 procedure mont_loop_0(
     ghost curr_view: seq(uint256),
@@ -191,7 +185,7 @@ procedure mont_loop_0(
         valid_uint512_view(wdrs, p1, 30, 29);
 
         p1.full == curr_view[0] + y_it.buff[0] * xi;
-        cong_B256(w25, p1.full * m0d);
+        w25 == half_mul_256(p1.lh, m0d);
 
         next_y_it == bn_lid_next_iter(y_it, true);
         iter_safe(next_y_it, heap, x19);
@@ -215,14 +209,15 @@ procedure mont_loop_0(
 
     /* [w26, w27] = w30*w2 = y[0]*xi */
     mul256_w30xw2();
-    // assert ToNat(seq(w27, w26)) == y_it.buff[0] * w2;
+    // assert to_nat(seq(w27, w26)) == y_it.buff[0] * w2;
 
     /* w24 = w4 = A[0] */ 
     bn_movr(x13, false, x8, true);
 
     /* add A[0]: [w29, w30] = [w26, w27] + w24 = y[0]*xi + A[0] */
-    mont_word_mul_add_bound_lemma_0(seq(w27, w26), seq(w24, w31), y_it.buff[0], w2);
-    p1 := seq_addc_512_safe(w30, w27, w24, w29, w26, w31);
+    p1 := mul_add_512(w30, w27, w24, w29, w26, w31, y_it.buff[0], w2);
+
+    dw_view_lemma(p1);
 
     /* w25 = w3 = m0d */
     bn_mov(w25, w3);
@@ -235,6 +230,7 @@ procedure mont_loop_0(
 
     mont_loop_cong_lemma(p1, curr_view[0], y_it.buff[0], xi, w25, w26, m0d);
 }
+
 
 procedure mont_loop_1(
     ghost ui: uint256,
@@ -328,37 +324,16 @@ procedure mont_loop_1(
     ghost var j := y_it.index;
     /* load limb of y (operand a) and mult. with xi: [w26, w27] <- y[j]*xi */
     next_y_it := bn_lid_safe(x12, false, 0, x19, true, y_it);
-    mul256_w30xw2();
 
-    /* add limb of buffer: [w26, w27] <- [w26,w27] + w24 = y[j]*xi + A[j] */
     bn_movr(x13, false, x8, true);
 
-    LemmaMulIsCommutativeAuto();
-    mont_word_mul_add_bound_lemma_0(seq(w27, w26), seq(w24, w31), y_it.buff[j], xi);
-    next_p1 := seq_addc_512_safe(w27, w27, w24, w26, w26, w31);
-
-    /* add carry word from previous cycle:
-       [c_xy, a_tmp] = [w29, w24] <- [w26,w27] + w29 = y[j]*xi + A[j] + c_xy*/
-    uint512_view_lemma(next_p1);
-
-    mont_word_mul_add_bound_lemma_1(seq(w27, w26), seq(w29, w31), y_it.buff[j], xi, w24);
-    next_p1 := seq_addc_512_safe(w24, w27, w29, w29, w26, w31);
+    next_p1 := mula512_w30xw2(y_it.buff[j], xi);
 
     /* load limb m[j] of modulus and multiply with ui:
        [w26, w27] = w30*w25 = m[j]*ui */
     next_m_it := bn_lid_safe(x12, false, 0, x16, true, m_it);
-    mul256_w30xw25();
 
-    /* add result from first step
-       [w26, w27] <- [w26,w27] + w24 = m[j]*ui + a_tmp */
-    mont_word_mul_add_bound_lemma_0(seq(w27, w26), seq(w24, w31), m_it.buff[j], ui);
-    next_p2 := seq_addc_512_safe(w27, w27, w24, w26, w26, w31);
-
-    /* [c_m, A[j-1]] = [w28, w24] = m[j]*ui + a_tmp + c_m */
-    uint512_view_lemma(next_p2);
-
-    mont_word_mul_add_bound_lemma_1(seq(w27, w26), seq(w28, w31), m_it.buff[j], ui, w24);
-    next_p2 := seq_addc_512_safe(w24, w27, w28, w28, w26, w31);
+    next_p2 := mula512_w30xw25(m_it.buff[j], ui);
 
     bn_movr(x10, true, x13, false);
     next_view := curr_view[j-1 := w24];
@@ -440,11 +415,10 @@ procedure mont_loop(
 
     /* [w26, w27] = w30*w25 = m[0]*ui*/
     mul256_w30xw25();
-    // assert ToNat(seq(w27, w26)) == m_it.buff[0] * ui;
+    // assert to_nat(seq(w27, w26)) == m_it.buff[0] * ui;
 
     /* [w28, w27] = [w26, w27] + w24 = m[0]*ui + (y[0]*xi + A[0] mod b) */
-    mont_word_mul_add_bound_lemma_0(seq(w27, w26), seq(w24, w31), m_it.buff[0], ui);
-    p2 := seq_addc_512_safe(w27, w27, w24, w28, w26, w31);
+    p2 := mul_add_512(w27, w27, w24, w28, w26, w31, w30, w25);
 
     LemmaMulIsCommutativeAuto();
     mont_loop_inv_pre_lemma(xi, ui, vars.rsa.M0D, p1, p2, y_it.buff, m_it.buff, curr_view);
@@ -533,8 +507,8 @@ procedure mont_loop(
     m_it := iter_cons(x16, 0, heap[x16].b);
     next_view := cond_sub_to_reg(curr_view, m_it, fgroups.fg1.cf);
 
-    mont_loop_cond_sub_lemma(xi, ui, y_it.buff, ToNat(m_it.buff),
-        ToNat(prev_view), curr_view, next_view, bout, bool_to_uint1(fgroups.fg0.cf));
+    mont_loop_cond_sub_lemma(xi, ui, y_it.buff, to_nat(m_it.buff),
+        to_nat(prev_view), curr_view, next_view, bout, bool_to_uint1(fgroups.fg0.cf));
     
     /* restore pointer */
     li(x8, 4);

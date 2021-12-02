@@ -1,0 +1,496 @@
+include "../../arch/riscv/decls.i.vad"
+include "mont_mul.i.vad"
+include "ge_mod.i.vad"
+include "sub_mod.i.vad"
+
+#verbatim
+include "../../impl/riscv/ge_mod.i.dfy"
+include "../../impl/riscv/sub_mod.i.dfy"
+include "../../impl/riscv/mont_mul.i.dfy"
+
+include "../../../lib/bv32_mm_lemmas.i.dfy"
+
+module mod_pow {
+
+import opened integers
+import opened rv_machine
+import opened rv_decls
+import opened rv_vale
+
+import opened sub_mod
+import opened ge_mod
+import opened mont_mul
+
+import opened bv32_mm_lemmas
+
+import opened Power
+import opened DivMod
+
+#endverbatim
+
+type mp_vars: Type(0) extern; 
+
+function operator(.mp_frame_ptr) (vars: mp_vars): nat extern;
+function operator(.mm_frame_ptr) (vars: mp_vars): nat extern;
+function operator(.mma_frame_ptr) (vars: mp_vars): nat extern;
+function operator(.iter_rr) (vars: mp_vars): iter_t extern;
+function operator(.iter_n) (vars: mp_vars): iter_t extern;
+function operator(.iter_in) (vars: mp_vars): iter_t extern;
+function operator(.iter_ar) (vars: mp_vars): iter_t extern; 
+function operator(.iter_ar := ) (vars: mp_vars, it: iter_t): mp_vars extern; 
+function operator(.iter_aar) (vars: mp_vars): iter_t extern; 
+function operator(.iter_aar := ) (vars: mp_vars, it: iter_t): mp_vars extern; 
+function operator(.iter_out) (vars: mp_vars): iter_t extern;
+function operator(.iter_out := ) (vars: mp_vars, it: iter_t): mp_vars extern; 
+
+function modexp_var_inv(a: nat, i: nat, rsa: rsa_params): bool extern;
+
+function modexp_var_inv_pre_lemma(
+    a_view: seq(uint32),
+    rr: seq(uint32),
+    sig: seq(uint32),
+    rsa: rsa_params): void extern;
+
+function modexp_var_inv_peri_lemma(
+    ar: seq(uint32),
+    aar: seq(uint32),
+    i: nat,
+    rsa: rsa_params): void extern;
+
+function mm_vars_cons(
+    mm_frame_ptr: nat,
+    mma_frame_ptr: nat,
+    iter_a: iter_t,
+    iter_b: iter_t,
+    iter_c: iter_t, 
+    iter_n: iter_t): mm_vars extern;
+
+function mp_vars_inv(
+    vars: mp_vars,
+    mem: mem_t,
+    rr_ptr: nat,
+    n_ptr: nat,
+    in_ptr: nat,
+    ar_ptr: nat,
+    aar_ptr: nat,
+    out_ptr: nat,
+    rsa: rsa_params): bool extern;
+
+function modexp_var_correct_lemma(
+    raw_val: nat,
+    adjusted_val: nat,
+    carry: bool,
+    rsa: rsa_params): void extern;
+
+procedure mod_pow_0(ghost vars: mp_vars, ghost rsa: rsa_params)
+    returns (ghost mut_vars: mp_vars, ghost saved: seq(uint32))
+
+    requires sp > 112;
+    requires sp-32 == vars.mp_frame_ptr;
+    requires sp-64 == vars.mm_frame_ptr;
+    requires sp-112 == vars.mma_frame_ptr;
+
+    requires a0 == rsa.M0D;
+
+    requires mp_vars_inv(vars, mem, 71576 /* rr */, 71192 /* n */, 71960 /* in */,
+            a2 /* ar */, a2 + NUM_WORDS * 4 /*aar */, a1 /* out_ptr */, rsa);
+
+    reads x0;
+
+    modifies
+        sp; s0; s1; s2; s3; s4; s5; s6; s7; s8;
+        a0; a1; a2; a3; a4; a5; a6; ra; mem;
+
+    ensures
+        sp == old(sp) - 32;
+        s1 == 8;
+        s3 == rsa.M0D;
+
+    ensures
+        mp_vars_inv(mut_vars, mem, 71576 /* rr */, 71192 /* n */, s5 /* in */,
+            s0 /* ar */, s2 /*aar */, s4 /* out_ptr */, rsa);
+
+    ensures
+        mut_vars == vars.(iter_ar := mut_vars.iter_ar);
+        mut_vars.iter_ar.base_addr == vars.iter_ar.base_addr;
+
+    ensures
+        saved == seq(old(mem)[vars.mp_frame_ptr][0],
+            old(s5), old(s4), old(s3), old(s2), old(s1), old(s0), old(ra));
+
+        mem == old(mem)
+                [vars.mp_frame_ptr := saved]
+                [vars.mma_frame_ptr := mem[vars.mma_frame_ptr]]
+                [vars.mm_frame_ptr := mem[vars.mm_frame_ptr]]
+                [vars.iter_ar.base_addr := mut_vars.iter_ar.buff];
+    ensures
+        s6 == old(s6);
+        s7 == old(s7);
+        s8 == old(s8);
+
+    ensures
+        modexp_var_inv(to_nat(mut_vars.iter_ar.buff), 0, rsa);
+{
+    addi(sp, sp, (-32));
+
+    sw_stack(ra, 28, 7);
+    sw_stack(s0, 24, 6);
+    sw_stack(s1, 20, 5);
+    sw_stack(s2, 16, 4);
+    sw_stack(s3, 12, 3);
+    sw_stack(s4, 8, 2);
+    sw_stack(s5, 4, 1);
+
+    saved := seq(old(mem)[vars.mp_frame_ptr][0], s5, s4, s3, s2, s1, s0, ra);
+    assert mem[vars.mp_frame_ptr] == saved;
+
+    mv(s0, a2);
+    lui(a2, 0x11);
+    assume 0x11000 == a2;
+    addi(a2, a2, 1560);
+    assert a2 == 71192;
+
+    addi(s5, a2, 768);
+    addi(a2, a2, 384);
+
+    mv(s4 ,a1);
+    mv(a3 ,s5);
+    mv(a1 ,s0);
+    mv(s3 ,a0);
+    addi(s2, s0, 384);
+
+    ghost var iter_temp := vars.iter_ar;
+
+    let mmvars := mm_vars_cons(
+        vars.mm_frame_ptr,
+        vars.mma_frame_ptr,
+        vars.iter_rr,
+        vars.iter_in,
+        vars.iter_ar,
+        vars.iter_n);
+
+    iter_temp := mont_mul(mmvars, rsa);
+    mut_vars := vars.(iter_ar := iter_temp);
+
+    assert iter_temp.base_addr == vars.iter_ar.base_addr;
+
+    li(s1, 8);
+
+    assert montmul_inv(mut_vars.iter_ar.buff,
+        mut_vars.iter_rr.buff, NUM_WORDS, mut_vars.iter_in.buff, rsa);
+
+    modexp_var_inv_pre_lemma(
+        mut_vars.iter_ar.buff,
+        mut_vars.iter_rr.buff,
+        mut_vars.iter_in.buff,
+        rsa);
+}
+
+procedure mod_pow_1(ghost vars: mp_vars, ghost rsa: rsa_params, ghost i: nat)
+    returns (ghost mut_vars: mp_vars)
+
+    requires
+        sp > 80;
+        sp-32 == vars.mm_frame_ptr;
+        sp-80 == vars.mma_frame_ptr;
+
+    requires
+        s3 == rsa.M0D;
+
+        mp_vars_inv(vars, mem, 71576 /* rr */, 71192 /* n */, s5 /* in */,
+            s0 /* ar */, s2 /*aar */, s4 /* out_ptr */, rsa);
+    
+    requires
+        modexp_var_inv(to_nat(vars.iter_ar.buff), 2 * i, rsa);
+
+    reads x0;
+
+    modifies
+        sp; s0; s1; s2; s3; s4; s5; s6; s7; s8;
+        a0; a1; a2; a3; a4; a5; a6; ra; mem;
+
+    ensures
+        ra == old(ra);
+        s0 == old(s0);
+        s1 == old(s1);
+        s2 == old(s2);
+        s3 == old(s3);
+        s4 == old(s4);
+        s5 == old(s5);
+        s6 == old(s6);
+        s7 == old(s7);
+        s8 == old(s8);
+        sp == old(sp);
+
+    ensures
+        mp_vars_inv(mut_vars, mem, 71576 /* rr */, 71192 /* n */, s5 /* in */,
+            s0 /* ar */, s2 /*aar */, s4 /* out_ptr */, rsa);
+
+        mut_vars == vars.(iter_ar := mut_vars.iter_ar)
+            .(iter_aar := mut_vars.iter_aar);
+
+        mut_vars.iter_ar.base_addr == vars.iter_ar.base_addr;
+        mut_vars.iter_aar.base_addr == vars.iter_aar.base_addr;
+
+        mem == old(mem)[vars.mma_frame_ptr := mem[vars.mma_frame_ptr]]
+                [vars.mm_frame_ptr := mem[vars.mm_frame_ptr]]
+                [vars.iter_ar.base_addr := mut_vars.iter_ar.buff]
+                [vars.iter_aar.base_addr := mut_vars.iter_aar.buff];
+    ensures
+        modexp_var_inv(to_nat(mut_vars.iter_ar.buff), 2 * (i+1), rsa);
+{
+    let old_ar := vars.iter_ar.buff;
+
+    ghost var mmvars := mm_vars_cons(
+        vars.mm_frame_ptr,
+        vars.mma_frame_ptr,
+        vars.iter_ar,
+        vars.iter_ar,
+        vars.iter_aar,
+        vars.iter_n);
+
+    mv(a3, s0); // ar
+    mv(a2, s0); // ar
+    mv(a1, s2); // aar
+    mv(a0, s3); // M0D
+
+    ghost var iter_temp: iter_t;
+    iter_temp := mont_mul(mmvars, rsa);
+    mut_vars := vars.(iter_aar := iter_temp);
+
+    modexp_var_inv_peri_lemma(vars.iter_ar.buff, iter_temp.buff, 2 * i, rsa);
+
+    assert modexp_var_inv(to_nat(iter_temp.buff), 2 * i + 1, rsa);
+
+    mmvars := mm_vars_cons(
+        mut_vars.mm_frame_ptr,
+        mut_vars.mma_frame_ptr,
+        mut_vars.iter_aar,
+        mut_vars.iter_aar,
+        mut_vars.iter_ar,
+        mut_vars.iter_n);
+
+    mv(a3, s2);
+    mv(a2, s2);
+    mv(a1, s0);
+    mv(a0, s3);
+
+    iter_temp := mont_mul(mmvars, rsa);
+    mut_vars := mut_vars.(iter_ar := iter_temp);
+
+    modexp_var_inv_peri_lemma(mut_vars.iter_aar.buff, iter_temp.buff, 2 * i + 1, rsa);
+}
+
+function modexp_var_inv_post_lemma(
+    a_view: seq(uint32),
+    next_a_view: seq(uint32),
+    sig: seq(uint32),
+    rsa: rsa_params): void extern;
+
+function mod(a: int, m: int): int extern;
+
+procedure mod_pow_2(ghost vars: mp_vars, ghost rsa: rsa_params)
+    returns (ghost mut_vars:  mp_vars)
+
+    requires
+        rsa.E0 == 16;
+        sp > 80;
+        sp == vars.mp_frame_ptr;
+        sp-32 == vars.mm_frame_ptr;
+        sp-80 == vars.mma_frame_ptr;
+
+    requires
+        s3 == rsa.M0D;
+
+        mp_vars_inv(vars, mem, 71576 /* rr */, 71192 /* n */, s5 /* in */,
+            s0 /* ar */, s2 /*aar */, s4 /* out_ptr */, rsa);
+    
+    requires
+        modexp_var_inv(to_nat(vars.iter_ar.buff), rsa.E0, rsa);
+
+    reads x0;
+
+    modifies
+        sp; s0; s1; s2; s3; s4; s5; s6; s7; s8;
+        a0; a1; a2; a3; a4; a5; a6; ra; mem;
+
+    ensures
+        mut_vars.iter_out.base_addr == vars.iter_out.base_addr;
+        mut_vars == vars.(iter_out := mut_vars.iter_out);
+        mp_vars_inv(mut_vars, mem, 71576 /* rr */, 71192 /* n */, s5 /* in */,
+            s0 /* ar */, s2 /*aar */, s4 /* out_ptr */, rsa);
+        mem == old(mem)[vars.mma_frame_ptr := mem[mut_vars.mma_frame_ptr]]
+            [vars.mm_frame_ptr := mem[mut_vars.mm_frame_ptr]]
+            [mut_vars.iter_out.base_addr := mut_vars.iter_out.buff];
+    ensures
+        sp == old(sp);
+        to_nat(mut_vars.iter_out.buff) == mod(Pow(rsa.SIG, rsa.E), rsa.M);
+
+    ensures
+        ra == old(ra);
+        s0 == old(s0);
+        s1 == old(s1);
+        s2 == old(s2);
+        s3 == old(s3);
+        s4 == old(s4);
+        s5 == old(s5);
+        s6 == old(s6);
+        s7 == old(s7);
+        s8 == old(s8);
+        sp == old(sp);
+{
+    mv(a0, s3);
+    mv(a3, s5);
+    mv(a2, s0);
+    mv(a1, s4);
+
+    mut_vars := vars;
+
+    let mmvars := mm_vars_cons(
+        mut_vars.mm_frame_ptr,
+        mut_vars.mma_frame_ptr,
+        mut_vars.iter_ar,
+        mut_vars.iter_in,
+        mut_vars.iter_out,
+        mut_vars.iter_n);
+
+    ghost var iter_out: iter_t;
+    iter_out := mont_mul(mmvars, rsa);
+    mut_vars := mut_vars.(iter_out := iter_out);
+
+    modexp_var_inv_post_lemma(
+        mut_vars.iter_ar.buff,
+        iter_out.buff,
+        mut_vars.iter_in.buff,
+        rsa);
+
+    mv(a0, s4);
+    let sub := ge_mod(mut_vars.iter_n, iter_out);
+
+    ghost var raw_val := to_nat(iter_out.buff);
+
+    if (a0 == x0) {
+        mv(a0, s4);
+        ghost var borrow: nat;
+        iter_out, borrow := sub_mod(mut_vars.iter_n, iter_out);
+        // assert mp_vars_inv(mut_vars, mem, 71576 /* rr */, 71192 /* n */, s5 /* in */,
+        //    s0 /* ar */, s2 /*aar */, s4 /* out_ptr */, rsa);
+        assert borrow == 0;
+    }
+
+    mut_vars := mut_vars.(iter_out := iter_out);
+    modexp_var_correct_lemma(raw_val, to_nat(iter_out.buff), !sub, rsa);
+
+    // assert to_nat(mut_vars.iter_out.buff) == mod(Pow(rsa.SIG, 65537), rsa.M);
+}
+
+procedure mod_pow(ghost vars: mp_vars, ghost rsa: rsa_params)
+    returns (ghost mut_vars:  mp_vars)
+
+    requires rsa.E0 == 16;
+    requires sp > 112;
+    requires sp-32 == vars.mp_frame_ptr;
+    requires sp-64 == vars.mm_frame_ptr;
+    requires sp-112 == vars.mma_frame_ptr;
+
+    requires a0 == rsa.M0D;
+
+    requires mp_vars_inv(vars, mem, 71576 /* rr */, 71192 /* n */, 71960 /* in */,
+            a2 /* ar */, a2 + NUM_WORDS * 4 /*aar */, a1 /* out_ptr */, rsa);
+
+    reads x0;
+    modifies
+        sp; s0; s1; s2; s3; s4; s5; s6; s7; s8;
+        a0; a1; a2; a3; a4; a5; a6; ra; mem;
+
+    ensures
+        ra == old(ra);
+        s0 == old(s0);
+        s1 == old(s1);
+        s2 == old(s2);
+        s3 == old(s3);
+        s4 == old(s4);
+        s5 == old(s5);
+        s6 == old(s6);
+        s7 == old(s7);
+        s8 == old(s8);
+        sp == old(sp);
+
+    ensures
+        mp_vars_inv(mut_vars, mem, 71576 /* rr */, 71192 /* n */, 71960 /* in */,
+            old(a2) /* ar */, old(a2) + NUM_WORDS * 4 /*aar */, old(a1) /* out_ptr */, rsa);
+
+    ensures
+        mem == old(mem)[vars.mp_frame_ptr := mem[mut_vars.mp_frame_ptr]]
+            [vars.mma_frame_ptr := mem[mut_vars.mma_frame_ptr]]
+            [vars.mm_frame_ptr := mem[mut_vars.mm_frame_ptr]]
+            [mut_vars.iter_out.base_addr := mut_vars.iter_out.buff]
+            [mut_vars.iter_ar.base_addr := mut_vars.iter_ar.buff]
+            [mut_vars.iter_aar.base_addr := mut_vars.iter_aar.buff];
+
+    ensures
+        mut_vars.iter_out.base_addr == vars.iter_out.base_addr;
+        to_nat(mut_vars.iter_out.buff) == mod(Pow(rsa.SIG, rsa.E), rsa.M);
+{
+    ghost var saved: seq(uint32);
+    mut_vars, saved := mod_pow_0(vars, rsa);
+
+    let mem1 := mem;
+
+    ghost var i :nat := 0;
+
+    while (s1 > x0)
+        invariant
+            sp > 80;
+            sp == mut_vars.mp_frame_ptr;
+            sp-32 == vars.mm_frame_ptr;
+            sp-80 == vars.mma_frame_ptr;
+        
+            s3 == rsa.M0D;
+            s1 == 8 - i;
+
+            s6 == old(s6);
+            s7 == old(s7);
+            s8 == old(s8);
+
+            mp_vars_inv(mut_vars, mem, 71576 /* rr */, 71192 /* n */, s5 /* in */,
+                s0 /* ar */, s2 /*aar */, s4 /* out_ptr */, rsa);
+
+            mem[mut_vars.mp_frame_ptr] == saved;
+
+            mut_vars == vars.(iter_ar := mut_vars.iter_ar)
+                .(iter_aar := mut_vars.iter_aar);
+
+            mut_vars.iter_ar.base_addr == vars.iter_ar.base_addr;
+            mut_vars.iter_aar.base_addr == vars.iter_aar.base_addr;
+
+            mem == mem1[vars.mma_frame_ptr := mem[vars.mma_frame_ptr]]
+                    [vars.mm_frame_ptr := mem[vars.mm_frame_ptr]]
+                    [vars.iter_ar.base_addr := mut_vars.iter_ar.buff]
+                    [vars.iter_aar.base_addr := mut_vars.iter_aar.buff];
+        invariant
+            modexp_var_inv(to_nat(mut_vars.iter_ar.buff), 2 * i, rsa);
+
+        decreases
+            s1;
+    {
+        mut_vars := mod_pow_1(mut_vars, rsa, i);
+        addi(s1, s1, (-1));
+        i := i + 1;
+    }
+
+    mut_vars := mod_pow_2(mut_vars, rsa);
+
+    lw_stack(ra, 28, 7);
+    lw_stack(s0, 24, 6);
+    lw_stack(s1, 20, 5);
+    lw_stack(s2, 16, 4);
+    lw_stack(s3, 12, 3);
+    lw_stack(s4, 8, 2);
+    lw_stack(s5, 4, 1);
+    addi(sp, sp, 32);
+}
+
+#verbatim
+}
+#endverbatim

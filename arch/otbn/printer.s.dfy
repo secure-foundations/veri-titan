@@ -2,7 +2,7 @@ include "vale.i.dfy"
 include "../../gen/impl/otbn/modexp_var.i.dfy"
 
 module otbn_printer {
-    import opened bv_ops
+    import opened integers
     import opened ot_machine
     import opened modexp_var
 
