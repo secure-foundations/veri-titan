@@ -25,6 +25,7 @@ module integers
     type uint4   = i :int | 0 <= i < BASE_4
     type uint5   = i :int | 0 <= i < BASE_5
     type uint10  = i :int | 0 <= i < 1024
+    type uint12  = i :int | 0 <= i < 4096
     type uint32  = i :int | 0 <= i < BASE_32
     type uint64  = i :int | 0 <= i < BASE_64
     type uint128 = i :int | 0 <= i < BASE_128

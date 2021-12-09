@@ -372,7 +372,7 @@ module ot_machine {
         | Ins256(bn_ins: ins256)
         | Block(block: codes)
         | While(whileCond: whileCond, whileBody: code)
-        | IfElse(ifCond: ifCond, ifT: code, ifF: code)
+        | IfElse(ifCond: ifCond, ifTrue: code, ifFalse: code)
         | Function(name: string, functionBody: codes)
         | Comment(com: string)
 

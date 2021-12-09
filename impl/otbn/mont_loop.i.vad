@@ -494,24 +494,29 @@ procedure mont_loop(
     mont_loop_inv_post_lemma(xi, ui, p1, p2,
         y_it.buff, m_it.buff, prev_view, curr_view, bout);
 
-    /* restore pointers */
-    addi(x16, x22, 0);
-    li(x8, 4);
-    li(x10, 4);
-
     // clear flag group 0
     bn_add(w31, w31, w31, SFT_DFT, 0);
 
-    /* This replaces Step 3 of HAC 14.36 and performs conditional constant-time
+    /* This replaces Step 3 of HAC 14.36 and performs conditional 
      subtraction of the modulus from the output buffer  */
-    m_it := iter_cons(x16, 0, heap[x16].b);
-    next_view := cond_sub_to_reg(curr_view, m_it, fgroups.fg1.cf);
+    
+    csrrs(x2, 0x7c1, x0);
+    andi(x2, x2, 1);
+    assume x2 == bool_to_uint1(fgroups.fg1.cf);
+
+    next_view := curr_view;
+
+    if (x2 != x0) {
+        m_it := iter_cons(x22, 0, heap[x22].b);
+        next_view := sub_to_reg(curr_view, m_it);
+    }
 
     mont_loop_cond_sub_lemma(xi, ui, y_it.buff, to_nat(m_it.buff),
         to_nat(prev_view), curr_view, next_view, bout, bool_to_uint1(fgroups.fg0.cf));
     
     /* restore pointer */
     li(x8, 4);
+    li(x10, 4);
 
     reveal Pow;
     montmul_inv_lemma(prev_view, next_view, x_it.buff, x_it.index-1, ui, y_it.buff, vars.rsa);

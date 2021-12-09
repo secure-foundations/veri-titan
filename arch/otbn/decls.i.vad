@@ -28,6 +28,7 @@ type uint1:   Type(0) := int_range(0, 2);
 type uint2:   Type(0) := int_range(0, 4);
 type uint5:   Type(0) := int_range(0, 32);
 type uint10:  Type(0) := int_range(0, 1024);
+type uint12:  Type(0) := int_range(0, 4096);
 type uint32:  Type(0) := int_range(0, 0xffffffff);
 type uint128: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff);
 type uint256: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff);
@@ -348,7 +349,6 @@ procedure sw(in grs2: reg32, inline offset: int12, in grs1: reg32)
     this := this.(heap := new_heap);
 }
 
-
 procedure add(inout dst: reg32, in src1: reg32, in src2: reg32)
     {:instruction Ins32(ADD(dst, src1, src2))}
     ensures
@@ -367,6 +367,16 @@ procedure addi(inout dst: reg32, in src1: reg32, inline imm: int12)
     reveal eval_code_opaque;
     reveal valid_state_opaque;
     this := this.(heap := old(this).heap);
+}
+
+procedure andi(inout dst: reg32, in src1: reg32, inline imm: int12)
+{
+    assume false;
+}
+
+procedure csrrs(inout grd: reg32, inline csr: uint12, in grs1: reg32)
+{
+    assume false;
 }
 
 procedure li(inout dst: reg32, inline imm: uint32)
