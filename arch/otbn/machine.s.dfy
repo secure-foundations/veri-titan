@@ -359,21 +359,26 @@ module ot_machine {
 
 /* control flow definitions */
 
+    datatype whileCond = 
+        | RegCond(r: reg32_t)
+        | ImmCond(c: uint32)
+
+    datatype cmp = Eq | Ne
+    
+    datatype ifCond = Cmp(op: cmp, r1: reg32_t, r2: reg32_t)
+
     datatype code =
         | Ins32(ins: ins32)
         | Ins256(bn_ins: ins256)
         | Block(block: codes)
         | While(whileCond: whileCond, whileBody: code)
+        | IfElse(ifCond: ifCond, ifT: code, ifF: code)
         | Function(name: string, functionBody: codes)
         | Comment(com: string)
 
     datatype codes = 
         | CNil
         | va_CCons(hd: code, tl: codes)
-
-    datatype whileCond = 
-        | RegCond(r: reg32_t)
-        | ImmCond(c: uint32)
 
 /* state definitions */
 
@@ -751,6 +756,26 @@ module ot_machine {
                     eval_code(c).eval_while(c, n - 1)
         }
 
+        function method eval_cmp(cond: ifCond): bool
+        {
+            var Cmp(op, r1, r2) := cond;
+            match op 
+                case Eq => (read_reg32(r1) == read_reg32(r2))
+                case Ne => (read_reg32(r1) != read_reg32(r2))
+        }
+
+        function method eval_if_else(cond: ifCond, ifT: code, ifF: code): state
+            decreases if eval_cmp(cond) then ifT else ifF
+        {
+            if !ok then
+                this
+            else
+                if eval_cmp(cond) then
+                    eval_code(ifT)
+                else
+                    eval_code(ifF)
+        }
+
         function method eval_code(c: code): state
             decreases c, 0
         {
@@ -758,6 +783,7 @@ module ot_machine {
                 case Ins32(ins) => eval_ins32(ins)
                 case Ins256(ins) => eval_ins256(ins)
                 case Block(block) => eval_block(block)
+                case IfElse(cond, ifT, ifF) => eval_if_else(cond, ifT, ifF)
                 case While(cond, body) => eval_while(body, eval_cond(cond))
                 case Function(name, body) => eval_block(body)
                 case Comment(com) => this

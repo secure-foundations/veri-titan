@@ -279,7 +279,7 @@ module rv_machine {
     | Ins32(ins: ins32)
     | Block(block: codes)
     | While(whileCond: cond, whileBody: code)
-    | IfElse(ifCond: cond, ifTrue:code, ifFalse:code)
+    | IfElse(ifCond: cond, ifTrue: code, ifFalse: code)
     // | Procedure(proc: codes, name: string) // TODO: direct call semantics
     | Comment(com: string)
 

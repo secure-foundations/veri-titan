@@ -48,7 +48,7 @@ abstract module generic_bv_ops
 
     type uint1 = integers.uint1
 
-    // the singed version of uint
+    // the signed version of uint
     type sint = i: int | -(BASE()/2 as int) <= i < BASE()/2 as int
 
     // half word base

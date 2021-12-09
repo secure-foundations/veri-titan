@@ -451,16 +451,7 @@ module ot_vale {
             case Function(_, b) => {
                 lemma_FailurePreservedByBlock(b, s, r);
             }
-            case While(c, b) => {
-                var n :| r == s.eval_while(b, n);
-            }
-            case Ins256(i) => {
-                var r' :| r' == s.eval_code(c);
-            }
-            case Ins32(i) => {
-                var r' :| r' == s.eval_code(c);
-            }
-            case Comment(com) => {
+            case _ => {
                 var r' :| r' == s.eval_code(c);
             }
         }
@@ -509,6 +500,12 @@ module ot_vale {
                 assert true;
             } else if c.Block? {
                 block_state_validity(c.block, s, r);
+            } else if c.IfElse? {
+                if s.eval_cmp(c.ifCond) {
+                    code_state_validity(c.ifT, s, r);
+                } else {
+                    code_state_validity(c.ifF, s, r);
+                }
             } else if c.While? {
                 var n:nat :| r == s.eval_while(c.whileBody, n);
                 eval_while_validity(c.whileCond, c.whileBody, n, s, r);
@@ -668,5 +665,31 @@ module ot_vale {
             return;
         }
         r' := r.(heap := s.heap);
+    }
+
+    lemma va_lemma_ifElse(ifb: ifCond, ct:code, cf:code, s:va_state, r:va_state) returns(cond:bool, s':va_state)
+    requires valid_state_opaque(s);
+    requires eval_code_lax(IfElse(ifb, ct, cf), s, r)
+    ensures  if s.ms.ok then
+                && s'.ms.ok
+                && valid_state_opaque(s')
+                && cond == s.ms.eval_cmp(ifb) 
+                && s' == s
+                && (if cond then eval_code_lax(ct, s', r) else eval_code_lax(cf, s', r))
+            else
+                true
+    {
+        reveal_eval_code_opaque();
+        reveal_valid_state_opaque();
+        cond := s.ms.eval_cmp(ifb);
+        if s.ms.ok {
+            assert r.ms == s.ms.eval_code(IfElse(ifb, ct, cf));
+            if cond {
+                code_state_validity(ct, s.ms, r.ms);
+            } else {
+                code_state_validity(cf, s.ms, r.ms);
+            }
+        }
+        s' := s;
     }
 }
