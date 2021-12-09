@@ -174,7 +174,6 @@ procedure mont_loop_0(
         x22 == x16;
         // x29 == old(x29);
         // x30 == old(x30);
-        // x31 == old(x31);
 
         w2 == xi;
         w3 == old(w3);
@@ -296,7 +295,6 @@ procedure mont_loop_1(
         x22 == old(x22);
         x29 == old(x29);
         x30 == old(x30);
-        x31 == old(x31);
 
         w2 == xi;
         w3 == old(w3);
@@ -360,8 +358,6 @@ procedure mont_loop(
     {:frame false}
 
     requires
-        x30 == NUM_WORDS;
-        x31 == NUM_WORDS - 1;
 
         w2 == xi;
         w3 == vars.rsa.M0D;
@@ -385,8 +381,6 @@ procedure mont_loop(
         x20 == old(x20);
         x21 == old(x21);
         x29 == old(x29);
-        x30 == old(x30);
-        x31 == old(x31);
 
         w3 == old(w3);
         w31 == old(w31);
@@ -425,7 +419,7 @@ procedure mont_loop(
 
     ghost var j: nat := 1;
 
-    while (Loop(x31))
+    while (LoopImm(11))
         invariant
             x6 == old(x6);
             x7 == old(x7);
@@ -439,8 +433,6 @@ procedure mont_loop(
             x20 == old(x20);
             x21 == old(x21);
             x29 == old(x29);
-            x30 == NUM_WORDS;
-            x31 == NUM_WORDS - 1;
 
             w2 == xi;
             w3 == old(w3);

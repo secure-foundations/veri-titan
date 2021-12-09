@@ -340,8 +340,6 @@ procedure modexp_var(
             x9 == 3;
             x10 == 4;
             x11 == 2;
-            x30 == NUM_WORDS;
-            x31 == NUM_WORDS - 1;
 
             w31 == 0;
 
