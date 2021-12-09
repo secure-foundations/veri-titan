@@ -147,7 +147,6 @@ procedure sub_mod(
         x8 == 4;
         x9 == 3;
         x11 == 2;
-        x30 == NUM_WORDS;
 
         w31 == 0;
 
@@ -155,7 +154,6 @@ procedure sub_mod(
         valid_wdr_view(wdrs, raw_view, 4, NUM_WORDS);
 
     reads
-        x30;
         mem; heap;
 
     modifies
@@ -179,7 +177,7 @@ procedure sub_mod(
 
     subb_inv_pre_lemma(adjusted_view, raw_view, m_it.buff);
 
-    while (Loop(x30))
+    while (LoopImm(12))
         invariant
             iter_inv(m_it, heap, x16);
             m_it.base_ptr == initial_m_it.base_ptr;
@@ -226,8 +224,7 @@ procedure write_to_dmem(ghost iter: iter_t)
     returns (ghost next_iter: iter_t)
 
     requires
-        x8 == 4;
-        x30 == NUM_WORDS;
+        (x8 == 4) || (x8 == 16);
 
         iter_safe(iter, heap, x21);
         seq_len(iter.buff) == NUM_WORDS;
@@ -237,26 +234,27 @@ procedure write_to_dmem(ghost iter: iter_t)
         x8; x21; mem; heap;
 
     reads
-        x30; wdrs;
+        wdrs;
 
     ensures
         iter_inv(next_iter, heap, iter.base_ptr);
         next_iter.base_ptr == iter.base_ptr;
         seq_len(next_iter.buff) == NUM_WORDS;
-        next_iter.buff == wdrs[4..4+NUM_WORDS];
+        next_iter.buff == wdrs[old(x8)..old(x8)+NUM_WORDS];
         heap == old(heap)[next_iter.base_ptr := WBUFF(next_iter.buff)];
 {
+    ghost var start := x8;
     next_iter := iter;
 
-    while (Loop(x30))
+    while (LoopImm(12))
         invariant
-            x8 == 4 + next_iter.index;
+            x8 == start + next_iter.index;
 
             iter_inv(next_iter, heap, x21);
             next_iter.index + loop_ctr == NUM_WORDS;
             seq_len(next_iter.buff) == NUM_WORDS;
 
-            next_iter.buff[..next_iter.index] == wdrs[4..4+next_iter.index];
+            next_iter.buff[..next_iter.index] == wdrs[start..start+next_iter.index];
             wdrs == old(wdrs);
 
             next_iter.base_ptr == iter.base_ptr;
@@ -272,115 +270,21 @@ procedure write_to_dmem(ghost iter: iter_t)
         addi(x8, x8, 1);
 
         ghost var item := next_iter.buff[index];
-        assert next_iter.buff[index] == wdrs[4+index];
+        assert next_iter.buff[index] == wdrs[start+index];
 
         calc == {
             next_iter.buff[..next_iter.index];
             ==
             seq_append(last_iter.buff[..index], item);
             ==
-            seq_append(wdrs[4..4+index], item);
+            seq_append(wdrs[start..start+index], item);
             ==
-            wdrs[4..4+index+1];
+            wdrs[start..start+index+1];
             ==
-            wdrs[4..4+next_iter.index];
+            wdrs[start..start+next_iter.index];
         }
     }
     next_iter := next_iter.(index := 0);
-}
-
-procedure modexp_var_1(
-    ghost raw_view: seq(uint256),
-    ghost adjusted_view: seq(uint256),
-    ghost carry: bool,
-    ghost sig: nat,
-    ghost rsa: rsa_params)
-returns (ghost out_iter: iter_t)
-
-    {:frame false }
-
-    requires
-        xword_ptr_valid(heap, 28); // out
-        buff_base_ptr_valid(heap, heap[28].v);
-        let loc := #nat(heap[28].v);
-        seq_len(heap[loc].b) == NUM_WORDS;
-
-        NUM_WORDS == x30;
-
-        rsa_params_inv(rsa);
-
-        valid_wdr_view(wdrs, raw_view, 4, NUM_WORDS);
-        valid_wdr_view(wdrs, adjusted_view, 16, NUM_WORDS);
-
-        carry == fgroups.fg0.cf;
-        carry ==> to_nat(raw_view) == mod(Pow(sig, rsa.E), rsa.M);
-        !carry ==> to_nat(adjusted_view) == mod(Pow(sig, rsa.E), rsa.M);
-    
-    ensures
-        iter_inv(out_iter, heap, x21);
-        to_nat(out_iter.buff) == mod(Pow(sig, rsa.E), rsa.M);
-        heap == old(heap)[out_iter.base_ptr := WBUFF(out_iter.buff)];
-{
-    lw(x21, 28, x0);
-    li(x8, 4);
-    li(x9, 2);
-    li(x10, 3);
-    li(x17, 16);
-
-    out_iter := iter_cons(x21, 0, heap[x21].b);
-
-    while (Loop(x30))
-        invariant
-            x9 == 2;
-            x8 == 4 + out_iter.index;
-            x10 == 3;
-            x17 == 16 + out_iter.index;
-            carry == fgroups.fg0.cf;
-
-            iter_inv(out_iter, heap, x21);
-            out_iter.index + loop_ctr == NUM_WORDS;
-            seq_len(out_iter.buff) == NUM_WORDS;
-
-            valid_wdr_view(wdrs, raw_view, 4, NUM_WORDS);
-            valid_wdr_view(wdrs, adjusted_view, 16, NUM_WORDS);
-
-            carry ==> out_iter.buff[..out_iter.index] == raw_view[..out_iter.index];
-            !carry ==> out_iter.buff[..out_iter.index] == adjusted_view[..out_iter.index];
-
-            heap == old(heap)[out_iter.base_ptr := WBUFF(out_iter.buff)];
-        decreases
-            loop_ctr;
-    {
-        let index := out_iter.index;
-        bn_movr(x9, false, x8, true);
-        assert w2 == raw_view[index];
-
-        bn_movr(x10, false, x17, true);
-        assert w3 == adjusted_view[index];
-   
-        bn_sel(w2, w2, w3, 0, 0);
-
-        out_iter := bn_sid_safe(x9, false, 0, x21, true, out_iter);
-
-        ghost if (carry) {
-            assert w2 == raw_view[index];
-            calc == {
-                out_iter.buff[..out_iter.index];
-                ==
-                seq_append(out_iter.buff[..index], raw_view[index]);
-                ==
-                seq_append(raw_view[..index], raw_view[index]);
-                ==
-                raw_view[..out_iter.index];
-            }
-        } else {
-            assert w2 == adjusted_view[index];
-        }
-    }
-
-    assert out_iter.buff == out_iter.buff[..NUM_WORDS];
-    assert raw_view == raw_view[..out_iter.index];
-    assert adjusted_view == adjusted_view[..out_iter.index];
 }
 
 procedure modexp_var(
@@ -401,8 +305,10 @@ procedure modexp_var(
             m_ptr, m0d_ptr, rr_ptr, sig_ptr, out_ptr);
 
     ensures
+        mvars_init(init_vars, heap,
+            m_ptr, m0d_ptr, rr_ptr, sig_ptr, out_ptr);
         // out_iter contains a valid view of memory
-        iter_inv(out_iter, heap, x21);
+        iter_inv(out_iter, heap, out_ptr);
         // out_iter contains the right value
         let rsa := init_vars.rsa in 
         to_nat(out_iter.buff) == mod(Pow(rsa.SIG, rsa.E), rsa.M);
@@ -489,7 +395,20 @@ procedure modexp_var(
     let carry := fgroups.fg0.cf;
     modexp_var_correct_lemma(to_nat(raw_view), to_nat(adjusted_view), carry, vars.rsa);
 
-    out_iter := modexp_var_1(raw_view, adjusted_view, carry, vars.rsa.SIG, vars.rsa);
+    lw(x21, 28, x0);
+    li(x8, 4);
+
+    csrrs(x2, 0x7c0, x0);
+    andi(x2, x2, 1);
+    
+    assume x2 == bool_to_uint1(carry);
+
+    if (x2 == x0) {
+        li(x8, 16);
+    }
+
+    out_iter := iter_cons(x21, 0, heap[x21].b);
+    out_iter := write_to_dmem(out_iter);
 }
 
 #verbatim
