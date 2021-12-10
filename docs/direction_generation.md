@@ -110,4 +110,4 @@ The validation is done through something called block-based semantic equivalence
 
 ## [Simple High-Level Code For Cryptographic Arithmetic – With Proofs, Without Compromises](http://adam.chlipala.net/papers/FiatCryptoSP19/FiatCryptoSP19.pdf)
 
-
+## [Automatic Equivalence Checking for Assembly Implementations of Cryptography Libraries](https://people.cs.rutgers.edu/~sn349/papers/casm-verify-cgo-2019.pdf)

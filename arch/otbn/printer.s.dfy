@@ -271,6 +271,7 @@ function method codeSize(c: code) : int
     match c
         case Block(block) => blockSize(block)
         case While(wcond, wbody) => codeSize(wbody) + 2 // +1 for inner loop and +1 for inner loop's nop
+        case IfElse(icond, tbody, fbody) => codeSize(tbody) + codeSize(fbody) + 1
         case Function(_, _) => 1
         case Ins32(ins) => 1
         case Ins256(bn_ins) => 1
@@ -295,6 +296,10 @@ method printCode(c: code, depth: int)
         case Block(block) => printBlock(block, depth);
         case Function(name, fbody) =>
             printIndent(depth); print("jal x1, "); print(name); print("\n");
+        case IfElse(icond, tbody, fbody) =>
+        {
+            print("NYI\n"); 
+        }
         case While(wcond, wbody) =>
         {
             printIndent(depth); printWhileCond(wcond); print(", ");
