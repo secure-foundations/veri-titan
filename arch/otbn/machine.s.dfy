@@ -43,14 +43,6 @@ module ot_machine {
     // datatype flag = CF | MSB | LSB | ZERO
     datatype flags_t = flags_t(cf: bool, msb: bool, lsb: bool, zero: bool)
     {
-        function method to_nat(): nat
-        {
-            var r := if cf then 1 else 0;
-            var r := r + if msb then 2 else 0;
-            var r := r + if lsb then 4 else 0;
-            r + if zero then 8 else 0
-        }
-
         function method get_single_flag(which_flag: uint2): bool
         {
             if which_flag == 0 then cf 
@@ -58,6 +50,14 @@ module ot_machine {
             else if which_flag == 2 then lsb
             else zero
         }
+    }
+
+    function method flags_as_uint(flags: flags_t): uint4
+    {
+        var r := if flags.cf then 1 else 0;
+        var r := r + if flags.msb then 2 else 0;
+        var r := r + if flags.lsb then 4 else 0;
+        r + if flags.zero then 8 else 0
     }
 
     datatype fgroups_t = fgroups_t(fg0: flags_t, fg1: flags_t)
@@ -88,11 +88,13 @@ module ot_machine {
     datatype ins32 =
         | ADD(xrd: reg32_t, xrs1: reg32_t, xrs2: reg32_t)
         | ADDI(xrd: reg32_t, xrs1: reg32_t, imm: int12)
+        | ANDI(xrd: reg32_t, xrs1: reg32_t, imm: int12)
         | LW(xrd: reg32_t, offset: int12, xrs1: reg32_t)
         | SW(xrs2: reg32_t, offset: int12, xrs1: reg32_t)
         // | LOOP(grs: reg32_t, bodysize: uint32)
         // | LOOPI(iterations: uint32, bodysize: uint32)
         | LI(xrd: reg32_t, imm32: uint32)
+        | CSRRS(grd: reg32_t, csr: uint12, grs1: reg32_t)
         | ECALL
 
     datatype ins256 =
@@ -372,7 +374,7 @@ module ot_machine {
         | Ins256(bn_ins: ins256)
         | Block(block: codes)
         | While(whileCond: whileCond, whileBody: code)
-        | IfElse(ifCond: ifCond, ifT: code, ifF: code)
+        | IfElse(ifCond: ifCond, ifTrue: code, ifFalse: code)
         | Function(name: string, functionBody: codes)
         | Comment(com: string)
 
@@ -466,6 +468,27 @@ module ot_machine {
             write_reg32(xrd, sum)
         }
 
+        function method eval_ANDI(xrd: reg32_t, xrs1: reg32_t, imm: int12): state
+        {
+            var v1 := read_reg32(xrs1);
+            var sum := bv32_ops.andi(v1, imm);
+            write_reg32(xrd, sum)
+        }
+
+        function method eval_CSRRS(grd: reg32_t, csr: uint12, grs1: reg32_t): state
+        {
+            var v1 := read_reg32(grs1);
+            // TODO: extend when necessary
+            if csr != 0x7c0 && csr != 0x7c1 && v1 != 0 then 
+                this.(ok := false)
+            else if csr == 0x7c0 then
+                var flags := flags_as_uint(get_fgroup(fgroups, 0));
+                write_reg32(grd, flags)
+            else
+                var flags := flags_as_uint(get_fgroup(fgroups, 1));
+                write_reg32(grd, flags)
+        }
+
         function method eval_LW(xrd: reg32_t, offset: int12, xrs1: reg32_t): state
         {
             var base := read_reg32(xrs1);
@@ -492,7 +515,7 @@ module ot_machine {
             match r {
                 case WDR(index) => wdrs[r.index]
                 case WMOD => wmod
-                case WRND => 0x99999999_99999999_99999999_99999999_99999999_99999999_99999999_99999999
+                case WRND => 0x99999999_99999999_99999999_99999999_99999999_99999999_99999999_99999999 // to match otbn_sim random number generator
                 case WURND => wurnd
                 case WACC => wacc
             }
@@ -685,8 +708,10 @@ module ot_machine {
             else match xins
                 case ADD(xrd, xrs1, xrs2) => eval_ADD(xrd, xrs1, xrs2)
                 case ADDI(xrd, xrs1, imm) => eval_ADDI(xrd, xrs1, imm)
+                case ANDI(xrd, xrs1, imm) => eval_ANDI(xrd, xrs1, imm)
                 case LW(xrd, offset, xrs1) => eval_LW(xrd, offset, xrs1)
                 case SW(xrs2, offset, xrs1) => eval_SW(xrs2, offset, xrs1)
+                case CSRRS(grd, csr, grs1) => eval_CSRRS(grd, csr, grs1)
                 case LI(xrd, imm32) => eval_LI(xrd, imm32)
                 case ECALL => this
         }

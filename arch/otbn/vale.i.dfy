@@ -77,6 +77,11 @@ module ot_vale {
         bv32_ops.add(x, y)
     }
 
+    function method uint32_andi(x: uint32, y: bv32_ops.sint): uint32
+    {
+        bv32_ops.andi(x, y)
+    }
+
     // otbn state realted
 
     datatype gstate = gstate(ms: state, heap: heap_t)
@@ -410,6 +415,9 @@ module ot_vale {
     {
     }
 
+    function method va_cmp_eq(r1:reg32_t, r2:reg32_t): ifCond { Cmp(Eq, r1, r2) }
+    function method va_cmp_ne(r1:reg32_t, r2:reg32_t): ifCond { Cmp(Ne, r1, r2) }
+
     function method va_const_cmp(n: uint32):uint32 { n }
     function method va_coerce_reg32_to_cmp(r: reg32_t): reg32_t { r }
 
@@ -422,12 +430,17 @@ module ot_vale {
     function method va_Block(block:codes): code { Block(block) }
     function method va_While(wcond: whileCond, wcode: code): code { While(wcond, wcode) }
     function method va_Function(name: string, body: codes): code { Function(name, body) }
+    function method va_IfElse(ifb: ifCond, ift:code, iff:code):code { IfElse(ifb, ift, iff) }
 
     function method va_get_block(c: code): codes requires c.Block? || c.Function? { 
         if c.Block? then c.block else c.functionBody }
     function method va_get_whileCond(c: code): whileCond requires c.While? {c.whileCond }
     function method va_get_whileBody(c: code): code requires c.While? { c.whileBody }
-    
+    function method va_get_ifCond(c:code):ifCond requires c.IfElse? { c.ifCond }
+    function method va_get_ifTrue(c:code):code requires c.IfElse? { c.ifTrue }
+    function method va_get_ifFalse(c:code):code requires c.IfElse? { c.ifFalse }
+
+
     lemma lemma_FailurePreservedByBlock(block: codes, s: state, r: state)
         requires r == s.eval_block(block);
         ensures !s.ok ==> !r.ok;
@@ -502,9 +515,9 @@ module ot_vale {
                 block_state_validity(c.block, s, r);
             } else if c.IfElse? {
                 if s.eval_cmp(c.ifCond) {
-                    code_state_validity(c.ifT, s, r);
+                    code_state_validity(c.ifTrue, s, r);
                 } else {
-                    code_state_validity(c.ifF, s, r);
+                    code_state_validity(c.ifFalse, s, r);
                 }
             } else if c.While? {
                 var n:nat :| r == s.eval_while(c.whileBody, n);

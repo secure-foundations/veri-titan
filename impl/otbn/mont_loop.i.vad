@@ -174,7 +174,6 @@ procedure mont_loop_0(
         x22 == x16;
         // x29 == old(x29);
         // x30 == old(x30);
-        // x31 == old(x31);
 
         w2 == xi;
         w3 == old(w3);
@@ -296,7 +295,6 @@ procedure mont_loop_1(
         x22 == old(x22);
         x29 == old(x29);
         x30 == old(x30);
-        x31 == old(x31);
 
         w2 == xi;
         w3 == old(w3);
@@ -348,6 +346,21 @@ procedure mont_loop_1(
         y_it.buff, m_it.buff, prev_view, curr_view, next_view, j);
 }
 
+function read_carry_flag_lemma(flags: flags_t): void extern;
+
+procedure read_fg1()
+    reads
+        x0; fgroups;
+    modifies
+        x2;
+    ensures
+        x2 == bool_to_uint1(fgroups.fg1.cf);
+{
+    csrrs(x2, 0x7c1, x0);
+    andi(x2, x2, 1);
+    read_carry_flag_lemma(fgroups.fg1);
+}
+
 procedure mont_loop(
     ghost x_it: iter_t,
     ghost xi: uint256,
@@ -360,8 +373,6 @@ procedure mont_loop(
     {:frame false}
 
     requires
-        x30 == NUM_WORDS;
-        x31 == NUM_WORDS - 1;
 
         w2 == xi;
         w3 == vars.rsa.M0D;
@@ -385,8 +396,6 @@ procedure mont_loop(
         x20 == old(x20);
         x21 == old(x21);
         x29 == old(x29);
-        x30 == old(x30);
-        x31 == old(x31);
 
         w3 == old(w3);
         w31 == old(w31);
@@ -425,7 +434,7 @@ procedure mont_loop(
 
     ghost var j: nat := 1;
 
-    while (Loop(x31))
+    while (LoopImm(11))
         invariant
             x6 == old(x6);
             x7 == old(x7);
@@ -439,8 +448,6 @@ procedure mont_loop(
             x20 == old(x20);
             x21 == old(x21);
             x29 == old(x29);
-            x30 == NUM_WORDS;
-            x31 == NUM_WORDS - 1;
 
             w2 == xi;
             w3 == old(w3);
@@ -494,24 +501,27 @@ procedure mont_loop(
     mont_loop_inv_post_lemma(xi, ui, p1, p2,
         y_it.buff, m_it.buff, prev_view, curr_view, bout);
 
-    /* restore pointers */
-    addi(x16, x22, 0);
-    li(x8, 4);
-    li(x10, 4);
-
     // clear flag group 0
     bn_add(w31, w31, w31, SFT_DFT, 0);
 
-    /* This replaces Step 3 of HAC 14.36 and performs conditional constant-time
+    /* This replaces Step 3 of HAC 14.36 and performs conditional 
      subtraction of the modulus from the output buffer  */
-    m_it := iter_cons(x16, 0, heap[x16].b);
-    next_view := cond_sub_to_reg(curr_view, m_it, fgroups.fg1.cf);
+
+    read_fg1();
+
+    next_view := curr_view;
+
+    if (x2 != x0) {
+        m_it := iter_cons(x22, 0, heap[x22].b);
+        next_view := sub_to_reg(curr_view, m_it);
+    }
 
     mont_loop_cond_sub_lemma(xi, ui, y_it.buff, to_nat(m_it.buff),
         to_nat(prev_view), curr_view, next_view, bout, bool_to_uint1(fgroups.fg0.cf));
     
     /* restore pointer */
     li(x8, 4);
+    li(x10, 4);
 
     reveal Pow;
     montmul_inv_lemma(prev_view, next_view, x_it.buff, x_it.index-1, ui, y_it.buff, vars.rsa);
