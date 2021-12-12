@@ -26,6 +26,7 @@ function operator([ := ]) #[a: Type(0), b: Type(0)](m: map(a, b), rsa: a, v: b):
 type nat:     Type(0) := int_range(0, _);
 type uint1:   Type(0) := int_range(0, 2);
 type uint2:   Type(0) := int_range(0, 4);
+type uint4:   Type(0) := int_range(0, 16);
 type uint5:   Type(0) := int_range(0, 32);
 type uint10:  Type(0) := int_range(0, 1024);
 type uint12:  Type(0) := int_range(0, 4096);
@@ -40,6 +41,8 @@ function Pow(b: int, e: nat) : int extern;
 function IsModEquivalent(a: int, b: int, n: int) : bool extern;
 function cong_BASE(a: int, b: int) : bool extern;
 function pow_BASE(e: nat): nat extern;
+
+function GPR(index: nat): reg32_t extern;
 
 const BASE_32:  nat extern;
 const BASE_64:  nat extern; 
@@ -96,6 +99,7 @@ function operator(.lsb) (fg :flags_t): bool extern;
 function operator(.lsb := ) (fg: flags_t, f: bool): flags_t extern;
 function operator(.zero) (fg: flags_t): bool extern;
 function operator(.zero := ) (fg: flags_t, f: bool): flags_t extern;
+function flags_as_uint(fg: flags_t): uint4 extern;
 
 type fgroups_t: Type(0) extern;
 function operator(.fg0) (fgroups: fgroups_t): flags_t extern;
@@ -269,6 +273,7 @@ function uint32_or(x: uint32, y: uint32): uint32 extern;
 function uint32_and(x: uint32, y: uint32): uint32 extern;
 function uint32_add(x: uint32, y: uint32): uint32 extern;
 function uint32_addi(x: uint32, y: int12): uint32 extern;
+function uint32_andi(x: uint32, y: int12): uint32 extern;
 function uint32_not(x: uint32): uint32 extern;
 function uint32_ls(x: uint32, amount: uint32): uint32 extern; 
 function uint32_se(x: uint32, size: int): uint32 extern;
@@ -370,13 +375,26 @@ procedure addi(inout dst: reg32, in src1: reg32, inline imm: int12)
 }
 
 procedure andi(inout dst: reg32, in src1: reg32, inline imm: int12)
+    {:instruction Ins32(ANDI(dst, src1, imm))}
+    ensures
+        dst == uint32_andi(old(src1), imm);
 {
-    assume false;
+    reveal eval_code_opaque;
+    reveal valid_state_opaque;
+    this := this.(heap := old(this).heap);
 }
 
 procedure csrrs(inout grd: reg32, inline csr: uint12, in grs1: reg32)
+    {:instruction Ins32(CSRRS(grd, csr, grs1))}
+    requires @grs1 == GPR(0);
+    requires csr == 0x7c0 || csr == 0x7c1;
+    reads fgroups;
+    ensures csr == 0x7c0 ==> grd == flags_as_uint(get_fgroup(fgroups, 0));
+    ensures csr == 0x7c1 ==> grd == flags_as_uint(get_fgroup(fgroups, 1));
 {
-    assume false;
+    reveal eval_code_opaque;
+    reveal valid_state_opaque;
+    this := this.(heap := old(this).heap);
 }
 
 procedure li(inout dst: reg32, inline imm: uint32)
@@ -710,7 +728,9 @@ procedure bn_sel(inout dst: reg256, in src1: reg256, in src2: reg256, inline whi
 procedure comment(inline comment: string)
     {:instruction Comment(comment)}
 {
-    assume false;
+    reveal eval_code_opaque;
+    reveal valid_state_opaque;
+    this := this.(heap := old(this).heap);
 }
 
 #verbatim

@@ -346,6 +346,21 @@ procedure mont_loop_1(
         y_it.buff, m_it.buff, prev_view, curr_view, next_view, j);
 }
 
+function read_carry_flag_lemma(flags: flags_t): void extern;
+
+procedure read_fg1()
+    reads
+        x0; fgroups;
+    modifies
+        x2;
+    ensures
+        x2 == bool_to_uint1(fgroups.fg1.cf);
+{
+    csrrs(x2, 0x7c1, x0);
+    andi(x2, x2, 1);
+    read_carry_flag_lemma(fgroups.fg1);
+}
+
 procedure mont_loop(
     ghost x_it: iter_t,
     ghost xi: uint256,
@@ -491,10 +506,8 @@ procedure mont_loop(
 
     /* This replaces Step 3 of HAC 14.36 and performs conditional 
      subtraction of the modulus from the output buffer  */
-    
-    csrrs(x2, 0x7c1, x0);
-    andi(x2, x2, 1);
-    assume x2 == bool_to_uint1(fgroups.fg1.cf);
+
+    read_fg1();
 
     next_view := curr_view;
 

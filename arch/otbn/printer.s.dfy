@@ -53,10 +53,10 @@ method printIns32(ins:ins32)
         //     printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
         //     print("\n");
 
-        // case ANDI(dst, src1, src2) =>
-        //     print ("andi ");
-        //     printReg32(dst); print(", "); printReg32(src1); print(", "); print(src2);
-        //     print("\n");
+        case ANDI(dst, src1, src2) =>
+            print ("andi ");
+            printReg32(dst); print(", "); printReg32(src1); print(", "); print(src2);
+            print("\n");
 
         // case OR(dst, src1, src2) =>
         //     print ("or ");
@@ -88,8 +88,14 @@ method printIns32(ins:ins32)
             print ("li ");
             printReg32(dst); print(", "); print(src);
             print("\n");
+        
+        case CSRRS(grd, csr, grs1) =>
+            print ("csrrs ");
+            printReg32(grd); print(", "); print(csr); print(", "); printReg32(grs1);
+            print("\n");
 
-        case _ => print("TODO32 "); print(ins);
+        case ECALL => 
+            print ("ecall ");
 }
 
 method printShift(shift:shift_t)
@@ -241,17 +247,6 @@ method printIns256(ins:ins256)
         case _ => print("TODO256 "); print(ins);
 }
 
-method printBlock(b: codes, depth: int)
-{
-    var i := b;
-    while (i.va_CCons?)
-        decreases i
-    {
-        printCode(i.hd, depth);
-        i := i.tl;
-    }
-}
-
 method printWhileCond(wcond: whileCond)
 {
     match wcond
@@ -278,36 +273,17 @@ function method codeSize(c: code) : int
         case Comment(com) => 0
 }
 
-method printIndent(depth: int)
+method printIfCond(icond: ifCond)
 {
-    var i := 0;
-    while i < depth
-    {
-        print("  ");
-        i := i + 1;
-    }
-}
+    var Cmp(op, r1, r2) := icond;
 
-method printCode(c: code, depth: int)
-{
-    match c
-        case Ins32(ins) => printIndent(depth); printIns32(ins);
-        case Ins256(ins) => printIndent(depth); printIns256(ins);
-        case Block(block) => printBlock(block, depth);
-        case Function(name, fbody) =>
-            printIndent(depth); print("jal x1, "); print(name); print("\n");
-        case IfElse(icond, tbody, fbody) =>
-        {
-            print("NYI\n"); 
-        }
-        case While(wcond, wbody) =>
-        {
-            printIndent(depth); printWhileCond(wcond); print(", ");
-            print(codeSize(wbody) + 1); print("\n"); // + 1 for nop instruction
-            printCode(wbody, depth + 1);
-            printIndent(depth+1); print("nop\n"); // ensures different end addrs for nested loops
-        }
-        case Comment(com) => print(com);
+    // revert the operation
+    match op {
+        case Eq => print("bne "); 
+        case Ne => print("beq "); 
+    }
+
+    printReg32(r1); print(", "); printReg32(r2); 
 }
 
 method getFunctionsFromCodes(block: codes, defs: set<string>, res: seq<(string, codes)>) 
@@ -345,33 +321,93 @@ method getFunctions(c: code, defs: set<string>, res: seq<(string, codes)>)
             defs', res' := defs, res;
 }
 
-method printProc(code:code)
-    requires code.Function?
-{
-    print(".globl modexp_var"); print("\n");
-    var defs, res := getFunctions(code, {}, []); 
-    var i := 0;
-    while i < |res|
+class Printer {
+    var labelCount: nat;
+    var depth: int;
+
+    constructor()
     {
-        print(res[i].0); print(":\n");
-        printCode(Block(res[i].1), 1);
-        i := i + 1;
-        printIndent(1); print("ret\n\n");
+        labelCount := 0;
+        depth := 1;
     }
-}
 
-datatype AsmTarget = OTBN
-datatype PlatformTarget = Linux | MacOS
+    method printIndent()
+    {
+        var i := 0;
+        while i < depth
+        {
+            print("  ");
+            i := i + 1;
+        }
+    }
 
-method PrintDemo(asm:AsmTarget, platform:PlatformTarget)
-{
-    reveal va_code_modexp_var();
-    printProc(va_code_modexp_var());
+    method printBlock(b: codes)
+        modifies this
+    {
+        var i := b;
+        while (i.va_CCons?)
+            decreases i
+        {
+            printCode(i.hd);
+            i := i.tl;
+        }
+    }
+
+    method printCode(c: code)
+        modifies this
+    {
+        match c
+            case Ins32(ins) => printIndent(); printIns32(ins);
+            case Ins256(ins) => printIndent(); printIns256(ins);
+            case Block(block) => printBlock(block);
+            case Function(name, fbody) =>
+                printIndent(); print("jal x1, "); print(name); print("\n");
+            case IfElse(icond, tbody, fbody) =>
+            {
+                printIndent(); printIfCond(icond); print(", label_"); print(labelCount); print("\n");
+                printCode(tbody);
+                print(goto )
+                printIndent(); print("label_"); print(labelCount); print(":\n");
+                var fsize := codeSize(fbody);
+                if fsize != 0 {
+                    print("TODO else not yet implemented"); 
+                }
+                labelCount := labelCount + 1;
+            }
+            case While(wcond, wbody) =>
+            {
+                printIndent(); printWhileCond(wcond); print(", ");
+                print(codeSize(wbody) + 1); print("\n"); // + 1 for nop instruction
+                depth := depth + 1;
+                printCode(wbody);
+                printIndent(); print("nop\n"); // ensures different end addrs for nested loops
+                depth := depth - 1;
+            }
+            case Comment(com) => print(com);
+    }
+
+    method printProc(code: code)
+        requires code.Function?
+        modifies this
+    {
+        print(".globl modexp_var"); print("\n");
+        var defs, res := getFunctions(code, {}, []); 
+        var i := 0;
+        while i < |res|
+        {
+            print(res[i].0); print(":\n");
+            printCode(Block(res[i].1));
+            i := i + 1;
+            printIndent(); print("ret\n\n");
+        }
+    }
 }
 
 method Main()
 {
-    PrintDemo(OTBN, Linux);
+    reveal va_code_modexp_var();
+    var p := new Printer();
+    p.printProc(va_code_modexp_var());
 }
 
 }

@@ -77,6 +77,11 @@ module ot_vale {
         bv32_ops.add(x, y)
     }
 
+    function method uint32_andi(x: uint32, y: bv32_ops.sint): uint32
+    {
+        bv32_ops.andi(x, y)
+    }
+
     // otbn state realted
 
     datatype gstate = gstate(ms: state, heap: heap_t)
