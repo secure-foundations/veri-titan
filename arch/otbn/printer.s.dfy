@@ -366,7 +366,6 @@ class Printer {
             {
                 printIndent(); printIfCond(icond); print(", label_"); print(labelCount); print("\n");
                 printCode(tbody);
-                print(goto )
                 printIndent(); print("label_"); print(labelCount); print(":\n");
                 var fsize := codeSize(fbody);
                 if fsize != 0 {
