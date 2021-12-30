@@ -1,11 +1,13 @@
-include "../arch/otbn/abstraction.i.dfy"
+include "../arch/otbn/vale.i.dfy"
 include "bv256_ops.dfy"
 include "generic_mm_lemmas.dfy"
 include "mul256_nl_lemma.i.dfy"
 
 module bv256_mm_lemmas refines generic_mm_lemmas {
     import opened GBV = bv256_ops
+    import bv32_ops
     import opened ot_machine
+    import opened ot_vale
     import opened ot_abstraction
     import opened mul256_nl_lemma
 
@@ -211,6 +213,25 @@ module bv256_mm_lemmas refines generic_mm_lemmas {
         assert to_nat([t2, u2]) == x * y by {
             GBV.BVSEQ.LemmaSeqLen2([t2, u2]);
         }
+    }
+
+    lemma and_lsb_lemma(x: uint32)
+        ensures x % 2 == 1 ==> bv32_ops.and(x, 1) == 1
+        ensures x % 2 == 0 ==> bv32_ops.and(x, 1) == 0
+    {
+        reveal bv32_ops.and();
+    }
+
+    lemma read_carry_flag_lemma(flags: flags_t)
+        ensures uint32_andi(flags_as_uint(flags), 1)
+            == if flags.cf then 1 else 0;
+    {
+        var value := flags_as_uint(flags);
+        assert flags.cf ==> value % 2 == 1;
+        assert !flags.cf ==> value % 2 == 0;
+        var carry := uint32_andi(value, 1);
+        and_lsb_lemma(value);
+        assert carry == if flags.cf then 1 else 0;
     }
 }
 

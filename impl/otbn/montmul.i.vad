@@ -41,7 +41,6 @@ procedure montmul_0(ghost vars: mvars)
         x9 == 3;
         x10 == 4;
         x11 == 2;
-        x30 == NUM_WORDS;
     
         w31 == 0;
 
@@ -53,8 +52,6 @@ procedure montmul_0(ghost vars: mvars)
         x20 == old(x20);
         x21 == old(x21);
         x29 == old(x29);
-        x30 == old(x30);
-        x31 == old(x31);
 
         w3 == vars.rsa.M0D;
         w31 == 0;
@@ -71,7 +68,7 @@ procedure montmul_0(ghost vars: mvars)
 
     a_view := wdrs[4..4+NUM_WORDS];
 
-    while (Loop(x30))
+    while (LoopImm(12))
         invariant
             x9 == old(x9);
             x10 + loop_ctr == 4 + NUM_WORDS;
@@ -79,8 +76,6 @@ procedure montmul_0(ghost vars: mvars)
             x20 == old(x20);
             x21 == old(x21);
             x29 == old(x29);
-            x30 == NUM_WORDS;
-            x31 == old(x31);
 
             w2 == 0;
             w3 == vars.rsa.M0D;
@@ -113,9 +108,6 @@ procedure montmul(ghost vars: mvars)
         x9 == 3;
         x10 == 4;
         x11 == 2;
-    
-        x30 == NUM_WORDS;
-        x31 == NUM_WORDS - 1;
 
         mvars_inv(vars, heap, x20, x19, x16, x17, NA, NA);
 
@@ -128,8 +120,6 @@ procedure montmul(ghost vars: mvars)
         x11 == 2;
         x21 == old(x21);
         x29 == old(x29);
-        x30 == NUM_WORDS;
-        x31 == NUM_WORDS - 1;
 
         w31 == 0;
 
@@ -148,14 +138,12 @@ procedure montmul(ghost vars: mvars)
         montmul_inv_lemma_0(a_view, x_it.buff, vars.y_it.buff, vars.rsa);
     }
 
-    while (Loop(x30))
+    while (LoopImm(12))
         invariant
             x9 == old(x9);
             x11 == 2;
             x21 == old(x21);
             x29 == old(x29);
-            x30 == NUM_WORDS;
-            x31 == NUM_WORDS - 1;
 
             iter_inv(x_it, heap, x20);
             x_it.index + loop_ctr == NUM_WORDS;

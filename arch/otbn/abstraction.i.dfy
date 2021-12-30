@@ -491,8 +491,8 @@ module ot_abstraction {
             i := i + 1;
         }
 
-        print(" fg0 = ");print_as_hex(s.fgroups.fg0.to_nat(), 4); print("\n"); 
-        print(" fg1 = ");print_as_hex(s.fgroups.fg1.to_nat(), 4); print("\n"); 
+        print(" fg0 = ");print_as_hex(flags_as_uint(s.fgroups.fg0), 4); print("\n"); 
+        print(" fg1 = ");print_as_hex(flags_as_uint(s.fgroups.fg1), 4); print("\n"); 
     }
 
     method dump_mem(s: state, addr: uint32, words: uint32)
