@@ -86,7 +86,7 @@ module rv_vale {
 
     function va_mul_nat(a: nat, b: nat): nat
     {
-        assume false;
+        //assume false;
         a * b
     }
 

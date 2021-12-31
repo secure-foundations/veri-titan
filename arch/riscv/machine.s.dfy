@@ -280,7 +280,7 @@ module rv_machine {
     | Block(block: codes)
     | While(whileCond: cond, whileBody: code)
     | IfElse(ifCond: cond, ifTrue: code, ifFalse: code)
-    // | Procedure(proc: codes, name: string) // TODO: direct call semantics
+    | Function(name: string, functionBody: codes)
     | Comment(com: string)
 
     datatype codes =
