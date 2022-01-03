@@ -175,17 +175,6 @@ method printIns32(ins:ins32)
             
         case _ => print("Instruction not supported: "); print(ins);
 }
-method printBlock(b: codes, depth: int, lcount: int) returns (lcount': int)
-{
-    var i := b;
-    lcount' := lcount;
-    while (i.va_CCons?)
-        decreases i
-    {
-        lcount' := printCode(i.hd, depth, lcount');
-        i := i.tl;
-    }
-}
 
 method printWCondOp(op: cmp)
 {
@@ -198,29 +187,15 @@ method printWCondOp(op: cmp)
         case Gt => print("  ble ");
 }
 
-method printWhileCond(wcond: cond, lcount: int)
-{
-   printWCondOp(wcond.op);
-   printReg32(wcond.r1); print(", "); printReg32(wcond.r2);
-   print(", "); print("w_end"); print(lcount); print("\n");
-}
-
 method printIfCondOp(op: cmp)
 {
-    match op
-        case Eq => print("  beq ");
-        case Ne => print("  bne ");
-        case Le => print("  ble ");
-        case Ge => print("  bge ");
-        case Lt => print("  blt ");
-        case Gt => print("  bgt ");
-}
-
-method printIfCond(icond: cond, lcount: int)
-{
-   printIfCondOp(icond.op);
-   printReg32(icond.r1); print(", "); printReg32(icond.r2);
-   print(", "); print("if_true"); print(lcount); print("\n");
+  match op
+    case Eq => print("  beq ");
+    case Ne => print("  bne ");
+    case Le => print("  ble ");
+    case Ge => print("  bge ");
+    case Lt => print("  blt ");
+    case Gt => print("  bgt ");
 }
 
 function method blockSize(b: codes) : int
@@ -234,48 +209,11 @@ function method codeSize(c: code) : int
 {
     match c
         case Block(block) => blockSize(block)
-        case While(wcond, wbody) => codeSize(wbody) + 2 // TODO: RISC-V loops?
-        case IfElse(ifcond, iftrue, iffalse) => codeSize(iftrue) + codeSize(iffalse) + 1 // TODO: check?
+        case While(wcond, wbody) => codeSize(wbody) + 1 // TODO: RV check
+        case IfElse(ifcond, iftrue, iffalse) => codeSize(iftrue) + codeSize(iffalse) + 1
         case Function(_, _) => 1
         case Ins32(ins) => 1
         case Comment(com) => 0
-}
-
-method printIndent(depth: int)
-{
-    var i := 0;
-    while i < depth
-    {
-        print("  ");
-        i := i + 1;
-    }
-}
-
-method printCode(c: code, depth: int, lcount: int) returns (lcount': int)
-{
-    match c
-        case Ins32(ins) => printIndent(depth); printIns32(ins); return lcount;
-        case Block(block) => lcount' := printBlock(block, depth, lcount);
-        case IfElse(icond, tbody, fbody) =>
-        {
-            printIfCond(icond, lcount);
-            lcount' := printCode(fbody, depth, lcount + 1);
-            print("  j "); print("if_end"); print(lcount); print("\n");
-            print("\n"); print("if_true"); print(lcount); print(":\n");
-            lcount' := printCode(tbody, depth, lcount');
-            print("\n"); print("if_end"); print(lcount); print(":\n");
-        }
-        case While(wcond, wbody) =>
-        {
-            print("\n"); print("w_start"); print(lcount); print(":\n");
-            printWhileCond(wcond, lcount);
-            lcount' := printCode(wbody, depth, lcount + 1);
-            print("  j "); print("w_start"); print(lcount); print("\n");
-            print("\n"); print("w_end"); print(lcount); print(":\n");
-        }
-        case Function(name, fbody) =>
-            print("TODO\n"); return lcount;
-        case Comment(com) => print(com); return lcount;
 }
 
 method getFunctionsFromCodes(block: codes, defs: set<string>, res: seq<(string, codes)>) 
@@ -309,38 +247,99 @@ method getFunctions(c: code, defs: set<string>, res: seq<(string, codes)>)
         }
         case While(_, wbody) => 
             defs', res' := getFunctions(wbody, defs', res');
+        case IfElse(_, tbody, fbody) =>
+            defs', res' := getFunctions(tbody, defs', res');
+            defs', res' := getFunctions(fbody, defs', res');
         case _ =>
             defs', res' := defs, res;
 }
 
-method printProc(code:code)
-     requires code.Function?
-{
-    // print(".globl mod_pow"); print("\n");
-    // var defs, res := getFunctions(code, {}, []); 
-    // var i := 0;
-    // while i < |res|
-    // {
-    //     print(res[i].0); print(":\n");
-    //     var _ := printCode(Block(res[i].1), 1, 0);
-    //     i := i + 1;
-    //     printIndent(1); print("ret\n\n");
-    // }
-    var _ := printCode(code, 0, 0);
-}
+class Printer {
+    var labelCount: nat;
 
-datatype AsmTarget = RISCV
-datatype PlatformTarget = Linux | MacOS
+    constructor()
+    {
+        labelCount := 0;
+    }
 
-method PrintDemo(asm:AsmTarget, platform:PlatformTarget)
-{
-    reveal va_code_mod_pow();
-    printProc(va_code_mod_pow());
+    method printWhileCond(wcond: cond)
+    {
+      printWCondOp(wcond.op);
+      printReg32(wcond.r1); print(", "); printReg32(wcond.r2);
+      print(", "); print("w_end"); print(labelCount); print("\n");
+    }
+
+    method printIfCond(icond: cond)
+    {
+      printIfCondOp(icond.op);
+      printReg32(icond.r1); print(", "); printReg32(icond.r2);
+      print(", "); print("if_true"); print(labelCount); print("\n");
+    }
+
+    method printBlock(b: codes)
+      modifies this
+    {
+      var i := b;
+      while (i.va_CCons?)
+        decreases i
+      {
+        printCode(i.hd);
+        i := i.tl;
+      }
+    }
+
+    method printCode(c: code)
+      modifies this
+    {
+      match c
+        case Ins32(ins) => print("  "); printIns32(ins);
+        case Block(block) => printBlock(block);
+        case IfElse(icond, tbody, fbody) =>
+      {
+        printIfCond(icond);
+        labelCount := labelCount + 1;
+        printCode(fbody);
+        print("  j "); print("if_end"); print(labelCount); print("\n");
+        print("\n"); print("if_true"); print(labelCount); print(":\n");
+        printCode(tbody);
+        print("\n"); print("if_end"); print(labelCount); print(":\n");
+      }
+        case While(wcond, wbody) =>
+      {
+        print("\n"); print("w_start"); print(labelCount); print(":\n");
+        printWhileCond(wcond);
+        labelCount := labelCount + 1;
+        printCode(wbody);
+        print("  j "); print("w_start"); print(labelCount); print("\n");
+        print("\n"); print("w_end"); print(labelCount); print(":\n");
+      }
+        case Function(name, fbody) =>
+          print("TODO\n");
+        case Comment(com) => print(com);
+    }
+
+    method printProc(code: code)
+        requires code.Function?
+        modifies this
+    {
+        print(".globl mod_pow"); print("\n");
+        var defs, res := getFunctions(code, {}, []); 
+        var i := 0;
+        while i < |res|
+        {
+            print(res[i].0); print(":\n");
+            printCode(Block(res[i].1));
+            i := i + 1;
+            print("ret\n\n");
+        }
+    }
 }
 
 method Main()
 {
-    PrintDemo(RISCV, MacOS);
+    reveal va_code_mod_pow();
+    var p := new Printer();
+    p.printProc(va_code_mod_pow());
 }
 
 }
