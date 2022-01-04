@@ -341,6 +341,7 @@ module rv_machine {
             case Ins32(ins) => eval_ins32(ins, s, r)
             case Block(block) => eval_block(block, s, r)
             case While(condition, body) => exists n:nat :: eval_while(condition, body, n, s, r)
+            case Function(name, body) => eval_block(body, s, r)
             case IfElse(cond, ifT, ifF) => eval_if_else(cond, ifT, ifF, s, r)
             case Comment(com) => s == r
     }

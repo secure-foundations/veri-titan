@@ -1,8 +1,11 @@
 include "machine.s.dfy"
+include "../../std_lib/src/NonlinearArithmetic/Mul.dfy"
 
 module rv_vale {
     import opened integers
     import opened rv_machine
+
+    import opened Mul
 
     type va_code = code
     type va_codes = codes
@@ -86,7 +89,7 @@ module rv_vale {
 
     function va_mul_nat(a: nat, b: nat): nat
     {
-        //assume false;
+        Mul.LemmaMulNonnegativeAuto();
         a * b
     }
 
@@ -180,10 +183,12 @@ module rv_vale {
 
     function method va_op_reg32_reg32_t(r: reg32_t): reg32_t { r }
     function method va_Block(block:codes):code { Block(block) }
+    function method va_Function(name: string, body: codes): code { Function(name, body) }
     function method va_While(wcond:cond, wcode:code):code { While(wcond, wcode) }
     function method va_IfElse(ifb:cond, ift:code, iff:code):code { IfElse(ifb, ift, iff) }
 
-    function method va_get_block(c:code):codes requires c.Block? { c.block }
+    function method va_get_block(c: code): codes requires c.Block? || c.Function? { 
+        if c.Block? then c.block else c.functionBody }
     function method va_get_whileCond(c:code):cond requires c.While? {c.whileCond }
     function method va_get_whileBody(c:code):code requires c.While? { c.whileBody }
     function method va_get_ifCond(c:code):cond requires c.IfElse? { c.ifCond }
@@ -208,6 +213,9 @@ module rv_vale {
     {
         match c {
             case Block(b) => {
+                lemma_FailurePreservedByBlock(b, s, r);
+            }
+            case Function(_, b) => {
                 lemma_FailurePreservedByBlock(b, s, r);
             }
             case While(c, b) => {
@@ -296,6 +304,8 @@ module rv_vale {
         requires eval_code_lax(Block(b), s0, r)
         ensures  b == va_CCons(c0, b1)
         ensures eval_code_lax(c0, s0, r1)
+        ensures c0.Function? ==>
+            eval_code_lax(Block(c0.functionBody), s0, r1)
         ensures valid_state_opaque(s0) && r1.ok ==> valid_state_opaque(r1);
         ensures eval_code_lax(Block(b1), r1, r)
     {

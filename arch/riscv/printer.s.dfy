@@ -316,17 +316,17 @@ method getFunctions(c: code, defs: set<string>, res: seq<(string, codes)>)
 method printProc(code:code)
      requires code.Function?
 {
-    // print(".globl mod_pow"); print("\n");
-    // var defs, res := getFunctions(code, {}, []); 
-    // var i := 0;
-    // while i < |res|
-    // {
-    //     print(res[i].0); print(":\n");
-    //     var _ := printCode(Block(res[i].1), 1, 0);
-    //     i := i + 1;
-    //     printIndent(1); print("ret\n\n");
-    // }
-    var _ := printCode(code, 0, 0);
+    print(".globl mod_pow"); print("\n");
+    var defs, res := getFunctions(code, {}, []); 
+    var i := 0;
+    while i < |res|
+    {
+        print(res[i].0); print(":\n");
+        var _ := printCode(Block(res[i].1), 1, 0);
+        i := i + 1;
+        printIndent(1); print("ret\n\n");
+    }
+    // var _ := printCode(code, 0, 0);
 }
 
 datatype AsmTarget = RISCV

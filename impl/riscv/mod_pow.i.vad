@@ -384,8 +384,11 @@ procedure mod_pow_2(ghost vars: mp_vars, ghost rsa: rsa_params)
     // assert to_nat(mut_vars.iter_out.buff) == mod(Pow(rsa.SIG, 65537), rsa.M);
 }
 
-procedure mod_pow(ghost vars: mp_vars, ghost rsa: rsa_params)
+procedure mod_pow(
+    ghost vars: mp_vars, ghost rsa: rsa_params)
     returns (ghost mut_vars:  mp_vars)
+
+    {:noInline}
 
     requires rsa.E0 == 16;
     requires sp > 112;
