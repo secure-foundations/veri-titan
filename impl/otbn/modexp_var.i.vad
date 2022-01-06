@@ -409,9 +409,90 @@ procedure modexp_var_3072_f4(
     let carry := fgroups.fg0.cf;
     modexp_var_correct_lemma(to_nat(raw_view), to_nat(adjusted_view), carry, vars.rsa);
 
+    read_fg0();
     li(x8, 4);
 
+    if (x2 == x0) {
+        li(x8, 16);
+    }
+
+    addi(x21, x24, 0);
+
+    out_iter := iter_cons(x21, 0, heap[x21].b);
+    out_iter := write_to_dmem(out_iter);
+}
+
+
+procedure modexp_var_3072_3(
+    ghost init_vars: mvars,
+    ghost m_ptr: uint32,
+    ghost m0d_ptr: uint32,
+    ghost rr_ptr: uint32,
+    ghost sig_ptr: uint32,
+    ghost out_ptr: uint32)
+
+    returns (ghost out_iter: iter_t)
+
+    {:noInline}
+    {:frame false}
+
+    requires
+        x16 == m_ptr;
+        x17 == m0d_ptr;
+        x26 == rr_ptr;
+        x23 == sig_ptr;
+        x24 == out_ptr;
+
+        mvars_init(init_vars, heap,
+            m_ptr, m0d_ptr, rr_ptr, sig_ptr, out_ptr);
+
+        init_vars.rsa.E0 == 1;
+
+    ensures
+        mvars_init(init_vars, heap,
+            m_ptr, m0d_ptr, rr_ptr, sig_ptr, out_ptr);
+        // out_iter contains a valid view of memory
+        iter_inv(out_iter, heap, out_ptr);
+        // out_iter contains the right value
+        let rsa := init_vars.rsa in 
+        to_nat(out_iter.buff) == mod(Pow(rsa.SIG, rsa.E), rsa.M);
+{
+    ghost var vars := init_vars;
+    vars, out_iter := modexp_var_0(init_vars);
+
+    addi(x19, x24, 0);
+    addi(x20, x24, 0);
+    addi(x21, x24, 0);
+
+    ghost var prev_a_view := out_iter.buff;
+    ghost var a_view := prev_a_view;
+    a_view := montmul(vars);
+
+    out_iter := write_to_dmem(out_iter);
+    
+    vars := vars.(x_it := out_iter).(y_it := out_iter);
+
+    modexp_var_inv_peri_lemma(prev_a_view, a_view, 0, vars.rsa);
+
+    addi(x19, x23, 0);
+    addi(x20, x24, 0);
+    addi(x21, x24, 0);
+
+    prev_a_view := out_iter.buff;
+
+    vars := vars.(x_it := out_iter).(y_it := vars.sig_it);
+    a_view := montmul(vars);
+
+    modexp_var_inv_post_lemma(prev_a_view, a_view, vars.sig_it.buff, vars.rsa);
+
+    ghost var raw_view := wdrs[4..4+NUM_WORDS];
+    let adjusted_view := sub_mod(raw_view, vars.m_it);
+    
+    let carry := fgroups.fg0.cf;
+    modexp_var_correct_lemma(to_nat(raw_view), to_nat(adjusted_view), carry, vars.rsa);
+
     read_fg0();
+    li(x8, 4);
 
     if (x2 == x0) {
         li(x8, 16);
