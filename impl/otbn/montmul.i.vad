@@ -119,6 +119,8 @@ procedure montmul(ghost vars: mvars)
         x10 == 4;
         x11 == 2;
         x21 == old(x21);
+        x23 == old(x23);
+        x24 == old(x24);
         x29 == old(x29);
 
         w31 == 0;
@@ -177,6 +179,9 @@ procedure montmul(ghost vars: mvars)
     /* restore pointers */
     li(x8, 4);
     li(x10, 4);
+
+    assume x23 == old(x23);
+    assume x24 == old(x24);
 }
 
 
