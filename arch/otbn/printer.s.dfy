@@ -324,6 +324,7 @@ method getFunctions(c: code, defs: set<string>, res: seq<(string, codes)>)
 class Printer {
     var labelCount: nat;
     var depth: int;
+    var printed: set<string>;
 
     constructor()
     {
@@ -366,7 +367,6 @@ class Printer {
             {
                 printIndent(); printIfCond(icond); print(", label_"); print(labelCount); print("\n");
                 printCode(tbody);
-                print(goto )
                 printIndent(); print("label_"); print(labelCount); print(":\n");
                 var fsize := codeSize(fbody);
                 if fsize != 0 {
@@ -386,28 +386,37 @@ class Printer {
             case Comment(com) => print(com);
     }
 
-    method printProc(code: code)
+    method printTopLevelProc(name: string, code: code)
         requires code.Function?
         modifies this
     {
-        print(".globl modexp_var"); print("\n");
-        var defs, res := getFunctions(code, {}, []); 
+        print(".globl "); print(name); print("\n");
+        var defs, res := getFunctions(code, {}, []);
         var i := 0;
         while i < |res|
         {
-            print(res[i].0); print(":\n");
-            printCode(Block(res[i].1));
+            var func_name := res[i].0;
+            if func_name !in printed {
+                printed := printed + {func_name};
+                print(func_name); print(":\n");
+                printCode(Block(res[i].1));
+                printIndent(); print("ret\n\n");
+            }
             i := i + 1;
-            printIndent(); print("ret\n\n");
         }
     }
 }
 
 method Main()
 {
-    reveal va_code_modexp_var();
+    reveal va_code_modexp_var_3072_f4();
+    reveal va_code_modexp_var_3072_3();
+
     var p := new Printer();
-    p.printProc(va_code_modexp_var());
+    p.printTopLevelProc("modexp_var_3072_f4",
+        va_code_modexp_var_3072_f4());
+    p.printTopLevelProc("modexp_var_3072_3",
+        va_code_modexp_var_3072_3());
 }
 
 }
