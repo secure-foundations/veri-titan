@@ -184,6 +184,7 @@ procedure modexp_var_0(ghost init_vars: mvars)
         mvars_iter_init(out_iter, heap, x24, NA);
         mvars_inv(vars, heap, x24, x24, x16, x17, old(x26), x23);
         modexp_var_inv(to_nat(out_iter.buff), 0, vars.rsa);
+        mvars_init(init_vars, heap, old(x16), old(x17), old(x26), x23, x24);
 {
     xor_clear_lemma(w31);
 
@@ -210,9 +211,6 @@ procedure modexp_var_0(ghost init_vars: mvars)
 
     vars := vars.(x_it := out_iter).(y_it := out_iter);
     modexp_var_inv_pre_lemma(a_view, rr_iter.buff, sig_iter.buff, vars.rsa);
-
-    assume x23 == old(x23);
-    assume x24 == old(x24);
 }
 
 procedure sub_mod(
@@ -331,18 +329,19 @@ procedure modexp_var_3072_f4(
         x23 == sig_ptr;
         x24 == out_ptr;
 
-        mvars_init(init_vars, heap, m_ptr, m0d_ptr, rr_ptr, sig_ptr, out_ptr);
+        mvars_init(init_vars, heap,
+            m_ptr, m0d_ptr, rr_ptr, sig_ptr, out_ptr);
 
         init_vars.rsa.E0 == 16;
 
-//     ensures
-//         mvars_init(init_vars, heap,
-//             m_ptr, m0d_ptr, rr_ptr, sig_ptr, out_ptr);
-//         // out_iter contains a valid view of memory
-//         iter_inv(out_iter, heap, out_ptr);
-//         // out_iter contains the right value
-//         let rsa := init_vars.rsa in 
-//         to_nat(out_iter.buff) == mod(Pow(rsa.SIG, rsa.E), rsa.M);
+    ensures
+        mvars_init(init_vars, heap,
+            m_ptr, m0d_ptr, rr_ptr, sig_ptr, out_ptr);
+        // out_iter contains a valid view of memory
+        iter_inv(out_iter, heap, out_ptr);
+        // out_iter contains the right value
+        let rsa := init_vars.rsa in 
+        to_nat(out_iter.buff) == mod(Pow(rsa.SIG, rsa.E), rsa.M);
 {
     ghost var vars := init_vars;
     vars, out_iter := modexp_var_0(init_vars);
@@ -366,7 +365,8 @@ procedure modexp_var_3072_f4(
             mvars_iter_init(out_iter, heap, x24, NA);
             modexp_var_inv(to_nat(out_iter.buff), i, vars.rsa);
             mvars_inv(vars, heap, x24, x24, x16, x17, rr_ptr, sig_ptr);
-            // mvars_init(init_vars, heap, m_ptr, m0d_ptr, rr_ptr, sig_ptr, out_ptr); // might not need this
+            mvars_init(init_vars, heap,
+                m_ptr, m0d_ptr, rr_ptr, sig_ptr, out_ptr);
 
             out_ptr != x16;
             out_ptr != x17;
@@ -390,9 +390,6 @@ procedure modexp_var_3072_f4(
         modexp_var_inv_peri_lemma(prev_a_view, a_view, i, vars.rsa);
     
         i := i + 1;
-
-        assume x23 == sig_ptr;
-        assume x24 == out_ptr;
     }
 
     addi(x19, x23, 0);
