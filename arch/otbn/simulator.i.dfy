@@ -326,10 +326,10 @@ method ExecuteDemo()
         0x638 := 0x8fc62fbe,
         0x63c := 0x114e6da5];
 
-    state := state.(mem := mem);
-    state := state.eval_code(va_code_modexp_var());
+    // state := state.(mem := mem);
+    // state := state.eval_code(va_code_modexp_var());
 
-    dump_mem(state, 0x000008c0, 96);
+    // dump_mem(state, 0x000008c0, 96);
 }
 
 method Main()

@@ -51,7 +51,8 @@ procedure montmul_0(ghost vars: mvars)
         x11 == 2;
         x20 == old(x20);
         x21 == old(x21);
-        x29 == old(x29);
+        x23 == old(x23);
+        x24 == old(x24);
 
         w3 == vars.rsa.M0D;
         w31 == 0;
@@ -75,7 +76,8 @@ procedure montmul_0(ghost vars: mvars)
             x11 == 2;
             x20 == old(x20);
             x21 == old(x21);
-            x29 == old(x29);
+            x23 == old(x23);
+            x24 == old(x24);
 
             w2 == 0;
             w3 == vars.rsa.M0D;
@@ -118,8 +120,10 @@ procedure montmul(ghost vars: mvars)
         x9 == old(x9);
         x10 == 4;
         x11 == 2;
+
         x21 == old(x21);
-        x29 == old(x29);
+        x23 == old(x23);
+        x24 == old(x24);
 
         w31 == 0;
 
@@ -143,7 +147,8 @@ procedure montmul(ghost vars: mvars)
             x9 == old(x9);
             x11 == 2;
             x21 == old(x21);
-            x29 == old(x29);
+            x23 == old(x23);
+            x24 == old(x24);
 
             iter_inv(x_it, heap, x20);
             x_it.index + loop_ctr == NUM_WORDS;
