@@ -1,3 +1,7 @@
+/*
+  veri-titan commit hash: 47792932f788b92221ff61e4037811a867e747c7
+*/
+
 .globl modexp_var_3072_f4
 modexp_var_3072_f4:
   bn.xor w31, w31, w31 << 0, FG0
