@@ -1,8 +1,3 @@
-/*
-  generated through vale/dafny in veri-titan project
-  commit hash: 338507a9b57c23bbec14eebd21d8c13fa86911b8
-*/
-
 .globl modexp_var_3072_f4
 modexp_var_3072_f4:
   bn.xor w31, w31, w31 << 0, FG0
@@ -53,6 +48,7 @@ modexp_var_3072_f4:
     nop
   ret
 
+.globl montmul
 montmul:
   bn.lid x9, 0(x17)
   bn.mov w2, w31
@@ -163,53 +159,5 @@ mul256_w30xw25:
   bn.mulqacc w30.3, w25.2, 64
   bn.mulqacc.so w26.L, w30.2, w25.3, 64, FG0
   bn.mulqacc.so w26.U, w30.3, w25.3, 0, FG0
-  ret
-
-.globl modexp_var_3072_3
-modexp_var_3072_3:
-  bn.xor w31, w31, w31 << 0, FG0
-  li x8, 4
-  li x9, 3
-  li x10, 4
-  li x11, 2
-  addi x19, x23, 0
-  addi x20, x26, 0
-  addi x21, x24, 0
-  jal x1, montmul
-  loopi 12, 3
-    bn.sid x8, 0(x21++)
-    addi x8, x8, 1
-    nop
-  addi x19, x24, 0
-  addi x20, x24, 0
-  addi x21, x24, 0
-  jal x1, montmul
-  loopi 12, 3
-    bn.sid x8, 0(x21++)
-    addi x8, x8, 1
-    nop
-  addi x19, x23, 0
-  addi x20, x24, 0
-  addi x21, x24, 0
-  jal x1, montmul
-  bn.add w31, w31, w31 << 0, FG0
-  li x17, 16
-  loopi 12, 5
-    bn.movr x11, x8++
-    bn.lid x9, 0(x16++)
-    bn.subb w2, w2, w3 << 0, FG0
-    bn.movr x17++, x11
-    nop
-  csrrs x2, 1984, x0
-  andi x2, x2, 1
-  li x8, 4
-  bne x2, x0, label_2
-  li x8, 16
-  label_2:
-  addi x21, x24, 0
-  loopi 12, 3
-    bn.sid x8, 0(x21++)
-    addi x8, x8, 1
-    nop
   ret
 

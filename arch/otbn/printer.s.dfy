@@ -325,11 +325,13 @@ class Printer {
     var labelCount: nat;
     var depth: int;
     var printed: set<string>;
+    var globls: set<string>;
 
-    constructor()
+    constructor(globals: set<string>)
     {
         labelCount := 0;
         depth := 1;
+        globls := globals;
     }
 
     method printIndent()
@@ -386,11 +388,10 @@ class Printer {
             case Comment(com) => print(com);
     }
 
-    method printTopLevelProc(name: string, code: code)
+    method printTopLevelProc(code: code)
         requires code.Function?
         modifies this
     {
-        print(".globl "); print(name); print("\n");
         var defs, res := getFunctions(code, {}, []);
         var i := 0;
         while i < |res|
@@ -398,6 +399,9 @@ class Printer {
             var func_name := res[i].0;
             if func_name !in printed {
                 printed := printed + {func_name};
+                if func_name in globls {
+                    print(".globl "); print(func_name); print("\n");
+                }
                 print(func_name); print(":\n");
                 printCode(Block(res[i].1));
                 printIndent(); print("ret\n\n");
@@ -409,14 +413,10 @@ class Printer {
 
 method Main()
 {
-    reveal va_code_modexp_var_3072_f4();
-    reveal va_code_modexp_var_3072_3();
+    var p := new Printer({"modexp_var_3072_f4", "montmul"});
 
-    var p := new Printer();
-    p.printTopLevelProc("modexp_var_3072_f4",
-        va_code_modexp_var_3072_f4());
-    p.printTopLevelProc("modexp_var_3072_3",
-        va_code_modexp_var_3072_3());
+    reveal va_code_modexp_var_3072_f4();
+    p.printTopLevelProc(va_code_modexp_var_3072_f4());
 }
 
 }
