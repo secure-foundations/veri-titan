@@ -29,6 +29,13 @@ module ot_machine {
         | WURND // Wide urandom number
         | WACC // Wide accumulator
 
+    method printReg256(r:reg256_t)
+    {
+        match r
+            case WDR(w) => print("w"); print(w);
+            case _ => print("TODO");
+    }
+
     predicate is_wide_data_register(r: reg256_t)
     {
         r.WDR?
@@ -112,7 +119,7 @@ module ot_machine {
         // | BN_SUBM(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t)
         // | BN_AND(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
         // | BN_OR(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
-        | BN_NOT(wrd: reg256_t, wrs: reg256_t, shift: shift_t, fg: uint1)
+        // | BN_NOT(wrd: reg256_t, wrs: reg256_t, shift: shift_t, fg: uint1)
         | BN_XOR(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
         // | BN_RSHI(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, imm: uint256)
         | BN_SEL(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, fg: uint1, flag: uint2)
@@ -124,6 +131,55 @@ module ot_machine {
         | BN_MOVR(grd: reg32_t, grd_inc: bool, grs: reg32_t, grs_inc: bool)
         | BN_WSRR(wrd: reg256_t, wsr: uint2)
         // | BN_WSRRW
+
+    method print_as_hex(a: nat, bytes: nat)
+    {
+        var val := a;
+        var num_digits := bytes * 2;
+        var i := 0;
+        var result := "";
+        while i < num_digits
+            decreases num_digits - i
+        {
+            var digit := val % 16;
+            if digit == 0 {
+                result := "0" + result;
+            } else if digit == 1 {
+                result := "1" + result;
+            } else if digit == 2 {
+                result := "2" + result;
+            } else if digit == 3 {
+                result := "3" + result;
+            } else if digit == 4 {
+                result := "4" + result;
+            } else if digit == 5 {
+                result := "5" + result;
+            } else if digit == 6 {
+                result := "6" + result;
+            } else if digit == 7 {
+                result := "7" + result;
+            } else if digit == 8 {
+                result := "8" + result;
+            } else if digit == 9 {
+                result := "9" + result;
+            } else if digit == 10 {
+                result := "a" + result;
+            } else if digit == 11 {
+                result := "b" + result;
+            } else if digit == 12 {
+                result := "c" + result;
+            } else if digit == 13 {
+                result := "d" + result;
+            } else if digit == 14 {
+                result := "e" + result;
+            } else if digit == 15 {
+                result := "f" + result;
+            }
+            val := val / 16;
+            i := i + 1;
+        }
+        print("0x"); print(result);
+    }
 
 /* stateless semantic functions  */
 
@@ -276,12 +332,12 @@ module ot_machine {
         mulqacc_so_result_t(uh, otbn_hwb(z, lh, lower), new_flags)
     }
 
-    function method otbn_not(x: uint256, shift: shift_t, carry: bool): (uint256, flags_t)
-    {
-        var result := bv256_ops.not(otbn_shift(x, shift));
-        // keep the old carry
-        (result, set_mlz_flags(bv256_ops.bool_to_uint1(carry), result))
-    }
+    // function method otbn_not(x: uint256, shift: shift_t, carry: bool): (uint256, flags_t)
+    // {
+    //     var result := bv256_ops.not(otbn_shift(x, shift));
+    //     // keep the old carry
+    //     (result, set_mlz_flags(bv256_ops.bool_to_uint1(carry), result))
+    // }
 
     function method otbn_xor(x: uint256, y: uint256, shift: shift_t, carry: bool): (uint256, flags_t)
     {
@@ -420,6 +476,12 @@ module ot_machine {
             else this.(gprs := gprs[r.index := v])
         }
 
+        method debug_write_reg32(r: reg32_t, v: uint32)
+            returns (rs: state)
+        {
+            rs := write_reg32(r, v);
+        }
+
         function method read_xword(addr: uint32): uint32
             requires xword_ptr_admissible(addr)
         {
@@ -532,6 +594,15 @@ module ot_machine {
             }
         }
 
+        method debug_write_reg256(r: reg256_t, v: uint256)
+            returns (rs: state)
+        {
+            var old_v := read_reg256(r);
+            printReg256(r); print(":"); 
+            print(old_v); print(","); print(v); print("\n"); 
+            rs := write_reg256(r, v);
+        }
+
         function method read_flag(which_group: uint1, which_flag: uint2): bool
         {
             get_flag(fgroups, which_group, which_flag)
@@ -540,6 +611,16 @@ module ot_machine {
         function method write_flags(which_group: uint1, new_flags: flags_t): state
         {
             this.(fgroups := update_fgroups(fgroups, which_group, new_flags))
+        }
+
+        method debug_write_flags(which_group: uint1, new_flags: flags_t)
+            returns (rs: state)
+        {
+            print("fg"); print(which_group); print(":");
+            print_as_hex(flags_as_uint(get_fgroup(fgroups, which_group)), 1); print(",");
+            print_as_hex(flags_as_uint(new_flags), 1);
+            print("\n");
+            rs := write_flags(which_group, new_flags);
         }
 
         function method eval_BN_LID(grd: reg32_t, grd_inc: bool, offset: int10, grs: reg32_t, grs_inc: bool): state
@@ -573,13 +654,22 @@ module ot_machine {
                 l.write_wword(addr, value)
         }
 
-        function method eval_BN_ADD(wrd: reg256_t, wrs1: reg256_t, wrs2: 
-        reg256_t, shift: shift_t, fg: uint1): state
+        function method eval_BN_ADD(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1): state
         {
             var v1 := read_reg256(wrs1);
             var v2 := read_reg256(wrs2);
             var (sum, flags) := otbn_addc(v1, v2, shift, false);
             write_reg256(wrd, sum).write_flags(fg, flags)
+        }
+
+        method debug_eval_BN_ADD(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
+            returns (rs: state)
+        {
+            var v1 := read_reg256(wrs1);
+            var v2 := read_reg256(wrs2);
+            var (sum, flags) := otbn_addc(v1, v2, shift, false);
+            rs := this.debug_write_reg256(wrd, sum);
+            rs := rs.debug_write_flags(fg, flags);
         }
 
         function method eval_BN_ADDC(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1): state
@@ -589,6 +679,17 @@ module ot_machine {
             var carry := read_flag(fg, 0);
             var (sum, flags) := otbn_addc(v1, v2, shift, carry);
             write_reg256(wrd, sum).write_flags(fg, flags)
+        }
+
+        method debug_eval_BN_ADDC(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
+            returns (rs: state)
+        {
+            var v1 := read_reg256(wrs1);
+            var v2 := read_reg256(wrs2);
+            var carry := read_flag(fg, 0);
+            var (sum, flags) := otbn_addc(v1, v2, shift, carry);
+            rs := this.debug_write_reg256(wrd, sum);
+            rs := rs.debug_write_flags(fg, flags);
         }
 
         function method eval_BN_ADDI(wrd: reg256_t, wrs1: reg256_t, imm: uint10, fg: uint1): state
@@ -649,13 +750,13 @@ module ot_machine {
             write_reg256(wrd, diff).write_flags(fg, flags)
         }
 
-        function method eval_BN_NOT(wrd: reg256_t, wrs: reg256_t, shift: shift_t, fg: uint1): state
-        {
-            var v := read_reg256(wrs);
-            var carry := read_flag(fg, 0);
-            var (result, flags) := otbn_not(v, shift, carry);
-            write_reg256(wrd, result).write_flags(fg, flags)
-        }
+        // function method eval_BN_NOT(wrd: reg256_t, wrs: reg256_t, shift: shift_t, fg: uint1): state
+        // {
+        //     var v := read_reg256(wrs);
+        //     var carry := read_flag(fg, 0);
+        //     var (result, flags) := otbn_not(v, shift, carry);
+        //     write_reg256(wrd, result).write_flags(fg, flags)
+        // }
 
         function method eval_BN_XOR(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1): state
         {
@@ -735,8 +836,8 @@ module ot_machine {
                     eval_BN_SUB(wrd, wrs1, wrs2, shift, fg)
                 case BN_SUBB(wrd, wrs1, wrs2, shift, fg) => 
                     eval_BN_SUBB(wrd, wrs1, wrs2, shift, fg)
-                case BN_NOT(wrd, wrs, shift, fg) => 
-                    eval_BN_NOT(wrd, wrs, shift, fg)
+                // case BN_NOT(wrd, wrs, shift, fg) => 
+                //     eval_BN_NOT(wrd, wrs, shift, fg)
                 case BN_XOR(wrd, wrs1, wrs2, shift, fg) => 
                     eval_BN_XOR(wrd, wrs1, wrs2, shift, fg)
                 case BN_SEL(wrd, wrs1, wrs2, fg, flag) => 
@@ -751,6 +852,27 @@ module ot_machine {
                     eval_BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc)
                 case BN_WSRR(wrd, wsr) => 
                     eval_BN_WSRR(wrd, wsr)
+        }
+
+        method debug_eval_ins256(wins: ins256)
+            returns (rs: state)
+        {
+            if !ok {
+                print("state not ok!");
+                rs := this;
+            }
+
+            match wins
+                case BN_ADD(wrd, wrs1, wrs2, shift, fg) => {
+                    rs := debug_eval_BN_ADD(wrd, wrs1, wrs2, shift, fg);
+                }
+                case BN_ADDC(wrd, wrs1, wrs2, shift, fg) => {
+                    rs := debug_eval_BN_ADDC(wrd, wrs1, wrs2, shift, fg);
+                }
+                case _ => {
+                    print("unhandled instruction!");
+                    rs := this.(ok := false);
+                }
         }
 
         function method eval_block(block: codes): state
@@ -814,6 +936,35 @@ module ot_machine {
                 case Comment(com) => this
         }
 
+        method debug_eval_block(block: codes)
+            returns (rs: state)
+            decreases block;
+        {
+            if block.CNil? {
+                return this;
+            }
+            rs := debug_eval_code(block.hd);
+            rs := rs.debug_eval_block(block.tl);
+        }
+
+        method debug_eval_code(c: code)
+            returns (rs: state)
+            decreases c, 0
+        {
+            match c
+                case Ins256(ins) =>
+                    rs := debug_eval_ins256(ins);
+                case Block(block) =>
+                    rs := debug_eval_block(block);
+                case _ => {
+                    rs := this.(ok := false);
+                    print("unhandled control flow");
+                }
+                // case IfElse(cond, ifT, ifF) => eval_if_else(cond, ifT, ifF)
+                // case While(cond, body) => eval_while(body, eval_cond(cond))
+                // case Function(name, body) => eval_block(body)
+                // case Comment(com) => this
+        }
     }
 
     predicate valid_state(s: state)

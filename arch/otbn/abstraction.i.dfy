@@ -414,55 +414,6 @@ module ot_abstraction {
 
 /* debug prints */
 
-    method print_as_hex(a: nat, bytes: nat)
-    {
-        var val := a;
-        var num_digits := bytes * 2;
-        var i := 0;
-        var result := "";
-        while i < num_digits
-            decreases num_digits - i
-        {
-            var digit := val % 16;
-            if digit == 0 {
-                result := "0" + result;
-            } else if digit == 1 {
-                result := "1" + result;
-            } else if digit == 2 {
-                result := "2" + result;
-            } else if digit == 3 {
-                result := "3" + result;
-            } else if digit == 4 {
-                result := "4" + result;
-            } else if digit == 5 {
-                result := "5" + result;
-            } else if digit == 6 {
-                result := "6" + result;
-            } else if digit == 7 {
-                result := "7" + result;
-            } else if digit == 8 {
-                result := "8" + result;
-            } else if digit == 9 {
-                result := "9" + result;
-            } else if digit == 10 {
-                result := "a" + result;
-            } else if digit == 11 {
-                result := "b" + result;
-            } else if digit == 12 {
-                result := "c" + result;
-            } else if digit == 13 {
-                result := "d" + result;
-            } else if digit == 14 {
-                result := "e" + result;
-            } else if digit == 15 {
-                result := "f" + result;
-            }
-            val := val / 16;
-            i := i + 1;
-        }
-        print("0x"); print(result);
-    }
-
     method dump_regs(s: state)
     {
         var i := 0;

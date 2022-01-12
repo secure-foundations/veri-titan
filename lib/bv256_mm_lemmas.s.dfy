@@ -167,6 +167,8 @@ module bv256_mm_lemmas refines generic_mm_lemmas {
             uint256_quarter_split_lemma(y);
         }
 
+        assume false;
+
         calc {
             t2 + u2 * B4 + wacc * B8;
                 { half_split_lemma(r3); }

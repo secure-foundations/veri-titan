@@ -849,6 +849,8 @@ abstract module generic_mm_lemmas {
         assert to_nat(x[..0]) == 0 by {
             reveal GBV.BVSEQ.ToNatRight();
         }
+        assert to_nat(a) == 0;
+                // && IsModEquivalent(to_nat(a) * pow_BASE(i), to_nat(x[..i]) * to_nat(y), rsa.M)
         assert montmul_inv(a, x, 0, y, rsa);
     }
 

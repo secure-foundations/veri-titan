@@ -29,10 +29,11 @@ module bv256_ops refines generic_bv_ops
        (x as bv256 | y as bv256) as uint
     }
 
-    function method {:opaque} not(x: uint) : uint
-    {
-        !(x as bv256) as uint
-    }
+    // function method {:opaque} not(x: uint) : uint
+    // {
+    //     assume false; // not sure why
+    //     !(x as bv256) as uint
+    // }
 
     function method {:opaque} xor(x: uint, y: uint): uint
     {

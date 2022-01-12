@@ -34,10 +34,11 @@ module bv32_ops refines generic_bv_ops
        (x as bv32 | y as bv32) as uint
     }
 
-    function method {:opaque} not(x: uint) : uint
-    {
-        !(x as bv32) as uint
-    }
+    // function method {:opaque} not(x: uint) : uint
+    // {
+    //     assume false; // not sure why
+    //     !(x as bv32) as uint
+    // }
 
     function method {:opaque} xor(x: uint, y: uint): uint
     {

@@ -1,0 +1,47 @@
+include "../../arch/otbn/decls.i.vad"
+
+#verbatim
+
+include "../../arch/otbn/decls.i.dfy"
+include "../../../lib/bv256_mm_lemmas.s.dfy"
+
+module addc512 {
+
+import opened ot_machine
+import opened ot_abstraction
+import opened ot_decls
+import opened ot_vale
+
+import opened integers
+import opened bv256_mm_lemmas
+
+// import opened Mul
+
+#endverbatim
+
+procedure mul_add_512(
+    ghost x_lh: uint256,
+    ghost x_uh: uint256,
+    ghost y_lh: uint256,
+    ghost y_uh: uint256)
+
+    requires
+        w24 == x_lh;
+        w31 == x_uh;
+        w27 == y_lh;
+        w26 == y_uh;
+
+    reads
+        w24; w31;
+
+    modifies
+        w27; w26;
+        fgroups;
+{
+    bn_add(w27, w27, w24, SFT_DFT, 0);
+    bn_addc(w26, w26, w31, SFT_DFT, 0);
+}
+
+#verbatim
+}
+#endverbatim

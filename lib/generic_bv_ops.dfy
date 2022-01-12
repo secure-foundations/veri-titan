@@ -78,7 +78,7 @@ abstract module generic_bv_ops
 
     function method or(x: uint, y: uint): uint
 
-    function method not(x: uint) : uint
+    // function method not(x: uint) : uint
 
     function method xor(x: uint, y: uint): uint
 

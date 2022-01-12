@@ -5,8 +5,8 @@ from subprocess import PIPE, Popen
 from os.path import exists
 
 TOOLS_DIR = "./tools"
-DAFNY_PATH = "./tools/dafny/dafny"
-VALE_PATH = "./tools/vale/bin/vale"
+DAFNY_PATH = "./tools/dafny/Binaries/Dafny"
+VALE_PATH = "./tools/vale/bin/vale.exe"
 DAFNY_LIB_DIR = "./std_lib"
 
 DAFNY_LIB_HASH = "84d160538b6442017a5401feb91265147bf34bfc"
