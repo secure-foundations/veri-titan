@@ -67,8 +67,8 @@ class DafnyParser:
             # pp.pprint(call_site)
             raise Exception("unhandled Main call site")
 
-    def __init__(self, target_name) -> None:
-        dfy_ast = open("ast.json").read()
+    def __init__(self, target_name, ast_file) -> None:
+        dfy_ast = open(ast_file).read()
         dfy_ast = ast.literal_eval(dfy_ast)
 
         self.methods = dict()
@@ -115,11 +115,22 @@ class DafnyParser:
     def get_target_method(self):
         return self.methods[self.target_name]
 
+    def get_lemma(self, name):
+        return self.lemmas[name]
+
     def load_call(self, call):
         callee_name = call[1]
         callee = self._lookup_callee(callee_name)
         callee.add_trace(call)
 
+    def load_trace(self, trace_file):
+        f = open(trace_file)
+        for line in f:
+            line = line.strip()
+            assert line[0] == "(" and line[-1] == ")"
+            line = line[1:-1]
+            line = line.split(", ")
+            self.load_call(line)
 
 if __name__ == "__main__":
     p = DafnyParser("dw_add")

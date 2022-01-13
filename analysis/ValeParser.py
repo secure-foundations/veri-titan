@@ -1,3 +1,4 @@
+import ast
 import pprint
 
 pp = pprint.PrettyPrinter(indent=2)
@@ -36,7 +37,8 @@ class ValeProc:
             assert right in self.formals
             self.formals[right].pyhsical = left
 
-    def __init__(self, proc_ast):
+    def __init__(self, ast_file):
+        proc_ast = ast.literal_eval(open(ast_file).read())
         self.name = proc_ast['name']
         self._load_formals(proc_ast['formals'])
         self._load_requires(proc_ast['requires'])

@@ -1,30 +1,13 @@
-import sys, ast
+import enum
+from re import match
+import sys, ast, os
 from ValeParser import *
 from DfyParser import DafnyParser
 from ValeParser import *
+import time
 
-target_name = "dw_add"
-
-vale_ast = open("vale.ast").read()
-vale_ast = ast.literal_eval(vale_ast)
-
-vproc = ValeProc(vale_ast)
-assert (vproc.name == target_name)
-
-dparser = DafnyParser(target_name)
-dproc = dparser.get_target_method()
-
-trace = open(sys.argv[1]).readlines()
-
-for line in trace:
-    line = line.strip()
-    assert line[0] == "(" and line[-1] == ")"
-    line = line[1:-1]
-    line = line.split(", ")
-    dparser.load_call(line)
-
-prelude = """
-include "vale.i.dfy"
+SIM_PROLOGUE = """
+include "../../arch/otbn/vale.i.dfy"
 include "../../gen/impl/otbn/test.dfy"
 
 module otbn_exe {
@@ -38,18 +21,18 @@ method ExecuteDemo()
     var state := state.init();
 """
 
-postlude = """
+SIM_EPILOGUE = """
     state := state.debug_eval_code(va_code_mul_add_512());
-
 }
 
 method Main()
 {
     ExecuteDemo();
 }
-
 }
 """
+
+DFY_MOD_PATH = "tools/dafny_mod/Binaries/Dafny"
 
 class State:
     def __init__(self):
@@ -72,39 +55,59 @@ class State:
     def add_fg_update(self, fg, value):
         assert fg in FGS
         value = int(value, base=16)
-        self.add_flag_update(fg + "c", value & 1)
-        self.add_flag_update(fg + "z", value & 8)
+        self.add_flag_update(fg + "c", str(value & 1))
+        self.add_flag_update(fg + "z", str(value & 8))
 
-        # var r := if flags.cf then 1 else 0;
-        # var r := r + if flags.msb then 2 else 0;
-        # var r := r + if flags.lsb then 4 else 0;
-        # r + if flags.zero then 8 else 0
+    def match_invocation(self, formals, invocation, matching):
+        for argi, target_value in enumerate(invocation):
+            formal = formals[argi]
+            matched = set()
+            for reg, values in self.wdrs.items():
+                for index, value in enumerate(values):
+                    if value == target_value:
+                        matched |= {(reg, index)}
+            
+            if matched == set():
+                for flag, values in self.flgs.items():
+                    for index, value in enumerate(values):
+                        if value == target_value:
+                            matched |= {(flag, index)}
 
+            # assert matched != set()
+            if formal not in matching:
+                matching[formal] = matched
+            else:
+                matching[formal] &= matched
 
+            # print(formal, matched, target_value)
+            print(matching[formal])
 
 def print_wdr(r):
     if r[0] == "w":
         return "WDR(" + r[1:] + ")"
     assert False
 
-def match_formals(vproc, dproc):
+def match_arguments(vproc, dproc):
+    # list of formals have to match
     assert (len(vproc.formals) == len(dproc.formals))
     assert (set(vproc.formals.keys()) == set(dproc.formals))
     
     state = State()
+    sim_code = ""
 
     for name, gv in vproc.formals.items():
         value = dproc.get_formal_concrete_value(name)
         reg = print_wdr(gv.pyhsical)
-        print("state := state.write_reg256(%s, %s);" % (reg, value))
+        sim_code += "state := state.write_reg256(%s, %s);\n" % (reg, value)
         state.add_reg_update(gv.pyhsical, value)
-    return state
+    sim_code = SIM_PROLOGUE + sim_code + SIM_EPILOGUE
+    return sim_code, state
 
-print(prelude)
-state = match_formals(vproc, dproc)
-print(postlude)
+def run_instrumented_dfy(dfy_trace_file_path):
+    os.system("dotnet experiment/dafny/Instrumented.dll > %s" % dfy_trace_file_path)
+    time.sleep(1)
 
-trace2 = open(sys.argv[2]).readlines()
+VALE_OUTPUT_DIR = "experiment/vale/"
 
 def parse_trace(state, line):
     line = line.strip().split(":")
@@ -115,14 +118,45 @@ def parse_trace(state, line):
     elif operand[0] == "f":
         state.add_fg_update(operand, value)
     else:
-        assert False  
+        assert False
 
-for line in trace2:
-    parse_trace(state, line)
+def run_simulated_vad(sim_file_name, sim_code, vad_trace_file_path):
+    sim_file_path = VALE_OUTPUT_DIR + sim_file_name
+    sim_dfy_file = open(sim_file_path, "w+")
+    sim_dfy_file.write(sim_code)
+    sim_dfy_file.close()
+    os.system(f"cd {VALE_OUTPUT_DIR} && dafny {sim_file_name} /noNLarith /timeLimit:20")
+    dll_file_name = sim_file_name.replace(".dfy", ".dll")
+    os.system(f"dotnet {VALE_OUTPUT_DIR + dll_file_name} > {vad_trace_file_path}")
 
-print(state.wdrs)
-print(state.flgs)
-# for method in self.methods.values():
-#     print(method.calls)
+if __name__ == '__main__':
+    target_name = "dw_add"
 
-    # p.load_trace("Generated/out.trace")
+    matching = dict()
+
+    for i in range(5):
+        dparser = DafnyParser(target_name, "experiment/dafny/dfy.ast")
+        dproc = dparser.get_target_method()
+
+        vproc = ValeProc("experiment/vale.ast")
+        assert (vproc.name == target_name)
+
+        dfy_trace_file_path = "experiment/dfy_trace"
+        run_instrumented_dfy(dfy_trace_file_path)
+
+        dparser.load_trace(dfy_trace_file_path)
+
+        sim_code, state = match_arguments(vproc, dproc)
+
+        vad_trace_file_path = "experiment/vad_trace"
+        sim_file_name = "sim.dfy"
+
+        run_simulated_vad(sim_file_name, sim_code, vad_trace_file_path) 
+
+        trace = open(vad_trace_file_path).readlines()
+
+        for line in trace:
+            parse_trace(state, line)
+
+        lemma = dparser.get_lemma("dw_add_correct")
+        state.match_invocation(lemma.formals, lemma.traces[0], matching)
