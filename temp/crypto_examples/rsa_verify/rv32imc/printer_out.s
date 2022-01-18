@@ -5,7 +5,7 @@ asm_mod_pow:
     addi sp, sp, -32
     sw ra, 28(sp)
     sw s0, 24(sp)
-    sw s11, 20(sp)
+    sw s1, 20(sp)
     sw s2, 16(sp)
     sw s3, 12(sp)
     sw s4, 8(sp)
@@ -23,36 +23,36 @@ asm_mod_pow:
     addi sp, sp, -32
     sw ra, 28(sp)
     sw s0, 24(sp)
-    sw s11, 20(sp)
+    sw s1, 20(sp)
     sw s2, 16(sp)
     sw s3, 12(sp)
     sw s4, 8(sp)
     addi s0, a0, 0
-    addi s11, a1, 0
+    addi s1, a1, 0
     addi s2, a2, 0
     addi s3, a3, 0
-    addi s4, s11, 384
+    addi s4, s1, 384
 
 w_start0:
-  bge s11, s4, w_end0
-    sw x0, 0(s11)
-    addi s11, s11, 4
+  bge s1, s4, w_end0
+    sw x0, 0(s1)
+    addi s1, s1, 4
   j w_start0
 
 w_end0:
-    addi s11, a1, 0
+    addi s1, a1, 0
     addi s4, s2, 384
 
 w_start1:
   bge s2, s4, w_end1
-    addi a1, s11, 0
+    addi a1, s1, 0
     addi a0, s0, 0
     addi a3, s3, 0
     lw a2, 0(s2)
     addi sp, sp, -48
     sw ra, 44(sp)
     sw s0, 40(sp)
-    sw s11, 36(sp)
+    sw s1, 36(sp)
     sw s2, 32(sp)
     sw s3, 28(sp)
     sw s4, 24(sp)
@@ -88,7 +88,7 @@ w_start1:
     add a0, a5, a2
     sltu a5, a0, a5
     add a1, a1, a5
-    addi s11, a1, 0
+    addi s1, a1, 0
 
 w_start2:
   bge s2, s8, w_end2
@@ -107,7 +107,7 @@ w_start2:
     addi s0, a1, 0
     lw a1, 0(s2)
     addi a2, a0, 0
-    addi a3, s11, 0
+    addi a3, s1, 0
     addi a0, s5, 0
     mul a5, a0, a1
     mulhu a1, a0, a1
@@ -119,15 +119,15 @@ w_start2:
     add a1, a1, a5
     sw a0, 0(s3)
     addi s2, s2, 4
-    addi s11, a1, 0
+    addi s1, a1, 0
     addi s4, s4, 4
     addi s3, s3, 4
   j w_start2
 
 w_end2:
-    add s0, s0, s11
+    add s0, s0, s1
     sw s0, 0(s3)
-  blt s0, s11, if_true3
+  blt s0, s1, if_true3
   j if_end3
 
 if_true3:
@@ -159,7 +159,7 @@ w_end4:
 if_end3:
     lw ra, 44(sp)
     lw s0, 40(sp)
-    lw s11, 36(sp)
+    lw s1, 36(sp)
     lw s2, 32(sp)
     lw s3, 28(sp)
     lw s4, 24(sp)
@@ -174,15 +174,15 @@ if_end3:
 w_end1:
     lw ra, 28(sp)
     lw s0, 24(sp)
-    lw s11, 20(sp)
+    lw s1, 20(sp)
     lw s2, 16(sp)
     lw s3, 12(sp)
     lw s4, 8(sp)
     addi sp, sp, 32
-    li s11, 8
+    li s1, 8
 
 w_start5:
-  ble s11, x0, w_end5
+  ble s1, x0, w_end5
     addi a3, s0, 0
     addi a2, s0, 0
     addi a1, s2, 0
@@ -190,36 +190,36 @@ w_start5:
     addi sp, sp, -32
     sw ra, 28(sp)
     sw s0, 24(sp)
-    sw s11, 20(sp)
+    sw s1, 20(sp)
     sw s2, 16(sp)
     sw s3, 12(sp)
     sw s4, 8(sp)
     addi s0, a0, 0
-    addi s11, a1, 0
+    addi s1, a1, 0
     addi s2, a2, 0
     addi s3, a3, 0
-    addi s4, s11, 384
+    addi s4, s1, 384
 
 w_start6:
-  bge s11, s4, w_end6
-    sw x0, 0(s11)
-    addi s11, s11, 4
+  bge s1, s4, w_end6
+    sw x0, 0(s1)
+    addi s1, s1, 4
   j w_start6
 
 w_end6:
-    addi s11, a1, 0
+    addi s1, a1, 0
     addi s4, s2, 384
 
 w_start7:
   bge s2, s4, w_end7
-    addi a1, s11, 0
+    addi a1, s1, 0
     addi a0, s0, 0
     addi a3, s3, 0
     lw a2, 0(s2)
     addi sp, sp, -48
     sw ra, 44(sp)
     sw s0, 40(sp)
-    sw s11, 36(sp)
+    sw s1, 36(sp)
     sw s2, 32(sp)
     sw s3, 28(sp)
     sw s4, 24(sp)
@@ -255,7 +255,7 @@ w_start7:
     add a0, a5, a2
     sltu a5, a0, a5
     add a1, a1, a5
-    addi s11, a1, 0
+    addi s1, a1, 0
 
 w_start8:
   bge s2, s8, w_end8
@@ -274,7 +274,7 @@ w_start8:
     addi s0, a1, 0
     lw a1, 0(s2)
     addi a2, a0, 0
-    addi a3, s11, 0
+    addi a3, s1, 0
     addi a0, s5, 0
     mul a5, a0, a1
     mulhu a1, a0, a1
@@ -286,15 +286,15 @@ w_start8:
     add a1, a1, a5
     sw a0, 0(s3)
     addi s2, s2, 4
-    addi s11, a1, 0
+    addi s1, a1, 0
     addi s4, s4, 4
     addi s3, s3, 4
   j w_start8
 
 w_end8:
-    add s0, s0, s11
+    add s0, s0, s1
     sw s0, 0(s3)
-  blt s0, s11, if_true9
+  blt s0, s1, if_true9
   j if_end9
 
 if_true9:
@@ -326,7 +326,7 @@ w_end10:
 if_end9:
     lw ra, 44(sp)
     lw s0, 40(sp)
-    lw s11, 36(sp)
+    lw s1, 36(sp)
     lw s2, 32(sp)
     lw s3, 28(sp)
     lw s4, 24(sp)
@@ -341,7 +341,7 @@ if_end9:
 w_end7:
     lw ra, 28(sp)
     lw s0, 24(sp)
-    lw s11, 20(sp)
+    lw s1, 20(sp)
     lw s2, 16(sp)
     lw s3, 12(sp)
     lw s4, 8(sp)
@@ -353,36 +353,36 @@ w_end7:
     addi sp, sp, -32
     sw ra, 28(sp)
     sw s0, 24(sp)
-    sw s11, 20(sp)
+    sw s1, 20(sp)
     sw s2, 16(sp)
     sw s3, 12(sp)
     sw s4, 8(sp)
     addi s0, a0, 0
-    addi s11, a1, 0
+    addi s1, a1, 0
     addi s2, a2, 0
     addi s3, a3, 0
-    addi s4, s11, 384
+    addi s4, s1, 384
 
 w_start11:
-  bge s11, s4, w_end11
-    sw x0, 0(s11)
-    addi s11, s11, 4
+  bge s1, s4, w_end11
+    sw x0, 0(s1)
+    addi s1, s1, 4
   j w_start11
 
 w_end11:
-    addi s11, a1, 0
+    addi s1, a1, 0
     addi s4, s2, 384
 
 w_start12:
   bge s2, s4, w_end12
-    addi a1, s11, 0
+    addi a1, s1, 0
     addi a0, s0, 0
     addi a3, s3, 0
     lw a2, 0(s2)
     addi sp, sp, -48
     sw ra, 44(sp)
     sw s0, 40(sp)
-    sw s11, 36(sp)
+    sw s1, 36(sp)
     sw s2, 32(sp)
     sw s3, 28(sp)
     sw s4, 24(sp)
@@ -418,7 +418,7 @@ w_start12:
     add a0, a5, a2
     sltu a5, a0, a5
     add a1, a1, a5
-    addi s11, a1, 0
+    addi s1, a1, 0
 
 w_start13:
   bge s2, s8, w_end13
@@ -437,7 +437,7 @@ w_start13:
     addi s0, a1, 0
     lw a1, 0(s2)
     addi a2, a0, 0
-    addi a3, s11, 0
+    addi a3, s1, 0
     addi a0, s5, 0
     mul a5, a0, a1
     mulhu a1, a0, a1
@@ -449,15 +449,15 @@ w_start13:
     add a1, a1, a5
     sw a0, 0(s3)
     addi s2, s2, 4
-    addi s11, a1, 0
+    addi s1, a1, 0
     addi s4, s4, 4
     addi s3, s3, 4
   j w_start13
 
 w_end13:
-    add s0, s0, s11
+    add s0, s0, s1
     sw s0, 0(s3)
-  blt s0, s11, if_true14
+  blt s0, s1, if_true14
   j if_end14
 
 if_true14:
@@ -489,7 +489,7 @@ w_end15:
 if_end14:
     lw ra, 44(sp)
     lw s0, 40(sp)
-    lw s11, 36(sp)
+    lw s1, 36(sp)
     lw s2, 32(sp)
     lw s3, 28(sp)
     lw s4, 24(sp)
@@ -504,12 +504,12 @@ if_end14:
 w_end12:
     lw ra, 28(sp)
     lw s0, 24(sp)
-    lw s11, 20(sp)
+    lw s1, 20(sp)
     lw s2, 16(sp)
     lw s3, 12(sp)
     lw s4, 8(sp)
     addi sp, sp, 32
-    addi s11, s11, -1
+    addi s1, s1, -1
   j w_start5
 
 w_end5:
@@ -520,36 +520,36 @@ w_end5:
     addi sp, sp, -32
     sw ra, 28(sp)
     sw s0, 24(sp)
-    sw s11, 20(sp)
+    sw s1, 20(sp)
     sw s2, 16(sp)
     sw s3, 12(sp)
     sw s4, 8(sp)
     addi s0, a0, 0
-    addi s11, a1, 0
+    addi s1, a1, 0
     addi s2, a2, 0
     addi s3, a3, 0
-    addi s4, s11, 384
+    addi s4, s1, 384
 
 w_start16:
-  bge s11, s4, w_end16
-    sw x0, 0(s11)
-    addi s11, s11, 4
+  bge s1, s4, w_end16
+    sw x0, 0(s1)
+    addi s1, s1, 4
   j w_start16
 
 w_end16:
-    addi s11, a1, 0
+    addi s1, a1, 0
     addi s4, s2, 384
 
 w_start17:
   bge s2, s4, w_end17
-    addi a1, s11, 0
+    addi a1, s1, 0
     addi a0, s0, 0
     addi a3, s3, 0
     lw a2, 0(s2)
     addi sp, sp, -48
     sw ra, 44(sp)
     sw s0, 40(sp)
-    sw s11, 36(sp)
+    sw s1, 36(sp)
     sw s2, 32(sp)
     sw s3, 28(sp)
     sw s4, 24(sp)
@@ -585,7 +585,7 @@ w_start17:
     add a0, a5, a2
     sltu a5, a0, a5
     add a1, a1, a5
-    addi s11, a1, 0
+    addi s1, a1, 0
 
 w_start18:
   bge s2, s8, w_end18
@@ -604,7 +604,7 @@ w_start18:
     addi s0, a1, 0
     lw a1, 0(s2)
     addi a2, a0, 0
-    addi a3, s11, 0
+    addi a3, s1, 0
     addi a0, s5, 0
     mul a5, a0, a1
     mulhu a1, a0, a1
@@ -616,15 +616,15 @@ w_start18:
     add a1, a1, a5
     sw a0, 0(s3)
     addi s2, s2, 4
-    addi s11, a1, 0
+    addi s1, a1, 0
     addi s4, s4, 4
     addi s3, s3, 4
   j w_start18
 
 w_end18:
-    add s0, s0, s11
+    add s0, s0, s1
     sw s0, 0(s3)
-  blt s0, s11, if_true19
+  blt s0, s1, if_true19
   j if_end19
 
 if_true19:
@@ -656,7 +656,7 @@ w_end20:
 if_end19:
     lw ra, 44(sp)
     lw s0, 40(sp)
-    lw s11, 36(sp)
+    lw s1, 36(sp)
     lw s2, 32(sp)
     lw s3, 28(sp)
     lw s4, 24(sp)
@@ -671,7 +671,7 @@ if_end19:
 w_end17:
     lw ra, 28(sp)
     lw s0, 24(sp)
-    lw s11, 20(sp)
+    lw s1, 20(sp)
     lw s2, 16(sp)
     lw s3, 12(sp)
     lw s4, 8(sp)
@@ -737,7 +737,7 @@ w_end24:
 if_end23:
     lw ra, 28(sp)
     lw s0, 24(sp)
-    lw s11, 20(sp)
+    lw s1, 20(sp)
     lw s2, 16(sp)
     lw s3, 12(sp)
     lw s4, 8(sp)
