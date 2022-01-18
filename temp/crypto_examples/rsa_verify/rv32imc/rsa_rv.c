@@ -454,15 +454,14 @@ int main(void) {
 
   mod_pow(rr,d0inv,n,sig,out,workbuf);
   
+  // for (int i=0; i<(RSANUMWORDS); i++) {
+  //   printf("Limb %d: 0x%08lx\n", i, out[i]);
+  // }
+  
   asm_mod_pow(rr,d0inv,n,sig,asm_out,asm_workbuf);
 
-  
-  for (int i=0; i<(RSANUMWORDS); i++) {
-    printf("Limb %d: 0x%08lx\n", i, out[i]);
-  }
-
-  for (int i=0; i<(RSANUMWORDS); i++) {
-    printf("Limb %d: 0x%08lx\n", i, asm_out[i]);
-  }
+  // for (int i=0; i<(RSANUMWORDS); i++) {
+  //   printf("Limb %d: 0x%08lx\n", i, asm_out[i]);
+  // }
 }
 
