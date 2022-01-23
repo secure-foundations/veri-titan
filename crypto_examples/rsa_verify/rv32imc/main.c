@@ -334,7 +334,7 @@ int main(void) {
   uint32_t workbuf[2*RSANUMWORDS];
   uint32_t out[96];
 
-  mod_pow(rr,d0inv,n,sig,out,workbuf);
+  mod_pow(d0inv,out,workbuf32,rr,n,sig)
   
   for (int i=0; i<(RSANUMWORDS); i++) {
     printf("Limb %d: 0x%08lx\n", i, out[i]);

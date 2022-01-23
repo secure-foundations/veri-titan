@@ -68,10 +68,19 @@ function subb_inv_pre_lemma(
 
 function A_as_carry(lh: uint32, uh: uint32): uint1 extern;
 
-procedure sub_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
-    returns (ghost iter_a': iter_t, ghost borrow: uint1)
+procedure sub_mod(
+    ghost iter_n: iter_t,
+    ghost iter_a: iter_t)
+
+    returns (
+        ghost iter_a': iter_t,
+        ghost borrow: uint1)
+
+    {:noInline}
+
+
     requires
-        iter_safe(iter_n, mem, 71192);
+        iter_safe(iter_n, mem, a1);
         seq_len(iter_n.buff) == 96;
         iter_n.index == 0; 
 
@@ -80,27 +89,22 @@ procedure sub_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
         iter_a.index == 0;
 
         iter_n.base_addr != iter_a.base_addr;
+
     modifies
         a0; a1; a2; a3; a4; a5; a6; mem;
+
     ensures
-        // iter_inv(iter_a', mem, a0);
         seq_len(iter_a'.buff) == 96;
+        iter_a'.base_addr == iter_a.base_addr;
+        iter_a'.index == 0;
         mem == old(mem)[iter_a.base_addr := iter_a'.buff];
+
         to_nat(iter_a'.buff) ==
             to_nat(iter_a.buff) - to_nat(iter_n.buff) + borrow * Pow(BASE_32, 96);
         to_nat(iter_a.buff) >= to_nat(iter_n.buff) ==> borrow == 0;
-        iter_a'.base_addr == iter_a.base_addr;
-        iter_a'.index == 0;
 {
-    // load address of n
-    lui(a2, 0x11); // 0x11000 into a2
-    assume 0x11000 == a2;
-
-    addi(a2, a2, 1560); // 71192 in a2
-    assert a2 == 71192;
-
-    addi(a6 ,a2, 384);  // 71576 in a6
-    assert a6 == 71576;
+    addi(a2, a1, 0);
+    addi(a6 ,a2, 384);
 
     // set A to 0
     li(a5, 0); // 0 in a5 -- lower half of A
@@ -120,15 +124,15 @@ procedure sub_mod(ghost iter_n: iter_t, ghost iter_a: iter_t)
 
     while (a2 != a6)
         invariant a2 <= a6;
-        invariant a2 == 71192 + 4 * i;
-        invariant a6 == 71576;
+        // invariant a2 == old(a1) + 4 * i;
+        invariant a6 == n_ptr + 384;
         invariant 0 <= i <= 96;
 
         invariant iter_inv(iter_n, mem, a2);
         invariant iter_n.base_addr == n_ptr;
         invariant iter_n.index == i;
-        invariant mem == old(mem)[a_ptr := iter_a'.buff];
 
+        invariant mem == old(mem)[a_ptr := iter_a'.buff];
         invariant iter_inv(iter_a', mem, a0);
         invariant seq_len(iter_a'.buff) == 96;
         invariant iter_a'.base_addr == a_ptr;

@@ -35,7 +35,7 @@ uint64_t mulaa32(uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
 /**
  * a[] -= mod
  */
-static void sub_mod(const uint32_t *n, uint32_t *a)
+static void sub_mod(uint32_t *a, const uint32_t *n)
 {
   int64_t A = 0;
   uint32_t i;
@@ -49,7 +49,7 @@ static void sub_mod(const uint32_t *n, uint32_t *a)
 /**
  * Return a[] >= mod
  */
-static int ge_mod(const uint32_t *n, const uint32_t *a)
+static int ge_mod(const uint32_t *a, const uint32_t *n)
 {
   uint32_t i;
   for (i = RSANUMWORDS; i;) {
@@ -82,7 +82,7 @@ static void mont_mul_add(const uint32_t d0inv, const uint32_t *n,
   A = (A >> 32) + (B >> 32);
   c[i - 1] = (uint32_t)A;
   if (A >> 32)
-    sub_mod(n, c);
+    sub_mod(c, n);
 }
 
 /**
@@ -113,10 +113,12 @@ void mont_mul(const uint32_t d0inv, const uint32_t *n,
  * @param workbuf32	Work buffer; caller must verify this is
  *			2 x RSANUMWORDS elements long.
  */
-void mod_pow(const uint32_t * rr, const uint32_t d0inv, const uint32_t *n,
-         uint32_t *in,
-         uint32_t *out,
-         uint32_t *workbuf32)
+void mod_pow(const uint32_t d0inv,
+        uint32_t *out,
+        uint32_t *workbuf32,
+        const uint32_t * rr,
+        const uint32_t *n,
+        uint32_t *in)
 {
   uint32_t *a_r = workbuf32;
   uint32_t *aa_r = a_r + RSANUMWORDS;
@@ -131,6 +133,6 @@ void mod_pow(const uint32_t * rr, const uint32_t d0inv, const uint32_t *n,
   mont_mul(d0inv, n, out, a_r, in);  /* aaa = a_r * a / R mod M */
 
   /* Make sure aaa < mod; aaa is at most 1x mod too large. */
-  if (ge_mod(n, out))
-    sub_mod(n, out);
+  if (ge_mod(out, n))
+    sub_mod(out, n);
 }

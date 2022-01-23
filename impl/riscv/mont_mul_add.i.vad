@@ -127,7 +127,7 @@ procedure mont_mul_add_0(
     requires a0 == rsa.M0D;
     requires a2 == vars.a_i;
 
-    requires mma_vars_inv(vars, mem, 71192, 0, /* n */ a1, 0, /* c */ a3, 0, /* b */ rsa);
+    requires mma_vars_inv(vars, mem, a4, 0, /* n */ a1, 0, /* c */ a3, 0, /* b */ rsa);
 
     modifies
         sp; s0; s1; s2; s3; s4; s5; s6; s7; s8;
@@ -138,7 +138,7 @@ procedure mont_mul_add_0(
         s1 == B.uh;
         s6 == old(a1);
         s7 == vars.a_i;
-        s8 == 71576;
+        s8 == old(a4) + 384;
         sp == vars.frame_ptr;
 
     ensures
@@ -197,28 +197,15 @@ procedure mont_mul_add_0(
     // s4 <- pointer to b
     mv(s4, a3);
 
-    // ** before mula32 call:
-    //      sp[2..10] = s8, s7, ..., s10
-    //      sp[11] = ra
-
-    //      a0 = a, a1 = b[0], a2 = c[0]
-    //      s6 = pointer to (beginning of) c
-    //      s5 = d0inv
-    //      s4 = pointer to b
-    //      s7 = a
-
     A := mula32();
+
     assert A.full == vars.a_i * vars.iter_b.buff[0] + vars.iter_c.buff[0];
     
     // s5 <- A(lh) * d0inv
     mul(s5, a0, s5);
     // assert s5 == uint32_mul(A.lh, d0inv);
     
-    // s8 <- pointer to n (71192)
-    lui(s8, 0x11);
-    assume 0x11000 == s8;
-    addi(s8, s8, 1560);
-    assert s8 == 71192;
+    addi(s8, a4, 0);
 
     // s0 <- A(uh)
     mv(s0, a1);
@@ -228,9 +215,6 @@ procedure mont_mul_add_0(
     // a2 <- A(lh)
     mv(a2, a0);
 
-    // assert a1 == iter_n.buff[0];
-    // assert a2 == A.lh;
-    
     // s2 <- pointer to n[1]
     addi(s2, s8, 4);
     let next_iter_n := lw_next_iter(vars.iter_n);
@@ -382,6 +366,8 @@ procedure mont_mul_add(
     returns (ghost next_iter_c : iter_t)
     {:timeLimitMultiplier 2}
 
+    {:noInline}
+
     requires sp > 48;
     requires sp - 48 == vars.frame_ptr;
 
@@ -390,7 +376,7 @@ procedure mont_mul_add(
 
     requires vars.i < NUM_WORDS;    
 
-    requires mma_vars_inv(vars, mem, 71192, 0, /* n */ a1, 0, /* c */ a3, 0, /* b */ rsa);
+    requires mma_vars_inv(vars, mem, a4, 0, /* n */ a1, 0, /* c */ a3, 0, /* b */ rsa);
 
     requires montmul_inv(vars.iter_c.buff, vars.iter_a.buff, vars.i, vars.iter_b.buff, rsa);
 
@@ -419,7 +405,7 @@ procedure mont_mul_add(
         mem == old(mem)[vars.frame_ptr := mem[vars.frame_ptr]]
             [next_iter_c.base_addr := next_iter_c.buff];
 
-        mma_vars_inv(vars.(iter_c := next_iter_c), mem, 71192, 0, /* n */ old(a1), 0, /* c */ old(a3), 0, /* b */ rsa);
+        mma_vars_inv(vars.(iter_c := next_iter_c), mem, old(a4), 0, /* n */ old(a1), 0, /* c */ old(a3), 0, /* b */ rsa);
 
     ensures
         montmul_inv(next_iter_c.buff, vars.iter_a.buff, vars.i+1, vars.iter_b.buff, rsa);
@@ -446,7 +432,7 @@ procedure mont_mul_add(
             s7 == next_vars.a_i;
 
             s2 == next_vars.iter_n.base_addr + 4 * j;
-            s8 == 71576;
+            s8 == old(a4) + 384;
             s2 <= s8;
 
             sp == next_vars.frame_ptr;
@@ -491,6 +477,8 @@ procedure mont_mul_add(
     if (s0 < s1) {
         // assert A.uh + B.uh == s0 + BASE_32;
         mv(a0, s6);
+        addi(a1, s8, (-384));
+
         next_iter_c, next_bout := sub_mod(next_vars.iter_n.(index := 0),
             next_iter_c.(index := 0));
     }
