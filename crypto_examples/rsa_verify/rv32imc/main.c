@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-extern void asm_mod_pow(const uint32_t * rr, const uint32_t d0inv, const uint32_t *n,
+extern void mod_pow(const uint32_t * rr, const uint32_t d0inv, const uint32_t *n,
          uint32_t *in,
          uint32_t *out,
          uint32_t *workbuf32);
@@ -329,139 +329,15 @@ uint32_t sig[RSANUMWORDS] = {
   0x114e6da5};
 
 
-uint64_t mul32(uint32_t a, uint32_t b) {
-  return (uint64_t)a*b;
-}
-
-uint64_t mula32(uint32_t a, uint32_t b, uint32_t c) {
-  return (uint64_t)a*b+c;
-}
-
-uint64_t mulaa32(uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
-  return (uint64_t)a*b+c+d;
-}
-
-/**
- * a[] -= mod
- */
-static void sub_mod(const uint32_t *n, uint32_t *a)
-{
-  int64_t A = 0;
-  uint32_t i;
-  for (i = 0; i < RSANUMWORDS; ++i) {
-    A += (uint64_t)a[i] - n[i];
-    a[i] = (uint32_t)A;
-    A >>= 32;
-  }
-}
-
-/**
- * Return a[] >= mod
- */
-static int ge_mod(const uint32_t *n, const uint32_t *a)
-{
-  uint32_t i;
-  for (i = RSANUMWORDS; i;) {
-    --i;
-    if (a[i] < n[i])
-      return 0;
-    if (a[i] > n[i])
-      return 1;
-  }
-  return 1;  /* equal */
-}
-
-/**
- * Montgomery c[] += a * b[] / R % mod
- */
-static void mont_mul_add(const uint32_t d0inv, const uint32_t *n,
-       uint32_t *c,
-       const uint32_t a,
-       const uint32_t *b)
-{
-  uint64_t A = mula32(a, b[0], c[0]);
-  uint32_t d0 = (uint32_t)A * d0inv;
-  uint64_t B = mula32(d0, n[0], (uint32_t)A);
-  uint32_t i;
-  for (i = 1; i < RSANUMWORDS; ++i) {
-    A = mulaa32(a, b[i], c[i], A >> 32);
-    B = mulaa32(d0, n[i], (uint32_t)A, B >> 32);
-    c[i - 1] = (uint32_t)B;
-  }
-  A = (A >> 32) + (B >> 32);
-  c[i - 1] = (uint32_t)A;
-  if (A >> 32)
-    sub_mod(n, c);
-}
-
-/**
- * Montgomery c[] = a[] * b[] / R % mod
- */
-static void mont_mul(const uint32_t d0inv, const uint32_t *n,
-         uint32_t *c,
-         const uint32_t *a,
-         const uint32_t *b)
-{
-  uint32_t i;
-  for (i = 0; i < RSANUMWORDS; ++i)
-    c[i] = 0;
-  for (i = 0; i < RSANUMWORDS; ++i)
-    mont_mul_add(d0inv, n, c, a[i], b);
-}
-
-/**
- * In-place public exponentiation.
- * Exponent depends is fixed to 65537
- *
- * @param rr		Precomputed constant, (R*R) mod n, considered part of key
- * @param d0inv Precomputed Montgomery constant,
- *                considered part of key d0inv=-n^(-1) mod R
- * @param n     Modulus of key
- * @param in		Input signature as little-endian array
- * @param out   Output message as little-endian array
- * @param workbuf32	Work buffer; caller must verify this is
- *			2 x RSANUMWORDS elements long.
- */
-static void mod_pow(const uint32_t * rr, const uint32_t d0inv, const uint32_t *n,
-         uint32_t *in,
-         uint32_t *out,
-         uint32_t *workbuf32)
-{
-  uint32_t *a_r = workbuf32;
-  uint32_t *aa_r = a_r + RSANUMWORDS;
-  int i;
-
-  /* Exponent 65537 */
-  mont_mul(d0inv, n, a_r, in, rr);  /* a_r = a * RR / R mod M */
-  for (i = 0; i < 16; i += 2) {
-    mont_mul(d0inv, n, aa_r, a_r, a_r); /* aa_r = a_r * a_r / R mod M */
-    mont_mul(d0inv, n, a_r, aa_r, aa_r);/* a_r = aa_r * aa_r / R mod M */
-  }
-  mont_mul(d0inv, n, out, a_r, in);  /* aaa = a_r * a / R mod M */
-
-  /* Make sure aaa < mod; aaa is at most 1x mod too large. */
-  if (ge_mod(n, out))
-    sub_mod(n, out);
-}
-
 
 int main(void) {
   uint32_t workbuf[2*RSANUMWORDS];
   uint32_t out[96];
 
-  uint32_t asm_workbuf[2*RSANUMWORDS];
-  uint32_t asm_out[96];
-
-  mod_pow(rr,d0inv,n,sig,out,workbuf);
+  mod_pow(d0inv,out,workbuf32,rr,n,sig)
   
-  // for (int i=0; i<(RSANUMWORDS); i++) {
-  //   printf("Limb %d: 0x%08lx\n", i, out[i]);
-  // }
-  
-  asm_mod_pow(rr,d0inv,n,sig,asm_out,asm_workbuf);
-
-  // for (int i=0; i<(RSANUMWORDS); i++) {
-  //   printf("Limb %d: 0x%08lx\n", i, asm_out[i]);
-  // }
+  for (int i=0; i<(RSANUMWORDS); i++) {
+    printf("Limb %d: 0x%08lx\n", i, out[i]);
+  }
 }
 

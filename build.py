@@ -44,13 +44,16 @@ rule otbn-ld
     command = otbn-ld $in -o $out
 """
 
-OT_PRINTER_DFY_PATH = "arch/otbn/printer.s.dfy"
-OT_SIMULATOR_DFY_PATH = "arch/otbn/simulator.i.dfy"
-DLL_SOURCES = {OT_PRINTER_DFY_PATH, OT_SIMULATOR_DFY_PATH}
-
-OUTPUT_ASM_PATH = "gen/arch/otbn/printer.s.dll.out"
-TEST_ASM_PATH = "impl/otbn/run_modexp.s"
+OTBN_ASM_PATH = "gen/arch/otbn/otbn_modexp.s"
+RISCV_ASM_PATH = "gen/arch/riscv/riscv_modexp.s"
+OTBN_TEST_ASM_PATH = "impl/otbn/run_modexp.s"
 OUTPUT_ELF_PATH = "gen/impl/otbn/run_modexp.elf"
+
+DLL_SOURCES = {
+    "arch/otbn/printer.s.dfy": OTBN_ASM_PATH,
+    "arch/otbn/simulator.i.dfy": "gen/arch/otbn/sim.out", 
+    "arch/riscv/printer.s.dfy": RISCV_ASM_PATH,
+}
 
 NINJA_PATH = "build.ninja"
 CODE_DIRS = ["arch", "impl", "lib"]
@@ -292,18 +295,18 @@ class Generator():
             self.content.append(f"build {ver_path}: dafny {dfy_file} || {dd_path}")
         self.content.append(f"    dyndep = {dd_path}\n")
 
-    def generate_dll_rules(self, dafny_path):
-        dfy_deps = list_dfy_deps(dafny_path)
-        dll_path = get_dll_path(dafny_path)
-        self.content.append(f"build {dll_path}: dll-gen {dafny_path} | {dfy_deps}\n")
-        dll_out_path = dll_path + ".out"
-        self.content.append(f"build {dll_out_path}: dll-run {dll_path} \n")
+    def generate_dll_rules(self):
+        for dafny_path, dll_out_path in DLL_SOURCES.items():
+            dfy_deps = list_dfy_deps(dafny_path)
+            dll_path = get_dll_path(dafny_path)
+            self.content.append(f"build {dll_path}: dll-gen {dafny_path} | {dfy_deps}\n")
+            self.content.append(f"build {dll_out_path}: dll-run {dll_path} \n")
 
     def generate_elf_rules(self):
-        output_o_path = get_o_path(OUTPUT_ASM_PATH)
-        self.content.append(f"build {output_o_path}: otbn-as {OUTPUT_ASM_PATH}\n")
-        test_o_path = get_o_path(TEST_ASM_PATH)
-        self.content.append(f"build {test_o_path}: otbn-as {TEST_ASM_PATH}\n")
+        output_o_path = get_o_path(OTBN_ASM_PATH)
+        self.content.append(f"build {output_o_path}: otbn-as {OTBN_ASM_PATH}\n")
+        test_o_path = get_o_path(OTBN_TEST_ASM_PATH)
+        self.content.append(f"build {test_o_path}: otbn-as {OTBN_TEST_ASM_PATH}\n")
         self.content.append(f"build {OUTPUT_ELF_PATH}: otbn-ld {test_o_path} {output_o_path}\n")
 
     def generate_rules(self):
@@ -318,8 +321,7 @@ class Generator():
             self.generate_dfy_rules(dfy_file)
 
         # rules for the printer
-        for dll_source in DLL_SOURCES:
-            self.generate_dll_rules(dll_source)
+        self.generate_dll_rules()
 
         # rules for the elf
         self.generate_elf_rules()

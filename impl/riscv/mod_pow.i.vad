@@ -57,6 +57,14 @@ function modexp_var_inv_peri_lemma(
     i: nat,
     rsa: rsa_params): void extern;
 
+function modexp_var_inv_post_lemma(
+    a_view: seq(uint32),
+    next_a_view: seq(uint32),
+    sig: seq(uint32),
+    rsa: rsa_params): void extern;
+
+function mod(a: int, m: int): int extern;
+
 function mm_vars_cons(
     mm_frame_ptr: nat,
     mma_frame_ptr: nat,
@@ -68,7 +76,7 @@ function mm_vars_cons(
 function mp_vars_inv(
     vars: mp_vars,
     mem: mem_t,
-    rr_ptr: nat,
+    rr_ptr: int,
     n_ptr: nat,
     in_ptr: nat,
     ar_ptr: nat,
@@ -92,7 +100,7 @@ procedure mod_pow_0(ghost vars: mp_vars, ghost rsa: rsa_params)
 
     requires a0 == rsa.M0D;
 
-    requires mp_vars_inv(vars, mem, 71576 /* rr */, 71192 /* n */, 71960 /* in */,
+    requires mp_vars_inv(vars, mem, a3 /* rr */, a4 /* n */, a5 /* in */,
             a2 /* ar */, a2 + NUM_WORDS * 4 /*aar */, a1 /* out_ptr */, rsa);
 
     reads x0;
@@ -107,7 +115,7 @@ procedure mod_pow_0(ghost vars: mp_vars, ghost rsa: rsa_params)
         s3 == rsa.M0D;
 
     ensures
-        mp_vars_inv(mut_vars, mem, 71576 /* rr */, 71192 /* n */, s5 /* in */,
+        mp_vars_inv(mut_vars, mem, NA /* rr */, s6 /* n */, s5 /* in */,
             s0 /* ar */, s2 /*aar */, s4 /* out_ptr */, rsa);
 
     ensures
@@ -115,8 +123,7 @@ procedure mod_pow_0(ghost vars: mp_vars, ghost rsa: rsa_params)
         mut_vars.iter_ar.base_addr == vars.iter_ar.base_addr;
 
     ensures
-        saved == seq(old(mem)[vars.mp_frame_ptr][0],
-            old(s5), old(s4), old(s3), old(s2), old(s1), old(s0), old(ra));
+        saved == seq(old(s6), old(s5), old(s4), old(s3), old(s2), old(s1), old(s0), old(ra));
 
         mem == old(mem)
                 [vars.mp_frame_ptr := saved]
@@ -124,7 +131,6 @@ procedure mod_pow_0(ghost vars: mp_vars, ghost rsa: rsa_params)
                 [vars.mm_frame_ptr := mem[vars.mm_frame_ptr]]
                 [vars.iter_ar.base_addr := mut_vars.iter_ar.buff];
     ensures
-        s6 == old(s6);
         s7 == old(s7);
         s8 == old(s8);
 
@@ -138,28 +144,20 @@ procedure mod_pow_0(ghost vars: mp_vars, ghost rsa: rsa_params)
     sw_stack(s1, 20, 5);
     sw_stack(s2, 16, 4);
     sw_stack(s3, 12, 3);
-    sw_stack(s4, 8, 2);
-    sw_stack(s5, 4, 1);
+    sw_stack(s4,  8, 2);
+    sw_stack(s5,  4, 1);
+    sw_stack(s6,  0, 0);
 
-    saved := seq(old(mem)[vars.mp_frame_ptr][0], s5, s4, s3, s2, s1, s0, ra);
+    saved := seq(s6, s5, s4, s3, s2, s1, s0, ra);
     assert mem[vars.mp_frame_ptr] == saved;
 
-    mv(s0, a2);
-    lui(a2, 0x11);
-    assume 0x11000 == a2;
-    addi(a2, a2, 1560);
-    assert a2 == 71192;
+    mv(s0, a2); // s0 = ar
+    mv(s6, a4); // s6 = n
+    mv(s3 ,a0); // s3 = d0inv
+    mv(s5, a5); // s5 = in
+    mv(s4, a1); // s4 = out
 
-    addi(s5, a2, 768);
-    addi(a2, a2, 384);
-
-    mv(s4 ,a1);
-    mv(a3 ,s5);
-    mv(a1 ,s0);
-    mv(s3 ,a0);
-    addi(s2, s0, 384);
-
-    ghost var iter_temp := vars.iter_ar;
+    addi(s2, a2, 384);
 
     let mmvars := mm_vars_cons(
         vars.mm_frame_ptr,
@@ -169,7 +167,16 @@ procedure mod_pow_0(ghost vars: mp_vars, ghost rsa: rsa_params)
         vars.iter_ar,
         vars.iter_n);
 
-    iter_temp := mont_mul(mmvars, rsa);
+    mv(a2, a3);
+    mv(a1, s0);
+    mv(a3, s5);
+
+    // assert mvar_iter_inv(mem, vars.iter_ar, a1, 0, NA);
+    // assert mvar_iter_inv(mem, vars.iter_rr, a2, 0, rsa.RR);
+    // assert mvar_iter_inv(mem, vars.iter_n, a4, 0, rsa.M);
+    // assert mvar_iter_inv(mem, vars.iter_in, a3, 0, rsa.SIG);
+
+    let iter_temp := mont_mul(mmvars, rsa);
     mut_vars := vars.(iter_ar := iter_temp);
 
     assert iter_temp.base_addr == vars.iter_ar.base_addr;
@@ -197,9 +204,9 @@ procedure mod_pow_1(ghost vars: mp_vars, ghost rsa: rsa_params, ghost i: nat)
     requires
         s3 == rsa.M0D;
 
-        mp_vars_inv(vars, mem, 71576 /* rr */, 71192 /* n */, s5 /* in */,
+        mp_vars_inv(vars, mem, NA /* rr */, s6 /* n */, s5 /* in */,
             s0 /* ar */, s2 /*aar */, s4 /* out_ptr */, rsa);
-    
+
     requires
         modexp_var_inv(to_nat(vars.iter_ar.buff), 2 * i, rsa);
 
@@ -223,7 +230,7 @@ procedure mod_pow_1(ghost vars: mp_vars, ghost rsa: rsa_params, ghost i: nat)
         sp == old(sp);
 
     ensures
-        mp_vars_inv(mut_vars, mem, 71576 /* rr */, 71192 /* n */, s5 /* in */,
+        mp_vars_inv(mut_vars, mem, NA /* rr */, s6 /* n */, s5 /* in */,
             s0 /* ar */, s2 /*aar */, s4 /* out_ptr */, rsa);
 
         mut_vars == vars.(iter_ar := mut_vars.iter_ar)
@@ -253,6 +260,7 @@ procedure mod_pow_1(ghost vars: mp_vars, ghost rsa: rsa_params, ghost i: nat)
     mv(a2, s0); // ar
     mv(a1, s2); // aar
     mv(a0, s3); // M0D
+    mv(a4, s6); // n
 
     ghost var iter_temp: iter_t;
     iter_temp := mont_mul(mmvars, rsa);
@@ -274,6 +282,7 @@ procedure mod_pow_1(ghost vars: mp_vars, ghost rsa: rsa_params, ghost i: nat)
     mv(a2, s2);
     mv(a1, s0);
     mv(a0, s3);
+    mv(a4, s6);
 
     iter_temp := mont_mul(mmvars, rsa);
     mut_vars := mut_vars.(iter_ar := iter_temp);
@@ -281,16 +290,8 @@ procedure mod_pow_1(ghost vars: mp_vars, ghost rsa: rsa_params, ghost i: nat)
     modexp_var_inv_peri_lemma(mut_vars.iter_aar.buff, iter_temp.buff, 2 * i + 1, rsa);
 }
 
-function modexp_var_inv_post_lemma(
-    a_view: seq(uint32),
-    next_a_view: seq(uint32),
-    sig: seq(uint32),
-    rsa: rsa_params): void extern;
-
-function mod(a: int, m: int): int extern;
-
 procedure mod_pow_2(ghost vars: mp_vars, ghost rsa: rsa_params)
-    returns (ghost mut_vars:  mp_vars)
+    returns (ghost mut_vars: mp_vars)
 
     requires
         rsa.E0 == 16;
@@ -302,7 +303,7 @@ procedure mod_pow_2(ghost vars: mp_vars, ghost rsa: rsa_params)
     requires
         s3 == rsa.M0D;
 
-        mp_vars_inv(vars, mem, 71576 /* rr */, 71192 /* n */, s5 /* in */,
+        mp_vars_inv(vars, mem, NA /* rr */, s6 /* n */, s5 /* in */,
             s0 /* ar */, s2 /*aar */, s4 /* out_ptr */, rsa);
     
     requires
@@ -317,7 +318,7 @@ procedure mod_pow_2(ghost vars: mp_vars, ghost rsa: rsa_params)
     ensures
         mut_vars.iter_out.base_addr == vars.iter_out.base_addr;
         mut_vars == vars.(iter_out := mut_vars.iter_out);
-        mp_vars_inv(mut_vars, mem, 71576 /* rr */, 71192 /* n */, s5 /* in */,
+        mp_vars_inv(mut_vars, mem, NA /* rr */, s6 /* n */, s5 /* in */,
             s0 /* ar */, s2 /*aar */, s4 /* out_ptr */, rsa);
         mem == old(mem)[vars.mma_frame_ptr := mem[mut_vars.mma_frame_ptr]]
             [vars.mm_frame_ptr := mem[mut_vars.mm_frame_ptr]]
@@ -343,6 +344,7 @@ procedure mod_pow_2(ghost vars: mp_vars, ghost rsa: rsa_params)
     mv(a3, s5);
     mv(a2, s0);
     mv(a1, s4);
+    mv(a4, s6); // n
 
     mut_vars := vars;
 
@@ -365,12 +367,14 @@ procedure mod_pow_2(ghost vars: mp_vars, ghost rsa: rsa_params)
         rsa);
 
     mv(a0, s4);
+    mv(a1, s6);
     let sub := ge_mod(mut_vars.iter_n, iter_out);
 
     ghost var raw_val := to_nat(iter_out.buff);
 
     if (a0 == x0) {
         mv(a0, s4);
+        mv(a1, s6);
         ghost var borrow: nat;
         iter_out, borrow := sub_mod(mut_vars.iter_n, iter_out);
         // assert mp_vars_inv(mut_vars, mem, 71576 /* rr */, 71192 /* n */, s5 /* in */,
@@ -380,8 +384,6 @@ procedure mod_pow_2(ghost vars: mp_vars, ghost rsa: rsa_params)
 
     mut_vars := mut_vars.(iter_out := iter_out);
     modexp_var_correct_lemma(raw_val, to_nat(iter_out.buff), !sub, rsa);
-
-    // assert to_nat(mut_vars.iter_out.buff) == mod(Pow(rsa.SIG, 65537), rsa.M);
 }
 
 procedure mod_pow(
@@ -398,10 +400,11 @@ procedure mod_pow(
 
     requires a0 == rsa.M0D;
 
-    requires mp_vars_inv(vars, mem, 71576 /* rr */, 71192 /* n */, 71960 /* in */,
+    requires mp_vars_inv(vars, mem, a3 /* rr */, a4 /* n */, a5 /* in */,
             a2 /* ar */, a2 + NUM_WORDS * 4 /*aar */, a1 /* out_ptr */, rsa);
 
     reads x0;
+
     modifies
         sp; s0; s1; s2; s3; s4; s5; s6; s7; s8;
         a0; a1; a2; a3; a4; a5; a6; ra; mem;
@@ -420,7 +423,7 @@ procedure mod_pow(
         sp == old(sp);
 
     ensures
-        mp_vars_inv(mut_vars, mem, 71576 /* rr */, 71192 /* n */, 71960 /* in */,
+        mp_vars_inv(mut_vars, mem, NA /* rr */, old(a4) /* n */, old(a5) /* in */,
             old(a2) /* ar */, old(a2) + NUM_WORDS * 4 /*aar */, old(a1) /* out_ptr */, rsa);
 
     ensures
@@ -452,11 +455,10 @@ procedure mod_pow(
             s3 == rsa.M0D;
             s1 == 8 - i;
 
-            s6 == old(s6);
             s7 == old(s7);
             s8 == old(s8);
 
-            mp_vars_inv(mut_vars, mem, 71576 /* rr */, 71192 /* n */, s5 /* in */,
+            mp_vars_inv(mut_vars, mem, NA /* rr */, s6 /* n */, s5 /* in */,
                 s0 /* ar */, s2 /*aar */, s4 /* out_ptr */, rsa);
 
             mem[mut_vars.mp_frame_ptr] == saved;
@@ -491,9 +493,9 @@ procedure mod_pow(
     lw_stack(s3, 12, 3);
     lw_stack(s4, 8, 2);
     lw_stack(s5, 4, 1);
+    lw_stack(s6, 0, 0);
     addi(sp, sp, 32);
 }
-
 #verbatim
 }
 #endverbatim
