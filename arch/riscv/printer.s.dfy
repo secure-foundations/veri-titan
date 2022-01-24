@@ -87,9 +87,9 @@ method printIns32(ins:ins32)
             printReg32(rd); print(", "); printReg32(rs1); print(", "); print(imm);
             print("\n");                                              
                                                                       
-        case RV_SW(rd, rs1, imm) =>                                    
+        case RV_SW(rs2, base, imm) =>                                    
             print ("sw ");                                          
-            printReg32(rd); print(", "); print(imm); print("("); printReg32(rs1); print(")");
+            printReg32(rs2); print(", "); print(imm); print("("); printReg32(base); print(")");
             print("\n");
             
         case RV_ADD(rd, rs1, rs2) =>
