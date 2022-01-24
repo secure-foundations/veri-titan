@@ -45,7 +45,7 @@ rule otbn-ld
 """
 
 OTBN_ASM_PATH = "gen/arch/otbn/otbn_modexp.s"
-RISCV_ASM_PATH = "gen/arch/risv/riscv_modexp.s"
+RISCV_ASM_PATH = "gen/arch/riscv/riscv_modexp.s"
 OTBN_TEST_ASM_PATH = "impl/otbn/run_modexp.s"
 OUTPUT_ELF_PATH = "gen/impl/otbn/run_modexp.elf"
 
