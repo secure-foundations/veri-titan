@@ -244,6 +244,10 @@ method printIns256(ins:ins256)
             printReg32(grs); if grs_inc { print("++"); }
             print("\n");
 
+        case BN_NOP =>
+            print("bn.nop\n");
+        
+
         case _ => print("TODO256 "); print(ins);
 }
 
@@ -265,7 +269,7 @@ function method codeSize(c: code) : int
 {
     match c
         case Block(block) => blockSize(block)
-        case While(wcond, wbody) => codeSize(wbody) + 2 // +1 for inner loop and +1 for inner loop's nop
+        case While(wcond, wbody) => codeSize(wbody) + 1 // +1 for inner loop
         case IfElse(icond, tbody, fbody) => codeSize(tbody) + codeSize(fbody) + 1
         case Function(_, _) => 1
         case Ins32(ins) => 1
@@ -379,10 +383,9 @@ class Printer {
             case While(wcond, wbody) =>
             {
                 printIndent(); printWhileCond(wcond); print(", ");
-                print(codeSize(wbody) + 1); print("\n"); // + 1 for nop instruction
+                print(codeSize(wbody)); print("\n");
                 depth := depth + 1;
                 printCode(wbody);
-                printIndent(); print("nop\n"); // ensures different end addrs for nested loops
                 depth := depth - 1;
             }
             case Comment(com) => print(com);
@@ -416,7 +419,13 @@ method Main()
     var p := new Printer({"modexp_var_3072_f4", "montmul"});
 
     reveal va_code_modexp_var_3072_f4();
-    p.printTopLevelProc(va_code_modexp_var_3072_f4());
+    c := va_code_modexp_var_3072_f4();
+    if while_nonoverlap(c, false, false) {
+      p.printTopLevelProc(c);
+    } else
+    {
+      print("ERROR: Overlapping 'While' loop.");
+    }
 }
 
 }

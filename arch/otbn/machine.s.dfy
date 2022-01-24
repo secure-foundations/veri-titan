@@ -124,6 +124,7 @@ module ot_machine {
         | BN_MOVR(grd: reg32_t, grd_inc: bool, grs: reg32_t, grs_inc: bool)
         | BN_WSRR(wrd: reg256_t, wsr: uint2)
         // | BN_WSRRW
+        | BN_NOP
 
 /* stateless semantic functions  */
 
@@ -381,6 +382,28 @@ module ot_machine {
     datatype codes = 
         | CNil
         | va_CCons(hd: code, tl: codes)
+
+/* control flow overlap detection */
+    predicate while_end(c: codes, inWhile: bool)
+    {
+      match c
+        case CNil => false
+        case va_CCons(hd, CNil) => while_nonoverlap(hd, inWhile, true)
+        case va_CCons(hd, tl) => while_nonoverlap(hd, inWhile, false)
+    }
+
+    predicate while_nonoverlap(c: code, inWhile: bool, codeEnd: bool)
+    {
+      match c
+        case Ins32(_) => false
+        case Block(b) => while_end(b, inWhile)
+        case While(con, body) => if (inWhile && codeEnd) then false else while_nonoverlap(body, true, codeEnd) //TODO:check
+        case IfElse(_, CNil, _) => false
+        case IfElse(_, body, _) => while_nonoverlap(body, inWhile, codeEnd) //TODO:check
+        case Function(_, body) => while_end(body, false)
+        case Comment(_) => (inWhile && codeEnd)
+    }
+    
 
 /* state definitions */
 

@@ -732,6 +732,14 @@ procedure comment(inline comment: string)
     reveal valid_state_opaque;
     this := this.(heap := old(this).heap);
 }
+    
+procedure bn_nop()
+    {:instruction Ins256(BN_NOP)}
+{
+    reveal eval_code_opaque;
+    reveal valid_state_opaque;
+    this := this.(heap := old(this).heap);
+}
 
 #verbatim
 } // end module vt_decls
