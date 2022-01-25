@@ -311,6 +311,9 @@ method getFunctions(c: code, defs: set<string>, res: seq<(string, codes)>)
         }
         case While(_, wbody) => 
             defs', res' := getFunctions(wbody, defs', res');
+        case IfElse(_, ifTrue, ifFalse) =>
+            defs', res' := getFunctions(ifTrue, defs', res');
+            defs', res' := getFunctions(ifFalse, defs', res');
         case _ =>
             defs', res' := defs, res;
 }
