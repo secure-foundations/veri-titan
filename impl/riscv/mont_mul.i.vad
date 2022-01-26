@@ -115,6 +115,8 @@ procedure mont_mul(
     ghost rsa: rsa_params)
     returns (ghost next_iter_c : iter_t)
 
+    {:noInline}
+
     {:timeLimitMultiplier 3} 
 
     requires sp > 80;

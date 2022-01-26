@@ -28,6 +28,8 @@ function mul_double_add_lemma(xs: seq(uint32), ys: seq(uint32),
     carry: nat, a: uint32, b: uint32, c: uint32): uint64_view_t extern;
 
 procedure mula32() returns (ghost sum: uint64_view_t)
+    {:noInline}
+
     reads
         a2;
     modifies
@@ -66,6 +68,8 @@ procedure mula32() returns (ghost sum: uint64_view_t)
 }
 
 procedure mulaa32() returns (ghost sum: uint64_view_t)
+    {:noInline}
+
     modifies
         a0; a1; a2; a3; a5;
     ensures
@@ -78,15 +82,39 @@ procedure mulaa32() returns (ghost sum: uint64_view_t)
     ghost var c := a2;
     ghost var d := a3;
 
-    sum := mula32();
-    let x_lh := a0;
-    let x_uh := a1;
+    // ghost var c := a2;
+   
+    // bottom half of a0 * a1 in a5 
+    mul(a5, a0, a1);
+    
+    // top half of a0 * a1 in a1
+    mulhu(a1, a0, a1);
+
+    mul32_correct_lemma(a, b, a5, a1);
+    ghost var x_lh := a5;
+    ghost var x_uh := a1;
+
+    // bottom half + a2 value in a0
+    add(a0, a5, a2);
+
+    // if a0 now less than a5 it's because we overflowed
+    // so we need to add 1 to a1
+    sltu(a5, a0, a5);
+    ghost var c1 := a5;
+    
+    // add 1 to top half if needed
+    add(a1, a1, a5);
+
+    sum := mul_add_lemma(seq(x_lh, x_uh), seq(a2, 0), c1, a, b);
+
+    x_lh := a0;
+    x_uh := a1;
 
     dw_view_lemma(sum);
 
     add(a0, a0, a3);
     sltu(a5, a0, a3);
-    let c1 := a5;
+    c1 := a5;
 
     add(a1, a1, a5);
 
