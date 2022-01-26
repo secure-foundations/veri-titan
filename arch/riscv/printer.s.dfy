@@ -180,10 +180,10 @@ method printWCondOp(op: cmp)
     match op
         case Eq => print("  bne ");
         case Ne => print("  beq ");
-        case Le => print("  bgt ");
-        case Ge => print("  blt ");
-        case Lt => print("  bge ");
-        case Gt => print("  ble ");
+        case Le => print("  bgtu ");
+        case Ge => print("  bltu ");
+        case Lt => print("  bgeu ");
+        case Gt => print("  bleu ");
 }
 
 method printWhileCond(wcond: cond, lcount: int)
@@ -198,10 +198,10 @@ method printIfCondOp(op: cmp)
     match op
         case Eq => print("  beq ");
         case Ne => print("  bne ");
-        case Le => print("  ble ");
-        case Ge => print("  bge ");
-        case Lt => print("  blt ");
-        case Gt => print("  bgt ");
+        case Le => print("  bleu ");
+        case Ge => print("  bgeu ");
+        case Lt => print("  bltu ");
+        case Gt => print("  bgtu ");
 }
 
 method printIfCond(icond: cond, lcount: int)

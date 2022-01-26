@@ -35,7 +35,7 @@ uint64_t mulaa32(uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
 /**
  * a[] -= mod
  */
-static void sub_mod(uint32_t *a, const uint32_t *n)
+void sub_mod(uint32_t *a, const uint32_t *n)
 {
   int64_t A = 0;
   uint32_t i;
@@ -49,7 +49,7 @@ static void sub_mod(uint32_t *a, const uint32_t *n)
 /**
  * Return a[] >= mod
  */
-static int ge_mod(const uint32_t *a, const uint32_t *n)
+int ge_mod(const uint32_t *a, const uint32_t *n)
 {
   uint32_t i;
   for (i = RSANUMWORDS; i;) {
@@ -65,10 +65,11 @@ static int ge_mod(const uint32_t *a, const uint32_t *n)
 /**
  * Montgomery c[] += a * b[] / R % mod
  */
-static void mont_mul_add(const uint32_t d0inv, const uint32_t *n,
-       uint32_t *c,
-       const uint32_t a,
-       const uint32_t *b)
+void mont_mul_add(const uint32_t d0inv,
+      uint32_t *c,
+      const uint32_t a,
+      const uint32_t *b,
+      const uint32_t *n)
 {
   uint64_t A = mula32(a, b[0], c[0]);
   uint32_t d0 = (uint32_t)A * d0inv;
@@ -88,16 +89,17 @@ static void mont_mul_add(const uint32_t d0inv, const uint32_t *n,
 /**
  * Montgomery c[] = a[] * b[] / R % mod
  */
-void mont_mul(const uint32_t d0inv, const uint32_t *n,
+void mont_mul(const uint32_t d0inv,
          uint32_t *c,
          const uint32_t *a,
-         const uint32_t *b)
+         const uint32_t *b,
+         const uint32_t *n)
 {
   uint32_t i;
   for (i = 0; i < RSANUMWORDS; ++i)
     c[i] = 0;
   for (i = 0; i < RSANUMWORDS; ++i)
-    mont_mul_add(d0inv, n, c, a[i], b);
+    mont_mul_add(d0inv, c, a[i], b, n);
 }
 
 /**
@@ -125,12 +127,12 @@ void mod_pow(const uint32_t d0inv,
   int i;
 
   /* Exponent 65537 */
-  mont_mul(d0inv, n, a_r, in, rr);  /* a_r = a * RR / R mod M */
+  mont_mul(d0inv, a_r, in, rr, n);  /* a_r = a * RR / R mod M */
   for (i = 0; i < 16; i += 2) {
-    mont_mul(d0inv, n, aa_r, a_r, a_r); /* aa_r = a_r * a_r / R mod M */
-    mont_mul(d0inv, n, a_r, aa_r, aa_r);/* a_r = aa_r * aa_r / R mod M */
+    mont_mul(d0inv, aa_r, a_r, a_r, n); /* aa_r = a_r * a_r / R mod M */
+    mont_mul(d0inv, a_r, aa_r, aa_r, n);/* a_r = aa_r * aa_r / R mod M */
   }
-  mont_mul(d0inv, n, out, a_r, in);  /* aaa = a_r * a / R mod M */
+  mont_mul(d0inv, out, a_r, in, n);  /* aaa = a_r * a / R mod M */
 
   /* Make sure aaa < mod; aaa is at most 1x mod too large. */
   if (ge_mod(out, n))
