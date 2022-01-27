@@ -396,6 +396,7 @@ module ot_machine {
     {
       match c
         case Ins32(_) => false
+        case Ins256(_) => false
         case Block(b) => while_end(b, inWhile)
         case While(con, body) => if (inWhile && codeEnd) then false else while_nonoverlap(body, true, codeEnd) //TODO:check
         case IfElse(_, CNil, _) => false
@@ -774,6 +775,7 @@ module ot_machine {
                     eval_BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc)
                 case BN_WSRR(wrd, wsr) => 
                     eval_BN_WSRR(wrd, wsr)
+                case BN_NOP => this
         }
 
         function method eval_block(block: codes): state
