@@ -20,7 +20,7 @@
 
 extern void mod_pow(const uint32_t d0inv,
         uint32_t *out,
-        uint32_t *workbuf32,
+        uint32_t *workbuf,
         const uint32_t * rr,
         const uint32_t *n,
         uint32_t *in);
