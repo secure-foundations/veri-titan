@@ -9,7 +9,7 @@ DAFNY_PATH = "./tools/dafny/dafny"
 VALE_PATH = "./tools/vale/bin/vale"
 DAFNY_LIB_DIR = "./std_lib"
 
-DAFNY_LIB_HASH = "84d160538b6442017a5401feb91265147bf34bfc"
+DAFNY_LIB_HASH = "6ce420782487e592dd9925acf715e0d9548bc300"
 
 DAFNY_ZIP_LINUX = "dafny-3.0.0-x64-ubuntu-16.04.zip"
 DAFNY_ZIP_MACOS = "dafny-3.0.0-x64-osx-10.14.2.zip"
