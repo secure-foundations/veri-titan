@@ -18,11 +18,12 @@
 #include <stdio.h>
 #include <stdint.h>
 
-extern void mod_pow(const uint32_t * rr, const uint32_t d0inv, const uint32_t *n,
-         uint32_t *in,
-         uint32_t *out,
-         uint32_t *workbuf32);
-
+extern void mod_pow(const uint32_t d0inv,
+        uint32_t *out,
+        uint32_t *workbuf,
+        const uint32_t * rr,
+        const uint32_t *n,
+        uint32_t *in);
 
 #define RSANUMWORDS 96 // 3072 = 96*32 bit
 
@@ -334,7 +335,7 @@ int main(void) {
   uint32_t workbuf[2*RSANUMWORDS];
   uint32_t out[96];
 
-  mod_pow(d0inv,out,workbuf32,rr,n,sig)
+  mod_pow(d0inv,out,workbuf,rr,n,sig);
   
   for (int i=0; i<(RSANUMWORDS); i++) {
     printf("Limb %d: 0x%08lx\n", i, out[i]);

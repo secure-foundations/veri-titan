@@ -78,7 +78,6 @@ procedure sub_mod(
 
     {:noInline}
 
-
     requires
         iter_safe(iter_n, mem, a1);
         seq_len(iter_n.buff) == 96;
