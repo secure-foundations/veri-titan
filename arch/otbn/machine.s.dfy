@@ -384,7 +384,7 @@ module ot_machine {
         | va_CCons(hd: code, tl: codes)
 
 /* control flow overlap detection */
-    predicate while_end(c: codes, inWhile: bool)
+    predicate method while_end(c: codes, inWhile: bool)
     {
       match c
         case CNil => false
@@ -392,7 +392,7 @@ module ot_machine {
         case va_CCons(hd, tl) => while_nonoverlap(hd, inWhile, false)
     }
 
-    predicate while_nonoverlap(c: code, inWhile: bool, codeEnd: bool)
+    predicate method while_nonoverlap(c: code, inWhile: bool, codeEnd: bool)
     {
       match c
         case Ins32(_) => false

@@ -419,8 +419,10 @@ method Main()
     var p := new Printer({"modexp_var_3072_f4", "montmul"});
 
     reveal va_code_modexp_var_3072_f4();
-    c := va_code_modexp_var_3072_f4();
-    if while_nonoverlap(c, false, false) {
+    var c := va_code_modexp_var_3072_f4();
+    
+    var n :=  while_nonoverlap(c, false, false);
+    if n {
       p.printTopLevelProc(c);
     } else
     {
