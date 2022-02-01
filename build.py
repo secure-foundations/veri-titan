@@ -44,10 +44,10 @@ rule otbn-ld
     command = otbn-ld $in -o $out
 """
 
-OTBN_ASM_PATH = "gen/arch/otbn/otbn_modexp.s"
-RISCV_ASM_PATH = "gen/arch/riscv/riscv_modexp.s"
+OTBN_ASM_PATH = "gen/otbn_modexp.s"
+RISCV_ASM_PATH = "gen/riscv_modexp.s"
 OTBN_TEST_ASM_PATH = "impl/otbn/run_modexp.s"
-OUTPUT_ELF_PATH = "gen/impl/otbn/run_modexp.elf"
+OUTPUT_ELF_PATH = "gen/run_modexp.elf"
 
 DLL_SOURCES = {
     "arch/otbn/printer.s.dfy": OTBN_ASM_PATH,
@@ -372,8 +372,7 @@ def verify_dafny_proc(proc):
 def verify_single_file(target):
     if not os.path.exists(target):
         return
-    generate_dot_ninja()
-    target  = os.path.relpath(target)
+    target = os.path.relpath(target)
     if target.endswith(".dfy"):
         target = get_ver_path(target)
         os.system("ninja -v " + target)

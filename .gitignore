@@ -17,3 +17,5 @@ output.s
 *.runtimeconfig.json
 tools/
 std_lib/
+!gen/riscv_modexp.s
+!gen/otbn_modexp.s
