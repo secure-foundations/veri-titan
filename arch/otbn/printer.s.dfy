@@ -410,6 +410,11 @@ class Printer {
                     print(".globl "); print(func_name); print("\n");
                 }
                 print(func_name); print(":\n");
+                var overlaps := has_overlap_seq(simplify_codes(res[i].1));
+                if overlaps {
+                  print("LOOP_ERROR detected:\n");
+                  print(simplify_codes(res[i].1));
+                }
                 printCode(Block(res[i].1));
                 printIndent(); print("ret\n\n");
             }
@@ -421,19 +426,30 @@ class Printer {
 method TestOverlap(p:Printer, name:string, c:code, overlap_expected:bool) 
   modifies p
 {
-    var overlaps := while_overlap(c);
+  match c
+    case Function(_, body) => {
+
+    var overlaps := has_overlap_seq(simplify_codes(body));
     print("\nTesting loop overlap detection in " + name);
+
+    print("  Simplified code: "); print(simplify_codes(body)); print("\n");
+    
     if overlaps != overlap_expected {
       if overlap_expected {
         print("\n  ERROR: Expected to find an overlap but didn't\n");
       } else {
         print("\n  ERROR: Did not expect overlap but I think I found one\n");
       }
-
-      print(simplify_code(c));
+      
     } else {
-      print("  PASSED!");
+      print("\n  PASSED!\n");
     }
+  }
+    case _ =>
+    {
+    print("ERROR: Expected a top-level function, found:\n" + name);
+    print("\n");
+  }
 }
 
 
@@ -454,8 +470,13 @@ method Main()
     TestOverlap(p, "loop_overlap_nop", c, false);
     c := va_code_loop_overlap();
     TestOverlap(p, "loop_overlap", c, true);
-    c := va_code_loop_inner_only();
-    TestOverlap(p, "loop_inner_only", c, false);
+    c := va_code_loop_no_overlap();
+    TestOverlap(p, "loop_no_overlap", c, false);
+    c := va_code_loop_overlap_inner_with_starting_ins();
+    TestOverlap(p, "loop_overlap_inner_with_starting_ins", c, true);
+    c := va_code_loop_overlap_inner_with_ending_ins();
+    TestOverlap(p, "loop_overlap_inner_with_ending_ins", c, false);
+
     
     /*
        TODO: Restore testing on the real code to be printed

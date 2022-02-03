@@ -387,6 +387,7 @@ module ot_machine {
 datatype simple_code =
   | SIns
   | SWhile(s:seq<simple_code>)
+  | SJump
 
 function method simplify_codes(c:codes) : seq<simple_code>
 {
@@ -395,6 +396,7 @@ function method simplify_codes(c:codes) : seq<simple_code>
     case va_CCons(hd, tl) => simplify_code(hd) + simplify_codes(tl)
 }
 
+// Intended to be called on the body of each top-level function.
 function method simplify_code(c:code) : seq<simple_code>
 {
   match c
@@ -402,18 +404,19 @@ function method simplify_code(c:code) : seq<simple_code>
     case Ins256(_) => [SIns]
     case Block(b) => simplify_codes(b)
     case While(_, body) => [SWhile(simplify_code(body))]
-    case Function(_, body) => simplify_codes(body)  // TODO: This is handling the case where c is the top-level code consisting of a single Function without any Functions inside.  We can either update this, or call simple_code on each Function body we encounter during printing
+    case IfElse(_, tbody, fbody) => ([SJump] + simplify_code(tbody))
+    case Function(_, body) => [SJump]
     case Comment(_) => []
-    case _ => []  // TODO: Handle IfElse properly
 }
 
 predicate method has_overlap(c:simple_code) 
 {
   match c
     case SIns => false
+    case SJump => false
     case SWhile(s) =>
       if |s| == 0 then false
-      else if s[|s|-1].SWhile? then true    // Should use Seq.last(s) here
+      else if (s[|s|-1].SWhile? || s[|s|-1].SJump?) then true // Should use Seq.last(s) here
       else has_overlap_seq(s)
 }
 

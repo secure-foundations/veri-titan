@@ -29,7 +29,7 @@ procedure loop_inner_only()
         }
 }
 
-procedure loop_inner_and_starting_ins()
+procedure loop_inner_with_starting_ins()
     requires
         x4 == 0;
     modifies
@@ -48,7 +48,7 @@ procedure loop_inner_and_starting_ins()
         }
 }
 
-procedure loop_inner_and_ending_ins()
+procedure loop_inner_with_ending_ins()
     requires
         x4 == 0;
     modifies
@@ -179,6 +179,51 @@ procedure loop_overlap_nop()
         li(x4, 0);
         loop_inner_only();
         nop();
+    }
+}
+    
+procedure loop_overlap_inner_with_starting_ins()
+    {:noInline}
+    requires
+        x3 == 0;
+        x4 == 6;
+    modifies
+        fgroups; x0; x2; x3; x4;
+    ensures
+        x3 == 6;
+        x4 == 6;
+{
+    while (LoopImm(3))
+        invariant x3 == (3 - loop_ctr) * 2;
+        invariant x4 == 6;
+        decreases loop_ctr;
+    {
+        addi(x3, x3, 2);
+        li(x4, 0);
+        loop_inner_with_starting_ins();
+    }
+}
+    
+    
+procedure loop_overlap_inner_with_ending_ins()
+    {:noInline}
+    requires
+        x3 == 0;
+        x4 == 6;
+    modifies
+        fgroups; x0; x2; x3; x4;
+    ensures
+        x3 == 6;
+        x4 == 6;
+{
+    while (LoopImm(3))
+        invariant x3 == (3 - loop_ctr) * 2;
+        invariant x4 == 6;
+        decreases loop_ctr;
+    {
+        addi(x3, x3, 2);
+        li(x4, 0);
+        loop_inner_with_ending_ins();
     }
 }
     
