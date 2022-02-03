@@ -418,6 +418,25 @@ class Printer {
     }
 }
 
+method TestOverlap(p:Printer, name:string, c:code, overlap_expected:bool) 
+  modifies p
+{
+    var overlaps := while_overlap(c);
+    print("\nTesting loop overlap detection in " + name);
+    if overlaps != overlap_expected {
+      if overlap_expected {
+        print("\n  ERROR: Expected to find an overlap but didn't\n");
+      } else {
+        print("\n  ERROR: Did not expect overlap but I think I found one\n");
+      }
+
+      print(simplify_code(c));
+    } else {
+      print("  PASSED!");
+    }
+}
+
+
 method Main()
 {
     // var p := new Printer({"modexp_var_3072_f4", "montmul"});
@@ -427,9 +446,19 @@ method Main()
     // reveal va_code_modexp_var_3072_f4();
     // var c := va_code_modexp_var_3072_f4();
 
-    reveal va_code_loop_overlap_nop();
-    var c := va_code_loop_overlap_nop();
+    //reveal va_code_loop_overlap_nop();
+
+    // TODO: Factor all of this unit testing into a separate method/file
+    var c;
+    c := va_code_loop_overlap_nop();
+    TestOverlap(p, "loop_overlap_nop", c, false);
+    c := va_code_loop_overlap();
+    TestOverlap(p, "loop_overlap", c, true);
+    c := va_code_loop_inner_only();
+    TestOverlap(p, "loop_inner_only", c, false);
     
+    /*
+       TODO: Restore testing on the real code to be printed
     var n :=  while_overlap(c);
     if n {
       print("ERROR: Overlapping 'While' loop.\n");
@@ -440,6 +469,7 @@ method Main()
       p.printTopLevelProc(c);
 
     }
+    */
 }
 
 }

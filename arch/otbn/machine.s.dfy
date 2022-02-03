@@ -384,7 +384,51 @@ module ot_machine {
         | va_CCons(hd: code, tl: codes)
 
 /* control flow overlap detection */
+datatype simple_code =
+  | SIns
+  | SWhile(s:seq<simple_code>)
 
+function method simplify_codes(c:codes) : seq<simple_code>
+{
+  match c 
+    case CNil => []
+    case va_CCons(hd, tl) => simplify_code(hd) + simplify_codes(tl)
+}
+
+function method simplify_code(c:code) : seq<simple_code>
+{
+  match c
+    case Ins32(_) => [SIns]
+    case Ins256(_) => [SIns]
+    case Block(b) => simplify_codes(b)
+    case While(_, body) => [SWhile(simplify_code(body))]
+    case Function(_, body) => simplify_codes(body)  // TODO: This is handling the case where c is the top-level code consisting of a single Function without any Functions inside.  We can either update this, or call simple_code on each Function body we encounter during printing
+    case Comment(_) => []
+    case _ => []  // TODO: Handle IfElse properly
+}
+
+predicate method has_overlap(c:simple_code) 
+{
+  match c
+    case SIns => false
+    case SWhile(s) =>
+      if |s| == 0 then false
+      else if s[|s|-1].SWhile? then true    // Should use Seq.last(s) here
+      else has_overlap_seq(s)
+}
+
+predicate method has_overlap_seq(s:seq<simple_code>)
+{
+  if |s| == 0 then false
+  else has_overlap(s[0]) || has_overlap_seq(s[1..])
+}
+
+predicate method while_overlap(c:code) 
+{
+  has_overlap_seq(simplify_code(c))
+}
+
+/*
     // true when a loop ends with another loop
     predicate method while_overlap(c: code)
     {
@@ -408,7 +452,7 @@ module ot_machine {
 
     // carry = last thing we saw was a While
     predicate method last_is_while(cs:codes, carry:bool)
-      decreases cs
+      decreases cs, 0
     {
       match cs
         case CNil => carry
@@ -416,7 +460,7 @@ module ot_machine {
     }
 
     predicate method check_while(hd: code, tl: codes, carry: bool)
-      decreases tl
+      decreases hd, tl, 1
     {
         match hd
             case While(cond, body) => last_is_while(tl, true)
@@ -425,7 +469,7 @@ module ot_machine {
             case Comment(_) => last_is_while(tl, carry)
             case _ => false
     }
-        
+*/        
 
 /* state definitions */
 
