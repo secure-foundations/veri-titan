@@ -423,7 +423,7 @@ module ot_machine {
             case Block(b) => last_is_while(tl, last_is_while(b, carry))
             case Function(_, b) => last_is_while(tl, last_is_while(b, carry))
             case Comment(_) => last_is_while(tl, carry)
-            case _ => last_is_while(tl, false)
+            case _ => false
     }
         
 

@@ -430,7 +430,7 @@ method Main()
     reveal va_code_loop_overlap_nop();
     var c := va_code_loop_overlap_nop();
     
-    var n :=  while_overlap(c, false, false);
+    var n :=  while_overlap(c);
     if n {
       print("ERROR: Overlapping 'While' loop.\n");
       p.printTopLevelProc(c);
