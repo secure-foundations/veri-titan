@@ -96,6 +96,7 @@ module ot_machine {
         | LI(xrd: reg32_t, imm32: uint32)
         | CSRRS(grd: reg32_t, csr: uint12, grs1: reg32_t)
         | ECALL
+        | NOP
 
     datatype ins256 =
         | BN_ADD(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
@@ -124,7 +125,6 @@ module ot_machine {
         | BN_MOVR(grd: reg32_t, grd_inc: bool, grs: reg32_t, grs_inc: bool)
         | BN_WSRR(wrd: reg256_t, wsr: uint2)
         // | BN_WSRRW
-        | BN_NOP
 
 /* stateless semantic functions  */
 
@@ -384,27 +384,48 @@ module ot_machine {
         | va_CCons(hd: code, tl: codes)
 
 /* control flow overlap detection */
-    predicate method while_end(c: codes, inWhile: bool)
-    {
-      match c
-        case CNil => false
-        case va_CCons(hd, CNil) => while_nonoverlap(hd, inWhile, true)
-        case va_CCons(hd, tl) => while_nonoverlap(hd, inWhile, false)
-    }
 
-    predicate method while_nonoverlap(c: code, inWhile: bool, codeEnd: bool)
+    // true when a loop ends with another loop
+    predicate method while_overlap(c: code)
     {
       match c
         case Ins32(_) => false
         case Ins256(_) => false
-        case Block(b) => while_end(b, inWhile)
-        case While(con, body) => if (inWhile && codeEnd) then false else while_nonoverlap(body, true, codeEnd) //TODO:check
-        case IfElse(_, CNil, _) => false
-        case IfElse(_, body, _) => while_nonoverlap(body, inWhile, codeEnd) //TODO:check
-        case Function(_, body) => while_end(body, false)
-        case Comment(_) => (inWhile && codeEnd)
+        case Block(b) => any_has_while_overlap(b)
+        case While(con, body) => check_while(body, CNil, false) // can't have Loop X 0
+        case IfElse(_, body, _) => while_overlap(body)
+        case Function(_, body) => any_has_while_overlap(body)
+        case Comment(_) => false
     }
-    
+
+    predicate method any_has_while_overlap(cs:codes)
+      decreases cs
+    {
+      match cs
+        case CNil => false
+        case va_CCons(hd, tl) => while_overlap(hd) || any_has_while_overlap(tl)
+    }
+
+    // carry = last thing we saw was a While
+    predicate method last_is_while(cs:codes, carry:bool)
+      decreases cs
+    {
+      match cs
+        case CNil => carry
+        case va_CCons(hd, tl) => check_while(hd, tl, carry)
+    }
+
+    predicate method check_while(hd: code, tl: codes, carry: bool)
+      decreases tl
+    {
+        match hd
+            case While(cond, body) => last_is_while(tl, true)
+            case Block(b) => last_is_while(tl, last_is_while(b, carry))
+            case Function(_, b) => last_is_while(tl, last_is_while(b, carry))
+            case Comment(_) => last_is_while(tl, carry)
+            case _ => last_is_while(tl, false)
+    }
+        
 
 /* state definitions */
 
@@ -738,6 +759,7 @@ module ot_machine {
                 case CSRRS(grd, csr, grs1) => eval_CSRRS(grd, csr, grs1)
                 case LI(xrd, imm32) => eval_LI(xrd, imm32)
                 case ECALL => this
+                case NOP => this
         }
 
         function method eval_ins256(wins: ins256): state
@@ -775,7 +797,6 @@ module ot_machine {
                     eval_BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc)
                 case BN_WSRR(wrd, wsr) => 
                     eval_BN_WSRR(wrd, wsr)
-                case BN_NOP => this
         }
 
         function method eval_block(block: codes): state

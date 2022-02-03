@@ -110,7 +110,6 @@ procedure loop_reg(inout dst:reg32, in cnt:reg32)
 //     bn_sel(w22, w30, w22, 0, 3);
 // }
 
-
 // procedure copy()
 //     requires
 //         xmem_addr_valid(xmem, x0 + 0);

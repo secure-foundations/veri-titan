@@ -1,16 +1,19 @@
 include "vale.i.dfy"
 include "../../gen/impl/otbn/modexp_var.i.dfy"
+include "../../gen/impl/otbn/nop_tests.i.dfy"
+
 
 module otbn_printer {
     import opened integers
     import opened ot_machine
     import opened modexp_var
 
+    import opened nop_tests
+
 method printReg32(r:reg32_t)
 {
     match r
         case GPR(x) => print("x"); print(x);
-        // case RND => print("ERROR: rnd"); // TODO: Are we no longer modeling RND?
 }
 
 method printReg256(r:reg256_t)
@@ -96,6 +99,11 @@ method printIns32(ins:ins32)
 
         case ECALL => 
             print ("ecall ");
+
+        case BN_NOP =>
+            print("nop\n");
+        
+
 }
 
 method printShift(shift:shift_t)
@@ -243,10 +251,6 @@ method printIns256(ins:ins256)
             printReg32(grd); if grd_inc { print("++"); } print(", ");
             printReg32(grs); if grs_inc { print("++"); }
             print("\n");
-
-        case BN_NOP =>
-            print("bn.nop\n");
-        
 
         case _ => print("TODO256 "); print(ins);
 }
@@ -416,17 +420,25 @@ class Printer {
 
 method Main()
 {
-    var p := new Printer({"modexp_var_3072_f4", "montmul"});
+    // var p := new Printer({"modexp_var_3072_f4", "montmul"});
 
-    reveal va_code_modexp_var_3072_f4();
-    var c := va_code_modexp_var_3072_f4();
+    var p := new Printer({"loop_overlap_nop"});
+
+    // reveal va_code_modexp_var_3072_f4();
+    // var c := va_code_modexp_var_3072_f4();
+
+    reveal va_code_loop_overlap_nop();
+    var c := va_code_loop_overlap_nop();
     
-    var n :=  while_nonoverlap(c, false, false);
+    var n :=  while_overlap(c, false, false);
     if n {
+      print("ERROR: Overlapping 'While' loop.\n");
       p.printTopLevelProc(c);
     } else
     {
-      print("ERROR: Overlapping 'While' loop.");
+      print("No overlaps detected!\n");
+      p.printTopLevelProc(c);
+
     }
 }
 

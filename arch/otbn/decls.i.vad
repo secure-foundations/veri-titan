@@ -407,6 +407,14 @@ procedure li(inout dst: reg32, inline imm: uint32)
     this := this.(heap := old(this).heap);
 }
 
+procedure nop()
+    {:instruction Ins32(NOP)}
+{
+    reveal eval_code_opaque;
+    reveal valid_state_opaque;
+    this := this.(heap := old(this).heap);
+}
+
 procedure bn_add(inout dst: reg256, in src1: reg256, in src2: reg256, inline shift: shift_t, inline which_group: uint1)
     {:instruction Ins256(BN_ADD(dst, src1, src2, shift, which_group))}
     modifies
@@ -733,14 +741,6 @@ procedure comment(inline comment: string)
     this := this.(heap := old(this).heap);
 }
     
-procedure bn_nop()
-    {:instruction Ins256(BN_NOP)}
-{
-    reveal eval_code_opaque;
-    reveal valid_state_opaque;
-    this := this.(heap := old(this).heap);
-}
-
 #verbatim
 } // end module vt_decls
 #endverbatim
