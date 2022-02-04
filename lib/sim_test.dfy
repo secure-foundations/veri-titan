@@ -98,10 +98,11 @@ abstract module induction
         if |xs| == 0 then
             []
         else
-            var (lh, uh) := half_split(First(xs));
-            [lh, uh] + bn_full_2_half(DropFirst(xs))
+            var (lh, uh) := half_split(Last(xs));
+            bn_full_2_half(DropLast(xs)) + [lh, uh]
     }
 
+/*
     lemma bn_full_2_half_equiv_val(xs: seq<u_full>, ys: seq<u_half>)
         requires bn_full_2_half(xs) == ys;
         ensures fw_to_nat(xs) == hw_to_nat(ys);
@@ -115,9 +116,9 @@ abstract module induction
                 reveal HW.BVSEQ.ToNatRight();
             }
         } else {
-            var x := First(xs);
+            var x := Last(xs);
             var (lh, uh) := half_split(x);
-            var xs' := DropFirst(xs);
+            var xs' := DropLast(xs);
             var ys' := bn_full_2_half(xs');
 
             calc == {
@@ -161,6 +162,7 @@ abstract module induction
             }
         }
     }
+*/
 
     lemma bn_full_2_half_equiv_len(xs: seq<u_full>, ys: seq<u_half>)
         requires bn_full_2_half(xs) == ys;
@@ -174,20 +176,19 @@ abstract module induction
     const hm': u_half;
 
     function mm_full_rec(fxs: seq<u_full>): nat
-    decreases |fxs|;
     {
         if |fxs| == 0 then
             0
         else
-            var acc := mm_full_rec(DropFirst(fxs));
-            var a_0 := acc % BASE();
-            var y_0 := Y % BASE();
-            var x_i := First(fxs);
-            var u_i := ((a_0 + x_i * y_0) * fm') % BASE();
-            var acc := (acc + x_i * Y + u_i * M) / BASE();
+            var A := mm_full_rec(DropLast(fxs));
+            var a := A % BASE();
+            var y := Y % BASE();
+            var x := Last(fxs);
+            var u_i := ((a + x * y) * fm') % BASE();
+            var A := (A + x * Y + u_i * M) / BASE();
             Mul.LemmaMulNonnegativeAuto();
             DivMod.LemmaDivPosIsPosAuto();
-            acc
+            A
     }
 
     function mm_half_rec(hxs: seq<u_half>): nat
@@ -196,15 +197,15 @@ abstract module induction
         if |hxs| == 0 then
             0
         else
-            var acc := mm_half_rec(DropFirst(hxs));
-            var a_0 := acc % HW_BASE();
-            var y_0 := Y % HW_BASE();
-            var x_i := First(hxs);
-            var u_i := ((a_0 + x_i * y_0) * hm') % HW_BASE();
-            var acc := (acc + x_i * Y + u_i * M) / HW_BASE();
+            var A := mm_half_rec(DropLast(hxs));
+            var a := A % HW_BASE();
+            var y := Y % HW_BASE();
+            var x := Last(hxs);
+            var u_i := ((a + x * y) * hm') % HW_BASE();
+            var A := (A + x * Y + u_i * M) / HW_BASE();
             Mul.LemmaMulNonnegativeAuto();
             DivMod.LemmaDivPosIsPosAuto();
-            acc
+            A
     }
 
     lemma weird(fxs: seq<u_full>, hxs: seq<u_half>)
@@ -217,101 +218,95 @@ abstract module induction
             return;
         }
 
-        var acc := mm_full_rec(DropFirst(fxs));
-        var a_0 := acc % BASE();
-        var y_0 := Y % BASE();
-        var x_i := First(fxs);
-        var u_i := ((a_0 + x_i * y_0) * fm') % BASE();
+        var A := mm_full_rec(DropLast(fxs));
+        var a := A % BASE();
+        var y := Y % BASE();
+        var x := Last(fxs);
+        var u := ((a + x * y) * fm') % BASE();
+        var A_l := (A + x * Y + u * M) / BASE();
+        assume A_l * BASE() == (A + x * Y + u * M);
 
-        var q := ((a_0 + x_i * y_0) * fm') / BASE();
-        assert q * BASE() + u_i == (a_0 + x_i * y_0) * fm' by {
-            DivMod.LemmaFundamentalDivMod((a_0 + x_i * y_0) * fm', BASE());
+        // assert A_l == mm_full_rec(fxs);
+
+        var A_0 := mm_half_rec(DropLast(DropLast(hxs)));
+
+        assert A == A_0 by {
+            reveal bn_full_2_half();
+            assert bn_full_2_half(DropLast(fxs)) == DropLast(DropLast(hxs));
+            weird(DropLast(fxs), DropLast(DropLast(hxs)));
         }
 
-        var acc_l := (acc + x_i * Y + u_i * M) / BASE();
-        assume acc_l >= 0;
-        
-        DivMod.LemmaFundamentalDivMod(acc + x_i * Y + u_i * M, BASE());
-        var r: nat :| acc_l * BASE() + r == acc + x_i * Y + u_i * M;
+        var a_0 := A % HW_BASE();
+        var y_0 := Y % HW_BASE();
+        var x_0 := Last(DropLast(hxs));
+        var u_0 := ((a_0 + x_0 * y_0) * hm') % HW_BASE();
+        var A_1 := (A + x_0 * Y + u_0 * M) / HW_BASE();
+        assume A_1 *  HW_BASE() == (A + x_0 * Y + u_0 * M);
 
-        var hxs_0 := DropFirst(hxs);
+        // assert A_1 == mm_half_rec(DropLast(hxs));
 
-        var acc_1 := mm_half_rec(DropFirst(hxs_0));
-        var a_0_1 := acc_1 % HW_BASE();
-        var y_0_1 := Y % HW_BASE();
-        var x_i_1 := First(hxs_0);
+        var a_1 := A_1 % HW_BASE();
+        var x_1 := Last(hxs);
+        var u_1 := ((a_1 + x_1 * y_0) * hm') % HW_BASE();
+        var A_r := (A_1 + x_1 * Y + u_1 * M) / HW_BASE();
+        assume A_r * HW_BASE() == A_1 + x_1 * Y + u_1 * M;
 
-        var u_i_1 := ((a_0_1 + x_i_1 * y_0_1) * hm') % HW_BASE();
-        var q_1 := ((a_0_1 + x_i_1 * y_0_1) * hm') / HW_BASE();
+        // assert A_r == mm_half_rec(hxs);
 
-        assert q_1 * HW_BASE() + u_i_1 == (a_0_1 + x_i_1 * y_0_1) * hm' by {
-            DivMod.LemmaFundamentalDivMod((a_0_1 + x_i_1 * y_0_1) * hm', HW_BASE());
+        assert x_1 * HW_BASE() + x_0 == x by {
+            reveal bn_full_2_half();
+            var (lh, uh) := half_split(x);
+            assert bn_full_2_half(DropLast(fxs)) + [lh, uh] == hxs;
+            assert x_1 == Last(hxs);
+            assert x_0 == Last(DropLast(hxs));
+            half_split_lemma(x);
         }
-
-        var acc_0' := (acc_1 + x_i_1 * Y + u_i_1 * M) / HW_BASE();
-        DivMod.LemmaFundamentalDivMod(acc_1 + x_i_1 * Y + u_i_1 * M, HW_BASE());
-        var r_1: nat :| acc_0' * HW_BASE() + r_1 == acc_1 + x_i_1 * Y + u_i_1 * M;
-
-        assert acc == acc_1 by {
-            assume bn_full_2_half(DropFirst(fxs)) == DropFirst(hxs_0);
-            weird(DropFirst(fxs), DropFirst(hxs_0));
-        }
-
-        var acc_0 := mm_half_rec(hxs_0);
-        var a_0_0 := acc_0 % HW_BASE();
-        var y_0_0 := Y % HW_BASE();
-        var x_i_0 := First(hxs);
-
-        var u_i_0 := ((a_0_0 + x_i_0 * y_0_0) * hm') % HW_BASE();
-        var q_0 := ((a_0_0 + x_i_0 * y_0_0) * hm') / HW_BASE();
-
-        assert q_0 * HW_BASE() + u_i_0 == (a_0_0 + x_i_0 * y_0_0) * hm' by {
-            DivMod.LemmaFundamentalDivMod((a_0_0 + x_i_0 * y_0_0) * hm', HW_BASE());
-        }
-
-        var acc_r := (acc_0 + x_i_0 * Y + u_i_0 * M) / HW_BASE();
-        DivMod.LemmaFundamentalDivMod(acc_0 + x_i_0 * Y + u_i_0 * M, HW_BASE());
-        var r_0: nat :| acc_r * HW_BASE() + r_0 == acc_0 + x_i_0 * Y + u_i_0 * M;
-
-        // assert q * BASE() + u_i == (a_0 + x_i * y_0) * fm';
-        // assert q_0 * HW_BASE() + u_i_0 == (a_0_0 + x_i_0 * y_0_0) * hm'
-        // assert q_1 * HW_BASE() + u_i_1 == (a_0_1 + x_i_1 * y_0_1) * hm';
 
         calc == {
-            acc_r * HW_BASE() * HW_BASE();
-            (acc_0 + x_i_0 * Y + u_i_0 * M - r_0) * HW_BASE();
+            A_r * BASE();
             {
-                assume false;
+                Mul.LemmaMulIsAssociativeAuto();
             }
-            acc_0 * HW_BASE() + x_i_0 * Y * HW_BASE() + u_i_0 * M * HW_BASE() - r_0 * HW_BASE();
+            A_r * HW_BASE() * HW_BASE();
+            (A_1 + x_1 * Y + u_1 * M) * HW_BASE();
             {
-                assert acc_0 == acc_0';
+                Mul.LemmaMulIsDistributiveAddOtherWayAuto();
             }
-            acc_1 + x_i_1 * Y + u_i_1 * M - r_1 + x_i_0 * Y * HW_BASE() + u_i_0 * M * HW_BASE() - r_0 * HW_BASE();
+            A_1 * HW_BASE() + x_1 * Y * HW_BASE() + u_1 * M * HW_BASE();
+            A + x_0 * Y + u_0 * M + x_1 * Y * HW_BASE() + u_1 * M * HW_BASE();
             {
-                assume (x_i_1 + x_i_0 * HW_BASE()) * Y == x_i_1 * Y + x_i_0 * Y * HW_BASE();
+                Mul.LemmaMulIsAssociativeAuto();
+                assert x_1 * Y * HW_BASE() == x_1 * HW_BASE() * Y;
             }
-            acc_1 + (x_i_1 + x_i_0 * HW_BASE()) * Y + u_i_1 * M - r_1 + u_i_0 * M * HW_BASE() - r_0 * HW_BASE();
+            A + x_0 * Y + u_0 * M + x_1 * HW_BASE() * Y + u_1 * M * HW_BASE();
+            A + x_0 * Y + x_1 * HW_BASE() * Y + u_0 * M + u_1 * M * HW_BASE();
             {
-                assume (u_i_1 + u_i_0 * HW_BASE()) * M == u_i_1 * M + u_i_0 * M * HW_BASE();
+                Mul.LemmaMulIsDistributiveAddOtherWayAuto();
+                assert (x_0 + x_1 * HW_BASE()) * Y == x_0 * Y + x_1 * HW_BASE() * Y;
             }
-            acc_1 + (x_i_1 + x_i_0 * HW_BASE()) * Y - r_1 + (u_i_1 + u_i_0 * HW_BASE()) * M - r_0 * HW_BASE();
+            A + (x_0 + x_1 * HW_BASE()) * Y + u_0 * M + u_1 * M * HW_BASE();
             {
-                assume x_i == x_i_1 + x_i_0 * HW_BASE();
+                assert x_0 + x_1 * HW_BASE() == x;
             }
-            acc_1 + x_i * Y - r_1 + (u_i_1 + u_i_0 * HW_BASE()) * M - r_0 * HW_BASE();
+            A + x * Y + u_0 * M + u_1 * M * HW_BASE();
+            {
+                Mul.LemmaMulIsAssociativeAuto();
+            }
+            A + x * Y + u_0 * M + u_1 * HW_BASE() * M;
+            {
+                Mul.LemmaMulIsDistributiveAddOtherWayAuto();
+            }
+            A + x * Y + (u_0 + u_1 * HW_BASE()) * M;
+            {
+                assume u_0 + u_1 * HW_BASE() == u;
+            }
+            A + x * Y + u * M;
+            A_l * BASE();
         }
-        
-        // acc_l * BASE() + r == acc + x_i * Y + u_i * M;
 
-        // (acc_0 + x_i_0 * Y + u_i_0 * M) / HW_BASE();
-
-
-
-
-        // Mul.LemmaMulNonnegativeAuto();
-        // DivMod.LemmaDivPosIsPosAuto();
-
-        assume false;
+        assert A_r == A_l by {
+            assert A_r * BASE() == A_l * BASE();
+            Mul.LemmaMulEqualityConverse(BASE(), A_r, A_l);
+        }
     }
 }
