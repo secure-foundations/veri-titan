@@ -1,0 +1,11 @@
+ring r=integer,(k_0,k_9,b,k_4,k_1,a_0,A_l,Y,x_0,M,y_0,A,hm',a,k_3,A_1,A_r,k_5,k_8,fm',k_2,y,u,x_1,k_7,u_1,x,u_0,a_1,k_6),lp;
+ideal I = 
+(A) - (a) - k_0 * b * b,
+(b * b * A_l) - (A + x * Y + u * M),
+(b * A_1) - (A + x_0 * Y + u_0 * M),
+(x) - (x_0 + x_1 * b),
+(b * A_r) - (A_1 + x_1 * Y + u_1 * M),
+u - (u_0 + u_1 * b);
+ideal G = groebner(I);
+reduce(A_l * b * b - A_r * b * b, G);
+quit;
