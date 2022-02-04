@@ -432,14 +432,14 @@ method TestOverlap(p:Printer, name:string, c:code, overlap_expected:bool)
     var overlaps := has_overlap_seq(simplify_codes(body));
     print("\nTesting loop overlap detection in " + name);
 
-    print("  Simplified code: "); print(simplify_codes(body)); print("\n");
-    
     if overlaps != overlap_expected {
       if overlap_expected {
         print("\n  ERROR: Expected to find an overlap but didn't\n");
       } else {
         print("\n  ERROR: Did not expect overlap but I think I found one\n");
       }
+
+      print("  Simplified code: "); print(simplify_codes(body)); print("\n");
       
     } else {
       print("\n  PASSED!\n");
@@ -476,6 +476,16 @@ method Main()
     TestOverlap(p, "loop_overlap_inner_with_starting_ins", c, true);
     c := va_code_loop_overlap_inner_with_ending_ins();
     TestOverlap(p, "loop_overlap_inner_with_ending_ins", c, false);
+
+    c := va_code_loop_if_overlap();
+    TestOverlap(p, "loop_if_overlap", c, true);
+
+    c := va_code_loop_if_with_starting_ins_overlap();
+    TestOverlap(p, "loop_if_with_starting_ins_overlap", c, true);
+    
+    c := va_code_loop_if_with_ending_ins_no_overlap();
+    TestOverlap(p, "loop_if_with_ending_ins_no_overlap", c, false);
+    
 
     
     /*

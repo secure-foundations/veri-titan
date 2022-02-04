@@ -112,6 +112,17 @@ procedure if_inner_and_ending_ins()
     li(x2, 0);
 }
 
+procedure if_empty()
+    requires
+        true;
+    modifies
+        x0; x2;
+    ensures
+        true;
+{
+    if (x0 != x2) { }
+}
+
 procedure loop_no_overlap()
     {:noInline}
     requires

@@ -386,8 +386,9 @@ module ot_machine {
 /* control flow overlap detection */
 datatype simple_code =
   | SIns
-  | SWhile(s:seq<simple_code>)
   | SJump
+  | SWhile(s:seq<simple_code>)
+  | SBranch(s:seq<simple_code>)
 
 function method simplify_codes(c:codes) : seq<simple_code>
 {
@@ -404,7 +405,7 @@ function method simplify_code(c:code) : seq<simple_code>
     case Ins256(_) => [SIns]
     case Block(b) => simplify_codes(b)
     case While(_, body) => [SWhile(simplify_code(body))]
-    case IfElse(_, tbody, fbody) => ([SJump] + simplify_code(tbody))
+    case IfElse(_, tbody, fbody) => [SBranch(simplify_code(tbody))]
     case Function(_, body) => [SJump]
     case Comment(_) => []
 }
@@ -414,9 +415,10 @@ predicate method has_overlap(c:simple_code)
   match c
     case SIns => false
     case SJump => false
+    case SBranch(s) => false
     case SWhile(s) =>
       if |s| == 0 then false
-      else if (s[|s|-1].SWhile? || s[|s|-1].SJump?) then true // Should use Seq.last(s) here
+      else if (s[|s|-1].SWhile? || s[|s|-1].SBranch?) then true // Should use Seq.last(s) here
       else has_overlap_seq(s)
 }
 
