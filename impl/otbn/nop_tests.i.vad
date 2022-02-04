@@ -112,17 +112,6 @@ procedure if_inner_and_ending_ins()
     li(x2, 0);
 }
 
-procedure if_empty()
-    requires
-        true;
-    modifies
-        x0; x2;
-    ensures
-        true;
-{
-    if (x0 != x2) { }
-}
-
 procedure loop_no_overlap()
     {:noInline}
     requires
@@ -292,7 +281,7 @@ procedure loop_if_with_ending_ins_no_overlap()
     }
 }
     
-procedure if_loop_overlap()
+procedure if_loop_no_overlap()
     {:noInline}
     requires
         x4 == 0;
@@ -306,7 +295,7 @@ procedure if_loop_overlap()
     }
 }
     
-procedure if_if_overlap()
+procedure if_if_no_overlap()
     {:noInline}
     requires
         true;
@@ -319,8 +308,8 @@ procedure if_if_overlap()
         if_inner_only();
     }
 }
-    
-procedure loop_small()
+
+procedure loop_empty()
     requires
         true;
     ensures
@@ -329,6 +318,77 @@ procedure loop_small()
     while (LoopImm(3))
         decreases loop_ctr;
     {
+    }
+}
+
+procedure if_empty()
+    requires
+        true;
+    modifies
+        x0; x2;
+    ensures
+        true;
+{
+    if (x0 != x2) { }
+}
+    
+procedure loop_loop_empty_overlap()
+    {:noInline}
+    requires
+        true;
+    modifies
+        x0; x2;
+    ensures
+        true;
+{
+    while (LoopImm(3))
+        decreases loop_ctr;
+    {
+        loop_empty();
+    }
+}
+    
+procedure loop_if_empty_overlap()
+    {:noInline}
+    requires
+        true;
+    modifies
+        x0; x2;
+    ensures
+        true;
+{
+    while (LoopImm(3))
+        decreases loop_ctr;
+    {
+        if_empty();
+    }
+}
+    
+procedure function_call()
+    {:noInline}
+    requires
+        true;
+    modifies
+        x2;
+    ensures
+        true;
+{
+    addi(x2, x2, 1);
+}
+    
+procedure loop_function_overlap()
+    {:noInline}
+    requires
+        true;
+    modifies
+        x2;
+    ensures
+        true;
+{
+    while (LoopImm(3))
+        decreases loop_ctr;
+    {
+        function_call();
     }
 }
 

@@ -486,7 +486,17 @@ method Main()
     c := va_code_loop_if_with_ending_ins_no_overlap();
     TestOverlap(p, "loop_if_with_ending_ins_no_overlap", c, false);
     
+    c := va_code_if_loop_no_overlap();
+    TestOverlap(p, "if_loop_no_overlap", c, false);
+    
+    c := va_code_loop_loop_empty_overlap();
+    TestOverlap(p, "if_loop_loop_empty_overlap", c, true);
 
+    c := va_code_loop_if_empty_overlap();
+    TestOverlap(p, "if_loop_if_empty_overlap", c, true);
+
+    c := va_code_loop_function_overlap();
+    TestOverlap(p, "if_loop_function_overlap", c, true);
     
     /*
        TODO: Restore testing on the real code to be printed

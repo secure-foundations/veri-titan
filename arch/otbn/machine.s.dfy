@@ -418,7 +418,7 @@ predicate method has_overlap(c:simple_code)
     case SBranch(s) => false
     case SWhile(s) =>
       if |s| == 0 then false
-      else if (s[|s|-1].SWhile? || s[|s|-1].SBranch?) then true // Should use Seq.last(s) here
+      else if (s[|s|-1].SWhile? || s[|s|-1].SBranch? || s[|s|-1].SJump?) then true // Should use Seq.last(s) here
       else has_overlap_seq(s)
 }
 
