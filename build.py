@@ -9,7 +9,7 @@ DAFNY_PATH = "./tools/dafny/dafny"
 VALE_PATH = "./tools/vale/bin/vale"
 DAFNY_LIB_DIR = "./std_lib"
 
-DAFNY_LIB_HASH = "84d160538b6442017a5401feb91265147bf34bfc"
+DAFNY_LIB_HASH = "6ce420782487e592dd9925acf715e0d9548bc300"
 
 DAFNY_ZIP_LINUX = "dafny-3.0.0-x64-ubuntu-16.04.zip"
 DAFNY_ZIP_MACOS = "dafny-3.0.0-x64-osx-10.14.2.zip"
@@ -44,18 +44,20 @@ rule otbn-ld
     command = otbn-ld $in -o $out
 """
 
-OT_PRINTER_DFY_PATH = "arch/otbn/modexp_printer.s.dfy"
-OT_SIMULATOR_DFY_PATH = "arch/otbn/simulator.i.dfy"
-DLL_SOURCES = {OT_PRINTER_DFY_PATH, OT_SIMULATOR_DFY_PATH}
+OTBN_ASM_PATH = "gen/otbn_modexp.s"
+RISCV_ASM_PATH = "gen/riscv_modexp.s"
+OTBN_TEST_ASM_PATH = "impl/otbn/run_modexp.s"
+OUTPUT_ELF_PATH = "gen/run_modexp.elf"
 
-OUTPUT_ASM_PATH = "gen/arch/otbn/modexp_printer.s.dll.out"
-TEST_ASM_PATH = "impl/otbn/run_modexp.s"
-OUTPUT_ELF_PATH = "gen/impl/otbn/run_modexp.elf"
+DLL_SOURCES = {
+     "arch/otbn/modexp_printer.s.dfy": OTBN_ASM_PATH,
+    "arch/otbn/simulator.i.dfy": "gen/arch/otbn/sim.out", 
+    "arch/riscv/printer.s.dfy": RISCV_ASM_PATH,
+}
 
 NINJA_PATH = "build.ninja"
 CODE_DIRS = ["arch", "impl", "lib"]
 GEN_DIR = "gen"
-
 
 NL_FILES = {
     "lib/sub_mod_nl_lemmas.i.dfy",
@@ -292,18 +294,18 @@ class Generator():
             self.content.append(f"build {ver_path}: dafny {dfy_file} || {dd_path}")
         self.content.append(f"    dyndep = {dd_path}\n")
 
-    def generate_dll_rules(self, dafny_path):
-        dfy_deps = list_dfy_deps(dafny_path)
-        dll_path = get_dll_path(dafny_path)
-        self.content.append(f"build {dll_path}: dll-gen {dafny_path} | {dfy_deps}\n")
-        dll_out_path = dll_path + ".out"
-        self.content.append(f"build {dll_out_path}: dll-run {dll_path} \n")
+    def generate_dll_rules(self):
+        for dafny_path, dll_out_path in DLL_SOURCES.items():
+            dfy_deps = list_dfy_deps(dafny_path)
+            dll_path = get_dll_path(dafny_path)
+            self.content.append(f"build {dll_path}: dll-gen {dafny_path} | {dfy_deps}\n")
+            self.content.append(f"build {dll_out_path}: dll-run {dll_path} \n")
 
     def generate_elf_rules(self):
-        output_o_path = get_o_path(OUTPUT_ASM_PATH)
-        self.content.append(f"build {output_o_path}: otbn-as {OUTPUT_ASM_PATH}\n")
-        test_o_path = get_o_path(TEST_ASM_PATH)
-        self.content.append(f"build {test_o_path}: otbn-as {TEST_ASM_PATH}\n")
+        output_o_path = get_o_path(OTBN_ASM_PATH)
+        self.content.append(f"build {output_o_path}: otbn-as {OTBN_ASM_PATH}\n")
+        test_o_path = get_o_path(OTBN_TEST_ASM_PATH)
+        self.content.append(f"build {test_o_path}: otbn-as {OTBN_TEST_ASM_PATH}\n")
         self.content.append(f"build {OUTPUT_ELF_PATH}: otbn-ld {test_o_path} {output_o_path}\n")
 
     def generate_rules(self):
@@ -318,8 +320,7 @@ class Generator():
             self.generate_dfy_rules(dfy_file)
 
         # rules for the printer
-        for dll_source in DLL_SOURCES:
-            self.generate_dll_rules(dll_source)
+        self.generate_dll_rules()
 
         # rules for the elf
         self.generate_elf_rules()
@@ -370,8 +371,7 @@ def verify_dafny_proc(proc):
 def verify_single_file(target):
     if not os.path.exists(target):
         return
-    generate_dot_ninja()
-    target  = os.path.relpath(target)
+    target = os.path.relpath(target)
     if target.endswith(".dfy"):
         target = get_ver_path(target)
         os.system("ninja -v " + target)

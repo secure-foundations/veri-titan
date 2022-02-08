@@ -46,7 +46,6 @@ method printReg32(r:reg32_t)
 
 method printIns32(ins:ins32)
 {
-    print("  ");
     match ins
         case RV_LW(rd, rs1, imm) =>
             print ("lw ");
@@ -175,27 +174,16 @@ method printIns32(ins:ins32)
             
         case _ => print("Instruction not supported: "); print(ins);
 }
-method printBlock(b: codes, depth: int, lcount: int) returns (lcount': int)
-{
-    var i := b;
-    lcount' := lcount;
-    while (i.va_CCons?)
-        decreases i
-    {
-        lcount' := printCode(i.hd, depth, lcount');
-        i := i.tl;
-    }
-}
 
 method printWCondOp(op: cmp)
 {
     match op
         case Eq => print("  bne ");
         case Ne => print("  beq ");
-        case Le => print("  bgt ");
-        case Ge => print("  blt ");
-        case Lt => print("  bge ");
-        case Gt => print("  ble ");
+        case Le => print("  bgtu ");
+        case Ge => print("  bltu ");
+        case Lt => print("  bgeu ");
+        case Gt => print("  bleu ");
 }
 
 method printWhileCond(wcond: cond, lcount: int)
@@ -210,10 +198,10 @@ method printIfCondOp(op: cmp)
     match op
         case Eq => print("  beq ");
         case Ne => print("  bne ");
-        case Le => print("  ble ");
-        case Ge => print("  bge ");
-        case Lt => print("  blt ");
-        case Gt => print("  bgt ");
+        case Le => print("  bleu ");
+        case Ge => print("  bgeu ");
+        case Lt => print("  bltu ");
+        case Gt => print("  bgtu ");
 }
 
 method printIfCond(icond: cond, lcount: int)
@@ -223,59 +211,99 @@ method printIfCond(icond: cond, lcount: int)
    print(", "); print("if_true"); print(lcount); print("\n");
 }
 
-function method blockSize(b: codes) : int
-{
-    match b
-        case CNil => 0
-        case va_CCons(hd, tl) => codeSize(hd) + blockSize(tl)
-}
+class Printer {
+    var lcount: int;
+    var depth: int;
 
-function method codeSize(c: code) : int
-{
-    match c
-        case Block(block) => blockSize(block)
-        case While(wcond, wbody) => codeSize(wbody) + 2 // TODO: RISC-V loops?
-        case IfElse(ifcond, iftrue, iffalse) => codeSize(iftrue) + codeSize(iffalse) + 1 // TODO: check?
-        case Function(_, _) => 1
-        case Ins32(ins) => 1
-        case Comment(com) => 0
-}
+    var printed: set<string>;
+    var globls: set<string>;
 
-method printIndent(depth: int)
-{
-    var i := 0;
-    while i < depth
+    constructor(globals: set<string>)
     {
-        print("  ");
-        i := i + 1;
+        lcount := 0;
+        depth := 1;
+        globls := globals;
     }
-}
 
-method printCode(c: code, depth: int, lcount: int) returns (lcount': int)
-{
-    match c
-        case Ins32(ins) => printIndent(depth); printIns32(ins); return lcount;
-        case Block(block) => lcount' := printBlock(block, depth, lcount);
-        case IfElse(icond, tbody, fbody) =>
+    method printIndent()
+    {
+        var i := 0;
+        while i < depth
         {
-            printIfCond(icond, lcount);
-            lcount' := printCode(fbody, depth, lcount + 1);
-            print("  j "); print("if_end"); print(lcount); print("\n");
-            print("\n"); print("if_true"); print(lcount); print(":\n");
-            lcount' := printCode(tbody, depth, lcount');
-            print("\n"); print("if_end"); print(lcount); print(":\n");
+            print("  ");
+            i := i + 1;
         }
-        case While(wcond, wbody) =>
+    }
+
+    method printBlock(b: codes)
+        modifies this
+    {
+        var i := b;
+        while (i.va_CCons?)
+            decreases i
         {
-            print("\n"); print("w_start"); print(lcount); print(":\n");
-            printWhileCond(wcond, lcount);
-            lcount' := printCode(wbody, depth, lcount + 1);
-            print("  j "); print("w_start"); print(lcount); print("\n");
-            print("\n"); print("w_end"); print(lcount); print(":\n");
+            printCode(i.hd);
+            i := i.tl;
         }
-        case Function(name, fbody) =>
-            print("TODO\n"); return lcount;
-        case Comment(com) => print(com); return lcount;
+    }
+
+    method printCode(c: code)
+        modifies this
+    {
+        match c
+            case Ins32(ins) => printIndent(); printIns32(ins); 
+            case Block(block) => printBlock(block);
+            case IfElse(icond, tbody, fbody) =>
+            {
+                var cur_label := lcount;
+                lcount := lcount + 1;
+
+                printIfCond(icond, cur_label);
+                printCode(fbody);
+                print("  j "); print("if_end"); print(cur_label); print("\n");
+                print("\n"); print("if_true"); print(cur_label); print(":\n");
+                printCode(tbody);
+                print("\n"); print("if_end"); print(cur_label); print(":\n");
+            }
+            case While(wcond, wbody) =>
+            {
+                var cur_label := lcount;
+                lcount := lcount + 1;
+
+                print("\n"); print("w_start"); print(cur_label); print(":\n");
+                printWhileCond(wcond, cur_label);
+                printCode(wbody);
+                print("  j "); print("w_start"); print(cur_label); print("\n");
+                print("\n"); print("w_end"); print(cur_label); print(":\n");
+            }
+            case Function(name, fbody) =>
+                printIndent(); 
+                print("call "); print(name); print("\n"); 
+            case Comment(com) => print(com);
+    }
+
+    method printProc(code:code)
+        requires code.Function?
+        modifies this
+    {
+        var defs, res := getFunctions(code, {}, []); 
+
+        var i := 0;
+        while i < |res|
+        {
+            var func_name := res[i].0;
+            if func_name !in printed {
+                printed := printed + {func_name};
+                if func_name in globls {
+                    print(".globl "); print(func_name); print("\n");
+                }
+                print(func_name); print(":\n");
+                printCode(Block(res[i].1));
+                printIndent(); print("ret\n\n");
+            }
+            i := i + 1;
+        }
+    }
 }
 
 method getFunctionsFromCodes(block: codes, defs: set<string>, res: seq<(string, codes)>) 
@@ -309,38 +337,22 @@ method getFunctions(c: code, defs: set<string>, res: seq<(string, codes)>)
         }
         case While(_, wbody) => 
             defs', res' := getFunctions(wbody, defs', res');
+        case IfElse(_, ifTrue, ifFalse) =>
+            defs', res' := getFunctions(ifTrue, defs', res');
+            defs', res' := getFunctions(ifFalse, defs', res');
         case _ =>
             defs', res' := defs, res;
 }
 
-method printProc(code:code)
-     requires code.Function?
-{
-    print(".globl mod_pow"); print("\n");
-    var defs, res := getFunctions(code, {}, []); 
-    var i := 0;
-    while i < |res|
-    {
-        print(res[i].0); print(":\n");
-        var _ := printCode(Block(res[i].1), 1, 0);
-        i := i + 1;
-        printIndent(1); print("ret\n\n");
-    }
-    // var _ := printCode(code, 0, 0);
-}
-
-datatype AsmTarget = RISCV
-datatype PlatformTarget = Linux | MacOS
-
-method PrintDemo(asm:AsmTarget, platform:PlatformTarget)
-{
-    reveal va_code_mod_pow();
-    printProc(va_code_mod_pow());
-}
 
 method Main()
 {
-    PrintDemo(RISCV, MacOS);
+    var comment := "/*\n  This code is generated by the veri-titan project: https://github.com/secure-foundations/veri-titan\n\n  The mod_pow assembly snippet expects arguments in the following way:\n\n  a0:\n      @param d0inv      Precomputed Montgomery constant, considered part of key d0inv=-n^(-1) mod R\n\n  a1: \n      @param out        Output message as little-endian array\n\n  a2:\n      @param workbuf32  Work buffer, caller must verify this is 2 x RSANUMWORDS elements long.\n\n  a3:\n      @param rr         Precomputed constant, (R*R) mod n, considered part of key\n\n  a4:\n      @param n          Modulus of key\n\n  a5:\n      @param in         Input signature as little-endian array\n\n  It should correspond to this C signature:\n\n  void mod_pow(const uint32_t d0inv,\n          uint32_t *out,\n          uint32_t *workbuf32,\n          const uint32_t * rr,\n          const uint32_t *n,\n          uint32_t *in)\n*/\n";
+    print(comment);
+
+    reveal va_code_mod_pow();
+    var printer := new Printer({"mod_pow"});
+    printer.printProc(va_code_mod_pow());
 }
 
 }

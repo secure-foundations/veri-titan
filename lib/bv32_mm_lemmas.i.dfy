@@ -155,7 +155,7 @@ module bv32_mm_lemmas refines generic_mm_lemmas {
     predicate mp_vars_inv(
         vars: mp_vars,
         mem: mem_t,
-        rr_ptr: nat,
+        rr_ptr: int,
         n_ptr: nat,
         in_ptr: nat,
         ar_ptr: nat,

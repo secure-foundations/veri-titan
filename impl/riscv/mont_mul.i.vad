@@ -115,7 +115,9 @@ procedure mont_mul(
     ghost rsa: rsa_params)
     returns (ghost next_iter_c : iter_t)
 
-    {:timeLimitMultiplier 2} 
+    {:noInline}
+
+    {:timeLimitMultiplier 3} 
 
     requires sp > 80;
     requires sp-32 == vars.mm_frame_ptr;
@@ -124,7 +126,7 @@ procedure mont_mul(
     requires a0 == rsa.M0D;
 
     requires mm_vars_inv(vars, mem,
-        a2, 0 /* a */, 71192, 0, /* n */ a1, 0, /* c */ a3, 0, /* b */ rsa);
+        a2, 0 /* a */, a4, 0, /* n */ a1, 0, /* c */ a3, 0, /* b */ rsa);
 
     reads x0;
 
@@ -153,8 +155,6 @@ procedure mont_mul(
                 [next_iter_c.base_addr := next_iter_c.buff];
 
         montmul_inv(next_iter_c.buff, vars.iter_a.buff, NUM_WORDS, vars.iter_b.buff, rsa);
-        // IsModEquivalent(to_nat(next_iter_c.buff),
-        //     to_nat(vars.iter_a.buff) * to_nat(vars.iter_b.buff) * rsa.R_INV, rsa.M);
 {
     addi(sp, sp, (-32));
 
@@ -163,12 +163,14 @@ procedure mont_mul(
     sw_stack(s1, 20, 5);
     sw_stack(s2, 16, 4);
     sw_stack(s3, 12, 3);
-    sw_stack(s4, 8, 2);
+    sw_stack(s4,  8, 2);
+    sw_stack(s5,  4, 1);
 
     mv(s0, a0); // s0 = rsa.M0D
     mv(s1, a1); // s1 c *
     mv(s2, a2); // s2 a *
     mv(s3, a3); // s3 b *
+    mv(s5, a4); // s5 n *
 
     addi(s4, s1, 384);
 
@@ -201,13 +203,13 @@ procedure mont_mul(
             sp >= 48;
             sp-48 == mut_vars.mma_frame_ptr;
 
-            s5 == old(s5);
+            s5 == old(a4);
             s6 == old(s6);
             s7 == old(s7);
             s8 == old(s8);
 
             mm_vars_inv(mut_vars, mem,
-            s2, i /* a */, 71192, 0, /* n */ s1, 0, /* c */ s3, 0, /* b */ rsa);
+            s2, i /* a */, s5, 0, /* n */ s1, 0, /* c */ s3, 0, /* b */ rsa);
 
             montmul_inv(mut_vars.iter_c.buff, mut_vars.iter_a.buff, mut_vars.iter_a.index, mut_vars.iter_b.buff, rsa);
 
@@ -227,6 +229,7 @@ procedure mont_mul(
         mv(a1, s1); // c
         mv(a0, s0); // M0D
         mv(a3, s3); // b
+        mv(a4, s5); // n
 
         let next_iter_a := lw_next(a2, s2, 0, mut_vars.iter_a);
 
@@ -246,7 +249,8 @@ procedure mont_mul(
     lw_stack(s1, 20, 5);
     lw_stack(s2, 16, 4);
     lw_stack(s3, 12, 3);
-    lw_stack(s4, 8, 2);
+    lw_stack(s4,  8, 2);
+    lw_stack(s5,  4, 1);
     addi(sp, sp, 32);
 }
 
