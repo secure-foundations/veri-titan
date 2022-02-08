@@ -1,14 +1,8 @@
 include "vale.i.dfy"
-include "../../gen/impl/otbn/modexp_var.i.dfy"
-include "../../gen/impl/otbn/nop_tests.i.dfy"
-
 
 module otbn_printer {
     import opened integers
     import opened ot_machine
-    import opened modexp_var
-
-    import opened nop_tests
 
 method printReg32(r:reg32_t)
 {
@@ -421,96 +415,6 @@ class Printer {
             i := i + 1;
         }
     }
-}
-
-method TestOverlap(p:Printer, name:string, c:code, overlap_expected:bool) 
-  modifies p
-{
-  match c
-    case Function(_, body) => {
-
-    var overlaps := has_overlap_seq(simplify_codes(body));
-    print("\nTesting loop overlap detection in " + name);
-
-    if overlaps != overlap_expected {
-      if overlap_expected {
-        print("\n  ERROR: Expected to find an overlap but didn't\n");
-      } else {
-        print("\n  ERROR: Did not expect overlap but I think I found one\n");
-      }
-
-      print("  Simplified code: "); print(simplify_codes(body)); print("\n");
-      
-    } else {
-      print("\n  PASSED!\n");
-    }
-  }
-    case _ =>
-    {
-    print("ERROR: Expected a top-level function, found:\n" + name);
-    print("\n");
-  }
-}
-
-
-method Main()
-{
-    // var p := new Printer({"modexp_var_3072_f4", "montmul"});
-
-    var p := new Printer({"loop_overlap_nop"});
-
-    // reveal va_code_modexp_var_3072_f4();
-    // var c := va_code_modexp_var_3072_f4();
-
-    //reveal va_code_loop_overlap_nop();
-
-    // TODO: Factor all of this unit testing into a separate method/file
-    var c;
-    c := va_code_loop_overlap_nop();
-    TestOverlap(p, "loop_overlap_nop", c, false);
-    c := va_code_loop_overlap();
-    TestOverlap(p, "loop_overlap", c, true);
-    c := va_code_loop_no_overlap();
-    TestOverlap(p, "loop_no_overlap", c, false);
-    c := va_code_loop_overlap_inner_with_starting_ins();
-    TestOverlap(p, "loop_overlap_inner_with_starting_ins", c, true);
-    c := va_code_loop_overlap_inner_with_ending_ins();
-    TestOverlap(p, "loop_overlap_inner_with_ending_ins", c, false);
-
-    c := va_code_loop_if_overlap();
-    TestOverlap(p, "loop_if_overlap", c, true);
-
-    c := va_code_loop_if_with_starting_ins_overlap();
-    TestOverlap(p, "loop_if_with_starting_ins_overlap", c, true);
-    
-    c := va_code_loop_if_with_ending_ins_no_overlap();
-    TestOverlap(p, "loop_if_with_ending_ins_no_overlap", c, false);
-    
-    c := va_code_if_loop_no_overlap();
-    TestOverlap(p, "if_loop_no_overlap", c, false);
-    
-    c := va_code_loop_loop_empty_overlap();
-    TestOverlap(p, "if_loop_loop_empty_overlap", c, true);
-
-    c := va_code_loop_if_empty_overlap();
-    TestOverlap(p, "if_loop_if_empty_overlap", c, true);
-
-    c := va_code_loop_function_overlap();
-    TestOverlap(p, "if_loop_function_overlap", c, true);
-    
-    /*
-       TODO: Restore testing on the real code to be printed
-    var n :=  while_overlap(c);
-    if n {
-      print("ERROR: Overlapping 'While' loop.\n");
-      p.printTopLevelProc(c);
-    } else
-    {
-      print("No overlaps detected!\n");
-      p.printTopLevelProc(c);
-
-    }
-    */
 }
 
 }

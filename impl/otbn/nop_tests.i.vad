@@ -13,6 +13,7 @@ import opened ot_vale
 
 #endverbatim
     
+/* Several unit tests for ensuring that procedures without appropriate NOPs are detected. */
 procedure loop_inner_only()
     requires
         x4 == 0;
@@ -391,6 +392,184 @@ procedure loop_function_overlap()
         function_call();
     }
 }
+    
+
+/* Examples provided in: https://docs.opentitan.org/hw/ip/otbn/doc/#loop-nesting */
+procedure otbn_inner_1()
+    requires
+        true;
+    modifies
+        x2; x3; x4;
+    ensures
+        true;
+{
+    while (Loop(x3))
+        decreases loop_ctr;
+    {
+        addi(x4, x4, 1);
+    }
+}
+    
+procedure otbn_ok_example_1()
+    {:noInline}
+    requires
+        true;
+    modifies
+        x2; x3; x4;
+    ensures
+        true;
+{
+    while (Loop(x2))
+        decreases loop_ctr;
+    {
+        otbn_inner_1();
+        nop();
+    }
+}
+    
+procedure some_fn()
+    {:noInline}
+    requires
+        true;
+    ensures
+        true;
+{
+    nop();
+}
+    
+procedure otbn_inner_2()
+    requires
+        true;
+    modifies
+        x1; x2; x3; x4;
+    ensures
+        true;
+{
+    while (Loop(x3))
+        decreases loop_ctr;
+    {
+        some_fn();
+        addi(x4, x4, 1);
+    }
+}
+
+procedure otbn_ok_example_2()
+    {:noInline}
+    requires
+        true;
+    modifies
+        x1; x2; x3; x4;
+    ensures
+        true;
+{
+    while (Loop(x2))
+        decreases loop_ctr;
+    {
+        some_fn();
+        otbn_inner_2();
+        nop();
+    }
+}
+
+procedure otbn_inner_3()
+    requires
+        true;
+    modifies
+        x3; x6;
+    ensures
+        true;
+{
+    while (Loop(x3))
+        decreases loop_ctr;
+    {
+        addi(x6, x6, 1);
+    }
+}
+
+procedure otbn_ok_example_3()
+    {:noInline}
+    requires
+        true;
+    modifies
+        x2; x3; x4; x5; x6;
+    ensures
+        true;
+{
+    while (Loop(x2))
+        decreases loop_ctr;
+    {
+        if (x4 == x5) {
+            some_fn();
+        }
+        
+        otbn_inner_3();
+        nop();
+    }
+}
+
+procedure otbn_nok_example_1()
+    {:noInline}
+    requires
+        true;
+    modifies
+        x2; x3; x4; x5; x6;
+    ensures
+        true;
+{
+    while (Loop(x2))
+        decreases loop_ctr;
+    {   
+        otbn_inner_1();
+    }
+}
+
+procedure outer_body()
+    {:noInline}
+    requires
+        true;
+    modifies
+        x9;
+    ensures
+        true;
+{
+    addi(x9, x9, 1);
+}
+
+procedure otbn_inner_nok()
+    requires
+        true;
+    modifies
+        x3; x4; x5; x6; x7; x8; x9;
+    ensures
+        true;
+{
+    while (Loop(x3))
+        decreases loop_ctr;
+    {
+        addi(x4, x4, 1);
+        if (x4 == x5) {
+            outer_body();
+            add(x6, x7, x8);
+        }
+    }
+}
+
+procedure otbn_nok_example_2()
+    {:noInline}
+    requires
+        true;
+    modifies
+        x2; x3; x4; x5; x6; x7; x8; x9;
+    ensures
+        true;
+{
+    while (Loop(x2))
+        decreases loop_ctr;
+    {
+        otbn_inner_nok();
+    }
+}
+    
 
 #verbatim
 }

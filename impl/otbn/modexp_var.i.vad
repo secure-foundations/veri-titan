@@ -390,6 +390,7 @@ procedure modexp_var_3072_f4(
         modexp_var_inv_peri_lemma(prev_a_view, a_view, i, vars.rsa);
     
         i := i + 1;
+        nop();
     }
 
     addi(x19, x23, 0);

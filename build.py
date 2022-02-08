@@ -44,11 +44,11 @@ rule otbn-ld
     command = otbn-ld $in -o $out
 """
 
-OT_PRINTER_DFY_PATH = "arch/otbn/printer.s.dfy"
+OT_PRINTER_DFY_PATH = "arch/otbn/modexp_printer.s.dfy"
 OT_SIMULATOR_DFY_PATH = "arch/otbn/simulator.i.dfy"
 DLL_SOURCES = {OT_PRINTER_DFY_PATH, OT_SIMULATOR_DFY_PATH}
 
-OUTPUT_ASM_PATH = "gen/arch/otbn/printer.s.dll.out"
+OUTPUT_ASM_PATH = "gen/arch/otbn/modexp_printer.s.dll.out"
 TEST_ASM_PATH = "impl/otbn/run_modexp.s"
 OUTPUT_ELF_PATH = "gen/impl/otbn/run_modexp.elf"
 
