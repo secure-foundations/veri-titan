@@ -16,15 +16,7 @@ method Main()
 
     reveal va_code_modexp_var_3072_f4();
     var c := va_code_modexp_var_3072_f4();
-
-    var n :=  while_overlap(c);
-    if n {
-      print("ERROR: Overlapping 'While' loop.\n");
-      p.printTopLevelProc(c);
-    } else
-    {
-      p.printTopLevelProc(c);
-    }
+    p.printTopLevelProc(c);
 }
 
 }

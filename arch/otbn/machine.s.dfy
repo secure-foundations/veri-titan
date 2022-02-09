@@ -3,6 +3,7 @@ include "../../lib/bv256_ops.dfy"
 
 module ot_machine {
     import Mul
+    import Seq
 
     import bv32_ops
     import bv256_ops
@@ -418,7 +419,7 @@ predicate method has_overlap(c:simple_code)
     case SBranch(s) => false
     case SWhile(s) =>
       if |s| == 0 then false
-      else if (s[|s|-1].SWhile? || s[|s|-1].SBranch? || s[|s|-1].SJump?) then true // Should use Seq.last(s) here
+      else if (Seq.Last(s).SWhile? || Seq.Last(s).SBranch? || Seq.Last(s).SJump?) then true
       else has_overlap_seq(s)
 }
 
@@ -432,49 +433,6 @@ predicate method while_overlap(c:code)
 {
   has_overlap_seq(simplify_code(c))
 }
-
-/*
-    // true when a loop ends with another loop
-    predicate method while_overlap(c: code)
-    {
-      match c
-        case Ins32(_) => false
-        case Ins256(_) => false
-        case Block(b) => any_has_while_overlap(b)
-        case While(con, body) => check_while(body, CNil, false) // can't have Loop X 0
-        case IfElse(_, body, _) => while_overlap(body)
-        case Function(_, body) => any_has_while_overlap(body)
-        case Comment(_) => false
-    }
-
-    predicate method any_has_while_overlap(cs:codes)
-      decreases cs
-    {
-      match cs
-        case CNil => false
-        case va_CCons(hd, tl) => while_overlap(hd) || any_has_while_overlap(tl)
-    }
-
-    // carry = last thing we saw was a While
-    predicate method last_is_while(cs:codes, carry:bool)
-      decreases cs, 0
-    {
-      match cs
-        case CNil => carry
-        case va_CCons(hd, tl) => check_while(hd, tl, carry)
-    }
-
-    predicate method check_while(hd: code, tl: codes, carry: bool)
-      decreases hd, tl, 1
-    {
-        match hd
-            case While(cond, body) => last_is_while(tl, true)
-            case Block(b) => last_is_while(tl, last_is_while(b, carry))
-            case Function(_, b) => last_is_while(tl, last_is_while(b, carry))
-            case Comment(_) => last_is_while(tl, carry)
-            case _ => false
-    }
-*/        
 
 /* state definitions */
 
