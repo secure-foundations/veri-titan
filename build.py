@@ -5,7 +5,7 @@ from subprocess import PIPE, Popen
 from os.path import exists
 
 TOOLS_DIR = "./tools"
-DAFNY_PATH = "./tools/dafny/dafny"
+DAFNY_PATH = "./tools/dafny_mod/Binaries/Dafny"
 VALE_PATH = "./tools/vale/bin/vale"
 DAFNY_LIB_DIR = "./std_lib"
 
