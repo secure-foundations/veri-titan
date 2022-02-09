@@ -50,7 +50,7 @@ OTBN_TEST_ASM_PATH = "impl/otbn/run_modexp.s"
 OUTPUT_ELF_PATH = "gen/run_modexp.elf"
 
 DLL_SOURCES = {
-    "arch/otbn/printer.s.dfy": OTBN_ASM_PATH,
+     "arch/otbn/modexp_printer.s.dfy": OTBN_ASM_PATH,
     "arch/otbn/simulator.i.dfy": "gen/arch/otbn/sim.out", 
     "arch/riscv/printer.s.dfy": RISCV_ASM_PATH,
 }
@@ -58,7 +58,6 @@ DLL_SOURCES = {
 NINJA_PATH = "build.ninja"
 CODE_DIRS = ["arch", "impl", "lib"]
 GEN_DIR = "gen"
-
 
 NL_FILES = {
     "lib/sub_mod_nl_lemmas.i.dfy",
