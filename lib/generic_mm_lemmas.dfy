@@ -76,11 +76,15 @@ abstract module generic_mm_lemmas {
         ensures num.full
         == to_nat([num.lh, num.uh])
         == num.lh + num.uh * BASE();
+        ensures IsModEquivalent(num.full, num.lh, BASE());
     {
         reveal dw_lh();
         reveal dw_uh();
         LemmaFundamentalDivMod(num.full, BASE());
         GBV.BVSEQ.LemmaSeqLen2([num.lh, num.uh]);
+        assert num.full - num.lh == num.uh * BASE();
+        DivMod.LemmaModMultiplesBasicAuto();
+        assert (num.uh * BASE()) % BASE() == 0;
     }
 
     predicate dw_add_is_safe(
@@ -331,45 +335,16 @@ abstract module generic_mm_lemmas {
         requires cong_BASE(ui, p1.full * m0d);
         ensures p2.lh == 0;
     {
-        var p1_full := p1.full as int;
+        dw_view_lemma(p1);
+        dw_view_lemma(p2);
 
-        assert cong_BASE(ui * m0, -p1_full) by {
-            assert cong_BASE(m0d * m0 * p1.full, -p1_full) by {
-                LemmaModMulEquivalent(m0d * m0, -1, p1.full, BASE());
-            }
-            assert cong_BASE(ui * m0, p1.full * m0d * m0) by {
-                LemmaModMulEquivalentAuto();
-            }
-            assert p1.full * m0d * m0 == m0d * m0 * p1.full by {
-                LemmaMulIsAssociativeAuto();
-            }
+        gbassert IsModEquivalent(p2.lh, 0, BASE()) by {
+            assert p2.full == ui * m0 + p1.lh;
+            assert IsModEquivalent(p1.full, p1.lh, BASE());
+            assert IsModEquivalent(p2.full, p2.lh, BASE());
+            assert IsModEquivalent(m0d * m0, -1, BASE());
+            assert IsModEquivalent(ui, p1.full * m0d, BASE());
         }
-
-        calc ==> {
-            cong_BASE(ui * m0, -p1_full);
-            cong_BASE(ui * m0 + p1.lh , - p1_full + p1.lh);
-                { dw_view_lemma(p1); }
-            cong_BASE(ui * m0 + p1.lh, - (p1.uh as int * BASE() + p1.lh) + p1.lh);
-            cong_BASE(ui * m0 + p1.lh, - (p1.uh as int * BASE()));
-                { assert - (p1.uh as int * BASE())== - 1 * (p1.uh as int * BASE()); }
-                { LemmaMulIsAssociativeAuto(); }
-            cong_BASE(ui * m0 + p1.lh, - (p1.uh as int) * BASE());
-                { LemmaModMultiplesVanish(- (p1.uh as int), 0, BASE()); }
-            cong_BASE(ui * m0 + p1.lh, 0);
-        }
-
-        calc ==> {
-            p2.full == ui * m0 + p1.lh;
-                { dw_view_lemma(p2); }
-            p2.lh + p2.uh * BASE() == ui * m0 + p1.lh;
-            cong_BASE(p2.lh + p2.uh * BASE(), ui * m0 + p1.lh);
-            cong_BASE(ui * m0 + p1.lh, p2.lh + p2.uh * BASE());
-                { LemmaModMultiplesVanish(p2.uh, p2.lh, BASE()); }
-            cong_BASE(ui * m0 + p1.lh, p2.lh);
-            cong_BASE(p2.lh, 0);
-        }
-
-        assert cong_BASE(p2.lh, 0);
         LemmaSmallMod(p2.lh, BASE());
     }
 
