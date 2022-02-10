@@ -9,7 +9,7 @@ module bv256_mm_lemmas refines generic_mm_lemmas {
     import opened ot_machine
     import opened ot_vale
     import opened ot_abstraction
-    import opened mul256_nl_lemma
+    // import opened mul256_nl_lemma
 
     type uint512_view_t = dw_view_t
 
@@ -134,9 +134,9 @@ module bv256_mm_lemmas refines generic_mm_lemmas {
             && p13 == otbn_qmul(x, 3, y, 2)
             && p14 == otbn_qmul(x, 2, y, 3)
             && p15 == otbn_qmul(x, 3, y, 3)
-            && r0 == p0 + (p1 + p2) * B
-            && r1 == uh(r0) + p3 + p4 + p5 + (p6 + p7 + p8 + p9) * B
-            && r2 == uh(r1) + p10 + p11 + p12 + (p13 + p14) * B
+            && r0 == p0 + (p1 + p2) * integers.BASE_64
+            && r1 == uh(r0) + p3 + p4 + p5 + (p6 + p7 + p8 + p9) * integers.BASE_64
+            && r2 == uh(r1) + p10 + p11 + p12 + (p13 + p14) * integers.BASE_64
             && r3 == uh(r2) + p15
             && t1 == otbn_hwb(t0, lh(r0), true)
             && t2 == otbn_hwb(t1, lh(r1), false)
@@ -147,65 +147,77 @@ module bv256_mm_lemmas refines generic_mm_lemmas {
         ensures
             to_nat([t2, u2]) == x * y;
     {
-        assert t2 == lh(r0) + lh(r1) * B2 by {
-            otbn_hwb_lemma(t0, t1, t2, lh(r0), lh(r1));
-        }
-
-        assert u2 == lh(r2) + lh(r3) * B2 by {
-            otbn_hwb_lemma(u0, u1, u2, lh(r2), lh(r3));
-        }
-
         var x_0, x_1, x_2, x_3  := otbn_qsel(x, 0), otbn_qsel(x, 1), otbn_qsel(x, 2), otbn_qsel(x, 3);
-
-        assert x == x_0 + x_1 * B + x_2 * B2 + x_3 * B3 by {
-            uint256_quarter_split_lemma(x);
-        }
-
         var y_0, y_1, y_2, y_3  := otbn_qsel(y, 0), otbn_qsel(y, 1), otbn_qsel(y, 2), otbn_qsel(y, 3);
+        var B :int := integers.BASE_64;
 
-        assert y == y_0 + y_1 * B + y_2 * B2 + y_3 * B3 by {
-            uint256_quarter_split_lemma(y);
+        gbassert t2 + u2*B*B*B*B + wacc*B*B*B*B*B*B*B*B
+            ==
+            p0 + (p1 + p2)*B + (p3 + p4 + p5)*B*B + (p6 + p7 + p8 + p9)*B*B*B + (p10 + p11 + p12)*B*B*B*B + (p13 + p14)*B*B*B*B*B + p15*B*B*B*B*B*B
+        by {
+            assert r0 == p0 + (p1 + p2)*B;
+            assert r1 == uh(r0) + p3 + p4 + p5 + (p6 + p7 + p8 + p9)*B;
+            assert r2 == uh(r1) + p10 + p11 + p12 + (p13 + p14)*B;
+            assert r3 == uh(r2) + p15;
+            assert r0 == lh(r0) + uh(r0)*B*B by {
+                half_split_lemma(r0);
+            }
+            assert r1 == lh(r1) + uh(r1)*B*B by {
+                half_split_lemma(r1);
+            }
+            assert r2 == lh(r2) + uh(r2)*B*B by {
+                half_split_lemma(r2);
+            }
+            assert r3 == lh(r3) + uh(r3)*B*B by {
+                half_split_lemma(r3);
+            }
+            assert wacc == uh(r3);
+            assert t2 == lh(r0) + lh(r1)*B*B  by {
+                otbn_hwb_lemma(t0, t1, t2, lh(r0), lh(r1));
+            }
+            assert u2 == lh(r2) + lh(r3)*B*B  by {
+                otbn_hwb_lemma(u0, u1, u2, lh(r2), lh(r3));
+            }
         }
 
-        calc {
-            t2 + u2 * B4 + wacc * B8;
-                { half_split_lemma(r3); }
-            t2 + (lh(r2) + r3 * B2) * B4;
-                { half_split_lemma(r2); }
-            t2 + (r2 - uh(r2) * B2 + r3 * B2) * B4;
-            t2 + r2 * B4 - uh(r2) * B2 * B4 + r3 * B2 * B4;
-            lh(r0) + lh(r1) * B2 + r2 * B4 - uh(r2) * B2 * B4 + r3 * B2 * B4;
-                { LemmaMulIsAssociativeAuto(); }
-            lh(r0) + lh(r1) * B2 + r2 * B4 + (r3 - uh(r2)) * B6;
-            lh(r0) + lh(r1) * B2 + r2 * B4 + p15 * B6;
-                { half_split_lemma(r1); }
-            lh(r0) + (r1 - uh(r1) * B2) * B2 + r2 * B4 + p15 * B6;
-            lh(r0) + r1 * B2 - uh(r1) * B4 + r2 * B4 + p15 * B6;
-            lh(r0) + r1 * B2 + (r2 - uh(r1)) * B4 + p15 * B6;
-            lh(r0) + r1 * B2 + (p10 + p11 + p12 + (p13 + p14) * B) * B4 + p15 * B6;
-            lh(r0) + r1 * B2 + ((p10 + p11 + p12) + (p13 + p14) * B) * B4 + p15 * B6;
-                { LemmaMulIsDistributiveAddOtherWayAuto(); }
-            lh(r0) + r1 * B2 + (p10 + p11 + p12) * B4 + ((p13 + p14) * B) * B4 + p15 * B6;
-                { LemmaMulIsCommutativeAuto(); }
-            lh(r0) + r1 * B2 + (p10 + p11 + p12) * B4 + (p13 + p14) * B5 + p15 * B6;
-                { half_split_lemma(r0); }
-            p0 + (p1 + p2) * B + (p3 + p4 + p5) * B2 + (p6 + p7 + p8 + p9) * B3 + (p10 + p11 + p12) * B4 + (p13 + p14) * B5 + p15 * B6;
-                {
-                    reveal otbn_qmul();
-                    mul256_canonize_lemma(
-                        p0, p1, p2, p3,
-                        p4, p5, p6, p7,
-                        p8, p9, p10, p11,
-                        p12, p13, p14, p15,
-                        x, x_0, x_1, x_2, x_3,
-                        y, y_0, y_1,y_2, y_3);
-                }
-            x * y;
+        reveal otbn_qmul();
+
+        gbassert p0 + (p1 + p2)*B + (p3 + p4 + p5)*B*B + (p6 + p7 + p8 + p9)*B*B*B + (p10 + p11 + p12)*B*B*B*B + (p13 + p14)*B*B*B*B*B + p15*B*B*B*B*B*B
+            ==
+            x * y
+        by {
+            assert x == x_0 + x_1*B + x_2*B*B + x_3*B*B*B by {
+                uint256_quarter_split_lemma(x);
+            }
+            assert y == y_0 + y_1*B + y_2*B*B + y_3*B*B*B by {
+                uint256_quarter_split_lemma(y);
+            }
+            assert p0 == x_0 * y_0;
+            assert p1 == x_1 * y_0;
+            assert p2 == x_0 * y_1;
+            assert p3 == x_2 * y_0;
+            assert p4 == x_1 * y_1;
+            assert p5 == x_0 * y_2;
+            assert p6 == x_3 * y_0;
+            assert p7 == x_2 * y_1;
+            assert p8 == x_1 * y_2;
+            assert p9 == x_0 * y_3;
+            assert p10 == x_3 * y_1;
+            assert p11 == x_2 * y_2;
+            assert p12 == x_1 * y_3;
+            assert p13 == x_3 * y_2;
+            assert p14 == x_2 * y_3;
+            assert p15 == x_3 * y_3;
         }
+
+        assert t2 + u2*B*B*B*B + wacc*B*B*B*B*B*B*B*B == x * y;
+
+        var B4 := B*B*B*B;
+        var B8 := B4 * B4;
 
         assert wacc == 0 by {
             assert x * y <= (B4 - 1) * (B4 - 1) by {
-                Mul.LemmaMulUpperBoundAuto();
+                Mul.LemmaMulUpperBound(x, B4 - 1, y, B4 - 1);
             }
             assert x * y <= B8;
         }
