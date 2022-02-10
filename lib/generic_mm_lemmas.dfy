@@ -740,7 +740,7 @@ abstract module generic_mm_lemmas {
         var curr_a := to_nat(a);
         var prev_a := to_nat(prev_a);
 
-        gbassert IsModEquivalent(curr_a * pow_BASE(1+i), to_nat(x[..i+1]) * to_nat(y), rsa.M) by {
+        gbassert IsModEquivalent(curr_a * pow_BASE(i+1), to_nat(x[..i+1]) * to_nat(y), rsa.M) by {
             assert IsModEquivalent(curr_a * BASE(), x[i] * to_nat(y) + ui * rsa.M + prev_a, rsa.M);
             assert IsModEquivalent(prev_a * pow_BASE(i), to_nat(x[..i]) * to_nat(y), rsa.M);
             assert BASE() * pow_BASE(i) == pow_BASE(i+1) by {
