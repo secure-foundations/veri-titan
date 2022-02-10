@@ -892,36 +892,25 @@ abstract module generic_mm_lemmas {
         var s := to_nat(sig);
 
         LemmaPowPositiveAuto();
-        // LemmaPowNonnegativeAuto();
         var cur := Pow(s, Pow(2, rsa.E0));
 
-        assert IsModEquivalent(a, cur * rsa.R, m);
+        Mul.LemmaMulNonnegative(a, s);
+        assert a * s >= 0;
 
-        calc ==> {
-            IsModEquivalent(a, cur * rsa.R, m);
-                { LemmaModMulEquivalentAuto(); }
-            IsModEquivalent(a * (s * rsa.R_INV), (cur * rsa.R) * (s * rsa.R_INV), m);
-                { LemmaMulIsAssociativeAuto(); }
-            IsModEquivalent(a * s * rsa.R_INV, cur * rsa.R * s * rsa.R_INV, m);
-                {
-                    assert IsModEquivalent(next_a, a * s * rsa.R_INV, m) by {
-                        montmul_inv_lemma_1(next_a_view, a_view, sig, rsa);
-                    }
-                }
-            IsModEquivalent(next_a, cur * rsa.R * s * rsa.R_INV, m);
-                {
-                    LemmaMulProperties();
-                    r_r_inv_cancel_lemma(next_a, cur * s, rsa);
-                }
-            IsModEquivalent(next_a, cur * s, m);
-                {
-                    LemmaMulIsCommutativeAuto();
-                    reveal Pow();
-                }
-            IsModEquivalent(next_a, Pow(s, Pow(2, rsa.E0) + 1), m);
-            IsModEquivalent(next_a, Pow(s, rsa.E), m);
-            IsModEquivalent(to_nat(next_a_view), Pow(to_nat(sig), rsa.E), m);
+        gbassert IsModEquivalent(next_a, cur * s, m) by {
+            assert IsModEquivalent(a, cur * rsa.R, m);
+            assert IsModEquivalent(next_a * rsa.R, a * s, m) by {
+                assert a_view == a_view[..NUM_WORDS];
+            }
+            assert IsModEquivalent(rsa.R_INV * rsa.R, 1, m);
         }
+
+        assert IsModEquivalent(next_a, Pow(s, Pow(2, rsa.E0) + 1), m) by {
+            LemmaMulIsCommutativeAuto();
+            reveal Pow();
+        }
+
+        assert IsModEquivalent(to_nat(next_a_view), Pow(to_nat(sig), rsa.E), m);
     }
 
     lemma modexp_var_correct_lemma(
