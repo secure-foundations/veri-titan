@@ -5,14 +5,14 @@ from subprocess import PIPE, Popen
 from os.path import exists
 
 TOOLS_DIR = "./tools"
-DAFNY_PATH = "./tools/dafny/dafny"
+DAFNY_PATH = "./tools/dafny/Binaries/Dafny"
 VALE_PATH = "./tools/vale/bin/vale"
 DAFNY_LIB_DIR = "./std_lib"
 
 DAFNY_LIB_HASH = "6ce420782487e592dd9925acf715e0d9548bc300"
 
-DAFNY_ZIP_LINUX = "dafny-3.0.0-x64-ubuntu-16.04.zip"
-DAFNY_ZIP_MACOS = "dafny-3.0.0-x64-osx-10.14.2.zip"
+# DAFNY_ZIP_LINUX = "dafny-3.0.0-x64-ubuntu-16.04.zip"
+# DAFNY_ZIP_MACOS = "dafny-3.0.0-x64-osx-10.14.2.zip"
 
 def rules():
     vale = "" if platform.system() == "Linux" else "mono"
@@ -59,9 +59,7 @@ NINJA_PATH = "build.ninja"
 CODE_DIRS = ["arch", "impl", "lib"]
 GEN_DIR = "gen"
 
-NL_FILES = {
-    "lib/sub_mod_nl_lemmas.i.dfy",
-    "lib/mul256_nl_lemma.i.dfy"}
+NL_FILES = {"lib/sub_mod_nl_lemmas.i.dfy"}
 
 ## misc utils
 
@@ -161,13 +159,12 @@ def setup_tools():
     if not os.path.exists(TOOLS_DIR):
         os.mkdir(TOOLS_DIR)
 
-    dafny_zip = DAFNY_ZIP_LINUX if os_type == "Linux" else DAFNY_ZIP_MACOS
+    z3_target = "z3-ubuntu" if os_type == "Linux" else "z3-mac"
     if os.path.exists(DAFNY_PATH):
         print("[INFO] dafny binary already exists")
     else:
-        os.system(f"wget https://github.com/dafny-lang/dafny/releases/download/v3.0.0/{dafny_zip}")
-        os.system(f"unzip {dafny_zip} -d {TOOLS_DIR}")
-        os.system(f"rm {dafny_zip}")
+        os.system("cd tools && git clone git@github.com:secure-foundations/dafny.git")
+        os.system("cd tools/dafny && git checkout groebner-extension && make exe && make z3-ubuntu")
 
     if os.path.exists(VALE_PATH):
         print("[INFO] vale binary already exists")
@@ -386,10 +383,13 @@ def verify_single_file(target):
 def generate_dll(dfy_path, dll_path):
     dfy_path = os.path.realpath(dfy_path)
     assert(dll_path.startswith(GEN_DIR) and dll_path.endswith(".dll"))
-    dll_dir = os.path.dirname(dll_path)
-    command = f"dafny /compile:1 /noNLarith /vcsCores:2 {dfy_path} /out:{dll_path}"
-    output = subprocess_run(command, cwd=dll_dir) 
-    print(output)
+    output_dir, dll_name = os.path.split(dll_path)
+    json_name = dll_name.replace(".dll", ".runtimeconfig.json")
+    json_path = output_dir + "/" + json_name
+    command = f"{DAFNY_PATH} /compile:1 /noNLarith /vcsCores:2 {dfy_path} /out:{dll_path}"
+    output = subprocess_run(command)
+    os.system(f"mv {dll_name} {dll_path}")
+    os.system(f"mv {json_name} {json_path}")
 
 ## command line interface
 
