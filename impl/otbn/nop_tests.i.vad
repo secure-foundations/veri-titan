@@ -1,0 +1,576 @@
+include "../../arch/otbn/decls.i.vad"
+
+#verbatim
+
+include "../../arch/otbn/decls.i.dfy"
+
+module nop_tests {
+
+import opened ot_machine
+import opened ot_abstraction
+import opened ot_decls
+import opened ot_vale
+
+#endverbatim
+    
+/* Several unit tests for ensuring that procedures without appropriate NOPs are detected. */
+procedure loop_inner_only()
+    requires
+        x4 == 0;
+    modifies
+        fgroups; x4;
+    ensures
+        x4 == 6;
+{
+    while (LoopImm(6))
+            invariant x4 == (6 - loop_ctr);
+            decreases loop_ctr;
+        {
+            addi(x4, x4, 1);
+        }
+}
+
+procedure loop_inner_with_starting_ins()
+    requires
+        x4 == 0;
+    modifies
+        fgroups; x4;
+    ensures
+        x4 == 6;
+{
+    addi(x4, x4, 1);
+    li(x4, 0);    
+
+    while (LoopImm(6))
+            invariant x4 == (6 - loop_ctr);
+            decreases loop_ctr;
+        {
+            addi(x4, x4, 1);
+        }
+}
+
+procedure loop_inner_with_ending_ins()
+    requires
+        x4 == 0;
+    modifies
+        fgroups; x4;
+    ensures
+        x4 == 6;
+{
+    while (LoopImm(6))
+            invariant x4 == (6 - loop_ctr);
+            decreases loop_ctr;
+        {
+            addi(x4, x4, 1);
+        }
+
+    li(x4, 6);
+}
+    
+procedure if_inner_only()
+    requires
+        true;
+    modifies
+        x0; x2;
+    ensures
+        x2 == 0;
+{
+    if (x2 != x0) {
+        addi(x2, x2, 1);
+        li(x2, 0);
+    }
+}
+
+procedure if_inner_and_starting_ins()
+    requires
+        true;
+    modifies
+        x0; x2;
+    ensures
+        x2 == 0;
+{
+    addi(x2, x2, 1);
+
+    if (x2 != x0) {
+        addi(x2, x2, 1);
+        li(x2, 0);
+    }
+}
+
+procedure if_inner_and_ending_ins()
+    requires
+        true;
+    modifies
+        x0; x2;
+    ensures
+        x2 == 0;
+{
+    if (x2 != x0) {
+        addi(x2, x2, 1);
+        li(x2, 0);
+    }
+    
+    li(x2, 0);
+}
+
+procedure loop_no_overlap()
+    {:noInline}
+    requires
+        x3 == 0;
+        x4 == 0;
+    modifies
+        fgroups; x3; x4;
+    ensures
+        x3 == 6;
+        x4 == 6;
+{
+    while (LoopImm(3))
+        invariant x3 == (3 - loop_ctr) * 2;
+        invariant x4 == 0;
+        decreases loop_ctr;
+    {
+        addi(x3, x3, 2);
+    }
+    
+    loop_inner_only();
+    
+    }
+    
+// nested loops with end overlap
+procedure loop_overlap()
+    {:noInline}
+    requires
+        x3 == 0;
+        x4 == 6;
+    modifies
+        fgroups; x3; x4;
+    ensures
+        x3 == 6;
+        x4 == 6;
+{
+    while (LoopImm(3))
+        invariant x3 == (3 - loop_ctr) * 2;
+        invariant x4 == 6;
+        decreases loop_ctr;
+    {
+        addi(x3, x3, 2);
+        li(x4, 0);
+        loop_inner_only();
+    }
+}
+
+// nested loops with ending nop
+procedure loop_overlap_nop()
+    {:noInline}
+    requires
+        x3 == 0;
+        x4 == 6;
+    modifies
+        fgroups; x3; x4;
+    ensures
+        x3 == 6;
+        x4 == 6;
+{
+    while (LoopImm(3))
+        invariant x3 == (3 - loop_ctr) * 2;
+        invariant x4 == 6;
+        decreases loop_ctr;
+    {
+        addi(x3, x3, 2);
+        li(x4, 0);
+        loop_inner_only();
+        nop();
+    }
+}
+    
+procedure loop_overlap_inner_with_starting_ins()
+    {:noInline}
+    requires
+        x3 == 0;
+        x4 == 6;
+    modifies
+        fgroups; x0; x2; x3; x4;
+    ensures
+        x3 == 6;
+        x4 == 6;
+{
+    while (LoopImm(3))
+        invariant x3 == (3 - loop_ctr) * 2;
+        invariant x4 == 6;
+        decreases loop_ctr;
+    {
+        addi(x3, x3, 2);
+        li(x4, 0);
+        loop_inner_with_starting_ins();
+    }
+}
+    
+    
+procedure loop_overlap_inner_with_ending_ins()
+    {:noInline}
+    requires
+        x3 == 0;
+        x4 == 6;
+    modifies
+        fgroups; x0; x2; x3; x4;
+    ensures
+        x3 == 6;
+        x4 == 6;
+{
+    while (LoopImm(3))
+        invariant x3 == (3 - loop_ctr) * 2;
+        invariant x4 == 6;
+        decreases loop_ctr;
+    {
+        addi(x3, x3, 2);
+        li(x4, 0);
+        loop_inner_with_ending_ins();
+    }
+}
+    
+procedure loop_if_overlap()
+    {:noInline}
+    requires
+        x3 == 0;
+    modifies
+        fgroups; x0; x2; x3;
+    ensures
+        x3 == 6;
+{
+    while (LoopImm(3))
+        invariant x3 == (3 - loop_ctr) * 2;
+        decreases loop_ctr;
+    {
+        addi(x3, x3, 2);
+        if_inner_only();
+    }
+}
+    
+procedure loop_if_with_starting_ins_overlap()
+    {:noInline}
+    requires
+        x3 == 0;
+    modifies
+        fgroups; x0; x2; x3;
+    ensures
+        x3 == 6;
+{
+    while (LoopImm(3))
+        invariant x3 == (3 - loop_ctr) * 2;
+        decreases loop_ctr;
+    {
+        addi(x3, x3, 2);
+        if_inner_and_starting_ins();
+    }
+}
+
+procedure loop_if_with_ending_ins_no_overlap()
+    {:noInline}
+    requires
+        x3 == 0;
+    modifies
+        fgroups; x0; x2; x3;
+    ensures
+        x3 == 6;
+{
+    while (LoopImm(3))
+        invariant x3 == (3 - loop_ctr) * 2;
+        decreases loop_ctr;
+    {
+        addi(x3, x3, 2);
+        if_inner_and_ending_ins();
+    }
+}
+    
+procedure if_loop_no_overlap()
+    {:noInline}
+    requires
+        x4 == 0;
+    modifies
+        fgroups; x0; x2; x4;
+    ensures
+        true;
+{
+    if (x2 != x0) {
+        loop_inner_only();
+    }
+}
+    
+procedure if_if_no_overlap()
+    {:noInline}
+    requires
+        true;
+    modifies
+        fgroups; x0; x2;
+    ensures
+        true;
+{
+    if (x2 != x0) {
+        if_inner_only();
+    }
+}
+
+procedure loop_empty()
+    requires
+        true;
+    ensures
+        true;
+{
+    while (LoopImm(3))
+        decreases loop_ctr;
+    {
+    }
+}
+
+procedure if_empty()
+    requires
+        true;
+    modifies
+        x0; x2;
+    ensures
+        true;
+{
+    if (x0 != x2) { }
+}
+    
+procedure loop_loop_empty_overlap()
+    {:noInline}
+    requires
+        true;
+    modifies
+        x0; x2;
+    ensures
+        true;
+{
+    while (LoopImm(3))
+        decreases loop_ctr;
+    {
+        loop_empty();
+    }
+}
+    
+procedure loop_if_empty_overlap()
+    {:noInline}
+    requires
+        true;
+    modifies
+        x0; x2;
+    ensures
+        true;
+{
+    while (LoopImm(3))
+        decreases loop_ctr;
+    {
+        if_empty();
+    }
+}
+    
+procedure function_call()
+    {:noInline}
+    requires
+        true;
+    modifies
+        x2;
+    ensures
+        true;
+{
+    addi(x2, x2, 1);
+}
+    
+procedure loop_function_overlap()
+    {:noInline}
+    requires
+        true;
+    modifies
+        x2;
+    ensures
+        true;
+{
+    while (LoopImm(3))
+        decreases loop_ctr;
+    {
+        function_call();
+    }
+}
+    
+
+/* Examples provided in: https://docs.opentitan.org/hw/ip/otbn/doc/#loop-nesting */
+procedure otbn_inner_1()
+    requires
+        true;
+    modifies
+        x2; x3; x4;
+    ensures
+        true;
+{
+    while (Loop(x3))
+        decreases loop_ctr;
+    {
+        addi(x4, x4, 1);
+    }
+}
+    
+procedure otbn_ok_example_1()
+    {:noInline}
+    requires
+        true;
+    modifies
+        x2; x3; x4;
+    ensures
+        true;
+{
+    while (Loop(x2))
+        decreases loop_ctr;
+    {
+        otbn_inner_1();
+        nop();
+    }
+}
+    
+procedure some_fn()
+    {:noInline}
+    requires
+        true;
+    ensures
+        true;
+{
+    nop();
+}
+    
+procedure otbn_inner_2()
+    requires
+        true;
+    modifies
+        x1; x2; x3; x4;
+    ensures
+        true;
+{
+    while (Loop(x3))
+        decreases loop_ctr;
+    {
+        some_fn();
+        addi(x4, x4, 1);
+    }
+}
+
+procedure otbn_ok_example_2()
+    {:noInline}
+    requires
+        true;
+    modifies
+        x1; x2; x3; x4;
+    ensures
+        true;
+{
+    while (Loop(x2))
+        decreases loop_ctr;
+    {
+        some_fn();
+        otbn_inner_2();
+        nop();
+    }
+}
+
+procedure otbn_inner_3()
+    requires
+        true;
+    modifies
+        x3; x6;
+    ensures
+        true;
+{
+    while (Loop(x3))
+        decreases loop_ctr;
+    {
+        addi(x6, x6, 1);
+    }
+}
+
+procedure otbn_ok_example_3()
+    {:noInline}
+    requires
+        true;
+    modifies
+        x2; x3; x4; x5; x6;
+    ensures
+        true;
+{
+    while (Loop(x2))
+        decreases loop_ctr;
+    {
+        if (x4 == x5) {
+            some_fn();
+        }
+        
+        otbn_inner_3();
+        nop();
+    }
+}
+
+procedure otbn_nok_example_1()
+    {:noInline}
+    requires
+        true;
+    modifies
+        x2; x3; x4; x5; x6;
+    ensures
+        true;
+{
+    while (Loop(x2))
+        decreases loop_ctr;
+    {   
+        otbn_inner_1();
+    }
+}
+
+procedure outer_body()
+    {:noInline}
+    requires
+        true;
+    modifies
+        x9;
+    ensures
+        true;
+{
+    addi(x9, x9, 1);
+}
+
+procedure otbn_inner_nok()
+    requires
+        true;
+    modifies
+        x3; x4; x5; x6; x7; x8; x9;
+    ensures
+        true;
+{
+    while (Loop(x3))
+        decreases loop_ctr;
+    {
+        addi(x4, x4, 1);
+        if (x4 == x5) {
+            outer_body();
+            add(x6, x7, x8);
+        }
+    }
+}
+
+procedure otbn_nok_example_2()
+    {:noInline}
+    requires
+        true;
+    modifies
+        x2; x3; x4; x5; x6; x7; x8; x9;
+    ensures
+        true;
+{
+    while (Loop(x2))
+        decreases loop_ctr;
+    {
+        otbn_inner_nok();
+    }
+}
+    
+
+#verbatim
+}
+#endverbatim

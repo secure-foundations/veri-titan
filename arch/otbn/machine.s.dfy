@@ -3,6 +3,7 @@ include "../../lib/bv256_ops.dfy"
 
 module ot_machine {
     import Mul
+    import Seq
 
     import bv32_ops
     import bv256_ops
@@ -96,6 +97,7 @@ module ot_machine {
         | LI(xrd: reg32_t, imm32: uint32)
         | CSRRS(grd: reg32_t, csr: uint12, grs1: reg32_t)
         | ECALL
+        | NOP
 
     datatype ins256 =
         | BN_ADD(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
@@ -381,6 +383,56 @@ module ot_machine {
     datatype codes = 
         | CNil
         | va_CCons(hd: code, tl: codes)
+
+/* control flow overlap detection */
+datatype simple_code =
+  | SIns
+  | SJump
+  | SWhile(s:seq<simple_code>)
+  | SBranch(s:seq<simple_code>)
+
+function method simplify_codes(c:codes) : seq<simple_code>
+{
+  match c 
+    case CNil => []
+    case va_CCons(hd, tl) => simplify_code(hd) + simplify_codes(tl)
+}
+
+// Intended to be called on the body of each top-level function.
+function method simplify_code(c:code) : seq<simple_code>
+{
+  match c
+    case Ins32(_) => [SIns]
+    case Ins256(_) => [SIns]
+    case Block(b) => simplify_codes(b)
+    case While(_, body) => [SWhile(simplify_code(body))]
+    case IfElse(_, tbody, fbody) => [SBranch(simplify_code(tbody))]
+    case Function(_, body) => [SJump]
+    case Comment(_) => []
+}
+
+predicate method has_overlap(c:simple_code) 
+{
+  match c
+    case SIns => false
+    case SJump => false
+    case SBranch(s) => false
+    case SWhile(s) =>
+      if |s| == 0 then false
+      else if (Seq.Last(s).SWhile? || Seq.Last(s).SBranch? || Seq.Last(s).SJump?) then true
+      else has_overlap_seq(s)
+}
+
+predicate method has_overlap_seq(s:seq<simple_code>)
+{
+  if |s| == 0 then false
+  else has_overlap(s[0]) || has_overlap_seq(s[1..])
+}
+
+predicate method while_overlap(c:code) 
+{
+  has_overlap_seq(simplify_code(c))
+}
 
 /* state definitions */
 
@@ -714,6 +766,7 @@ module ot_machine {
                 case CSRRS(grd, csr, grs1) => eval_CSRRS(grd, csr, grs1)
                 case LI(xrd, imm32) => eval_LI(xrd, imm32)
                 case ECALL => this
+                case NOP => this
         }
 
         function method eval_ins256(wins: ins256): state
