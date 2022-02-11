@@ -773,17 +773,6 @@ abstract module generic_mm_lemmas {
         assert montmul_inv(a, x, 0, y, rsa);
     }
 
-    lemma r_r_inv_cancel_lemma(a: nat, b: nat, rsa: rsa_params)
-        requires rsa_params_inv(rsa);
-        requires IsModEquivalent(a, b * rsa.R_INV * rsa.R, rsa.M);
-        ensures IsModEquivalent(a, b, rsa.M);
-    {
-        assert IsModEquivalent(b * rsa.R_INV * rsa.R, b, rsa.M) by {
-            LemmaModMulEquivalent(rsa.R_INV * rsa.R, 1, b, rsa.M);
-            LemmaMulIsAssociativeAuto();
-        }
-    }
-
     lemma montmul_inv_lemma_1(
         a_view: seq<uint>,
         x: seq<uint>,
