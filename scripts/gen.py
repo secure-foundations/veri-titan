@@ -4,9 +4,6 @@ import sys
 templateLoader = jinja2.FileSystemLoader(searchpath="./")
 templateEnv = jinja2.Environment(loader=templateLoader)
 
-TEMPLATE_FILE = 'memory.jinja2'
-
-t = templateEnv.get_template(TEMPLATE_FILE)
 
 BASE_WIDTH = 32
 
@@ -25,4 +22,11 @@ class WordSize():
 
 sizes = [WordSize(32), WordSize(256)]
 
-print(t.render(base_size=sizes[0], sizes=sizes))
+# small, big = 32, 256
+# print(t.render(small=small, big=big, num_words=big//small))
+
+# convert = templateEnv.get_template("uint_convert.jinja2")
+
+memory = templateEnv.get_template('memory.jinja2')
+
+print(memory.render(base_size=sizes[0], sizes=sizes))
