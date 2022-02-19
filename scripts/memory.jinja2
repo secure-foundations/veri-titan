@@ -1,0 +1,67 @@
+include "../lib/generic_bv_ops.dfy"
+
+module memory{{base_size.num_bits}} {
+  import opened integers
+
+  const DMEM_LIMIT: int := 0x8000
+
+  // basic map
+  type mem_t = map<int, uint{{base_size.num_bits}}>
+
+{% for item in sizes %}
+  predicate method uint{{item.num_bits}}_ptr_admissible(ptr: nat)
+  {
+    // uint{{item.num_bits}} ptr should be {{item.align}} bytes aligned
+    && ptr % {{item.align}} == 0
+    && (ptr + {{item.num_bytes}}) <= DMEM_LIMIT
+  }
+
+  predicate method uint{{item.num_bits}}_ptr_valid(mem: mem_t, ptr: nat)
+  {
+    && uint{{item.num_bits}}_ptr_admissible(ptr)
+  {%- for n in range(item.num_words) %}
+    && ptr + {{n * base_size.num_bytes}} in mem
+  {%- endfor %}
+  }
+
+  // this assumes little endiness
+  function method {:opaque} uint{{item.num_bits}}_sel_uint{{base_size.num_bits}}(x: uint{{item.num_bits}}, sel: nat): uint{{base_size.num_bits}}
+    requires sel < {{item.num_words}}
+  {
+    if sel == 0 then ((x as bv{{item.num_bits}}) as int) % BASE_{{base_size.num_bits}}
+    {%- for n in range(1, item.num_words-1) %}
+    else if sel == {{n}} then ((x as bv{{item.num_bits}} >> {{n * base_size.num_bits}}) as int) % BASE_{{base_size.num_bits}}
+    {%- endfor %}
+    else ((x as bv{{item.num_bits}} >> {{(item.num_words - 1) * base_size.num_bits}}) as int) % BASE_{{base_size.num_bits}}
+  }
+
+  function method {:opaque} uint{{base_size.num_bits}}_asm_uint{{item.num_bits}}(
+    {%- for n in range(0, item.num_words) %}
+    p{{n}}: uint{{base_size.num_bits}} {{- ", " if not loop.last -}}
+    {%- endfor %}): uint{{item.num_bits}}
+  {
+    ((p{{0}} as bv{{item.num_bits}})
+    {%- for n in range(1, item.num_words) %}
+    |(p{{n}} as bv{{item.num_bits}} << {{n * base_size.num_bits}})
+    {%- endfor -%}
+    ) as uint{{item.num_bits}}
+  }
+
+  function method uint{{item.num_bits}}_read(mem: mem_t, ptr: nat): uint{{item.num_bits}}
+    requires uint{{item.num_bits}}_ptr_valid(mem, ptr)
+  {
+  {%- for n in range(item.num_words) %}
+    var p{{n}} := mem[ptr + {{n * base_size.num_bytes}}];
+  {%- endfor %}
+    uint{{base_size.num_bits}}_asm_uint{{item.num_bits}}(
+  {%- for n in range(item.num_words) -%}
+    p{{n}} {{- ", " if not loop.last -}}
+  {%- endfor %})
+  }
+
+
+{% endfor %}
+
+
+
+}
