@@ -1,16 +1,16 @@
 include "../lib/generic_bv_ops.dfy"
 
-{% macro assemble(small, big) -%}
+{%- macro assemble(big, small) -%}
   assemble_{{small}}_to_{{big}}
-{%- endmacro %}
+{%- endmacro -%}
 
-{% macro select(big, small) -%}
+{%- macro select(big, small) -%}
   select_{{small}}_from_{{big}}
-{%- endmacro %}
+{%- endmacro -%}
 
-{% macro convert(big, small, num_words) -%}
+{%- macro convert(big, small, num_words) -%}
 
-  function method {:opaque} {{ select(small, big) }}(x: uint{{big}}, sel: nat): uint{{small}}
+  function method {:opaque} {{ select(big, small) }}(x: uint{{big}}, sel: nat): uint{{small}}
     requires sel < {{num_words}}
   {
     if sel == 0 then ((x as bv{{big}}) as int) % BASE_{{small}}
@@ -20,7 +20,7 @@ include "../lib/generic_bv_ops.dfy"
     else ((x as bv{{big}} >> {{(num_words - 1) * small}}) as int) % BASE_{{small}}
   }
 
-  function method {:opaque} {{ assemble(small, big) }}(
+  function method {:opaque} {{ assemble(big, small) }}(
     {%- for n in range(0, num_words) %}
     p{{n}}: uint{{small}} {{- ", " if not loop.last -}}
     {%- endfor %}): uint{{big}}
@@ -33,12 +33,12 @@ include "../lib/generic_bv_ops.dfy"
   }
 
   lemma {:axiom} value_{{big}}_from_{{small}}(x: uint{{big}})
-    ensures x == {{ assemble(small, big) }}(
+    ensures x == {{ assemble(big, small) }}(
   {%- for n in range(0, num_words) %}
-      {{ select(small, big) }}(x, {{n}}) {{- ", " if not loop.last -}}
+      {{ select(big, small) }}(x, {{n}}) {{- ", " if not loop.last -}}
   {%- endfor %});
 
-{%- endmacro %}
+{%- endmacro -%}
 
 
 module memory{{base_size.num_bits}} {
@@ -73,24 +73,32 @@ module memory{{base_size.num_bits}} {
   {%- for n in range(item.num_words) %}
     var p{{n}} := mem[ptr + {{n * base_size.num_bytes}}];
   {%- endfor %}
-   {{ assemble(base_size.num_bits, item.num_bits) }}(
+    {{ assemble(item.num_bits, base_size.num_bits) }}(
   {%- for n in range(item.num_words) -%}
     p{{n}} {{- ", " if not loop.last -}}
   {%- endfor %})
   }
 
-  function method write_uint{{item.num_bits}}(mem: mem_t, x: uint{{item.num_bits}}, ptr: nat): mem_t
+  function method write_uint{{item.num_bits}}(mem: mem_t, x: uint{{item.num_bits}}, ptr: nat): (new_mem: mem_t) 
     requires uint{{item.num_bits}}_ptr_admissible(ptr)
+    ensures uint{{item.num_bits}}_ptr_valid(new_mem, ptr)
   {
     mem
   {%- for n in range(item.num_words) %}
-    [ptr + {{n * base_size.num_bytes}} := {{ select(base_size.num_bits, item.num_bits) }}(x, {{n}})]
+    [ptr + {{n * base_size.num_bytes}} := {{ select(item.num_bits, base_size.num_bits) }}(x, {{n}})]
   {%- endfor %}
   }
 
+  lemma write_read_basic_{{item.num_bits}}(mem: mem_t, x: uint{{item.num_bits}}, ptr: nat)
+    requires uint{{item.num_bits}}_ptr_admissible(ptr)
+    ensures read_uint{{item.num_bits}}(write_uint{{item.num_bits}}(mem, x, ptr), ptr) == x
+  {
+    var new_mem := write_uint{{item.num_bits}}(mem, x, ptr);
+    value_{{item.num_bits}}_from_{{base_size.num_bits}}(x);
+    assert read_uint{{item.num_bits}}(new_mem, ptr) == x;
+  }
 
 {% endfor %}
-
 
 
 }
