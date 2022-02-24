@@ -294,7 +294,7 @@
     heap: heap_t, new_heap: heap_t,
     iter: {{iter_type}}, 
     mem: mem_t, new_mem: mem_t,
-    value: uint256)
+    value: {{buff_item.uint_type}})
 
     requires mem_equiv_inv(heap, mem)
     requires {{iter_type}}_safe(iter, heap)
@@ -320,50 +320,74 @@
    lemma heap_write_{{single_item.name}}_preserves_{{buff_item.name}}_inv(
     heap: heap_t, new_heap: heap_t,
     mem: mem_t, new_mem: mem_t,
-    value: uint32,
+    value: {{single_item.uint_type}},
     write_ptr: nat,
     other_ptr: nat)
 
     requires mem_equiv_inv(heap, mem)
-    requires equiv_inv_w32(heap, mem, write_ptr)
-    requires equiv_inv_b256(heap, mem, other_ptr)
-    requires new_heap == heap_write_w32(heap, write_ptr, value)
-    requires new_mem == mem_write_32(mem, write_ptr, value)
+    requires equiv_inv_{{single_item.name}}(heap, mem, write_ptr)
+    requires equiv_inv_{{buff_item.name}}(heap, mem, other_ptr)
+    requires new_heap == heap_write_{{single_item.name}}(heap, write_ptr, value)
+    requires new_mem == mem_write_{{single_item.num_bits}}(mem, write_ptr, value)
 
-    ensures equiv_inv_b256(new_heap, new_mem, other_ptr)
+    ensures equiv_inv_{{buff_item.name}}(new_heap, new_mem, other_ptr)
   {
     assert heap[other_ptr] == new_heap[other_ptr];
-    var buff := heap[other_ptr].b256;
+    var buff := heap[other_ptr].{{buff_item.name}};
 
     forall i | 0 <= i < |buff| 
-      ensures equiv_inv_256(new_heap, new_mem, other_ptr, i)
+      ensures equiv_inv_{{buff_item.num_bits}}(new_heap, new_mem, other_ptr, i)
     {
-      assert equiv_inv_256(heap, mem, other_ptr, i);
+      assert equiv_inv_{{buff_item.num_bits}}(heap, mem, other_ptr, i);
     }
   }
 
    lemma heap_write_{{single_item.name}}_preserves_{{single_item.name}}_inv(
     heap: heap_t, new_heap: heap_t,
-    iter: iter_b256, 
     mem: mem_t, new_mem: mem_t,
-    value: uint32,
+    value: {{single_item.uint_type}},
     write_ptr: nat,
     other_ptr: nat)
 
     requires mem_equiv_inv(heap, mem)
-    requires equiv_inv_w32(heap, mem, write_ptr)
-    requires equiv_inv_w32(heap, mem, other_ptr)
-    requires new_heap == heap_write_w32(heap, write_ptr, value)
-    requires new_mem == mem_write_32(mem, write_ptr, value)
+    requires equiv_inv_{{single_item.name}}(heap, mem, write_ptr)
+    requires equiv_inv_{{single_item.name}}(heap, mem, other_ptr)
+    requires new_heap == heap_write_{{single_item.name}}(heap, write_ptr, value)
+    requires new_mem == mem_write_{{single_item.num_bits}}(mem, write_ptr, value)
 
-    ensures equiv_inv_w32(new_heap, new_mem, other_ptr)
+    ensures equiv_inv_{{single_item.name}}(new_heap, new_mem, other_ptr)
   {
     if other_ptr == write_ptr {
-      value_32_from_32(value);
+      value_{{single_item.num_bits}}_from_{{single_item.num_bits}}(value);
     }
   }
 
+  lemma heap_write_{{single_item.name}}_preverses_mem_equiv(
+    heap: heap_t, new_heap: heap_t,
+    mem: mem_t, new_mem: mem_t,
+    write_ptr: nat,
+    value: {{single_item.uint_type}})
 
+    requires mem_equiv_inv(heap, mem)
+    requires equiv_inv_{{single_item.name}}(heap, mem, write_ptr)
+    requires new_heap == heap_write_{{single_item.name}}(heap, write_ptr, value)
+    requires new_mem == mem_write_{{single_item.num_bits}}(mem, write_ptr, value)
+
+    ensures mem_equiv_inv(new_heap, new_mem)
+  {
+    forall base_ptr | heap_ptr_valid_{{buff_item.name}}(new_heap, base_ptr)
+      ensures equiv_inv_{{buff_item.name}}(new_heap, new_mem, base_ptr)
+    {
+      heap_write_{{single_item.name}}_preserves_{{buff_item.name}}_inv(heap, new_heap,
+        mem, new_mem, value, write_ptr, base_ptr);
+    }
+    forall base_ptr | heap_ptr_valid_{{single_item.name}}(new_heap, base_ptr)
+      ensures equiv_inv_{{single_item.name}}(new_heap, new_mem, base_ptr)
+    {
+      heap_write_{{single_item.name}}_preserves_{{single_item.name}}_inv(heap, new_heap,
+        mem, new_mem, value, write_ptr, base_ptr);
+    }
+  }
 
 {%- endmacro -%}
 
