@@ -1,5 +1,3 @@
-include "../lib/generic_bv_ops.dfy"
-
 {%- macro assemble(big, small) -%}
   assemble_{{small}}_to_{{big}}
 {%- endmacro -%}
@@ -37,29 +35,19 @@ include "../lib/generic_bv_ops.dfy"
   {%- for n in range(0, num_words) %}
       {{ select(big, small) }}(x, {{n}}) {{- ", " if not loop.last -}}
   {%- endfor %});
-
 {%- endmacro -%}
 
-
-module memory{{base_size.num_bits}} {
-  import opened integers
-
-  const DMEM_LIMIT: int := 0x8000
-
-  // basic map
-  type mem_t = map<int, uint{{base_size.num_bits}}>
-
-{% for item in sizes %}
-  predicate method uint{{item.num_bits}}_ptr_admissible(ptr: nat)
+{%- macro emit_basic_map(item) -%}
+  predicate method ptr_admissible_{{item.num_bits}}(ptr: nat)
   {
-    // uint{{item.num_bits}} ptr should be {{item.align}} bytes aligned
+    // {{item.uint_type}} ptr should be {{item.align}} bytes aligned
     && ptr % {{item.align}} == 0
-    && (ptr + {{item.num_bytes}}) <= DMEM_LIMIT
+    && (ptr + {{item.num_bytes}}) < DMEM_LIMIT
   }
 
-  predicate method uint{{item.num_bits}}_ptr_valid(mem: mem_t, ptr: nat)
+  predicate method mem_ptr_valid_{{item.num_bits}}(mem: mem_t, ptr: nat)
   {
-    && uint{{item.num_bits}}_ptr_admissible(ptr)
+    && ptr_admissible_{{item.num_bits}}(ptr)
   {%- for n in range(item.num_words) %}
     && ptr + {{n * base_size.num_bytes}} in mem
   {%- endfor %}
@@ -67,8 +55,8 @@ module memory{{base_size.num_bits}} {
 
   {{ convert(item.num_bits, base_size.num_bits, item.num_words) }}
 
-  function method read_uint{{item.num_bits}}(mem: mem_t, ptr: nat): uint{{item.num_bits}}
-    requires uint{{item.num_bits}}_ptr_valid(mem, ptr)
+  function method mem_read_{{item.num_bits}}(mem: mem_t, ptr: nat): {{item.uint_type}}
+    requires mem_ptr_valid_{{item.num_bits}}(mem, ptr)
   {
   {%- for n in range(item.num_words) %}
     var p{{n}} := mem[ptr + {{n * base_size.num_bytes}}];
@@ -79,9 +67,9 @@ module memory{{base_size.num_bits}} {
   {%- endfor %})
   }
 
-  function method write_uint{{item.num_bits}}(mem: mem_t, x: uint{{item.num_bits}}, ptr: nat): (new_mem: mem_t) 
-    requires uint{{item.num_bits}}_ptr_admissible(ptr)
-    ensures uint{{item.num_bits}}_ptr_valid(new_mem, ptr)
+  function method mem_write_{{item.num_bits}}(mem: mem_t, ptr: nat, x: {{item.uint_type}}): (new_mem: mem_t) 
+    requires ptr_admissible_{{item.num_bits}}(ptr)
+    ensures mem_ptr_valid_{{item.num_bits}}(new_mem, ptr)
   {
     mem
   {%- for n in range(item.num_words) %}
@@ -89,16 +77,374 @@ module memory{{base_size.num_bits}} {
   {%- endfor %}
   }
 
-  lemma write_read_basic_{{item.num_bits}}(mem: mem_t, x: uint{{item.num_bits}}, ptr: nat)
-    requires uint{{item.num_bits}}_ptr_admissible(ptr)
-    ensures read_uint{{item.num_bits}}(write_uint{{item.num_bits}}(mem, x, ptr), ptr) == x
+  lemma mem_read_write_basic_{{item.num_bits}}(mem: mem_t, x: {{item.uint_type}}, ptr: nat)
+    requires ptr_admissible_{{item.num_bits}}(ptr)
+    ensures mem_read_{{item.num_bits}}(mem_write_{{item.num_bits}}(mem, ptr, x), ptr) == x
   {
-    var new_mem := write_uint{{item.num_bits}}(mem, x, ptr);
+    var new_mem := mem_write_{{item.num_bits}}(mem, ptr, x);
     value_{{item.num_bits}}_from_{{base_size.num_bits}}(x);
-    assert read_uint{{item.num_bits}}(new_mem, ptr) == x;
+    assert mem_read_{{item.num_bits}}(new_mem, ptr) == x;
+  }
+{%- endmacro -%}
+
+{%- macro emit_buff_entry(item) -%}
+  {%- set iter_type = "iter_" + item.name %}
+  // iterator for buffer entries
+  datatype {{iter_type}} = {{iter_type}}_cons(base_ptr: nat, index: nat,
+    ptr: nat, buff: {{item.type}})
+
+  function buff_index_ptr_{{item.name}}(ptr: nat, i: nat): nat
+  {
+    ptr + {{ item.num_bytes }} * i
   }
 
-{% endfor %}
+  predicate {{iter_type}}_inv(iter: {{iter_type}}, heap: heap_t)
+  {
+    var base_ptr := iter.base_ptr;
+    // base_ptr points to a valid buffer
+    && heap_ptr_valid_{{item.name}}(heap, base_ptr)
+    // ptr is correct
+    && iter.ptr == buff_index_ptr_{{item.name}}(base_ptr, iter.index)
+    // the view is consistent with heap
+    && heap[base_ptr].{{item.name}} == iter.buff
+    // the index is within bound (or at end)
+    && iter.index <= |iter.buff|
+  }
 
+  predicate {{iter_type}}_safe(iter: {{iter_type}}, heap: heap_t)
+  {
+    && {{iter_type}}_inv(iter, heap)
+    // tighter constraint so we can dereference
+    && iter.index < |iter.buff|
+  }
+
+  function {{iter_type}}_load_next(iter: {{iter_type}}, inc: bool): {{iter_type}}
+  {
+    iter.(index := if inc then iter.index + 1 else iter.index)
+  }
+
+  function {{iter_type}}_store_next(iter: {{iter_type}}, value: {{item.uint_type}}, inc: bool): {{iter_type}}
+    requires iter.index < |iter.buff|
+  {
+      iter.(index := if inc then iter.index + 1 else iter.index)
+          .(buff := iter.buff[iter.index := value])
+  }
+
+  // this holds for each {{item.uint_type}} in a {{item.cons}} heaplet entry
+  predicate equiv_inv_{{item.num_bits}}(heap: heap_t, mem: mem_t,
+    base_ptr: nat, i: nat)
+    requires heap_ptr_valid_{{item.name}}(heap, base_ptr)
+    requires i < |heap[base_ptr].{{item.name}}|
+  {
+    var ptr := buff_index_ptr_{{item.name}}(base_ptr, i);
+    // ptr points to some {{item.uint_type}}, which has {{ item.num_words }} base words uint{{ base_size.num_bits }}
+    && mem_ptr_valid_{{item.num_bits}}(mem, ptr)
+    && mem_read_{{item.num_bits}}(mem, ptr) == heap[base_ptr].{{item.name}}[i]
+    // except when i is 0, none of these addresses should be in the heaplet
+    && (i != 0 ==> ptr !in heap)
+    {%- for n in range(1, item.num_words) %}
+    && ptr + {{ n * base_size.num_bytes }} !in heap
+    {%- endfor %}
+  }
+
+  // this holds for each {{item.cons}} heaplet entry
+  predicate equiv_inv_{{item.name}}(heap: heap_t, mem: mem_t,
+    base_ptr: nat)
+  {
+    && heap_ptr_valid_{{item.name}}(heap, base_ptr)
+    && var buff := heap[base_ptr].{{item.name}};
+    && (forall i | 0 <= i < |buff| ::
+      equiv_inv_{{item.num_bits}}(heap, mem, base_ptr, i))
+  }
+
+  function heap_read_{{item.name}}(heap: heap_t, iter: {{iter_type}}): {{item.uint_type}}
+    requires {{iter_type}}_safe(iter, heap)
+  {
+    iter.buff[iter.index]
+  }
+
+  function heap_write_{{item.name}}(heap: heap_t, iter: {{iter_type}}, value: {{item.uint_type}}): heap_t
+    requires {{iter_type}}_safe(iter, heap)
+  {
+    var buff := heap[iter.base_ptr].{{item.name}};
+    var new_buff := buff[iter.index := value];
+    heap[iter.base_ptr := {{item.cons}}(new_buff)]
+  }
+{%- endmacro -%}
+
+
+{%- macro emit_buff_inv(buff_item, single_item) -%}
+  {%- set iter_type = "iter_" + buff_item.name %}
+
+  lemma sub_ptrs_disjoint(heap: heap_t, mem: mem_t, base1: nat, base2: nat)
+    requires mem_equiv_inv(heap, mem)
+    requires heap_ptr_valid_{{buff_item.name}}(heap, base1)
+    requires heap_ptr_valid_{{buff_item.name}}(heap, base2)
+    requires base1 != base2
+    ensures forall i, j ::
+      (0 <= i < |heap[base1].{{buff_item.name}}| && 0 <= j < |heap[base2].{{buff_item.name}}|)
+        ==> 
+      (buff_index_ptr_{{buff_item.name}}(base1, i) != buff_index_ptr_{{buff_item.name}}(base2, j))
+  {
+    if exists i, j ::
+      && 0 <= i < |heap[base1].{{buff_item.name}}|
+      && 0 <= j < |heap[base2].{{buff_item.name}}|
+      && buff_index_ptr_{{buff_item.name}}(base1, i) == buff_index_ptr_{{buff_item.name}}(base2, j)
+    {
+      var i, j :|
+        && 0 <= i < |heap[base1].{{buff_item.name}}|
+        && 0 <= j < |heap[base2].{{buff_item.name}}|
+        && buff_index_ptr_{{buff_item.name}}(base1, i) == buff_index_ptr_{{buff_item.name}}(base2, j);
+      assert base1 + {{ buff_item.num_bytes }} * i == base2 + {{ buff_item.num_bytes }} * j;
+      var buff1 := heap[base1].{{buff_item.name}};
+      var buff2 := heap[base2].{{buff_item.name}};
+
+      if base1 > base2 {
+        assert equiv_inv_{{buff_item.name}}(heap, mem, base2);
+        var k := j - i;
+        assert base1 == buff_index_ptr_{{buff_item.name}}(base2, k);
+        assert 0 <= k < |buff2|;
+        assert equiv_inv_{{buff_item.num_bits}}(heap, mem, base2, k);
+        assert base1 !in heap;
+        assert false;
+      } else {
+        assert equiv_inv_{{buff_item.name}}(heap, mem, base1);
+        var k := i - j;
+        assert base2 == buff_index_ptr_{{buff_item.name}}(base1, k);
+        assert 0 <= k < |buff1|;
+        assert equiv_inv_{{buff_item.num_bits}}(heap, mem, base1, k);
+        assert base2 !in heap;
+        assert false;
+      }
+    }
+  }
+
+  lemma heap_write_{{buff_item.name}}_preserves_{{buff_item.name}}_inv(
+    heap: heap_t, new_heap: heap_t,
+    iter: {{iter_type}}, 
+    mem: mem_t, new_mem: mem_t,
+    value: {{buff_item.uint_type}},
+    other_ptr: nat)
+
+    requires mem_equiv_inv(heap, mem)
+    requires {{iter_type}}_safe(iter, heap)
+    requires equiv_inv_{{buff_item.name}}(heap, mem, other_ptr)
+    requires new_heap == heap_write_{{buff_item.name}}(heap, iter, value)
+    requires new_mem == mem_write_{{buff_item.num_bits}}(mem, iter.ptr, value)
+
+    ensures equiv_inv_{{buff_item.name}}(new_heap, new_mem, other_ptr)
+  {
+    var base_ptr, j := iter.base_ptr, iter.index;
+    var buff := heap[other_ptr].{{buff_item.name}};
+    var new_buff := new_heap[other_ptr].{{buff_item.name}};
+    var len := |buff|;
+
+    if other_ptr == base_ptr {
+      forall i | 0 <= i < len
+        ensures equiv_inv_{{buff_item.num_bits}}(new_heap, new_mem, base_ptr, i)
+      {
+        assert equiv_inv_{{buff_item.num_bits}}(heap, mem, base_ptr, i);
+        if i == j {
+          value_{{buff_item.num_bits}}_from_{{base_size.num_bits}}(value);
+          assert equiv_inv_{{buff_item.num_bits}}(new_heap, new_mem, base_ptr, i);
+        }
+      }
+    } else {
+      forall i | 0 <= i < len
+        ensures equiv_inv_{{buff_item.num_bits}}(new_heap, new_mem, other_ptr, i)
+      {
+        assert equiv_inv_{{buff_item.num_bits}}(heap, mem, other_ptr, i);
+        var ptr := buff_index_ptr_{{buff_item.name}}(other_ptr, i);
+        assert mem_ptr_valid_{{buff_item.num_bits}}(new_mem, ptr);
+        assert ptr != iter.ptr by {
+          sub_ptrs_disjoint(heap, mem, other_ptr, base_ptr);
+        }
+        assert mem_read_{{buff_item.num_bits}}(new_mem, ptr) == buff[i];
+      }
+    }
+    assert equiv_inv_{{buff_item.name}}(heap, mem, other_ptr);
+  }
+
+  lemma heap_write_{{buff_item.name}}_preserves_{{single_item.name}}_inv(
+    heap: heap_t, new_heap: heap_t,
+    iter: {{iter_type}}, 
+    mem: mem_t, new_mem: mem_t,
+    value: {{buff_item.uint_type}},
+    other_ptr: nat)
+
+    requires mem_equiv_inv(heap, mem)
+    requires {{iter_type}}_safe(iter, heap)
+    requires equiv_inv_{{single_item.name}}(heap, mem, other_ptr)
+    requires new_heap == heap_write_{{buff_item.name}}(heap, iter, value)
+    requires new_mem == mem_write_{{buff_item.num_bits}}(mem, iter.ptr, value)
+
+    ensures equiv_inv_{{single_item.name}}(new_heap, new_mem, other_ptr)
+    {
+      assert heap[other_ptr] == new_heap[other_ptr];
+      if mem[other_ptr] != new_mem[other_ptr] {
+        {# var i :| && i % 4 == 0
+          && 0 <= i <= 28
+          && write_ptr + i == other_ptr; #}
+        assert equiv_inv_{{buff_item.num_bits}}(heap, mem, iter.base_ptr, iter.index);
+        assert false;
+      }
+    }
+
+  lemma heap_write_{{buff_item.name}}_preverses_mem_equiv(
+    heap: heap_t, new_heap: heap_t,
+    iter: {{iter_type}}, 
+    mem: mem_t, new_mem: mem_t,
+    value: uint256)
+
+    requires mem_equiv_inv(heap, mem)
+    requires {{iter_type}}_safe(iter, heap)
+    requires new_heap == heap_write_{{buff_item.name}}(heap, iter, value)
+    requires new_mem == mem_write_{{buff_item.num_bits}}(mem, iter.ptr, value)
+
+    ensures mem_equiv_inv(new_heap, new_mem)
+  {
+    forall base_ptr | heap_ptr_valid_{{buff_item.name}}(new_heap, base_ptr)
+      ensures equiv_inv_{{buff_item.name}}(new_heap, new_mem, base_ptr)
+    {
+      heap_write_{{buff_item.name}}_preserves_{{buff_item.name}}_inv(heap, new_heap,
+        iter, mem, new_mem, value, base_ptr);
+    }
+    forall base_ptr | heap_ptr_valid_{{single_item.name}}(new_heap, base_ptr)
+      ensures equiv_inv_{{single_item.name}}(new_heap, new_mem, base_ptr)
+    {
+      heap_write_{{buff_item.name}}_preserves_{{single_item.name}}_inv(heap, new_heap,
+        iter, mem, new_mem, value, base_ptr);
+    }
+  }
+
+   lemma heap_write_{{single_item.name}}_preserves_{{buff_item.name}}_inv(
+    heap: heap_t, new_heap: heap_t,
+    mem: mem_t, new_mem: mem_t,
+    value: uint32,
+    write_ptr: nat,
+    other_ptr: nat)
+
+    requires mem_equiv_inv(heap, mem)
+    requires equiv_inv_w32(heap, mem, write_ptr)
+    requires equiv_inv_b256(heap, mem, other_ptr)
+    requires new_heap == heap_write_w32(heap, write_ptr, value)
+    requires new_mem == mem_write_32(mem, write_ptr, value)
+
+    ensures equiv_inv_b256(new_heap, new_mem, other_ptr)
+  {
+    assert heap[other_ptr] == new_heap[other_ptr];
+    var buff := heap[other_ptr].b256;
+
+    forall i | 0 <= i < |buff| 
+      ensures equiv_inv_256(new_heap, new_mem, other_ptr, i)
+    {
+      assert equiv_inv_256(heap, mem, other_ptr, i);
+    }
+  }
+
+   lemma heap_write_{{single_item.name}}_preserves_{{single_item.name}}_inv(
+    heap: heap_t, new_heap: heap_t,
+    iter: iter_b256, 
+    mem: mem_t, new_mem: mem_t,
+    value: uint32,
+    write_ptr: nat,
+    other_ptr: nat)
+
+    requires mem_equiv_inv(heap, mem)
+    requires equiv_inv_w32(heap, mem, write_ptr)
+    requires equiv_inv_w32(heap, mem, other_ptr)
+    requires new_heap == heap_write_w32(heap, write_ptr, value)
+    requires new_mem == mem_write_32(mem, write_ptr, value)
+
+    ensures equiv_inv_w32(new_heap, new_mem, other_ptr)
+  {
+    if other_ptr == write_ptr {
+      value_32_from_32(value);
+    }
+  }
+
+
+
+{%- endmacro -%}
+
+include "../lib/generic_bv_ops.dfy"
+
+module memory{{base_size.num_bits}} {
+  import opened integers
+
+  const DMEM_LIMIT: int := 0x8000
+
+  // basic map
+  type mem_t = map<int, uint{{base_size.num_bits}}>
+
+{% for item in sizes %}
+  {{ emit_basic_map(item) }}
+{%- endfor %}
+
+  // heaplet entry
+  datatype entry_t = 
+{%- for item in sizes %}
+    | {{ item.decl }}
+{%- endfor %}
+
+
+  type heap_t = map<int, entry_t>
+
+{% for item in sizes %}
+  // valid pointer for {{item.cons}} heaplet entry
+  predicate heap_ptr_valid_{{item.name}}(heap: heap_t, base_ptr: nat)
+  {
+    && ptr_admissible_{{item.num_bits}}(base_ptr)
+    && base_ptr in heap
+    && heap[base_ptr].{{item.cons}}?
+    {%- if item.is_buff  %}
+    && var len := |heap[base_ptr].{{ item.name }}|;
+    //  the buffer is not empty
+    && len != 0
+    // end of buffer is in bound
+    && ptr_admissible_{{item.num_bits}}(buff_index_ptr_{{item.name}}(base_ptr, len - 1))
+    {%- endif %}
+  }
+
+{%- if item.is_buff %}
+  {{ emit_buff_entry(item) }}
+{% else %}
+  // this holds for each {{item.cons}} heaplet entry
+  predicate equiv_inv_{{item.name}}(heap: heap_t, mem: mem_t,
+    ptr: nat)
+  {
+    && heap_ptr_valid_{{item.name}}(heap, ptr)
+    && mem_ptr_valid_{{item.num_bits}}(mem, ptr)
+    && heap[ptr].{{item.name}} == mem_read_{{item.num_bits}}(mem, ptr)
+    {%- for n in range(1, item.num_words) %}
+    && ptr + {{ n * base_size.num_bytes }} !in heap
+    {%- endfor %}
+  }
+
+  function heap_read_{{item.name}}(heap: heap_t, ptr: nat): {{item.uint_type}}
+    requires heap_ptr_valid_{{item.name}}(heap, ptr)
+  {
+    heap[ptr].{{item.name}}
+  }
+
+  function heap_write_{{item.name}}(heap: heap_t, ptr: nat, value: {{item.uint_type}}): heap_t
+    requires heap_ptr_valid_{{item.name}}(heap, ptr)
+  {
+    heap[ptr := {{item.cons}}(value)]
+  }
+
+{%- endif %}
+{%- endfor %}
+
+  // the equivalence invariant between heaplet and memory
+  predicate mem_equiv_inv(heap: heap_t, mem: mem_t)
+  {
+{%- for item in sizes %}
+    && (forall base_ptr | heap_ptr_valid_{{item.name}}(heap, base_ptr) ::
+      equiv_inv_{{item.name}}(heap, mem, base_ptr))
+{%- endfor %}
+  }
+
+{{emit_buff_inv(sizes[1], sizes[0])}}
 
 }
