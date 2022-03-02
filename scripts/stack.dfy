@@ -1,10 +1,22 @@
-include "flat_memory.dfy"
+include "flat.dfy"
 
 module stack {
-  import opened integers
-  import opened flat_memory
   import Mul
   import DivMod
+
+  import opened integers
+  import opened flat
+
+  lemma LemmaDivMulNop(a: int, b: int)
+    requires b != 0
+    requires a % b == 0
+    ensures a / b * b == a
+  {
+    var q := a / b;
+    var r := a % b;
+    DivMod.LemmaFundamentalDivMod(a, b);
+    assert a == q * b + r;
+  }
 
   function STACK_MAX_BYTES(): (n: nat)
     ensures n % 4 == 0
@@ -172,8 +184,6 @@ module stack {
       assert forall j: nat | 0 <= j < len :: sp + |fs[len].content| * 4 + |fs[j].content| * 4 <= fs[j].fp;
     }
 
-    // lemma (stack: seq<uint32>, i: nat)
-
     function write(index: nat, value: uint32): frames_t
       requires |fs| >= 1
       requires index < |fs[|fs| - 1].content|
@@ -185,14 +195,67 @@ module stack {
       this.(fs := fs[last := new_top_f])
     }
 
+    lemma none_top_frame_disjoint(stack: seq<uint32>, i: nat, index: nat, value: uint32)
+      requires |stack| == STACK_MAX_WORDS()
+      requires write.requires(index, value)
+      requires i < |fs| - 1
+      requires frames_inv(stack)
+      ensures ptr_to_stack_index(sp) + index < ptr_to_stack_index(fs[i].next_fp());
+    {
+      var last := |fs| - 1;
+      var j := ptr_to_stack_index(sp) + index;
+      var f := fs[i];
+      var start := ptr_to_stack_index(f.next_fp());
+      var end := ptr_to_stack_index(f.fp);
+
+      calc == {
+        j * 4;
+        ((sp - STACK_END()) / 4 + index) * 4;
+        {
+          Mul.LemmaMulIsDistributiveAuto();
+        }
+        (sp - STACK_END()) / 4 * 4 + index * 4;
+        {
+          assert DivMod.IsModEquivalent(sp, STACK_END(), 4); // pain
+          LemmaDivMulNop(sp - STACK_END(), 4);
+        }
+        sp - STACK_END() + index * 4;
+      }
+
+      calc == {
+        start * 4;
+        (f.fp - 4 * |f.content| - STACK_END()) / 4 * 4;
+        {
+          assert DivMod.IsModEquivalent(f.fp, 4 * |f.content|, 4); // pain
+          assert DivMod.IsModEquivalent(f.fp - 4 * |f.content|, STACK_END(), 4); // pain
+          LemmaDivMulNop(f.fp - 4 * |f.content| - STACK_END(), 4);
+        }
+        f.fp - 4 * |f.content| - STACK_END();
+      }
+
+      assert j < start by 
+      {
+        calc {
+          (j - start) * 4;
+          j * 4 - start * 4;
+          sp + index * 4 - f.fp + |f.content| * 4;
+          sp + |f.content| * 4 + index * 4 - f.fp;
+          <=
+          { sp_as_lower_bound(stack, i); }
+          index * 4 - |fs[last].content| * 4;
+          <
+          0;
+        }
+      }
+    }
+
     lemma write_preserves_inv(stack: seq<uint32>,
-      index: nat, value: uint32,
-      new_frames: frames_t)
+      index: nat, value: uint32)
       requires |stack| == STACK_MAX_WORDS()
       requires write.requires(index, value)
       requires frames_inv(stack)
-      // requires new_frames == write(index, value)
-      // requires new_stack == 
+      ensures write(index, value).
+        frames_inv(stack[ptr_to_stack_index(sp) + index := value])
     {
       var new_frames := write(index, value);
       assert in_stack_addr_range(sp);
@@ -214,58 +277,9 @@ module stack {
         var new_f := new_frames.fs[i];
         var start := ptr_to_stack_index(new_f.next_fp());
         var end := ptr_to_stack_index(new_f.fp);
+
         if i != last {
-          calc == {
-            new_f.content;
-            fs[i].content;
-            {
-              assert fs[i].frame_inv(stack);
-            }
-            stack[start..end];
-            {
-              calc == {
-                j * 4;
-                ((sp - STACK_END()) / 4 + index) * 4;
-                {
-                  Mul.LemmaMulIsDistributiveAuto();
-                }
-                (sp - STACK_END()) / 4 * 4 + index * 4;
-                {
-                  assume (sp - STACK_END()) / 4 * 4 == sp - STACK_END();
-                }
-                sp - STACK_END() + index * 4;
-              }
-
-              calc == {
-                start * 4;
-                (fs[i].fp - 4 * |fs[i].content| - STACK_END()) / 4 * 4;
-                {
-                  assume false;
-                }
-                fs[i].fp - 4 * |fs[i].content| - STACK_END();
-              }
-
-              calc {
-                (j - start) * 4;
-                j * 4 - start * 4;
-                ==
-                sp + index * 4 - fs[i].fp + |fs[i].content| * 4;
-                ==
-                sp + |fs[i].content| * 4 + index * 4 - fs[i].fp ;
-                <=
-                {
-                  sp_as_lower_bound(stack, i);
-                }
-                index * 4 - |fs[last].content| * 4;
-                <
-                0;
-              }
-
-              assert (j - start) * 4 < 0;
-              assert j < start;
-            }
-            new_stack[start..end];
-          }
+          none_top_frame_disjoint(stack, i, index, value);
         } else {
           calc == {
             new_f.content;

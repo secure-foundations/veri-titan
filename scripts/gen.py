@@ -4,10 +4,9 @@ import sys
 templateLoader = jinja2.FileSystemLoader(searchpath="./")
 templateEnv = jinja2.Environment(loader=templateLoader)
 
-
 BASE_WIDTH = 32
 
-class WordSize():
+class MemEntry():
     def __init__(self, num_bits, is_buff):
         self.is_buff = is_buff
         self.uint_type = f"uint{num_bits}"
@@ -33,7 +32,12 @@ class WordSize():
         assert(self.num_bits % BASE_WIDTH == 0)
         self.num_words = self.num_bits // BASE_WIDTH
 
-sizes = [WordSize(BASE_WIDTH, False), WordSize(256, True)]
-memory = templateEnv.get_template('memory.jinja2')
+single = MemEntry(BASE_WIDTH, False)
+buffer = MemEntry(256, True)
 
-print(memory.render(base_size=sizes[0], sizes=sizes))
+memory = templateEnv.get_template('mem.jinja2')
+
+print(memory.render(base_size=single, sizes=[single, buffer], limit="0x80000"))
+
+heap = templateEnv.get_template('heap.jinja2')
+print(heap.render(base_size=single, buff_item=buffer, single_item=single))
