@@ -51,6 +51,11 @@ module stack {
     (addr - STACK_END()) / 4
   }
 
+  function stack_index_to_ptr(i: nat): nat
+  {
+    STACK_END() + i * 4
+  }
+
   datatype frame_t = frame_cons(fp: nat, content: seq<uint32>)
   {
     function next_fp(): int
@@ -98,11 +103,11 @@ module stack {
         .(fs := fs + [frame_cons(sp, stack[start..end])])
     }
 
-    lemma push_preserves_inv(num_words: uint32, stack: seq<uint32>, new_frames: frames_t)
+    lemma push_preserves_inv(num_words: uint32, stack: seq<uint32>)
       requires push.requires(num_words, stack)
-      requires new_frames == push(num_words, stack)
-      ensures new_frames.frames_inv(stack)
+      ensures push(num_words, stack).frames_inv(stack)
     {
+      var new_frames := push(num_words, stack);
       var new_sp := sp - 4 * num_words;
       var start := ptr_to_stack_index(new_sp);
       var end := ptr_to_stack_index(sp);
@@ -123,6 +128,7 @@ module stack {
       {
         if i < last {
           assert fs[i] == new_frames.fs[i];
+          assert fs[i].frame_inv(stack);
         } else {
           assert new_frames.fs[i] == new_f;
         }
@@ -142,9 +148,9 @@ module stack {
 
     lemma pop_preserves_inv(stack: seq<uint32>, new_frames: frames_t)
       requires pop.requires(stack)
-      requires new_frames == pop(stack)
-      ensures new_frames.frames_inv(stack)
+      ensures pop(stack).frames_inv(stack)
     {
+      var new_frames := pop(stack);
       var last := |new_frames.fs| - 1;
 
       forall i | 0 <= i < last
@@ -157,6 +163,7 @@ module stack {
         ensures new_frames.fs[i].frame_inv(stack)
       {
         assert fs[i] == new_frames.fs[i];
+        assert fs[i].frame_inv(stack);
       }
     }
 
