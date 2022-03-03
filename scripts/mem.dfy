@@ -12,9 +12,66 @@ module mem {
     ptr + 32 * i
   }
 
-  function stack_index_ptr(i: nat): nat
+  datatype entry_t = 
+    | W32(w32: uint32)
+    | B256(b256: seq<uint256>)
+
+  type heap_t = map<int, entry_t>
+
+  predicate heap_b256_ptr_valid(heap: heap_t, base_ptr: nat)
   {
-    STACK_END() + i * 4
+    && ptr_admissible_256(base_ptr)
+    && base_ptr in heap
+    && heap[base_ptr].B256?
+    && var len := |heap[base_ptr].b256|;
+    //  the buffer is not empty
+    && len != 0
+    // end of buffer is in bound
+    && ptr_admissible_256(heap_b256_index_ptr(base_ptr, len - 1))
+  }
+
+  // this holds for each uint256 in a B256 heaplet entry
+  predicate heap_256_inv(heap: heap_t, flat: flat_t, base_ptr: nat, i: nat)
+    requires heap_b256_ptr_valid(heap, base_ptr)
+    requires i < |heap[base_ptr].b256|
+  {
+    var ptr := heap_b256_index_ptr(base_ptr, i);
+    // ptr points to some uint256, which has 8 base words uint32
+    && flat_ptr_valid_256(flat, ptr)
+    && flat_read_256(flat, ptr) == heap[base_ptr].b256[i]
+    // disjointness
+    && (i != 0 ==> ptr !in heap)
+    && ptr + 4 !in heap
+    && ptr + 8 !in heap
+    && ptr + 12 !in heap
+    && ptr + 16 !in heap
+    && ptr + 20 !in heap
+    && ptr + 24 !in heap
+    && ptr + 28 !in heap
+    && !in_stack_addr_range(ptr)
+    && !in_stack_addr_range(ptr + 4)
+    && !in_stack_addr_range(ptr + 8)
+    && !in_stack_addr_range(ptr + 12)
+    && !in_stack_addr_range(ptr + 16)
+    && !in_stack_addr_range(ptr + 20)
+    && !in_stack_addr_range(ptr + 24)
+    && !in_stack_addr_range(ptr + 28)
+  }
+
+  // this holds for each B256 heaplet entry
+  predicate heap_b256_inv(heap: heap_t, flat: flat_t, base_ptr: nat)
+    requires heap_b256_ptr_valid(heap, base_ptr)
+  {
+    forall i | 0 <= i < |heap[base_ptr].b256| ::
+      heap_256_inv(heap, flat, base_ptr, i)
+  }
+
+  function heap_b256_write(heap: heap_t, iter: b256_iter, value: uint256): heap_t
+    requires b256_iter_safe(heap, iter)
+  {
+    var buff := heap[iter.base_ptr].b256;
+    var new_buff := buff[iter.index := value];
+    heap[iter.base_ptr := B256(new_buff)]
   }
 
   // iterator for buffer entries
@@ -33,158 +90,95 @@ module mem {
           .(buff := iter.buff[iter.index := value])
   }
 
-  datatype entry_t = 
-    | W32(w32: uint32)
-    | B256(b256: seq<uint256>)
-
-  type heap_t = map<int, entry_t>
-
-  datatype mem_t = memory(heap: heap_t, stack: seq<uint32>)
+  predicate b256_iter_inv(heap: heap_t, iter: b256_iter)
   {
-    predicate equiv_inv_stack(flat: flat_t)
-      requires |stack| == STACK_MAX_WORDS()
+    var base_ptr := iter.base_ptr;
+    // base_ptr points to a valid buffer
+    && heap_b256_ptr_valid(heap, base_ptr)
+    // ptr is correct
+    && iter.ptr == heap_b256_index_ptr(base_ptr, iter.index)
+    // the view is consistent with heap
+    && heap[base_ptr].b256 == iter.buff
+    // the index is within bound (or at end)
+    && iter.index <= |iter.buff|
+  }
+
+  predicate b256_iter_safe(heap: heap_t, iter: b256_iter)
+  {
+    && b256_iter_inv(heap, iter)
+    // tighter constraint so we can dereference
+    && iter.index < |iter.buff|
+  }
+
+  // valid pointer for W32 heaplet entry
+  predicate heap_w32_ptr_valid(heap: heap_t, base_ptr: nat)
+  {
+    && ptr_admissible_32(base_ptr)
+    && base_ptr in heap
+    && heap[base_ptr].W32?
+  }
+
+  function heap_w32_write(heap: heap_t, ptr: nat, value: uint32): heap_t
+    requires heap_w32_ptr_valid(heap, ptr)
+  {
+    heap[ptr := W32(value)]
+  }
+
+  // this holds for each W32 heaplet entry
+  predicate heap_w32_inv(heap: heap_t, flat: flat_t, ptr: nat)
+    requires heap_w32_ptr_valid(heap, ptr)
+  {
+    && flat_ptr_valid_32(flat, ptr)
+    && heap[ptr].w32 == flat_read_32(flat, ptr)
+    // disjointness from stack
+    && !in_stack_addr_range(ptr)
+  }
+
+  predicate stack_addrs_valid(flat: flat_t)
+  {
+    forall i | 0 <= i < STACK_MAX_WORDS() ::
+      flat_ptr_valid_32(flat, stack_index_to_ptr(i))
+  }
+
+  function {:opaque} get_stack(flat: flat_t): (stack: seq<uint32>)
+    requires stack_addrs_valid(flat)
+    ensures |stack| ==  STACK_MAX_WORDS()
+  {
+    seq(STACK_MAX_WORDS(),
+      n requires 0 <= n < STACK_MAX_WORDS() =>
+        flat_read_32(flat, stack_index_to_ptr(n)))
+  }
+
+  datatype imem_t = imem_cons(heap: heap_t, stack: seq<uint32>)
+  {
+    predicate stack_inv(flat: flat_t)
     {
-      (forall i | 0 <= i < |stack| ::
-        && var ptr := stack_index_ptr(i);
-        && flat_ptr_valid_32(flat, ptr)
-        && stack[i] == flat_read_32(flat, ptr)
-        && ptr !in heap)
+      && stack_addrs_valid(flat)
+      && stack == get_stack(flat)
+      && (forall i | 0 <= i < STACK_MAX_WORDS() ::
+        stack_index_to_ptr(i) !in heap)
     }
 
-    function stack_write(i: nat, value: uint32): mem_t
+    // the equivalence invariant between heaplet and memory
+    predicate inv(flat: flat_t)
+    {
+      && (forall base_ptr | heap_b256_ptr_valid(heap, base_ptr) ::
+        heap_b256_inv(heap, flat, base_ptr))
+      && (forall base_ptr | heap_w32_ptr_valid(heap, base_ptr) ::
+        heap_w32_inv(heap, flat, base_ptr))
+      && stack_inv(flat)
+    }
+
+    function stack_write(i: nat, value: uint32): imem_t
       requires i < |stack|
     {
       this.(stack := stack[i:= value])
     }
 
-    // valid pointer for W32 heaplet entry
-    predicate heap_w32_ptr_valid(base_ptr: nat)
-    {
-      && ptr_admissible_32(base_ptr)
-      && base_ptr in heap
-      && heap[base_ptr].W32?
-    }
-
-    // this holds for each W32 heaplet entry
-    predicate equiv_inv_w32(flat: flat_t, ptr: nat)
-      requires heap_w32_ptr_valid(ptr)
-    {
-      && flat_ptr_valid_32(flat, ptr)
-      && heap[ptr].w32 == flat_read_32(flat, ptr)
-      // disjointness from stack
-      && !in_stack_addr_range(ptr)
-    }
-
-    function heap_w32_read(ptr: nat): uint32
-      requires heap_w32_ptr_valid(ptr)
-    {
-      heap[ptr].w32
-    }
-
-    function heap_w32_write(ptr: nat, value: uint32): mem_t
-      requires heap_w32_ptr_valid(ptr)
-    {
-      this.(heap := heap[ptr := W32(value)])
-    }
-
-    // valid pointer for B256 heaplet entry
-    predicate heap_b256_ptr_valid(base_ptr: nat)
-    {
-      && ptr_admissible_256(base_ptr)
-      && base_ptr in heap
-      && heap[base_ptr].B256?
-      && var len := |heap[base_ptr].b256|;
-      //  the buffer is not empty
-      && len != 0
-      // end of buffer is in bound
-      && ptr_admissible_256(heap_b256_index_ptr(base_ptr, len - 1))
-    }
-
-    predicate b256_iter_inv(iter: b256_iter)
-    {
-      var base_ptr := iter.base_ptr;
-      // base_ptr points to a valid buffer
-      && heap_b256_ptr_valid(base_ptr)
-      // ptr is correct
-      && iter.ptr == heap_b256_index_ptr(base_ptr, iter.index)
-      // the view is consistent with heap
-      && heap[base_ptr].b256 == iter.buff
-      // the index is within bound (or at end)
-      && iter.index <= |iter.buff|
-    }
-
-    predicate b256_iter_safe(iter: b256_iter)
-    {
-      && b256_iter_inv(iter)
-      // tighter constraint so we can dereference
-      && iter.index < |iter.buff|
-    }
-
-    // this holds for each uint256 in a B256 heaplet entry
-    predicate heap_256_equiv_inv(flat: flat_t, base_ptr: nat, i: nat)
-      requires heap_b256_ptr_valid(base_ptr)
-      requires i < |heap[base_ptr].b256|
-    {
-      var ptr := heap_b256_index_ptr(base_ptr, i);
-      // ptr points to some uint256, which has 8 base words uint32
-      && flat_ptr_valid_256(flat, ptr)
-      && flat_read_256(flat, ptr) == heap[base_ptr].b256[i]
-      // disjointness
-      && (i != 0 ==> ptr !in heap)
-      && ptr + 4 !in heap
-      && ptr + 8 !in heap
-      && ptr + 12 !in heap
-      && ptr + 16 !in heap
-      && ptr + 20 !in heap
-      && ptr + 24 !in heap
-      && ptr + 28 !in heap
-      && !in_stack_addr_range(ptr)
-      && !in_stack_addr_range(ptr + 4)
-      && !in_stack_addr_range(ptr + 8)
-      && !in_stack_addr_range(ptr + 12)
-      && !in_stack_addr_range(ptr + 16)
-      && !in_stack_addr_range(ptr + 20)
-      && !in_stack_addr_range(ptr + 24)
-      && !in_stack_addr_range(ptr + 28)
-    }
-
-    // this holds for each B256 heaplet entry
-    predicate heap_b256_equiv_inv(flat: flat_t, base_ptr: nat)
-      requires heap_b256_ptr_valid(base_ptr)
-    {
-      forall i | 0 <= i < |heap[base_ptr].b256| ::
-        heap_256_equiv_inv(flat, base_ptr, i)
-    }
-
-    function heap_read_b256(iter: b256_iter): uint256
-      requires b256_iter_safe(iter)
-    {
-      iter.buff[iter.index]
-    }
-
-    function heap_b256_write(iter: b256_iter, value: uint256): mem_t
-      requires b256_iter_safe(iter)
-    {
-      var buff := heap[iter.base_ptr].b256;
-      var new_buff := buff[iter.index := value];
-      this.(heap := heap[iter.base_ptr := B256(new_buff)])
-    }
-
-    // the equivalence invariant between heaplet and memory
-    predicate flat_equiv_inv(flat: flat_t)
-    {
-      && (forall base_ptr | heap_b256_ptr_valid(base_ptr) ::
-        heap_b256_equiv_inv(flat, base_ptr))
-      && (forall base_ptr | heap_w32_ptr_valid(base_ptr) ::
-        equiv_inv_w32(flat, base_ptr))
-      && |stack| == STACK_MAX_WORDS()
-      && equiv_inv_stack(flat)
-    }
-
     lemma sub_ptrs_disjoint(flat: flat_t, base1: nat, base2: nat)
-      requires flat_equiv_inv(flat)
-      requires heap_b256_ptr_valid(base1)
-      requires heap_b256_ptr_valid(base2)
+      requires inv(flat)
+      requires heap_b256_ptr_valid(heap, base1)
+      requires heap_b256_ptr_valid(heap, base2)
       requires base1 != base2
       ensures forall i, j ::
         (0 <= i < |heap[base1].b256| && 0 <= j < |heap[base2].b256|)
@@ -206,19 +200,19 @@ module mem {
         var buff2 := heap[base2].b256;
 
         if base1 > base2 {
-          assert heap_b256_equiv_inv(flat, base2);
+          assert heap_b256_inv(heap, flat, base2);
           var k := j - i;
           assert base1 == heap_b256_index_ptr(base2, k);
           assert 0 <= k < |buff2|;
-          assert heap_256_equiv_inv(flat, base2, k);
+          assert heap_256_inv(heap, flat, base2, k);
           assert base1 !in heap;
           assert false;
         } else {
-          assert heap_b256_equiv_inv(flat, base1);
+          assert heap_b256_inv(heap, flat, base1);
           var k := i - j;
           assert base2 == heap_b256_index_ptr(base1, k);
           assert 0 <= k < |buff1|;
-          assert heap_256_equiv_inv(flat, base1, k);
+          assert heap_256_inv(heap, flat, base1, k);
           assert base2 !in heap;
           assert false;
         }
@@ -226,38 +220,38 @@ module mem {
     }
 
     lemma heap_b256_write_preserves_b256_inv(
-      new_mem: mem_t,
       flat: flat_t, new_flat: flat_t,
       iter: b256_iter, value: uint256,
       other_ptr: nat)
 
-      requires flat_equiv_inv(flat)
-      requires b256_iter_safe(iter)
-      requires heap_b256_ptr_valid(other_ptr)
-      requires new_mem == heap_b256_write(iter, value)
+      requires inv(flat)
+      requires b256_iter_safe(heap, iter)
       requires new_flat == flat_write_256(flat, iter.ptr, value)
+      requires heap_b256_ptr_valid(heap, other_ptr)
 
-      ensures new_mem.heap_b256_equiv_inv(new_flat, other_ptr)
+      ensures heap_b256_inv(heap_b256_write(heap, iter, value),
+        flat_write_256(flat, iter.ptr, value), other_ptr)
     {
+      var new_heap := heap_b256_write(heap, iter, value);
       var base_ptr, j := iter.base_ptr, iter.index;
       var buff := heap[other_ptr].b256;
       var len := |buff|;
 
       if other_ptr == base_ptr {
         forall i | 0 <= i < len
-          ensures new_mem.heap_256_equiv_inv(new_flat, base_ptr, i)
+          ensures heap_256_inv(new_heap, new_flat, base_ptr, i)
         {
-          assert heap_256_equiv_inv(flat, base_ptr, i);
+          assert heap_256_inv(heap, flat, base_ptr, i);
           if i == j {
             value_256_from_32(value);
-            assert new_mem.heap_256_equiv_inv(new_flat, base_ptr, i);
+            assert heap_256_inv(new_heap, new_flat, base_ptr, i);
           }
         }
       } else {
         forall i | 0 <= i < len
-          ensures new_mem.heap_256_equiv_inv(new_flat, other_ptr, i)
+          ensures heap_256_inv(new_heap, new_flat, other_ptr, i)
         {
-          assert heap_256_equiv_inv(flat, other_ptr, i);
+          assert heap_256_inv(heap, flat, other_ptr, i);
           var ptr := heap_b256_index_ptr(other_ptr, i);
           assert flat_ptr_valid_256(new_flat, ptr);
           assert ptr != iter.ptr by {
@@ -266,127 +260,116 @@ module mem {
           assert flat_read_256(new_flat, ptr) == buff[i];
         }
       }
-      assert heap_b256_equiv_inv(flat, other_ptr);
+      assert heap_b256_inv(heap, flat, other_ptr);
     }
 
     lemma heap_b256_write_preserves_stack_inv(
-      new_mem: mem_t,
       flat: flat_t, new_flat: flat_t,
       iter: b256_iter, value: uint256)
 
-      requires flat_equiv_inv(flat)
-      requires b256_iter_safe(iter)
-
-      requires new_mem == heap_b256_write(iter, value)
+      requires inv(flat)
+      requires b256_iter_safe(heap, iter)
       requires new_flat == flat_write_256(flat, iter.ptr, value)
 
-      ensures new_mem.equiv_inv_stack(new_flat)
+      ensures this.(heap := heap_b256_write(heap, iter, value)).stack_inv(new_flat)
     {
-      var stack_end := STACK_END();
-
-      forall i | 0 <= i < |new_mem.stack|
-        ensures
-          && var ptr := stack_end + i * 4;
-          && flat_ptr_valid_32(new_flat, ptr)
-          && new_mem.stack[i] == flat_read_32(new_flat, ptr)
-          && ptr !in new_mem.heap
-      {
-        var ptr := stack_end + i * 4;
-        assert flat_ptr_valid_32(new_flat, ptr);
-
-        if flat_read_32(new_flat, ptr) != flat_read_32(flat, ptr) {
-          // this pointer can't be in stack range
-          assert heap_256_equiv_inv(flat, iter.base_ptr, iter.index);
-          assert false;
+      var new_heap := heap_b256_write(heap, iter, value);
+      var new_mem := this.(heap := new_heap);
+  
+      assert (this.(heap := new_heap)).stack_inv(new_flat) by {
+        forall n | 0 <= n < STACK_MAX_WORDS()
+          ensures flat_read_32(flat, stack_index_to_ptr(n))
+            == 
+          flat_read_32(new_flat, stack_index_to_ptr(n))
+        {
+          var ptr := stack_index_to_ptr(n);
+          if flat[ptr] != new_flat[ptr] {
+            assert heap_256_inv(heap, flat, iter.base_ptr, iter.index);
+            assert false;
+          }
         }
+        reveal get_stack();
       }
     }
 
     lemma heap_b256_write_preserves_w32_inv(
-      new_mem: mem_t,
       flat: flat_t, new_flat: flat_t,
-      iter: b256_iter, value: uint256,
-      other_ptr: nat)
+      iter: b256_iter, value: uint256, other_ptr: nat)
 
-      requires flat_equiv_inv(flat)
-      requires b256_iter_safe(iter)
-      requires heap_w32_ptr_valid(other_ptr)
-      requires new_mem== heap_b256_write(iter, value)
+      requires inv(flat)
+      requires b256_iter_safe(heap, iter)
       requires new_flat == flat_write_256(flat, iter.ptr, value)
+      requires heap_w32_ptr_valid(heap, other_ptr)
 
-      ensures new_mem.equiv_inv_w32(new_flat, other_ptr)
+      ensures heap_w32_inv(heap_b256_write(heap, iter, value), new_flat, other_ptr)
     {
       if flat[other_ptr] != new_flat[other_ptr] {
-        assert heap_256_equiv_inv(flat, iter.base_ptr, iter.index);
+        assert heap_256_inv(heap, flat, iter.base_ptr, iter.index);
         assert false;
       }
     }
-
-    lemma heap_b256_write_preverses_flat_equiv(
-      new_mem: mem_t,
+  
+    lemma heap_b256_write_preverses_inv(
       flat: flat_t, new_flat: flat_t,
       iter: b256_iter, value: uint256)
 
-      requires flat_equiv_inv(flat)
-      requires b256_iter_safe(iter)
-      requires new_mem == heap_b256_write(iter, value)
+      requires inv(flat)
+      requires b256_iter_safe(heap, iter)
       requires new_flat == flat_write_256(flat, iter.ptr, value)
 
-      ensures new_mem.flat_equiv_inv(new_flat)
+      ensures this.(heap := heap_b256_write(heap, iter, value)).inv(new_flat)
     {
-      forall base_ptr | new_mem.heap_b256_ptr_valid(base_ptr)
-        ensures new_mem.heap_b256_equiv_inv(new_flat, base_ptr)
+      var new_heap := heap_b256_write(heap, iter, value);
+      var new_mem := this.(heap := new_heap);
+
+      forall base_ptr | heap_b256_ptr_valid(new_heap, base_ptr)
+        ensures heap_b256_inv(new_heap, new_flat, base_ptr)
       {
-        heap_b256_write_preserves_b256_inv(new_mem,
-          flat, new_flat, iter, value, base_ptr);
+        heap_b256_write_preserves_b256_inv(flat, new_flat, iter, value, base_ptr);
       }
-      forall base_ptr | new_mem.heap_w32_ptr_valid(base_ptr)
-        ensures new_mem.equiv_inv_w32(new_flat, base_ptr)
+      forall base_ptr | heap_w32_ptr_valid(new_heap, base_ptr)
+        ensures heap_w32_inv(new_heap, new_flat, base_ptr)
       {
-        heap_b256_write_preserves_w32_inv(new_mem,
-          flat, new_flat, iter, value, base_ptr);
+        heap_b256_write_preserves_w32_inv(flat, new_flat, iter, value, base_ptr);
       }
 
-      heap_b256_write_preserves_stack_inv(new_mem,
+      heap_b256_write_preserves_stack_inv(
         flat, new_flat, iter, value);
     }
 
     lemma heap_w32_write_preserves_b256_inv(
-      new_mem: mem_t,
       flat: flat_t, new_flat: flat_t,
-      value: uint32,
-      write_ptr: nat, other_ptr: nat)
+      write_ptr: nat, value: uint32, other_ptr: nat)
 
-    requires flat_equiv_inv(flat)
-    requires heap_w32_ptr_valid(write_ptr)
-    requires heap_b256_ptr_valid(other_ptr)
-    requires new_mem == heap_w32_write(write_ptr, value)
-    requires new_flat == flat_write_32(flat, write_ptr, value)
+      requires inv(flat)
+      requires heap_w32_ptr_valid(heap, write_ptr)
+      requires new_flat == flat_write_32(flat, write_ptr, value)
 
-    ensures new_mem.heap_b256_equiv_inv(new_flat, other_ptr)
+      requires heap_b256_ptr_valid(heap, other_ptr)
+
+      ensures heap_b256_inv(heap_w32_write(heap, write_ptr, value), new_flat, other_ptr)
     {
-      assert heap_b256_equiv_inv(flat, other_ptr);
+      var new_heap := heap_w32_write(heap, write_ptr, value);
+      assert heap_b256_inv(heap, flat, other_ptr);
       var buff := heap[other_ptr].b256;
       forall i | 0 <= i < |buff| 
-        ensures new_mem.heap_256_equiv_inv(new_flat, other_ptr, i)
+        ensures heap_256_inv(new_heap, new_flat, other_ptr, i)
       {
-        assert heap_256_equiv_inv(flat, other_ptr, i);
+        assert heap_256_inv(heap, flat, other_ptr, i);
       }
     }
 
     lemma heap_w32_write_preserves_w32_inv(
-      new_mem: mem_t,
       flat: flat_t, new_flat: flat_t,
-      value: uint32,
-      write_ptr: nat, other_ptr: nat)
+      write_ptr: nat, value: uint32, other_ptr: nat)
 
-      requires flat_equiv_inv(flat)
-      requires heap_w32_ptr_valid(write_ptr)
-      requires heap_w32_ptr_valid(other_ptr)
-      requires new_mem == heap_w32_write(write_ptr, value)
+      requires inv(flat)
+      requires heap_w32_ptr_valid(heap, write_ptr)
       requires new_flat == flat_write_32(flat, write_ptr, value)
 
-      ensures new_mem.equiv_inv_w32(new_flat, other_ptr)
+      requires heap_w32_ptr_valid(heap, other_ptr)
+
+      ensures heap_w32_inv(heap_w32_write(heap, write_ptr, value), new_flat, other_ptr)
     {
       if other_ptr == write_ptr {
         value_32_from_32(value);
@@ -394,145 +377,211 @@ module mem {
     }
 
     lemma heap_w32_write_preserves_stack_inv(
-      new_mem: mem_t,
       flat: flat_t, new_flat: flat_t,
-      value: uint32,
-      write_ptr: nat)
+      value: uint32, write_ptr: nat)
 
-      requires flat_equiv_inv(flat)
-      requires heap_w32_ptr_valid(write_ptr)
-      requires new_mem == heap_w32_write(write_ptr, value)
+      requires inv(flat)
+      requires heap_w32_ptr_valid(heap, write_ptr)
       requires new_flat == flat_write_32(flat, write_ptr, value)
 
-      ensures new_mem.equiv_inv_stack(new_flat)
+      ensures this.(heap := heap_w32_write(heap, write_ptr, value)).stack_inv(new_flat)
     {
+      var new_heap := heap_w32_write(heap, write_ptr, value);
+  
+      assert (this.(heap := new_heap)).stack_inv(new_flat) by {
+        reveal get_stack();
+      }
     }
 
-    lemma heap_w32_write_preverses_flat_equiv(
-      new_mem: mem_t,
+    lemma heap_w32_write_preverses_inv(
       flat: flat_t, new_flat: flat_t,
-      value: uint32,
-      write_ptr: nat)
+      write_ptr: nat, value: uint32)
 
-      requires flat_equiv_inv(flat)
-      requires heap_w32_ptr_valid(write_ptr)
-      requires new_mem == heap_w32_write(write_ptr, value)
+      requires inv(flat)
+      requires heap_w32_ptr_valid(heap, write_ptr)
       requires new_flat == flat_write_32(flat, write_ptr, value)
 
-      ensures new_mem.flat_equiv_inv(new_flat)
+      ensures this.(heap := heap_w32_write(heap, write_ptr, value)).inv(new_flat)
     {
-      forall base_ptr | new_mem.heap_b256_ptr_valid(base_ptr)
-        ensures new_mem.heap_b256_equiv_inv(new_flat, base_ptr)
-      {
-        heap_w32_write_preserves_b256_inv(new_mem,
-          flat, new_flat, value, write_ptr, base_ptr);
-      }
-      forall base_ptr | new_mem.heap_w32_ptr_valid(base_ptr)
-        ensures new_mem.equiv_inv_w32(new_flat, base_ptr)
-      {
-        heap_w32_write_preserves_w32_inv(new_mem,
-          flat, new_flat, value, write_ptr, base_ptr);
-      }
+      var new_heap := heap_w32_write(heap, write_ptr, value);
 
-      heap_w32_write_preserves_stack_inv(new_mem,
-        flat, new_flat, value, write_ptr);
+      forall base_ptr | heap_b256_ptr_valid(new_heap, base_ptr)
+        ensures heap_b256_inv(new_heap, new_flat, base_ptr)
+      {
+        heap_w32_write_preserves_b256_inv(flat, new_flat, write_ptr, value, base_ptr);
+      }
+      forall base_ptr | heap_w32_ptr_valid(new_heap, base_ptr)
+        ensures heap_w32_inv(new_heap, new_flat, base_ptr)
+      {
+        heap_w32_write_preserves_w32_inv(flat, new_flat, write_ptr, value, base_ptr);
+      }
+      heap_w32_write_preserves_stack_inv(flat, new_flat, value, write_ptr);
     }
 
     lemma stack_write_preserves_b256_inv(
-      new_mem: mem_t,
       flat: flat_t, new_flat: flat_t,
-      index: nat, value: uint32,
-      base_ptr: nat)
+      index: nat, value: uint32, base_ptr: nat)
 
-      requires flat_equiv_inv(flat)
+      requires inv(flat)
       requires index < |stack|
-      requires new_mem == stack_write(index, value)
-      requires new_flat == flat_write_32(flat, stack_index_ptr(index), value)
-      requires heap_b256_ptr_valid(base_ptr)
+      requires new_flat == flat_write_32(flat, stack_index_to_ptr(index), value)
+      requires heap_b256_ptr_valid(heap, base_ptr)
   
-      ensures new_mem.heap_b256_equiv_inv(new_flat, base_ptr)
+      ensures heap_b256_inv(heap, new_flat, base_ptr)
     {
       var buff := heap[base_ptr].b256;
-      var new_buff := new_mem.heap[base_ptr].b256;
+      var new_buff := heap[base_ptr].b256;
+  
       forall i | 0 <= i < |new_buff|
-        ensures new_mem.heap_256_equiv_inv(new_flat, base_ptr, i) 
+        ensures heap_256_inv(heap, new_flat, base_ptr, i) 
       {
-        assert heap_256_equiv_inv(flat, base_ptr, i);
-        // var ptr := heap_b256_index_ptr(base_ptr, i);
-        // assert flat_read_256(flat, ptr) == flat_read_256(new_flat, ptr);
+        assert heap_256_inv(heap, flat, base_ptr, i);
       }
     }
 
     lemma stack_write_preserves_w32_inv(
-      new_mem: mem_t,
       flat: flat_t, new_flat: flat_t,
       index: nat, value: uint32,
       other_ptr: nat)
 
-      requires flat_equiv_inv(flat)
+      requires inv(flat)
       requires index < |stack|
-      requires new_mem == stack_write(index, value)
-      requires new_flat == flat_write_32(flat, stack_index_ptr(index), value)
-      requires heap_w32_ptr_valid(other_ptr)
+      requires new_flat == flat_write_32(flat, stack_index_to_ptr(index), value)
+      requires heap_w32_ptr_valid(heap, other_ptr)
 
-      ensures new_mem.equiv_inv_w32(new_flat, other_ptr)
+      ensures heap_w32_inv(heap, new_flat, other_ptr)
     {
     }
 
     lemma stack_write_preserves_stack_inv(
-      new_mem: mem_t,
       flat: flat_t, new_flat: flat_t,
       index: nat, value: uint32)
 
-      requires flat_equiv_inv(flat)
+      requires inv(flat)
       requires index < |stack|
-      requires new_mem == stack_write(index, value)
-      requires new_flat == flat_write_32(flat, stack_index_ptr(index), value)
+      requires new_flat == flat_write_32(flat, stack_index_to_ptr(index), value)
   
-      ensures new_mem.equiv_inv_stack(new_flat)
+      ensures this.(stack := stack[index := value]).stack_inv(new_flat)
     {
-      var new_stack := new_mem.stack;
-      forall i | 0 <= i < |new_stack|
-        ensures 
-          var ptr := stack_index_ptr(i);
-          && flat_ptr_valid_32(new_flat, ptr)
-          && new_stack[i] == flat_read_32(new_flat, ptr)
-          && ptr !in new_mem.heap;
-      {
-        if i == index {
-          value_32_from_32(value);
-        }
-      }
+      var new_stack := stack[index := value];
+      reveal get_stack();
+      value_32_from_32(value);
+      assert get_stack(new_flat) == new_stack;
     }
 
-    lemma stack_write_preverses_flat_equiv(
-      new_mem: mem_t,
+    lemma stack_write_preverses_inv(
       flat: flat_t, new_flat: flat_t,
       index: nat, value: uint32)
 
-      requires flat_equiv_inv(flat)
+      requires inv(flat)
       requires index < |stack|
-      requires new_mem == stack_write(index, value)
-      requires new_flat == flat_write_32(flat, stack_index_ptr(index), value)
+      requires new_flat == flat_write_32(flat, stack_index_to_ptr(index), value)
 
-      ensures new_mem.flat_equiv_inv(new_flat)
+      ensures this.(stack := stack[index := value]).inv(new_flat)
     {
-      forall base_ptr | new_mem.heap_b256_ptr_valid(base_ptr)
-        ensures new_mem.heap_b256_equiv_inv(new_flat, base_ptr)
+      forall base_ptr | heap_b256_ptr_valid(heap, base_ptr)
+        ensures heap_b256_inv(heap, new_flat, base_ptr)
       {
-        stack_write_preserves_b256_inv(new_mem,
-          flat, new_flat, index, value, base_ptr);
+        stack_write_preserves_b256_inv(flat, new_flat, index, value, base_ptr);
       }
       
-      forall base_ptr | new_mem.heap_w32_ptr_valid(base_ptr)
-        ensures new_mem.equiv_inv_w32(new_flat, base_ptr)
+      forall base_ptr | heap_w32_ptr_valid(heap, base_ptr)
+        ensures heap_w32_inv(heap, new_flat, base_ptr)
       {
-        stack_write_preserves_w32_inv(new_mem,
-          flat, new_flat, index, value, base_ptr);
+        stack_write_preserves_w32_inv(flat, new_flat, index, value, base_ptr);
       }
     
-      stack_write_preserves_stack_inv(new_mem, flat, new_flat,
+      stack_write_preserves_stack_inv(flat, new_flat,
         index, value);
+    }
+  }
+
+  datatype mem_t = mem_cons(heap: heap_t, frames: frames_t)
+  {
+    function as_imem(flat: flat_t): imem_t
+      requires stack_addrs_valid(flat)
+    {
+      imem_cons(heap, get_stack(flat))
+    }
+
+    predicate inv(flat: flat_t)
+    {
+      && stack_addrs_valid(flat)
+      && as_imem(flat).inv(flat)
+      && frames.frames_inv(get_stack(flat))
+    }
+
+    function push(flat: flat_t, num_words: uint32): mem_t
+      requires inv(flat)
+      requires in_stack_addr_range(frames.sp - num_words * 4)
+    {
+      var stack := get_stack(flat);
+      this.(frames := frames.push(num_words, stack))
+    }
+
+    lemma push_preserves_inv(flat: flat_t, num_words: uint32)
+      requires push.requires(flat, num_words)
+      ensures push(flat, num_words).inv(flat)
+    {
+      frames.push_preserves_inv(num_words, get_stack(flat));
+    }
+
+    lemma heap_b256_write_preverses_inv(
+      flat: flat_t, iter: b256_iter, value: uint256)
+
+      requires inv(flat)
+      requires b256_iter_safe(heap, iter)
+
+      ensures this.(heap := heap_b256_write(heap, iter, value)).
+        inv(flat_write_256(flat, iter.ptr, value))
+    {
+      var new_flat := flat_write_256(flat, iter.ptr, value);
+      as_imem(flat).heap_b256_write_preverses_inv(flat, new_flat,
+        iter, value);
+    }
+
+    lemma heap_w32_write_preverses_inv(
+      flat: flat_t, write_ptr: nat, value: uint32)
+    
+      requires inv(flat)
+      requires heap_w32_ptr_valid(heap, write_ptr)
+      ensures this.(heap := heap_w32_write(heap, write_ptr, value)).
+        inv(flat_write_32(flat, write_ptr, value))
+    {
+      var new_flat := flat_write_32(flat, write_ptr, value);
+      as_imem(flat).heap_w32_write_preverses_inv(flat, new_flat,
+        write_ptr, value);
+    }
+
+    function frames_write(index: nat, value: uint32): mem_t
+      requires frames.write.requires(index, value)
+    {
+      this.(frames := frames.write(index, value))
+    }
+
+    lemma frames_write_preverses_inv(
+      flat: flat_t, index: nat, value: uint32)
+    
+      requires inv(flat)
+      requires frames.write.requires(index, value)
+
+      ensures frames_write(index, value).
+        inv(flat_write_32(flat, stack_index_to_ptr(ptr_to_stack_index(frames.sp) + index), value))
+    {
+      var new_mem := frames_write(index, value);
+      var stack_index := ptr_to_stack_index(frames.sp) + index;
+      var new_flat := flat_write_32(flat, stack_index_to_ptr(stack_index), value);
+      var stack := get_stack(flat);
+
+      frames.write_preserves_inv(stack, index, value);
+
+      assert new_mem.frames.
+        frames_inv(stack[stack_index := value]);
+
+      as_imem(flat).stack_write_preverses_inv(flat, new_flat,
+        stack_index, value);
+
+      assert as_imem(flat).(stack := stack[stack_index := value]).inv(new_flat);
     }
   }
 }
