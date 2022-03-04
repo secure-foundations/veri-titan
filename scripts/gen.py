@@ -45,17 +45,17 @@ class MemEntry():
 single = MemEntry(base_width, False)
 buffer = MemEntry(args.heaplet_width, True)
 
-with open(output_dir + "/flat.dfy", "w+") as f:
+with open(output_dir + "/flat.s.dfy", "w+") as f:
     flat = templateEnv.get_template('flat.jinja2')
     sizes = [single, buffer]
     if single.num_bits == buffer.num_bits:
         sizes = [single]
     f.write(flat.render(base_size=single, sizes=sizes, limit="0x80000"))
 
-with open(output_dir + "/stack.dfy", "w+") as f:
+with open(output_dir + "/stack.i.dfy", "w+") as f:
     stack = templateEnv.get_template('stack.jinja2')
     f.write(stack.render(base_size=single))
 
-with open(output_dir + "/mem.dfy", "w+") as f:
+with open(output_dir + "/mem.i.dfy", "w+") as f:
     mem = templateEnv.get_template('mem.jinja2')
     f.write(mem.render(base_size=single, buff_item=buffer))

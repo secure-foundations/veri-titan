@@ -1,4 +1,4 @@
-include "stack.dfy"
+include "stack.i.dfy"
 
 module mem {
   import opened integers
@@ -7,36 +7,36 @@ module mem {
 
   datatype entry_t = 
     | {{base_size.cons}}({{base_size.name}}: {{base_size.uint_type}})
-    | {{buff_item.cons}}({{buff_item.cons}}: seq<{{buff_item.uint_type}}>)
+    | {{buff_item.cons}}({{buff_item.name}}: seq<{{buff_item.uint_type}}>)
 
   type heap_t = map<int, entry_t>
 
-  function heap_{{buff_item.cons}}_index_ptr(ptr: nat, i: nat): nat
+  function heap_{{buff_item.name}}_index_ptr(ptr: nat, i: nat): nat
   {
     ptr + {{buff_item.num_bytes}} * i
   }
 
-  predicate heap_{{buff_item.cons}}_ptr_valid(heap: heap_t, base_ptr: nat)
+  predicate heap_{{buff_item.name}}_ptr_valid(heap: heap_t, base_ptr: nat)
   {
     && ptr_admissible_{{buff_item.num_bits}}(base_ptr)
     && base_ptr in heap
     && heap[base_ptr].{{buff_item.cons}}?
-    && var len := |heap[base_ptr].{{buff_item.cons}}|;
+    && var len := |heap[base_ptr].{{buff_item.name}}|;
     //  the buffer is not empty
     && len != 0
     // end of buffer is in bound
-    && ptr_admissible_{{buff_item.num_bits}}(heap_{{buff_item.cons}}_index_ptr(base_ptr, len - 1))
+    && ptr_admissible_{{buff_item.num_bits}}(heap_{{buff_item.name}}_index_ptr(base_ptr, len - 1))
   }
 
-  // this holds for each {{buff_item.uint_type}} in a {{buff_item.cons}} heaplet entry
+  // this holds for each {{buff_item.uint_type}} in a {{buff_item.name}} heaplet entry
   predicate heap_{{buff_item.num_bits}}_inv(heap: heap_t, flat: flat_t, base_ptr: nat, i: nat)
-    requires heap_{{buff_item.cons}}_ptr_valid(heap, base_ptr)
-    requires i < |heap[base_ptr].{{buff_item.cons}}|
+    requires heap_{{buff_item.name}}_ptr_valid(heap, base_ptr)
+    requires i < |heap[base_ptr].{{buff_item.name}}|
   {
-    var ptr := heap_{{buff_item.cons}}_index_ptr(base_ptr, i);
+    var ptr := heap_{{buff_item.name}}_index_ptr(base_ptr, i);
     // ptr points to some {{buff_item.uint_type}}, which has 8 base words {{base_size.uint_type}}
     && flat_ptr_valid_{{buff_item.num_bits}}(flat, ptr)
-    && flat_read_{{buff_item.num_bits}}(flat, ptr) == heap[base_ptr].{{buff_item.cons}}[i]
+    && flat_read_{{buff_item.num_bits}}(flat, ptr) == heap[base_ptr].{{buff_item.name}}[i]
     // disjointness
     && (i != 0 ==> ptr !in heap)
     {%- for n in range(1, buff_item.num_words) %}
@@ -48,54 +48,62 @@ module mem {
     {%- endfor %}
   }
 
-  // this holds for each {{buff_item.cons}} heaplet entry
-  predicate heap_{{buff_item.cons}}_inv(heap: heap_t, flat: flat_t, base_ptr: nat)
-    requires heap_{{buff_item.cons}}_ptr_valid(heap, base_ptr)
+  // this holds for each {{buff_item.name}} heaplet entry
+  predicate heap_{{buff_item.name}}_inv(heap: heap_t, flat: flat_t, base_ptr: nat)
+    requires heap_{{buff_item.name}}_ptr_valid(heap, base_ptr)
   {
-    forall i | 0 <= i < |heap[base_ptr].{{buff_item.cons}}| ::
+    forall i | 0 <= i < |heap[base_ptr].{{buff_item.name}}| ::
       heap_{{buff_item.num_bits}}_inv(heap, flat, base_ptr, i)
   }
 
-  function heap_{{buff_item.cons}}_write(heap: heap_t, iter: {{buff_item.cons}}_iter, value: {{buff_item.uint_type}}): heap_t
-    requires {{buff_item.cons}}_iter_safe(heap, iter)
+  function heap_{{buff_item.name}}_read(heap: heap_t, iter: {{buff_item.name}}_iter): {{buff_item.uint_type}}
+    requires {{buff_item.name}}_iter_safe(heap, iter)
   {
-    var buff := heap[iter.base_ptr].{{buff_item.cons}};
+    var buff := heap[iter.base_ptr].{{buff_item.name}};
+    buff[iter.index]
+  }
+
+  function heap_{{buff_item.name}}_write(heap: heap_t, iter: {{buff_item.name}}_iter, value: {{buff_item.uint_type}}): heap_t
+    requires {{buff_item.name}}_iter_safe(heap, iter)
+  {
+    var buff := heap[iter.base_ptr].{{buff_item.name}};
     var new_buff := buff[iter.index := value];
     heap[iter.base_ptr := {{buff_item.cons}}(new_buff)]
   }
 
+
   // iterator for buffer entries
-  datatype {{buff_item.cons}}_iter = {{buff_item.cons}}_iter_cons(base_ptr: nat, index: nat,
+  datatype {{buff_item.name}}_iter = {{buff_item.name}}_iter_cons(base_ptr: nat, index: nat,
     ptr: nat, buff: seq<{{buff_item.uint_type}}>)
 
-  function {{buff_item.cons}}_iter_load_next(iter: {{buff_item.cons}}_iter, inc: bool): {{buff_item.cons}}_iter
+  function {{buff_item.name}}_iter_load_next(iter: {{buff_item.name}}_iter, inc: bool): {{buff_item.name}}_iter
   {
     iter.(index := if inc then iter.index + 1 else iter.index)
   }
 
-  function {{buff_item.cons}}_iter_store_next(iter: {{buff_item.cons}}_iter, value: {{buff_item.uint_type}}, inc: bool): {{buff_item.cons}}_iter
+  function {{buff_item.name}}_iter_store_next(iter: {{buff_item.name}}_iter, value: {{buff_item.uint_type}}, inc: bool): {{buff_item.name}}_iter
     requires iter.index < |iter.buff|
   {
       iter.(index := if inc then iter.index + 1 else iter.index)
           .(buff := iter.buff[iter.index := value])
   }
 
-  predicate {{buff_item.cons}}_iter_inv(heap: heap_t, iter: {{buff_item.cons}}_iter)
+  predicate {{buff_item.name}}_iter_inv(heap: heap_t, iter: {{buff_item.name}}_iter)
   {
     var base_ptr := iter.base_ptr;
     // base_ptr points to a valid buffer
-    && heap_{{buff_item.cons}}_ptr_valid(heap, base_ptr)
+    && heap_{{buff_item.name}}_ptr_valid(heap, base_ptr)
     // ptr is correct
-    && iter.ptr == heap_{{buff_item.cons}}_index_ptr(base_ptr, iter.index)
+    && iter.ptr == heap_{{buff_item.name}}_index_ptr(base_ptr, iter.index)
     // the view is consistent with heap
-    && heap[base_ptr].{{buff_item.cons}} == iter.buff
+    && heap[base_ptr].{{buff_item.name}} == iter.buff
     // the index is within bound (or at end)
     && iter.index <= |iter.buff|
   }
 
-  predicate {{buff_item.cons}}_iter_safe(heap: heap_t, iter: {{buff_item.cons}}_iter)
+  predicate {{buff_item.name}}_iter_safe(heap: heap_t, iter: {{buff_item.name}}_iter)
   {
-    && {{buff_item.cons}}_iter_inv(heap, iter)
+    && {{buff_item.name}}_iter_inv(heap, iter)
     // tighter constraint so we can dereference
     && iter.index < |iter.buff|
   }
@@ -106,6 +114,12 @@ module mem {
     && ptr_admissible_{{base_size.num_bits}}(base_ptr)
     && base_ptr in heap
     && heap[base_ptr].{{base_size.cons}}?
+  }
+
+  function heap_{{base_size.name}}_read(heap: heap_t, ptr: nat): {{base_size.uint_type}}
+    requires heap_{{base_size.name}}_ptr_valid(heap, ptr)
+  {
+    heap[ptr].{{base_size.name}}
   }
 
   function heap_{{base_size.name}}_write(heap: heap_t, ptr: nat, value: {{base_size.uint_type}}): heap_t
@@ -152,8 +166,8 @@ module mem {
     // the equivalence invariant between heaplet and memory
     predicate inv(flat: flat_t)
     {
-      && (forall base_ptr | heap_{{buff_item.cons}}_ptr_valid(heap, base_ptr) ::
-        heap_{{buff_item.cons}}_inv(heap, flat, base_ptr))
+      && (forall base_ptr | heap_{{buff_item.name}}_ptr_valid(heap, base_ptr) ::
+        heap_{{buff_item.name}}_inv(heap, flat, base_ptr))
       && (forall base_ptr | heap_{{base_size.name}}_ptr_valid(heap, base_ptr) ::
         heap_{{base_size.name}}_inv(heap, flat, base_ptr))
       && stack_inv(flat)
@@ -167,40 +181,40 @@ module mem {
 
     lemma sub_ptrs_disjoint(flat: flat_t, base1: nat, base2: nat)
       requires inv(flat)
-      requires heap_{{buff_item.cons}}_ptr_valid(heap, base1)
-      requires heap_{{buff_item.cons}}_ptr_valid(heap, base2)
+      requires heap_{{buff_item.name}}_ptr_valid(heap, base1)
+      requires heap_{{buff_item.name}}_ptr_valid(heap, base2)
       requires base1 != base2
       ensures forall i, j ::
-        (0 <= i < |heap[base1].{{buff_item.cons}}| && 0 <= j < |heap[base2].{{buff_item.cons}}|)
+        (0 <= i < |heap[base1].{{buff_item.name}}| && 0 <= j < |heap[base2].{{buff_item.name}}|)
           ==> 
-        (heap_{{buff_item.cons}}_index_ptr(base1, i) != heap_{{buff_item.cons}}_index_ptr(base2, j))
+        (heap_{{buff_item.name}}_index_ptr(base1, i) != heap_{{buff_item.name}}_index_ptr(base2, j))
     {
       var heap := heap;
       if exists i, j ::
-        && 0 <= i < |heap[base1].{{buff_item.cons}}|
-        && 0 <= j < |heap[base2].{{buff_item.cons}}|
-        && heap_{{buff_item.cons}}_index_ptr(base1, i) == heap_{{buff_item.cons}}_index_ptr(base2, j)
+        && 0 <= i < |heap[base1].{{buff_item.name}}|
+        && 0 <= j < |heap[base2].{{buff_item.name}}|
+        && heap_{{buff_item.name}}_index_ptr(base1, i) == heap_{{buff_item.name}}_index_ptr(base2, j)
       {
         var i, j :|
-          && 0 <= i < |heap[base1].{{buff_item.cons}}|
-          && 0 <= j < |heap[base2].{{buff_item.cons}}|
-          && heap_{{buff_item.cons}}_index_ptr(base1, i) == heap_{{buff_item.cons}}_index_ptr(base2, j);
+          && 0 <= i < |heap[base1].{{buff_item.name}}|
+          && 0 <= j < |heap[base2].{{buff_item.name}}|
+          && heap_{{buff_item.name}}_index_ptr(base1, i) == heap_{{buff_item.name}}_index_ptr(base2, j);
         assert base1 + {{buff_item.num_bytes}} * i == base2 + {{buff_item.num_bytes}} * j;
-        var buff1 := heap[base1].{{buff_item.cons}};
-        var buff2 := heap[base2].{{buff_item.cons}};
+        var buff1 := heap[base1].{{buff_item.name}};
+        var buff2 := heap[base2].{{buff_item.name}};
 
         if base1 > base2 {
-          assert heap_{{buff_item.cons}}_inv(heap, flat, base2);
+          assert heap_{{buff_item.name}}_inv(heap, flat, base2);
           var k := j - i;
-          assert base1 == heap_{{buff_item.cons}}_index_ptr(base2, k);
+          assert base1 == heap_{{buff_item.name}}_index_ptr(base2, k);
           assert 0 <= k < |buff2|;
           assert heap_{{buff_item.num_bits}}_inv(heap, flat, base2, k);
           assert base1 !in heap;
           assert false;
         } else {
-          assert heap_{{buff_item.cons}}_inv(heap, flat, base1);
+          assert heap_{{buff_item.name}}_inv(heap, flat, base1);
           var k := i - j;
-          assert base2 == heap_{{buff_item.cons}}_index_ptr(base1, k);
+          assert base2 == heap_{{buff_item.name}}_index_ptr(base1, k);
           assert 0 <= k < |buff1|;
           assert heap_{{buff_item.num_bits}}_inv(heap, flat, base1, k);
           assert base2 !in heap;
@@ -209,22 +223,22 @@ module mem {
       }
     }
 
-    lemma heap_{{buff_item.cons}}_write_preserves_{{buff_item.cons}}_inv(
+    lemma heap_{{buff_item.name}}_write_preserves_{{buff_item.name}}_inv(
       flat: flat_t, new_flat: flat_t,
-      iter: {{buff_item.cons}}_iter, value: {{buff_item.uint_type}},
+      iter: {{buff_item.name}}_iter, value: {{buff_item.uint_type}},
       other_ptr: nat)
 
       requires inv(flat)
-      requires {{buff_item.cons}}_iter_safe(heap, iter)
+      requires {{buff_item.name}}_iter_safe(heap, iter)
       requires new_flat == flat_write_{{buff_item.num_bits}}(flat, iter.ptr, value)
-      requires heap_{{buff_item.cons}}_ptr_valid(heap, other_ptr)
+      requires heap_{{buff_item.name}}_ptr_valid(heap, other_ptr)
 
-      ensures heap_{{buff_item.cons}}_inv(heap_{{buff_item.cons}}_write(heap, iter, value),
+      ensures heap_{{buff_item.name}}_inv(heap_{{buff_item.name}}_write(heap, iter, value),
         flat_write_{{buff_item.num_bits}}(flat, iter.ptr, value), other_ptr)
     {
-      var new_heap := heap_{{buff_item.cons}}_write(heap, iter, value);
+      var new_heap := heap_{{buff_item.name}}_write(heap, iter, value);
       var base_ptr, j := iter.base_ptr, iter.index;
-      var buff := heap[other_ptr].{{buff_item.cons}};
+      var buff := heap[other_ptr].{{buff_item.name}};
       var len := |buff|;
 
       if other_ptr == base_ptr {
@@ -242,7 +256,7 @@ module mem {
           ensures heap_{{buff_item.num_bits}}_inv(new_heap, new_flat, other_ptr, i)
         {
           assert heap_{{buff_item.num_bits}}_inv(heap, flat, other_ptr, i);
-          var ptr := heap_{{buff_item.cons}}_index_ptr(other_ptr, i);
+          var ptr := heap_{{buff_item.name}}_index_ptr(other_ptr, i);
           assert flat_ptr_valid_{{buff_item.num_bits}}(new_flat, ptr);
           assert ptr != iter.ptr by {
             sub_ptrs_disjoint(flat, other_ptr, base_ptr);
@@ -250,20 +264,20 @@ module mem {
           assert flat_read_{{buff_item.num_bits}}(new_flat, ptr) == buff[i];
         }
       }
-      assert heap_{{buff_item.cons}}_inv(heap, flat, other_ptr);
+      assert heap_{{buff_item.name}}_inv(heap, flat, other_ptr);
     }
 
-    lemma heap_{{buff_item.cons}}_write_preserves_stack_inv(
+    lemma heap_{{buff_item.name}}_write_preserves_stack_inv(
       flat: flat_t, new_flat: flat_t,
-      iter: {{buff_item.cons}}_iter, value: {{buff_item.uint_type}})
+      iter: {{buff_item.name}}_iter, value: {{buff_item.uint_type}})
 
       requires inv(flat)
-      requires {{buff_item.cons}}_iter_safe(heap, iter)
+      requires {{buff_item.name}}_iter_safe(heap, iter)
       requires new_flat == flat_write_{{buff_item.num_bits}}(flat, iter.ptr, value)
 
-      ensures this.(heap := heap_{{buff_item.cons}}_write(heap, iter, value)).stack_inv(new_flat)
+      ensures this.(heap := heap_{{buff_item.name}}_write(heap, iter, value)).stack_inv(new_flat)
     {
-      var new_heap := heap_{{buff_item.cons}}_write(heap, iter, value);
+      var new_heap := heap_{{buff_item.name}}_write(heap, iter, value);
       var new_mem := this.(heap := new_heap);
   
       assert (this.(heap := new_heap)).stack_inv(new_flat) by {
@@ -282,16 +296,16 @@ module mem {
       }
     }
 
-    lemma heap_{{buff_item.cons}}_write_preserves_{{base_size.name}}_inv(
+    lemma heap_{{buff_item.name}}_write_preserves_{{base_size.name}}_inv(
       flat: flat_t, new_flat: flat_t,
-      iter: {{buff_item.cons}}_iter, value: {{buff_item.uint_type}}, other_ptr: nat)
+      iter: {{buff_item.name}}_iter, value: {{buff_item.uint_type}}, other_ptr: nat)
 
       requires inv(flat)
-      requires {{buff_item.cons}}_iter_safe(heap, iter)
+      requires {{buff_item.name}}_iter_safe(heap, iter)
       requires new_flat == flat_write_{{buff_item.num_bits}}(flat, iter.ptr, value)
       requires heap_{{base_size.name}}_ptr_valid(heap, other_ptr)
 
-      ensures heap_{{base_size.name}}_inv(heap_{{buff_item.cons}}_write(heap, iter, value), new_flat, other_ptr)
+      ensures heap_{{base_size.name}}_inv(heap_{{buff_item.name}}_write(heap, iter, value), new_flat, other_ptr)
     {
       if flat[other_ptr] != new_flat[other_ptr] {
         assert heap_{{buff_item.num_bits}}_inv(heap, flat, iter.base_ptr, iter.index);
@@ -299,35 +313,35 @@ module mem {
       }
     }
   
-    lemma heap_{{buff_item.cons}}_write_preverses_inv(
+    lemma heap_{{buff_item.name}}_write_preverses_inv(
       flat: flat_t, new_flat: flat_t,
-      iter: {{buff_item.cons}}_iter, value: {{buff_item.uint_type}})
+      iter: {{buff_item.name}}_iter, value: {{buff_item.uint_type}})
 
       requires inv(flat)
-      requires {{buff_item.cons}}_iter_safe(heap, iter)
+      requires {{buff_item.name}}_iter_safe(heap, iter)
       requires new_flat == flat_write_{{buff_item.num_bits}}(flat, iter.ptr, value)
 
-      ensures this.(heap := heap_{{buff_item.cons}}_write(heap, iter, value)).inv(new_flat)
+      ensures this.(heap := heap_{{buff_item.name}}_write(heap, iter, value)).inv(new_flat)
     {
-      var new_heap := heap_{{buff_item.cons}}_write(heap, iter, value);
+      var new_heap := heap_{{buff_item.name}}_write(heap, iter, value);
       var new_mem := this.(heap := new_heap);
 
-      forall base_ptr | heap_{{buff_item.cons}}_ptr_valid(new_heap, base_ptr)
-        ensures heap_{{buff_item.cons}}_inv(new_heap, new_flat, base_ptr)
+      forall base_ptr | heap_{{buff_item.name}}_ptr_valid(new_heap, base_ptr)
+        ensures heap_{{buff_item.name}}_inv(new_heap, new_flat, base_ptr)
       {
-        heap_{{buff_item.cons}}_write_preserves_{{buff_item.cons}}_inv(flat, new_flat, iter, value, base_ptr);
+        heap_{{buff_item.name}}_write_preserves_{{buff_item.name}}_inv(flat, new_flat, iter, value, base_ptr);
       }
       forall base_ptr | heap_{{base_size.name}}_ptr_valid(new_heap, base_ptr)
         ensures heap_{{base_size.name}}_inv(new_heap, new_flat, base_ptr)
       {
-        heap_{{buff_item.cons}}_write_preserves_{{base_size.name}}_inv(flat, new_flat, iter, value, base_ptr);
+        heap_{{buff_item.name}}_write_preserves_{{base_size.name}}_inv(flat, new_flat, iter, value, base_ptr);
       }
 
-      heap_{{buff_item.cons}}_write_preserves_stack_inv(
+      heap_{{buff_item.name}}_write_preserves_stack_inv(
         flat, new_flat, iter, value);
     }
 
-    lemma heap_{{base_size.name}}_write_preserves_{{buff_item.cons}}_inv(
+    lemma heap_{{base_size.name}}_write_preserves_{{buff_item.name}}_inv(
       flat: flat_t, new_flat: flat_t,
       write_ptr: nat, value: {{base_size.uint_type}}, other_ptr: nat)
 
@@ -335,13 +349,13 @@ module mem {
       requires heap_{{base_size.name}}_ptr_valid(heap, write_ptr)
       requires new_flat == flat_write_{{base_size.num_bits}}(flat, write_ptr, value)
 
-      requires heap_{{buff_item.cons}}_ptr_valid(heap, other_ptr)
+      requires heap_{{buff_item.name}}_ptr_valid(heap, other_ptr)
 
-      ensures heap_{{buff_item.cons}}_inv(heap_{{base_size.name}}_write(heap, write_ptr, value), new_flat, other_ptr)
+      ensures heap_{{buff_item.name}}_inv(heap_{{base_size.name}}_write(heap, write_ptr, value), new_flat, other_ptr)
     {
       var new_heap := heap_{{base_size.name}}_write(heap, write_ptr, value);
-      assert heap_{{buff_item.cons}}_inv(heap, flat, other_ptr);
-      var buff := heap[other_ptr].{{buff_item.cons}};
+      assert heap_{{buff_item.name}}_inv(heap, flat, other_ptr);
+      var buff := heap[other_ptr].{{buff_item.name}};
       forall i | 0 <= i < |buff| 
         ensures heap_{{buff_item.num_bits}}_inv(new_heap, new_flat, other_ptr, i)
       {
@@ -395,10 +409,10 @@ module mem {
     {
       var new_heap := heap_{{base_size.name}}_write(heap, write_ptr, value);
 
-      forall base_ptr | heap_{{buff_item.cons}}_ptr_valid(new_heap, base_ptr)
-        ensures heap_{{buff_item.cons}}_inv(new_heap, new_flat, base_ptr)
+      forall base_ptr | heap_{{buff_item.name}}_ptr_valid(new_heap, base_ptr)
+        ensures heap_{{buff_item.name}}_inv(new_heap, new_flat, base_ptr)
       {
-        heap_{{base_size.name}}_write_preserves_{{buff_item.cons}}_inv(flat, new_flat, write_ptr, value, base_ptr);
+        heap_{{base_size.name}}_write_preserves_{{buff_item.name}}_inv(flat, new_flat, write_ptr, value, base_ptr);
       }
       forall base_ptr | heap_{{base_size.name}}_ptr_valid(new_heap, base_ptr)
         ensures heap_{{base_size.name}}_inv(new_heap, new_flat, base_ptr)
@@ -408,19 +422,19 @@ module mem {
       heap_{{base_size.name}}_write_preserves_stack_inv(flat, new_flat, value, write_ptr);
     }
 
-    lemma stack_write_preserves_{{buff_item.cons}}_inv(
+    lemma stack_write_preserves_{{buff_item.name}}_inv(
       flat: flat_t, new_flat: flat_t,
       index: nat, value: {{base_size.uint_type}}, base_ptr: nat)
 
       requires inv(flat)
       requires index < |stack|
       requires new_flat == flat_write_{{base_size.num_bits}}(flat, stack_index_to_ptr(index), value)
-      requires heap_{{buff_item.cons}}_ptr_valid(heap, base_ptr)
+      requires heap_{{buff_item.name}}_ptr_valid(heap, base_ptr)
   
-      ensures heap_{{buff_item.cons}}_inv(heap, new_flat, base_ptr)
+      ensures heap_{{buff_item.name}}_inv(heap, new_flat, base_ptr)
     {
-      var buff := heap[base_ptr].{{buff_item.cons}};
-      var new_buff := heap[base_ptr].{{buff_item.cons}};
+      var buff := heap[base_ptr].{{buff_item.name}};
+      var new_buff := heap[base_ptr].{{buff_item.name}};
   
       forall i | 0 <= i < |new_buff|
         ensures heap_{{buff_item.num_bits}}_inv(heap, new_flat, base_ptr, i) 
@@ -469,10 +483,10 @@ module mem {
 
       ensures this.(stack := stack[index := value]).inv(new_flat)
     {
-      forall base_ptr | heap_{{buff_item.cons}}_ptr_valid(heap, base_ptr)
-        ensures heap_{{buff_item.cons}}_inv(heap, new_flat, base_ptr)
+      forall base_ptr | heap_{{buff_item.name}}_ptr_valid(heap, base_ptr)
+        ensures heap_{{buff_item.name}}_inv(heap, new_flat, base_ptr)
       {
-        stack_write_preserves_{{buff_item.cons}}_inv(flat, new_flat, index, value, base_ptr);
+        stack_write_preserves_{{buff_item.name}}_inv(flat, new_flat, index, value, base_ptr);
       }
       
       forall base_ptr | heap_{{base_size.name}}_ptr_valid(heap, base_ptr)
@@ -516,17 +530,17 @@ module mem {
       frames.push_preserves_inv(num_words, get_stack(flat));
     }
 
-    lemma heap_{{buff_item.cons}}_write_preverses_inv(
-      flat: flat_t, iter: {{buff_item.cons}}_iter, value: {{buff_item.uint_type}})
+    lemma heap_{{buff_item.name}}_write_preverses_inv(
+      flat: flat_t, iter: {{buff_item.name}}_iter, value: {{buff_item.uint_type}})
 
       requires inv(flat)
-      requires {{buff_item.cons}}_iter_safe(heap, iter)
+      requires {{buff_item.name}}_iter_safe(heap, iter)
 
-      ensures this.(heap := heap_{{buff_item.cons}}_write(heap, iter, value)).
+      ensures this.(heap := heap_{{buff_item.name}}_write(heap, iter, value)).
         inv(flat_write_{{buff_item.num_bits}}(flat, iter.ptr, value))
     {
       var new_flat := flat_write_{{buff_item.num_bits}}(flat, iter.ptr, value);
-      as_imem(flat).heap_{{buff_item.cons}}_write_preverses_inv(flat, new_flat,
+      as_imem(flat).heap_{{buff_item.name}}_write_preverses_inv(flat, new_flat,
         iter, value);
     }
 

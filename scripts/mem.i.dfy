@@ -1,4 +1,4 @@
-include "stack.dfy"
+include "stack.i.dfy"
 
 module mem {
   import opened integers
@@ -7,36 +7,36 @@ module mem {
 
   datatype entry_t = 
     | W32(w32: uint32)
-    | B256(B256: seq<uint256>)
+    | B256(b256: seq<uint256>)
 
   type heap_t = map<int, entry_t>
 
-  function heap_B256_index_ptr(ptr: nat, i: nat): nat
+  function heap_b256_index_ptr(ptr: nat, i: nat): nat
   {
     ptr + 32 * i
   }
 
-  predicate heap_B256_ptr_valid(heap: heap_t, base_ptr: nat)
+  predicate heap_b256_ptr_valid(heap: heap_t, base_ptr: nat)
   {
     && ptr_admissible_256(base_ptr)
     && base_ptr in heap
     && heap[base_ptr].B256?
-    && var len := |heap[base_ptr].B256|;
+    && var len := |heap[base_ptr].b256|;
     //  the buffer is not empty
     && len != 0
     // end of buffer is in bound
-    && ptr_admissible_256(heap_B256_index_ptr(base_ptr, len - 1))
+    && ptr_admissible_256(heap_b256_index_ptr(base_ptr, len - 1))
   }
 
-  // this holds for each uint256 in a B256 heaplet entry
+  // this holds for each uint256 in a b256 heaplet entry
   predicate heap_256_inv(heap: heap_t, flat: flat_t, base_ptr: nat, i: nat)
-    requires heap_B256_ptr_valid(heap, base_ptr)
-    requires i < |heap[base_ptr].B256|
+    requires heap_b256_ptr_valid(heap, base_ptr)
+    requires i < |heap[base_ptr].b256|
   {
-    var ptr := heap_B256_index_ptr(base_ptr, i);
+    var ptr := heap_b256_index_ptr(base_ptr, i);
     // ptr points to some uint256, which has 8 base words uint32
     && flat_ptr_valid_256(flat, ptr)
-    && flat_read_256(flat, ptr) == heap[base_ptr].B256[i]
+    && flat_read_256(flat, ptr) == heap[base_ptr].b256[i]
     // disjointness
     && (i != 0 ==> ptr !in heap)
     && ptr + 4 !in heap
@@ -64,54 +64,62 @@ module mem {
     && ptr + 28 !in heap
   }
 
-  // this holds for each B256 heaplet entry
-  predicate heap_B256_inv(heap: heap_t, flat: flat_t, base_ptr: nat)
-    requires heap_B256_ptr_valid(heap, base_ptr)
+  // this holds for each b256 heaplet entry
+  predicate heap_b256_inv(heap: heap_t, flat: flat_t, base_ptr: nat)
+    requires heap_b256_ptr_valid(heap, base_ptr)
   {
-    forall i | 0 <= i < |heap[base_ptr].B256| ::
+    forall i | 0 <= i < |heap[base_ptr].b256| ::
       heap_256_inv(heap, flat, base_ptr, i)
   }
 
-  function heap_B256_write(heap: heap_t, iter: B256_iter, value: uint256): heap_t
-    requires B256_iter_safe(heap, iter)
+  function heap_b256_read(heap: heap_t, iter: b256_iter): uint256
+    requires b256_iter_safe(heap, iter)
   {
-    var buff := heap[iter.base_ptr].B256;
+    var buff := heap[iter.base_ptr].b256;
+    buff[iter.index]
+  }
+
+  function heap_b256_write(heap: heap_t, iter: b256_iter, value: uint256): heap_t
+    requires b256_iter_safe(heap, iter)
+  {
+    var buff := heap[iter.base_ptr].b256;
     var new_buff := buff[iter.index := value];
     heap[iter.base_ptr := B256(new_buff)]
   }
 
+
   // iterator for buffer entries
-  datatype B256_iter = B256_iter_cons(base_ptr: nat, index: nat,
+  datatype b256_iter = b256_iter_cons(base_ptr: nat, index: nat,
     ptr: nat, buff: seq<uint256>)
 
-  function B256_iter_load_next(iter: B256_iter, inc: bool): B256_iter
+  function b256_iter_load_next(iter: b256_iter, inc: bool): b256_iter
   {
     iter.(index := if inc then iter.index + 1 else iter.index)
   }
 
-  function B256_iter_store_next(iter: B256_iter, value: uint256, inc: bool): B256_iter
+  function b256_iter_store_next(iter: b256_iter, value: uint256, inc: bool): b256_iter
     requires iter.index < |iter.buff|
   {
       iter.(index := if inc then iter.index + 1 else iter.index)
           .(buff := iter.buff[iter.index := value])
   }
 
-  predicate B256_iter_inv(heap: heap_t, iter: B256_iter)
+  predicate b256_iter_inv(heap: heap_t, iter: b256_iter)
   {
     var base_ptr := iter.base_ptr;
     // base_ptr points to a valid buffer
-    && heap_B256_ptr_valid(heap, base_ptr)
+    && heap_b256_ptr_valid(heap, base_ptr)
     // ptr is correct
-    && iter.ptr == heap_B256_index_ptr(base_ptr, iter.index)
+    && iter.ptr == heap_b256_index_ptr(base_ptr, iter.index)
     // the view is consistent with heap
-    && heap[base_ptr].B256 == iter.buff
+    && heap[base_ptr].b256 == iter.buff
     // the index is within bound (or at end)
     && iter.index <= |iter.buff|
   }
 
-  predicate B256_iter_safe(heap: heap_t, iter: B256_iter)
+  predicate b256_iter_safe(heap: heap_t, iter: b256_iter)
   {
-    && B256_iter_inv(heap, iter)
+    && b256_iter_inv(heap, iter)
     // tighter constraint so we can dereference
     && iter.index < |iter.buff|
   }
@@ -122,6 +130,12 @@ module mem {
     && ptr_admissible_32(base_ptr)
     && base_ptr in heap
     && heap[base_ptr].W32?
+  }
+
+  function heap_w32_read(heap: heap_t, ptr: nat): uint32
+    requires heap_w32_ptr_valid(heap, ptr)
+  {
+    heap[ptr].w32
   }
 
   function heap_w32_write(heap: heap_t, ptr: nat, value: uint32): heap_t
@@ -168,8 +182,8 @@ module mem {
     // the equivalence invariant between heaplet and memory
     predicate inv(flat: flat_t)
     {
-      && (forall base_ptr | heap_B256_ptr_valid(heap, base_ptr) ::
-        heap_B256_inv(heap, flat, base_ptr))
+      && (forall base_ptr | heap_b256_ptr_valid(heap, base_ptr) ::
+        heap_b256_inv(heap, flat, base_ptr))
       && (forall base_ptr | heap_w32_ptr_valid(heap, base_ptr) ::
         heap_w32_inv(heap, flat, base_ptr))
       && stack_inv(flat)
@@ -183,40 +197,40 @@ module mem {
 
     lemma sub_ptrs_disjoint(flat: flat_t, base1: nat, base2: nat)
       requires inv(flat)
-      requires heap_B256_ptr_valid(heap, base1)
-      requires heap_B256_ptr_valid(heap, base2)
+      requires heap_b256_ptr_valid(heap, base1)
+      requires heap_b256_ptr_valid(heap, base2)
       requires base1 != base2
       ensures forall i, j ::
-        (0 <= i < |heap[base1].B256| && 0 <= j < |heap[base2].B256|)
+        (0 <= i < |heap[base1].b256| && 0 <= j < |heap[base2].b256|)
           ==> 
-        (heap_B256_index_ptr(base1, i) != heap_B256_index_ptr(base2, j))
+        (heap_b256_index_ptr(base1, i) != heap_b256_index_ptr(base2, j))
     {
       var heap := heap;
       if exists i, j ::
-        && 0 <= i < |heap[base1].B256|
-        && 0 <= j < |heap[base2].B256|
-        && heap_B256_index_ptr(base1, i) == heap_B256_index_ptr(base2, j)
+        && 0 <= i < |heap[base1].b256|
+        && 0 <= j < |heap[base2].b256|
+        && heap_b256_index_ptr(base1, i) == heap_b256_index_ptr(base2, j)
       {
         var i, j :|
-          && 0 <= i < |heap[base1].B256|
-          && 0 <= j < |heap[base2].B256|
-          && heap_B256_index_ptr(base1, i) == heap_B256_index_ptr(base2, j);
+          && 0 <= i < |heap[base1].b256|
+          && 0 <= j < |heap[base2].b256|
+          && heap_b256_index_ptr(base1, i) == heap_b256_index_ptr(base2, j);
         assert base1 + 32 * i == base2 + 32 * j;
-        var buff1 := heap[base1].B256;
-        var buff2 := heap[base2].B256;
+        var buff1 := heap[base1].b256;
+        var buff2 := heap[base2].b256;
 
         if base1 > base2 {
-          assert heap_B256_inv(heap, flat, base2);
+          assert heap_b256_inv(heap, flat, base2);
           var k := j - i;
-          assert base1 == heap_B256_index_ptr(base2, k);
+          assert base1 == heap_b256_index_ptr(base2, k);
           assert 0 <= k < |buff2|;
           assert heap_256_inv(heap, flat, base2, k);
           assert base1 !in heap;
           assert false;
         } else {
-          assert heap_B256_inv(heap, flat, base1);
+          assert heap_b256_inv(heap, flat, base1);
           var k := i - j;
-          assert base2 == heap_B256_index_ptr(base1, k);
+          assert base2 == heap_b256_index_ptr(base1, k);
           assert 0 <= k < |buff1|;
           assert heap_256_inv(heap, flat, base1, k);
           assert base2 !in heap;
@@ -225,22 +239,22 @@ module mem {
       }
     }
 
-    lemma heap_B256_write_preserves_B256_inv(
+    lemma heap_b256_write_preserves_b256_inv(
       flat: flat_t, new_flat: flat_t,
-      iter: B256_iter, value: uint256,
+      iter: b256_iter, value: uint256,
       other_ptr: nat)
 
       requires inv(flat)
-      requires B256_iter_safe(heap, iter)
+      requires b256_iter_safe(heap, iter)
       requires new_flat == flat_write_256(flat, iter.ptr, value)
-      requires heap_B256_ptr_valid(heap, other_ptr)
+      requires heap_b256_ptr_valid(heap, other_ptr)
 
-      ensures heap_B256_inv(heap_B256_write(heap, iter, value),
+      ensures heap_b256_inv(heap_b256_write(heap, iter, value),
         flat_write_256(flat, iter.ptr, value), other_ptr)
     {
-      var new_heap := heap_B256_write(heap, iter, value);
+      var new_heap := heap_b256_write(heap, iter, value);
       var base_ptr, j := iter.base_ptr, iter.index;
-      var buff := heap[other_ptr].B256;
+      var buff := heap[other_ptr].b256;
       var len := |buff|;
 
       if other_ptr == base_ptr {
@@ -258,7 +272,7 @@ module mem {
           ensures heap_256_inv(new_heap, new_flat, other_ptr, i)
         {
           assert heap_256_inv(heap, flat, other_ptr, i);
-          var ptr := heap_B256_index_ptr(other_ptr, i);
+          var ptr := heap_b256_index_ptr(other_ptr, i);
           assert flat_ptr_valid_256(new_flat, ptr);
           assert ptr != iter.ptr by {
             sub_ptrs_disjoint(flat, other_ptr, base_ptr);
@@ -266,20 +280,20 @@ module mem {
           assert flat_read_256(new_flat, ptr) == buff[i];
         }
       }
-      assert heap_B256_inv(heap, flat, other_ptr);
+      assert heap_b256_inv(heap, flat, other_ptr);
     }
 
-    lemma heap_B256_write_preserves_stack_inv(
+    lemma heap_b256_write_preserves_stack_inv(
       flat: flat_t, new_flat: flat_t,
-      iter: B256_iter, value: uint256)
+      iter: b256_iter, value: uint256)
 
       requires inv(flat)
-      requires B256_iter_safe(heap, iter)
+      requires b256_iter_safe(heap, iter)
       requires new_flat == flat_write_256(flat, iter.ptr, value)
 
-      ensures this.(heap := heap_B256_write(heap, iter, value)).stack_inv(new_flat)
+      ensures this.(heap := heap_b256_write(heap, iter, value)).stack_inv(new_flat)
     {
-      var new_heap := heap_B256_write(heap, iter, value);
+      var new_heap := heap_b256_write(heap, iter, value);
       var new_mem := this.(heap := new_heap);
   
       assert (this.(heap := new_heap)).stack_inv(new_flat) by {
@@ -298,16 +312,16 @@ module mem {
       }
     }
 
-    lemma heap_B256_write_preserves_w32_inv(
+    lemma heap_b256_write_preserves_w32_inv(
       flat: flat_t, new_flat: flat_t,
-      iter: B256_iter, value: uint256, other_ptr: nat)
+      iter: b256_iter, value: uint256, other_ptr: nat)
 
       requires inv(flat)
-      requires B256_iter_safe(heap, iter)
+      requires b256_iter_safe(heap, iter)
       requires new_flat == flat_write_256(flat, iter.ptr, value)
       requires heap_w32_ptr_valid(heap, other_ptr)
 
-      ensures heap_w32_inv(heap_B256_write(heap, iter, value), new_flat, other_ptr)
+      ensures heap_w32_inv(heap_b256_write(heap, iter, value), new_flat, other_ptr)
     {
       if flat[other_ptr] != new_flat[other_ptr] {
         assert heap_256_inv(heap, flat, iter.base_ptr, iter.index);
@@ -315,35 +329,35 @@ module mem {
       }
     }
   
-    lemma heap_B256_write_preverses_inv(
+    lemma heap_b256_write_preverses_inv(
       flat: flat_t, new_flat: flat_t,
-      iter: B256_iter, value: uint256)
+      iter: b256_iter, value: uint256)
 
       requires inv(flat)
-      requires B256_iter_safe(heap, iter)
+      requires b256_iter_safe(heap, iter)
       requires new_flat == flat_write_256(flat, iter.ptr, value)
 
-      ensures this.(heap := heap_B256_write(heap, iter, value)).inv(new_flat)
+      ensures this.(heap := heap_b256_write(heap, iter, value)).inv(new_flat)
     {
-      var new_heap := heap_B256_write(heap, iter, value);
+      var new_heap := heap_b256_write(heap, iter, value);
       var new_mem := this.(heap := new_heap);
 
-      forall base_ptr | heap_B256_ptr_valid(new_heap, base_ptr)
-        ensures heap_B256_inv(new_heap, new_flat, base_ptr)
+      forall base_ptr | heap_b256_ptr_valid(new_heap, base_ptr)
+        ensures heap_b256_inv(new_heap, new_flat, base_ptr)
       {
-        heap_B256_write_preserves_B256_inv(flat, new_flat, iter, value, base_ptr);
+        heap_b256_write_preserves_b256_inv(flat, new_flat, iter, value, base_ptr);
       }
       forall base_ptr | heap_w32_ptr_valid(new_heap, base_ptr)
         ensures heap_w32_inv(new_heap, new_flat, base_ptr)
       {
-        heap_B256_write_preserves_w32_inv(flat, new_flat, iter, value, base_ptr);
+        heap_b256_write_preserves_w32_inv(flat, new_flat, iter, value, base_ptr);
       }
 
-      heap_B256_write_preserves_stack_inv(
+      heap_b256_write_preserves_stack_inv(
         flat, new_flat, iter, value);
     }
 
-    lemma heap_w32_write_preserves_B256_inv(
+    lemma heap_w32_write_preserves_b256_inv(
       flat: flat_t, new_flat: flat_t,
       write_ptr: nat, value: uint32, other_ptr: nat)
 
@@ -351,13 +365,13 @@ module mem {
       requires heap_w32_ptr_valid(heap, write_ptr)
       requires new_flat == flat_write_32(flat, write_ptr, value)
 
-      requires heap_B256_ptr_valid(heap, other_ptr)
+      requires heap_b256_ptr_valid(heap, other_ptr)
 
-      ensures heap_B256_inv(heap_w32_write(heap, write_ptr, value), new_flat, other_ptr)
+      ensures heap_b256_inv(heap_w32_write(heap, write_ptr, value), new_flat, other_ptr)
     {
       var new_heap := heap_w32_write(heap, write_ptr, value);
-      assert heap_B256_inv(heap, flat, other_ptr);
-      var buff := heap[other_ptr].B256;
+      assert heap_b256_inv(heap, flat, other_ptr);
+      var buff := heap[other_ptr].b256;
       forall i | 0 <= i < |buff| 
         ensures heap_256_inv(new_heap, new_flat, other_ptr, i)
       {
@@ -411,10 +425,10 @@ module mem {
     {
       var new_heap := heap_w32_write(heap, write_ptr, value);
 
-      forall base_ptr | heap_B256_ptr_valid(new_heap, base_ptr)
-        ensures heap_B256_inv(new_heap, new_flat, base_ptr)
+      forall base_ptr | heap_b256_ptr_valid(new_heap, base_ptr)
+        ensures heap_b256_inv(new_heap, new_flat, base_ptr)
       {
-        heap_w32_write_preserves_B256_inv(flat, new_flat, write_ptr, value, base_ptr);
+        heap_w32_write_preserves_b256_inv(flat, new_flat, write_ptr, value, base_ptr);
       }
       forall base_ptr | heap_w32_ptr_valid(new_heap, base_ptr)
         ensures heap_w32_inv(new_heap, new_flat, base_ptr)
@@ -424,19 +438,19 @@ module mem {
       heap_w32_write_preserves_stack_inv(flat, new_flat, value, write_ptr);
     }
 
-    lemma stack_write_preserves_B256_inv(
+    lemma stack_write_preserves_b256_inv(
       flat: flat_t, new_flat: flat_t,
       index: nat, value: uint32, base_ptr: nat)
 
       requires inv(flat)
       requires index < |stack|
       requires new_flat == flat_write_32(flat, stack_index_to_ptr(index), value)
-      requires heap_B256_ptr_valid(heap, base_ptr)
+      requires heap_b256_ptr_valid(heap, base_ptr)
   
-      ensures heap_B256_inv(heap, new_flat, base_ptr)
+      ensures heap_b256_inv(heap, new_flat, base_ptr)
     {
-      var buff := heap[base_ptr].B256;
-      var new_buff := heap[base_ptr].B256;
+      var buff := heap[base_ptr].b256;
+      var new_buff := heap[base_ptr].b256;
   
       forall i | 0 <= i < |new_buff|
         ensures heap_256_inv(heap, new_flat, base_ptr, i) 
@@ -485,10 +499,10 @@ module mem {
 
       ensures this.(stack := stack[index := value]).inv(new_flat)
     {
-      forall base_ptr | heap_B256_ptr_valid(heap, base_ptr)
-        ensures heap_B256_inv(heap, new_flat, base_ptr)
+      forall base_ptr | heap_b256_ptr_valid(heap, base_ptr)
+        ensures heap_b256_inv(heap, new_flat, base_ptr)
       {
-        stack_write_preserves_B256_inv(flat, new_flat, index, value, base_ptr);
+        stack_write_preserves_b256_inv(flat, new_flat, index, value, base_ptr);
       }
       
       forall base_ptr | heap_w32_ptr_valid(heap, base_ptr)
@@ -532,17 +546,17 @@ module mem {
       frames.push_preserves_inv(num_words, get_stack(flat));
     }
 
-    lemma heap_B256_write_preverses_inv(
-      flat: flat_t, iter: B256_iter, value: uint256)
+    lemma heap_b256_write_preverses_inv(
+      flat: flat_t, iter: b256_iter, value: uint256)
 
       requires inv(flat)
-      requires B256_iter_safe(heap, iter)
+      requires b256_iter_safe(heap, iter)
 
-      ensures this.(heap := heap_B256_write(heap, iter, value)).
+      ensures this.(heap := heap_b256_write(heap, iter, value)).
         inv(flat_write_256(flat, iter.ptr, value))
     {
       var new_flat := flat_write_256(flat, iter.ptr, value);
-      as_imem(flat).heap_B256_write_preverses_inv(flat, new_flat,
+      as_imem(flat).heap_b256_write_preverses_inv(flat, new_flat,
         iter, value);
     }
 
