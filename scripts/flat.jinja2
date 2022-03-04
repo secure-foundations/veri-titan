@@ -1,0 +1,100 @@
+{%- macro assemble(big, small) -%}
+  assemble_{{small}}_to_{{big}}
+{%- endmacro -%}
+
+{%- macro select(big, small) -%}
+  select_{{small}}_from_{{big}}
+{%- endmacro -%}
+
+{%- macro convert(big, small, num_words) -%}
+
+  function method {:opaque} {{ select(big, small) }}(x: uint{{big}}, sel: nat): uint{{small}}
+    requires sel < {{num_words}}
+  {
+    if sel == 0 then ((x as bv{{big}}) as int) % BASE_{{small}}
+    {%- for n in range(1, num_words-1) %}
+    else if sel == {{n}} then ((x as bv{{big}} >> {{n * small}}) as int) % BASE_{{small}}
+    {%- endfor %}
+    else ((x as bv{{big}} >> {{(num_words - 1) * small}}) as int) % BASE_{{small}}
+  }
+
+  function method {:opaque} {{ assemble(big, small) }}(
+    {%- for n in range(0, num_words) %}
+    p{{n}}: uint{{small}} {{- ", " if not loop.last -}}
+    {%- endfor %}): uint{{big}}
+  {
+    ((p{{0}} as bv{{big}})
+    {%- for n in range(1, num_words) %}
+    |(p{{n}} as bv{{big}} << {{n * small}})
+    {%- endfor -%}
+    ) as uint{{big}}
+  }
+
+  lemma {:axiom} value_{{big}}_from_{{small}}(x: uint{{big}})
+    ensures x == {{ assemble(big, small) }}(
+  {%- for n in range(0, num_words) %}
+      {{ select(big, small) }}(x, {{n}}) {{- ", " if not loop.last -}}
+  {%- endfor %});
+{%- endmacro -%}
+
+include "../lib/generic_bv_ops.dfy"
+
+module flat {
+  import opened integers
+
+  const DMEM_LIMIT: int := {{limit}}
+
+  // basic map
+  type flat_t = map<int, uint{{base_size.num_bits}}>
+
+{% for item in sizes %}
+  predicate method ptr_admissible_{{item.num_bits}}(ptr: nat)
+  {
+    // {{item.uint_type}} ptr should be {{item.align}} bytes aligned
+    && ptr % {{item.align}} == 0
+    && (ptr + {{item.num_bytes}}) < DMEM_LIMIT
+  }
+
+  predicate method flat_ptr_valid_{{item.num_bits}}(flat: flat_t, ptr: nat)
+  {
+    && ptr_admissible_{{item.num_bits}}(ptr)
+  {%- for n in range(item.num_words) %}
+    && ptr + {{n * base_size.num_bytes}} in flat
+  {%- endfor %}
+  }
+
+  {{ convert(item.num_bits, base_size.num_bits, item.num_words) }}
+
+  function method flat_read_{{item.num_bits}}(flat: flat_t, ptr: nat): {{item.uint_type}}
+    requires flat_ptr_valid_{{item.num_bits}}(flat, ptr)
+  {
+  {%- for n in range(item.num_words) %}
+    var p{{n}} := flat[ptr + {{n * base_size.num_bytes}}];
+  {%- endfor %}
+    {{ assemble(item.num_bits, base_size.num_bits) }}(
+  {%- for n in range(item.num_words) -%}
+    p{{n}} {{- ", " if not loop.last -}}
+  {%- endfor %})
+  }
+
+  function method flat_write_{{item.num_bits}}(flat: flat_t, ptr: nat, x: {{item.uint_type}}): (new_flat: flat_t) 
+    requires ptr_admissible_{{item.num_bits}}(ptr)
+    ensures flat_ptr_valid_{{item.num_bits}}(new_flat, ptr)
+  {
+    flat
+  {%- for n in range(item.num_words) %}
+    [ptr + {{n * base_size.num_bytes}} := {{ select(item.num_bits, base_size.num_bits) }}(x, {{n}})]
+  {%- endfor %}
+  }
+
+  lemma flat_read_write_basic_{{item.num_bits}}(flat: flat_t, x: {{item.uint_type}}, ptr: nat)
+    requires ptr_admissible_{{item.num_bits}}(ptr)
+    ensures flat_read_{{item.num_bits}}(flat_write_{{item.num_bits}}(flat, ptr, x), ptr) == x
+  {
+    var new_flat := flat_write_{{item.num_bits}}(flat, ptr, x);
+    value_{{item.num_bits}}_from_{{base_size.num_bits}}(x);
+    assert flat_read_{{item.num_bits}}(new_flat, ptr) == x;
+  }
+{%- endfor %}
+
+}

@@ -1,0 +1,595 @@
+include "stack.dfy"
+
+module mem {
+  import opened integers
+  import opened flat
+  import opened stack
+
+  datatype entry_t = 
+    | {{base_size.cons}}({{base_size.name}}: {{base_size.uint_type}})
+    | {{buff_item.cons}}({{buff_item.cons}}: seq<{{buff_item.uint_type}}>)
+
+  type heap_t = map<int, entry_t>
+
+  function heap_{{buff_item.cons}}_index_ptr(ptr: nat, i: nat): nat
+  {
+    ptr + {{buff_item.num_bytes}} * i
+  }
+
+  predicate heap_{{buff_item.cons}}_ptr_valid(heap: heap_t, base_ptr: nat)
+  {
+    && ptr_admissible_{{buff_item.num_bits}}(base_ptr)
+    && base_ptr in heap
+    && heap[base_ptr].{{buff_item.cons}}?
+    && var len := |heap[base_ptr].{{buff_item.cons}}|;
+    //  the buffer is not empty
+    && len != 0
+    // end of buffer is in bound
+    && ptr_admissible_{{buff_item.num_bits}}(heap_{{buff_item.cons}}_index_ptr(base_ptr, len - 1))
+  }
+
+  // this holds for each {{buff_item.uint_type}} in a {{buff_item.cons}} heaplet entry
+  predicate heap_{{buff_item.num_bits}}_inv(heap: heap_t, flat: flat_t, base_ptr: nat, i: nat)
+    requires heap_{{buff_item.cons}}_ptr_valid(heap, base_ptr)
+    requires i < |heap[base_ptr].{{buff_item.cons}}|
+  {
+    var ptr := heap_{{buff_item.cons}}_index_ptr(base_ptr, i);
+    // ptr points to some {{buff_item.uint_type}}, which has 8 base words {{base_size.uint_type}}
+    && flat_ptr_valid_{{buff_item.num_bits}}(flat, ptr)
+    && flat_read_{{buff_item.num_bits}}(flat, ptr) == heap[base_ptr].{{buff_item.cons}}[i]
+    // disjointness
+    && (i != 0 ==> ptr !in heap)
+    {%- for n in range(1, buff_item.num_words) %}
+    && ptr + {{ n * base_size.num_bytes }} !in heap
+    {%- endfor %}
+    {%- for n in range(0, buff_item.num_words) %}
+    && !in_stack_addr_range(ptr + {{ n * base_size.num_bytes }})
+    && ptr + {{ n * base_size.num_bytes }} !in heap
+    {%- endfor %}
+  }
+
+  // this holds for each {{buff_item.cons}} heaplet entry
+  predicate heap_{{buff_item.cons}}_inv(heap: heap_t, flat: flat_t, base_ptr: nat)
+    requires heap_{{buff_item.cons}}_ptr_valid(heap, base_ptr)
+  {
+    forall i | 0 <= i < |heap[base_ptr].{{buff_item.cons}}| ::
+      heap_{{buff_item.num_bits}}_inv(heap, flat, base_ptr, i)
+  }
+
+  function heap_{{buff_item.cons}}_write(heap: heap_t, iter: {{buff_item.cons}}_iter, value: {{buff_item.uint_type}}): heap_t
+    requires {{buff_item.cons}}_iter_safe(heap, iter)
+  {
+    var buff := heap[iter.base_ptr].{{buff_item.cons}};
+    var new_buff := buff[iter.index := value];
+    heap[iter.base_ptr := {{buff_item.cons}}(new_buff)]
+  }
+
+  // iterator for buffer entries
+  datatype {{buff_item.cons}}_iter = {{buff_item.cons}}_iter_cons(base_ptr: nat, index: nat,
+    ptr: nat, buff: seq<{{buff_item.uint_type}}>)
+
+  function {{buff_item.cons}}_iter_load_next(iter: {{buff_item.cons}}_iter, inc: bool): {{buff_item.cons}}_iter
+  {
+    iter.(index := if inc then iter.index + 1 else iter.index)
+  }
+
+  function {{buff_item.cons}}_iter_store_next(iter: {{buff_item.cons}}_iter, value: {{buff_item.uint_type}}, inc: bool): {{buff_item.cons}}_iter
+    requires iter.index < |iter.buff|
+  {
+      iter.(index := if inc then iter.index + 1 else iter.index)
+          .(buff := iter.buff[iter.index := value])
+  }
+
+  predicate {{buff_item.cons}}_iter_inv(heap: heap_t, iter: {{buff_item.cons}}_iter)
+  {
+    var base_ptr := iter.base_ptr;
+    // base_ptr points to a valid buffer
+    && heap_{{buff_item.cons}}_ptr_valid(heap, base_ptr)
+    // ptr is correct
+    && iter.ptr == heap_{{buff_item.cons}}_index_ptr(base_ptr, iter.index)
+    // the view is consistent with heap
+    && heap[base_ptr].{{buff_item.cons}} == iter.buff
+    // the index is within bound (or at end)
+    && iter.index <= |iter.buff|
+  }
+
+  predicate {{buff_item.cons}}_iter_safe(heap: heap_t, iter: {{buff_item.cons}}_iter)
+  {
+    && {{buff_item.cons}}_iter_inv(heap, iter)
+    // tighter constraint so we can dereference
+    && iter.index < |iter.buff|
+  }
+
+  // valid pointer for {{base_size.cons}} heaplet entry
+  predicate heap_{{base_size.name}}_ptr_valid(heap: heap_t, base_ptr: nat)
+  {
+    && ptr_admissible_{{base_size.num_bits}}(base_ptr)
+    && base_ptr in heap
+    && heap[base_ptr].{{base_size.cons}}?
+  }
+
+  function heap_{{base_size.name}}_write(heap: heap_t, ptr: nat, value: {{base_size.uint_type}}): heap_t
+    requires heap_{{base_size.name}}_ptr_valid(heap, ptr)
+  {
+    heap[ptr := {{base_size.cons}}(value)]
+  }
+
+  // this holds for each {{base_size.cons}} heaplet entry
+  predicate heap_{{base_size.name}}_inv(heap: heap_t, flat: flat_t, ptr: nat)
+    requires heap_{{base_size.name}}_ptr_valid(heap, ptr)
+  {
+    && flat_ptr_valid_{{base_size.num_bits}}(flat, ptr)
+    && heap[ptr].{{base_size.name}} == flat_read_{{base_size.num_bits}}(flat, ptr)
+    // disjointness from stack
+    && !in_stack_addr_range(ptr)
+  }
+
+  predicate stack_addrs_valid(flat: flat_t)
+  {
+    forall i | 0 <= i < STACK_MAX_WORDS() ::
+      flat_ptr_valid_{{base_size.num_bits}}(flat, stack_index_to_ptr(i))
+  }
+
+  function {:opaque} get_stack(flat: flat_t): (stack: seq<{{base_size.uint_type}}>)
+    requires stack_addrs_valid(flat)
+    ensures |stack| ==  STACK_MAX_WORDS()
+  {
+    seq(STACK_MAX_WORDS(),
+      n requires 0 <= n < STACK_MAX_WORDS() =>
+        flat_read_{{base_size.num_bits}}(flat, stack_index_to_ptr(n)))
+  }
+
+  datatype imem_t = imem_cons(heap: heap_t, stack: seq<{{base_size.uint_type}}>)
+  {
+    predicate stack_inv(flat: flat_t)
+    {
+      && stack_addrs_valid(flat)
+      && stack == get_stack(flat)
+      && (forall i | 0 <= i < STACK_MAX_WORDS() ::
+        stack_index_to_ptr(i) !in heap)
+    }
+
+    // the equivalence invariant between heaplet and memory
+    predicate inv(flat: flat_t)
+    {
+      && (forall base_ptr | heap_{{buff_item.cons}}_ptr_valid(heap, base_ptr) ::
+        heap_{{buff_item.cons}}_inv(heap, flat, base_ptr))
+      && (forall base_ptr | heap_{{base_size.name}}_ptr_valid(heap, base_ptr) ::
+        heap_{{base_size.name}}_inv(heap, flat, base_ptr))
+      && stack_inv(flat)
+    }
+
+    function stack_write(i: nat, value: {{base_size.uint_type}}): imem_t
+      requires i < |stack|
+    {
+      this.(stack := stack[i:= value])
+    }
+
+    lemma sub_ptrs_disjoint(flat: flat_t, base1: nat, base2: nat)
+      requires inv(flat)
+      requires heap_{{buff_item.cons}}_ptr_valid(heap, base1)
+      requires heap_{{buff_item.cons}}_ptr_valid(heap, base2)
+      requires base1 != base2
+      ensures forall i, j ::
+        (0 <= i < |heap[base1].{{buff_item.cons}}| && 0 <= j < |heap[base2].{{buff_item.cons}}|)
+          ==> 
+        (heap_{{buff_item.cons}}_index_ptr(base1, i) != heap_{{buff_item.cons}}_index_ptr(base2, j))
+    {
+      var heap := heap;
+      if exists i, j ::
+        && 0 <= i < |heap[base1].{{buff_item.cons}}|
+        && 0 <= j < |heap[base2].{{buff_item.cons}}|
+        && heap_{{buff_item.cons}}_index_ptr(base1, i) == heap_{{buff_item.cons}}_index_ptr(base2, j)
+      {
+        var i, j :|
+          && 0 <= i < |heap[base1].{{buff_item.cons}}|
+          && 0 <= j < |heap[base2].{{buff_item.cons}}|
+          && heap_{{buff_item.cons}}_index_ptr(base1, i) == heap_{{buff_item.cons}}_index_ptr(base2, j);
+        assert base1 + {{buff_item.num_bytes}} * i == base2 + {{buff_item.num_bytes}} * j;
+        var buff1 := heap[base1].{{buff_item.cons}};
+        var buff2 := heap[base2].{{buff_item.cons}};
+
+        if base1 > base2 {
+          assert heap_{{buff_item.cons}}_inv(heap, flat, base2);
+          var k := j - i;
+          assert base1 == heap_{{buff_item.cons}}_index_ptr(base2, k);
+          assert 0 <= k < |buff2|;
+          assert heap_{{buff_item.num_bits}}_inv(heap, flat, base2, k);
+          assert base1 !in heap;
+          assert false;
+        } else {
+          assert heap_{{buff_item.cons}}_inv(heap, flat, base1);
+          var k := i - j;
+          assert base2 == heap_{{buff_item.cons}}_index_ptr(base1, k);
+          assert 0 <= k < |buff1|;
+          assert heap_{{buff_item.num_bits}}_inv(heap, flat, base1, k);
+          assert base2 !in heap;
+          assert false;
+        }
+      }
+    }
+
+    lemma heap_{{buff_item.cons}}_write_preserves_{{buff_item.cons}}_inv(
+      flat: flat_t, new_flat: flat_t,
+      iter: {{buff_item.cons}}_iter, value: {{buff_item.uint_type}},
+      other_ptr: nat)
+
+      requires inv(flat)
+      requires {{buff_item.cons}}_iter_safe(heap, iter)
+      requires new_flat == flat_write_{{buff_item.num_bits}}(flat, iter.ptr, value)
+      requires heap_{{buff_item.cons}}_ptr_valid(heap, other_ptr)
+
+      ensures heap_{{buff_item.cons}}_inv(heap_{{buff_item.cons}}_write(heap, iter, value),
+        flat_write_{{buff_item.num_bits}}(flat, iter.ptr, value), other_ptr)
+    {
+      var new_heap := heap_{{buff_item.cons}}_write(heap, iter, value);
+      var base_ptr, j := iter.base_ptr, iter.index;
+      var buff := heap[other_ptr].{{buff_item.cons}};
+      var len := |buff|;
+
+      if other_ptr == base_ptr {
+        forall i | 0 <= i < len
+          ensures heap_{{buff_item.num_bits}}_inv(new_heap, new_flat, base_ptr, i)
+        {
+          assert heap_{{buff_item.num_bits}}_inv(heap, flat, base_ptr, i);
+          if i == j {
+            value_{{buff_item.num_bits}}_from_{{base_size.num_bits}}(value);
+            assert heap_{{buff_item.num_bits}}_inv(new_heap, new_flat, base_ptr, i);
+          }
+        }
+      } else {
+        forall i | 0 <= i < len
+          ensures heap_{{buff_item.num_bits}}_inv(new_heap, new_flat, other_ptr, i)
+        {
+          assert heap_{{buff_item.num_bits}}_inv(heap, flat, other_ptr, i);
+          var ptr := heap_{{buff_item.cons}}_index_ptr(other_ptr, i);
+          assert flat_ptr_valid_{{buff_item.num_bits}}(new_flat, ptr);
+          assert ptr != iter.ptr by {
+            sub_ptrs_disjoint(flat, other_ptr, base_ptr);
+          }
+          assert flat_read_{{buff_item.num_bits}}(new_flat, ptr) == buff[i];
+        }
+      }
+      assert heap_{{buff_item.cons}}_inv(heap, flat, other_ptr);
+    }
+
+    lemma heap_{{buff_item.cons}}_write_preserves_stack_inv(
+      flat: flat_t, new_flat: flat_t,
+      iter: {{buff_item.cons}}_iter, value: {{buff_item.uint_type}})
+
+      requires inv(flat)
+      requires {{buff_item.cons}}_iter_safe(heap, iter)
+      requires new_flat == flat_write_{{buff_item.num_bits}}(flat, iter.ptr, value)
+
+      ensures this.(heap := heap_{{buff_item.cons}}_write(heap, iter, value)).stack_inv(new_flat)
+    {
+      var new_heap := heap_{{buff_item.cons}}_write(heap, iter, value);
+      var new_mem := this.(heap := new_heap);
+  
+      assert (this.(heap := new_heap)).stack_inv(new_flat) by {
+        forall n | 0 <= n < STACK_MAX_WORDS()
+          ensures flat_read_{{base_size.num_bits}}(flat, stack_index_to_ptr(n))
+            == 
+          flat_read_{{base_size.num_bits}}(new_flat, stack_index_to_ptr(n))
+        {
+          var ptr := stack_index_to_ptr(n);
+          if flat[ptr] != new_flat[ptr] {
+            assert heap_{{buff_item.num_bits}}_inv(heap, flat, iter.base_ptr, iter.index);
+            assert false;
+          }
+        }
+        reveal get_stack();
+      }
+    }
+
+    lemma heap_{{buff_item.cons}}_write_preserves_{{base_size.name}}_inv(
+      flat: flat_t, new_flat: flat_t,
+      iter: {{buff_item.cons}}_iter, value: {{buff_item.uint_type}}, other_ptr: nat)
+
+      requires inv(flat)
+      requires {{buff_item.cons}}_iter_safe(heap, iter)
+      requires new_flat == flat_write_{{buff_item.num_bits}}(flat, iter.ptr, value)
+      requires heap_{{base_size.name}}_ptr_valid(heap, other_ptr)
+
+      ensures heap_{{base_size.name}}_inv(heap_{{buff_item.cons}}_write(heap, iter, value), new_flat, other_ptr)
+    {
+      if flat[other_ptr] != new_flat[other_ptr] {
+        assert heap_{{buff_item.num_bits}}_inv(heap, flat, iter.base_ptr, iter.index);
+        assert false;
+      }
+    }
+  
+    lemma heap_{{buff_item.cons}}_write_preverses_inv(
+      flat: flat_t, new_flat: flat_t,
+      iter: {{buff_item.cons}}_iter, value: {{buff_item.uint_type}})
+
+      requires inv(flat)
+      requires {{buff_item.cons}}_iter_safe(heap, iter)
+      requires new_flat == flat_write_{{buff_item.num_bits}}(flat, iter.ptr, value)
+
+      ensures this.(heap := heap_{{buff_item.cons}}_write(heap, iter, value)).inv(new_flat)
+    {
+      var new_heap := heap_{{buff_item.cons}}_write(heap, iter, value);
+      var new_mem := this.(heap := new_heap);
+
+      forall base_ptr | heap_{{buff_item.cons}}_ptr_valid(new_heap, base_ptr)
+        ensures heap_{{buff_item.cons}}_inv(new_heap, new_flat, base_ptr)
+      {
+        heap_{{buff_item.cons}}_write_preserves_{{buff_item.cons}}_inv(flat, new_flat, iter, value, base_ptr);
+      }
+      forall base_ptr | heap_{{base_size.name}}_ptr_valid(new_heap, base_ptr)
+        ensures heap_{{base_size.name}}_inv(new_heap, new_flat, base_ptr)
+      {
+        heap_{{buff_item.cons}}_write_preserves_{{base_size.name}}_inv(flat, new_flat, iter, value, base_ptr);
+      }
+
+      heap_{{buff_item.cons}}_write_preserves_stack_inv(
+        flat, new_flat, iter, value);
+    }
+
+    lemma heap_{{base_size.name}}_write_preserves_{{buff_item.cons}}_inv(
+      flat: flat_t, new_flat: flat_t,
+      write_ptr: nat, value: {{base_size.uint_type}}, other_ptr: nat)
+
+      requires inv(flat)
+      requires heap_{{base_size.name}}_ptr_valid(heap, write_ptr)
+      requires new_flat == flat_write_{{base_size.num_bits}}(flat, write_ptr, value)
+
+      requires heap_{{buff_item.cons}}_ptr_valid(heap, other_ptr)
+
+      ensures heap_{{buff_item.cons}}_inv(heap_{{base_size.name}}_write(heap, write_ptr, value), new_flat, other_ptr)
+    {
+      var new_heap := heap_{{base_size.name}}_write(heap, write_ptr, value);
+      assert heap_{{buff_item.cons}}_inv(heap, flat, other_ptr);
+      var buff := heap[other_ptr].{{buff_item.cons}};
+      forall i | 0 <= i < |buff| 
+        ensures heap_{{buff_item.num_bits}}_inv(new_heap, new_flat, other_ptr, i)
+      {
+        assert heap_{{buff_item.num_bits}}_inv(heap, flat, other_ptr, i);
+      }
+    }
+
+    lemma heap_{{base_size.name}}_write_preserves_{{base_size.name}}_inv(
+      flat: flat_t, new_flat: flat_t,
+      write_ptr: nat, value: {{base_size.uint_type}}, other_ptr: nat)
+
+      requires inv(flat)
+      requires heap_{{base_size.name}}_ptr_valid(heap, write_ptr)
+      requires new_flat == flat_write_{{base_size.num_bits}}(flat, write_ptr, value)
+
+      requires heap_{{base_size.name}}_ptr_valid(heap, other_ptr)
+
+      ensures heap_{{base_size.name}}_inv(heap_{{base_size.name}}_write(heap, write_ptr, value), new_flat, other_ptr)
+    {
+      if other_ptr == write_ptr {
+        value_{{base_size.num_bits}}_from_{{base_size.num_bits}}(value);
+      }
+    }
+
+    lemma heap_{{base_size.name}}_write_preserves_stack_inv(
+      flat: flat_t, new_flat: flat_t,
+      value: {{base_size.uint_type}}, write_ptr: nat)
+
+      requires inv(flat)
+      requires heap_{{base_size.name}}_ptr_valid(heap, write_ptr)
+      requires new_flat == flat_write_{{base_size.num_bits}}(flat, write_ptr, value)
+
+      ensures this.(heap := heap_{{base_size.name}}_write(heap, write_ptr, value)).stack_inv(new_flat)
+    {
+      var new_heap := heap_{{base_size.name}}_write(heap, write_ptr, value);
+  
+      assert (this.(heap := new_heap)).stack_inv(new_flat) by {
+        reveal get_stack();
+      }
+    }
+
+    lemma heap_{{base_size.name}}_write_preverses_inv(
+      flat: flat_t, new_flat: flat_t,
+      write_ptr: nat, value: {{base_size.uint_type}})
+
+      requires inv(flat)
+      requires heap_{{base_size.name}}_ptr_valid(heap, write_ptr)
+      requires new_flat == flat_write_{{base_size.num_bits}}(flat, write_ptr, value)
+
+      ensures this.(heap := heap_{{base_size.name}}_write(heap, write_ptr, value)).inv(new_flat)
+    {
+      var new_heap := heap_{{base_size.name}}_write(heap, write_ptr, value);
+
+      forall base_ptr | heap_{{buff_item.cons}}_ptr_valid(new_heap, base_ptr)
+        ensures heap_{{buff_item.cons}}_inv(new_heap, new_flat, base_ptr)
+      {
+        heap_{{base_size.name}}_write_preserves_{{buff_item.cons}}_inv(flat, new_flat, write_ptr, value, base_ptr);
+      }
+      forall base_ptr | heap_{{base_size.name}}_ptr_valid(new_heap, base_ptr)
+        ensures heap_{{base_size.name}}_inv(new_heap, new_flat, base_ptr)
+      {
+        heap_{{base_size.name}}_write_preserves_{{base_size.name}}_inv(flat, new_flat, write_ptr, value, base_ptr);
+      }
+      heap_{{base_size.name}}_write_preserves_stack_inv(flat, new_flat, value, write_ptr);
+    }
+
+    lemma stack_write_preserves_{{buff_item.cons}}_inv(
+      flat: flat_t, new_flat: flat_t,
+      index: nat, value: {{base_size.uint_type}}, base_ptr: nat)
+
+      requires inv(flat)
+      requires index < |stack|
+      requires new_flat == flat_write_{{base_size.num_bits}}(flat, stack_index_to_ptr(index), value)
+      requires heap_{{buff_item.cons}}_ptr_valid(heap, base_ptr)
+  
+      ensures heap_{{buff_item.cons}}_inv(heap, new_flat, base_ptr)
+    {
+      var buff := heap[base_ptr].{{buff_item.cons}};
+      var new_buff := heap[base_ptr].{{buff_item.cons}};
+  
+      forall i | 0 <= i < |new_buff|
+        ensures heap_{{buff_item.num_bits}}_inv(heap, new_flat, base_ptr, i) 
+      {
+        assert heap_{{buff_item.num_bits}}_inv(heap, flat, base_ptr, i);
+      }
+    }
+
+    lemma stack_write_preserves_{{base_size.name}}_inv(
+      flat: flat_t, new_flat: flat_t,
+      index: nat, value: {{base_size.uint_type}},
+      other_ptr: nat)
+
+      requires inv(flat)
+      requires index < |stack|
+      requires new_flat == flat_write_{{base_size.num_bits}}(flat, stack_index_to_ptr(index), value)
+      requires heap_{{base_size.name}}_ptr_valid(heap, other_ptr)
+
+      ensures heap_{{base_size.name}}_inv(heap, new_flat, other_ptr)
+    {
+    }
+
+    lemma stack_write_preserves_stack_inv(
+      flat: flat_t, new_flat: flat_t,
+      index: nat, value: {{base_size.uint_type}})
+
+      requires inv(flat)
+      requires index < |stack|
+      requires new_flat == flat_write_{{base_size.num_bits}}(flat, stack_index_to_ptr(index), value)
+  
+      ensures this.(stack := stack[index := value]).stack_inv(new_flat)
+    {
+      var new_stack := stack[index := value];
+      reveal get_stack();
+      value_{{base_size.num_bits}}_from_{{base_size.num_bits}}(value);
+      assert get_stack(new_flat) == new_stack;
+    }
+
+    lemma stack_write_preverses_inv(
+      flat: flat_t, new_flat: flat_t,
+      index: nat, value: {{base_size.uint_type}})
+
+      requires inv(flat)
+      requires index < |stack|
+      requires new_flat == flat_write_{{base_size.num_bits}}(flat, stack_index_to_ptr(index), value)
+
+      ensures this.(stack := stack[index := value]).inv(new_flat)
+    {
+      forall base_ptr | heap_{{buff_item.cons}}_ptr_valid(heap, base_ptr)
+        ensures heap_{{buff_item.cons}}_inv(heap, new_flat, base_ptr)
+      {
+        stack_write_preserves_{{buff_item.cons}}_inv(flat, new_flat, index, value, base_ptr);
+      }
+      
+      forall base_ptr | heap_{{base_size.name}}_ptr_valid(heap, base_ptr)
+        ensures heap_{{base_size.name}}_inv(heap, new_flat, base_ptr)
+      {
+        stack_write_preserves_{{base_size.name}}_inv(flat, new_flat, index, value, base_ptr);
+      }
+    
+      stack_write_preserves_stack_inv(flat, new_flat,
+        index, value);
+    }
+  }
+
+  datatype mem_t = mem_cons(heap: heap_t, frames: frames_t)
+  {
+    function as_imem(flat: flat_t): imem_t
+      requires stack_addrs_valid(flat)
+    {
+      imem_cons(heap, get_stack(flat))
+    }
+
+    predicate inv(flat: flat_t)
+    {
+      && stack_addrs_valid(flat)
+      && as_imem(flat).inv(flat)
+      && frames.frames_inv(get_stack(flat))
+    }
+
+    function push(flat: flat_t, num_words: {{base_size.uint_type}}): mem_t
+      requires inv(flat)
+      requires in_stack_addr_range(frames.sp - num_words * {{base_size.num_bytes}})
+    {
+      var stack := get_stack(flat);
+      this.(frames := frames.push(num_words, stack))
+    }
+
+    lemma push_preserves_inv(flat: flat_t, num_words: {{base_size.uint_type}})
+      requires push.requires(flat, num_words)
+      ensures push(flat, num_words).inv(flat)
+    {
+      frames.push_preserves_inv(num_words, get_stack(flat));
+    }
+
+    lemma heap_{{buff_item.cons}}_write_preverses_inv(
+      flat: flat_t, iter: {{buff_item.cons}}_iter, value: {{buff_item.uint_type}})
+
+      requires inv(flat)
+      requires {{buff_item.cons}}_iter_safe(heap, iter)
+
+      ensures this.(heap := heap_{{buff_item.cons}}_write(heap, iter, value)).
+        inv(flat_write_{{buff_item.num_bits}}(flat, iter.ptr, value))
+    {
+      var new_flat := flat_write_{{buff_item.num_bits}}(flat, iter.ptr, value);
+      as_imem(flat).heap_{{buff_item.cons}}_write_preverses_inv(flat, new_flat,
+        iter, value);
+    }
+
+    lemma heap_{{base_size.name}}_write_preverses_inv(
+      flat: flat_t, write_ptr: nat, value: {{base_size.uint_type}})
+    
+      requires inv(flat)
+      requires heap_{{base_size.name}}_ptr_valid(heap, write_ptr)
+      ensures this.(heap := heap_{{base_size.name}}_write(heap, write_ptr, value)).
+        inv(flat_write_{{base_size.num_bits}}(flat, write_ptr, value))
+    {
+      var new_flat := flat_write_{{base_size.num_bits}}(flat, write_ptr, value);
+      as_imem(flat).heap_{{base_size.name}}_write_preverses_inv(flat, new_flat,
+        write_ptr, value);
+    }
+
+    function frames_write(index: nat, value: {{base_size.uint_type}}): mem_t
+      requires frames.write.requires(index, value)
+    {
+      this.(frames := frames.write(index, value))
+    }
+
+    lemma frames_write_preverses_inv(
+      flat: flat_t, index: nat, value: {{base_size.uint_type}})
+    
+      requires inv(flat)
+      requires frames.write.requires(index, value)
+
+      ensures in_stack_addr_range(frames.sp + index * {{base_size.num_bytes}})
+      ensures frames_write(index, value).
+        inv(flat_write_{{base_size.num_bits}}(flat, frames.sp + index * {{base_size.num_bytes}}, value))
+    {
+      var new_mem := frames_write(index, value);
+      var stack_index := ptr_to_stack_index(frames.sp) + index;
+      var write_ptr := stack_index_to_ptr(stack_index);
+
+      calc == {
+        write_ptr;
+        STACK_END() + (ptr_to_stack_index(frames.sp) + index) * {{base_size.num_bytes}};
+        {
+          Mul.LemmaMulIsDistributiveAddAuto();
+        }
+        STACK_END() + ptr_to_stack_index(frames.sp) * {{base_size.num_bytes}} + index * {{base_size.num_bytes}};
+        STACK_END() + ((frames.sp - STACK_END()) / {{base_size.num_bytes}}) * {{base_size.num_bytes}} + index * {{base_size.num_bytes}};
+        {
+          assert DivMod.IsModEquivalent(frames.sp, STACK_END(), {{base_size.num_bytes}});  // pain
+          LemmaDivMulNop(frames.sp - STACK_END(), {{base_size.num_bytes}}); 
+        }
+        frames.sp + index * {{base_size.num_bytes}};
+      }
+
+      var new_flat := flat_write_{{base_size.num_bits}}(flat, frames.sp + index * {{base_size.num_bytes}}, value);
+      var stack := get_stack(flat);
+
+      frames.write_preserves_inv(stack, index, value);
+
+      assert new_mem.frames.
+        frames_inv(stack[stack_index := value]);
+
+      as_imem(flat).stack_write_preverses_inv(flat, new_flat,
+        stack_index, value);
+
+      assert as_imem(flat).(stack := stack[stack_index := value]).inv(new_flat);
+    }
+  }
+}

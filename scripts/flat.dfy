@@ -8,6 +8,7 @@ module flat {
   // basic map
   type flat_t = map<int, uint32>
 
+
   predicate method ptr_admissible_32(ptr: nat)
   {
     // uint32 ptr should be 4 bytes aligned
@@ -162,4 +163,5 @@ module flat {
     value_256_from_32(x);
     assert flat_read_256(new_flat, ptr) == x;
   }
+
 }
