@@ -7,6 +7,8 @@ module ot_decls {
     import opened ot_machine
     import opened ot_abstraction
     import opened ot_vale
+    import opened mem
+    import opened flat
 
 #endverbatim
 
@@ -52,8 +54,16 @@ const BASE_512: nat extern;
 const NUM_WORDS:nat extern;
 
 type state: Type(0) {: primitive} extern;
-function operator(.heap) (s: state): heap_t extern;
-function operator(.heap := ) (s: state, heap: heap_t): state extern;
+
+type mem_t: Type(0) extern;
+var mem: mem_t {:state mem()};
+function operator(.mem) (s: state): mem_t extern;
+function operator(.mem := ) (s: state, mem: mem_t): state extern;
+
+type flat_t: Type(0) extern;
+var flat: flat_t {:state flat()};
+function operator(.flat) (s: state): flat_t extern;
+function operator(.flat := ) (s: state, flat: mem_t): state extern;
 
 type reg32_t: Type(0) extern;
 function operator(.index) (r :reg32_t): nat extern;
@@ -63,20 +73,19 @@ function operator(.index) (r :reg256_t): nat extern;
 function is_wide_data_register(r: reg256_t): bool extern;
 
 type entry_t: Type(0) extern;
-function XWORD(v: uint32): entry_t extern;
-function WBUFF(b: seq(uint256)): entry_t extern;
-function operator(.v) (e :entry_t): uint32 extern;
-function operator(.b) (e :entry_t): seq(uint256) extern;
+function W32(v: uint32): entry_t extern;
+function B256(b: seq(uint256)): entry_t extern;
+function operator(.w32) (e :entry_t): uint32 extern;
+function operator(.b256) (e :entry_t): seq(uint256) extern;
 
 type heap_t:  Type(0) := map(int, entry_t);
 var heap: heap_t {:state heap()};
-function xword_ptr_valid(heap: heap_t, ptr: int): bool extern;
+function heap_w32_ptr_valid(heap: heap_t, ptr: int): bool extern;
 function buff_base_ptr_valid(heap: heap_t, ptr: nat): bool extern;
-function heap_read_xword(heap: heap_t, ptr: int): uint32 extern;
-function heap_write_xword(heap: heap_t, ptr: int, value: uint32): heap_t extern;
+function heap_w32_read(heap: heap_t, ptr: int): uint32 extern;
+function heap_w32_write(heap: heap_t, ptr: int, value: uint32): heap_t extern;
 
-type mem_t: Type(0) extern;
-var mem: mem_t {:state mem()};
+function heap_B256_write(heap: heap_t, iter: iter_t, value: uint256): heap_t extern;
 
 function buff_base_addr_valid(heap: heap_t, ptr: int): bool extern;
 
@@ -132,6 +141,8 @@ function operator(.index) (iter :iter_t): int extern;
 function operator(.index := ) (iter: iter_t, i :int): iter_t extern;
 function operator(.buff) (iter :iter_t): seq(uint256) extern;
 function operator(.buff := ) (iter :iter_t, buff: seq(uint256)): iter_t extern;
+function operator(.ptr) (iter :iter_t): int extern;
+function operator(.ptr := ) (iter :iter_t, ptr: int): iter_t extern;
 
 function iter_inv(iter: iter_t, h: heap_t, ptr: int): bool extern;
 function iter_safe(iter: iter_t, h: heap_t, ptr: int): bool extern;
@@ -326,32 +337,32 @@ procedure lw(out grd: reg32, inline offset: int12, in grs1: reg32)
     reads
         heap;
     requires
-        xword_ptr_valid(heap, uint32_addi(grs1, offset));
+        heap_w32_ptr_valid(heap, uint32_addi(grs1, offset));
     ensures
-        xword_ptr_valid(heap, uint32_addi(old(grs1), offset));
-        grd == heap_read_xword(heap, uint32_addi(old(grs1), offset));
+        heap_w32_ptr_valid(heap, uint32_addi(old(grs1), offset));
+        grd == heap_w32_read(heap, uint32_addi(old(grs1), offset));
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
-    this := this.(heap := old(this).heap);
+    this := this.(mem := old(this).mem);
 }
 
-function sw_correct(gs: state, grs2: reg32_t, offset: int12, grs1: reg32_t, write_ptr: uint32): (new_heap: heap_t) extern;
+function sw_correct(gs: state, grs2: reg32_t, offset: int12, grs1: reg32_t, write_ptr: uint32):  (new_mem: mem_t) extern;
 
 procedure sw(in grs2: reg32, inline offset: int12, in grs1: reg32)
     {:instruction Ins32(SW(grs2, offset, grs1))}
     modifies
-        heap; mem;
+        heap; mem; flat;
     requires
-        xword_ptr_valid(heap, uint32_addi(grs1, offset));
+        heap_w32_ptr_valid(heap, uint32_addi(grs1, offset));
     ensures
-        xword_ptr_valid(old(heap), uint32_addi(grs1, offset));
-        heap == heap_write_xword(old(heap), uint32_addi(grs1, offset), grs2);
+        heap_w32_ptr_valid(old(heap), uint32_addi(grs1, offset));
+        heap == heap_w32_write(old(heap), uint32_addi(grs1, offset), grs2);
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
-    let new_heap := sw_correct(old(this), @grs2, offset, @grs1, uint32_addi(grs1, offset));
-    this := this.(heap := new_heap);
+    let new_mem := sw_correct(old(this), @grs2, offset, @grs1, uint32_addi(grs1, offset));
+    this := this.(mem := new_mem);
 }
 
 procedure add(inout dst: reg32, in src1: reg32, in src2: reg32)
@@ -361,7 +372,7 @@ procedure add(inout dst: reg32, in src1: reg32, in src2: reg32)
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
-    this := this.(heap := old(this).heap);
+    this := this.(mem := old(this).mem);
 }
 
 procedure addi(inout dst: reg32, in src1: reg32, inline imm: int12)
@@ -371,7 +382,7 @@ procedure addi(inout dst: reg32, in src1: reg32, inline imm: int12)
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
-    this := this.(heap := old(this).heap);
+    this := this.(mem := old(this).mem);
 }
 
 procedure andi(inout dst: reg32, in src1: reg32, inline imm: int12)
@@ -381,7 +392,7 @@ procedure andi(inout dst: reg32, in src1: reg32, inline imm: int12)
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
-    this := this.(heap := old(this).heap);
+    this := this.(mem := old(this).mem);
 }
 
 procedure csrrs(inout grd: reg32, inline csr: uint12, in grs1: reg32)
@@ -394,7 +405,7 @@ procedure csrrs(inout grd: reg32, inline csr: uint12, in grs1: reg32)
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
-    this := this.(heap := old(this).heap);
+    this := this.(mem := old(this).mem);
 }
 
 procedure li(inout dst: reg32, inline imm: uint32)
@@ -404,7 +415,7 @@ procedure li(inout dst: reg32, inline imm: uint32)
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
-    this := this.(heap := old(this).heap);
+    this := this.(mem := old(this).mem);
 }
 
 procedure nop()
@@ -412,7 +423,7 @@ procedure nop()
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
-    this := this.(heap := old(this).heap);
+    this := this.(mem := old(this).mem);
 }
 
 procedure bn_add(inout dst: reg256, in src1: reg256, in src2: reg256, inline shift: shift_t, inline which_group: uint1)
@@ -426,7 +437,7 @@ procedure bn_add(inout dst: reg256, in src1: reg256, in src2: reg256, inline shi
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
-    this := this.(heap := old(this).heap);
+    this := this.(mem := old(this).mem);
 }
 
 procedure bn_addc(inout dst: reg256, in src1: reg256, in src2: reg256, inline shift: shift_t, inline which_group: uint1)
@@ -441,7 +452,7 @@ procedure bn_addc(inout dst: reg256, in src1: reg256, in src2: reg256, inline sh
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
-    this := this.(heap := old(this).heap);
+    this := this.(mem := old(this).mem);
 }
 
 procedure bn_addi(inout dst: reg256, in src: reg256, inline imm: uint10, inline which_group: uint1)
@@ -455,7 +466,7 @@ procedure bn_addi(inout dst: reg256, in src: reg256, inline imm: uint10, inline 
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
-    this := this.(heap := old(this).heap);
+    this := this.(mem := old(this).mem);
 }
 
 procedure bn_xor(inout dst: reg256, in src1: reg256, in src2: reg256, inline shift: shift_t, inline which_group: uint1)
@@ -470,7 +481,7 @@ procedure bn_xor(inout dst: reg256, in src1: reg256, in src2: reg256, inline shi
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
-    this := this.(heap := old(this).heap);
+    this := this.(mem := old(this).mem);
 }
 
 procedure bn_sub(inout dst: reg256, in src1: reg256, in src2: reg256, inline shift: shift_t, inline which_group: uint1)
@@ -484,7 +495,7 @@ procedure bn_sub(inout dst: reg256, in src1: reg256, in src2: reg256, inline shi
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
-    this := this.(heap := old(this).heap);
+    this := this.(mem := old(this).mem);
 }
 
 procedure bn_subb(inout dst: reg256, in src1: reg256, in src2: reg256, inline shift: shift_t, inline which_group: uint1)
@@ -499,7 +510,7 @@ procedure bn_subb(inout dst: reg256, in src1: reg256, in src2: reg256, inline sh
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
-    this := this.(heap := old(this).heap);
+    this := this.(mem := old(this).mem);
 }
 
 procedure bn_mulqacc(
@@ -514,7 +525,7 @@ procedure bn_mulqacc(
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
-    this := this.(heap := old(this).heap);
+    this := this.(mem := old(this).mem);
 }
 
 procedure bn_mulqacc_z(
@@ -529,7 +540,7 @@ procedure bn_mulqacc_z(
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
-    this := this.(heap := old(this).heap);
+    this := this.(mem := old(this).mem);
 }
 
 ghost procedure otbn_mulqacc_safe_correct_lemma(
@@ -578,7 +589,7 @@ procedure bn_mulqacc_so(
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
-    this := this.(heap := old(this).heap);
+    this := this.(mem := old(this).mem);
 }
 
 procedure bn_mulqacc_so_safe( 
@@ -613,7 +624,7 @@ function wwrod_offset_ptr(base: uint32, offset: int10): uint32 extern;
 function bn_lid_correct(s: state,
     grd: reg32_t, grd_inc: bool,
     offset: int10, grs: reg32_t, grs_inc: bool,
-    addr: uint32, iter: iter_t) : iter_t extern;
+    iter: iter_t) : iter_t extern;
 
 procedure bn_lid_safe(
     inout grd: reg32, inline grd_inc: bool,
@@ -631,7 +642,7 @@ procedure bn_lid_safe(
         let addr := wwrod_offset_ptr(grs, offset);
         iter_safe(iter, heap, addr);
     reads
-        mem; heap;
+        flat; heap;
     modifies
         wdrs;
     ensures
@@ -642,17 +653,16 @@ procedure bn_lid_safe(
         next_iter == bn_lid_next_iter(iter, grs_inc);
 {
     reveal eval_code_opaque;
-    let addr := wwrod_offset_ptr(old(grs), offset);
-    this := this.(heap := old(this).heap);
+    this := this.(mem := old(this).mem);
     next_iter := bn_lid_correct(old(this), @grd, grd_inc,
-        offset, @grs, grs_inc, addr, iter);
+        offset, @grs, grs_inc, iter);
 }
 
 function bn_sid_correct(gs: state, 
         grs2: reg32_t, grs2_inc: bool,
         offset: int10, grs1: reg32_t, grs1_inc: bool,
-        value: uint256, addr: uint32, iter: iter_t)
-    : tuple(heap_t, iter_t) extern;
+        value: uint256, iter: iter_t)
+    : tuple(mem_t, iter_t) extern;
 
 function heap_write_wword(heap: heap_t, iter: iter_t, ptr: nat, value: uint256): heap_t extern;
 
@@ -674,21 +684,19 @@ procedure bn_sid_safe(
     reads
         wdrs;
     modifies
-        mem; heap;
+        heap; flat;
     ensures
         grs1 == (if grs1_inc then (old(grs1) + 32) else old(grs1));
         grs2 == (if grs2_inc then (old(grs2) + 1) else old(grs2));
-        let addr := wwrod_offset_ptr(old(grs1), offset);
-        heap == old(heap)[iter.base_ptr := WBUFF(next_iter.buff)];
+        heap == heap_B256_write(old(heap), iter, wdrs[old(grs2)]);
         iter_inv(next_iter, heap, grs1 + offset);
         next_iter == bn_sid_next_iter(iter, wdrs[old(grs2)], grs1_inc);
 {
     reveal eval_code_opaque;
-    let addr := wwrod_offset_ptr(old(grs1), offset);
     let value := wdrs[old(grs2)];
     let result := bn_sid_correct(old(this), @grs2, grs2_inc,
-        offset, @grs1, grs1_inc, value, addr, iter);
-    this := this.(heap := fst(result));
+        offset, @grs1, grs1_inc, value, iter);
+    this := this.(mem := fst(result));
     next_iter := snd(result);
 }
 
@@ -699,7 +707,7 @@ procedure bn_mov(inout dst: reg256, in src: reg256)
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
-    this := this.(heap := old(this).heap);
+    this := this.(mem := old(this).mem);
 }
 
 // note that implicitly we are not using x0/x1 for inout 
@@ -718,7 +726,7 @@ procedure bn_movr(inout grd: reg32, inline grd_inc: bool, inout grs: reg32, inli
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
-    this := this.(heap := old(this).heap);
+    this := this.(mem := old(this).mem);
 }
 
 procedure bn_sel(inout dst: reg256, in src1: reg256, in src2: reg256, inline which_group: uint1, inline flag: uint2)
@@ -730,7 +738,7 @@ procedure bn_sel(inout dst: reg256, in src1: reg256, in src2: reg256, inline whi
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
-    this := this.(heap := old(this).heap);
+    this := this.(mem := old(this).mem);
 }
     
 procedure comment(inline comment: string)
@@ -738,7 +746,7 @@ procedure comment(inline comment: string)
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
-    this := this.(heap := old(this).heap);
+    this := this.(mem := old(this).mem);
 }
     
 #verbatim

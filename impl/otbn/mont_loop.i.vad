@@ -151,7 +151,7 @@ procedure mont_loop_0(
     reads
         x16;
         w3; w31;
-        mem; heap;
+        flat; heap;
 
     modifies
         x8; x10; x12; x13; x19; x22;
@@ -302,7 +302,7 @@ procedure mont_loop_1(
         w25 == ui;
         w31 == 0;
 
-        mem == old(mem);
+        flat == old(flat);
         heap == old(heap);
 
         valid_uint512_view(wdrs, next_p1, NA, 29);
@@ -406,7 +406,7 @@ procedure mont_loop(
 
         montmul_inv(next_view, x_it.buff, x_it.index, vars.y_it.buff, vars.rsa);
 
-        mem == old(mem);
+        flat == old(flat);
         heap == old(heap);
 {
     ghost var curr_view := prev_view;
@@ -457,7 +457,7 @@ procedure mont_loop(
             w25 == ui;
             w31 == 0;
 
-            mem == old(mem);
+            flat == old(flat);
             heap == old(heap);
 
             valid_uint512_view(wdrs, p1, NA, 29);
@@ -515,7 +515,7 @@ procedure mont_loop(
     next_view := curr_view;
 
     if (x2 != x0) {
-        m_it := iter_cons(x22, 0, heap[x22].b);
+        m_it := iter_cons(x22, 0, heap[x22].b256);
         next_view := sub_to_reg(curr_view, m_it);
     }
 

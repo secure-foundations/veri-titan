@@ -1,4 +1,4 @@
-include "flat.dfy"
+include "flat.s.dfy"
 
 module stack {
   import Mul
