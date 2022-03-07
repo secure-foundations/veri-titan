@@ -239,30 +239,14 @@ module ot_vale {
 
     predicate iter_safe(iter: iter_t, heap: heap_t, ptress: nat)
     {
-        && iter.ptr == ptress
+        && iter.cur_ptr() == ptress
         && b256_iter_safe(heap, iter)
     }
 
     predicate iter_inv(iter: iter_t, heap: heap_t, ptress: nat)
     {
-        && iter.ptr == ptress
+        && iter.cur_ptr() == ptress
         && b256_iter_inv(heap, iter)
-    }
-
-    function bn_lid_next_iter(iter: b256_iter, inc: bool): b256_iter
-    {
-        b256_iter_load_next(iter, inc)
-    }
-
-    function bn_sid_next_iter(iter: b256_iter, value: uint256, inc: bool): b256_iter
-        requires iter.index < |iter.buff|
-    {
-        b256_iter_store_next(iter, value, inc)
-    }
-
-    function iter_cons(base_ptr: nat, index: nat, buff: seq<uint256>): iter_t
-    {
-        b256_iter_cons(base_ptr, index, base_ptr + 32 * index, buff)
     }
 
     predicate is_xword_pointee(heap: heap_t, ptr: nat, value: uint32)
@@ -310,7 +294,7 @@ module ot_vale {
             && grs.index != 0
             && grs.index != 1
         requires gs.ms.read_reg32(grd) <= 31
-        requires iter.ptr == wwrod_offset_ptr(gs.ms.read_reg32(grs), offset)
+        requires iter.cur_ptr() == wwrod_offset_ptr(gs.ms.read_reg32(grs), offset)
         requires b256_iter_safe(gs.mem.heap, iter)
 
         ensures 
@@ -322,7 +306,7 @@ module ot_vale {
             && gr.ms.read_reg32(grs) == (gs.ms.read_reg32(grs) + if grs_inc then 32 else 0)
             // new_iter still reflects the memory
             && new_iter == b256_iter_load_next(iter, grs_inc)
-            && new_iter.ptr == wwrod_offset_ptr(gr.ms.read_reg32(grs), offset)
+            && new_iter.cur_ptr() == wwrod_offset_ptr(gr.ms.read_reg32(grs), offset)
             && b256_iter_inv(gr.mem.heap, new_iter)
             // the resulting wide register
             && gr.ms.wdrs[gs.ms.read_reg32(grd)] == new_iter.buff[iter.index]
@@ -331,8 +315,8 @@ module ot_vale {
         new_iter := b256_iter_load_next(iter, grs_inc);
         var r := gs.ms.eval_BN_LID(grd, grd_inc, offset, grs, grs_inc);
         var gr := gstate(r, gs.mem);
-        var value := gs.ms.read_wword(iter.ptr);
-        assert heap_B256_inv(gs.mem.heap, gs.ms.flat, iter.base_ptr);
+        var value := gs.ms.read_wword(iter.cur_ptr());
+        assert heap_b256_inv(gs.mem.heap, gs.ms.flat, iter.base_ptr);
         assert heap_256_inv(gs.mem.heap, gs.ms.flat,  iter.base_ptr, iter.index);
         assert value == iter.buff[iter.index];
     }
@@ -354,7 +338,7 @@ module ot_vale {
         requires
             var s := gs.ms;
             && s.read_reg32(grs2) <= 31
-            && iter.ptr == wwrod_offset_ptr(s.read_reg32(grs1), offset)
+            && iter.cur_ptr() == wwrod_offset_ptr(s.read_reg32(grs1), offset)
             && value == s.read_reg256(WDR(s.read_reg32(grs2)))
             && b256_iter_safe(gs.mem.heap, iter)
 
@@ -369,14 +353,14 @@ module ot_vale {
             && r.read_reg32(grs1) == (s.read_reg32(grs1) + if grs1_inc then 32 else 0)
             // new_iter still reflects the memory
             && new_iter == b256_iter_store_next(iter, value, grs1_inc)
-            && new_iter.ptr == wwrod_offset_ptr(r.read_reg32(grs1), offset)
+            && new_iter.cur_ptr() == wwrod_offset_ptr(r.read_reg32(grs1), offset)
             && b256_iter_inv(new_mem.heap, new_iter)
-            && new_mem == gs.mem.(heap := heap_B256_write(gs.mem.heap, iter, value))
+            && new_mem == gs.mem.(heap := heap_b256_write(gs.mem.heap, iter, value))
     {
         reveal valid_state_opaque();
         var r := gs.ms.eval_BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc);
-        gs.mem.heap_B256_write_preverses_inv(gs.ms.flat, iter, value);
-        var mem' := gs.mem.(heap := heap_B256_write(gs.mem.heap, iter, value));
+        gs.mem.heap_b256_write_preverses_inv(gs.ms.flat, iter, value);
+        var mem' := gs.mem.(heap := heap_b256_write(gs.mem.heap, iter, value));
         var iter' := b256_iter_store_next(iter, value, grs1_inc);
         return (mem', iter');
     }

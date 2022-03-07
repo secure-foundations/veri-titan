@@ -18,6 +18,7 @@ import opened ot_machine
 import opened ot_abstraction
 import opened ot_decls
 import opened ot_vale
+import opened mem
 
 import opened mul256
 import opened addc512
@@ -186,7 +187,7 @@ procedure mont_loop_0(
         p1.full == curr_view[0] + y_it.buff[0] * xi;
         w25 == half_mul_256(p1.lh, m0d);
 
-        next_y_it == bn_lid_next_iter(y_it, true);
+        next_y_it == b256_iter_load_next(y_it, true);
         iter_safe(next_y_it, heap, x19);
 {
    /* save pointer to modulus */
@@ -308,10 +309,10 @@ procedure mont_loop_1(
         valid_uint512_view(wdrs, next_p1, NA, 29);
         valid_uint512_view(wdrs, next_p2, NA, 28);
 
-        next_y_it == bn_lid_next_iter(y_it, true);
+        next_y_it == b256_iter_load_next(y_it, true);
         iter_inv(next_y_it, heap, x19);
 
-        next_m_it == bn_lid_next_iter(m_it, true);
+        next_m_it == b256_iter_load_next(m_it, true);
         iter_inv(next_m_it, heap, x16);
 
         valid_wdr_view(wdrs, next_view, 4, NUM_WORDS);
@@ -515,7 +516,7 @@ procedure mont_loop(
     next_view := curr_view;
 
     if (x2 != x0) {
-        m_it := iter_cons(x22, 0, heap[x22].b256);
+        m_it := b256_iter_cons(x22, 0, heap[x22].b256);
         next_view := sub_to_reg(curr_view, m_it);
     }
 

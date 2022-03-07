@@ -29,6 +29,16 @@ module flat {
     else ((x as bv32 >> 0) as int) % BASE_32
   }
 
+  function method {:opaque} assemble_32_to_32(
+    p0: uint32): uint32
+  {
+    ((p0 as bv32)) as uint32
+  }
+
+  lemma {:axiom} value_32_from_32(x: uint32)
+    ensures x == assemble_32_to_32(
+      select_32_from_32(x, 0));
+
   function method flat_read_32(flat: flat_t, ptr: nat): uint32
     requires ptr_admissible_32(ptr)
   {
@@ -39,8 +49,7 @@ module flat {
     requires ptr_admissible_32(ptr)
     ensures flat_ptr_valid_32(new_flat, ptr)
   {
-    flat
-    [ptr + 0 := x]
+    flat[ptr := x]
   }
 
   lemma flat_read_write_basic_32(flat: flat_t, x: uint32, ptr: nat)
@@ -48,6 +57,7 @@ module flat {
     ensures flat_read_32(flat_write_32(flat, ptr, x), ptr) == x
   {
     var new_flat := flat_write_32(flat, ptr, x);
+    value_32_from_32(x);
     assert flat_read_32(new_flat, ptr) == x;
   }
   predicate method ptr_admissible_256(ptr: nat)
@@ -117,15 +127,15 @@ module flat {
   function method flat_read_256(flat: flat_t, ptr: nat): uint256
     requires ptr_admissible_256(ptr)
   {
-    var p0 := flat_read_32(flat, ptr + 0);
-    var p1 := flat_read_32(flat, ptr + 4);
-    var p2 := flat_read_32(flat, ptr + 8);
-    var p3 := flat_read_32(flat, ptr + 12);
-    var p4 := flat_read_32(flat, ptr + 16);
-    var p5 := flat_read_32(flat, ptr + 20);
-    var p6 := flat_read_32(flat, ptr + 24);
-    var p7 := flat_read_32(flat, ptr + 28);
-    assemble_32_to_256(p0, p1, p2, p3, p4, p5, p6, p7)
+    assemble_32_to_256(
+    flat_read_32(flat, ptr + 0), 
+    flat_read_32(flat, ptr + 4), 
+    flat_read_32(flat, ptr + 8), 
+    flat_read_32(flat, ptr + 12), 
+    flat_read_32(flat, ptr + 16), 
+    flat_read_32(flat, ptr + 20), 
+    flat_read_32(flat, ptr + 24), 
+    flat_read_32(flat, ptr + 28))
   }
 
   function method flat_write_256(flat: flat_t, ptr: nat, x: uint256): (new_flat: flat_t) 

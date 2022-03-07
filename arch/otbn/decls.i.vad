@@ -85,7 +85,7 @@ function buff_base_ptr_valid(heap: heap_t, ptr: nat): bool extern;
 function heap_w32_read(heap: heap_t, ptr: int): uint32 extern;
 function heap_w32_write(heap: heap_t, ptr: int, value: uint32): heap_t extern;
 
-function heap_B256_write(heap: heap_t, iter: iter_t, value: uint256): heap_t extern;
+function heap_b256_write(heap: heap_t, iter: iter_t, value: uint256): heap_t extern;
 
 function buff_base_addr_valid(heap: heap_t, ptr: int): bool extern;
 
@@ -133,16 +133,14 @@ function operator(.full) (num: uint512_view_t): int extern;
 var ok: bool {:state ok()};
 
 type iter_t: Type(0) extern;
-function iter_cons(base_addr: int, index: nat, buff: seq(uint256)): iter_t extern;
-function bn_lid_next_iter(iter: iter_t, inc: bool): iter_t extern;
-function bn_sid_next_iter(iter: iter_t, value: uint256, inc: bool): iter_t extern;
+function b256_iter_cons(base_addr: int, index: nat, buff: seq(uint256)): iter_t extern;
+function b256_iter_load_next(iter: iter_t, inc: bool): iter_t extern;
+function b256_iter_store_next(iter: iter_t, value: uint256, inc: bool): iter_t extern;
 function operator(.base_ptr) (iter :iter_t): int extern;
 function operator(.index) (iter :iter_t): int extern;
 function operator(.index := ) (iter: iter_t, i :int): iter_t extern;
 function operator(.buff) (iter :iter_t): seq(uint256) extern;
 function operator(.buff := ) (iter :iter_t, buff: seq(uint256)): iter_t extern;
-function operator(.ptr) (iter :iter_t): int extern;
-function operator(.ptr := ) (iter :iter_t, ptr: int): iter_t extern;
 
 function iter_inv(iter: iter_t, h: heap_t, ptr: int): bool extern;
 function iter_safe(iter: iter_t, h: heap_t, ptr: int): bool extern;
@@ -325,13 +323,6 @@ function otbn_mulqacc_so(product: uint256, z: uint256, lower: bool, flags: flags
 
 function seq_addc_512_is_safe(x: seq(uint256), y: seq(uint256)) : bool extern;
 
-//   assert va_s0.ok;
-//   assert va_cM == Ins32(SW(grs2, grs1, offset));
-//   assert eval_code_lax(va_cM, va_s0, va_sM);
-//   assert eval_code(va_cM, va_s0, va_sM);
-//   assert eval_ins32(va_cM.ins, va_s0, va_sM);
-//   assert va_sM == va_s0.eval_SW(grs1, grs2, offset);
-
 procedure lw(out grd: reg32, inline offset: int12, in grs1: reg32)
     {:instruction Ins32(LW(grd, offset, grs1))}
     reads
@@ -352,7 +343,7 @@ function sw_correct(gs: state, grs2: reg32_t, offset: int12, grs1: reg32_t, writ
 procedure sw(in grs2: reg32, inline offset: int12, in grs1: reg32)
     {:instruction Ins32(SW(grs2, offset, grs1))}
     modifies
-        heap; mem; flat;
+        heap; flat;
     requires
         heap_w32_ptr_valid(heap, uint32_addi(grs1, offset));
     ensures
@@ -650,7 +641,7 @@ procedure bn_lid_safe(
         grs == (if grs_inc then (old(grs) + 32) else old(grs));
         wdrs == old(wdrs[grd := iter.buff[iter.index]]);
         iter_inv(next_iter, heap, grs + offset);
-        next_iter == bn_lid_next_iter(iter, grs_inc);
+        next_iter == b256_iter_load_next(iter, grs_inc);
 {
     reveal eval_code_opaque;
     this := this.(mem := old(this).mem);
@@ -688,9 +679,9 @@ procedure bn_sid_safe(
     ensures
         grs1 == (if grs1_inc then (old(grs1) + 32) else old(grs1));
         grs2 == (if grs2_inc then (old(grs2) + 1) else old(grs2));
-        heap == heap_B256_write(old(heap), iter, wdrs[old(grs2)]);
+        heap == heap_b256_write(old(heap), iter, wdrs[old(grs2)]);
         iter_inv(next_iter, heap, grs1 + offset);
-        next_iter == bn_sid_next_iter(iter, wdrs[old(grs2)], grs1_inc);
+        next_iter == b256_iter_store_next(iter, wdrs[old(grs2)], grs1_inc);
 {
     reveal eval_code_opaque;
     let value := wdrs[old(grs2)];

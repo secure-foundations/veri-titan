@@ -15,6 +15,7 @@ import opened ot_machine
 import opened ot_abstraction
 import opened ot_decls
 import opened ot_vale
+import opened mem
 
 import opened mont_loop
 import opened montmul
@@ -23,7 +24,6 @@ import opened Power
 
 import opened integers
 import opened bv256_mm_lemmas
-import opened mem
 
 #endverbatim
 
@@ -128,20 +128,23 @@ procedure write_to_dmem(ghost iter: iter_t)
 
         ghost var item := next_iter.buff[index];
         assert next_iter.buff[index] == wdrs[start+index];
+        let gwdrs := wdrs;
 
         calc == {
             next_iter.buff[..next_iter.index];
             ==
             seq_append(last_iter.buff[..index], item);
             ==
-            seq_append(wdrs[start..start+index], item);
+            seq_append(gwdrs[start..start+index], item);
             ==
-            wdrs[start..start+index+1];
+            gwdrs[start..start+index+1];
+            ==
+            gwdrs[start..start+next_iter.index];
             ==
             wdrs[start..start+next_iter.index];
         }
     }
-    next_iter := next_iter.(index := 0).(ptr := iter.base_ptr);
+    next_iter := next_iter.(index := 0);
 }
 
 function mvars_init(
@@ -207,7 +210,7 @@ procedure modexp_var_0(ghost init_vars: mvars)
 
     let a_view := montmul(vars);
 
-    out_iter := iter_cons(x21, 0, heap[x21].b256);
+    out_iter := b256_iter_cons(x21, 0, heap[x21].b256);
     out_iter := write_to_dmem(out_iter);
 
     vars := vars.(x_it := out_iter).(y_it := out_iter);
@@ -420,7 +423,7 @@ procedure modexp_var_3072_f4(
 
     addi(x21, x24, 0);
 
-    out_iter := iter_cons(x21, 0, heap[x21].b256);
+    out_iter := b256_iter_cons(x21, 0, heap[x21].b256);
     out_iter := write_to_dmem(out_iter);
 }
 

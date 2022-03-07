@@ -73,8 +73,12 @@ module mem {
 
 
   // iterator for buffer entries
-  datatype {{buff_item.name}}_iter = {{buff_item.name}}_iter_cons(base_ptr: nat, index: nat,
-    ptr: nat, buff: seq<{{buff_item.uint_type}}>)
+  datatype {{buff_item.name}}_iter = {{buff_item.name}}_iter_cons(base_ptr: nat, index: nat, buff: seq<{{buff_item.uint_type}}>)
+  {
+    function cur_ptr(): nat {
+      heap_{{buff_item.name}}_index_ptr(base_ptr, index)
+    }
+  }
 
   function {{buff_item.name}}_iter_load_next(iter: {{buff_item.name}}_iter, inc: bool): {{buff_item.name}}_iter
   {
@@ -94,7 +98,7 @@ module mem {
     // base_ptr points to a valid buffer
     && heap_{{buff_item.name}}_ptr_valid(heap, base_ptr)
     // ptr is correct
-    && iter.ptr == heap_{{buff_item.name}}_index_ptr(base_ptr, iter.index)
+    && iter.cur_ptr() == heap_{{buff_item.name}}_index_ptr(base_ptr, iter.index)
     // the view is consistent with heap
     && heap[base_ptr].{{buff_item.name}} == iter.buff
     // the index is within bound (or at end)
@@ -230,11 +234,11 @@ module mem {
 
       requires inv(flat)
       requires {{buff_item.name}}_iter_safe(heap, iter)
-      requires new_flat == flat_write_{{buff_item.num_bits}}(flat, iter.ptr, value)
+      requires new_flat == flat_write_{{buff_item.num_bits}}(flat, iter.cur_ptr(), value)
       requires heap_{{buff_item.name}}_ptr_valid(heap, other_ptr)
 
       ensures heap_{{buff_item.name}}_inv(heap_{{buff_item.name}}_write(heap, iter, value),
-        flat_write_{{buff_item.num_bits}}(flat, iter.ptr, value), other_ptr)
+        flat_write_{{buff_item.num_bits}}(flat, iter.cur_ptr(), value), other_ptr)
     {
       var new_heap := heap_{{buff_item.name}}_write(heap, iter, value);
       var base_ptr, j := iter.base_ptr, iter.index;
@@ -258,7 +262,7 @@ module mem {
           assert heap_{{buff_item.num_bits}}_inv(heap, flat, other_ptr, i);
           var ptr := heap_{{buff_item.name}}_index_ptr(other_ptr, i);
           assert flat_ptr_valid_{{buff_item.num_bits}}(new_flat, ptr);
-          assert ptr != iter.ptr by {
+          assert ptr != iter.cur_ptr() by {
             sub_ptrs_disjoint(flat, other_ptr, base_ptr);
           }
           assert flat_read_{{buff_item.num_bits}}(new_flat, ptr) == buff[i];
@@ -273,7 +277,7 @@ module mem {
 
       requires inv(flat)
       requires {{buff_item.name}}_iter_safe(heap, iter)
-      requires new_flat == flat_write_{{buff_item.num_bits}}(flat, iter.ptr, value)
+      requires new_flat == flat_write_{{buff_item.num_bits}}(flat, iter.cur_ptr(), value)
 
       ensures this.(heap := heap_{{buff_item.name}}_write(heap, iter, value)).stack_inv(new_flat)
     {
@@ -302,7 +306,7 @@ module mem {
 
       requires inv(flat)
       requires {{buff_item.name}}_iter_safe(heap, iter)
-      requires new_flat == flat_write_{{buff_item.num_bits}}(flat, iter.ptr, value)
+      requires new_flat == flat_write_{{buff_item.num_bits}}(flat, iter.cur_ptr(), value)
       requires heap_{{base_size.name}}_ptr_valid(heap, other_ptr)
 
       ensures heap_{{base_size.name}}_inv(heap_{{buff_item.name}}_write(heap, iter, value), new_flat, other_ptr)
@@ -319,7 +323,7 @@ module mem {
 
       requires inv(flat)
       requires {{buff_item.name}}_iter_safe(heap, iter)
-      requires new_flat == flat_write_{{buff_item.num_bits}}(flat, iter.ptr, value)
+      requires new_flat == flat_write_{{buff_item.num_bits}}(flat, iter.cur_ptr(), value)
 
       ensures this.(heap := heap_{{buff_item.name}}_write(heap, iter, value)).inv(new_flat)
     {
@@ -537,9 +541,9 @@ module mem {
       requires {{buff_item.name}}_iter_safe(heap, iter)
 
       ensures this.(heap := heap_{{buff_item.name}}_write(heap, iter, value)).
-        inv(flat_write_{{buff_item.num_bits}}(flat, iter.ptr, value))
+        inv(flat_write_{{buff_item.num_bits}}(flat, iter.cur_ptr(), value))
     {
-      var new_flat := flat_write_{{buff_item.num_bits}}(flat, iter.ptr, value);
+      var new_flat := flat_write_{{buff_item.num_bits}}(flat, iter.cur_ptr(), value);
       as_imem(flat).heap_{{buff_item.name}}_write_preverses_inv(flat, new_flat,
         iter, value);
     }
