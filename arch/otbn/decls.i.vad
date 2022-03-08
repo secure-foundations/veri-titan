@@ -62,8 +62,6 @@ function operator(.mem := ) (s: state, mem: mem_t): state extern;
 
 type flat_t: Type(0) extern;
 var flat: flat_t {:state flat()};
-function operator(.flat) (s: state): flat_t extern;
-function operator(.flat := ) (s: state, flat: mem_t): state extern;
 
 type reg32_t: Type(0) extern;
 function operator(.index) (r :reg32_t): nat extern;

@@ -1,15 +1,21 @@
 include "machine.s.dfy"
 include "../../std_lib/src/NonlinearArithmetic/Mul.dfy"
+include "../../arch/riscv/mem.i.dfy"
 
 module rv_vale {
     import opened integers
     import opened rv_machine
+    import opened flat
+    import opened mem
 
     import opened Mul
 
     type va_code = code
     type va_codes = codes
-    type va_state = state
+
+    datatype gstate = gstate(ms: state, mem: mem_t)
+
+    type va_state = gstate
 
     function fst<T,Q>(t:(T, Q)) : T { t.0 }
     function snd<T,Q>(t:(T, Q)) : Q { t.1 }
@@ -43,38 +49,41 @@ module rv_vale {
 
     function va_get_ok(s: va_state): bool
     {
-        s.ok
+        s.ms.ok
     }
 
-    function va_get_reg32_t(r : reg32_t, s: va_state): uint32
+    function va_get_reg32_t(r: reg32_t, s: va_state): uint32
     {
-        s.read_reg32(r)
+        s.ms.read_reg32(r)
     }
 
     function va_eval_reg32(s: va_state, r : reg32_t): uint32
     {
-        s.read_reg32(r)
+        s.ms.read_reg32(r)
     }
 
-    function va_get_mem(s: va_state): mem_t
+    function va_get_flat(s: va_state): flat_t
     {
-        s.mem
+        s.ms.flat
     }
 
-    function va_update_mem(sM: va_state, sK: va_state): va_state
+    function va_update_flat(sM: va_state, sK: va_state): va_state
     {
-        sK.(mem := sM.mem)
+        var temp := sM.ms.flat;
+        sK.(ms := sK.ms.(flat := temp))
     }
 
     function va_update_ok(sM: va_state, sK: va_state): va_state
     {
-        sK.(ok := sM.ok)
+        var temp := sM.ms.ok;
+        sK.(ms := sK.ms.(ok := temp))
     }
 
     function va_update_reg32_t(r: reg32_t, sM: va_state, sK: va_state): va_state
     {
         var index := reg32_to_index(r);
-        sK.(regs := sK.regs[index := sM.regs[index]])
+        var temp := sM.ms.regs[index];
+        sK.(ms := sK.ms.write_reg32(r, temp))
     }
 
     type va_operand_simm32 = int32
@@ -111,7 +120,7 @@ module rv_vale {
 
     function va_read_reg32(s: va_state, r : reg32_t):uint32
     {
-        s.read_reg32(r)
+        s.ms.read_reg32(r)
     }
 
     function va_update_operand_reg32(r: reg32_t, sM: va_state, sK: va_state): va_state
@@ -127,9 +136,10 @@ module rv_vale {
     predicate va_state_eq(s0: va_state, s1: va_state)
     {
         // s0 == s1
-        && s0.regs == s1.regs
+        && s0.ms.regs == s1.ms.regs
+        && s0.ms.flat == s1.ms.flat
+        && s0.ms.ok == s1.ms.ok
         && s0.mem == s1.mem
-        && s0.ok == s1.ok
     }
 
     predicate{:opaque} eval_code_opaque(c:code, s0:state, sN:state)
@@ -137,14 +147,22 @@ module rv_vale {
         eval_code(c, s0, sN)
     }
 
-    predicate eval_code_lax(c:code, s:state, r:state)
+    predicate eval_code_lax(c:code, s:va_state, r:va_state)
     {
-        s.ok ==> eval_code_opaque(c, s, r)
+        s.ms.ok ==> eval_code_opaque(c, s.ms, r.ms)
     }
 
     function method va_CNil():codes { CNil }
     predicate cHeadIs(b:codes, c:code) { b.va_CCons? && b.hd == c }
     predicate cTailIs(b:codes, t:codes) { b.va_CCons? && b.tl == t }
+
+    predicate {:opaque} valid_state_opaque(s:va_state)
+        ensures valid_state_opaque(s) ==> valid_state(s.ms);
+    {
+        && s.ms.regs[reg32_to_index(SP)] == s.mem.frames.sp
+        && valid_state(s.ms)
+        && s.mem.inv(s.ms.flat)
+    }
 
     predicate va_require(b0:codes, c1:code, s0: va_state, sN: va_state)
     {
@@ -154,9 +172,9 @@ module rv_vale {
     }
 
     // Weaker form of eval_code that we can actually ensure generically in instructions
-    predicate eval_weak(c:code, s:state, r:state)
+    predicate eval_weak(c: code, s: va_state, r: va_state)
     {
-        s.ok && r.ok ==> eval_code_opaque(c, s, r)
+        s.ms.ok && r.ms.ok ==> eval_code_opaque(c, s.ms, r.ms)
     }
 
     predicate va_ensure(b0:codes, b1:codes, s0: va_state, s1: va_state, sN: va_state)
@@ -285,18 +303,12 @@ module rv_vale {
 
     lemma va_lemma_empty(s: va_state, r: va_state) returns(r': va_state)
         requires eval_code_lax(Block(va_CNil()), s, r)
-        ensures  s.ok ==> r.ok
+        ensures  s.ms.ok ==> r.ms.ok
         ensures  r' == s
-        ensures  s.ok ==> r == s
+        ensures  s.ms.ok ==> r.ms == s.ms
     {
         reveal_eval_code_opaque();
         r' := s;
-    }
-
-    predicate {:opaque} valid_state_opaque(s:state)
-        ensures valid_state_opaque(s) ==> valid_state(s);
-    {
-        valid_state(s)
     }
 
     lemma va_lemma_block(b:codes, s0: va_state, r: va_state) returns(r1: va_state, c0:code, b1:codes)
@@ -306,21 +318,21 @@ module rv_vale {
         ensures eval_code_lax(c0, s0, r1)
         ensures c0.Function? ==>
             eval_code_lax(Block(c0.functionBody), s0, r1)
-        ensures valid_state_opaque(s0) && r1.ok ==> valid_state_opaque(r1);
+        // ensures valid_state_opaque(s0) && r1.ok ==> valid_state_opaque(r1);
         ensures eval_code_lax(Block(b1), r1, r)
     {
         reveal_eval_code_opaque();
         c0 := b.hd;
         b1 := b.tl;
-        if s0.ok {
-            assert eval_block(b, s0, r);
-            var r':state :| eval_code(b.hd, s0, r') && eval_block(b.tl, r', r);
+        if s0.ms.ok {
+            assert eval_block(b, s0.ms, r.ms);
+            var r':state :| eval_code(b.hd, s0.ms, r') && eval_block(b.tl, r', r.ms);
             c0 := b.hd;
             b1 := b.tl;
-            r1 := state(r'.regs, r'.mem, r'.ok);
+            r1 := gstate(r', s0.mem);
             if valid_state_opaque(s0) {
                 reveal_valid_state_opaque();
-                code_state_validity(c0, s0, r1);
+                code_state_validity(c0, s0.ms, r1.ms);
             }
             assert eval_code_lax(c0, s0, r1);
         } else {
@@ -333,10 +345,10 @@ module rv_vale {
     lemma va_lemma_ifElse(ifb:cond, ct:code, cf:code, s:va_state, r:va_state) returns(cond:bool, s':va_state)
         requires valid_state_opaque(s);
         requires eval_code_lax(IfElse(ifb, ct, cf), s, r)
-        ensures  if s.ok then
-                    && s'.ok
+        ensures  if s.ms.ok then
+                    && s'.ms.ok
                     && valid_state_opaque(s')
-                    && cond == eval_cond(s, ifb) 
+                    && cond == eval_cond(s.ms, ifb) 
                     && s' == s
                     && (if cond then eval_code_lax(ct, s', r) else eval_code_lax(cf, s', r))
                 else
@@ -344,26 +356,26 @@ module rv_vale {
     {
         reveal_eval_code_opaque();
         reveal_valid_state_opaque();
-        cond := eval_cond(s, ifb);
-        if s.ok {
-            assert eval_code(IfElse(ifb, ct, cf), s, r);
+        cond := eval_cond(s.ms, ifb);
+        if s.ms.ok {
+            assert eval_code(IfElse(ifb, ct, cf), s.ms, r.ms);
             if cond {
-                code_state_validity(ct, s, r);
+                code_state_validity(ct, s.ms, r.ms);
             } else {
-                code_state_validity(cf, s, r);
+                code_state_validity(cf, s.ms, r.ms);
             }
         }
         s' := s;
     }
 
-    predicate {:opaque} eval_while_opaque(w:cond, c:code, n:nat, s:state, r:state)
+    predicate {:opaque} eval_while_opaque(w:cond, c:code, n:nat, s:va_state, r:va_state)
     {
-        eval_while(w, c, n, s, r)
+        eval_while(w, c, n, s.ms, r.ms)
     }
 
-    predicate eval_while_lax(w:cond, c:code, n:nat, s:state, r:state)
+    predicate eval_while_lax(w:cond, c:code, n:nat, s:va_state, r:va_state)
     {
-        s.ok ==> eval_while_opaque(w, c, n, s, r)
+        s.ms.ok ==> eval_while_opaque(w, c, n, s, r)
     }
 
     predicate va_whileInv(w:cond, c:code, n:int, r1: va_state, r2: va_state)
@@ -382,9 +394,9 @@ module rv_vale {
         reveal_eval_code_opaque();
         reveal_valid_state_opaque();
         reveal_eval_while_opaque();
-        if s.ok {
-            assert eval_code(While(w, c), s, r);
-            n :| eval_while(w, c, n, s, r);
+        if s.ms.ok {
+            assert eval_code(While(w, c), s.ms, r.ms);
+            n :| eval_while(w, c, n, s.ms, r.ms);
         } else {
             n := 0;
         }
@@ -397,10 +409,10 @@ module rv_vale {
         ensures  valid_state_opaque(s) ==> valid_state_opaque(s');
         ensures  eval_while_lax(w, c, n - 1, r', r)
         ensures  eval_code_lax(c, s', r');
-        ensures  if s.ok && valid_state_opaque(s) then
-                    && s'.ok
+        ensures  if s.ms.ok && valid_state_opaque(s) then
+                    && s'.ms.ok
                     && s == s'
-                    && eval_cond(s, w)
+                    && eval_cond(s.ms, w)
                 else
                     true; //!r.ok;
     {
@@ -408,35 +420,35 @@ module rv_vale {
         reveal_eval_while_opaque();
         reveal_valid_state_opaque();
 
-        if !s.ok {
+        if !s.ms.ok {
             s' := s;
             r' := s;
             return;
         }
-        assert eval_while(w, c, n, s, r); // TODO: Dafny reveal/opaque issue
+        assert eval_while(w, c, n, s.ms, r.ms); // TODO: Dafny reveal/opaque issue
 
         if valid_state_opaque(s) {
-            var r'':state :| eval_code(c, s, r'') && eval_while(w, c, n - 1, r'', r);
+            var r'':state :| eval_code(c, s.ms, r'') && eval_while(w, c, n - 1, r'', r.ms);
             s' := s;
-            r' := r'';
-            code_state_validity(c, s', r'');
+            r' := gstate(r'', s.mem);
+            code_state_validity(c, s'.ms, r'');
         } else {
-            s' := s.(ok := false);
-            r' := s.(ok := false);
+            s' := s.(ms := s.ms.(ok := false));
+            r' := s.(ms := s.ms.(ok := false));
         }
     }
 
     lemma va_lemma_whileFalse(w:cond, c:code, s: va_state, r: va_state) returns(r': va_state)
         requires eval_while_lax(w, c, 0, s, r)
-        ensures  if s.ok then
+        ensures  if s.ms.ok then
                     (if valid_state_opaque(s) then
-                        (r'.ok ==> valid_state_opaque(r'))
-                    && s == r
-                    && !eval_cond(s, w)
-                    && r.ok
+                        (r'.ms.ok ==> valid_state_opaque(r'))
+                    && s.ms == r.ms 
+                    && !eval_cond(s.ms, w)
+                    && r.ms.ok
                     else
                         true)
-                    && r' == r
+                    && r'.ms  == r.ms 
                 else
                     r' == s; //!r.ok;
     {
@@ -444,10 +456,10 @@ module rv_vale {
         reveal_eval_while_opaque();
         reveal_valid_state_opaque();
 
-        if !s.ok {
+        if !s.ms.ok {
             r' := s;
             return;
         }
-        r' := r;
+        r' := r.(mem := s.mem);
     }
 }
