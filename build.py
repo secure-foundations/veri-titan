@@ -120,6 +120,7 @@ def setup_tools():
     version = subprocess_run("ninja --version")
     if not version.startswith("1.10."):
         print("[WARN] ninja not found or unexpected version.  Expected 1.10.*, found: " + version)
+
     # dotnet
     version = subprocess_run("dotnet --list-sdks")
     if "5.0" not in version:
@@ -128,21 +129,45 @@ def setup_tools():
         print("[INFO] Found dotnet version: " + version)
 
     # nuget
-    version = subprocess_run("nuget help | grep Version")
+    version = subprocess_run("nuget help | grep -m 1 Version")
     if "5.5" not in version:
         print("[WARN] nuget not found or unexpected version.  Expected 5.5, found: " + version)
     else:
         print("[INFO] Found nuget version: " + version)
 
-    path = subprocess_run("which otbn-as")
+    # C# compiler (Vale)
+    path = subprocess_run("which dmsc")
+    if "dmsc" not in path:
+        # Check for mcs (mono C# compiler) instead
+        path = subprocess_run("which mcs")
+        if "mcs" not in path:
+            print("[WARN] C# compiler (dmsc or mcs - Vale dependency) not found")
+        else:
+            print("[INFO] mcs (Vale dependency) found")
+    else:
+        print("[INFO] dmsc (Vale dependency) found")
 
+    # scons (Vale)
+    path = subprocess_run("which scons")
+    if "scons" not in path:
+        print("[WARN] scons (Vale dependency) not found")
+    else:
+        print("[INFO] scons (Vale dependency) found")
+
+    # F# compiler (Vale)
+    path = subprocess_run("which fsharpc")
+    if "fsharpc" not in path:
+        print("[WARN] fsharpc (Vale dependency) not found")
+    else:
+        print("[INFO] fsharpc (Vale dependency) found")
+
+    path = subprocess_run("which otbn-as")
     if "otbn-as" not in path:
         print("[WARN] otbn-as not found")
     else:
         print("[INFO] otbn-as found")
 
     path = subprocess_run("which otbn-ld")
-
     if "otbn-ld" not in path:
         print("[WARN] otbn-ld not found")
     else:
@@ -196,7 +221,7 @@ def list_dfy_deps(dfy_file):
             continue
         if i == 0:
             # print(dfy_file)
-            continue 
+            continue
         else:
             include = get_ver_path(include)
             includes.append(include)
