@@ -56,16 +56,13 @@ const NA: int extern;
 function to_uint32(i:int) : uint32 extern;
 function to_int32(i:uint32) : int32 extern;
 
-// function to_uint64(i:int) : uint64 extern;
-// function to_int64(i:uint64) : int64 extern;
-
 type state: Type(0) {: primitive} extern;
 function operator(.ok) (s: state): bool extern;
 function operator(.ok :=) (s: state, b: bool): state extern;
 
 type reg32_t: Type(0) extern;
 
-function mem_base_addr_valid(wmem: mem_t, ptr: int, size: nat): bool extern;
+function mem_base_ptr_valid(wmem: mem_t, ptr: int, size: nat): bool extern;
 
 type gprs_t: Type(0) extern;
 function operator([]) (s: gprs_t, i: int): uint32 extern; 
@@ -85,9 +82,20 @@ var ok: bool {:state ok()};
 type flat_t: Type(0) extern;
 var flat: flat_t {:state flat()};
 
+type heap_t:  Type(0) := map(int, entry_t);
+var heap: heap_t {:state heap()};
+function heap_b32_write(heap: heap_t, iter: iter_t, value: uint32): heap_t extern;
+
+type entry_t: Type(0) extern;
+function B32(b: seq(uint256)): entry_t extern;
+function operator(.b32) (e :entry_t): seq(uint32) extern;
+
+type frames_t: Type(0) extern;
+var frames: frames_t {:state frames()};
+
 type mem_t: Type(0) extern;
 var mem: mem_t {:state mem()};
-function push_frame(mem: mem_t, flat: flat_t, num_words: nat): mem_t extern;
+
 
 function in_stack_addr_range(addr: int): bool extern;
 
@@ -103,14 +111,13 @@ function operator(.uh) (num: int64_view_t) : uint32 extern;
 function operator(.full) (num: int64_view_t) : int extern;
 
 type iter_t: Type(0) extern;
-function iter_inv(iter: iter_t, h: mem_t, ptr: int): bool extern;
-function iter_safe(iter: iter_t, h: mem_t, ptr: int): bool extern;
+function iter_inv(iter: iter_t, h: heap_t, ptr: int): bool extern;
+function iter_safe(iter: iter_t, h: heap_t, ptr: int): bool extern;
 
-function iter_cons(base_addr: int, index: nat, buff: seq(uint32)): iter_t extern;
-function lw_next_iter(iter: iter_t): iter_t extern;
-function lw_prev_iter(iter: iter_t): iter_t extern;
-function sw_next_iter(iter: iter_t, value: uint32): iter_t extern;
-function operator(.base_addr) (iter :iter_t): int extern;
+function iter_cons(base_ptr: int, index: nat, buff: seq(uint32)): iter_t extern;
+function b32_iter_load_next(iter: iter_t, inc: bool): iter_t extern;
+function b32_iter_store_next(iter: iter_t, value: uint32, inc: bool): iter_t extern;
+function operator(.base_ptr) (iter :iter_t): int extern;
 function operator(.index) (iter :iter_t): int extern;
 function operator(.index := ) (iter: iter_t, i :int): iter_t extern;
 function operator(.buff) (iter :iter_t): seq(uint32) extern;
@@ -214,66 +221,126 @@ function operator(.full) (value : uint64_view_t): uint64 extern;
     
 // load instructions
 
-procedure push_frame(ghost num_words: nat)
+function mod(a: int, n: nat): int extern;
+
+function push_frame(mem: mem_t, flat: flat_t, num_bytes: int): mem_t extern;
+
+procedure push_frame(inline num_bytes: int32)
+    {:instruction Ins32(RV_ADDI(SP, SP, num_bytes))}
     requires
-        in_stack_addr_range(sp - num_words * 4);
+        num_bytes > 0;
+        mod(num_bytes, 4) == 0;
+        in_stack_addr_range(sp - num_bytes);
     modifies
         mem; sp;
     reads
         flat;
     ensures
-        sp == old(sp) - num_words * 4;
-        mem == push_frame(old(mem), flat, num_words);
+        sp == old(sp) - num_bytes;
+        flat == old(flat); // need this for the next one
+        mem == push_frame(old(mem), flat, num_bytes);
 {
     assume false;
 }
 
+function write_frame(mem: mem_t, flat: flat_t, index: nat, value: uint32): tuple(mem_t, flat_t) extern;
 
-// procedure lw_stack(inout dst: reg32, in src2: imm32, ghost index: nat)
-//     {:instruction Ins32(RV_LW(dst, SP, src2))}
-//     reads
-//         sp; mem;
-//     requires
-//         src2 < 4096; // 12-bit
-//         4 * index == src2;
-//         mem?[sp];
-//         index < seq_len(mem[sp]);
-//     ensures
-//         // mem location = src + sign-extended immediate
-//         dst == old(mem[sp][index]);
-// {
-//     assume false;
-// }
+function frames_writable(frames: frames_t, index: nat): bool extern;
 
-// procedure lw_iter(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
-//     {:instruction Ins32(RV_LW(dst, src1, src2))}
-//     reads
-//         mem;
-//     requires
-//         src2 < 4096; // 12-bit
-//         iter_safe(iter, mem, src1 + src2);
-//     ensures
-//         // mem location = src + sign-extended immediate
-//         dst == old(mem[iter.base_addr][iter.index]);
-// {
-//     assume false;
-// }
+procedure sw_stack(in rs2: reg32, in offset: imm32)
+    {:instruction Ins32(RV_SW(rs2, SP, offset))}
+    requires
+        mod(offset, 4) == 0;
+        frames_writable(frames, offset / 4);
+    modifies
+        mem; frames; flat;
+    ensures
+        let rst := write_frame(old(mem), old(flat), offset / 4, rs2);
+        mem == fst(rst);
+        flat == snd(rst);
+{
+    assume false;
+}
 
-// procedure lw_next(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
-//     returns (ghost next_iter: iter_t)
-//     reads
-//         mem;
-//     requires
-//         src2 < 4096; // 12-bit
-//         iter_safe(iter, mem, src1 + src2);
-//     ensures
-//         dst == old(mem[iter.base_addr][iter.index]);
-//         next_iter == lw_next_iter(iter);
-//         iter_inv(next_iter, mem, old(src1) + old(src2) + 4);
-// {
-//     next_iter := lw_next_iter(iter);
-//     lw_iter(dst, src1, src2, iter);
-// }
+function read_frame(mem: mem_t, flat: flat_t, index: nat): uint32 extern;
+
+procedure lw_stack(inout dst: reg32, in offset: imm32)
+    {:instruction Ins32(RV_LW(dst, SP, offset))}
+    requires
+        mod(offset, 4) == 0;
+        frames_writable(frames, offset / 4);
+    reads
+        mem; frames; flat;
+    ensures
+        mem == old(mem);
+        dst == read_frame(mem, flat, offset / 4);
+{
+    assume false;
+}
+
+procedure lw(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
+    {:instruction Ins32(RV_LW(dst, src1, src2))}
+    requires
+        src2 < 4096; // 12-bit
+        iter_safe(iter, heap, src1 + src2);
+    reads
+        heap;
+    ensures
+        heap == old(heap);
+        // mem location = src + sign-extended immediate
+        dst == heap[iter.base_ptr].b32[iter.index];
+{
+    assume false;
+}
+
+procedure lw_next(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
+    returns (ghost next_iter: iter_t)
+    requires
+        src2 < 4096; // 12-bit
+        iter_safe(iter, heap, src1 + src2);
+    reads
+        heap;
+    ensures
+        heap == old(heap);
+        dst == heap[iter.base_ptr].b32[iter.index];
+        next_iter == b32_iter_load_next(iter, true);
+        iter_inv(next_iter, heap, old(src1) + old(src2) + 4);
+{
+    next_iter := b32_iter_load_next(iter, true);
+    lw(dst, src1, src2, iter);
+}
+
+// store instructions
+
+procedure sw(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: iter_t)
+    {:instruction Ins32(RV_SW(rs2, base, offset))}
+    requires
+        iter_safe(iter, heap, base + offset);
+        offset < 4096;
+    modifies
+        heap;
+    ensures
+        heap == heap_b32_write(old(heap), iter, rs2);
+        iter_safe(b32_iter_store_next(iter, rs2, false), heap, base + offset);
+{
+    assume false;
+}
+
+procedure sw_next(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: iter_t)
+    returns (ghost next_iter: iter_t)
+    requires
+        iter_safe(iter, heap, base + offset);
+        offset < 4096;
+    modifies
+        heap;
+    ensures
+        heap == heap_b32_write(old(heap), iter, rs2);
+        next_iter == b32_iter_store_next(iter, rs2, true);
+        iter_inv(next_iter, heap, base + offset + 4);
+{
+    next_iter := b32_iter_store_next(iter, rs2, true);
+    sw(rs2, base, offset, iter);
+}
 
 // procedure lw_prev(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
 //     returns (ghost prev_iter: iter_t)
@@ -283,9 +350,9 @@ procedure push_frame(ghost num_words: nat)
 //         src2 < 4096; // 12-bit
 //         iter_safe(iter, mem, src1 + src2);
 //     ensures
-//         dst == old(mem[iter.base_addr][iter.index]);
+//         dst == old(mem[iter.base_ptr][iter.index]);
 //         prev_iter == lw_prev_iter(iter);
-//         old(src1) + old(src2) != iter.base_addr
+//         old(src1) + old(src2) != iter.base_ptr
 //             ==>
 //         iter_inv(prev_iter, mem, old(src1) + old(src2) - 4);
 // {
@@ -293,254 +360,204 @@ procedure push_frame(ghost num_words: nat)
 //     lw_iter(dst, src1, src2, iter);
 // }
 
-// // immediate instructions
-// // all immediate instructions take a 12-bit immediate and sign extend it
+// immediate instructions
+// all immediate instructions take a 12-bit immediate and sign extend it
     
-// procedure addi(inout dst: reg32, in src1: reg32, inline src2: int32)
-//     {:instruction Ins32(RV_ADDI(dst, src1, src2))}
-//     ensures
-//         dst == addi(old(src1), src2);
-// {
-//     assume false;
-// }
+procedure addi(inout dst: reg32, in src1: reg32, inline src2: int32)
+    {:instruction Ins32(RV_ADDI(dst, src1, src2))}
+    ensures
+        dst == addi(old(src1), src2);
+{
+    assume false;
+}
 
-// // pseudo-instruction: mv dst src is addi dst src 0
-// procedure mv(inout dst: reg32, in src: reg32)
-//     {:instruction Ins32(RV_ADDI(dst, src, 0))}
-//     ensures
-//         dst == old(src);
-// {
-//     assume false;
-// }
+// pseudo-instruction: mv dst src is addi dst src 0
+procedure mv(inout dst: reg32, in src: reg32)
+    {:instruction Ins32(RV_ADDI(dst, src, 0))}
+    ensures
+        dst == old(src);
+{
+    assume false;
+}
 
-// procedure xori(inout dst: reg32, in src1: reg32, in src2: imm32)
-//     {:instruction Ins32(RV_XORI(dst, src1, src2))}
-//     requires
-//         src2 < 0x1000;
-//     ensures
-//         dst == uint32_xor(old(src1), old(src2));
-// {
-//     assume false;
-// }
+procedure xori(inout dst: reg32, in src1: reg32, in src2: imm32)
+    {:instruction Ins32(RV_XORI(dst, src1, src2))}
+    requires
+        src2 < 0x1000;
+    ensures
+        dst == uint32_xor(old(src1), old(src2));
+{
+    assume false;
+}
 
-// procedure ori(inout dst: reg32, in src1: reg32, in src2: imm32)
-//     {:instruction Ins32(RV_ORI(dst, src1, src2))}
-//     requires
-//         src2 < 0x1000;
-//     ensures
-//         dst == uint32_or(old(src1), old(src2));
-// {
-//     assume false;
-// }
+procedure ori(inout dst: reg32, in src1: reg32, in src2: imm32)
+    {:instruction Ins32(RV_ORI(dst, src1, src2))}
+    requires
+        src2 < 0x1000;
+    ensures
+        dst == uint32_or(old(src1), old(src2));
+{
+    assume false;
+}
 
-// procedure andi(inout dst: reg32, in src1: reg32, in src2: imm32)
-//     {:instruction Ins32(RV_ANDI(dst, src1, src2))}
-//     requires
-//         src2 < 0x1000;
-//     ensures
-//         dst == uint32_and(old(src1), old(src2));
-// {
-//     assume false;
-// }
+procedure andi(inout dst: reg32, in src1: reg32, in src2: imm32)
+    {:instruction Ins32(RV_ANDI(dst, src1, src2))}
+    requires
+        src2 < 0x1000;
+    ensures
+        dst == uint32_and(old(src1), old(src2));
+{
+    assume false;
+}
 
     
-// procedure srli(inout dst: reg32, in src1: reg32, in src2: imm32)
-//     {:instruction Ins32(RV_SRLI(dst, src1, src2))}
-//     requires
-//         0 <= src2 < 31;
-//     ensures
-//         dst == uint32_rs(old(src1), old(src2));
-// {
-//     assume false;
-// }
+procedure srli(inout dst: reg32, in src1: reg32, in src2: imm32)
+    {:instruction Ins32(RV_SRLI(dst, src1, src2))}
+    requires
+        0 <= src2 < 31;
+    ensures
+        dst == uint32_rs(old(src1), old(src2));
+{
+    assume false;
+}
 
-// procedure srai(inout dst: reg32, in src1: reg32, in src2: imm32)
-//     {:instruction Ins32(RV_SRAI(dst, src1, src2))}
-//     requires
-//         0 <= src2 <= 31;
-//     ensures
-//         dst == to_uint32(int32_rs(to_int32(old(src1)), old(src2)));
-// {
-//     assume false;
-// }
+procedure srai(inout dst: reg32, in src1: reg32, in src2: imm32)
+    {:instruction Ins32(RV_SRAI(dst, src1, src2))}
+    requires
+        0 <= src2 <= 31;
+    ensures
+        dst == to_uint32(int32_rs(to_int32(old(src1)), old(src2)));
+{
+    assume false;
+}
 
 
-// // --------------------------------------------------------------
+// --------------------------------------------------------------
+
+
+// register-register operations
     
-// // store instructions
-    
-// procedure sw_stack(in rs2: reg32, in offset: imm32, inline index: nat)
-//     {:instruction Ins32(RV_SW(rs2, SP, offset))}
-//     requires
-//         4 * index == offset;
-//         mem?[sp];
-//         index < seq_len(mem[sp]);
-//         offset < 4096;
-//     reads
-//         sp;
-//     modifies
-//         mem;
-//     ensures
-//         mem == old(mem[sp := mem[sp][index := rs2]]);
-//     {
-//         assume false;
-//     }
+procedure add(inout dst: reg32, in src1: reg32, in src2: reg32)
+    {:instruction Ins32(RV_ADD(dst, src1, src2))}
+    ensures
+        dst == uint32_add(old(src1), old(src2));
+{
+    assume false;
+}
 
-// procedure sw_iter(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: iter_t)
-//     {:instruction Ins32(RV_SW(rs2, base, offset))}
-//     modifies
-//         mem;
-//     requires
-//         iter_safe(iter, mem, base + offset);
-//         offset < 4096;
-//     ensures
-//         // store rs2 at mem[base + offset]
-//         mem == old(mem[iter.base_addr := mem[iter.base_addr][iter.index := rs2]]);
-//         iter_safe(iter.(buff := iter.buff[iter.index := rs2]), mem, base + offset);
-// {
-//     assume false;
-// }
+procedure sub(inout dst: reg32, in src1: reg32, in src2: reg32)
+    {:instruction Ins32(RV_SUB(dst, src1, src2))}
+    ensures
+        dst == uint32_sub(old(src1), old(src2));
+{
+    assume false;
+}
 
-// procedure sw_next(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: iter_t)
-//     returns (ghost next_iter: iter_t)
-//     {:instruction Ins32(RV_SW(rs2, base, offset))}
-//     modifies
-//         mem;
-//     requires
-//         iter_safe(iter, mem, base + offset);
-//         offset < 4096;
-//     ensures
-//         // store rs2 at mem[base + offset]
-//         mem == old(mem[iter.base_addr := mem[iter.base_addr][iter.index := rs2]]);
-//         iter_inv(next_iter, mem, base + offset + 4);
-//         next_iter == sw_next_iter(iter, rs2);
-// {
-//     assume false;
-// }
+procedure sll(inout dst: reg32, in src1: reg32, in src2: reg32)
+    {:instruction Ins32(RV_SLL(dst, src1, src2))}
+    ensures
+        // left shift src1 by amount in lowest 5 bits of src2
+        dst == uint32_ls(old(src1), old(src2) % 32);
+{
+    assume false;
+}
 
-// // register-register operations
-    
-// procedure add(inout dst: reg32, in src1: reg32, in src2: reg32)
-//     {:instruction Ins32(RV_ADD(dst, src1, src2))}
-//     ensures
-//         dst == uint32_add(old(src1), old(src2));
-// {
-//     assume false;
-// }
+procedure sltu(inout dst: reg32, in src1: reg32, in src2: reg32)
+    {:instruction Ins32(RV_SLTU(dst, src1, src2))}
+    ensures
+        // < comparison as unsigned ints
+        dst == uint32_lt(old(src1), old(src2));
+{
+    assume false;
+}
 
-// procedure sub(inout dst: reg32, in src1: reg32, in src2: reg32)
-//     {:instruction Ins32(RV_SUB(dst, src1, src2))}
-//     ensures
-//         dst == uint32_sub(old(src1), old(src2));
-// {
-//     assume false;
-// }
+procedure xor(inout dst: reg32, in src1: reg32, in src2: reg32)
+    {:instruction Ins32(RV_XOR(dst, src1, src2))}
+    ensures
+        dst == uint32_xor(old(src1), old(src2));
+{
+    assume false;
+}
 
-// procedure sll(inout dst: reg32, in src1: reg32, in src2: reg32)
-//     {:instruction Ins32(RV_SLL(dst, src1, src2))}
-//     ensures
-//         // left shift src1 by amount in lowest 5 bits of src2
-//         dst == uint32_ls(old(src1), old(src2) % 32);
-// {
-//     assume false;
-// }
+procedure srl(inout dst: reg32, in src1: reg32, in src2: reg32)
+    {:instruction Ins32(RV_SRL(dst, src1, src2))}
+    requires
+        // limit to non-negative values for our use case
+        0 <= src2 < 31;
+    ensures
+        // right logical shift by lowest 5 bits of src2
+        dst == uint32_rs(old(src1), old(src2));
+{
+    assume false;
+}
 
-// procedure sltu(inout dst: reg32, in src1: reg32, in src2: reg32)
-//     {:instruction Ins32(RV_SLTU(dst, src1, src2))}
-//     ensures
-//         // < comparison as unsigned ints
-//         dst == uint32_lt(old(src1), old(src2));
-// {
-//     assume false;
-// }
+procedure sra(inout dst: reg32, in src1: reg32, in src2: reg32)
+    {:instruction Ins32(RV_SRA(dst, src1, src2))}
+    requires
+         0 <= src2 < 31;
+    ensures
+        // right arithmetic shift by lowest 5 bits of src2
+        dst == uint32_rs(old(src1), old(src2));
+{
+    assume false;
+}
 
-// procedure xor(inout dst: reg32, in src1: reg32, in src2: reg32)
-//     {:instruction Ins32(RV_XOR(dst, src1, src2))}
-//     ensures
-//         dst == uint32_xor(old(src1), old(src2));
-// {
-//     assume false;
-// }
+procedure or(inout dst: reg32, in src1: reg32, in src2: reg32)
+    {:instruction Ins32(RV_OR(dst, src1, src2))}
+    ensures
+        dst == uint32_or(old(src1), old(src2));
+{
+    assume false;
+}
 
-// procedure srl(inout dst: reg32, in src1: reg32, in src2: reg32)
-//     {:instruction Ins32(RV_SRL(dst, src1, src2))}
-//     requires
-//         // limit to non-negative values for our use case
-//         0 <= src2 < 31;
-//     ensures
-//         // right logical shift by lowest 5 bits of src2
-//         dst == uint32_rs(old(src1), old(src2));
-// {
-//     assume false;
-// }
+procedure and(inout dst: reg32, in src1: reg32, in src2: reg32)
+    {:instruction Ins32(RV_AND(dst, src1, src2))}
+    ensures
+        dst == uint32_and(old(src1), old(src2));
+{
+    assume false;
+}
 
-// procedure sra(inout dst: reg32, in src1: reg32, in src2: reg32)
-//     {:instruction Ins32(RV_SRA(dst, src1, src2))}
-//     requires
-//          0 <= src2 < 31;
-//     ensures
-//         // right arithmetic shift by lowest 5 bits of src2
-//         dst == uint32_rs(old(src1), old(src2));
-// {
-//     assume false;
-// }
+procedure lui(inout dst: reg32, in src: imm32)
+    {:instruction Ins32(RV_LUI(dst, src))}
+    requires
+        src < 0x100000; // 20-bit immediate
+    ensures
+        dst == uint32_ls(old(src), 12);
+{
+    assume false;
+}
 
-// procedure or(inout dst: reg32, in src1: reg32, in src2: reg32)
-//     {:instruction Ins32(RV_OR(dst, src1, src2))}
-//     ensures
-//         dst == uint32_or(old(src1), old(src2));
-// {
-//     assume false;
-// }
-
-// procedure and(inout dst: reg32, in src1: reg32, in src2: reg32)
-//     {:instruction Ins32(RV_AND(dst, src1, src2))}
-//     ensures
-//         dst == uint32_and(old(src1), old(src2));
-// {
-//     assume false;
-// }
-
-// procedure lui(inout dst: reg32, in src: imm32)
-//     {:instruction Ins32(RV_LUI(dst, src))}
-//     requires
-//         src < 0x100000; // 20-bit immediate
-//     ensures
-//         dst == uint32_ls(old(src), 12);
-// {
-//     assume false;
-// }
-
-// procedure li(inout dst: reg32, in src: imm32)
-//     {:instruction Ins32(RV_LI(dst, src))}
-//     ensures
-//         dst == src;
-// {
-//     assume false;
-// }
+procedure li(inout dst: reg32, in src: imm32)
+    {:instruction Ins32(RV_LI(dst, src))}
+    ensures
+        dst == src;
+{
+    assume false;
+}
 
 
-// // --------------------------------------------------------------
-// // Integer Multiplication and Division Extension
-// // --------------------------------------------------------------
+// --------------------------------------------------------------
+// Integer Multiplication and Division Extension
+// --------------------------------------------------------------
 
-// // todo: mulh mulshu div divu rem remu
+// todo: mulh mulshu div divu rem remu
 
-// procedure mul(inout dst: reg32, in src1: reg32, in src2: reg32)
-//     {:instruction Ins32(RV_MUL(dst, src1, src2))}
-//     ensures
-//         dst == uint32_mul(old(src1), old(src2));
-// {
-//     assume false;
-// }
+procedure mul(inout dst: reg32, in src1: reg32, in src2: reg32)
+    {:instruction Ins32(RV_MUL(dst, src1, src2))}
+    ensures
+        dst == uint32_mul(old(src1), old(src2));
+{
+    assume false;
+}
 
-// procedure mulhu(inout dst: reg32, in src1: reg32, in src2: reg32)
-//     {:instruction Ins32(RV_MULHU(dst, src1, src2))}
-//     ensures
-//         dst == uint32_mulhu(old(src1), old(src2));
-// {
-//     assume false;
-// }
+procedure mulhu(inout dst: reg32, in src1: reg32, in src2: reg32)
+    {:instruction Ins32(RV_MULHU(dst, src1, src2))}
+    ensures
+        dst == uint32_mulhu(old(src1), old(src2));
+{
+    assume false;
+}
     
 #verbatim
 } // end module bignum_decls

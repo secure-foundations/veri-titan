@@ -507,7 +507,7 @@ module mem {
       imem_cons(heap, get_stack(flat))
     }
 
-    predicate inv(flat: flat_t)
+    predicate {:opaque} inv(flat: flat_t)
     {
       && stack_addrs_valid(flat)
       && as_imem(flat).inv(flat)
@@ -523,6 +523,7 @@ module mem {
       ensures this.(heap := heap_b32_write(heap, iter, value)).
         inv(flat_write_32(flat, iter.cur_ptr(), value))
     {
+      reveal inv();
       var new_flat := flat_write_32(flat, iter.cur_ptr(), value);
       as_imem(flat).heap_b32_write_preverses_inv(flat, new_flat,
         iter, value);
@@ -536,28 +537,23 @@ module mem {
       ensures this.(heap := heap_w32_write(heap, write_ptr, value)).
         inv(flat_write_32(flat, write_ptr, value))
     {
+      reveal inv();
       var new_flat := flat_write_32(flat, write_ptr, value);
       as_imem(flat).heap_w32_write_preverses_inv(flat, new_flat,
         write_ptr, value);
     }
 
-    function frames_write(index: nat, value: uint32): mem_t
-      requires frames.write.requires(index, value)
-    {
-      this.(frames := frames.write(index, value))
-    }
-
-    lemma frames_write_preverses_inv(
-      flat: flat_t, index: nat, value: uint32)
-    
+    lemma frames_write_preverses_inv(flat: flat_t, index: nat, value: uint32)
       requires inv(flat)
       requires frames.write.requires(index, value)
 
       ensures in_stack_addr_range(frames.sp + index * 4)
-      ensures frames_write(index, value).
+      ensures this.(frames := frames.write(index, value)).
         inv(flat_write_32(flat, frames.sp + index * 4, value))
     {
-      var new_mem := frames_write(index, value);
+      reveal inv();
+
+      var new_mem := this.(frames := frames.write(index, value));
       var stack_index := ptr_to_stack_index(frames.sp) + index;
       var write_ptr := stack_index_to_ptr(stack_index);
 
@@ -591,13 +587,38 @@ module mem {
     }
   }
 
-  function push_frame(mem: mem_t, flat: flat_t, num_words: uint32): (new_mem: mem_t)
+  function push_frame(mem: mem_t, flat: flat_t, num_bytes: uint32): (new_mem: mem_t)
     requires mem.inv(flat)
-    requires in_stack_addr_range(mem.frames.sp - num_words * 4)
+    requires num_bytes % 4 == 0
+    requires in_stack_addr_range(mem.frames.sp - num_bytes)
     ensures new_mem.inv(flat)
   {
+    reveal mem.inv();
     var stack := get_stack(flat);
-    mem.frames.push_preserves_inv(num_words, get_stack(flat));
-    mem.(frames := mem.frames.push(num_words, stack))
+    mem.frames.push_preserves_inv(num_bytes, get_stack(flat));
+    var new_mem := mem.(frames := mem.frames.push(num_bytes, stack));
+    assert new_mem.inv(flat);
+    new_mem
+  }
+
+  function write_frame(mem: mem_t, flat: flat_t, index: nat, value: uint32): (r: (mem_t, flat_t))
+    requires mem.inv(flat)
+    requires frames_writable(mem.frames, index)
+    ensures in_stack_addr_range(mem.frames.sp + index * 4)
+    ensures r.1 == flat_write_32(flat, mem.frames.sp + index * 4, value)
+    ensures r.0.inv(r.1)
+  {
+    mem.frames_write_preverses_inv(flat, index, value);
+    var new_mem := mem.(frames := mem.frames.write(index, value));
+    var new_flat := flat_write_32(flat, mem.frames.sp + index * 4, value);
+    (new_mem, new_flat)
+  }
+
+  function read_frame(mem: mem_t, flat: flat_t, index: nat): (value: uint32)
+    requires mem.inv(flat)
+    requires frames_writable(mem.frames, index)
+    // ensures value == flat_read_32(flat, mem.frames.sp + index * 4)
+  {
+    mem.frames.read(index)
   }
 }

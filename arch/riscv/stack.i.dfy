@@ -74,6 +74,13 @@ module stack {
     }
   }
 
+  predicate frames_writable(frames: frames_t, index: nat)
+  {
+    && var fs := frames.fs;
+    && |fs| >= 1
+    && index < |fs[|fs| - 1].content|
+  }
+
   datatype frames_t = frames_cons(sp: nat, fs: seq<frame_t>)
   {
     predicate frames_inv(stack: seq<uint32>)
@@ -91,25 +98,26 @@ module stack {
       && (forall i | 0 <= i < |fs| :: fs[i].frame_inv(stack))
     }
   
-    function push(num_words: uint32, stack: seq<uint32>): frames_t
+    function push(num_bytes: uint32, stack: seq<uint32>): frames_t
       requires |stack| == STACK_MAX_WORDS()
+      requires num_bytes % 4 == 0
       requires frames_inv(stack)
-      requires in_stack_addr_range(sp - num_words * 4)
+      requires in_stack_addr_range(sp - num_bytes)
     {
-      var new_sp := sp - num_words * 4;
+      var new_sp := sp - num_bytes;
       var start := ptr_to_stack_index(new_sp);
       var end := ptr_to_stack_index(sp);
       this.(sp := new_sp)
         .(fs := fs + [frame_cons(sp, stack[start..end])])
     }
 
-    lemma push_preserves_inv(num_words: uint32, stack: seq<uint32>)
-      requires push.requires(num_words, stack)
-      ensures push(num_words, stack).frames_inv(stack)
+    lemma push_preserves_inv(num_bytes: uint32, stack: seq<uint32>)
+      requires push.requires(num_bytes, stack)
+      ensures push(num_bytes, stack).frames_inv(stack)
     {
-      var new_frames := push(num_words, stack);
+      var new_frames := push(num_bytes, stack);
       assert new_frames.frames_inv(stack) by {
-        var new_sp := sp - 4 * num_words;
+        var new_sp := sp - num_bytes;
         var start := ptr_to_stack_index(new_sp);
         var end := ptr_to_stack_index(sp);
         var new_f := frame_cons(sp, stack[start..end]);
@@ -126,25 +134,25 @@ module stack {
 
         calc == {
           (end - start) * 4;
-          ptr_to_stack_index(sp) * 4 - ptr_to_stack_index(sp - 4 * num_words) * 4;
+          ptr_to_stack_index(sp) * 4 - ptr_to_stack_index(sp - num_bytes) * 4;
           {
             Mul.LemmaMulIsDistributiveSubAuto();
           }
-          (sp - STACK_END()) / 4 * 4 - (sp - 4 * num_words - STACK_END()) / 4 * 4;
+          (sp - STACK_END()) / 4 * 4 - (sp - num_bytes - STACK_END()) / 4 * 4;
           {
             assert DivMod.IsModEquivalent(sp, STACK_END(), 4);
             LemmaDivMulNop(sp - STACK_END(), 4);
           }
-          sp - STACK_END() - (sp - 4 * num_words - STACK_END()) / 4 * 4;
+          sp - STACK_END() - (sp - num_bytes - STACK_END()) / 4 * 4;
           {
-            assert DivMod.IsModEquivalent(sp, 4 * num_words, 4);
-            assert DivMod.IsModEquivalent(sp - 4 * num_words, STACK_END(), 4);
-            LemmaDivMulNop(sp - 4 * num_words - STACK_END(), 4);
+            assert DivMod.IsModEquivalent(sp, num_bytes, 4);
+            assert DivMod.IsModEquivalent(sp - num_bytes, STACK_END(), 4);
+            LemmaDivMulNop(sp - num_bytes - STACK_END(), 4);
           }
-          num_words * 4;
+          num_bytes;
         }
-        assert end - start == num_words;
-        assert |stack[start..end]| == num_words;
+        assert end - start == num_bytes / 4;
+        assert |stack[start..end]| == num_bytes / 4;
 
         forall i | 0 <= i < |new_frames.fs|
           ensures new_frames.fs[i].frame_inv(stack)
@@ -157,8 +165,8 @@ module stack {
           }
         }
       }
-      assert new_frames == push(num_words, stack);
-      assert push(num_words, stack).frames_inv(stack);
+      assert new_frames == push(num_bytes, stack);
+      assert push(num_bytes, stack).frames_inv(stack);
     }
 
     function pop(stack: seq<uint32>): frames_t
@@ -218,14 +226,21 @@ module stack {
     }
 
     function write(index: nat, value: uint32): frames_t
-      requires |fs| >= 1
-      requires index < |fs[|fs| - 1].content|
+      requires frames_writable(this, index)
     {
       var last := |fs| - 1;
       var top_f := fs[last];
       var new_content := top_f.content[index := value];
       var new_top_f := top_f.(content := new_content);
       this.(fs := fs[last := new_top_f])
+    }
+
+    function read(index: nat): uint32
+      requires frames_writable(this, index)
+    {
+      var last := |fs| - 1;
+      var top_f := fs[last];
+      top_f.content[index]
     }
 
     lemma none_top_frame_disjoint(stack: seq<uint32>, i: nat, index: nat, value: uint32)

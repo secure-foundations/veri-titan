@@ -7,6 +7,7 @@ module rv_vale {
     import opened rv_machine
     import opened flat
     import opened mem
+    import opened stack
 
     import opened Mul
 
@@ -73,6 +74,36 @@ module rv_vale {
         sK.(ms := sK.ms.(flat := temp))
     }
 
+    function va_get_mem(s: va_state): mem_t
+    {
+        s.mem
+    }
+
+    function va_update_mem(sM: va_state, sK: va_state): va_state
+    {
+        sK.(mem := sM.mem)
+    }
+
+    function va_get_heap(s: va_state): heap_t
+    {
+        s.mem.heap
+    }
+
+    function va_update_heap(sM: va_state, sK: va_state): va_state
+    {
+        sK.(mem := sK.mem.(heap := sM.mem.heap))
+    }
+
+    function va_get_frames(s: va_state): frames_t
+    {
+        s.mem.frames
+    }
+
+    function va_update_frames(sM: va_state, sK: va_state): va_state
+    {
+        sK.(mem := sK.mem.(frames := sM.mem.frames))
+    }
+
     function va_update_ok(sM: va_state, sK: va_state): va_state
     {
         var temp := sM.ms.ok;
@@ -100,6 +131,20 @@ module rv_vale {
     {
         Mul.LemmaMulNonnegativeAuto();
         a * b
+    }
+
+    type iter_t = b32_iter
+
+    predicate iter_inv(iter: iter_t, heap: heap_t, address: int)
+    {
+        && iter.cur_ptr() == address
+        && b32_iter_inv(heap, iter)
+    }
+
+    predicate iter_safe(iter: iter_t, heap: heap_t, address: int)
+    {
+        && iter.cur_ptr() == address
+        && b32_iter_safe(heap, iter)
     }
 
     // reg32
@@ -156,8 +201,9 @@ module rv_vale {
     predicate cHeadIs(b:codes, c:code) { b.va_CCons? && b.hd == c }
     predicate cTailIs(b:codes, t:codes) { b.va_CCons? && b.tl == t }
 
-    predicate {:opaque} valid_state_opaque(s:va_state)
-        ensures valid_state_opaque(s) ==> valid_state(s.ms);
+    predicate valid_state_opaque(s:va_state)
+        // ensures valid_state_opaque(s) ==> valid_state(s.ms);
+        // ensures valid_state_opaque(s) ==> s.mem.inv(s.ms.flat);
     {
         && s.ms.regs[reg32_to_index(SP)] == s.mem.frames.sp
         && valid_state(s.ms)
@@ -331,7 +377,7 @@ module rv_vale {
             b1 := b.tl;
             r1 := gstate(r', s0.mem);
             if valid_state_opaque(s0) {
-                reveal_valid_state_opaque();
+                // reveal_valid_state_opaque();
                 code_state_validity(c0, s0.ms, r1.ms);
             }
             assert eval_code_lax(c0, s0, r1);
@@ -355,7 +401,7 @@ module rv_vale {
                     true
     {
         reveal_eval_code_opaque();
-        reveal_valid_state_opaque();
+        // reveal_valid_state_opaque();
         cond := eval_cond(s.ms, ifb);
         if s.ms.ok {
             assert eval_code(IfElse(ifb, ct, cf), s.ms, r.ms);
@@ -392,7 +438,7 @@ module rv_vale {
         //ensures  forall c', t, t' :: eval_code(c', t, t') == (t.ok ==> eval_code(c', t, t'));
     {
         reveal_eval_code_opaque();
-        reveal_valid_state_opaque();
+        // reveal_valid_state_opaque();
         reveal_eval_while_opaque();
         if s.ms.ok {
             assert eval_code(While(w, c), s.ms, r.ms);
@@ -418,7 +464,7 @@ module rv_vale {
     {
         reveal_eval_code_opaque();
         reveal_eval_while_opaque();
-        reveal_valid_state_opaque();
+        // reveal_valid_state_opaque();
 
         if !s.ms.ok {
             s' := s;
@@ -454,7 +500,7 @@ module rv_vale {
     {
         reveal_eval_code_opaque();
         reveal_eval_while_opaque();
-        reveal_valid_state_opaque();
+        // reveal_valid_state_opaque();
 
         if !s.ms.ok {
             r' := s;
