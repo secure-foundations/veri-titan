@@ -87,15 +87,23 @@ var heap: heap_t {:state heap()};
 function heap_b32_write(heap: heap_t, iter: iter_t, value: uint32): heap_t extern;
 
 type entry_t: Type(0) extern;
-function B32(b: seq(uint256)): entry_t extern;
+function B32(b: seq(uint32)): entry_t extern;
 function operator(.b32) (e :entry_t): seq(uint32) extern;
 
 type frames_t: Type(0) extern;
 var frames: frames_t {:state frames()};
+function operator(.fs) (m: frames_t): seq(frame_t) extern;
+function operator(.sp) (m: frames_t): int extern;
+
+type frame_t: Type(0) extern;
+function operator(.fp) (f: frame_t): uint32 extern;
+function operator(.content) (f: frame_t): seq(uint32) extern;
 
 type mem_t: Type(0) extern;
 var mem: mem_t {:state mem()};
-
+function operator(.frames) (m: mem_t): frames_t extern;
+function operator(.heap) (m: mem_t): heap_t extern;
+function read_top_frame(fs: mem_t): seq(uint32) extern;
 
 function in_stack_addr_range(addr: int): bool extern;
 
@@ -223,39 +231,42 @@ function operator(.full) (value : uint64_view_t): uint64 extern;
 
 function mod(a: int, n: nat): int extern;
 
-function push_frame(mem: mem_t, flat: flat_t, num_bytes: int): mem_t extern;
+function stack_push_frame(mem: mem_t, flat: flat_t, num_bytes: int): mem_t extern;
 
 procedure push_frame(inline num_bytes: int32)
     {:instruction Ins32(RV_ADDI(SP, SP, num_bytes))}
     requires
-        num_bytes > 0;
+        num_bytes < 0;
         mod(num_bytes, 4) == 0;
-        in_stack_addr_range(sp - num_bytes);
+        in_stack_addr_range(sp + num_bytes);
     modifies
         mem; sp;
     reads
         flat;
     ensures
-        sp == old(sp) - num_bytes;
+        sp == old(sp) + num_bytes;
         flat == old(flat); // need this for the next one
-        mem == push_frame(old(mem), flat, num_bytes);
+        mem == stack_push_frame(old(mem), flat, 0 - num_bytes);
 {
     assume false;
 }
 
 function write_frame(mem: mem_t, flat: flat_t, index: nat, value: uint32): tuple(mem_t, flat_t) extern;
 
-function frames_writable(frames: frames_t, index: nat): bool extern;
+function frame_index_valid(mem: mem_t, index: nat): bool extern;
 
 procedure sw_stack(in rs2: reg32, in offset: imm32)
     {:instruction Ins32(RV_SW(rs2, SP, offset))}
     requires
         mod(offset, 4) == 0;
-        frames_writable(frames, offset / 4);
+        frame_index_valid(mem, offset / 4);
     modifies
-        mem; frames; flat;
+        mem; flat;
     ensures
         let rst := write_frame(old(mem), old(flat), offset / 4, rs2);
+        frame_index_valid(mem, offset / 4);
+        read_top_frame(mem) ==
+            read_top_frame(old(mem))[offset / 4 := rs2];
         mem == fst(rst);
         flat == snd(rst);
 {
@@ -268,9 +279,9 @@ procedure lw_stack(inout dst: reg32, in offset: imm32)
     {:instruction Ins32(RV_LW(dst, SP, offset))}
     requires
         mod(offset, 4) == 0;
-        frames_writable(frames, offset / 4);
+        frame_index_valid(mem, offset / 4);
     reads
-        mem; frames; flat;
+        mem; flat;
     ensures
         mem == old(mem);
         dst == read_frame(mem, flat, offset / 4);

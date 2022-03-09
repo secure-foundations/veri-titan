@@ -414,25 +414,25 @@ module rv_vale {
         s' := s;
     }
 
-    predicate {:opaque} eval_while_opaque(w:cond, c:code, n:nat, s:va_state, r:va_state)
+    predicate {:opaque} eval_while_opaque(w:cond, c:code, n:nat, s:state, r:state)
     {
-        eval_while(w, c, n, s.ms, r.ms)
+        eval_while(w, c, n, s, r)
     }
 
-    predicate eval_while_lax(w:cond, c:code, n:nat, s:va_state, r:va_state)
+    predicate eval_while_lax(w:cond, c:code, n:nat, s:state, r:state)
     {
-        s.ms.ok ==> eval_while_opaque(w, c, n, s, r)
+        s.ok ==> eval_while_opaque(w, c, n, s, r)
     }
 
     predicate va_whileInv(w:cond, c:code, n:int, r1: va_state, r2: va_state)
     {
-        n >= 0 && valid_state_opaque(r1) && eval_while_lax(w, c, n, r1, r2)
+        n >= 0 && valid_state_opaque(r1) && eval_while_lax(w, c, n, r1.ms, r2.ms)
     }
 
     lemma va_lemma_while(w:cond, c:code, s: va_state, r: va_state) returns(n:nat, r': va_state)
         requires valid_state_opaque(s);
         requires eval_code_lax(While(w, c), s, r)
-        ensures  eval_while_lax(w, c, n, r', r)
+        ensures  eval_while_lax(w, c, n, r'.ms, r.ms)
         ensures  valid_state_opaque(r');
         ensures r' == s
         //ensures  forall c', t, t' :: eval_code(c', t, t') == (t.ok ==> eval_code(c', t, t'));
@@ -451,13 +451,14 @@ module rv_vale {
 
     lemma va_lemma_whileTrue(w:cond, c:code, n:nat, s: va_state, r: va_state) returns(s': va_state, r': va_state)
         requires n > 0
-        requires eval_while_lax(w, c, n, s, r)
+        requires eval_while_lax(w, c, n, s.ms, r.ms)
         ensures  valid_state_opaque(s) ==> valid_state_opaque(s');
-        ensures  eval_while_lax(w, c, n - 1, r', r)
+        ensures  eval_while_lax(w, c, n - 1, r'.ms, r.ms)
         ensures  eval_code_lax(c, s', r');
         ensures  if s.ms.ok && valid_state_opaque(s) then
                     && s'.ms.ok
                     && s == s'
+                    && (s.mem == s'.mem == r'.mem)
                     && eval_cond(s.ms, w)
                 else
                     true; //!r.ok;
@@ -485,7 +486,7 @@ module rv_vale {
     }
 
     lemma va_lemma_whileFalse(w:cond, c:code, s: va_state, r: va_state) returns(r': va_state)
-        requires eval_while_lax(w, c, 0, s, r)
+        requires eval_while_lax(w, c, 0, s.ms, r.ms)
         ensures  if s.ms.ok then
                     (if valid_state_opaque(s) then
                         (r'.ms.ok ==> valid_state_opaque(r'))
@@ -495,6 +496,7 @@ module rv_vale {
                     else
                         true)
                     && r'.ms  == r.ms 
+                    && r'.mem  == s.mem
                 else
                     r' == s; //!r.ok;
     {

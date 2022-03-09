@@ -68,8 +68,8 @@ procedure mont_mul_0(ghost iter_c: iter_t)
     requires iter_safe(iter_c, mem, s1);
     requires seq_len(iter_c.buff) == 96;
     requires iter_c.index == 0;
-    requires s4 == iter_c.base_addr + 384;
-    requires s1 == iter_c.base_addr;
+    requires s4 == iter_c.base_ptr + 384;
+    requires s1 == iter_c.base_ptr;
 
     reads
         x0; s4;
@@ -77,14 +77,14 @@ procedure mont_mul_0(ghost iter_c: iter_t)
         s1; mem;
 
     ensures
-        mem == old(mem[next_iter_c.base_addr := next_iter_c.buff]);
-        next_iter_c.base_addr == iter_c.base_addr;
+        mem == old(mem[next_iter_c.base_ptr := next_iter_c.buff]);
+        next_iter_c.base_ptr == iter_c.base_ptr;
         iter_inv(next_iter_c, mem, old(s1));
         seq_len(next_iter_c.buff) == 96;
         next_iter_c.buff == seq_zero(96);
         next_iter_c.index == 0;
 {
-    let ptr_c := iter_c.base_addr;
+    let ptr_c := iter_c.base_ptr;
     ghost var iter_c := iter_c;
 
     assume iter_c.buff[..0] == seq_zero(0);
@@ -94,7 +94,7 @@ procedure mont_mul_0(ghost iter_c: iter_t)
             s4 == ptr_c + 384;
             s1 == ptr_c + 4 * iter_c.index;
 
-            iter_c.base_addr == ptr_c;
+            iter_c.base_ptr == ptr_c;
             iter_inv(iter_c, mem, s1);
             seq_len(iter_c.buff) == 96;
             
@@ -148,11 +148,11 @@ procedure mont_mul(
 
         valid_frame_ptr(mem, vars.mma_frame_ptr, 12);
         valid_frame_ptr(mem, vars.mm_frame_ptr, 8);
-        mvar_iter_inv(mem, next_iter_c, (vars.iter_c.base_addr), 0, NA);
+        mvar_iter_inv(mem, next_iter_c, (vars.iter_c.base_ptr), 0, NA);
 
         mem == old(mem)[vars.mma_frame_ptr := mem[vars.mma_frame_ptr]]
                 [vars.mm_frame_ptr := mem[vars.mm_frame_ptr]]
-                [next_iter_c.base_addr := next_iter_c.buff];
+                [next_iter_c.base_ptr := next_iter_c.buff];
 
         montmul_inv(next_iter_c.buff, vars.iter_a.buff, NUM_WORDS, vars.iter_b.buff, rsa);
 {
@@ -192,12 +192,12 @@ procedure mont_mul(
     while (s2 < s4) 
         invariant
             s0 == rsa.M0D;
-            s1 == vars.iter_c.base_addr;
-            s2 == mut_vars.iter_a.base_addr + 4 * i;
-            s3 == vars.iter_b.base_addr;
+            s1 == vars.iter_c.base_ptr;
+            s2 == mut_vars.iter_a.base_ptr + 4 * i;
+            s3 == vars.iter_b.base_ptr;
 
             i == mut_vars.iter_a.index;
-            s4 == mut_vars.iter_a.base_addr + 384;
+            s4 == mut_vars.iter_a.base_ptr + 384;
             s2 <= s4;
 
             sp >= 48;
@@ -214,15 +214,15 @@ procedure mont_mul(
             montmul_inv(mut_vars.iter_c.buff, mut_vars.iter_a.buff, mut_vars.iter_a.index, mut_vars.iter_b.buff, rsa);
 
             mem?[mut_vars.mma_frame_ptr];
-            // mem?[mut_vars.iter_c.base_addr];
+            // mem?[mut_vars.iter_c.base_ptr];
             mem == mem1[mut_vars.mma_frame_ptr := mem[mut_vars.mma_frame_ptr]]
-                [mut_vars.iter_c.base_addr := mut_vars.iter_c.buff];
+                [mut_vars.iter_c.base_ptr := mut_vars.iter_c.buff];
 
             mut_vars == vars.(iter_a := mut_vars.iter_a)
                             .(iter_c := mut_vars.iter_c);
 
-            mut_vars.iter_a.base_addr == vars.iter_a.base_addr;
-            mut_vars.iter_c.base_addr == vars.iter_c.base_addr;
+            mut_vars.iter_a.base_ptr == vars.iter_a.base_ptr;
+            mut_vars.iter_c.base_ptr == vars.iter_c.base_ptr;
         decreases
             s4 - s2;
     {

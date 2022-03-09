@@ -136,7 +136,7 @@ module rv_machine {
 
     // predicate iter_inv(iter: iter_t, mem: mem_t, address: int)
     // {
-    //     var base_addr := iter.base_addr;
+    //     var base_addr := iter.base_ptr;
     //     // address is correct
     //     && address == base_addr + 4 * iter.index
     //     // base_addr points to a valid buffer

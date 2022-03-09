@@ -56,7 +56,7 @@ module stack {
     STACK_END() + i * 4
   }
 
-  datatype frame_t = frame_cons(fp: nat, content: seq<uint32>)
+  datatype frame_t = frame_cons(fp: int, content: seq<uint32>)
   {
     function next_fp(): int
     {
@@ -77,11 +77,17 @@ module stack {
   predicate frames_writable(frames: frames_t, index: nat)
   {
     && var fs := frames.fs;
-    && |fs| >= 1
+    && |fs| != 0
     && index < |fs[|fs| - 1].content|
   }
 
-  datatype frames_t = frames_cons(sp: nat, fs: seq<frame_t>)
+  function top_frame(frames: frames_t): frame_t
+    requires |frames.fs| != 0 
+  {
+    frames.fs[|frames.fs| - 1]
+  }
+
+  datatype frames_t = frames_cons(sp: int, fs: seq<frame_t>)
   {
     predicate frames_inv(stack: seq<uint32>)
       requires |stack| == STACK_MAX_WORDS()
@@ -111,9 +117,17 @@ module stack {
         .(fs := fs + [frame_cons(sp, stack[start..end])])
     }
 
+    function push_once(content: seq<uint32>, stack: seq<uint32>): frames_t
+    {
+      var new_sp := sp - |content| * 4;
+      this.(sp := new_sp)
+        .(fs := fs + [frame_cons(sp, content)])
+    }
+
     lemma push_preserves_inv(num_bytes: uint32, stack: seq<uint32>)
       requires push.requires(num_bytes, stack)
       ensures push(num_bytes, stack).frames_inv(stack)
+      ensures |top_frame(push(num_bytes, stack)).content| == num_bytes / 4
     {
       var new_frames := push(num_bytes, stack);
       assert new_frames.frames_inv(stack) by {
@@ -229,7 +243,7 @@ module stack {
       requires frames_writable(this, index)
     {
       var last := |fs| - 1;
-      var top_f := fs[last];
+      var top_f := top_frame(this);
       var new_content := top_f.content[index := value];
       var new_top_f := top_f.(content := new_content);
       this.(fs := fs[last := new_top_f])
@@ -238,8 +252,7 @@ module stack {
     function read(index: nat): uint32
       requires frames_writable(this, index)
     {
-      var last := |fs| - 1;
-      var top_f := fs[last];
+      var top_f := top_frame(this);
       top_f.content[index]
     }
 

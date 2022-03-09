@@ -587,26 +587,47 @@ module mem {
     }
   }
 
-  function push_frame(mem: mem_t, flat: flat_t, num_bytes: uint32): (new_mem: mem_t)
+  function stack_push_frame(mem: mem_t, flat: flat_t, num_bytes: uint32): (new_mem: mem_t)
     requires mem.inv(flat)
     requires num_bytes % 4 == 0
     requires in_stack_addr_range(mem.frames.sp - num_bytes)
     ensures new_mem.inv(flat)
+    ensures |new_mem.frames.fs| != 0
+    ensures |top_frame(new_mem.frames).content| == num_bytes / 4
   {
     reveal mem.inv();
     var stack := get_stack(flat);
-    mem.frames.push_preserves_inv(num_bytes, get_stack(flat));
+    mem.frames.push_preserves_inv(num_bytes, stack);
     var new_mem := mem.(frames := mem.frames.push(num_bytes, stack));
     assert new_mem.inv(flat);
     new_mem
   }
 
+  function stack_push_once(mem: mem_t, flat: flat_t, content: seq<uint32>): (new_mem: mem_t)
+    requires mem.inv(flat)
+  {
+    reveal mem.inv();
+    mem.(frames := mem.frames.push_once(content, get_stack(flat)))
+  }
+
+  predicate frame_index_valid(mem: mem_t, index: nat)
+  {
+    frames_writable(mem.frames, index)
+  }
+
+  function read_top_frame(mem: mem_t): seq<uint32>
+  {
+    if |mem.frames.fs| != 0 then top_frame(mem.frames).content
+    else []
+  }
+
   function write_frame(mem: mem_t, flat: flat_t, index: nat, value: uint32): (r: (mem_t, flat_t))
     requires mem.inv(flat)
-    requires frames_writable(mem.frames, index)
+    requires frame_index_valid(mem, index)
     ensures in_stack_addr_range(mem.frames.sp + index * 4)
     ensures r.1 == flat_write_32(flat, mem.frames.sp + index * 4, value)
     ensures r.0.inv(r.1)
+    ensures read_top_frame(r.0) == read_top_frame(mem)[index := value];
   {
     mem.frames_write_preverses_inv(flat, index, value);
     var new_mem := mem.(frames := mem.frames.write(index, value));
@@ -616,7 +637,7 @@ module mem {
 
   function read_frame(mem: mem_t, flat: flat_t, index: nat): (value: uint32)
     requires mem.inv(flat)
-    requires frames_writable(mem.frames, index)
+    requires frame_index_valid(mem, index)
     // ensures value == flat_read_32(flat, mem.frames.sp + index * 4)
   {
     mem.frames.read(index)
