@@ -233,6 +233,20 @@ function mod(a: int, n: nat): int extern;
 
 function stack_push_frame(mem: mem_t, flat: flat_t, num_bytes: int): mem_t extern;
 
+function stack_push_batch(mem: mem_t, flat: flat_t, content: seq(uint32)): mem_t extern;
+
+function top_frame(frames: frames_t): frame_t extern;
+
+function write_frame(mem: mem_t, flat: flat_t, index: nat, value: uint32): tuple(mem_t, flat_t) extern;
+
+function read_frame(mem: mem_t, flat: flat_t, index: nat): uint32 extern;
+
+function frame_index_valid(mem: mem_t, index: nat): bool extern;
+
+function stack_pop_frame(mem: mem_t, flat: flat_t): (new_mem: mem_t) extern;
+
+function stack_depth(mem: mem_t): nat extern;
+
 procedure push_frame(inline num_bytes: int32)
     {:instruction Ins32(RV_ADDI(SP, SP, num_bytes))}
     requires
@@ -251,9 +265,22 @@ procedure push_frame(inline num_bytes: int32)
     assume false;
 }
 
-function write_frame(mem: mem_t, flat: flat_t, index: nat, value: uint32): tuple(mem_t, flat_t) extern;
-
-function frame_index_valid(mem: mem_t, index: nat): bool extern;
+procedure pop_frame(inline num_bytes: int32)
+    {:instruction Ins32(RV_ADDI(SP, SP, num_bytes))}
+    requires
+        num_bytes == seq_len(read_top_frame(mem)) * 4;
+        stack_depth(mem) >= 2;
+    modifies
+        mem; sp;
+    reads
+        flat;
+    ensures
+        sp == old(sp) - num_bytes;
+        flat == old(flat);
+        mem == stack_pop_frame(old(mem), flat);
+{
+    assume false;
+}
 
 procedure sw_stack(in rs2: reg32, in offset: imm32)
     {:instruction Ins32(RV_SW(rs2, SP, offset))}
@@ -273,7 +300,6 @@ procedure sw_stack(in rs2: reg32, in offset: imm32)
     assume false;
 }
 
-function read_frame(mem: mem_t, flat: flat_t, index: nat): uint32 extern;
 
 procedure lw_stack(inout dst: reg32, in offset: imm32)
     {:instruction Ins32(RV_LW(dst, SP, offset))}

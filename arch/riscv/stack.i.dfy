@@ -74,19 +74,6 @@ module stack {
     }
   }
 
-  predicate frames_writable(frames: frames_t, index: nat)
-  {
-    && var fs := frames.fs;
-    && |fs| != 0
-    && index < |fs[|fs| - 1].content|
-  }
-
-  function top_frame(frames: frames_t): frame_t
-    requires |frames.fs| != 0 
-  {
-    frames.fs[|frames.fs| - 1]
-  }
-
   datatype frames_t = frames_cons(sp: int, fs: seq<frame_t>)
   {
     predicate frames_inv(stack: seq<uint32>)
@@ -104,6 +91,11 @@ module stack {
       && (forall i | 0 <= i < |fs| :: fs[i].frame_inv(stack))
     }
   
+    function depth(): nat 
+    {
+      |fs|
+    }
+
     function push(num_bytes: uint32, stack: seq<uint32>): frames_t
       requires |stack| == STACK_MAX_WORDS()
       requires num_bytes % 4 == 0
@@ -194,7 +186,7 @@ module stack {
         .(fs := fs[..last])
     }
 
-    lemma pop_preserves_inv(stack: seq<uint32>, new_frames: frames_t)
+    lemma pop_preserves_inv(stack: seq<uint32>)
       requires pop.requires(stack)
       ensures pop(stack).frames_inv(stack)
     {
@@ -358,10 +350,22 @@ module stack {
     }
   }
 
-  function init_frames(stack: seq<uint32>): (frames: frames_t)
-    requires |stack| == STACK_MAX_WORDS()
-    ensures frames.frames_inv(stack)
+  function top_frame(frames: frames_t): frame_t
+    requires frames.depth() != 0
   {
-    frames_cons(STACK_START(), [frame_cons(STACK_START(), [])])
+    frames.fs[|frames.fs| - 1]
   }
+
+  predicate frames_writable(frames: frames_t, index: nat)
+  {
+    && frames.depth() != 0
+    && index < |top_frame(frames).content|
+  }
+
+  // function init_frames(stack: seq<uint32>): (frames: frames_t)
+  //   requires |stack| == STACK_MAX_WORDS()
+  //   ensures frames.frames_inv(stack)
+  // {
+  //   frames_cons(STACK_START(), [frame_cons(STACK_START(), [])])
+  // }
 }

@@ -587,12 +587,17 @@ module mem {
     }
   }
 
+  function stack_depth(mem: mem_t): nat
+  {
+    mem.frames.depth()
+  }
+
   function stack_push_frame(mem: mem_t, flat: flat_t, num_bytes: uint32): (new_mem: mem_t)
     requires mem.inv(flat)
     requires num_bytes % 4 == 0
     requires in_stack_addr_range(mem.frames.sp - num_bytes)
     ensures new_mem.inv(flat)
-    ensures |new_mem.frames.fs| != 0
+    ensures stack_depth(new_mem) == stack_depth(mem) + 1
     ensures |top_frame(new_mem.frames).content| == num_bytes / 4
   {
     reveal mem.inv();
@@ -603,7 +608,21 @@ module mem {
     new_mem
   }
 
-  function stack_push_once(mem: mem_t, flat: flat_t, content: seq<uint32>): (new_mem: mem_t)
+  function stack_pop_frame(mem: mem_t, flat: flat_t): (new_mem: mem_t)
+    requires mem.inv(flat)
+    requires stack_depth(mem) >= 2
+    ensures new_mem.inv(flat)
+    ensures stack_depth(new_mem) == stack_depth(mem) - 1
+  {
+    reveal mem.inv();
+    var stack := get_stack(flat);
+    mem.frames.pop_preserves_inv(stack);
+    var new_mem := mem.(frames := mem.frames.pop(stack));
+    assert new_mem.inv(flat);
+    new_mem
+  }
+
+  function stack_push_batch(mem: mem_t, flat: flat_t, content: seq<uint32>): (new_mem: mem_t)
     requires mem.inv(flat)
   {
     reveal mem.inv();
