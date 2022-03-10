@@ -118,7 +118,8 @@ function mma_vars_inv(
 
 procedure mma_save_regs()
 
-    requires in_stack_addr_range(sp - 40);
+    requires
+        sp == STACK_START() - 68;
 
     modifies
         sp; mem; flat;
@@ -129,6 +130,7 @@ procedure mma_save_regs()
         sp == old(sp) - 40;
         mem == stack_push_batch(old(mem), old(flat), seq(s8, s7, s6, s5, s4, s3, s2, s1, s0, ra));
         stack_depth(mem) == stack_depth(old(mem)) + 1;
+        seq_len(read_top_frame(mem)) == 10;
 {
     push_frame((-40));
     sw_stack(ra, 36);
@@ -154,7 +156,7 @@ procedure mma_pre_loop(
         ghost B: uint64_view_t,
         ghost next_vars: mma_vars)
 
-    requires in_stack_addr_range(sp - 40);
+    requires sp == STACK_START() - 68;
 
     requires a0 == rsa.M0D;
     requires a2 == vars.a_i;
@@ -371,15 +373,99 @@ procedure mma_loop(
         next_vars.iter_b.buff, next_vars.iter_n.buff, original_c, vars.iter_c.buff, next_vars.iter_c.buff, j);
 }
 
+
+procedure mma_post_loop(
+    ghost vars: mma_vars,
+    ghost rsa: rsa_params,
+    ghost A: uint64_view_t,
+    ghost B: uint64_view_t,
+    ghost original_c: seq(uint32),
+    ghost j: nat)
+    // returns (ghost next_vars: mma_vars)
+    returns (ghost next_iter_c : iter_t)
+
+    requires
+
+        j == 96;
+
+        s0 == A.uh;
+        s1 == B.uh;
+
+        s6 == vars.iter_c.base_ptr;
+        s7 == vars.a_i;
+
+        s2 == vars.iter_n.base_ptr + 4 * j;
+
+        mma_vars_inv(vars, heap, s2, j, /* n */ s3, j-1, /* c */ s4, j, /* b */ rsa);
+
+        mont_loop_inv(vars.a_i, s5, A, B, vars.iter_b.buff, vars.iter_n.buff, original_c, vars.iter_c.buff, j);
+
+        vars.i < NUM_WORDS;    
+        montmul_inv(original_c, vars.iter_a.buff, vars.i, vars.iter_b.buff, rsa);
+
+    reads
+        s1; s2; s3; s5; s6;
+
+    modifies
+        s0; a0; a1; a2; a3; a4; a5; a6;
+        heap;
+
+    ensures
+        next_iter_c.base_ptr == vars.iter_c.base_ptr;
+
+        heap == old(heap)[next_iter_c.base_ptr := B32(next_iter_c.buff)];
+
+        montmul_inv(next_iter_c.buff, vars.iter_a.buff, vars.i+1, vars.iter_b.buff, rsa);
+        mvar_iter_inv(heap, next_iter_c, next_iter_c.base_ptr, 0, NA);
+{
+    // s0 <- lower half of A(uh) + B(uh)
+    add(s0, s0, s1);
+    // assert s0 == uint32_add(A.uh, B.uh);
+
+    // ghost var next_iter_c := vars.iter_c;
+
+    next_iter_c := sw_next(s0, s3, 0, vars.iter_c);
+
+    ghost var bout: uint1 := if s0 < s1 then 1 else 0;
+    ghost var presub_c := next_iter_c.buff;
+
+    mont_loop_inv_post_lemma(
+        vars.a_i, s5, A, B,
+        vars.iter_b.buff, vars.iter_n.buff,
+        original_c, presub_c, bout);
+
+    ghost var next_bout : uint1 := 0;
+
+    if (s0 < s1) {
+        // assert A.uh + B.uh == s0 + BASE_32;
+        mv(a0, s6);
+        addi(a1, s2, (-384));
+
+        next_iter_c, next_bout := sub_mod(vars.iter_n.(index := 0),
+            next_iter_c.(index := 0));
+        assert to_nat(next_iter_c.buff) ==
+            to_nat(presub_c) - to_nat(vars.iter_n.buff) + next_bout * Pow(BASE_32, 96);
+    }
+
+    let next_vars := vars.(iter_c := next_iter_c);
+
+    mont_loop_cond_sub_lemma(next_vars.a_i, s5,
+        next_vars.iter_b.buff, to_nat(next_vars.iter_n.buff), to_nat(original_c), presub_c,
+        next_vars.iter_c.buff, bout, next_bout);
+
+    montmul_inv_lemma(original_c, next_iter_c.buff, next_vars.iter_a.buff, next_vars.i, s5, next_vars.iter_b.buff, rsa);
+
+    next_iter_c := next_iter_c.(index := 0);
+}
+
+
 procedure mont_mul_add(
     ghost vars: mma_vars,
     ghost rsa: rsa_params)
     returns (ghost next_iter_c : iter_t)
-    {:timeLimitMultiplier 2}
-
     {:noInline}
 
-    requires in_stack_addr_range(sp - 40);
+    requires sp == STACK_START() - 68;
 
     requires a0 == rsa.M0D;
     requires a2 == vars.a_i;
@@ -406,18 +492,16 @@ procedure mont_mul_add(
         s6 == old(s6);
         s7 == old(s7);
         s8 == old(s8);
-        sp == old(sp); 
-
-    ensures
-        next_iter_c.base_ptr == vars.iter_c.base_ptr;
-
-        heap == old(heap)[next_iter_c.base_ptr := B32(next_iter_c.buff)];
-
-        mma_vars_inv(vars.(iter_c := next_iter_c), heap, old(a4), 0, /* n */ old(a1), 0, /* c */ old(a3), 0, /* b */ rsa);
+        sp == old(sp);
 
         mem.frames == old(mem).frames;
 
     ensures
+        next_iter_c.base_ptr == vars.iter_c.base_ptr;
+        heap == old(heap)[next_iter_c.base_ptr := B32(next_iter_c.buff)];
+    
+        mma_vars_inv(vars.(iter_c := next_iter_c), heap, old(a4), 0, /* n */ old(a1), 0, /* c */ old(a3), 0, /* b */ rsa);
+
         montmul_inv(next_iter_c.buff, vars.iter_a.buff, vars.i+1, vars.iter_b.buff, rsa);
 {
     ghost var A: uint64_view_t;
@@ -461,6 +545,8 @@ procedure mont_mul_add(
 
             mont_loop_inv(next_vars.a_i, s5, A, B, next_vars.iter_b.buff, next_vars.iter_n.buff, original_c, next_vars.iter_c.buff, j);
 
+            mem.frames == mem0.frames;
+
         decreases
             s8 - s2;
    {
@@ -468,41 +554,7 @@ procedure mont_mul_add(
         j := j + 1;
    }
 
-    // s0 <- lower half of A(uh) + B(uh)
-    add(s0, s0, s1);
-    // assert s0 == uint32_add(A.uh, B.uh);
-
-    next_iter_c := sw_next(s0, s3, 0, next_vars.iter_c);
-
-    ghost var bout: uint1 := if s0 < s1 then 1 else 0;
-    ghost var presub_c := next_iter_c.buff;
-
-    mont_loop_inv_post_lemma(
-        next_vars.a_i, s5, A, B,
-        next_vars.iter_b.buff, next_vars.iter_n.buff,
-        original_c, presub_c, bout);
-
-    ghost var next_bout : uint1 := 0;
-
-    if (s0 < s1) {
-        // assert A.uh + B.uh == s0 + BASE_32;
-        mv(a0, s6);
-        addi(a1, s8, (-384));
-
-        next_iter_c, next_bout := sub_mod(next_vars.iter_n.(index := 0),
-            next_iter_c.(index := 0));
-        assert to_nat(next_iter_c.buff) - Pow(BASE_32, 96) * next_bout == to_nat(presub_c) - to_nat(next_vars.iter_n.buff);
-    }
-
-    next_vars := next_vars.(iter_c := next_iter_c);
-
-    mont_loop_cond_sub_lemma(next_vars.a_i, s5,
-        next_vars.iter_b.buff, to_nat(next_vars.iter_n.buff), to_nat(original_c), presub_c,
-        next_vars.iter_c.buff, bout, next_bout);
-
-    montmul_inv_lemma(original_c, next_iter_c.buff, next_vars.iter_a.buff, next_vars.i, s5, next_vars.iter_b.buff, rsa);
-
-    next_iter_c := next_iter_c.(index := 0);
+    next_iter_c := mma_post_loop(next_vars, rsa, A, B, original_c, j);
 
     lw_stack(ra, 36);
     lw_stack(s0, 32);
@@ -514,10 +566,8 @@ procedure mont_mul_add(
     lw_stack(s6, 8);
     lw_stack(s7, 4);
     lw_stack(s8, 0);
-
-    addi(sp, sp, 48);
+    pop_frame(40);
 }
-
 #verbatim
 }
 #endverbatim

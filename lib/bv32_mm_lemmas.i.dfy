@@ -79,137 +79,89 @@ module bv32_mm_lemmas refines generic_mm_lemmas {
         && rsa_params_inv(rsa)
     }
 
-    // datatype mm_vars = mm_vars_cons(
-    //     mm_frame_ptr: uint32, // writable
-    //     mma_frame_ptr: uint32, // writable
-    //     iter_a: iter_t,
-    //     iter_b: iter_t,
-    //     iter_c: iter_t, // writable
-    //     iter_n: iter_t
-    // )
+    datatype mm_vars = mm_vars_cons(
+        iter_a: iter_t,
+        iter_b: iter_t,
+        iter_c: iter_t, // writable
+        iter_n: iter_t
+    )
 
-    // predicate mm_vars_inv(
-    //     vars: mm_vars,
-    //     heap: heap_t,
-    //     a_ptr: int, a_idx: nat,
-    //     n_ptr: int, n_idx: int,
-    //     c_ptr: int, c_idx: int,
-    //     b_ptr: int, b_idx: int,
-    //     rsa: rsa_params)
-    // {
-    //     && valid_frame_ptr(heap, vars.mm_frame_ptr, 8)
-    //     && valid_frame_ptr(heap, vars.mma_frame_ptr, 12)
+    predicate mm_vars_inv(
+        vars: mm_vars,
+        heap: heap_t,
+        a_ptr: int, a_idx: nat,
+        n_ptr: int, n_idx: int,
+        c_ptr: int, c_idx: int,
+        b_ptr: int, b_idx: int,
+        rsa: rsa_params)
+    {
+        && mvar_iter_inv(heap, vars.iter_a, a_ptr, a_idx, NA)
+        && mvar_iter_inv(heap, vars.iter_c, c_ptr, c_idx, NA)
+        && mvar_iter_inv(heap, vars.iter_b, b_ptr, b_idx, NA)
+        && mvar_iter_inv(heap, vars.iter_n, n_ptr, n_idx, rsa.M)
 
-    //     && mvar_iter_inv(heap, vars.iter_a, a_ptr, a_idx, NA)
-    //     && mvar_iter_inv(heap, vars.iter_c, c_ptr, c_idx, NA)
-    //     && mvar_iter_inv(heap, vars.iter_b, b_ptr, b_idx, NA)
-    //     && mvar_iter_inv(heap, vars.iter_n, n_ptr, n_idx, rsa.M)
+        && vars.iter_c.base_ptr != vars.iter_a.base_ptr
+        && vars.iter_c.base_ptr != vars.iter_n.base_ptr
+        && vars.iter_c.base_ptr != vars.iter_b.base_ptr
 
-    //     && vars.iter_c.base_ptr != vars.iter_a.base_ptr
-    //     && vars.iter_c.base_ptr != vars.iter_n.base_ptr
-    //     && vars.iter_c.base_ptr != vars.iter_b.base_ptr
-    //     && vars.iter_c.base_ptr != vars.mma_frame_ptr
+        && rsa_params_inv(rsa)
+    }
 
-    //     && vars.mm_frame_ptr != vars.mma_frame_ptr
-    //     && vars.mm_frame_ptr != vars.iter_a.base_ptr
-    //     && vars.mm_frame_ptr != vars.iter_b.base_ptr
-    //     && vars.mm_frame_ptr != vars.iter_c.base_ptr
-    //     && vars.mm_frame_ptr != vars.iter_n.base_ptr
+    function to_mma_vars(vars: mm_vars, a_i: uint32): mma_vars
+    {
+        mma_vars(vars.iter_a, a_i, vars.iter_a.index,
+            vars.iter_b, vars.iter_c, vars.iter_n)
+    }
 
-    //     && vars.mma_frame_ptr != vars.iter_a.base_ptr
-    //     && vars.mma_frame_ptr != vars.iter_n.base_ptr
-    //     && vars.mma_frame_ptr != vars.iter_b.base_ptr
+    function seq_zero(i: nat): seq<uint32>
+    {
+        GBV.BVSEQ.SeqZero(NUM_WORDS)
+    }
 
-    //     && rsa_params_inv(rsa)
-    // }
+    datatype mp_vars = mp_vars(
+        iter_rr: iter_t, 
+        iter_n: iter_t,
+        iter_in: iter_t,
+        iter_ar: iter_t, // writable
+        iter_aar: iter_t, // writable
+        iter_out: iter_t // writable
+    )
 
-    // function to_mma_vars(vars: mm_vars, a_i: uint32): mma_vars
-    // {
-    //     mma_vars(vars.mma_frame_ptr,
-    //         vars.iter_a, a_i, vars.iter_a.index,
-    //         vars.iter_b, vars.iter_c, vars.iter_n)
-    // }
+    predicate mp_vars_inv(
+        vars: mp_vars,
+        heap: heap_t,
+        rr_ptr: int,
+        n_ptr: nat,
+        in_ptr: nat,
+        ar_ptr: nat,
+        aar_ptr: nat,
+        out_ptr: nat,
+        rsa: rsa_params)
+    {
+        && mvar_iter_inv(heap, vars.iter_rr, rr_ptr, 0, rsa.RR)
+        && mvar_iter_inv(heap, vars.iter_n, n_ptr, 0, rsa.M)
+        && mvar_iter_inv(heap, vars.iter_in, in_ptr, 0, rsa.SIG)
+        && mvar_iter_inv(heap, vars.iter_ar, ar_ptr, 0, NA)
+        && mvar_iter_inv(heap, vars.iter_aar, aar_ptr, 0, NA)
+        && mvar_iter_inv(heap, vars.iter_out, out_ptr, 0, NA)
 
-    // function seq_zero(i: nat): seq<uint32>
-    // {
-    //     GBV.BVSEQ.SeqZero(NUM_WORDS)
-    // }
+        && vars.iter_ar.base_ptr != vars.iter_rr.base_ptr
+        && vars.iter_ar.base_ptr != vars.iter_n.base_ptr
+        && vars.iter_ar.base_ptr != vars.iter_in.base_ptr
+        && vars.iter_ar.base_ptr != vars.iter_aar.base_ptr
+        && vars.iter_ar.base_ptr != vars.iter_out.base_ptr
 
-    // datatype mp_vars = mp_vars(
-    //     mp_frame_ptr: uint32, // writable
-    //     mm_frame_ptr: uint32, // writable
-    //     mma_frame_ptr: uint32, // writable
-    //     iter_rr: iter_t, 
-    //     iter_n: iter_t,
-    //     iter_in: iter_t,
-    //     iter_ar: iter_t, // writable
-    //     iter_aar: iter_t, // writable
-    //     iter_out: iter_t // writable
-    // )
+        && vars.iter_aar.base_ptr != vars.iter_rr.base_ptr
+        && vars.iter_aar.base_ptr != vars.iter_n.base_ptr
+        && vars.iter_aar.base_ptr != vars.iter_in.base_ptr
+        && vars.iter_aar.base_ptr != vars.iter_out.base_ptr
 
-    // predicate mp_vars_inv(
-    //     vars: mp_vars,
-    //     heap: heap_t,
-    //     rr_ptr: int,
-    //     n_ptr: nat,
-    //     in_ptr: nat,
-    //     ar_ptr: nat,
-    //     aar_ptr: nat,
-    //     out_ptr: nat,
-    //     rsa: rsa_params)
-    // {
-    //     && valid_frame_ptr(heap, vars.mp_frame_ptr, 8)
-    //     && valid_frame_ptr(heap, vars.mm_frame_ptr, 8)
-    //     && valid_frame_ptr(heap, vars.mma_frame_ptr, 12)
+        && vars.iter_out.base_ptr != vars.iter_rr.base_ptr
+        && vars.iter_out.base_ptr != vars.iter_n.base_ptr
+        && vars.iter_out.base_ptr != vars.iter_in.base_ptr
 
-    //     && mvar_iter_inv(heap, vars.iter_rr, rr_ptr, 0, rsa.RR)
-    //     && mvar_iter_inv(heap, vars.iter_n, n_ptr, 0, rsa.M)
-    //     && mvar_iter_inv(heap, vars.iter_in, in_ptr, 0, rsa.SIG)
-    //     && mvar_iter_inv(heap, vars.iter_ar, ar_ptr, 0, NA)
-    //     && mvar_iter_inv(heap, vars.iter_aar, aar_ptr, 0, NA)
-    //     && mvar_iter_inv(heap, vars.iter_out, out_ptr, 0, NA)
-
-    //     && vars.iter_ar.base_ptr != vars.iter_rr.base_ptr
-    //     && vars.iter_ar.base_ptr != vars.iter_n.base_ptr
-    //     && vars.iter_ar.base_ptr != vars.iter_in.base_ptr
-    //     && vars.iter_ar.base_ptr != vars.iter_aar.base_ptr
-    //     && vars.iter_ar.base_ptr != vars.iter_out.base_ptr
-    //     && vars.iter_ar.base_ptr != vars.mp_frame_ptr
-    //     && vars.iter_ar.base_ptr != vars.mm_frame_ptr
-    //     && vars.iter_ar.base_ptr != vars.mma_frame_ptr
-
-    //     && vars.iter_aar.base_ptr != vars.iter_rr.base_ptr
-    //     && vars.iter_aar.base_ptr != vars.iter_n.base_ptr
-    //     && vars.iter_aar.base_ptr != vars.iter_in.base_ptr
-    //     && vars.iter_aar.base_ptr != vars.iter_out.base_ptr
-    //     && vars.iter_aar.base_ptr != vars.mp_frame_ptr
-    //     && vars.iter_aar.base_ptr != vars.mm_frame_ptr
-    //     && vars.iter_aar.base_ptr != vars.mma_frame_ptr
-
-    //     && vars.iter_out.base_ptr != vars.iter_rr.base_ptr
-    //     && vars.iter_out.base_ptr != vars.iter_n.base_ptr
-    //     && vars.iter_out.base_ptr != vars.iter_in.base_ptr
-    //     && vars.iter_out.base_ptr != vars.mp_frame_ptr
-    //     && vars.iter_out.base_ptr != vars.mm_frame_ptr
-    //     && vars.iter_out.base_ptr != vars.mma_frame_ptr
-
-    //     && vars.mp_frame_ptr != vars.iter_rr.base_ptr
-    //     && vars.mp_frame_ptr != vars.iter_n.base_ptr
-    //     && vars.mp_frame_ptr != vars.iter_in.base_ptr
-    //     && vars.mp_frame_ptr != vars.mm_frame_ptr
-    //     && vars.mp_frame_ptr != vars.mma_frame_ptr
-
-    //     && vars.mm_frame_ptr != vars.iter_rr.base_ptr
-    //     && vars.mm_frame_ptr != vars.iter_n.base_ptr
-    //     && vars.mm_frame_ptr != vars.iter_in.base_ptr
-    //     && vars.mm_frame_ptr != vars.mma_frame_ptr
-
-    //     && vars.mma_frame_ptr != vars.iter_rr.base_ptr
-    //     && vars.mma_frame_ptr != vars.iter_n.base_ptr
-    //     && vars.mma_frame_ptr != vars.iter_in.base_ptr
-
-    //     && rsa_params_inv(rsa)
-    // }
+        && rsa_params_inv(rsa)
+    }
 
     lemma {:induction A, i} cmp_sufficient_lemma(A: seq<uint32>, B: seq<uint32>, i: nat)
         requires 0 <= i < |A| == |B|;
