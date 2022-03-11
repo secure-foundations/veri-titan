@@ -411,10 +411,12 @@ def generate_dll(dfy_path, dll_path):
     output_dir, dll_name = os.path.split(dll_path)
     json_name = dll_name.replace(".dll", ".runtimeconfig.json")
     json_path = output_dir + "/" + json_name
-    command = f"{DAFNY_PATH} /compile:1 /noNLarith /vcsCores:2 {dfy_path} /out:{dll_path}"
+    command = f"{DAFNY_PATH} /compile:1 /spillTargetCode:1 /noNLarith /vcsCores:2 {dfy_path} /out:{dll_path}"
+    print(command)
     output = subprocess_run(command)
-    os.system(f"mv {dll_name} {dll_path}")
-    os.system(f"mv {json_name} {json_path}")
+    print(output)
+    # os.system(f"mv {dll_name} {dll_path}")
+    # os.system(f"mv {json_name} {json_path}")
 
 ## command line interface
 

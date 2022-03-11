@@ -12,6 +12,7 @@ import opened integers
 import opened rv_machine
 import opened rv_decls
 import opened rv_vale
+import opened mem
 
 import opened bv32_mm_lemmas
 import opened sub_mod_nl_lemmas
@@ -79,24 +80,24 @@ procedure sub_mod(
     {:noInline}
 
     requires
-        iter_safe(iter_n, mem, a1);
+        iter_safe(iter_n, heap, a1);
         seq_len(iter_n.buff) == 96;
         iter_n.index == 0; 
 
-        iter_safe(iter_a, mem, a0);
+        iter_safe(iter_a, heap, a0);
         seq_len(iter_a.buff) == 96;
         iter_a.index == 0;
 
-        iter_n.base_addr != iter_a.base_addr;
+        iter_n.base_ptr != iter_a.base_ptr;
 
     modifies
-        a0; a1; a2; a3; a4; a5; a6; mem;
+        a0; a1; a2; a3; a4; a5; a6; heap;
 
     ensures
         seq_len(iter_a'.buff) == 96;
-        iter_a'.base_addr == iter_a.base_addr;
+        iter_a'.base_ptr == iter_a.base_ptr;
         iter_a'.index == 0;
-        mem == old(mem)[iter_a.base_addr := iter_a'.buff];
+        heap == old(heap)[iter_a.base_ptr := B32(iter_a'.buff)];
 
         to_nat(iter_a'.buff) ==
             to_nat(iter_a.buff) - to_nat(iter_n.buff) + borrow * Pow(BASE_32, 96);
@@ -118,8 +119,8 @@ procedure sub_mod(
         subb_inv_pre_lemma(iter_a'.buff, old_a, iter_n.buff);
     }
 
-    ghost var n_ptr := iter_n.base_addr;
-    ghost var a_ptr := iter_a.base_addr;
+    ghost var n_ptr := iter_n.base_ptr;
+    ghost var a_ptr := iter_a.base_ptr;
 
     while (a2 != a6)
         invariant a2 <= a6;
@@ -127,14 +128,14 @@ procedure sub_mod(
         invariant a6 == n_ptr + 384;
         invariant 0 <= i <= 96;
 
-        invariant iter_inv(iter_n, mem, a2);
-        invariant iter_n.base_addr == n_ptr;
+        invariant iter_inv(iter_n, heap, a2);
+        invariant iter_n.base_ptr == n_ptr;
         invariant iter_n.index == i;
 
-        invariant mem == old(mem)[a_ptr := iter_a'.buff];
-        invariant iter_inv(iter_a', mem, a0);
+        invariant heap == old(heap)[a_ptr := B32(iter_a'.buff)];
+        invariant iter_inv(iter_a', heap, a0);
         invariant seq_len(iter_a'.buff) == 96;
-        invariant iter_a'.base_addr == a_ptr;
+        invariant iter_a'.base_ptr == a_ptr;
         invariant iter_a'.index == i;
 
         invariant a_ptr != n_ptr;
@@ -146,13 +147,13 @@ procedure sub_mod(
         let lh := a5;
         let uh := a1;
     
-        lw_iter(a4, a0, 0, iter_a');
+        lw(a4, a0, 0, iter_a');
 
-        let iter_a_next := lw_next_iter(iter_a);
-        // load mem from a0 to a4 (a4 == a[i])
+        let iter_a_next := b32_iter_load_next(iter_a, true);
+        // load heap from a0 to a4 (a4 == a[i])
 
         let iter_n_next := lw_next(a3, a2, 0, iter_n); 
-        // load mem from a2 into a3 (a3 == n[i])
+        // load heap from a2 into a3 (a3 == n[i])
         addi(a2, a2, 4); // increment n pointer
 
         ghost var a_i := iter_a.buff[i];

@@ -8,7 +8,7 @@ module bv256_mm_lemmas refines generic_mm_lemmas {
     import opened ot_machine
     import opened ot_vale
     import opened ot_abstraction
-    // import opened mul256_nl_lemma
+    import opened mem
 
     type uint512_view_t = dw_view_t
 
@@ -91,8 +91,8 @@ module bv256_mm_lemmas refines generic_mm_lemmas {
         && is_xword_pointee(heap, 28, out_ptr)
 
         && mvars_inv(vars, heap, NA, NA, m_ptr, m0d_ptr, rr_ptr, sig_ptr)
-        && buff_base_ptr_valid(heap, out_ptr)
-        && |heap[out_ptr].b| == NUM_WORDS
+        && heap_b256_ptr_valid(heap, out_ptr)
+        && |heap[out_ptr].b256| == NUM_WORDS
 
         && out_ptr != m0d_ptr
         && out_ptr != rr_ptr

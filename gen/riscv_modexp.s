@@ -101,14 +101,14 @@ if_end1:
   ret
 
 mont_mul:
-  addi sp, sp, -32
-  sw ra, 28(sp)
-  sw s0, 24(sp)
-  sw s1, 20(sp)
-  sw s2, 16(sp)
-  sw s3, 12(sp)
-  sw s4, 8(sp)
-  sw s5, 4(sp)
+  addi sp, sp, -28
+  sw ra, 24(sp)
+  sw s0, 20(sp)
+  sw s1, 16(sp)
+  sw s2, 12(sp)
+  sw s3, 8(sp)
+  sw s4, 4(sp)
+  sw s5, 0(sp)
   addi s0, a0, 0
   addi s1, a1, 0
   addi s2, a2, 0
@@ -138,28 +138,28 @@ w_start3:
   j w_start3
 
 w_end3:
-  lw ra, 28(sp)
-  lw s0, 24(sp)
-  lw s1, 20(sp)
-  lw s2, 16(sp)
-  lw s3, 12(sp)
-  lw s4, 8(sp)
-  lw s5, 4(sp)
-  addi sp, sp, 32
+  lw ra, 24(sp)
+  lw s0, 20(sp)
+  lw s1, 16(sp)
+  lw s2, 12(sp)
+  lw s3, 8(sp)
+  lw s4, 4(sp)
+  lw s5, 0(sp)
+  addi sp, sp, 28
   ret
 
 mont_mul_add:
-  addi sp, sp, -48
-  sw ra, 44(sp)
-  sw s0, 40(sp)
-  sw s1, 36(sp)
-  sw s2, 32(sp)
-  sw s3, 28(sp)
-  sw s4, 24(sp)
-  sw s6, 16(sp)
-  sw s5, 20(sp)
-  sw s7, 12(sp)
-  sw s8, 8(sp)
+  addi sp, sp, -40
+  sw ra, 36(sp)
+  sw s0, 32(sp)
+  sw s1, 28(sp)
+  sw s2, 24(sp)
+  sw s3, 20(sp)
+  sw s4, 16(sp)
+  sw s5, 12(sp)
+  sw s6, 8(sp)
+  sw s7, 4(sp)
+  sw s8, 0(sp)
   addi s6, a1, 0
   lw a1, 0(a3)
   addi s7, a2, 0
@@ -209,21 +209,21 @@ w_end4:
 
 if_true5:
   addi a0, s6, 0
-  addi a1, s8, -384
+  addi a1, s2, -384
   call sub_mod
 
 if_end5:
-  lw ra, 44(sp)
-  lw s0, 40(sp)
-  lw s1, 36(sp)
-  lw s2, 32(sp)
-  lw s3, 28(sp)
-  lw s4, 24(sp)
-  lw s5, 20(sp)
-  lw s6, 16(sp)
-  lw s7, 12(sp)
-  lw s8, 8(sp)
-  addi sp, sp, 48
+  lw ra, 36(sp)
+  lw s0, 32(sp)
+  lw s1, 28(sp)
+  lw s2, 24(sp)
+  lw s3, 20(sp)
+  lw s4, 16(sp)
+  lw s5, 12(sp)
+  lw s6, 8(sp)
+  lw s7, 4(sp)
+  lw s8, 0(sp)
+  addi sp, sp, 40
   ret
 
 mula32:

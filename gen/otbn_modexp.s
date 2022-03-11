@@ -12,19 +12,17 @@ modexp_var_3072_f4:
   addi x20, x26, 0
   addi x21, x24, 0
   jal x1, montmul
-  loopi 12, 3
+  loopi 12, 2
     bn.sid x8, 0(x21++)
     addi x8, x8, 1
-    nop
-  loopi 16, 9
+  loopi 16, 8
     addi x19, x24, 0
     addi x20, x24, 0
     addi x21, x24, 0
     jal x1, montmul
-    loopi 12, 3
+    loopi 12, 2
       bn.sid x8, 0(x21++)
       addi x8, x8, 1
-      nop
     nop
   addi x19, x23, 0
   addi x20, x24, 0
@@ -32,12 +30,11 @@ modexp_var_3072_f4:
   jal x1, montmul
   bn.add w31, w31, w31 << 0, FG0
   li x17, 16
-  loopi 12, 5
+  loopi 12, 4
     bn.movr x11, x8++
     bn.lid x9, 0(x16++)
     bn.subb w2, w2, w3 << 0, FG0
     bn.movr x17++, x11
-    nop
   csrrs x2, 1984, x0
   andi x2, x2, 1
   li x8, 4
@@ -45,27 +42,24 @@ modexp_var_3072_f4:
   li x8, 16
   label_0:
   addi x21, x24, 0
-  loopi 12, 3
+  loopi 12, 2
     bn.sid x8, 0(x21++)
     addi x8, x8, 1
-    nop
   ret
 
 .globl montmul
 montmul:
   bn.lid x9, 0(x17)
   bn.mov w2, w31
-  loopi 12, 2
+  loopi 12, 1
     bn.movr x10++, x11
-    nop
-  loopi 12, 7
+  loopi 12, 6
     bn.lid x11, 0(x20++)
     addi x6, x16, 0
     addi x7, x19, 0
     jal x1, mont_loop
     addi x16, x6, 0
     addi x19, x7, 0
-    nop
   li x8, 4
   li x10, 4
   ret
@@ -89,7 +83,7 @@ mont_loop:
   jal x1, mul256_w30xw25
   bn.add w27, w27, w24 << 0, FG0
   bn.addc w28, w26, w31 << 0, FG0
-  loopi 11, 15
+  loopi 11, 14
     bn.lid x12, 0(x19++)
     bn.movr x13, x8++
     jal x1, mul256_w30xw2
@@ -104,7 +98,6 @@ mont_loop:
     bn.add w24, w27, w28 << 0, FG0
     bn.addc w28, w26, w31 << 0, FG0
     bn.movr x10++, x13
-    nop
   bn.add w24, w29, w28 << 0, FG1
   bn.movr x10++, x13
   bn.add w31, w31, w31 << 0, FG0
@@ -115,12 +108,11 @@ mont_loop:
   li x13, 24
   addi x16, x22, 0
   li x8, 4
-  loopi 12, 5
+  loopi 12, 4
     bn.lid x13, 0(x16++)
     bn.movr x12, x8
     bn.subb w24, w30, w24 << 0, FG0
     bn.movr x8++, x13
-    nop
   label_1:
   li x8, 4
   li x10, 4

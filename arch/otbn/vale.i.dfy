@@ -1,13 +1,18 @@
-include "abstraction.i.dfy"
 include "../../std_lib/src/NonlinearArithmetic/Mul.dfy"
+include "abstraction.i.dfy"
+include "mem.i.dfy"
 
 module ot_vale {
     // import opened bv_ops
+
+    import bv32_ops
+    import bv256_seq
+
     import opened integers
     import opened ot_machine
     import opened ot_abstraction
-    import bv32_ops
-    import bv256_seq
+    import opened mem
+    import opened flat
 
     import Mul
 
@@ -84,7 +89,7 @@ module ot_vale {
 
     // otbn state realted
 
-    datatype gstate = gstate(ms: state, heap: heap_t)
+    datatype gstate = gstate(ms: state, mem: mem_t)
 
     type va_code = code
 
@@ -197,62 +202,87 @@ module ot_vale {
         sK.(ms := sK.ms.(wdrs := temp))
     }
 
+    // flat
+
+    function va_get_flat(s: va_state): map<int, uint32>
+    {
+        s.ms.flat
+    }
+
+    function va_update_flat(sM: va_state, sK: va_state): va_state
+    {
+        var temp := sM.ms.flat;
+        sK.(ms := sK.ms.(flat := temp))
+    }
+
     // mem
 
-    function va_get_mem(s: va_state): map<int, uint32>
+    function va_get_mem(s: va_state): mem_t
     {
-        s.ms.mem
+        s.mem
     }
 
     function va_update_mem(sM: va_state, sK: va_state): va_state
     {
-        var temp := sM.ms.mem;
-        sK.(ms := sK.ms.(mem := temp))
+        sK.(mem := sM.mem)
     }
-
-    // heap
 
     function va_get_heap(s: va_state): heap_t
     {
-        s.heap
+        s.mem.heap
     }
 
     function va_update_heap(sM: va_state, sK: va_state): va_state
     {
-        sK.(heap := sM.heap)
+        sK.(mem := sK.mem.(heap := sM.mem.heap))
+    }
+
+    predicate iter_safe(iter: iter_t, heap: heap_t, ptress: nat)
+    {
+        && iter.cur_ptr() == ptress
+        && b256_iter_safe(heap, iter)
+    }
+
+    predicate iter_inv(iter: iter_t, heap: heap_t, ptress: nat)
+    {
+        && iter.cur_ptr() == ptress
+        && b256_iter_inv(heap, iter)
+    }
+
+    predicate is_xword_pointee(heap: heap_t, ptr: nat, value: uint32)
+    {
+        && heap_w32_ptr_valid(heap, ptr)
+        && heap[ptr].w32 == value
     }
 
     lemma sw_correct(gs: gstate, grs2: reg32_t,
         offset: int12, grs1: reg32_t, write_ptr: uint32)
-        returns (new_heap: heap_t)
+        returns (new_mem: mem_t)
 
         requires valid_state_opaque(gs)
         requires write_ptr == bv32_ops.addi(gs.ms.read_reg32(grs1), offset);
-        requires xword_ptr_valid(gs.heap, write_ptr);
+        requires heap_w32_ptr_valid(gs.mem.heap, write_ptr);
 
         ensures
             var r := gs.ms.eval_SW(grs2, offset, grs1);
-            var gr := gstate(r, new_heap);
+            var gr := gstate(r, new_mem);
             var value := gs.ms.read_reg32(grs2);
             && valid_state_opaque(gr)
-            && xword_ptr_valid(gr.heap, write_ptr)
-            && heap_read_xword(gr.heap, write_ptr) == value
-            && new_heap == heap_write_xword(gs.heap, write_ptr, value)
+            && heap_w32_ptr_valid(gr.mem.heap, write_ptr)
+            && new_mem == gs.mem.(heap := heap_w32_write(gs.mem.heap, write_ptr, value))
     {
         reveal valid_state_opaque();
-
         var value := gs.ms.read_reg32(grs2);
-        new_heap := heap_write_xword(gs.heap, write_ptr, value);
-
-        write_xword_preverses_mem_equiv(gs.heap, new_heap,
-            gs.ms.mem, gs.ms.mem[write_ptr := value],
-            write_ptr, value);
+        var new_heap := heap_w32_write(gs.mem.heap, write_ptr, value);
+        new_mem := gs.mem.(heap := new_heap);
+        gs.mem.heap_w32_write_preverses_inv(gs.ms.flat, write_ptr, value);
     }
+
+    type iter_t = b256_iter
 
     lemma bn_lid_correct(gs: gstate,
         grd: reg32_t, grd_inc: bool,
-        offset: int10, grs: reg32_t, grs_inc: bool,
-        addr: uint32, iter: iter_t)
+        offset: int10, grs: reg32_t, grs_inc: bool, iter: iter_t)
         returns (new_iter: iter_t)
 
         requires valid_state_opaque(gs)
@@ -264,33 +294,38 @@ module ot_vale {
             && grs.index != 0
             && grs.index != 1
         requires gs.ms.read_reg32(grd) <= 31
-        requires addr == wwrod_offset_ptr(gs.ms.read_reg32(grs), offset)
-        requires iter_safe(iter, gs.heap, addr)
+        requires iter.cur_ptr() == wwrod_offset_ptr(gs.ms.read_reg32(grs), offset)
+        requires b256_iter_safe(gs.mem.heap, iter)
 
         ensures 
             var r := gs.ms.eval_BN_LID(grd, grd_inc, offset, grs, grs_inc);
-            var gr := gstate(r, gs.heap);
+            var gr := gstate(r, gs.mem);
             && valid_state_opaque(gr)
             // the resulting gerenal registers
             && gr.ms.read_reg32(grd) == (gs.ms.read_reg32(grd) + if grd_inc then 1 else 0)
             && gr.ms.read_reg32(grs) == (gs.ms.read_reg32(grs) + if grs_inc then 32 else 0)
             // new_iter still reflects the memory
-            && new_iter == bn_lid_next_iter(iter, grs_inc)
-            && var addr := wwrod_offset_ptr(gr.ms.read_reg32(grs), offset);
-            && iter_inv(new_iter, gr.heap, addr)
+            && new_iter == b256_iter_load_next(iter, grs_inc)
+            && new_iter.cur_ptr() == wwrod_offset_ptr(gr.ms.read_reg32(grs), offset)
+            && b256_iter_inv(gr.mem.heap,new_iter)
             // the resulting wide register
             && gr.ms.wdrs[gs.ms.read_reg32(grd)] == new_iter.buff[iter.index]
     {
         reveal valid_state_opaque();
-        new_iter := bn_lid_next_iter(iter, grs_inc);
+        new_iter := b256_iter_load_next(iter, grs_inc);
         var r := gs.ms.eval_BN_LID(grd, grd_inc, offset, grs, grs_inc);
+        var gr := gstate(r, gs.mem);
+        var value := gs.ms.read_wword(iter.cur_ptr());
+        assert heap_b256_inv(gs.mem.heap, gs.ms.flat, iter.base_ptr);
+        assert heap_256_inv(gs.mem.heap, gs.ms.flat,  iter.base_ptr, iter.index);
+        assert value == iter.buff[iter.index];
     }
 
     lemma bn_sid_correct(gs: gstate, 
         grs2: reg32_t, grs2_inc: bool,
         offset: int10, grs1: reg32_t, grs1_inc: bool,
-        value: uint256, addr: uint32, iter: iter_t)
-    returns (result: (heap_t, iter_t))
+        value: uint256, iter: iter_t)
+    returns (result: (mem_t, iter_t))
 
         requires valid_state_opaque(gs)
         // note this is overly restricting 
@@ -303,33 +338,31 @@ module ot_vale {
         requires
             var s := gs.ms;
             && s.read_reg32(grs2) <= 31
-            && addr == wwrod_offset_ptr(s.read_reg32(grs1), offset)
+            && iter.cur_ptr() == wwrod_offset_ptr(s.read_reg32(grs1), offset)
             && value == s.read_reg256(WDR(s.read_reg32(grs2)))
-            && iter_safe(iter, gs.heap, addr)
+            && b256_iter_safe(gs.mem.heap, iter)
 
         ensures
-            var (new_h, new_iter) := result;
+            var (new_mem, new_iter) := result;
             var s := gs.ms;
             var r := s.eval_BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc);
-            var gr := gstate(r, new_h);
+            var gr := gstate(r, new_mem);
             && valid_state_opaque(gr)
             // the resulting gerenal registers
             && r.read_reg32(grs2) == (s.read_reg32(grs2) + if grs2_inc then 1 else 0)
             && r.read_reg32(grs1) == (s.read_reg32(grs1) + if grs1_inc then 32 else 0)
             // new_iter still reflects the memory
-            && new_iter == bn_sid_next_iter(iter, value, grs1_inc)
-            && var addr := wwrod_offset_ptr(r.read_reg32(grs1), offset);
-            && iter_inv(new_iter, new_h, addr)
-            && gr.heap == gs.heap[iter.base_ptr := WBUFF(new_iter.buff)]
+            && new_iter == b256_iter_store_next(iter, value, grs1_inc)
+            && new_iter.cur_ptr() == wwrod_offset_ptr(r.read_reg32(grs1), offset)
+            && b256_iter_inv(new_mem.heap, new_iter)
+            && new_mem == gs.mem.(heap := heap_b256_write(gs.mem.heap, iter, value))
     {
         reveal valid_state_opaque();
         var r := gs.ms.eval_BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc);
-        var heap' := heap_write_wword(gs.heap, iter, addr, value);
-        write_wword_preverses_mem_equiv(
-            gs.heap, heap', iter,
-            gs.ms.mem, r.mem, addr, value);
-        var iter' := bn_sid_next_iter(iter, value, grs1_inc);
-        return (heap', iter');
+        gs.mem.heap_b256_write_preverses_inv(gs.ms.flat, iter, value);
+        var mem' := gs.mem.(heap := heap_b256_write(gs.mem.heap, iter, value));
+        var iter' := b256_iter_store_next(iter, value, grs1_inc);
+        return (mem', iter');
     }
 
     // ok
@@ -348,7 +381,7 @@ module ot_vale {
     predicate va_state_eq(s0: va_state, s1: va_state)
     {
         // s0 == s1
-        && s0.heap == s1.heap
+        && s0.mem == s1.mem
         && s0.ms == s1.ms
         // && s0.ms.gprs == s1.ms.gprs
         // && s0.ms.wdrs == s1.ms.wdrs
@@ -377,7 +410,7 @@ module ot_vale {
         ensures valid_state_opaque(s) ==> valid_state(s.ms);
     {
         && s.ms.ok
-        && mem_equiv(s.heap, s.ms.mem)
+        && s.mem.inv(s.ms.flat)
     }
 
     function method va_CNil(): codes { CNil }
@@ -561,7 +594,7 @@ module ot_vale {
             var r':state :| r' == s0.ms.eval_code(complete_block.hd) && r.ms == r'.eval_block(complete_block.tl);
             current := complete_block.hd;
             rest := complete_block.tl;
-            r1 := gstate(r', s0.heap);
+            r1 := gstate(r', s0.mem);
             // r1 := gstate(r'.gprs, r'.wdrs, r'.wmod, r'.wrnd, r'.wacc, r'.fgroups, r'.mem, r'.wmem, r'.ok);
             if valid_state_opaque(s0) {
                 reveal_valid_state_opaque();
@@ -626,7 +659,7 @@ module ot_vale {
                     && s'.ms.ok
                     && s == s'
 
-                    && (s.heap == s'.heap == r'.heap)
+                    && (s.mem == s'.mem == r'.mem)
                     // && eval_cond(s, w) > 0
                 else
                     true; //!r.ok;
@@ -645,7 +678,7 @@ module ot_vale {
         if valid_state_opaque(s) {
             var r'':state :| r'' == s.ms.eval_code(c) && r.ms == r''.eval_while(c, n - 1);
             s' := s;
-            r' := gstate(r'', s.heap);
+            r' := gstate(r'', s.mem);
             code_state_validity(c, s'.ms, r'');
         } else {
             s' := s.(ms := s.ms.(ok := false));
@@ -665,7 +698,7 @@ module ot_vale {
                     else
                         true)
                     && r'.ms == r.ms
-                    && r'.heap == s.heap
+                    && r'.mem == s.mem
                 else
                     r' == s; //!r.ok;
     {
@@ -677,7 +710,7 @@ module ot_vale {
             r' := s;
             return;
         }
-        r' := r.(heap := s.heap);
+        r' := r.(mem := s.mem);
     }
 
     lemma va_lemma_ifElse(ifb: ifCond, ct:code, cf:code, s:va_state, r:va_state) returns(cond:bool, s':va_state)

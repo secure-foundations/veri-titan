@@ -7,6 +7,8 @@ import opened integers
 import opened bv32_ops
 import opened rv_machine
 import opened rv_vale
+import opened mem
+import opened stack
 
 #endverbatim
 
@@ -54,28 +56,18 @@ const NA: int extern;
 function to_uint32(i:int) : uint32 extern;
 function to_int32(i:uint32) : int32 extern;
 
-// function to_uint64(i:int) : uint64 extern;
-// function to_int64(i:uint64) : int64 extern;
-
 type state: Type(0) {: primitive} extern;
 function operator(.ok) (s: state): bool extern;
 function operator(.ok :=) (s: state, b: bool): state extern;
 
 type reg32_t: Type(0) extern;
 
-type mem_t: Type(0) := map(int, seq(uint32));
-    
-function valid_frame_ptr(mem: mem_t, address: int, words: nat): bool extern;
-
-function mem_base_addr_valid(wmem: mem_t, ptr: int, size: nat): bool extern;
+function mem_base_ptr_valid(wmem: mem_t, ptr: int, size: nat): bool extern;
 
 type gprs_t: Type(0) extern;
 function operator([]) (s: gprs_t, i: int): uint32 extern; 
 function operator([ := ]) (s: gprs_t, i: int, v: uint32): gprs_t extern;
 function operator([ .. ]) (s: gprs_t, begin: int, end: int): seq(uint32) extern;
-
-function Loop(u: uint32) : bool extern;
-function LoopImm(u: uint32) : bool extern;
 
 function fst #[a: Type(0), b: Type(0)](m: tuple(a, b)): a extern;
 function snd #[a: Type(0), b: Type(0)](m: tuple(a, b)): b extern;
@@ -86,9 +78,34 @@ function A_as_carry(i:int) : uint1 extern;
 var gprs: gprs_t {:state gprs()};
 
 var ok: bool {:state ok()};
-    
+
+type flat_t: Type(0) extern;
+var flat: flat_t {:state flat()};
+
+type heap_t:  Type(0) := map(int, entry_t);
+var heap: heap_t {:state heap()};
+function heap_b32_write(heap: heap_t, iter: iter_t, value: uint32): heap_t extern;
+
+type entry_t: Type(0) extern;
+function B32(b: seq(uint32)): entry_t extern;
+function operator(.b32) (e :entry_t): seq(uint32) extern;
+
+type frames_t: Type(0) extern;
+var frames: frames_t {:state frames()};
+function operator(.fs) (m: frames_t): seq(frame_t) extern;
+function operator(.sp) (m: frames_t): int extern;
+
+type frame_t: Type(0) extern;
+function operator(.fp) (f: frame_t): uint32 extern;
+function operator(.content) (f: frame_t): seq(uint32) extern;
+
+type mem_t: Type(0) extern;
 var mem: mem_t {:state mem()};
-function mem_addr_valid(h: mem_t, ptr: int): bool extern;
+function operator(.frames) (m: mem_t): frames_t extern;
+function operator(.heap) (m: mem_t): heap_t extern;
+function read_top_frame(fs: mem_t): seq(uint32) extern;
+
+function in_stack_addr_range(addr: int): bool extern;
 
 type uint64_view_t: Type(0) extern;
 function uint64_cons(lh: uint32, uh: uint32, full: uint64) : uint64_view_t extern;
@@ -102,14 +119,14 @@ function operator(.uh) (num: int64_view_t) : uint32 extern;
 function operator(.full) (num: int64_view_t) : int extern;
 
 type iter_t: Type(0) extern;
-function iter_inv(iter: iter_t, h: mem_t, ptr: int): bool extern;
-function iter_safe(iter: iter_t, h: mem_t, ptr: int): bool extern;
-    
-function iter_cons(base_addr: int, index: nat, buff: seq(uint32)): iter_t extern;
-function lw_next_iter(iter: iter_t): iter_t extern;
-function lw_prev_iter(iter: iter_t): iter_t extern;
-function sw_next_iter(iter: iter_t, value: uint32): iter_t extern;
-function operator(.base_addr) (iter :iter_t): int extern;
+function iter_inv(iter: iter_t, h: heap_t, ptr: int): bool extern;
+function iter_safe(iter: iter_t, h: heap_t, ptr: int): bool extern;
+
+function iter_cons(base_ptr: int, index: nat, buff: seq(uint32)): iter_t extern;
+function b32_iter_load_next(iter: iter_t, inc: bool): iter_t extern;
+function b32_iter_load_prev(iter: iter_t): iter_t extern;
+function b32_iter_store_next(iter: iter_t, value: uint32, inc: bool): iter_t extern;
+function operator(.base_ptr) (iter :iter_t): int extern;
 function operator(.index) (iter :iter_t): int extern;
 function operator(.index := ) (iter: iter_t, i :int): iter_t extern;
 function operator(.buff) (iter :iter_t): seq(uint32) extern;
@@ -130,7 +147,7 @@ function operator(.RR) (rsa: rsa_params): nat extern;
 function operator(.R_INV) (rsa: rsa_params): nat extern;
 function rsa_params_inv(rsa: rsa_params): bool extern;
 
-function mvar_iter_inv(mem: mem_t, iter: iter_t, address: int, index: int, value: int): bool extern;
+function mvar_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int, value: int): bool extern;
 
 type string: Type(0) extern;
 
@@ -212,68 +229,174 @@ function operator(.full) (value : uint64_view_t): uint64 extern;
 // --------------------------------------------------------------
     
 // load instructions
-procedure lw_stack(inout dst: reg32, in src2: imm32, ghost index: nat)
-    {:instruction Ins32(RV_LW(dst, SP, src2))}
-    reads
-        sp; mem;
+
+function mod(a: int, n: nat): int extern;
+
+function stack_push_frame(mem: mem_t, flat: flat_t, num_bytes: int): mem_t extern;
+
+function stack_push_batch(mem: mem_t, flat: flat_t, content: seq(uint32)): mem_t extern;
+
+function top_frame(frames: frames_t): frame_t extern;
+
+function write_frame(mem: mem_t, flat: flat_t, index: nat, value: uint32): tuple(mem_t, flat_t) extern;
+
+function read_frame(mem: mem_t, flat: flat_t, index: nat): uint32 extern;
+
+function frame_index_valid(mem: mem_t, index: nat): bool extern;
+
+function stack_pop_frame(mem: mem_t, flat: flat_t): (new_mem: mem_t) extern;
+
+function stack_depth(mem: mem_t): nat extern;
+
+function STACK_START(): nat extern;
+
+procedure push_frame(inline num_bytes: int32)
+    {:instruction Ins32(RV_ADDI(SP, SP, num_bytes))}
     requires
-        src2 < 4096; // 12-bit
-        4 * index == src2;
-        mem?[sp];
-        index < seq_len(mem[sp]);
+        num_bytes < 0;
+        mod(num_bytes, 4) == 0;
+        in_stack_addr_range(sp + num_bytes);
+    modifies
+        mem; sp;
+    reads
+        flat;
     ensures
-        // mem location = src + sign-extended immediate
-        dst == old(mem[sp][index]);
+        sp == old(sp) + num_bytes;
+        flat == old(flat); // need this for the next one
+        mem == stack_push_frame(old(mem), flat, 0 - num_bytes);
 {
     assume false;
 }
 
-procedure lw_iter(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
-    {:instruction Ins32(RV_LW(dst, src1, src2))}
+procedure pop_frame(inline num_bytes: int32)
+    {:instruction Ins32(RV_ADDI(SP, SP, num_bytes))}
+    requires
+        seq_len(read_top_frame(mem)) == num_bytes / 4;
+        stack_depth(mem) >= 2;
+    modifies
+        mem; sp;
     reads
-        mem;
+        flat;
+    ensures
+        sp == old(sp) + num_bytes;
+        flat == old(flat);
+        mem == stack_pop_frame(old(mem), flat);
+{
+    assume false;
+}
+
+procedure sw_stack(in rs2: reg32, in offset: imm32)
+    {:instruction Ins32(RV_SW(rs2, SP, offset))}
+    requires
+        mod(offset, 4) == 0;
+        frame_index_valid(mem, offset / 4);
+    modifies
+        mem; flat;
+    ensures
+        let rst := write_frame(old(mem), old(flat), offset / 4, rs2);
+        frame_index_valid(mem, offset / 4);
+        read_top_frame(mem) ==
+            read_top_frame(old(mem))[offset / 4 := rs2];
+        mem == fst(rst);
+        flat == snd(rst);
+{
+    assume false;
+}
+
+
+procedure lw_stack(inout dst: reg32, in offset: imm32)
+    {:instruction Ins32(RV_LW(dst, SP, offset))}
+    requires
+        mod(offset, 4) == 0;
+        frame_index_valid(mem, offset / 4);
+    reads
+        mem; flat;
+    ensures
+        mem == old(mem);
+        dst == read_frame(mem, flat, offset / 4);
+{
+    assume false;
+}
+
+procedure lw(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
+    {:instruction Ins32(RV_LW(dst, src1, src2))}
     requires
         src2 < 4096; // 12-bit
-        iter_safe(iter, mem, src1 + src2);
+        iter_safe(iter, heap, src1 + src2);
+    reads
+        heap;
     ensures
+        heap == old(heap);
         // mem location = src + sign-extended immediate
-        dst == old(mem[iter.base_addr][iter.index]);
+        dst == heap[iter.base_ptr].b32[iter.index];
 {
     assume false;
 }
 
 procedure lw_next(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
     returns (ghost next_iter: iter_t)
-    reads
-        mem;
     requires
         src2 < 4096; // 12-bit
-        iter_safe(iter, mem, src1 + src2);
+        iter_safe(iter, heap, src1 + src2);
+    reads
+        heap;
     ensures
-        dst == old(mem[iter.base_addr][iter.index]);
-        next_iter == lw_next_iter(iter);
-        iter_inv(next_iter, mem, old(src1) + old(src2) + 4);
+        heap == old(heap);
+        dst == heap[iter.base_ptr].b32[iter.index];
+        next_iter == b32_iter_load_next(iter, true);
+        iter_inv(next_iter, heap, old(src1) + old(src2) + 4);
 {
-    next_iter := lw_next_iter(iter);
-    lw_iter(dst, src1, src2, iter);
+    next_iter := b32_iter_load_next(iter, true);
+    lw(dst, src1, src2, iter);
 }
 
 procedure lw_prev(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
-    returns (ghost prev_iter: iter_t)
-    reads
-        mem;
+    returns (ghost next_iter: iter_t)
     requires
         src2 < 4096; // 12-bit
-        iter_safe(iter, mem, src1 + src2);
+        iter_safe(iter, heap, src1 + src2);
+    reads
+        heap;
     ensures
-        dst == old(mem[iter.base_addr][iter.index]);
-        prev_iter == lw_prev_iter(iter);
-        old(src1) + old(src2) != iter.base_addr
-            ==>
-        iter_inv(prev_iter, mem, old(src1) + old(src2) - 4);
+        heap == old(heap);
+        dst == heap[iter.base_ptr].b32[iter.index];
+        next_iter == b32_iter_load_prev(iter);
+        iter.index != 0 ==> iter_inv(next_iter, heap, old(src1) + old(src2) - 4);
 {
-    prev_iter := lw_prev_iter(iter);
-    lw_iter(dst, src1, src2, iter);
+    next_iter := b32_iter_load_prev(iter);
+    lw(dst, src1, src2, iter);
+}
+
+// store instructions
+
+procedure sw(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: iter_t)
+    {:instruction Ins32(RV_SW(rs2, base, offset))}
+    requires
+        iter_safe(iter, heap, base + offset);
+        offset < 4096;
+    modifies
+        heap;
+    ensures
+        heap == heap_b32_write(old(heap), iter, rs2);
+        iter_safe(b32_iter_store_next(iter, rs2, false), heap, base + offset);
+{
+    assume false;
+}
+
+procedure sw_next(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: iter_t)
+    returns (ghost next_iter: iter_t)
+    requires
+        iter_safe(iter, heap, base + offset);
+        offset < 4096;
+    modifies
+        heap;
+    ensures
+        heap == heap_b32_write(old(heap), iter, rs2);
+        next_iter == b32_iter_store_next(iter, rs2, true);
+        iter_inv(next_iter, heap, base + offset + 4);
+{
+    next_iter := b32_iter_store_next(iter, rs2, true);
+    sw(rs2, base, offset, iter);
 }
 
 // immediate instructions
@@ -349,57 +472,7 @@ procedure srai(inout dst: reg32, in src1: reg32, in src2: imm32)
 
 
 // --------------------------------------------------------------
-    
-// store instructions
-    
-procedure sw_stack(in rs2: reg32, in offset: imm32, inline index: nat)
-    {:instruction Ins32(RV_SW(rs2, SP, offset))}
-    requires
-        4 * index == offset;
-        mem?[sp];
-        index < seq_len(mem[sp]);
-        offset < 4096;
-    reads
-        sp;
-    modifies
-        mem;
-    ensures
-        mem == old(mem[sp := mem[sp][index := rs2]]);
-    {
-        assume false;
-    }
 
-procedure sw_iter(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: iter_t)
-    {:instruction Ins32(RV_SW(rs2, base, offset))}
-    modifies
-        mem;
-    requires
-        iter_safe(iter, mem, base + offset);
-        offset < 4096;
-    ensures
-        // store rs2 at mem[base + offset]
-        mem == old(mem[iter.base_addr := mem[iter.base_addr][iter.index := rs2]]);
-        iter_safe(iter.(buff := iter.buff[iter.index := rs2]), mem, base + offset);
-{
-    assume false;
-}
-
-procedure sw_next(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: iter_t)
-    returns (ghost next_iter: iter_t)
-    {:instruction Ins32(RV_SW(rs2, base, offset))}
-    modifies
-        mem;
-    requires
-        iter_safe(iter, mem, base + offset);
-        offset < 4096;
-    ensures
-        // store rs2 at mem[base + offset]
-        mem == old(mem[iter.base_addr := mem[iter.base_addr][iter.index := rs2]]);
-        iter_inv(next_iter, mem, base + offset + 4);
-        next_iter == sw_next_iter(iter, rs2);
-{
-    assume false;
-}
 
 // register-register operations
     
