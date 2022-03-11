@@ -89,8 +89,12 @@ module mem {
 
 
   // iterator for buffer entries
-  datatype b256_iter = b256_iter_cons(base_ptr: nat, index: nat,
-    ptr: nat, buff: seq<uint256>)
+  datatype b256_iter = b256_iter_cons(base_ptr: nat, index: nat, buff: seq<uint256>)
+  {
+    function cur_ptr(): nat {
+      heap_b256_index_ptr(base_ptr, index)
+    }
+  }
 
   function b256_iter_load_next(iter: b256_iter, inc: bool): b256_iter
   {
@@ -109,8 +113,6 @@ module mem {
     var base_ptr := iter.base_ptr;
     // base_ptr points to a valid buffer
     && heap_b256_ptr_valid(heap, base_ptr)
-    // ptr is correct
-    && iter.ptr == heap_b256_index_ptr(base_ptr, iter.index)
     // the view is consistent with heap
     && heap[base_ptr].b256 == iter.buff
     // the index is within bound (or at end)
@@ -246,11 +248,11 @@ module mem {
 
       requires inv(flat)
       requires b256_iter_safe(heap, iter)
-      requires new_flat == flat_write_256(flat, iter.ptr, value)
+      requires new_flat == flat_write_256(flat, iter.cur_ptr(), value)
       requires heap_b256_ptr_valid(heap, other_ptr)
 
       ensures heap_b256_inv(heap_b256_write(heap, iter, value),
-        flat_write_256(flat, iter.ptr, value), other_ptr)
+        flat_write_256(flat, iter.cur_ptr(), value), other_ptr)
     {
       var new_heap := heap_b256_write(heap, iter, value);
       var base_ptr, j := iter.base_ptr, iter.index;
@@ -274,7 +276,7 @@ module mem {
           assert heap_256_inv(heap, flat, other_ptr, i);
           var ptr := heap_b256_index_ptr(other_ptr, i);
           assert flat_ptr_valid_256(new_flat, ptr);
-          assert ptr != iter.ptr by {
+          assert ptr != iter.cur_ptr() by {
             sub_ptrs_disjoint(flat, other_ptr, base_ptr);
           }
           assert flat_read_256(new_flat, ptr) == buff[i];
@@ -289,7 +291,7 @@ module mem {
 
       requires inv(flat)
       requires b256_iter_safe(heap, iter)
-      requires new_flat == flat_write_256(flat, iter.ptr, value)
+      requires new_flat == flat_write_256(flat, iter.cur_ptr(), value)
 
       ensures this.(heap := heap_b256_write(heap, iter, value)).stack_inv(new_flat)
     {
@@ -318,7 +320,7 @@ module mem {
 
       requires inv(flat)
       requires b256_iter_safe(heap, iter)
-      requires new_flat == flat_write_256(flat, iter.ptr, value)
+      requires new_flat == flat_write_256(flat, iter.cur_ptr(), value)
       requires heap_w32_ptr_valid(heap, other_ptr)
 
       ensures heap_w32_inv(heap_b256_write(heap, iter, value), new_flat, other_ptr)
@@ -335,7 +337,7 @@ module mem {
 
       requires inv(flat)
       requires b256_iter_safe(heap, iter)
-      requires new_flat == flat_write_256(flat, iter.ptr, value)
+      requires new_flat == flat_write_256(flat, iter.cur_ptr(), value)
 
       ensures this.(heap := heap_b256_write(heap, iter, value)).inv(new_flat)
     {
@@ -553,9 +555,9 @@ module mem {
       requires b256_iter_safe(heap, iter)
 
       ensures this.(heap := heap_b256_write(heap, iter, value)).
-        inv(flat_write_256(flat, iter.ptr, value))
+        inv(flat_write_256(flat, iter.cur_ptr(), value))
     {
-      var new_flat := flat_write_256(flat, iter.ptr, value);
+      var new_flat := flat_write_256(flat, iter.cur_ptr(), value);
       as_imem(flat).heap_b256_write_preverses_inv(flat, new_flat,
         iter, value);
     }

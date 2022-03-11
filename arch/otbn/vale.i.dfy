@@ -307,7 +307,7 @@ module ot_vale {
             // new_iter still reflects the memory
             && new_iter == b256_iter_load_next(iter, grs_inc)
             && new_iter.cur_ptr() == wwrod_offset_ptr(gr.ms.read_reg32(grs), offset)
-            && b256_iter_inv(gr.mem.heap, new_iter)
+            && b256_iter_inv(gr.mem.heap,new_iter)
             // the resulting wide register
             && gr.ms.wdrs[gs.ms.read_reg32(grd)] == new_iter.buff[iter.index]
     {
