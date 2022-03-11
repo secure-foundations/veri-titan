@@ -124,6 +124,7 @@ function iter_safe(iter: iter_t, h: heap_t, ptr: int): bool extern;
 
 function iter_cons(base_ptr: int, index: nat, buff: seq(uint32)): iter_t extern;
 function b32_iter_load_next(iter: iter_t, inc: bool): iter_t extern;
+function b32_iter_load_prev(iter: iter_t): iter_t extern;
 function b32_iter_store_next(iter: iter_t, value: uint32, inc: bool): iter_t extern;
 function operator(.base_ptr) (iter :iter_t): int extern;
 function operator(.index) (iter :iter_t): int extern;
@@ -349,6 +350,23 @@ procedure lw_next(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: 
     lw(dst, src1, src2, iter);
 }
 
+procedure lw_prev(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
+    returns (ghost next_iter: iter_t)
+    requires
+        src2 < 4096; // 12-bit
+        iter_safe(iter, heap, src1 + src2);
+    reads
+        heap;
+    ensures
+        heap == old(heap);
+        dst == heap[iter.base_ptr].b32[iter.index];
+        next_iter == b32_iter_load_prev(iter);
+        iter.index != 0 ==> iter_inv(next_iter, heap, old(src1) + old(src2) - 4);
+{
+    next_iter := b32_iter_load_prev(iter);
+    lw(dst, src1, src2, iter);
+}
+
 // store instructions
 
 procedure sw(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: iter_t)
@@ -380,24 +398,6 @@ procedure sw_next(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: i
     next_iter := b32_iter_store_next(iter, rs2, true);
     sw(rs2, base, offset, iter);
 }
-
-// procedure lw_prev(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
-//     returns (ghost prev_iter: iter_t)
-//     reads
-//         mem;
-//     requires
-//         src2 < 4096; // 12-bit
-//         iter_safe(iter, mem, src1 + src2);
-//     ensures
-//         dst == old(mem[iter.base_ptr][iter.index]);
-//         prev_iter == lw_prev_iter(iter);
-//         old(src1) + old(src2) != iter.base_ptr
-//             ==>
-//         iter_inv(prev_iter, mem, old(src1) + old(src2) - 4);
-// {
-//     prev_iter := lw_prev_iter(iter);
-//     lw_iter(dst, src1, src2, iter);
-// }
 
 // immediate instructions
 // all immediate instructions take a 12-bit immediate and sign extend it

@@ -80,6 +80,11 @@ module mem {
     iter.(index := if inc then iter.index + 1 else iter.index)
   }
 
+  function b32_iter_load_prev(iter: b32_iter): b32_iter
+  {
+    if iter.index == 0 then iter else iter.(index := iter.index - 1)
+  }
+
   function b32_iter_store_next(iter: b32_iter, value: uint32, inc: bool): b32_iter
     requires iter.index < |iter.buff|
   {
