@@ -115,7 +115,7 @@ procedure mm_clear(ghost iter_c: iter_t)
 
 procedure mm_save_regs()
     requires
-        sp == STACK_START() - 40;
+        sp == STACK_START() - 32;
 
     modifies
         sp; mem; flat;
@@ -123,7 +123,7 @@ procedure mm_save_regs()
         ra; s0; s1; s2; s3; s4; s5;
 
     ensures
-        sp == STACK_START() - 68;
+        sp == STACK_START() - 60;
         mem == stack_push_batch(old(mem), old(flat), seq(s5, s4, s3, s2, s1, s0, ra));
         stack_depth(mem) == stack_depth(old(mem)) + 1;
 {
@@ -209,7 +209,7 @@ procedure mont_mul(
 
     {:timeLimitMultiplier 3} 
 
-    requires sp == STACK_START() - 40;
+    requires sp == STACK_START() - 32;
 
     requires a0 == rsa.M0D;
 
@@ -261,8 +261,6 @@ procedure mont_mul(
             i == mut_vars.iter_a.index;
             s4 == mut_vars.iter_a.base_ptr + 384;
             s2 <= s4;
-
-            sp == STACK_START() - 68;
 
             s5 == old(a4);
             s6 == old(s6);

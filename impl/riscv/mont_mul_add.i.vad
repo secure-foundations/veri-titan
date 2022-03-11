@@ -119,7 +119,7 @@ function mma_vars_inv(
 procedure mma_save_regs()
 
     requires
-        sp == STACK_START() - 68;
+        sp == STACK_START() - 60;
 
     modifies
         sp; mem; flat;
@@ -156,7 +156,7 @@ procedure mma_pre_loop(
         ghost B: uint64_view_t,
         ghost next_vars: mma_vars)
 
-    requires sp == STACK_START() - 68;
+    requires sp == STACK_START() - 60;
 
     requires a0 == rsa.M0D;
     requires a2 == vars.a_i;
@@ -465,7 +465,7 @@ procedure mont_mul_add(
     returns (ghost next_iter_c : iter_t)
     {:noInline}
 
-    requires sp == STACK_START() - 68;
+    requires sp == STACK_START() - 60;
 
     requires a0 == rsa.M0D;
     requires a2 == vars.a_i;
