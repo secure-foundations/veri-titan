@@ -29,7 +29,7 @@ module stack {
     STACK_MAX_BYTES() / 4
   }
 
-  function STACK_START(): (sp: nat)
+  function {:extern} STACK_START(): (sp: nat)
     ensures sp > STACK_MAX_BYTES()
     ensures ptr_admissible_32(sp)
 
