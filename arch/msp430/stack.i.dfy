@@ -19,22 +19,22 @@ module stack {
   }
 
   function STACK_MAX_BYTES(): (n: nat)
-    ensures n % {{base_size.num_bytes}} == 0
+    ensures n % 2 == 0
   {
-    0x{{base_size.num_bytes}}00
+    0x400
   }
 
   function STACK_MAX_WORDS(): (n: nat)
   {
-    STACK_MAX_BYTES() / {{base_size.num_bytes}}
+    STACK_MAX_BYTES() / 2
   }
 
   function {:extern} STACK_START(): (sp: nat)
     ensures sp > STACK_MAX_BYTES()
-    ensures ptr_admissible_{{base_size.num_bits}}(sp)
+    ensures ptr_admissible_16(sp)
 
   function STACK_END(): (n: nat)
-    ensures n % {{base_size.num_bytes}} == 0
+    ensures n % 2 == 0
   {
     STACK_START() - STACK_MAX_BYTES()
   }
@@ -42,28 +42,28 @@ module stack {
   predicate in_stack_addr_range(addr: int)
   {
     && STACK_END() <= addr <= STACK_START()
-    && ptr_admissible_{{base_size.num_bits}}(addr)
+    && ptr_admissible_16(addr)
   }
 
   function ptr_to_stack_index(addr: int): nat
     requires in_stack_addr_range(addr)
   {
-    (addr - STACK_END()) / {{base_size.num_bytes}}
+    (addr - STACK_END()) / 2
   }
 
   function stack_index_to_ptr(i: nat): nat
   {
-    STACK_END() + i * {{base_size.num_bytes}}
+    STACK_END() + i * 2
   }
 
-  datatype frame_t = frame_cons(fp: int, content: seq<uint{{base_size.num_bits}}>)
+  datatype frame_t = frame_cons(fp: int, content: seq<uint16>)
   {
     function next_fp(): int
     {
-      fp - {{base_size.num_bytes}} * |content|
+      fp - 2 * |content|
     }
 
-    predicate frame_inv(stack: seq<uint{{base_size.num_bits}}>)
+    predicate frame_inv(stack: seq<uint16>)
       requires |stack| == STACK_MAX_WORDS()
     {
       && in_stack_addr_range(fp)
@@ -76,7 +76,7 @@ module stack {
 
   datatype frames_t = frames_cons(sp: int, fs: seq<frame_t>)
   {
-    predicate frames_inv(stack: seq<uint{{base_size.num_bits}}>)
+    predicate frames_inv(stack: seq<uint16>)
       requires |stack| == STACK_MAX_WORDS()
     {
       // first one is a place holder
@@ -96,9 +96,9 @@ module stack {
       |fs|
     }
 
-    function push(num_bytes: uint{{base_size.num_bits}}, stack: seq<uint{{base_size.num_bits}}>): frames_t
+    function push(num_bytes: uint16, stack: seq<uint16>): frames_t
       requires |stack| == STACK_MAX_WORDS()
-      requires num_bytes % {{base_size.num_bytes}} == 0
+      requires num_bytes % 2 == 0
       requires frames_inv(stack)
       requires in_stack_addr_range(sp - num_bytes)
     {
@@ -109,17 +109,17 @@ module stack {
         .(fs := fs + [frame_cons(sp, stack[start..end])])
     }
 
-    function push_once(content: seq<uint{{base_size.num_bits}}>, stack: seq<uint{{base_size.num_bits}}>): frames_t
+    function push_once(content: seq<uint16>, stack: seq<uint16>): frames_t
     {
-      var new_sp := sp - |content| * {{base_size.num_bytes}};
+      var new_sp := sp - |content| * 2;
       this.(sp := new_sp)
         .(fs := fs + [frame_cons(sp, content)])
     }
 
-    lemma push_preserves_inv(num_bytes: uint{{base_size.num_bits}}, stack: seq<uint{{base_size.num_bits}}>)
+    lemma push_preserves_inv(num_bytes: uint16, stack: seq<uint16>)
       requires push.requires(num_bytes, stack)
       ensures push(num_bytes, stack).frames_inv(stack)
-      ensures |top_frame(push(num_bytes, stack)).content| == num_bytes / {{base_size.num_bytes}}
+      ensures |top_frame(push(num_bytes, stack)).content| == num_bytes / 2
     {
       var new_frames := push(num_bytes, stack);
       assert new_frames.frames_inv(stack) by {
@@ -139,26 +139,26 @@ module stack {
         }
 
         calc == {
-          (end - start) * {{base_size.num_bytes}};
-          ptr_to_stack_index(sp) * {{base_size.num_bytes}} - ptr_to_stack_index(sp - num_bytes) * {{base_size.num_bytes}};
+          (end - start) * 2;
+          ptr_to_stack_index(sp) * 2 - ptr_to_stack_index(sp - num_bytes) * 2;
           {
             Mul.LemmaMulIsDistributiveSubAuto();
           }
-          (sp - STACK_END()) / {{base_size.num_bytes}} * {{base_size.num_bytes}} - (sp - num_bytes - STACK_END()) / {{base_size.num_bytes}} * {{base_size.num_bytes}};
+          (sp - STACK_END()) / 2 * 2 - (sp - num_bytes - STACK_END()) / 2 * 2;
           {
-            assert DivMod.IsModEquivalent(sp, STACK_END(), {{base_size.num_bytes}});
-            LemmaDivMulNop(sp - STACK_END(), {{base_size.num_bytes}});
+            assert DivMod.IsModEquivalent(sp, STACK_END(), 2);
+            LemmaDivMulNop(sp - STACK_END(), 2);
           }
-          sp - STACK_END() - (sp - num_bytes - STACK_END()) / {{base_size.num_bytes}} * {{base_size.num_bytes}};
+          sp - STACK_END() - (sp - num_bytes - STACK_END()) / 2 * 2;
           {
-            assert DivMod.IsModEquivalent(sp, num_bytes, {{base_size.num_bytes}});
-            assert DivMod.IsModEquivalent(sp - num_bytes, STACK_END(), {{base_size.num_bytes}});
-            LemmaDivMulNop(sp - num_bytes - STACK_END(), {{base_size.num_bytes}});
+            assert DivMod.IsModEquivalent(sp, num_bytes, 2);
+            assert DivMod.IsModEquivalent(sp - num_bytes, STACK_END(), 2);
+            LemmaDivMulNop(sp - num_bytes - STACK_END(), 2);
           }
           num_bytes;
         }
-        assert end - start == num_bytes / {{base_size.num_bytes}};
-        assert |stack[start..end]| == num_bytes / {{base_size.num_bytes}};
+        assert end - start == num_bytes / 2;
+        assert |stack[start..end]| == num_bytes / 2;
 
         forall i | 0 <= i < |new_frames.fs|
           ensures new_frames.fs[i].frame_inv(stack)
@@ -175,7 +175,7 @@ module stack {
       assert push(num_bytes, stack).frames_inv(stack);
     }
 
-    function pop(stack: seq<uint{{base_size.num_bits}}>): frames_t
+    function pop(stack: seq<uint16>): frames_t
       requires |stack| == STACK_MAX_WORDS()
       requires frames_inv(stack)
       requires |fs| >= 2
@@ -186,7 +186,7 @@ module stack {
         .(fs := fs[..last])
     }
 
-    lemma pop_preserves_inv(stack: seq<uint{{base_size.num_bits}}>)
+    lemma pop_preserves_inv(stack: seq<uint16>)
       requires pop.requires(stack)
       ensures pop(stack).frames_inv(stack)
     {
@@ -207,12 +207,12 @@ module stack {
       }
     }
 
-    lemma fp_decreasing(stack: seq<uint{{base_size.num_bits}}>, i: nat)
+    lemma fp_decreasing(stack: seq<uint16>, i: nat)
       requires |stack| == STACK_MAX_WORDS()
       requires frames_inv(stack)
       requires i < |fs|
       ensures forall j: nat | 0 <= j < i :: fs[i].fp <= fs[j].fp
-      ensures forall j: nat | 0 <= j < i :: fs[i].fp + |fs[j].content| * {{base_size.num_bytes}} <= fs[j].fp
+      ensures forall j: nat | 0 <= j < i :: fs[i].fp + |fs[j].content| * 2 <= fs[j].fp
     {
       if i != 0 {
         // assert fs[i-1].fp <= fs[i].fp;
@@ -220,18 +220,18 @@ module stack {
       }
     }
 
-    lemma sp_as_lower_bound(stack: seq<uint{{base_size.num_bits}}>, k: nat)
+    lemma sp_as_lower_bound(stack: seq<uint16>, k: nat)
       requires |stack| == STACK_MAX_WORDS()
       requires frames_inv(stack)
       requires k < |fs| - 1
-      ensures sp + |fs[|fs| - 1].content| * {{base_size.num_bytes}} + |fs[k].content| * {{base_size.num_bytes}}  <= fs[k].fp 
+      ensures sp + |fs[|fs| - 1].content| * 2 + |fs[k].content| * 2  <= fs[k].fp 
     {
       var len := |fs| - 1;
       fp_decreasing(stack, len);
-      assert forall j: nat | 0 <= j < len :: sp + |fs[len].content| * {{base_size.num_bytes}} + |fs[j].content| * {{base_size.num_bytes}} <= fs[j].fp;
+      assert forall j: nat | 0 <= j < len :: sp + |fs[len].content| * 2 + |fs[j].content| * 2 <= fs[j].fp;
     }
 
-    function write(index: nat, value: uint{{base_size.num_bits}}): frames_t
+    function write(index: nat, value: uint16): frames_t
       requires frames_writable(this, index)
     {
       var last := |fs| - 1;
@@ -241,14 +241,14 @@ module stack {
       this.(fs := fs[last := new_top_f])
     }
 
-    function read(index: nat): uint{{base_size.num_bits}}
+    function read(index: nat): uint16
       requires frames_writable(this, index)
     {
       var top_f := top_frame(this);
       top_f.content[index]
     }
 
-    lemma none_top_frame_disjoint(stack: seq<uint{{base_size.num_bits}}>, i: nat, index: nat, value: uint{{base_size.num_bits}})
+    lemma none_top_frame_disjoint(stack: seq<uint16>, i: nat, index: nat, value: uint16)
       requires |stack| == STACK_MAX_WORDS()
       requires write.requires(index, value)
       requires i < |fs| - 1
@@ -262,48 +262,48 @@ module stack {
       var end := ptr_to_stack_index(f.fp);
 
       calc == {
-        j * {{base_size.num_bytes}};
-        ((sp - STACK_END()) / {{base_size.num_bytes}} + index) * {{base_size.num_bytes}};
+        j * 2;
+        ((sp - STACK_END()) / 2 + index) * 2;
         {
           Mul.LemmaMulIsDistributiveAuto();
         }
-        (sp - STACK_END()) / {{base_size.num_bytes}} * {{base_size.num_bytes}} + index * {{base_size.num_bytes}};
+        (sp - STACK_END()) / 2 * 2 + index * 2;
         {
-          assert DivMod.IsModEquivalent(sp, STACK_END(), {{base_size.num_bytes}}); // pain
-          LemmaDivMulNop(sp - STACK_END(), {{base_size.num_bytes}});
+          assert DivMod.IsModEquivalent(sp, STACK_END(), 2); // pain
+          LemmaDivMulNop(sp - STACK_END(), 2);
         }
-        sp - STACK_END() + index * {{base_size.num_bytes}};
+        sp - STACK_END() + index * 2;
       }
 
       calc == {
-        start * {{base_size.num_bytes}};
-        (f.fp - |f.content| * {{base_size.num_bytes}} - STACK_END()) / {{base_size.num_bytes}} * {{base_size.num_bytes}};
+        start * 2;
+        (f.fp - |f.content| * 2 - STACK_END()) / 2 * 2;
         {
-          assert DivMod.IsModEquivalent(f.fp, |f.content| * {{base_size.num_bytes}}, {{base_size.num_bytes}}); // pain
-          assert DivMod.IsModEquivalent(f.fp - |f.content| * {{base_size.num_bytes}}, STACK_END(), {{base_size.num_bytes}}); // pain
-          LemmaDivMulNop(f.fp - |f.content| * {{base_size.num_bytes}} - STACK_END(), {{base_size.num_bytes}});
+          assert DivMod.IsModEquivalent(f.fp, |f.content| * 2, 2); // pain
+          assert DivMod.IsModEquivalent(f.fp - |f.content| * 2, STACK_END(), 2); // pain
+          LemmaDivMulNop(f.fp - |f.content| * 2 - STACK_END(), 2);
         }
-        f.fp - |f.content| * {{base_size.num_bytes}} - STACK_END();
+        f.fp - |f.content| * 2 - STACK_END();
       }
 
       assert j < start by 
       {
         calc {
-          (j - start) * {{base_size.num_bytes}};
-          j * {{base_size.num_bytes}} - start * {{base_size.num_bytes}};
-          sp + index * {{base_size.num_bytes}} - f.fp + |f.content| * {{base_size.num_bytes}};
-          sp + |f.content| * {{base_size.num_bytes}} + index * {{base_size.num_bytes}} - f.fp;
+          (j - start) * 2;
+          j * 2 - start * 2;
+          sp + index * 2 - f.fp + |f.content| * 2;
+          sp + |f.content| * 2 + index * 2 - f.fp;
           <=
           { sp_as_lower_bound(stack, i); }
-          index * {{base_size.num_bytes}} - |fs[last].content| * {{base_size.num_bytes}};
+          index * 2 - |fs[last].content| * 2;
           <
           0;
         }
       }
     }
 
-    lemma write_preserves_inv(stack: seq<uint{{base_size.num_bits}}>,
-      index: nat, value: uint{{base_size.num_bits}})
+    lemma write_preserves_inv(stack: seq<uint16>,
+      index: nat, value: uint16)
       requires |stack| == STACK_MAX_WORDS()
       requires write.requires(index, value)
       requires frames_inv(stack)
