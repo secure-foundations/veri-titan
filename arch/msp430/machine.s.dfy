@@ -9,32 +9,18 @@ module msp_machine {
 
     /* registers definitions */
 
+    // R0 R1, R2 are special 
+
+    type reg_idx = i: nat | 3 <= i <= 15 witness 3
+
     datatype reg_t =  
         // | PC
         | SP
-        // | R2
-        | R3
-        | R4
-        | R5
-        | R6
-        | R7
-        | R8
-        | R9
-        | R10
-        | R11
-        | R12
-        | R13
-        | R14
-        | R15
+        | R(i: reg_idx)
 
     /* state definition */
 
     type regs_t = map<reg_t, uint16>
-
-    // function method truncate_20_to_16(v: uint20): uint16
-    // {
-    //     v % BASE_16
-    // }
 
     datatype operand_t = 
         | Reg(r: reg_t)
@@ -57,6 +43,18 @@ module msp_machine {
         {
             this.(regs := this.regs[r := value])
         }
+    }
+
+    predicate valid_pushm_w(r: reg_t, n: uint16)
+    {
+        && r.R?
+        && 3 <= r.i - n <= 15
+    }
+
+    function pushm_w_seq(state: state, r: reg_t, n: uint16): seq<uint16>
+        requires valid_pushm_w(r, n)
+    {
+        seq(n, i requires 0 <= i < n => state.read_reg(R(r.i - i)))
     }
 
     function eval_operand(s: state, op: operand_t): uint16

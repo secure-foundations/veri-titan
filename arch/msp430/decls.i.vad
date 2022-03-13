@@ -1,0 +1,282 @@
+include{: verbatim} "../../arch/msp430/vale.i.dfy"
+
+#verbatim
+module msp_decls {
+
+import opened integers
+import opened bv16_ops
+import opened msp_machine
+import opened msp_vale
+import opened mem
+import opened stack
+
+#endverbatim
+
+type seq(a: Type(0)): Type(0) {: primitive} extern;
+function operator([]) #[a: Type(0)](s: seq(a), i: int): a extern; 
+function operator([ := ]) #[a: Type(0)](s: seq(a), i: int, v: a): seq(a) extern;
+function operator([ .. ]) #[a: Type(0)](s: seq(a), begin: int, end: int): seq(a) extern;
+function seq_len #[a: Type(0)] (s: seq(a)): nat extern;
+function seq_concat #[a: Type(0)](x: seq(a), y: seq(a)): seq(a) extern;
+function seq_append #[a: Type(0)](xs: seq(a), x: a): seq(a) extern;
+
+type map(a: Type(0), b: Type(0)): Type(0) extern;
+function operator(?[]) #[a:Type(0), b:Type(0)](m:map(a, b), rsa:a):bool extern;
+function operator([]) #[a: Type(0), b: Type(0)](m: map(a, b), rsa: a): b extern;
+function operator([ := ]) #[a: Type(0), b: Type(0)](m: map(a, b), rsa: a, v: b): map(a, b) extern;
+
+function fst #[a: Type(0), b: Type(0)](m: tuple(a, b)): a extern;
+function snd #[a: Type(0), b: Type(0)](m: tuple(a, b)): b extern;
+
+type nat:     Type(0) := int_range(0, _);
+type uint1:   Type(0) := int_range(0, 1);
+type uint2:   Type(0) := int_range(0, 3);
+type uint5:   Type(0) := int_range(0, 31);
+type uint16:  Type(0) := int_range(0, 65536);
+type uint32:  Type(0) := int_range(0, 0xffffffff);
+
+function power(b: int, e: nat) : nat extern;
+function cong(a: int, b: int, n: int) : bool extern;
+function cong_B16(a: int, b: int): bool extern;
+
+const BASE_16:  nat extern;
+const BASE_32:  nat extern;
+const NUM_WORDS:nat extern;
+    
+const NA: int extern;
+
+type state: Type(0) {: primitive} extern;
+function operator(.ms) (s: state): state extern; // small hack
+function operator(.ok) (s: state): bool extern;
+function operator(.ok :=) (s: state, b: bool): state extern;
+
+type reg_t: Type(0) extern;
+
+type operand_t: Type(0) extern;
+function Reg(r: reg_t): operand_t extern;
+function Idx(r: reg_t, index: uint16): operand_t extern;
+function RegIndir(r: reg_t, inc: bool): operand_t extern;
+function Imm(i: uint16): operand_t extern;
+
+function mem_base_ptr_valid(wmem: mem_t, ptr: int, size: nat): bool extern;
+
+function bool_to_uint1(i:bool) : uint1 extern;
+function A_as_carry(i:int) : uint1 extern;
+
+var ok: bool {:state ok()};
+
+type flat_t: Type(0) extern;
+var flat: flat_t {:state flat()};
+
+type heap_t:  Type(0) := map(int, entry_t);
+var heap: heap_t {:state heap()};
+function heap_b16_write(heap: heap_t, iter: iter_t, value: uint16): heap_t extern;
+
+type entry_t: Type(0) extern;
+function B16(b: seq(uint16)): entry_t extern;
+function operator(.b16) (e :entry_t): seq(uint16) extern;
+
+type frames_t: Type(0) extern;
+var frames: frames_t {:state frames()};
+function operator(.fs) (m: frames_t): seq(frame_t) extern;
+function operator(.sp) (m: frames_t): int extern;
+
+type frame_t: Type(0) extern;
+function operator(.fp) (f: frame_t): uint16 extern;
+function operator(.content) (f: frame_t): seq(uint16) extern;
+
+type mem_t: Type(0) extern;
+var mem: mem_t {:state mem()};
+function operator(.frames) (m: mem_t): frames_t extern;
+function operator(.heap) (m: mem_t): heap_t extern;
+function read_top_frame(fs: mem_t): seq(uint16) extern;
+
+function in_stack_addr_range(addr: int): bool extern;
+
+type iter_t: Type(0) extern;
+function iter_inv(iter: iter_t, h: heap_t, ptr: int): bool extern;
+function iter_safe(iter: iter_t, h: heap_t, ptr: int): bool extern;
+
+function iter_cons(base_ptr: int, index: nat, buff: seq(uint16)): iter_t extern;
+function b16_iter_load_next(iter: iter_t, inc: bool): iter_t extern;
+function b16_iter_load_prev(iter: iter_t): iter_t extern;
+function b16_iter_store_next(iter: iter_t, value: uint16, inc: bool): iter_t extern;
+function operator(.base_ptr) (iter :iter_t): int extern;
+function operator(.index) (iter :iter_t): int extern;
+function operator(.index := ) (iter: iter_t, i :int): iter_t extern;
+function operator(.buff) (iter :iter_t): seq(uint16) extern;
+function operator(.buff := ) (iter :iter_t, buff: seq(uint16)): iter_t extern;
+
+function to_nat(s: seq(uint16)): nat extern;
+
+type rsa_params: Type(0) extern;
+function operator(.E0) (rsa: rsa_params): nat extern;
+function operator(.E) (rsa: rsa_params): nat extern;
+function operator(.M) (rsa: rsa_params): nat extern;
+function operator(.SIG) (rsa: rsa_params): nat extern;
+function operator(.M0D) (rsa: rsa_params): uint16 extern;
+function operator(.B256_INV) (rsa: rsa_params): nat extern;
+function operator(.R) (rsa: rsa_params): nat extern;
+function operator(.RR) (rsa: rsa_params): nat extern;
+function operator(.R_INV) (rsa: rsa_params): nat extern;
+function rsa_params_inv(rsa: rsa_params): bool extern;
+
+function mvar_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int, value: int): bool extern;
+
+type string: Type(0) extern;
+
+var sp: uint16 {:state reg_t(SP)};
+var r3: uint16 {:state reg_t(R(3))};
+var r4: uint16 {:state reg_t(R(4))};
+var r5: uint16 {:state reg_t(R(5))};
+var r6: uint16 {:state reg_t(R(6))};
+var r7: uint16 {:state reg_t(R(7))};
+var r8: uint16 {:state reg_t(R(8))};
+var r9: uint16 {:state reg_t(R(9))};
+var r10: uint16 {:state reg_t(R(10))};
+var r11: uint16 {:state reg_t(R(11))};
+var r12: uint16 {:state reg_t(R(12))};
+var r13: uint16 {:state reg_t(R(13))};
+var r14: uint16 {:state reg_t(R(14))};
+var r15: uint16 {:state reg_t(R(15))};
+
+operand_type reg: uint16 @ reg_t :=
+    | inout r3  | inout r4  | inout r5  | inout r6
+    | inout r7  | inout r8  | inout r9  | inout r10
+    | inout r11 | inout r12 | inout r13 | inout r14
+    | inout r15;
+
+function mod(a: int, n: nat): int extern;
+
+function stack_push_frame(mem: mem_t, flat: flat_t, num_bytes: int): mem_t extern;
+
+function stack_push_batch(mem: mem_t, flat: flat_t, content: seq(uint16)): mem_t extern;
+
+function top_frame(frames: frames_t): frame_t extern;
+
+function write_frame(mem: mem_t, flat: flat_t, index: nat, value: uint16): tuple(mem_t, flat_t) extern;
+
+function read_frame(mem: mem_t, flat: flat_t, index: nat): uint16 extern;
+
+function frame_index_valid(mem: mem_t, index: nat): bool extern;
+
+function stack_pop_frame(mem: mem_t, flat: flat_t): (new_mem: mem_t) extern;
+
+function stack_depth(mem: mem_t): nat extern;
+
+function STACK_START(): nat extern;
+
+function valid_pushm_w(rs: reg_t, n: uint16): bool extern;
+function pushm_w_seq(state: state, r: reg_t, n: uint16): seq(uint16) extern;
+
+procedure pushm_w(inline n: uint16, in rs: reg)
+    {:instruction Ins(MSP_PUSHM_W(Reg(rs), Imm(n)))}
+    requires
+        in_stack_addr_range(sp - 2 * n);
+        valid_pushm_w(@rs, n);
+    
+    modifies
+        mem; flat; sp;
+
+    ensures
+        mem == stack_push_batch(old(mem), old(flat),
+            pushm_w_seq(old(this.ms), @rs, n));
+        sp == old(sp) - 2 * n;
+{
+    assume false;
+}
+
+function R(index: int): reg_t extern;
+
+procedure save_r10__r7()
+    requires
+        in_stack_addr_range(sp - 8);
+    
+    modifies
+        mem; flat; sp;
+    reads
+        r10; r9; r8; r7;
+
+    ensures
+        mem == stack_push_batch(old(mem), old(flat),
+            seq(r10, r9, r8, r7));
+        sp == old(sp) - 8;
+{
+    pushm_w(4, r10);
+    assert pushm_w_seq(old(this.ms), R(10), 4) == seq(r10, r9, r8, r7);
+}
+
+
+
+            // | (dst: operand_t, n: operand_t)
+//     {:instruction Ins32(RV_ADDI(SP, SP, num_bytes))}
+//     requires
+//         num_bytes < 0;
+//         mod(num_bytes, 4) == 0;
+//         in_stack_addr_range(sp + num_bytes);
+//     modifies
+//         mem; sp;
+//     reads
+//         flat;
+//     ensures
+//         sp == old(sp) + num_bytes;
+//         flat == old(flat); // need this for the next one
+//         mem == stack_push_frame(old(mem), flat, 0 - num_bytes);
+// {
+//     assume false;
+// }
+
+// procedure pop_frame(inline num_bytes: int32)
+//     {:instruction Ins32(RV_ADDI(SP, SP, num_bytes))}
+//     requires
+//         seq_len(read_top_frame(mem)) == num_bytes / 4;
+//         stack_depth(mem) >= 2;
+//     modifies
+//         mem; sp;
+//     reads
+//         flat;
+//     ensures
+//         sp == old(sp) + num_bytes;
+//         flat == old(flat);
+//         mem == stack_pop_frame(old(mem), flat);
+// {
+//     assume false;
+// }
+
+// procedure sw_stack(in rs2: reg, in offset: imm32)
+//     {:instruction Ins32(RV_SW(rs2, SP, offset))}
+//     requires
+//         mod(offset, 4) == 0;
+//         frame_index_valid(mem, offset / 4);
+//     modifies
+//         mem; flat;
+//     ensures
+//         let rst := write_frame(old(mem), old(flat), offset / 4, rs2);
+//         frame_index_valid(mem, offset / 4);
+//         read_top_frame(mem) ==
+//             read_top_frame(old(mem))[offset / 4 := rs2];
+//         mem == fst(rst);
+//         flat == snd(rst);
+// {
+//     assume false;
+// }
+
+
+// procedure lw_stack(inout dst: reg, in offset: imm32)
+//     {:instruction Ins32(RV_LW(dst, SP, offset))}
+//     requires
+//         mod(offset, 4) == 0;
+//         frame_index_valid(mem, offset / 4);
+//     reads
+//         mem; flat;
+//     ensures
+//         mem == old(mem);
+//         dst == read_frame(mem, flat, offset / 4);
+// {
+//     assume false;
+// }
+
+    
+#verbatim
+} // end module bignum_decls
+#endverbatim
