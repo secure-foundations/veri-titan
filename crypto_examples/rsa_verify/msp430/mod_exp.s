@@ -161,117 +161,72 @@ ge_mod:
 mont_mul_add:
 ; start of function
 ; framesize_regs:     14
-; framesize_locals:   16
+; framesize_locals:   6
 ; framesize_outgoing: 0
-; framesize:          30
+; framesize:          20
 ; elim ap -> fp       16
-; elim fp -> sp       16
+; elim fp -> sp       6
 ; saved regs: R4 R5 R6 R7 R8 R9 R10
 	; start of prologue
 	PUSHM.W	#7, R10
-	SUB.W	#16, R1
+	SUB.W	#6, R1
 	; end of prologue
-	MOV.W	R12, R9
-	MOV.W	R13, 8(R1)
-	MOV.W	R15, R10
-	MOV.W	R14,R11 { MOV.W	#0,R12
-	MOV.W	R11, 4(R1)
-	MOV.W	R12, 6(R1)
-	MOV.W	R15, R4
-	MOV.W	R11, R14
-	MOV.W	R12, R15
-	MOV.W	@R4+, R8
-	MOV.W	R8,R12 { MOV.W	#0,R13
-	CALL	#__mspabi_mpyl
-	MOV.W	8(R1), R11
-	MOV.W	@R11, R11
-	MOV.W	R11,R14 { MOV.W	#0,R15
 	MOV.W	R12, R8
-	ADD	R14, R8 ; cy
-	MOV.W	R13, R7
-	ADDC	R15, R7
-	MOV.W	R8, R13
-	MOV.W	R9, R12
-	CALL	#__mspabi_mpyi
-	MOV.W	R12,R13 { MOV.W	#0,R14
-	MOV.W	R13, @R1
-	MOV.W	R14, 2(R1)
-	MOV.W	32(R1), R6
-	MOV.W	R14, R15
-	MOV.W	R13, R14
-	MOV.W	@R6+, R9
-	MOV.W	R9,R12 { MOV.W	#0,R13
-	CALL	#__mspabi_mpyl
-	MOV.B	#0, R14
-	ADD	R8, R12 ; cy
+	MOV.W	R13, 4(R1)
+	MOV.W	R14, R5
+	MOV.W	@R13, R14
+	MOV.W	R15, R6
+	MOV.W	@R6+, R13
+	MOV.W	R5, R12
+	MOV.W	R15, @R1
+	CALL	#mula32
+	MOV.W	R12, R10
 	MOV.W	R13, R9
-	ADDC	R14, R9
-	MOV.W	8(R1), R5
-	ADD.W	#384, R10
-	MOV.W	R5, R8
-	MOV.W	R5, 10(R1)
-	MOV.W	R10, R5
+	MOV.W	R8, R13
+	CALL	#__mspabi_mpyi
+	MOV.W	R12, R4
+	MOV.W	R10, R14
+	MOV.W	22(R1), R7
+	MOV.W	@R7+, R13
+	CALL	#mula32
+	MOV.W	R13, R10
+	MOV.W	4(R1), R8
+	MOV.W	@R1, R15
+	ADD.W	#384, R15
+	MOV.W	R15, 2(R1)
 .L16:
-	MOV.W	2(R8), R11
-	MOV.W	R11,R14 { MOV.W	#0,R15
-	MOV.W	R7, R10
-	ADD	R14, R10 ; cy
-	MOV.B	#0, R7
-	ADDC	R15, R7
-	MOV.W	4(R1), R14
-	MOV.W	6(R1), R15
-	MOV.W	@R4+, R11
-	MOV.W	R11,R12 { MOV.W	#0,R13
-	CALL	#__mspabi_mpyl
-	ADD	R12, R10 ; cy
-	ADDC	R13, R7
-	MOV.W	@R1, R14
-	MOV.W	2(R1), R15
-	MOV.W	@R6+, R11
-	MOV.W	R11,R12 { MOV.W	#0,R13
-	CALL	#__mspabi_mpyl
-	ADD	R9, R12 ; cy
-	MOV.B	#0, R9
-	ADDC	R9, R13
-	ADD	R12, R10 ; cy
-	ADDC	R13, R9
-	MOV.W	R10, @R8
-	ADD.W	#2, R8
-	CMP.W	R4, R5 { JNE	.L16
-	MOV.W	10(R1), R5
-	ADD	R9, R7 ; cy
-	MOV.B	#0, R12
-	MOV.B	#0, R13
-	ADDC	R13, R12
-	MOV.W	8(R1), R8
-	MOV.W	R7, 382(R8)
-	CMP.W	#0, R12 { JEQ	.L15
-	MOV.W	32(R1), R13
-	MOV.W	R8, R9
-	ADD.W	#384, R9
-	MOV.B	#0, R12
-	MOV.B	#0, R10
-	MOV.W	R9, R7
-.L19:
-	MOV.W	@R5+, R9
-	MOV.W	R9,R14 { MOV.W	#0,R15
-	MOV.W	R14, R8
-	ADD	R12, R8 ; cy
-	MOV.W	R15, R9
-	ADDC	R10, R9
-	MOV.W	@R13+, R12
-	MOV.W	R12,R10 { MOV.W	#0,R11
-	MOV.W	R8, R14
 	MOV.W	R9, R15
-	SUB	R10, R14 { SUBC	R11, R15
-	MOV.W	R15, R12
-	MOV.W	R14, -2(R5)
-	MOV.W	R15, R10
-	RPT	#15 { RRAX.W	R10
-	CMP.W	R5, R7 { JNE	.L19
-.L15:
+	MOV.W	2(R8), R14
+	MOV.W	@R6+, R13
+	MOV.W	R5, R12
+	CALL	#mulaa32
+	MOV.W	R13, R9
+	MOV.W	R10, R15
+	MOV.W	R12, R14
+	MOV.W	@R7+, R13
+	MOV.W	R4, R12
+	CALL	#mulaa32
+	MOV.W	R13, R10
+	MOV.W	R12, @R8
+	ADD.W	#2, R8
+	CMP.W	R6, 2(R1) { JNE	.L16
+	MOV.B	#0, R15
+	MOV.B	#0, R12
+	ADD	R9, R13 ; cy
+	ADDC	R15, R12
+	MOV.W	4(R1), R14
+	MOV.W	R13, 382(R14)
+	CMP.W	#0, R12 { JNE	.L23
 	; start of epilogue
-	ADD.W	#16, R1
+	ADD.W	#6, R1
+	POPM.W	#7, r10
+	RET
+.L23:
+	MOV.W	22(R1), R13
+	MOV.W	R14, R12
+	CALL	#sub_mod
+	; start of epilogue
+	ADD.W	#6, R1
 	POPM.W	#7, r10
 	RET
 	.size	mont_mul_add, .-mont_mul_add
@@ -302,14 +257,14 @@ mont_mul:
 	CALL	#memset
 	MOV.W	R10, R6
 	ADD.W	#384, R6
-.L26:
+.L25:
 	MOV.W	R5, @R1
 	MOV.W	R8, R15
 	MOV.W	@R10+, R14
 	MOV.W	R9, R13
 	MOV.W	R7, R12
 	CALL	#mont_mul_add
-	CMP.W	R10, R6 { JNE	.L26
+	CMP.W	R10, R6 { JNE	.L25
 	; start of epilogue
 	ADD.W	#2, R1
 	POPM.W	#6, r10
@@ -321,134 +276,63 @@ mont_mul:
 mod_pow:
 ; start of function
 ; framesize_regs:     14
-; framesize_locals:   8
+; framesize_locals:   0
 ; framesize_outgoing: 2
-; framesize:          24
+; framesize:          16
 ; elim ap -> fp       16
-; elim fp -> sp       10
+; elim fp -> sp       2
 ; saved regs: R4 R5 R6 R7 R8 R9 R10
 	; start of prologue
 	PUSHM.W	#7, R10
-	SUB.W	#10, R1
+	SUB.W	#2, R1
 	; end of prologue
-	MOV.W	R12, R8
-	MOV.W	R13, 4(R1)
-	MOV.W	R14, R7
-	MOV.W	R15, R6
-	MOV.W	26(R1), R9
+	MOV.W	R12, R6
+	MOV.W	R13, R5
 	MOV.W	R14, R10
-	ADD.W	#384, R10
-	MOV.W	#384, R14
-	MOV.B	#0, R13
-	MOV.W	R7, R12
-	CALL	#memset
-	MOV.W	28(R1), R5
-	MOV.W	R5, R4
-	ADD.W	#384, R4
-.L29:
-	MOV.W	R9, @R1
-	MOV.W	R6, R15
-	MOV.W	@R5+, R14
-	MOV.W	R7, R13
-	MOV.W	R8, R12
-	CALL	#mont_mul_add
-	CMP.W	R5, R4 { JNE	.L29
-	MOV.B	#8, R15
-	MOV.W	R7, R6
-	ADD.W	#768, R6
-	MOV.W	R15, R4
-.L30:
-	MOV.W	#384, R14
-	MOV.B	#0, R13
-	MOV.W	R10, R12
-	CALL	#memset
-	MOV.W	R7, 2(R1)
-	MOV.W	R7, R5
-.L31:
-	MOV.W	R9, @R1
-	MOV.W	R7, R15
-	MOV.W	@R5+, R14
+	MOV.W	18(R1), R7
+	MOV.W	20(R1), R4
+	MOV.W	R14, R8
+	ADD.W	#384, R8
+	MOV.W	R7, @R1
+	MOV.W	R4, R14
 	MOV.W	R10, R13
-	MOV.W	R8, R12
-	CALL	#mont_mul_add
-	CMP.W	R5, R10 { JNE	.L31
-	MOV.W	#384, R14
-	MOV.B	#0, R13
-	MOV.W	R7, R12
-	CALL	#memset
-	MOV.W	R10, R5
-.L32:
-	MOV.W	R9, @R1
+	CALL	#mont_mul
+	MOV.B	#8, R9
+.L28:
+	MOV.W	R7, @R1
 	MOV.W	R10, R15
-	MOV.W	@R5+, R14
+	MOV.W	R10, R14
+	MOV.W	R8, R13
+	MOV.W	R6, R12
+	CALL	#mont_mul
+	MOV.W	R7, @R1
+	MOV.W	R8, R15
+	MOV.W	R8, R14
+	MOV.W	R10, R13
+	MOV.W	R6, R12
+	CALL	#mont_mul
+	ADD.W	#-1, R9
+	CMP.W	#0, R9 { JNE	.L28
+	MOV.W	R7, @R1
+	MOV.W	R4, R15
+	MOV.W	R10, R14
+	MOV.W	R5, R13
+	MOV.W	R6, R12
+	CALL	#mont_mul
 	MOV.W	R7, R13
-	MOV.W	R8, R12
-	CALL	#mont_mul_add
-	CMP.W	R5, R6 { JNE	.L32
-	ADD.W	#-1, R4
-	CMP.W	#0, R4 { JNE	.L30
-	MOV.W	2(R1), R5
-	MOV.W	#384, R14
-	MOV.B	#0, R13
-	MOV.W	4(R1), R12
-	CALL	#memset
-	MOV.W	4(R1), R7
-	MOV.W	28(R1), R6
-.L34:
-	MOV.W	R9, @R1
-	MOV.W	R6, R15
-	MOV.W	@R5+, R14
-	MOV.W	R7, R13
-	MOV.W	R8, R12
-	CALL	#mont_mul_add
-	CMP.W	R10, R5 { JNE	.L34
-	MOV.W	4(R1), R12
-	ADD.W	#382, R12
-	MOV.W	R9, R14
-	ADD.W	#382, R14
-	MOV.W	4(R1), R13
-	MOV.W	R13, R8
-	BR	#.L37
-.L46:
-	CMP.W	R10, R15 { JLO	.L36
-	MOV.W	R12, R15
-	ADD.W	#-2, R15
-	ADD.W	#-2, R14
-	CMP.W	R12, R8 { JEQ	.L36
-	MOV.W	R15, R12
-.L37:
-	MOV.W	@R12, R10
-	MOV.W	@R14, R15
-	CMP.W	R15, R10 { JHS	.L46
+	MOV.W	R5, R12
+	CALL	#ge_mod
+	CMP.W	#0, R12 { JNE	.L34
 	; start of epilogue
-	ADD.W	#10, R1
+	ADD.W	#2, R1
 	POPM.W	#7, r10
 	RET
-.L36:
-	MOV.W	4(R1), R4
-	ADD.W	#384, R4
-	MOV.B	#0, R12
-	MOV.B	#0, R10
-	MOV.W	R9, R7
-.L38:
-	MOV.W	@R13+, R9
-	MOV.W	R9,R14 { MOV.W	#0,R15
-	MOV.W	R14, R8
-	ADD	R12, R8 ; cy
-	MOV.W	R15, R9
-	ADDC	R10, R9
-	MOV.W	@R7+, R12
-	MOV.W	R12,R10 { MOV.W	#0,R11
-	MOV.W	R8, R14
-	MOV.W	R9, R15
-	SUB	R10, R14 { SUBC	R11, R15
-	MOV.W	R15, R12
-	MOV.W	R14, -2(R13)
-	MOV.W	R15, R10
-	RPT	#15 { RRAX.W	R10
-	CMP.W	R4, R13 { JNE	.L38
+.L34:
+	MOV.W	R7, R13
+	MOV.W	R5, R12
+	CALL	#sub_mod
 	; start of epilogue
-	ADD.W	#10, R1
+	ADD.W	#2, R1
 	POPM.W	#7, r10
 	RET
 	.size	mod_pow, .-mod_pow
