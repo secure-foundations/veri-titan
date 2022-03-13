@@ -2,10 +2,9 @@ include "../../lib/bv16_ops.dfy"
 include "flat.s.dfy"
 // include "../../lib/bv20_ops.dfy"
 
-module rv_machine {
+module msp_machine {
     import opened integers
     import opened bv16_ops
-    // import bv20_ops
     import opened flat
 
     /* registers definitions */
@@ -30,12 +29,12 @@ module rv_machine {
 
     /* state definition */
 
-    type regs_t = map<reg_t, uint20>
+    type regs_t = map<reg_t, uint16>
 
-    function method truncate_20_to_16(v: uint20): uint16
-    {
-        v % BASE_16
-    }
+    // function method truncate_20_to_16(v: uint20): uint16
+    // {
+    //     v % BASE_16
+    // }
 
     datatype operand_t = 
         | Reg(r: reg_t)
@@ -48,18 +47,13 @@ module rv_machine {
         flat: flat_t,
         ok: bool)
     {
-        function read_reg16(r: reg_t): uint16
+        function read_reg(r: reg_t): uint16
         {
-            if r in regs then truncate_20_to_16(regs[r]) else 0
+            if r in regs then regs[r] else 0
         }
 
         // will overrite higher bits
-        function write_reg16(r: reg_t, value: uint16): state
-        {
-            this.(regs := this.regs[r := value])
-        }
-
-        function write_reg20(r: reg_t, value: uint20): state
+        function write_reg(r: reg_t, value: uint16): state
         {
             this.(regs := this.regs[r := value])
         }
@@ -69,7 +63,7 @@ module rv_machine {
         // requires op.Reg? || op.Imm?
     {
         match op
-            case Reg(r) => s.read_reg16(r)
+            case Reg(r) => s.read_reg(r)
             case Imm(i) => i
             case _ => 0
     }
