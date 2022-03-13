@@ -104,7 +104,7 @@ module bv16_ops refines generic_bv_ops
 
     function method to_int16(x: uint): sint
     {
-        if x < 32768 then x else x - 65536
+        if x <  32768 then x else x - 65536
     }
 
     lemma signed_conversion_lemma(x: sint)

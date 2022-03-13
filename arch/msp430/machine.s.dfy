@@ -10,6 +10,7 @@ module msp_machine {
     /* registers definitions */
 
     // R0 R1, R2 are special 
+    type int16 = sint
 
     type reg_idx = i: nat | 3 <= i <= 15 witness 3
 
@@ -26,11 +27,21 @@ module msp_machine {
         | Reg(r: reg_t)
         | Idx(r: reg_t, index: uint16)
         | RegIndir(r: reg_t, inc: bool)
-        | Imm(i: uint16)
+        | Imm(i: int16)
     
+    datatype flags_t = flags_cons(msb: uint1, zero: uint1, cf: uint1 /*, over: uint1 */)
+
+    function method msp_add(x: uint16, y: uint16): (uint16, flags_t)
+    {
+        var (z, c) := addc(x, y, 0);
+        var flags := flags_cons(msb(z), if z == 0 then 1 else 0, c);
+        (z, flags)
+    }
+
     datatype state = state(
         regs: regs_t,
         flat: flat_t,
+        flags: flags_t,
         ok: bool)
     {
         function read_reg(r: reg_t): uint16
@@ -62,7 +73,7 @@ module msp_machine {
     {
         match op
             case Reg(r) => s.read_reg(r)
-            case Imm(i) => i
+            case Imm(i) => to_uint16(i)
             case _ => 0
     }
 
@@ -75,6 +86,7 @@ module msp_machine {
         | MSP_ADD_W(src: operand_t, dst: operand_t)
         | MSP_ADDC_W(src: operand_t, dst: operand_t)
         | MSP_SUB_W(src: operand_t, dst: operand_t)
+        | MSP_SUBC_W(src: operand_t, dst: operand_t)
         | MSP_MOV_W(src: operand_t, dst: operand_t)
         | MSP_MOV_B(src: operand_t, dst: operand_t)
         | MSP_CMP_W(src: operand_t, dst: operand_t)

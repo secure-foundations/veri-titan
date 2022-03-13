@@ -32,8 +32,12 @@ type nat:     Type(0) := int_range(0, _);
 type uint1:   Type(0) := int_range(0, 1);
 type uint2:   Type(0) := int_range(0, 3);
 type uint5:   Type(0) := int_range(0, 31);
-type uint16:  Type(0) := int_range(0, 65536);
+type uint8:   Type(0) := int_range(0, 255);
+type int16:   Type(0) := int_range((-32768), 32767);
+type uint16:  Type(0) := int_range(0, 65535);
 type uint32:  Type(0) := int_range(0, 0xffffffff);
+
+type string: Type(0) extern;
 
 function power(b: int, e: nat) : nat extern;
 function cong(a: int, b: int, n: int) : bool extern;
@@ -107,6 +111,9 @@ function operator(.index := ) (iter: iter_t, i :int): iter_t extern;
 function operator(.buff) (iter :iter_t): seq(uint16) extern;
 function operator(.buff := ) (iter :iter_t, buff: seq(uint16)): iter_t extern;
 
+type flags_t: Type(0) extern;
+var flags: flags_t {:state flags()};
+
 function to_nat(s: seq(uint16)): nat extern;
 
 type rsa_params: Type(0) extern;
@@ -120,10 +127,6 @@ function operator(.R) (rsa: rsa_params): nat extern;
 function operator(.RR) (rsa: rsa_params): nat extern;
 function operator(.R_INV) (rsa: rsa_params): nat extern;
 function rsa_params_inv(rsa: rsa_params): bool extern;
-
-function mvar_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int, value: int): bool extern;
-
-type string: Type(0) extern;
 
 var sp: uint16 {:state reg_t(SP)};
 var r3: uint16 {:state reg_t(R(3))};
@@ -139,6 +142,7 @@ var r12: uint16 {:state reg_t(R(12))};
 var r13: uint16 {:state reg_t(R(13))};
 var r14: uint16 {:state reg_t(R(14))};
 var r15: uint16 {:state reg_t(R(15))};
+
 
 operand_type reg: uint16 @ reg_t :=
     | inout r3  | inout r4  | inout r5  | inout r6
@@ -166,10 +170,10 @@ function stack_depth(mem: mem_t): nat extern;
 
 function STACK_START(): nat extern;
 
-function valid_pushm_w(rs: reg_t, n: uint16): bool extern;
-function pushm_w_seq(state: state, r: reg_t, n: uint16): seq(uint16) extern;
+function valid_pushm_w(rs: reg_t, n: uint8): bool extern;
+function pushm_w_seq(state: state, r: reg_t, n: uint8): seq(uint16) extern;
 
-procedure pushm_w(inline n: uint16, in rs: reg)
+procedure pushm_w(inline n: uint8, in rs: reg)
     {:instruction Ins(MSP_PUSHM_W(Reg(rs), Imm(n)))}
     requires
         in_stack_addr_range(sp - 2 * n);
@@ -206,77 +210,59 @@ procedure save_r10__r7()
     assert pushm_w_seq(old(this.ms), R(10), 4) == seq(r10, r9, r8, r7);
 }
 
+procedure mov_w(in rs: reg, inout rd: reg)
+    {:instruction Ins(MSP_MOV_W(Reg(rs), Reg(rd)))}
+    ensures
+        rd == old(rs);
+{
+    assume false;
+}
 
+procedure mov_w_imm(inline i: uint8, inout rd: reg)
+    {:instruction Ins(MSP_MOV_W(Imm(i), Reg(rd)))}
+    ensures
+        rd == i;
+{
+    assume false;
+}
 
-            // | (dst: operand_t, n: operand_t)
-//     {:instruction Ins32(RV_ADDI(SP, SP, num_bytes))}
-//     requires
-//         num_bytes < 0;
-//         mod(num_bytes, 4) == 0;
-//         in_stack_addr_range(sp + num_bytes);
-//     modifies
-//         mem; sp;
-//     reads
-//         flat;
-//     ensures
-//         sp == old(sp) + num_bytes;
-//         flat == old(flat); // need this for the next one
-//         mem == stack_push_frame(old(mem), flat, 0 - num_bytes);
-// {
-//     assume false;
-// }
+function to_uint16(x: int16): uint16 extern;
 
-// procedure pop_frame(inline num_bytes: int32)
-//     {:instruction Ins32(RV_ADDI(SP, SP, num_bytes))}
-//     requires
-//         seq_len(read_top_frame(mem)) == num_bytes / 4;
-//         stack_depth(mem) >= 2;
-//     modifies
-//         mem; sp;
-//     reads
-//         flat;
-//     ensures
-//         sp == old(sp) + num_bytes;
-//         flat == old(flat);
-//         mem == stack_pop_frame(old(mem), flat);
-// {
-//     assume false;
-// }
+function msp_add(x: uint16, y: uint16): tuple(uint16, flags_t) extern;
 
-// procedure sw_stack(in rs2: reg, in offset: imm32)
-//     {:instruction Ins32(RV_SW(rs2, SP, offset))}
-//     requires
-//         mod(offset, 4) == 0;
-//         frame_index_valid(mem, offset / 4);
-//     modifies
-//         mem; flat;
-//     ensures
-//         let rst := write_frame(old(mem), old(flat), offset / 4, rs2);
-//         frame_index_valid(mem, offset / 4);
-//         read_top_frame(mem) ==
-//             read_top_frame(old(mem))[offset / 4 := rs2];
-//         mem == fst(rst);
-//         flat == snd(rst);
-// {
-//     assume false;
-// }
-
-
-// procedure lw_stack(inout dst: reg, in offset: imm32)
-//     {:instruction Ins32(RV_LW(dst, SP, offset))}
-//     requires
-//         mod(offset, 4) == 0;
-//         frame_index_valid(mem, offset / 4);
-//     reads
-//         mem; flat;
-//     ensures
-//         mem == old(mem);
-//         dst == read_frame(mem, flat, offset / 4);
-// {
-//     assume false;
-// }
-
+procedure add_w(in rs: reg, inout rd: reg)
+    {:instruction Ins(MSP_ADD_W(Reg(rs), Reg(rd)))}
+    modifies
+        flags;
+    ensures 
+        let rst := msp_add(old(rs), old(rd));
+        rd == fst(rst);
+        flags == snd(rst);
+{
+    assume false;
+}
     
+procedure add_w_imm(inline imm: int16, inout rd: reg)
+    {:instruction Ins(MSP_ADD_W(Imm(imm), Reg(rd)))}
+    modifies
+        flags;
+    ensures
+        let rst := msp_add(to_uint16(imm), old(rd));
+        rd == fst(rst);
+        flags == snd(rst);
+{
+    assume false;
+}
+
+procedure add_w_imm_test()
+    requires r10 > 2;
+    modifies r10; flags;
+    ensures r10 == old(r10) - 3;
+{
+    add_w_imm((-3), r10);
+}
+
+
 #verbatim
 } // end module bignum_decls
 #endverbatim

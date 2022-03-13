@@ -74,6 +74,18 @@ module msp_vale {
         sK.(ms := sK.ms.(flat := temp))
     }
 
+    function va_get_flags(s: va_state): flags_t
+    {
+        s.ms.flags
+    }
+
+    function va_update_flags(sM: va_state, sK: va_state): va_state
+    {
+        var temp := sM.ms.flags;
+        sK.(ms := sK.ms.(flags := temp))
+    }
+
+
     function va_get_mem(s: va_state): mem_t
     {
         s.mem
@@ -172,6 +184,7 @@ module msp_vale {
         // s0 == s1
         && s0.ms.regs == s1.ms.regs
         && s0.ms.flat == s1.ms.flat
+        && s0.ms.flags == s0.ms.flags
         && s0.ms.ok == s1.ms.ok
         && s0.mem == s1.mem
     }
