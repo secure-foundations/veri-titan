@@ -1,0 +1,79 @@
+include "../../arch/msp430/decls.i.vad"
+
+#verbatim
+
+include "../../arch/msp430/decls.i.dfy"
+include "../../../lib/bv16_mm_lemmas.i.dfy"
+
+module examples {
+
+import opened msp_machine
+import opened msp_decls
+import opened msp_vale
+import opened mem
+import opened stack
+import opened bv16_mm_lemmas
+import opened integers
+
+#endverbatim
+
+procedure builtin__mspabi_mpyl()
+    requires
+        r15 == 0;
+        r13 == 0;
+    reads
+        r14;
+    modifies
+        r12; r13;
+    ensures
+        to_nat(seq(r12, r13)) == old(r12) * old(r14);
+        to_nat(seq(r12, r13)) == old(r14) * old(r12);
+{
+    assume false;
+}
+
+function mul_add_lemma(xs: seq(uint16), ys: seq(uint16),
+    carry: nat, a: uint16, b: uint16): uint32_view_t extern;
+
+function valid_uint32_view(num: uint32_view_t, lh: uint16, uh: uint16): bool extern;
+
+procedure mula16() returns (ghost sum: uint32_view_t)
+    {:noInline}
+    requires
+        in_stack_addr_range(sp - 2);
+
+    modifies
+        mem; flat; flags;
+        regs;
+        sp; r10; r11; r12; r13; r14; r15;
+    
+    ensures
+        sp == old(sp);
+        mem == old(mem);
+
+        valid_uint32_view(sum, r12, r13);
+        sum.full == old(r12) * old(r13) + old(r14);
+        sum.full == old(r13) * old(r12) + old(r14);
+{
+    pushm_w(1, r10);
+    mov_w(r14, r10);
+    mov_w(r13, r14);
+    mov_w_imm(0, r15);
+    mov_w_imm(0, r13);
+    builtin__mspabi_mpyl();
+
+    let x_lh := r12;
+    let x_uh := r13;
+
+    mov_w_imm(0, r11);
+    add_w(r10, r12);
+    assert(r10 == old(r14));
+    let carry := flags.cf;
+    addc_w(r11, r13);
+    sum := mul_add_lemma(seq(x_lh, x_uh), seq(r10, 0), carry, old(r12), old(r13));
+    popm_w(1, r10);
+}
+
+#verbatim
+}
+#endverbatim

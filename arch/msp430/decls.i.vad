@@ -119,8 +119,16 @@ function operator(.buff := ) (iter :iter_t, buff: seq(uint16)): iter_t extern;
 
 type flags_t: Type(0) extern;
 var flags: flags_t {:state flags()};
+function operator(.cf) (flags :flags_t): uint1 extern;
 
 function to_nat(s: seq(uint16)): nat extern;
+
+type uint32_view_t: Type(0) extern;
+function uint32_cons(lh: uint16, uh: uint16, full: uint32) : uint32_view_t extern;
+function valid_uint43_view(view: uint32_view_t, lh: uint16, uh: uint16) : bool extern;
+function operator(.lh) (value : uint32_view_t): uint16 extern;
+function operator(.uh) (value : uint32_view_t): uint16 extern;
+function operator(.full) (value : uint32_view_t): uint32 extern;
 
 type rsa_params: Type(0) extern;
 function operator(.E0) (rsa: rsa_params): nat extern;

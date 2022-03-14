@@ -1,0 +1,70 @@
+include "../../arch/msp430/decls.i.vad"
+
+#verbatim
+
+include "../../arch/msp430/decls.i.dfy"
+
+module examples {
+
+import opened msp_machine
+import opened msp_decls
+import opened msp_vale
+import opened mem
+import opened stack
+
+#endverbatim
+
+procedure add_w_imm_test()
+    requires r10 > 2;
+    modifies r10; flags;
+    ensures r10 == old(r10) - 3;
+{
+    add_w_imm((-3), r10);
+}
+
+procedure save_r10__r7()
+    requires
+        in_stack_addr_range(sp - 8);
+    
+    modifies
+        mem; flat; sp;
+    reads
+        r10; r9; r8; r7;
+    ensures
+        mem == stack_push_batch(old(mem), old(flat),
+            seq(r7, r8, r9, r10));
+        sp == old(sp) - 8;
+        stack_depth(mem) == stack_depth(old(mem)) + 1;
+{
+    pushm_w(4, r10);
+    assert pushm_w_seq(old(this.ms), R(10), 4) == seq(r7, r8, r9, r10);
+}
+
+procedure restore_test()
+    requires
+        in_stack_addr_range(sp - 8);
+    
+    modifies
+        mem; flat; regs; flags;
+        sp; r10; r9; r8; r7;
+    
+    ensures
+        mem == old(mem);
+        sp == old(sp);
+        r7 == old(r7);
+        r8 == old(r8);
+        r9 == old(r9);
+        r10 == old(r10);
+{
+    save_r10__r7();
+    add_w(r7, r8);
+    add_w(r8, r9);
+    add_w(r8, r7);
+    add_w(r9, r10);
+    assert read_top_frame(mem) == seq(old(r7), old(r8), old(r9), old(r10));
+    popm_w(4, r10);
+}
+
+#verbatim
+}
+#endverbatim
