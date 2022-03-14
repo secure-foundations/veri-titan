@@ -195,7 +195,7 @@ module msp_vale {
         // s0 == s1
         && s0.ms.regs == s1.ms.regs
         && s0.ms.flat == s1.ms.flat
-        && s0.ms.flags == s0.ms.flags
+        && s0.ms.flags == s1.ms.flags
         && s0.ms.ok == s1.ms.ok
         && s0.mem == s1.mem
     }
@@ -255,7 +255,7 @@ module msp_vale {
     // function method va_cmp_ne(r1:reg_t, r2:reg_t):cond { Cmp(Ne, r1, r2) }
     // function method va_cmp_le(r1:reg_t, r2:reg_t):cond { Cmp(Le, r1, r2) }
     // function method va_cmp_ge(r1:reg_t, r2:reg_t):cond { Cmp(Ge, r1, r2) }
-    // function method va_cmp_lt(r1:reg_t, r2:reg_t):cond { Cmp(Lt, r1, r2) }
+    function method va_cmp_lt(r1: reg_t, r2: reg_t):cond { LO(Reg(r1), Reg(r2)) }
     // function method va_cmp_gt(r1:reg_t, r2:reg_t):cond { Cmp(Gt, r1, r2) }
 
     function method va_op_reg_reg_t(r: reg_t): reg_t { r }
