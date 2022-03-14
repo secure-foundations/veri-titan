@@ -72,7 +72,7 @@ var ok: bool {:state ok()};
 type flat_t: Type(0) extern;
 var flat: flat_t {:state flat()};
 
-type heap_t:  Type(0) := map(int, entry_t);
+type heap_t: Type(0) := map(int, entry_t);
 var heap: heap_t {:state heap()};
 function heap_b16_write(heap: heap_t, iter: iter_t, value: uint16): heap_t extern;
 
@@ -84,6 +84,12 @@ type frames_t: Type(0) extern;
 var frames: frames_t {:state frames()};
 function operator(.fs) (m: frames_t): seq(frame_t) extern;
 function operator(.sp) (m: frames_t): int extern;
+
+type regs_t: Type(0) := seq(uint16);
+var regs: regs_t {:state regs()};
+// function operator([]) (s: regs_t, i: int): uint16 extern; 
+// function operator([ := ]) (s: regs_t, i: int, v: uint16): regs_t extern;
+// function operator([ .. ]) (s: regs_t, begin: int, end: int): seq(uint16) extern;
 
 type frame_t: Type(0) extern;
 function operator(.fp) (f: frame_t): uint16 extern;
@@ -170,43 +176,83 @@ function stack_depth(mem: mem_t): nat extern;
 
 function STACK_START(): nat extern;
 
-function valid_pushm_w(rs: reg_t, n: uint8): bool extern;
+function valid_push_pop_m(rs: reg_t, n: uint8): bool extern;
 function pushm_w_seq(state: state, r: reg_t, n: uint8): seq(uint16) extern;
 
 procedure pushm_w(inline n: uint8, in rs: reg)
-    {:instruction Ins(MSP_PUSHM_W(Reg(rs), Imm(n)))}
+    {:instruction Ins(MSP_PUSHM_W(Imm(n), Reg(rs)))}
     requires
         in_stack_addr_range(sp - 2 * n);
-        valid_pushm_w(@rs, n);
+        valid_push_pop_m(@rs, n);
     
     modifies
         mem; flat; sp;
 
     ensures
+        sp == old(sp) - 2 * n;
         mem == stack_push_batch(old(mem), old(flat),
             pushm_w_seq(old(this.ms), @rs, n));
-        sp == old(sp) - 2 * n;
 {
     assume false;
 }
 
-// procedure save_r10__r7()
-//     requires
-//         in_stack_addr_range(sp - 8);
-    
-//     modifies
-//         mem; flat; sp;
-//     reads
-//         r10; r9; r8; r7;
+function popm_w_seq(old_regs: regs_t, r: reg_t, n: uint16, s: seq(uint16)): regs_t extern;
 
-//     ensures
-//         mem == stack_push_batch(old(mem), old(flat),
-//             seq(r10, r9, r8, r7));
-//         sp == old(sp) - 8;
-// {
-//     pushm_w(4, r10);
-//     assert pushm_w_seq(old(this.ms), R(10), 4) == seq(r10, r9, r8, r7);
-// }
+procedure popm_w(inline n: uint8, in rs: reg)
+    {:instruction Ins(MSP_POPM_W(Imm(n), Reg(rs)))}
+    requires
+        valid_push_pop_m(@rs, n);
+        seq_len(read_top_frame(mem)) == n;
+        stack_depth(mem) >= 2;
+
+    modifies
+        mem; sp; regs;
+    reads
+        flat;
+    ensures
+        sp == old(sp) + n * 2;
+        flat == old(flat);
+        regs == popm_w_seq(old(regs), @rs, n, read_top_frame(old(mem)));
+        mem == stack_pop_frame(old(mem), flat);
+{
+    assume false;
+}
+
+procedure push_frame(inline num_bytes: int16)
+    {:instruction Ins(MSP_SUB_W(Imm(num_bytes), Reg(SP)))}
+    requires
+        num_bytes > 0;
+        mod(num_bytes, 2) == 0;
+        in_stack_addr_range(sp - num_bytes);
+    modifies
+        mem; sp;
+    reads
+        flat;
+    ensures
+        sp == old(sp) - num_bytes;
+        flat == old(flat); // need this for the next one
+        mem == stack_push_frame(old(mem), flat, num_bytes);
+{
+    assume false;
+}
+
+procedure pop_frame(inline num_bytes: int16)
+    {:instruction Ins(MSP_ADD_W(Imm(num_bytes), Reg(SP)))}
+    requires
+        mod(num_bytes, 2) == 0;
+        seq_len(read_top_frame(mem)) == num_bytes / 2;
+        stack_depth(mem) >= 2;
+    modifies
+        mem; sp;
+    reads
+        flat;
+    ensures
+        sp == old(sp) + num_bytes;
+        flat == old(flat);
+        mem == stack_pop_frame(old(mem), flat);
+{
+    assume false;
+}
 
 procedure mov_w(in rs: reg, inout rd: reg)
     {:instruction Ins(MSP_MOV_W(Reg(rs), Reg(rd)))}
@@ -363,7 +409,48 @@ procedure subb_w(in rs: reg, inout rd: reg)
     assume false;
 }
 
+procedure save_r10__r7()
+    requires
+        in_stack_addr_range(sp - 8);
+    
+    modifies
+        mem; flat; sp;
+    reads
+        r10; r9; r8; r7;
+    ensures
+        mem == stack_push_batch(old(mem), old(flat),
+            seq(r7, r8, r9, r10));
+        sp == old(sp) - 8;
+        stack_depth(mem) == stack_depth(old(mem)) + 1;
+{
+    pushm_w(4, r10);
+    assert pushm_w_seq(old(this.ms), R(10), 4) == seq(r7, r8, r9, r10);
+}
 
+procedure restore_test()
+    requires
+        in_stack_addr_range(sp - 8);
+    
+    modifies
+        mem; flat; regs; flags;
+        sp; r10; r9; r8; r7;
+    
+    ensures
+        mem == old(mem);
+        sp == old(sp);
+        r7 == old(r7);
+        r8 == old(r8);
+        r9 == old(r9);
+        r10 == old(r10);
+{
+    save_r10__r7();
+    add_w(r7, r8);
+    add_w(r8, r9);
+    add_w(r8, r7);
+    add_w(r9, r10);
+    assert read_top_frame(mem) == seq(old(r7), old(r8), old(r9), old(r10));
+    popm_w(4, r10);
+}
 
 #verbatim
 } // end module bignum_decls

@@ -599,7 +599,7 @@ module mem {
 
   function stack_push_frame(mem: mem_t, flat: flat_t, num_bytes: uint16): (new_mem: mem_t)
     requires mem.inv(flat)
-    requires num_bytes % 4 == 0
+    requires num_bytes % 2 == 0
     requires in_stack_addr_range(mem.frames.sp - num_bytes)
     ensures new_mem.inv(flat)
     ensures stack_depth(new_mem) == stack_depth(mem) + 1

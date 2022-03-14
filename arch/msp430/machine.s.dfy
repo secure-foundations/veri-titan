@@ -21,7 +21,7 @@ module msp_machine {
 
     /* state definition */
 
-    type regs_t = map<reg_t, uint16>
+    type regs_t = regs : seq<uint16> | |regs| == 16 witness *
 
     datatype operand_t = 
         | Reg(r: reg_t)
@@ -62,32 +62,52 @@ module msp_machine {
 
     datatype state = state(
         regs: regs_t,
+        sp: uint16,
         flat: flat_t,
         flags: flags_t,
         ok: bool)
     {
         function read_reg(r: reg_t): uint16
         {
-            if r in regs then regs[r] else 0
+            if r.SP? then sp else regs[r.i]
         }
 
         // will overrite higher bits
         function write_reg(r: reg_t, value: uint16): state
         {
-            this.(regs := this.regs[r := value])
+            if r.SP? then
+                this.(sp := value)
+            else 
+                this.(regs := regs[r.i := value])
         }
     }
 
-    predicate valid_pushm_w(r: reg_t, n: uint16)
+    predicate valid_push_pop_m(r: reg_t, n: nat)
     {
+        && n != 0
         && r.R?
-        && 3 <= r.i - n <= 15
+        && 3 <= r.i - n < r.i
     }
 
     function pushm_w_seq(state: state, r: reg_t, n: uint16): seq<uint16>
-        requires valid_pushm_w(r, n)
+        requires valid_push_pop_m(r, n)
     {
-        seq(n, i requires 0 <= i < n => state.read_reg(R(r.i - i)))
+        state.regs[r.i-n+1..r.i+1]
+    }
+
+    function {:opaque} popm_w_seq(old_regs: regs_t, r: reg_t, n: nat, s: seq<uint16>): (new_regs: regs_t)
+        requires valid_push_pop_m(r, n)
+        requires |s| == n
+        ensures new_regs[..r.i-n+1] == old_regs[..r.i-n+1]
+        ensures new_regs[r.i-n+1..r.i+1] == s
+        ensures new_regs[r.i+1..] == old_regs[r.i+1..]
+    {
+        var start := r.i - n + 1;
+        var end := r.i + 1;
+        var new_regs := seq(16, i requires 0 <= i < 16 => 
+            if start <= i < end then s[i - r.i + n - 1] else old_regs[i]);
+        assert new_regs[start..end] == s;
+        new_regs
     }
 
     function eval_operand(s: state, op: operand_t): uint16

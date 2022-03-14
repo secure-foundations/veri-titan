@@ -63,6 +63,23 @@ module msp_vale {
         s.ms.read_reg(r)
     }
 
+    function va_update_reg_t(r: reg_t, sM: va_state, sK: va_state): va_state
+    {
+        var temp := sM.ms.read_reg(r);
+        sK.(ms := sK.ms.write_reg(r, temp))
+    }
+
+    function va_get_regs(s: va_state): regs_t
+    {
+        s.ms.regs
+    }
+
+    function va_update_regs(sM: va_state, sK: va_state): va_state
+    {
+        var temp := sM.ms.regs;
+        sK.(ms := sK.ms.(regs := temp))
+    }
+
     function va_get_flat(s: va_state): flat_t
     {
         s.ms.flat
@@ -120,12 +137,6 @@ module msp_vale {
     {
         var temp := sM.ms.ok;
         sK.(ms := sK.ms.(ok := temp))
-    }
-
-    function va_update_reg_t(r: reg_t, sM: va_state, sK: va_state): va_state
-    {
-        var temp := sM.ms.read_reg(r);
-        sK.(ms := sK.ms.write_reg(r, temp))
     }
 
     function va_mul_nat(a: nat, b: nat): nat
