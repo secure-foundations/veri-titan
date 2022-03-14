@@ -3,7 +3,7 @@ include "../../lib/generic_bv_ops.dfy"
 module flat {
   import opened integers
 
-  const DMEM_LIMIT: int := 0x80000
+  const DMEM_LIMIT: int := 0x10000
 
   // basic map
   type flat_t = map<int, uint16>

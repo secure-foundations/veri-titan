@@ -307,7 +307,7 @@ procedure mov_w_imm(inline i: uint8, inout rd: reg)
     assume false;
 }
 
-procedure lw(in rs: reg, inline inc: bool, inout rd: reg, ghost iter: iter_t)
+procedure lw(inout rs: reg, inline inc: bool, inout rd: reg, ghost iter: iter_t)
     {:instruction Ins(MSP_MOV_W(RegIndir(rs, inc), Reg(rd)))}
     requires
         @rs != @rd;
@@ -321,24 +321,25 @@ procedure lw(in rs: reg, inline inc: bool, inout rd: reg, ghost iter: iter_t)
     assume false;
 }
 
-procedure lw_iter(in rs: reg, inline inc: bool, inout rd: reg, ghost iter: iter_t)
+procedure lw_iter(inout rs: reg, inline inc: bool, inout rd: reg, ghost iter: iter_t)
     returns (ghost next_iter: iter_t)
     requires
         @rs != @rd;
         iter_safe(iter, heap, rs);
     reads
-        heap;
-    ensures 
+        heap; flags;
+    ensures
+        flags == old(flags);
         rs == (if inc then old(rs) + 2 else old(rs));
         rd == iter.buff[iter.index];
         next_iter == b16_iter_load_next(iter, inc);
-        iter_safe(next_iter, heap, rs);
+        iter_inv(next_iter, heap, rs);
 {
     lw(rs, inc, rd, iter);
     next_iter := b16_iter_load_next(iter, inc);
 }
 
-procedure sw(in rs1: reg, inline inc: bool, in rs2: reg, ghost iter: iter_t)
+procedure sw(inout rs1: reg, inline inc: bool, in rs2: reg, ghost iter: iter_t)
     {:instruction Ins(MSP_MOV_W(Reg(rs1), RegIndir(rs2, inc)))}
     requires
         @rs1 != @rs2;
@@ -352,7 +353,7 @@ procedure sw(in rs1: reg, inline inc: bool, in rs2: reg, ghost iter: iter_t)
     assume false;
 }
 
-procedure sw_iter(in rs1: reg, inline inc: bool, in rs2: reg, ghost iter: iter_t)
+procedure sw_iter(inout rs1: reg, inline inc: bool, in rs2: reg, ghost iter: iter_t)
     returns (ghost next_iter: iter_t)
     requires
         @rs1 != @rs2;
@@ -362,7 +363,7 @@ procedure sw_iter(in rs1: reg, inline inc: bool, in rs2: reg, ghost iter: iter_t
     ensures
         rs1 == (if inc then old(rs1) + 2 else old(rs1));
         next_iter == b16_iter_store_next(iter, old(rs2), inc);
-        iter_safe(next_iter, heap, rs1);
+        iter_inv(next_iter, heap, rs1);
         heap == heap_b16_write(old(heap), iter, old(rs2));
 {
     sw(rs1, inc, rs2, iter);
@@ -376,6 +377,8 @@ function msp_addc(x: uint16, y: uint16, flags: flags_t): tuple(uint16, flags_t) 
 
 procedure add_w(in rs: reg, inout rd: reg)
     {:instruction Ins(MSP_ADD_W(Reg(rs), Reg(rd)))}
+    requires
+        @rs != @rd;
     modifies
         flags;
     ensures 
@@ -400,6 +403,8 @@ procedure add_w_imm(inline imm: int16, inout rd: reg)
 
 procedure addc_w(in rs: reg, inout rd: reg)
     {:instruction Ins(MSP_ADDC_W(Reg(rs), Reg(rd)))}
+    requires
+        @rs != @rd;
     modifies
         flags;
     ensures 
@@ -411,31 +416,46 @@ procedure addc_w(in rs: reg, inout rd: reg)
 }
 
 function msp_sub(x: uint16, y: uint16): tuple(uint16, flags_t) extern;
-function msp_subb(x: uint16, y: uint16, flags: flags_t): tuple(uint16, flags_t) extern;
+function msp_subc(x: uint16, y: uint16, flags: flags_t): tuple(uint16, flags_t) extern;
 
 procedure sub_w(in rs: reg, inout rd: reg)
     {:instruction Ins(MSP_SUB_W(Reg(rs), Reg(rd)))}
+    requires
+        @rs != @rd;
     modifies
         flags;
     ensures 
-        let rst := msp_add(old(rs), old(rd));
+        let rst := msp_add(old(rd), old(rs));
         rd == fst(rst);
         flags == snd(rst);
 {
     assume false;
 }
 
-procedure subb_w(in rs: reg, inout rd: reg)
+procedure subc_w(in rs: reg, inout rd: reg)
     {:instruction Ins(MSP_SUBC_W(Reg(rs), Reg(rd)))}
+    requires
+        @rs != @rd;
     modifies
         flags;
     ensures 
-        let rst := msp_subb(old(rs), old(rd), old(flags));
+        let rst := msp_subc(old(rd), old(rs), old(flags));
         rd == fst(rst);
         flags == snd(rst);
 {
     assume false;
 }
+
+// procedure subc_sanity()
+//     modifies
+//         flags; r9;
+// {
+//     let old_a := r10;
+//     let old_b := r9;
+//     subc_w(r10, r9);
+//     assert r9 == fst(msp_subc(old(r9), old(r10), old(flags)));
+// }
+
 
 #verbatim
 } // end module bignum_decls

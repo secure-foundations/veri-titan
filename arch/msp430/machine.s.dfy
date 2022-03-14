@@ -54,7 +54,7 @@ module msp_machine {
         (z, update_flags(z, c))
     }
 
-    function method msp_subb(x: uint16, y: uint16, flags: flags_t): (uint16, flags_t)
+    function method msp_subc(x: uint16, y: uint16, flags: flags_t): (uint16, flags_t)
     {
         var (z, c) := subb(x, y, flags.cf);
         (z, update_flags(z, c))
