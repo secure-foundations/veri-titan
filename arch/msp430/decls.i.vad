@@ -128,6 +128,7 @@ function operator(.RR) (rsa: rsa_params): nat extern;
 function operator(.R_INV) (rsa: rsa_params): nat extern;
 function rsa_params_inv(rsa: rsa_params): bool extern;
 
+function R(index: int): reg_t extern;
 var sp: uint16 {:state reg_t(SP)};
 var r3: uint16 {:state reg_t(R(3))};
 var r4: uint16 {:state reg_t(R(4))};
@@ -142,7 +143,6 @@ var r12: uint16 {:state reg_t(R(12))};
 var r13: uint16 {:state reg_t(R(13))};
 var r14: uint16 {:state reg_t(R(14))};
 var r15: uint16 {:state reg_t(R(15))};
-
 
 operand_type reg: uint16 @ reg_t :=
     | inout r3  | inout r4  | inout r5  | inout r6
@@ -190,25 +190,23 @@ procedure pushm_w(inline n: uint8, in rs: reg)
     assume false;
 }
 
-function R(index: int): reg_t extern;
-
-procedure save_r10__r7()
-    requires
-        in_stack_addr_range(sp - 8);
+// procedure save_r10__r7()
+//     requires
+//         in_stack_addr_range(sp - 8);
     
-    modifies
-        mem; flat; sp;
-    reads
-        r10; r9; r8; r7;
+//     modifies
+//         mem; flat; sp;
+//     reads
+//         r10; r9; r8; r7;
 
-    ensures
-        mem == stack_push_batch(old(mem), old(flat),
-            seq(r10, r9, r8, r7));
-        sp == old(sp) - 8;
-{
-    pushm_w(4, r10);
-    assert pushm_w_seq(old(this.ms), R(10), 4) == seq(r10, r9, r8, r7);
-}
+//     ensures
+//         mem == stack_push_batch(old(mem), old(flat),
+//             seq(r10, r9, r8, r7));
+//         sp == old(sp) - 8;
+// {
+//     pushm_w(4, r10);
+//     assert pushm_w_seq(old(this.ms), R(10), 4) == seq(r10, r9, r8, r7);
+// }
 
 procedure mov_w(in rs: reg, inout rd: reg)
     {:instruction Ins(MSP_MOV_W(Reg(rs), Reg(rd)))}
@@ -226,9 +224,72 @@ procedure mov_w_imm(inline i: uint8, inout rd: reg)
     assume false;
 }
 
+procedure lw(in rs: reg, inline inc: bool, inout rd: reg, ghost iter: iter_t)
+    {:instruction Ins(MSP_MOV_W(RegIndir(rs, inc), Reg(rd)))}
+    requires
+        @rs != @rd;
+        iter_safe(iter, heap, rs);
+    reads
+        heap;
+    ensures
+        rs == (if inc then old(rs) + 2 else old(rs));
+        rd == iter.buff[iter.index];
+{
+    assume false;
+}
+
+procedure lw_iter(in rs: reg, inline inc: bool, inout rd: reg, ghost iter: iter_t)
+    returns (ghost next_iter: iter_t)
+    requires
+        @rs != @rd;
+        iter_safe(iter, heap, rs);
+    reads
+        heap;
+    ensures 
+        rs == (if inc then old(rs) + 2 else old(rs));
+        rd == iter.buff[iter.index];
+        next_iter == b16_iter_load_next(iter, inc);
+        iter_safe(next_iter, heap, rs);
+{
+    lw(rs, inc, rd, iter);
+    next_iter := b16_iter_load_next(iter, inc);
+}
+
+procedure sw(in rs1: reg, inline inc: bool, in rs2: reg, ghost iter: iter_t)
+    {:instruction Ins(MSP_MOV_W(Reg(rs1), RegIndir(rs2, inc)))}
+    requires
+        @rs1 != @rs2;
+        iter_safe(iter, heap, rs1);
+    modifies
+        heap;
+    ensures
+        rs1 == (if inc then old(rs1) + 2 else old(rs1));
+        heap == heap_b16_write(old(heap), iter, old(rs2));
+{
+    assume false;
+}
+
+procedure sw_iter(in rs1: reg, inline inc: bool, in rs2: reg, ghost iter: iter_t)
+    returns (ghost next_iter: iter_t)
+    requires
+        @rs1 != @rs2;
+        iter_safe(iter, heap, rs1);
+    modifies
+        heap;
+    ensures
+        rs1 == (if inc then old(rs1) + 2 else old(rs1));
+        next_iter == b16_iter_store_next(iter, old(rs2), inc);
+        iter_safe(next_iter, heap, rs1);
+        heap == heap_b16_write(old(heap), iter, old(rs2));
+{
+    sw(rs1, inc, rs2, iter);
+    next_iter := b16_iter_store_next(iter, old(rs2), inc);
+}
+
 function to_uint16(x: int16): uint16 extern;
 
 function msp_add(x: uint16, y: uint16): tuple(uint16, flags_t) extern;
+function msp_addc(x: uint16, y: uint16, flags: flags_t): tuple(uint16, flags_t) extern;
 
 procedure add_w(in rs: reg, inout rd: reg)
     {:instruction Ins(MSP_ADD_W(Reg(rs), Reg(rd)))}
@@ -254,13 +315,54 @@ procedure add_w_imm(inline imm: int16, inout rd: reg)
     assume false;
 }
 
-procedure add_w_imm_test()
-    requires r10 > 2;
-    modifies r10; flags;
-    ensures r10 == old(r10) - 3;
+// procedure add_w_imm_test()
+//     requires r10 > 2;
+//     modifies r10; flags;
+//     ensures r10 == old(r10) - 3;
+// {
+//     add_w_imm((-3), r10);
+// }
+
+
+procedure addc_w(in rs: reg, inout rd: reg)
+    {:instruction Ins(MSP_ADDC_W(Reg(rs), Reg(rd)))}
+    modifies
+        flags;
+    ensures 
+        let rst := msp_addc(old(rs), old(rd), old(flags));
+        rd == fst(rst);
+        flags == snd(rst);
 {
-    add_w_imm((-3), r10);
+    assume false;
 }
+
+function msp_sub(x: uint16, y: uint16): tuple(uint16, flags_t) extern;
+function msp_subb(x: uint16, y: uint16, flags: flags_t): tuple(uint16, flags_t) extern;
+
+procedure sub_w(in rs: reg, inout rd: reg)
+    {:instruction Ins(MSP_SUB_W(Reg(rs), Reg(rd)))}
+    modifies
+        flags;
+    ensures 
+        let rst := msp_add(old(rs), old(rd));
+        rd == fst(rst);
+        flags == snd(rst);
+{
+    assume false;
+}
+
+procedure subb_w(in rs: reg, inout rd: reg)
+    {:instruction Ins(MSP_SUBC_W(Reg(rs), Reg(rd)))}
+    modifies
+        flags;
+    ensures 
+        let rst := msp_subb(old(rs), old(rd), old(flags));
+        rd == fst(rst);
+        flags == snd(rst);
+{
+    assume false;
+}
+
 
 
 #verbatim

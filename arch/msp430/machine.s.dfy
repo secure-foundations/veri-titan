@@ -31,11 +31,33 @@ module msp_machine {
     
     datatype flags_t = flags_cons(msb: uint1, zero: uint1, cf: uint1 /*, over: uint1 */)
 
+    function method update_flags(value: uint16, carry: uint1): flags_t
+    {
+        flags_cons(msb(value), if value == 0 then 1 else 0, carry)
+    }
+
     function method msp_add(x: uint16, y: uint16): (uint16, flags_t)
     {
         var (z, c) := addc(x, y, 0);
-        var flags := flags_cons(msb(z), if z == 0 then 1 else 0, c);
-        (z, flags)
+        (z, update_flags(z, c))
+    }
+
+    function method msp_addc(x: uint16, y: uint16, flags: flags_t): (uint16, flags_t)
+    {
+        var (z, c) := addc(x, y, flags.cf);
+        (z, update_flags(z, c))
+    }
+
+    function method msp_sub(x: uint16, y: uint16): (uint16, flags_t)
+    {
+        var (z, c) := subb(x, y, 0);
+        (z, update_flags(z, c))
+    }
+
+    function method msp_subb(x: uint16, y: uint16, flags: flags_t): (uint16, flags_t)
+    {
+        var (z, c) := subb(x, y, flags.cf);
+        (z, update_flags(z, c))
     }
 
     datatype state = state(
@@ -89,7 +111,7 @@ module msp_machine {
         | MSP_SUBC_W(src: operand_t, dst: operand_t)
         | MSP_MOV_W(src: operand_t, dst: operand_t)
         | MSP_MOV_B(src: operand_t, dst: operand_t)
-        | MSP_CMP_W(src: operand_t, dst: operand_t)
+        // | MSP_CMP_W(src: operand_t, dst: operand_t)
         | MSP_RRAX_W(dst: operand_t)
         | MSP_PUSHM_W(dst: operand_t, n: operand_t)
         | MSP_POPM_W(dst: operand_t, n: operand_t)
