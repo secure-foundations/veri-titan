@@ -32,24 +32,33 @@ procedure builtin__mspabi_mpyl()
     assume false;
 }
 
+function valid_uint32_view(num: uint32_view_t, lh: uint16, uh: uint16): bool extern;
+
+function dw_view_lemma(num: uint32_view_t): void extern;
+
 function mul_add_lemma(xs: seq(uint16), ys: seq(uint16),
     carry: nat, a: uint16, b: uint16): uint32_view_t extern;
 
-function valid_uint32_view(num: uint32_view_t, lh: uint16, uh: uint16): bool extern;
+function mul_double_add_lemma(xs: seq(uint16), ys: seq(uint16), 
+    carry: nat, a: uint16, b: uint16, c: uint16): uint32_view_t extern;
 
 procedure mula16() returns (ghost sum: uint32_view_t)
     {:noInline}
+    {:frame false}
+
     requires
         in_stack_addr_range(sp - 2);
 
-    modifies
-        mem; flat; flags;
-        regs;
-        sp; r10; r11; r12; r13; r14; r15;
+    // modifies
+    //     mem; flat; flags;
+    //     regs;
+    //     sp; r10; r11; r12; r13; r14; r15;
     
     ensures
         sp == old(sp);
         mem == old(mem);
+        regs[4..11] == old(regs)[4..11];
+        r10 == old(r10);
 
         valid_uint32_view(sum, r12, r13);
         sum.full == old(r12) * old(r13) + old(r14);
@@ -67,11 +76,72 @@ procedure mula16() returns (ghost sum: uint32_view_t)
 
     mov_w_imm(0, r11);
     add_w(r10, r12);
-    assert(r10 == old(r14));
+    // assert(r10 == old(r14));
     let carry := flags.cf;
     addc_w(r11, r13);
     sum := mul_add_lemma(seq(x_lh, x_uh), seq(r10, 0), carry, old(r12), old(r13));
     popm_w(1, r10);
+
+    assert regs[10] == old(regs[10]);
+}
+
+procedure mulaa16()
+    returns (ghost sum: uint32_view_t)
+    {:noInline}
+    {:frame false}
+
+    requires
+        in_stack_addr_range(sp - 4);
+
+    ensures
+        sp == old(sp);
+        mem == old(mem);
+        regs[4..11] == old(regs)[4..11];
+
+        valid_uint32_view(sum, r12, r13);
+        sum.full == old(r12) * old(r13) + old(r14) + old(r15);
+        sum.full == old(r13) * old(r12) + old(r14) + old(r15);
+{
+    pushm_w(2, r10);
+    mov_w(r14, r10);
+    mov_w(r15, r9);
+    mov_w(r13, r14);
+    mov_w_imm(0, r15);
+    mov_w_imm(0, r13);
+    builtin__mspabi_mpyl();
+
+    ghost var x_lh := r12;
+    ghost var x_uh := r13;
+    
+    mov_w(r10, r14);
+    mov_w_imm(0, r15);
+
+    add_w(r14, r12);
+    ghost var carry := flags.cf;
+    addc_w(r15, r13);
+
+    sum := mul_add_lemma(seq(x_lh, x_uh), seq(old(r14), 0), carry, old(r12), old(r13));
+
+    x_lh := r12;
+    x_uh := r13;
+
+    dw_view_lemma(sum);
+
+    mov_w(r9, r10);
+    mov_w_imm(0, r11);
+
+    add_w(r10, r12);
+    carry := flags.cf;
+    addc_w(r11, r13);
+
+    sum := mul_double_add_lemma(seq(x_lh, x_uh), seq(old(r15), 0), 
+    carry, old(r12), old(r13), old(r14));
+
+    popm_w(2, r10);
+
+    assert regs[10] == old(regs[10]);
+    assert regs[9] == old(regs[9]);
+    // assert regs[3..11] == old(regs)[3..11];
 }
 
 #verbatim

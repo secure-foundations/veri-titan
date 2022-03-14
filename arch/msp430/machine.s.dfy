@@ -12,7 +12,7 @@ module msp_machine {
     // R0 R1, R2 are special 
     type int16 = sint
 
-    type reg_idx = i: nat | 3 <= i <= 15 witness 3
+    type reg_idx = i: nat | 4 <= i <= 15 witness 4
 
     datatype reg_t =  
         // | PC
@@ -86,7 +86,7 @@ module msp_machine {
     {
         && n != 0
         && r.R?
-        && 3 <= r.i - n < r.i
+        && 4 <= r.i - n < r.i
     }
 
     function pushm_w_seq(state: state, r: reg_t, n: uint16): seq<uint16>

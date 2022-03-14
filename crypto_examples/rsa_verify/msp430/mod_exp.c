@@ -1,4 +1,4 @@
-// msp430-elf-gcc modexp.c -O3 -S --no-inline
+// msp430-elf-gcc mod_exp.c -O3 -S --no-inline
 
 #include <stdio.h>
 #include <stdint.h>
