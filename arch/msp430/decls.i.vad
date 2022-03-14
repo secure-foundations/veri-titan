@@ -434,8 +434,6 @@ procedure sub_w(in rs: reg, inout rd: reg)
 
 procedure subc_w(in rs: reg, inout rd: reg)
     {:instruction Ins(MSP_SUBC_W(Reg(rs), Reg(rd)))}
-    requires
-        @rs != @rd;
     modifies
         flags;
     ensures 
