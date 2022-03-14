@@ -254,6 +254,35 @@ procedure pop_frame(inline num_bytes: int16)
     assume false;
 }
 
+procedure lw_stack(inline offset: uint16, inout rd: reg)
+    {:instruction Ins(MSP_MOV_W(Idx(SP, offset), Reg(rd)))}
+    requires
+        mod(offset, 2) == 0;
+        frame_index_valid(mem, offset / 2);
+    reads
+        mem; flat;
+    ensures
+        mem == old(mem);
+        rd == read_frame(mem, flat, offset / 2);
+{
+    assume false;
+}
+
+procedure sw_stack(inline offset: uint16, inout rs: reg)
+    {:instruction Ins(MSP_MOV_W(Reg(rs), Idx(SP, offset)))}
+    requires
+        mod(offset, 2) == 0;
+        frame_index_valid(mem, offset / 2);
+    modifies
+        mem; flat;
+    ensures
+        let rst := write_frame(old(mem), old(flat), offset / 2, rs);
+        mem == fst(rst);
+        flat == snd(rst);
+{
+    assume false;
+}
+
 procedure mov_w(in rs: reg, inout rd: reg)
     {:instruction Ins(MSP_MOV_W(Reg(rs), Reg(rd)))}
     ensures
@@ -361,15 +390,6 @@ procedure add_w_imm(inline imm: int16, inout rd: reg)
     assume false;
 }
 
-// procedure add_w_imm_test()
-//     requires r10 > 2;
-//     modifies r10; flags;
-//     ensures r10 == old(r10) - 3;
-// {
-//     add_w_imm((-3), r10);
-// }
-
-
 procedure addc_w(in rs: reg, inout rd: reg)
     {:instruction Ins(MSP_ADDC_W(Reg(rs), Reg(rd)))}
     modifies
@@ -407,49 +427,6 @@ procedure subb_w(in rs: reg, inout rd: reg)
         flags == snd(rst);
 {
     assume false;
-}
-
-procedure save_r10__r7()
-    requires
-        in_stack_addr_range(sp - 8);
-    
-    modifies
-        mem; flat; sp;
-    reads
-        r10; r9; r8; r7;
-    ensures
-        mem == stack_push_batch(old(mem), old(flat),
-            seq(r7, r8, r9, r10));
-        sp == old(sp) - 8;
-        stack_depth(mem) == stack_depth(old(mem)) + 1;
-{
-    pushm_w(4, r10);
-    assert pushm_w_seq(old(this.ms), R(10), 4) == seq(r7, r8, r9, r10);
-}
-
-procedure restore_test()
-    requires
-        in_stack_addr_range(sp - 8);
-    
-    modifies
-        mem; flat; regs; flags;
-        sp; r10; r9; r8; r7;
-    
-    ensures
-        mem == old(mem);
-        sp == old(sp);
-        r7 == old(r7);
-        r8 == old(r8);
-        r9 == old(r9);
-        r10 == old(r10);
-{
-    save_r10__r7();
-    add_w(r7, r8);
-    add_w(r8, r9);
-    add_w(r8, r7);
-    add_w(r9, r10);
-    assert read_top_frame(mem) == seq(old(r7), old(r8), old(r9), old(r10));
-    popm_w(4, r10);
 }
 
 #verbatim
