@@ -5,7 +5,7 @@ include "../../arch/msp430/decls.i.vad"
 include "../../arch/msp430/decls.i.dfy"
 include "../../../lib/bv16_mm_lemmas.i.dfy"
 
-module examples {
+module mul16 {
 
 import opened msp_machine
 import opened msp_decls
@@ -18,6 +18,8 @@ import opened integers
 #endverbatim
 
 procedure builtin__mspabi_mpyl()
+    {:noInline}
+
     requires
         r15 == 0;
         r13 == 0;
@@ -44,20 +46,19 @@ function mul_double_add_lemma(xs: seq(uint16), ys: seq(uint16),
 
 procedure mula16() returns (ghost sum: uint32_view_t)
     {:noInline}
-    {:frame false}
 
     requires
         in_stack_addr_range(sp - 2);
 
-    // modifies
-    //     mem; flat; flags;
-    //     regs;
-    //     sp; r10; r11; r12; r13; r14; r15;
+    modifies
+        mem; flat; flags;
+        regs;
+        sp; r10; r11; r12; r13; r14; r15;
     
     ensures
         sp == old(sp);
         mem == old(mem);
-        regs[4..11] == old(regs)[4..11];
+        // regs[4..11] == old(regs)[4..11];
         r10 == old(r10);
 
         valid_uint32_view(sum, r12, r13);
@@ -81,22 +82,25 @@ procedure mula16() returns (ghost sum: uint32_view_t)
     addc_w(r11, r13);
     sum := mul_add_lemma(seq(x_lh, x_uh), seq(r10, 0), carry, old(r12), old(r13));
     popm_w(1, r10);
-
-    assert regs[10] == old(regs[10]);
 }
 
 procedure mulaa16()
     returns (ghost sum: uint32_view_t)
     {:noInline}
-    {:frame false}
 
     requires
         in_stack_addr_range(sp - 4);
 
+    modifies
+        mem; flat; flags;
+        regs;
+        sp; r9; r10; r11; r12; r13; r14; r15;
+
     ensures
         sp == old(sp);
         mem == old(mem);
-        regs[4..11] == old(regs)[4..11];
+        r9 == old(r9);
+        r10 == old(r10);
 
         valid_uint32_view(sum, r12, r13);
         sum.full == old(r12) * old(r13) + old(r14) + old(r15);
