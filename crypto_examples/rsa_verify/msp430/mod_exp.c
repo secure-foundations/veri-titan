@@ -1,19 +1,19 @@
-// msp430-elf-gcc hello.c -O3 -S --no-inline
+// msp430-elf-gcc modexp.c -O3 -S --no-inline
 
 #include <stdio.h>
 #include <stdint.h>
 
 #define RSANUMWORDS 192 
 
-uint32_t mul32(uint16_t a, uint16_t b) {
+uint32_t mul16(uint16_t a, uint16_t b) {
   return (uint32_t)a*b;
 }
 
-uint32_t mula32(uint16_t a, uint16_t b, uint16_t c) {
+uint32_t mula16(uint16_t a, uint16_t b, uint16_t c) {
   return (uint32_t)a*b+c;
 }
 
-uint32_t mulaa32(uint16_t a, uint16_t b, uint16_t c, uint16_t d) {
+uint32_t mulaa16(uint16_t a, uint16_t b, uint16_t c, uint16_t d) {
   return (uint32_t)a*b+c+d;
 }
 
@@ -56,13 +56,13 @@ void mont_mul_add(const uint16_t d0inv,
       const uint16_t *b,
       const uint16_t *n)
 {
-  uint32_t A = mula32(a, b[0], c[0]);
+  uint32_t A = mula16(a, b[0], c[0]);
   uint16_t d0 = (uint16_t)A * d0inv;
-  uint32_t B = mula32(d0, n[0], (uint16_t)A);
+  uint32_t B = mula16(d0, n[0], (uint16_t)A);
   uint16_t i;
   for (i = 1; i < RSANUMWORDS; ++i) {
-    A = mulaa32(a, b[i], c[i], A >> 16);
-    B = mulaa32(d0, n[i], (uint16_t)A, B >> 16);
+    A = mulaa16(a, b[i], c[i], A >> 16);
+    B = mulaa16(d0, n[i], (uint16_t)A, B >> 16);
     c[i - 1] = (uint16_t)B;
   }
   A = (A >> 16) + (B >> 16);

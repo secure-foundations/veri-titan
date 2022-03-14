@@ -1,10 +1,10 @@
-	.file	"hello.c"
+	.file	"mod_exp.c"
 .text
 	.global	__mspabi_mpyl
 	.balign 2
-	.global	mul32
-	.type	mul32, @function
-mul32:
+	.global	mul16
+	.type	mul16, @function
+mul16:
 ; start of function
 ; framesize_regs:     0
 ; framesize_locals:   0
@@ -20,11 +20,11 @@ mul32:
 	CALL	#__mspabi_mpyl
 	; start of epilogue
 	RET
-	.size	mul32, .-mul32
+	.size	mul16, .-mul16
 	.balign 2
-	.global	mula32
-	.type	mula32, @function
-mula32:
+	.global	mula16
+	.type	mula16, @function
+mula16:
 ; start of function
 ; framesize_regs:     2
 ; framesize_locals:   0
@@ -46,11 +46,11 @@ mula32:
 	; start of epilogue
 	POPM.W	#1, r10
 	RET
-	.size	mula32, .-mula32
+	.size	mula16, .-mula16
 	.balign 2
-	.global	mulaa32
-	.type	mulaa32, @function
-mulaa32:
+	.global	mulaa16
+	.type	mulaa16, @function
+mulaa16:
 ; start of function
 ; framesize_regs:     4
 ; framesize_locals:   0
@@ -76,7 +76,7 @@ mulaa32:
 	; start of epilogue
 	POPM.W	#2, r10
 	RET
-	.size	mulaa32, .-mulaa32
+	.size	mulaa16, .-mulaa16
 	.balign 2
 	.global	sub_mod
 	.type	sub_mod, @function
@@ -179,7 +179,7 @@ mont_mul_add:
 	MOV.W	@R6+, R13
 	MOV.W	R5, R12
 	MOV.W	R15, @R1
-	CALL	#mula32
+	CALL	#mula16
 	MOV.W	R12, R10
 	MOV.W	R13, R9
 	MOV.W	R8, R13
@@ -188,7 +188,7 @@ mont_mul_add:
 	MOV.W	R10, R14
 	MOV.W	22(R1), R7
 	MOV.W	@R7+, R13
-	CALL	#mula32
+	CALL	#mula16
 	MOV.W	R13, R10
 	MOV.W	4(R1), R8
 	MOV.W	@R1, R15
@@ -199,13 +199,13 @@ mont_mul_add:
 	MOV.W	2(R8), R14
 	MOV.W	@R6+, R13
 	MOV.W	R5, R12
-	CALL	#mulaa32
+	CALL	#mulaa16
 	MOV.W	R13, R9
 	MOV.W	R10, R15
 	MOV.W	R12, R14
 	MOV.W	@R7+, R13
 	MOV.W	R4, R12
-	CALL	#mulaa32
+	CALL	#mulaa16
 	MOV.W	R13, R10
 	MOV.W	R12, @R8
 	ADD.W	#2, R8
