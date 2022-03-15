@@ -82,39 +82,40 @@ mulaa16:
 	.type	sub_mod, @function
 sub_mod:
 ; start of function
-; framesize_regs:     8
+; framesize_regs:     10
 ; framesize_locals:   0
 ; framesize_outgoing: 0
-; framesize:          8
-; elim ap -> fp       10
+; framesize:          10
+; elim ap -> fp       12
 ; elim fp -> sp       0
-; saved regs: r7 r8 r9 r10
+; saved regs: r6 r7 r8 r9 r10
 	; start of prologue
-	pushm.w	#4, r10
+	pushm.w	#5, r10
 	; end of prologue
-	mov.w	r12, r7
-	add.w	#384, r7
-	mov.b	#0, r14
-	mov.b	#0, r15
+	mov.w	&n, r9
+	mov.w	r12, r8
+	add.w	#384, r8
+	mov.b	#0, r13
+	mov.b	#0, r7
 .l6:
-	mov.w	@r12+, r9
-	mov.w	r9,r10 { mov.w	#0,r11
-	mov.w	r10, r8
-	add	r14, r8 ; cy
-	mov.w	r11, r9
-	addc	r15, r9
-	mov.w	@r13+, r10
+	mov.w	@r12+, r10
 	mov.w	r10,r14 { mov.w	#0,r15
-	mov.w	r8, r10
-	mov.w	r9, r11
-	sub	r14, r10 { subc	r15, r11
-	mov.w	r11, r14
-	mov.w	r10, -2(r12)
+	mov.w	r14, r10
+	add	r13, r10 ; cy
+	mov.w	r15, r11
+	addc	r7, r11
+	mov.w	@r9+, r13
+	mov.w	r13,r6 { mov.w	#0,r7
+	mov.w	r10, r14
 	mov.w	r11, r15
-	rpt	#15 { rrax.w	r15
-	cmp.w	r12, r7 { jne	.l6
+	sub	r6, r14 { subc	r7, r15
+	mov.w	r15, r13
+	mov.w	r14, -2(r12)
+	mov.w	r15, r7
+	rpt	#15 { rrax.w	r7
+	cmp.w	r12, r8 { jne	.l6
 	; start of epilogue
-	popm.w	#4, r10
+	popm.w	#5, r10
 	ret
 	.size	sub_mod, .-sub_mod
 	.balign 2
@@ -131,21 +132,22 @@ ge_mod:
 ; saved regs:(none)
 	; start of prologue
 	; end of prologue
-	mov.w	r12, r14
-	add.w	#382, r14
+	mov.w	r12, r13
 	add.w	#382, r13
+	mov.w	&n, r11
+	add.w	#382, r11
 	br	#.l10
 .l14:
-	cmp.w	r11, r15 { jlo	.l12
-	mov.w	r14, r15
-	add.w	#-2, r15
-	add.w	#-2, r13
-	cmp.w	r14, r12 { jeq	.l12
-	mov.w	r15, r14
+	cmp.w	r15, r14 { jlo	.l12
+	mov.w	r13, r14
+	add.w	#-2, r14
+	add.w	#-2, r11
+	cmp.w	r13, r12 { jeq	.l12
+	mov.w	r14, r13
 .l10:
-	mov.w	@r14, r11
 	mov.w	@r13, r15
-	cmp.w	r15, r11 { jhs	.l14
+	mov.w	@r11, r14
+	cmp.w	r14, r15 { jhs	.l14
 	mov.b	#0, r12
 	; start of epilogue
 	ret
@@ -171,10 +173,10 @@ mont_mul_add:
 	pushm.w	#7, r10
 	sub.w	#6, r1
 	; end of prologue
-	mov.w	r12, r8
-	mov.w	r13, 4(r1)
-	mov.w	r14, r5
-	mov.w	@r13, r14
+	mov.w	r12, 4(r1)
+	mov.w	r13, r5
+	mov.w	r14, r15
+	mov.w	@r12, r14
 	mov.w	r15, r6
 	mov.w	@r6+, r13
 	mov.w	r5, r12
@@ -182,11 +184,11 @@ mont_mul_add:
 	call	#mula16
 	mov.w	r12, r10
 	mov.w	r13, r9
-	mov.w	r8, r13
+	mov.w	&d0inv, r13
 	call	#__mspabi_mpyi
 	mov.w	r12, r4
 	mov.w	r10, r14
-	mov.w	22(r1), r7
+	mov.w	&n, r7
 	mov.w	@r7+, r13
 	call	#mula16
 	mov.w	r13, r10
@@ -222,7 +224,6 @@ mont_mul_add:
 	popm.w	#7, r10
 	ret
 .l23:
-	mov.w	22(r1), r13
 	mov.w	r14, r12
 	call	#sub_mod
 	; start of epilogue
@@ -235,39 +236,32 @@ mont_mul_add:
 	.type	mont_mul, @function
 mont_mul:
 ; start of function
-; framesize_regs:     12
+; framesize_regs:     8
 ; framesize_locals:   0
-; framesize_outgoing: 2
-; framesize:          14
-; elim ap -> fp       14
-; elim fp -> sp       2
-; saved regs: r5 r6 r7 r8 r9 r10
+; framesize_outgoing: 0
+; framesize:          8
+; elim ap -> fp       10
+; elim fp -> sp       0
+; saved regs: r7 r8 r9 r10
 	; start of prologue
-	pushm.w	#6, r10
-	sub.w	#2, r1
+	pushm.w	#4, r10
 	; end of prologue
-	mov.w	r12, r7
-	mov.w	r13, r9
-	mov.w	r14, r10
-	mov.w	r15, r8
-	mov.w	16(r1), r5
+	mov.w	r12, r8
+	mov.w	r13, r10
+	mov.w	r14, r9
 	mov.w	#384, r14
 	mov.b	#0, r13
-	mov.w	r9, r12
 	call	#memset
-	mov.w	r10, r6
-	add.w	#384, r6
+	mov.w	r10, r7
+	add.w	#384, r7
 .l25:
-	mov.w	r5, @r1
-	mov.w	r8, r15
-	mov.w	@r10+, r14
-	mov.w	r9, r13
-	mov.w	r7, r12
+	mov.w	r9, r14
+	mov.w	@r10+, r13
+	mov.w	r8, r12
 	call	#mont_mul_add
-	cmp.w	r10, r6 { jne	.l25
+	cmp.w	r10, r7 { jne	.l25
 	; start of epilogue
-	add.w	#2, r1
-	popm.w	#6, r10
+	popm.w	#4, r10
 	ret
 	.size	mont_mul, .-mont_mul
 	.balign 2
@@ -275,65 +269,51 @@ mont_mul:
 	.type	mod_pow, @function
 mod_pow:
 ; start of function
-; framesize_regs:     14
+; framesize_regs:     10
 ; framesize_locals:   0
-; framesize_outgoing: 2
-; framesize:          16
-; elim ap -> fp       16
-; elim fp -> sp       2
-; saved regs: r4 r5 r6 r7 r8 r9 r10
+; framesize_outgoing: 0
+; framesize:          10
+; elim ap -> fp       12
+; elim fp -> sp       0
+; saved regs: r6 r7 r8 r9 r10
 	; start of prologue
-	pushm.w	#7, r10
-	sub.w	#2, r1
+	pushm.w	#5, r10
 	; end of prologue
-	mov.w	r12, r6
-	mov.w	r13, r5
-	mov.w	r14, r10
-	mov.w	18(r1), r7
-	mov.w	20(r1), r4
-	mov.w	r14, r8
+	mov.w	r12, r7
+	mov.w	r13, r10
+	mov.w	r15, r6
+	mov.w	r13, r8
 	add.w	#384, r8
-	mov.w	r7, @r1
-	mov.w	r4, r14
-	mov.w	r10, r13
+	mov.w	r15, r13
+	mov.w	r10, r12
 	call	#mont_mul
 	mov.b	#8, r9
 .l28:
-	mov.w	r7, @r1
-	mov.w	r10, r15
 	mov.w	r10, r14
-	mov.w	r8, r13
-	mov.w	r6, r12
-	call	#mont_mul
-	mov.w	r7, @r1
-	mov.w	r8, r15
-	mov.w	r8, r14
 	mov.w	r10, r13
-	mov.w	r6, r12
+	mov.w	r8, r12
+	call	#mont_mul
+	mov.w	r8, r14
+	mov.w	r8, r13
+	mov.w	r10, r12
 	call	#mont_mul
 	add.w	#-1, r9
 	cmp.w	#0, r9 { jne	.l28
-	mov.w	r7, @r1
-	mov.w	r4, r15
-	mov.w	r10, r14
-	mov.w	r5, r13
-	mov.w	r6, r12
+	mov.w	r6, r14
+	mov.w	r10, r13
+	mov.w	r7, r12
 	call	#mont_mul
-	mov.w	r7, r13
-	mov.w	r5, r12
+	mov.w	r7, r12
 	call	#ge_mod
 	cmp.w	#0, r12 { jne	.l34
 	; start of epilogue
-	add.w	#2, r1
-	popm.w	#7, r10
+	popm.w	#5, r10
 	ret
 .l34:
-	mov.w	r7, r13
-	mov.w	r5, r12
+	mov.w	r7, r12
 	call	#sub_mod
 	; start of epilogue
-	add.w	#2, r1
-	popm.w	#7, r10
+	popm.w	#5, r10
 	ret
 	.size	mod_pow, .-mod_pow
 	.ident	"gcc: (mitto systems limited - msp430-gcc 9.3.1.11) 9.3.1"

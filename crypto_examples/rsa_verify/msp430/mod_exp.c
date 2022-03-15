@@ -5,6 +5,9 @@
 
 #define RSANUMWORDS 192 
 
+extern const uint16_t d0inv;
+extern const uint16_t *n;
+
 uint32_t mul16(uint16_t a, uint16_t b) {
   return (uint32_t)a*b;
 }
@@ -20,7 +23,7 @@ uint32_t mulaa16(uint16_t a, uint16_t b, uint16_t c, uint16_t d) {
 /**
  * a[] -= mod
  */
-void sub_mod(uint16_t *a, const uint16_t *n)
+void sub_mod(uint16_t *a)
 {
   int32_t A = 0;
   uint16_t i;
@@ -34,7 +37,7 @@ void sub_mod(uint16_t *a, const uint16_t *n)
 /**
  * Return a[] >= mod
  */
-int ge_mod(const uint16_t *a, const uint16_t *n)
+int ge_mod(const uint16_t *a)
 {
   uint16_t i;
   for (i = RSANUMWORDS; i;) {
@@ -50,11 +53,10 @@ int ge_mod(const uint16_t *a, const uint16_t *n)
 /**
  * Montgomery c[] += a * b[] / R % mod
  */
-void mont_mul_add(const uint16_t d0inv,
+void mont_mul_add(
       uint16_t *c,
       const uint16_t a,
-      const uint16_t *b,
-      const uint16_t *n)
+      const uint16_t *b)
 {
   uint32_t A = mula16(a, b[0], c[0]);
   uint16_t d0 = (uint16_t)A * d0inv;
@@ -68,23 +70,21 @@ void mont_mul_add(const uint16_t d0inv,
   A = (A >> 16) + (B >> 16);
   c[i - 1] = (uint16_t)A;
   if (A >> 16)
-    sub_mod(c, n);
+    sub_mod(c);
 }
 
 /**
  * Montgomery c[] = a[] * b[] / R % mod
  */
-void mont_mul(const uint16_t d0inv,
-         uint16_t *c,
+void mont_mul(uint16_t *c,
          const uint16_t *a,
-         const uint16_t *b,
-         const uint16_t *n)
+         const uint16_t *b)
 {
   uint16_t i;
   for (i = 0; i < RSANUMWORDS; ++i)
     c[i] = 0;
   for (i = 0; i < RSANUMWORDS; ++i)
-    mont_mul_add(d0inv, c, a[i], b, n);
+    mont_mul_add(c, a[i], b);
 }
 
 /**
@@ -100,11 +100,9 @@ void mont_mul(const uint16_t d0inv,
  * @param workbuf32 Work buffer; caller must verify this is
  *      2 x RSANUMWORDS elements long.
  */
-void mod_pow(const uint16_t d0inv,
-        uint16_t *out,
+void mod_pow(uint16_t *out,
         uint16_t *workbuf32,
         const uint16_t * rr,
-        const uint16_t *n,
         uint16_t *in)
 {
   uint16_t *a_r = workbuf32;
@@ -112,14 +110,14 @@ void mod_pow(const uint16_t d0inv,
   int i;
 
   /* Exponent 65537 */
-  mont_mul(d0inv, a_r, in, rr, n);  /* a_r = a * RR / R mod M */
+  mont_mul(a_r, in, rr);  /* a_r = a * RR / R mod M */
   for (i = 0; i < 16; i += 2) {
-    mont_mul(d0inv, aa_r, a_r, a_r, n); /* aa_r = a_r * a_r / R mod M */
-    mont_mul(d0inv, a_r, aa_r, aa_r, n);/* a_r = aa_r * aa_r / R mod M */
+    mont_mul(aa_r, a_r, a_r); /* aa_r = a_r * a_r / R mod M */
+    mont_mul(a_r, aa_r, aa_r);/* a_r = aa_r * aa_r / R mod M */
   }
-  mont_mul(d0inv, out, a_r, in, n);  /* aaa = a_r * a / R mod M */
+  mont_mul(out, a_r, in);  /* aaa = a_r * a / R mod M */
 
   /* Make sure aaa < mod; aaa is at most 1x mod too large. */
-  if (ge_mod(out, n))
-    sub_mod(out, n);
+  if (ge_mod(out))
+    sub_mod(out);
 }
