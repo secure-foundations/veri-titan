@@ -513,6 +513,7 @@ module mem {
     }
 
     predicate {:opaque} inv(flat: flat_t)
+      ensures inv(flat) ==> consts_inv()
     {
       && stack_addrs_valid(flat)
       && as_imem(flat).inv(flat)
@@ -523,18 +524,19 @@ module mem {
     predicate const_inv(name: string)
       requires name in consts
     {
-      exists addr: uint16 :: addr in heap && heap[addr].W16?
+      exists addr: uint16 :: heap_w16_ptr_valid(heap, addr)
     }
 
     function get_const_addr(name: string): uint16
       requires name in consts
-      requires const_inv(name)
+      requires consts_inv()
     {
-      var addr :uint16 :| (addr as nat) in heap && heap[addr].W16?;
+      reveal consts_inv();
+      var addr :uint16 :| heap_w16_ptr_valid(heap, addr);
       addr
     }
 
-    predicate consts_inv()
+    predicate {:opaque} consts_inv()
     {
       forall name: string :: 
         name in consts ==> const_inv(name)
@@ -550,6 +552,7 @@ module mem {
         inv(flat_write_16(flat, iter.cur_ptr(), value))
     {
       reveal inv();
+      reveal consts_inv();
       var new_flat := flat_write_16(flat, iter.cur_ptr(), value);
       as_imem(flat).heap_b16_write_preverses_inv(flat, new_flat,
         iter, value);
@@ -558,13 +561,13 @@ module mem {
       var new_mem := this.(heap := new_heap);
     
       forall name: string
-        ensures name in new_mem.consts ==> new_mem.const_inv(name)
+        ensures (name in new_mem.consts ==> new_mem.const_inv(name))
       {
         if name in new_mem.consts {
           assert name in consts;
           assert const_inv(name);
           var addr := get_const_addr(name);
-          assert addr in new_heap && new_heap[addr].W16?;
+          assert heap_w16_ptr_valid(new_heap, addr);
         }
       }
     }
@@ -578,6 +581,7 @@ module mem {
         inv(flat_write_16(flat, write_ptr, value))
     {
       reveal inv();
+      reveal consts_inv();
       var new_flat := flat_write_16(flat, write_ptr, value);
       as_imem(flat).heap_w16_write_preverses_inv(flat, new_flat,
         write_ptr, value);
@@ -592,7 +596,7 @@ module mem {
           assert name in consts;
           assert const_inv(name);
           var addr := get_const_addr(name);
-          assert addr in new_heap && new_heap[addr].W16?;
+          assert heap_w16_ptr_valid(new_heap, addr);
         }
       }
     }
@@ -606,6 +610,7 @@ module mem {
         inv(flat_write_16(flat, frames.sp + index * 2, value))
     {
       reveal inv();
+      reveal consts_inv();
 
       var new_mem := this.(frames := frames.write(index, value));
       var stack_index := ptr_to_stack_index(frames.sp) + index;
@@ -655,6 +660,7 @@ module mem {
     ensures |top_frame(new_mem.frames).content| == num_bytes / 2
   {
     reveal mem.inv();
+    reveal mem.consts_inv();
     var stack := get_stack(flat);
     mem.frames.push_preserves_inv(num_bytes, stack);
     var new_mem := mem.(frames := mem.frames.push(num_bytes, stack));
@@ -669,6 +675,7 @@ module mem {
     ensures stack_depth(new_mem) == stack_depth(mem) - 1
   {
     reveal mem.inv();
+    reveal mem.consts_inv();
     var stack := get_stack(flat);
     mem.frames.pop_preserves_inv(stack);
     var new_mem := mem.(frames := mem.frames.pop(stack));
