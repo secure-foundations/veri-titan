@@ -48,9 +48,21 @@ module msp_vale {
         if a + b > m then a + b - m else a + b
     }
 
+    function va_mul_nat(a: nat, b: nat): nat
+    {
+        Mul.LemmaMulNonnegativeAuto();
+        a * b
+    }
+
     function va_get_ok(s: va_state): bool
     {
         s.ms.ok
+    }
+
+    function va_update_ok(sM: va_state, sK: va_state): va_state
+    {
+        var temp := sM.ms.ok;
+        sK.(ms := sK.ms.(ok := temp))
     }
 
     function va_get_reg_t(r: reg_t, s: va_state): uint16
@@ -102,6 +114,10 @@ module msp_vale {
         sK.(ms := sK.ms.(flags := temp))
     }
 
+    function va_get_symbols(s: va_state): set<string>
+    {
+        s.mem.consts
+    }
 
     function va_get_mem(s: va_state): mem_t
     {
@@ -131,18 +147,6 @@ module msp_vale {
     function va_update_frames(sM: va_state, sK: va_state): va_state
     {
         sK.(mem := sK.mem.(frames := sM.mem.frames))
-    }
-
-    function va_update_ok(sM: va_state, sK: va_state): va_state
-    {
-        var temp := sM.ms.ok;
-        sK.(ms := sK.ms.(ok := temp))
-    }
-
-    function va_mul_nat(a: nat, b: nat): nat
-    {
-        Mul.LemmaMulNonnegativeAuto();
-        a * b
     }
 
     type iter_t = b16_iter

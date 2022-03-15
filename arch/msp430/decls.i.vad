@@ -21,9 +21,12 @@ function seq_concat #[a: Type(0)](x: seq(a), y: seq(a)): seq(a) extern;
 function seq_append #[a: Type(0)](xs: seq(a), x: a): seq(a) extern;
 
 type map(a: Type(0), b: Type(0)): Type(0) extern;
-function operator(?[]) #[a:Type(0), b:Type(0)](m:map(a, b), rsa:a):bool extern;
-function operator([]) #[a: Type(0), b: Type(0)](m: map(a, b), rsa: a): b extern;
-function operator([ := ]) #[a: Type(0), b: Type(0)](m: map(a, b), rsa: a, v: b): map(a, b) extern;
+function operator(?[]) #[a:Type(0), b:Type(0)](m:map(a, b), k:a):bool extern;
+function operator([]) #[a: Type(0), b: Type(0)](m: map(a, b), k: a): b extern;
+function operator([ := ]) #[a: Type(0), b: Type(0)](m: map(a, b), k: a, v: b): map(a, b) extern;
+
+type set(a: Type(0)): Type(0) extern;
+function operator(?[]) #[a:Type(0)](m:set(a), k:a):bool extern;
 
 function fst #[a: Type(0), b: Type(0)](m: tuple(a, b)): a extern;
 function snd #[a: Type(0), b: Type(0)](m: tuple(a, b)): b extern;
@@ -68,6 +71,8 @@ function bool_to_uint1(i:bool) : uint1 extern;
 function A_as_carry(i:int) : uint1 extern;
 
 var ok: bool {:state ok()};
+
+var symbols: set(string) {:state symbols()};
 
 type flat_t: Type(0) extern;
 var flat: flat_t {:state flat()};
@@ -317,6 +322,21 @@ procedure lw(inout rs: reg, inline inc: bool, inout rd: reg, ghost iter: iter_t)
     ensures
         rs == (if inc then old(rs) + 2 else old(rs));
         rd == iter.buff[iter.index];
+{
+    assume false;
+}
+
+function load_symbol(mem: mem_t, flat: flat_t, name: string): uint16 extern;
+
+procedure lw_symbol(inline name: string, in rd: reg)
+    {:instruction Ins(MSP_MOV_W(Abs(name), Reg(rd)))}
+    requires
+        symbols?[name];
+    reads
+        mem; flat; 
+    ensures
+        mem == old(mem);
+        rd == load_symbol(mem, flat, name);
 {
     assume false;
 }

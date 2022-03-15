@@ -26,6 +26,7 @@ module msp_machine {
     datatype operand_t = 
         | Reg(r: reg_t)
         | Idx(r: reg_t, index: uint16)
+        | Abs(s: string)
         | RegIndir(r: reg_t, inc: bool)
         | Imm(i: int16)
     
@@ -86,7 +87,7 @@ module msp_machine {
     {
         && n != 0
         && r.R?
-        && 4 <= r.i - n < r.i
+        && 4 <= r.i - n + 1 <= r.i
     }
 
     function pushm_w_seq(state: state, r: reg_t, n: uint16): seq<uint16>

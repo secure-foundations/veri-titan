@@ -722,4 +722,12 @@ module mem {
   {
     mem.frames.read(index)
   }
+
+  function load_symbol(mem: mem_t, flat: flat_t, name: string): (value: uint16)
+    requires mem.inv(flat)
+    requires name in mem.consts
+  {
+    var addr := mem.get_const_addr(name);
+    mem.heap[addr].w16
+  }
 }
