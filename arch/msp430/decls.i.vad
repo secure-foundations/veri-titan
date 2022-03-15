@@ -72,7 +72,7 @@ function A_as_carry(i:int) : uint1 extern;
 
 var ok: bool {:state ok()};
 
-var symbols: set(string) {:state symbols()};
+var symbols: map(string, uint16) {:state symbols()};
 
 type flat_t: Type(0) extern;
 var flat: flat_t {:state flat()};
@@ -326,17 +326,17 @@ procedure lw(inout rs: reg, inline inc: bool, inout rd: reg, ghost iter: iter_t)
     assume false;
 }
 
-function load_symbol(mem: mem_t, flat: flat_t, name: string): uint16 extern;
+function load_symbol(mem: mem_t, name: string): uint16 extern;
 
-procedure lw_symbol(inline name: string, in rd: reg)
+procedure lw_symbol(inline name: string, inout rd: reg)
     {:instruction Ins(MSP_MOV_W(Abs(name), Reg(rd)))}
     requires
         symbols?[name];
     reads
-        mem; flat; 
+        mem;
     ensures
         mem == old(mem);
-        rd == load_symbol(mem, flat, name);
+        rd == load_symbol(mem, name);
 {
     assume false;
 }

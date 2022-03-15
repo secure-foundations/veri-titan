@@ -504,7 +504,7 @@ module mem {
     }
   }
 
-  datatype mem_t = mem_cons(heap: heap_t, frames: frames_t, consts: set<string>)
+  datatype mem_t = mem_cons(heap: heap_t, frames: frames_t, symbols: map<string, uint16>)
   {
     function as_imem(flat: flat_t): imem_t
       requires stack_addrs_valid(flat)
@@ -513,33 +513,27 @@ module mem {
     }
 
     predicate {:opaque} inv(flat: flat_t)
-      ensures inv(flat) ==> consts_inv()
+      ensures inv(flat) ==> symbols_inv()
     {
       && stack_addrs_valid(flat)
       && as_imem(flat).inv(flat)
       && frames.frames_inv(get_stack(flat))
-      && consts_inv()
+      && symbols_inv()
     }
 
-    predicate const_inv(name: string)
-      requires name in consts
-    {
-      exists addr: uint16 :: heap_w16_ptr_valid(heap, addr)
-    }
-
-    function get_const_addr(name: string): uint16
-      requires name in consts
-      requires consts_inv()
-    {
-      reveal consts_inv();
-      var addr :uint16 :| heap_w16_ptr_valid(heap, addr);
-      addr
-    }
-
-    predicate {:opaque} consts_inv()
+    predicate {:opaque} symbols_inv()
     {
       forall name: string :: 
-        name in consts ==> const_inv(name)
+        name in symbols ==> heap_w16_ptr_valid(heap, symbols[name])
+    }
+
+    function load_symbol(name: string): uint16
+      requires name in symbols
+      requires symbols_inv()
+    {
+      reveal symbols_inv();
+      assert heap_w16_ptr_valid(heap, symbols[name]);
+      heap[symbols[name]].w16
     }
 
     lemma heap_b16_write_preverses_inv(
@@ -552,24 +546,10 @@ module mem {
         inv(flat_write_16(flat, iter.cur_ptr(), value))
     {
       reveal inv();
-      reveal consts_inv();
+      reveal symbols_inv();
       var new_flat := flat_write_16(flat, iter.cur_ptr(), value);
       as_imem(flat).heap_b16_write_preverses_inv(flat, new_flat,
         iter, value);
-
-      var new_heap: map<int, entry_t> := heap_b16_write(heap, iter, value);
-      var new_mem := this.(heap := new_heap);
-    
-      forall name: string
-        ensures (name in new_mem.consts ==> new_mem.const_inv(name))
-      {
-        if name in new_mem.consts {
-          assert name in consts;
-          assert const_inv(name);
-          var addr := get_const_addr(name);
-          assert heap_w16_ptr_valid(new_heap, addr);
-        }
-      }
     }
 
     lemma heap_w16_write_preverses_inv(
@@ -581,24 +561,10 @@ module mem {
         inv(flat_write_16(flat, write_ptr, value))
     {
       reveal inv();
-      reveal consts_inv();
+      reveal symbols_inv();
       var new_flat := flat_write_16(flat, write_ptr, value);
       as_imem(flat).heap_w16_write_preverses_inv(flat, new_flat,
         write_ptr, value);
-
-      var new_heap: map<int, entry_t> := heap_w16_write(heap, write_ptr, value);
-      var new_mem := this.(heap := new_heap);
-
-      forall name: string
-        ensures name in new_mem.consts ==> new_mem.const_inv(name)
-      {
-        if name in new_mem.consts {
-          assert name in consts;
-          assert const_inv(name);
-          var addr := get_const_addr(name);
-          assert heap_w16_ptr_valid(new_heap, addr);
-        }
-      }
     }
 
     lemma frames_write_preverses_inv(flat: flat_t, index: nat, value: uint16)
@@ -610,7 +576,7 @@ module mem {
         inv(flat_write_16(flat, frames.sp + index * 2, value))
     {
       reveal inv();
-      reveal consts_inv();
+      reveal symbols_inv();
 
       var new_mem := this.(frames := frames.write(index, value));
       var stack_index := ptr_to_stack_index(frames.sp) + index;
@@ -660,7 +626,7 @@ module mem {
     ensures |top_frame(new_mem.frames).content| == num_bytes / 2
   {
     reveal mem.inv();
-    reveal mem.consts_inv();
+    reveal mem.symbols_inv();
     var stack := get_stack(flat);
     mem.frames.push_preserves_inv(num_bytes, stack);
     var new_mem := mem.(frames := mem.frames.push(num_bytes, stack));
@@ -675,7 +641,7 @@ module mem {
     ensures stack_depth(new_mem) == stack_depth(mem) - 1
   {
     reveal mem.inv();
-    reveal mem.consts_inv();
+    reveal mem.symbols_inv();
     var stack := get_stack(flat);
     mem.frames.pop_preserves_inv(stack);
     var new_mem := mem.(frames := mem.frames.pop(stack));
@@ -723,11 +689,10 @@ module mem {
     mem.frames.read(index)
   }
 
-  function load_symbol(mem: mem_t, flat: flat_t, name: string): (value: uint16)
-    requires mem.inv(flat)
-    requires name in mem.consts
+  function load_symbol(mem: mem_t, name: string): (value: uint16)
+    requires name in mem.symbols
+    requires mem.symbols_inv()
   {
-    var addr := mem.get_const_addr(name);
-    mem.heap[addr].w16
+    mem.load_symbol(name)
   }
 }

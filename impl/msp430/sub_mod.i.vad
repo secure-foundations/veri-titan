@@ -47,7 +47,7 @@ ghost procedure subb_inv_post_lemma(
     ghost src1: seq(uint16),
     ghost src2: seq(uint16)) extern;
 
-procedure save_r10__r7()
+procedure save_r7__r10()
     requires
         in_stack_addr_range(sp - 8);
     
@@ -78,9 +78,11 @@ procedure sub_mod(
     requires
         in_stack_addr_range(sp - 8);
 
+        symbols?["n"];
+
         iter_a.base_ptr != iter_n.base_ptr;
         mvar_iter_inv(heap, iter_a, r12, 0, (-1));
-        mvar_iter_inv(heap, iter_n, r13, 0, (-1));
+        mvar_iter_inv(heap, iter_n, load_symbol(mem, "n"), 0, (-1));
 
     modifies
         mem; flat; heap; regs; flags;
@@ -100,7 +102,7 @@ procedure sub_mod(
             to_nat(iter_a.buff) - to_nat(iter_n.buff) + borrow * Pow(BASE_16, 192);
         to_nat(iter_a.buff) >= to_nat(iter_n.buff) ==> borrow == 0;
 {
-    save_r10__r7();
+    save_r7__r10();
 
     ghost var a_ptr := iter_a.base_ptr;
     ghost var n_ptr := iter_n.base_ptr;
@@ -115,7 +117,11 @@ procedure sub_mod(
 
     // clear flags
     subc_w(r9, r9);
-    assert flags.cf == 0;
+    // assert flags.cf == 0;
+
+    lw_symbol("n", r13);
+
+    assert mvar_iter_inv(heap, iter_n, r13, 0, (-1));
 
     subb_inv_pre_lemma(next_iter_a.buff, old_a, next_iter_n.buff);
 
@@ -169,8 +175,6 @@ procedure sub_mod(
     assert read_top_frame(mem) == seq(old(r7), old(r8), old(r9), old(r10));
     popm_w(4, r10);
 }
-
-
 
 #verbatim
 }

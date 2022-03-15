@@ -114,9 +114,9 @@ module msp_vale {
         sK.(ms := sK.ms.(flags := temp))
     }
 
-    function va_get_symbols(s: va_state): set<string>
+    function va_get_symbols(s: va_state): map<string, uint16>
     {
-        s.mem.consts
+        s.mem.symbols
     }
 
     function va_get_mem(s: va_state): mem_t

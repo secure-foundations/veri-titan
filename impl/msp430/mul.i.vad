@@ -5,7 +5,7 @@ include "../../arch/msp430/decls.i.vad"
 include "../../arch/msp430/decls.i.dfy"
 include "../../../lib/bv16_mm_lemmas.i.dfy"
 
-module mul16 {
+module mul {
 
 import opened msp_machine
 import opened msp_decls
