@@ -504,7 +504,7 @@ module mem {
     }
   }
 
-  datatype mem_t = mem_cons(heap: heap_t, frames: frames_t)
+  datatype mem_t = mem_cons(heap: heap_t, frames: frames_t, consts: set<string>)
   {
     function as_imem(flat: flat_t): imem_t
       requires stack_addrs_valid(flat)
@@ -517,6 +517,27 @@ module mem {
       && stack_addrs_valid(flat)
       && as_imem(flat).inv(flat)
       && frames.frames_inv(get_stack(flat))
+      && consts_inv()
+    }
+
+    predicate const_inv(name: string)
+      requires name in consts
+    {
+      exists addr: uint16 :: addr in heap && heap[addr].W16?
+    }
+
+    function get_const_addr(name: string): uint16
+      requires name in consts
+      requires const_inv(name)
+    {
+      var addr :uint16 :| (addr as nat) in heap && heap[addr].W16?;
+      addr
+    }
+
+    predicate consts_inv()
+    {
+      forall name: string :: 
+        name in consts ==> const_inv(name)
     }
 
     lemma heap_b16_write_preverses_inv(
@@ -532,6 +553,20 @@ module mem {
       var new_flat := flat_write_16(flat, iter.cur_ptr(), value);
       as_imem(flat).heap_b16_write_preverses_inv(flat, new_flat,
         iter, value);
+
+      var new_heap: map<int, entry_t> := heap_b16_write(heap, iter, value);
+      var new_mem := this.(heap := new_heap);
+    
+      forall name: string
+        ensures name in new_mem.consts ==> new_mem.const_inv(name)
+      {
+        if name in new_mem.consts {
+          assert name in consts;
+          assert const_inv(name);
+          var addr := get_const_addr(name);
+          assert addr in new_heap && new_heap[addr].W16?;
+        }
+      }
     }
 
     lemma heap_w16_write_preverses_inv(
@@ -546,6 +581,20 @@ module mem {
       var new_flat := flat_write_16(flat, write_ptr, value);
       as_imem(flat).heap_w16_write_preverses_inv(flat, new_flat,
         write_ptr, value);
+
+      var new_heap: map<int, entry_t> := heap_w16_write(heap, write_ptr, value);
+      var new_mem := this.(heap := new_heap);
+
+      forall name: string
+        ensures name in new_mem.consts ==> new_mem.const_inv(name)
+      {
+        if name in new_mem.consts {
+          assert name in consts;
+          assert const_inv(name);
+          var addr := get_const_addr(name);
+          assert addr in new_heap && new_heap[addr].W16?;
+        }
+      }
     }
 
     lemma frames_write_preverses_inv(flat: flat_t, index: nat, value: uint16)
