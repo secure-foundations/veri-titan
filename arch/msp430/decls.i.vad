@@ -44,7 +44,7 @@ type string: Type(0) extern;
 
 function power(b: int, e: nat) : nat extern;
 function cong(a: int, b: int, n: int) : bool extern;
-function cong_B16(a: int, b: int): bool extern;
+function cong_BASE(a: int, b: int): bool extern;
 
 const BASE_16:  nat extern;
 const BASE_32:  nat extern;
@@ -103,6 +103,8 @@ function operator(.content) (f: frame_t): seq(uint16) extern;
 type mem_t: Type(0) extern;
 var mem: mem_t {:state mem()};
 function operator(.frames) (m: mem_t): frames_t extern;
+function operator(.frames := ) (m: mem_t, f: frames_t): mem_t extern;
+
 function operator(.heap) (m: mem_t): heap_t extern;
 function read_top_frame(fs: mem_t): seq(uint16) extern;
 
@@ -281,7 +283,7 @@ procedure lw_stack(inline offset: uint16, inout rd: reg)
     assume false;
 }
 
-procedure sw_stack(inline offset: uint16, inout rs: reg)
+procedure sw_stack(inline offset: uint16, in rs: reg)
     {:instruction Ins(MSP_MOV_W(Reg(rs), Idx(SP, offset)))}
     requires
         mod(offset, 2) == 0;
@@ -347,9 +349,8 @@ procedure lw_iter(inout rs: reg, inline inc: bool, inout rd: reg, ghost iter: it
         @rs != @rd;
         iter_safe(iter, heap, rs);
     reads
-        heap; flags;
+        heap;
     ensures
-        flags == old(flags);
         rs == (if inc then old(rs) + 2 else old(rs));
         rd == iter.buff[iter.index];
         next_iter == b16_iter_load_next(iter, inc);

@@ -74,6 +74,12 @@ module stack {
     }
   }
 
+  predicate frames_diff_one(f1: frames_t, f2: frames_t)
+  {
+    && |f1.fs| + 1 == |f2.fs|
+    && f1.fs == f2.fs[..|f1.fs|]
+  }
+
   datatype frames_t = frames_cons(sp: int, fs: seq<frame_t>)
   {
     predicate frames_inv(stack: seq<uint16>)
@@ -96,24 +102,25 @@ module stack {
       |fs|
     }
 
-    function push(num_bytes: uint16, stack: seq<uint16>): frames_t
-      requires |stack| == STACK_MAX_WORDS()
-      requires num_bytes % 2 == 0
-      requires frames_inv(stack)
-      requires in_stack_addr_range(sp - num_bytes)
-    {
-      var new_sp := sp - num_bytes;
-      var start := ptr_to_stack_index(new_sp);
-      var end := ptr_to_stack_index(sp);
-      this.(sp := new_sp)
-        .(fs := fs + [frame_cons(sp, stack[start..end])])
-    }
-
-    function push_once(content: seq<uint16>, stack: seq<uint16>): frames_t
+    function push_batch(content: seq<uint16>): (new_frames: frames_t)
+      ensures frames_diff_one(this, new_frames)
     {
       var new_sp := sp - |content| * 2;
       this.(sp := new_sp)
         .(fs := fs + [frame_cons(sp, content)])
+    }
+
+    function push(num_bytes: uint16, stack: seq<uint16>): (new_frames: frames_t)
+      requires |stack| == STACK_MAX_WORDS()
+      requires num_bytes % 2 == 0
+      requires frames_inv(stack)
+      requires in_stack_addr_range(sp - num_bytes)
+      ensures frames_diff_one(this, new_frames)
+    {
+      var new_sp := sp - num_bytes;
+      var start := ptr_to_stack_index(new_sp);
+      var end := ptr_to_stack_index(sp);
+      push_batch(stack[start..end])
     }
 
     lemma push_preserves_inv(num_bytes: uint16, stack: seq<uint16>)

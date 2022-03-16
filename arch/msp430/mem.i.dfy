@@ -514,6 +514,7 @@ module mem {
 
     predicate {:opaque} inv(flat: flat_t)
       ensures inv(flat) ==> symbols_inv()
+      ensures inv(flat) ==> |frames.fs| >= 1
     {
       && stack_addrs_valid(flat)
       && as_imem(flat).inv(flat)
@@ -617,12 +618,12 @@ module mem {
     mem.frames.depth()
   }
 
-  function stack_push_frame(mem: mem_t, flat: flat_t, num_bytes: uint16): (new_mem: mem_t)
+  function {:opaque} stack_push_frame(mem: mem_t, flat: flat_t, num_bytes: uint16): (new_mem: mem_t)
     requires mem.inv(flat)
     requires num_bytes % 2 == 0
     requires in_stack_addr_range(mem.frames.sp - num_bytes)
     ensures new_mem.inv(flat)
-    ensures stack_depth(new_mem) == stack_depth(mem) + 1
+    ensures frames_diff_one(mem.frames, new_mem.frames)
     ensures |top_frame(new_mem.frames).content| == num_bytes / 2
   {
     reveal mem.inv();
@@ -650,10 +651,8 @@ module mem {
   }
 
   function stack_push_batch(mem: mem_t, flat: flat_t, content: seq<uint16>): (new_mem: mem_t)
-    requires mem.inv(flat)
   {
-    reveal mem.inv();
-    mem.(frames := mem.frames.push_once(content, get_stack(flat)))
+    mem.(frames := mem.frames.push_batch(content))
   }
 
   predicate frame_index_valid(mem: mem_t, index: nat)
