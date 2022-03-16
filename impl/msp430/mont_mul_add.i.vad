@@ -130,7 +130,7 @@ procedure mma_pre(
     ghost B: uint32_view_t,
     ghost next_iter_b: iter_t,
     ghost next_iter_n: iter_t,
-    ghost c_end: uint16)
+    ghost n_end: uint16)
 
     {:frame false}
 
@@ -156,7 +156,7 @@ procedure mma_pre(
     ensures
         mem == old(mem).(frames := frames);
 
-        read_top_frame(mem) == seq(c_end);
+        read_top_frame(mem) == seq(n_end);
         frames_top_diff(old(mem).frames, mem.frames);
 
         sp == old(sp) - 2;
@@ -168,7 +168,8 @@ procedure mma_pre(
         mvar_iter_inv(heap, iter_c, r8, 0, (-1));
         r9 == A.uh;
         r10 == B.uh;
-        c_end == 384 + iter_c.base_ptr;
+        n_end == 384 + iter_n.base_ptr;
+        r15 == n_end;
 
         next_iter_b == b16_iter_load_next(iter_b, true);
         next_iter_n == b16_iter_load_next(iter_n, true);
@@ -181,11 +182,6 @@ procedure mma_pre(
     mov_w(r12, r8);
     mov_w(r13, r5);
     mov_w(r14, r6);
-
-    mov_w(r8, r15);
-    add_w_imm(384, r15);
-    c_end := r15;
-    sw_stack(0, r15);
 
     let _ := lw_iter(r12, false, r14, iter_c);
 
@@ -210,6 +206,11 @@ procedure mma_pre(
     B := mula16();
 
     mov_w(r13, r10);
+
+    mov_w(r7, r15);
+    add_w_imm(382, r15);
+    n_end := r15;
+    sw_stack(0, r15);
 
     mont_loop_inv_pre_lemma(a, r4, rsa.M0D, A, B,
         iter_b.buff, iter_n.buff, iter_c.buff);
@@ -261,6 +262,7 @@ returns (
         mem == old(mem).(heap := heap);
         mem.heap == old(mem).heap[next_iter_c.base_ptr := B16(next_iter_c.buff)];
 
+        sp == old(sp);
         r5 == a;
         mvar_iter_inv(heap, next_iter_b, r6, j + 1, (-1));
         mvar_iter_inv(heap, next_iter_n, r7, j + 1, rsa.M);
@@ -337,13 +339,56 @@ procedure mont_mul_add(
     ghost var B: uint32_view_t;
     ghost var next_iter_b: iter_t;
     ghost var next_iter_n: iter_t;
-    ghost var c_end: uint16;
+    ghost var next_iter_c := iter_c;
+    ghost var n_end: uint16;
 
-    A, B, next_iter_b, next_iter_n, c_end := 
+    A, B, next_iter_b, next_iter_n, n_end := 
         mma_pre(rsa, iter_c, a, iter_b, iter_n);
 
-    // let original_c := iter_c.buff;
-    // mma_loop(rsa, A, B, original_c, iter_c, a, next_iter_b, next_iter_n, 1);
+    let original_c := iter_c.buff;
+    let loop_sp := sp;
+    let loop_mem := mem;
+
+    ghost var j: nat := 1;
+
+    while (r7 < r15)
+        invariant
+            sp == loop_sp;
+            mem == loop_mem.(heap := heap);
+            read_top_frame(mem) == seq(n_end);
+
+            symbols?["n"];
+            symbols?["d0inv"];
+            load_symbol(mem, "d0inv") == rsa.M0D;
+
+            next_iter_b.base_ptr == iter_b.base_ptr;
+            next_iter_n.base_ptr == iter_n.base_ptr;
+            next_iter_c.base_ptr == iter_c.base_ptr;
+
+            next_iter_c.base_ptr != next_iter_n.base_ptr;
+            next_iter_c.base_ptr != next_iter_b.base_ptr;
+
+            1 <= j <= NUM_WORDS;
+            r5 == a;
+            mvar_iter_inv(heap, next_iter_b, r6, j, (-1));
+            mvar_iter_inv(heap, next_iter_n, r7, j, rsa.M);
+            mvar_iter_inv(heap, next_iter_c, r8, j - 1, (-1));
+            r9 == A.uh;
+            r10 == B.uh;
+            r15 == n_end;
+
+            mont_loop_inv(a, r4, A, B, next_iter_b.buff, next_iter_n.buff,
+                original_c, next_iter_c.buff, j);
+
+        decreases
+            r15 - r7;
+    {
+        A, B, next_iter_b, next_iter_c, next_iter_n := 
+            mma_loop(rsa, A, B, original_c, next_iter_c, a, next_iter_b, next_iter_n, j);
+        lw_stack(0, r15);
+        // assert r15 == n_end;
+        j := j + 1;
+    }
 
 }
 
