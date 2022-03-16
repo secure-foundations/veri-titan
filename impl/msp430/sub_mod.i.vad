@@ -54,10 +54,11 @@ procedure save_r7__r10()
     modifies
         mem; flat; sp;
     reads
-        r10; r9; r8; r7;
+        frames; r10; r9; r8; r7;
     ensures
         mem == stack_push_batch(old(mem), old(flat),
             seq(r7, r8, r9, r10));
+        mem == old(mem).(frames := frames);
         sp == old(sp) - 8;
         stack_depth(mem) == stack_depth(old(mem)) + 1;
 {
@@ -85,7 +86,7 @@ procedure sub_mod(
         mvar_iter_inv(heap, iter_n, load_symbol(mem, "n"), 0, (-1));
 
     modifies
-        mem; flat; heap; regs; flags;
+        mem; flat; heap; regs; flags; frames;
         sp; r7; r8; r9; r10; r11; r12; r13;
     
     ensures
@@ -95,10 +96,11 @@ procedure sub_mod(
         r9 == old(r9);
         r10 == old(r10);
 
-        mem.frames == old(mem).frames;
-        next_iter_a.base_ptr == iter_a.base_ptr;
-        mem.heap == old(mem).heap[next_iter_a.base_ptr := B16(next_iter_a.buff)];
+        mem == old(mem).(heap := heap);
+        mem.heap == old(heap)[next_iter_a.base_ptr := B16(next_iter_a.buff)];
+
         mvar_iter_inv(heap, next_iter_a, r12, (-1), (-1));
+        next_iter_a.base_ptr == iter_a.base_ptr;
 
         to_nat(next_iter_a.buff) - Pow(BASE_16, NUM_WORDS) * borrow ==
             to_nat(iter_a.buff) - to_nat(iter_n.buff);
@@ -128,6 +130,7 @@ procedure sub_mod(
     subb_inv_pre_lemma(next_iter_a.buff, old_a, next_iter_n.buff);
 
     let saved_frames := mem.frames;
+    let saved_mem := mem;
 
     ghost var i: int := 0;
 
@@ -144,8 +147,8 @@ procedure sub_mod(
 
             mvar_iter_inv(heap, next_iter_a, r12, i, (-1));
             mvar_iter_inv(heap, next_iter_n, r13, i, (-1));
+            mem == saved_mem.(heap := heap);
             heap == old(heap)[a_ptr := B16(next_iter_a.buff)];
-            mem.frames == saved_frames;
 
             subb_inv(next_iter_a.buff, flags.cf, old_a, next_iter_n.buff, i);
 
