@@ -226,6 +226,13 @@ procedure mma_loop(
     ghost iter_n: iter_t,
     ghost j: nat)
 
+returns (
+    ghost next_A: uint32_view_t,
+    ghost next_B: uint32_view_t,
+    ghost next_iter_b: iter_t,
+    ghost next_iter_c: iter_t,
+    ghost next_iter_n: iter_t)
+
     {:frame false}
 
     requires
@@ -249,27 +256,50 @@ procedure mma_loop(
 
         mont_loop_inv(a, r4, A, B,
             iter_b.buff, iter_n.buff, original_c, iter_c.buff, j);
+
+    ensures
+        mem == old(mem).(heap := heap);
+        mem.heap == old(mem).heap[next_iter_c.base_ptr := B16(next_iter_c.buff)];
+
+        r5 == a;
+        mvar_iter_inv(heap, next_iter_b, r6, j + 1, (-1));
+        mvar_iter_inv(heap, next_iter_n, r7, j + 1, rsa.M);
+        mvar_iter_inv(heap, next_iter_c, r8, j, (-1));
+        r9 == next_A.uh;
+        r10 == next_B.uh;
+
+        next_iter_b == b16_iter_load_next(iter_b, true);
+        next_iter_c == b16_iter_store_next(iter_c, r14, true);
+        next_iter_n == b16_iter_load_next(iter_n, true);
+
+        mont_loop_inv(a, r4, next_A, next_B,
+            next_iter_b.buff, next_iter_n.buff, original_c, next_iter_c.buff, j+1);
 {
     mov_w(r5, r12);
-    let next_iter_b := lw_iter(r6, true, r13, iter_b);
+    next_iter_b := lw_iter(r6, true, r13, iter_b);
     mov_w(r8, r15);
     add_w_imm(2, r15);
-    let next_iter_c := lw_iter(r15, true, r14, iter_c.(index := j));
+    next_iter_c := lw_iter(r15, true, r14, iter_c.(index := j));
     mov_w(r9, r15);
 
-    let next_A := mulaa16();
+    next_A := mulaa16();
     mov_w(r12, r14);
     mov_w(r13, r9);
     assert next_A.full == a * iter_b.buff[j] + iter_c.buff[j] + A.uh;
 
     mov_w(r4, r12);
-    let next_iter_n := lw_iter(r7, true, r13, iter_n);
+    next_iter_n := lw_iter(r7, true, r13, iter_n);
     mov_w(r10, r15);
 
-    let next_B := mulaa16();
+    next_B := mulaa16();
     assert next_B.full == r4 * iter_n.buff[j] + next_A.lh + B.uh;
+    mov_w(r12, r14);
+    mov_w(r13, r10);
 
+    next_iter_c := sw_iter(r8, true, r14, iter_c);
 
+    mont_loop_inv_peri_lemma(a, r4, A, B, next_A, next_B, 
+        iter_b.buff, iter_n.buff, original_c, iter_c.buff, next_iter_c.buff, j);
 }
 
 
@@ -312,8 +342,8 @@ procedure mont_mul_add(
     A, B, next_iter_b, next_iter_n, c_end := 
         mma_pre(rsa, iter_c, a, iter_b, iter_n);
 
-    let original_c := iter_c.buff;
-    mma_loop(rsa, A, B, original_c, iter_c, a, next_iter_b, next_iter_n, 1);
+    // let original_c := iter_c.buff;
+    // mma_loop(rsa, A, B, original_c, iter_c, a, next_iter_b, next_iter_n, 1);
 
 }
 

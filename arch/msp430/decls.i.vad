@@ -106,6 +106,8 @@ function operator(.frames) (m: mem_t): frames_t extern;
 function operator(.frames := ) (m: mem_t, f: frames_t): mem_t extern;
 
 function operator(.heap) (m: mem_t): heap_t extern;
+function operator(.heap := ) (m: mem_t, h: heap_t): mem_t extern;
+
 function read_top_frame(fs: mem_t): seq(uint16) extern;
 
 function in_stack_addr_range(addr: int): bool extern;
