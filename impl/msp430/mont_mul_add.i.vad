@@ -116,6 +116,8 @@ procedure save_r4__r10()
         == seq(r4, r5, r6, r7, r8, r9, r10);
 }
 
+function frames_top_diff(f1: frames_t, f2: frames_t): bool extern;
+
 procedure mma_pre(
     ghost rsa: rsa_params,
     ghost iter_c: iter_t,
@@ -151,14 +153,11 @@ procedure mma_pre(
 
         rsa_params_inv(rsa);
 
-    // modifies
-    //     mem; flat;
-    //     sp;
-
-    // reads
-    //     r4; r5; r6; r7; r8; r9; r10;
-
     ensures
+        mem == old(mem).(frames := frames);
+
+        read_top_frame(mem) == seq(c_end);
+        frames_top_diff(old(mem).frames, mem.frames);
 
         sp == old(sp) - 2;
 
@@ -177,7 +176,6 @@ procedure mma_pre(
         mont_loop_inv(a, r4, A, B,
             iter_b.buff, iter_n.buff, iter_c.buff, iter_c.buff, 1);
 {
-    // ghost var old_frames := mem.frames;
     push_frame(2);
 
     mov_w(r12, r8);
@@ -188,11 +186,6 @@ procedure mma_pre(
     add_w_imm(384, r15);
     c_end := r15;
     sw_stack(0, r15);
-
-    // assert read_frame(mem, flat, 0) == c_end;
-    // assert mem == stack_push_batch(old(mem), old(flat),
-    //         seq(c_end));
-    assume false;
 
     let _ := lw_iter(r12, false, r14, iter_c);
 
@@ -220,8 +213,6 @@ procedure mma_pre(
 
     mont_loop_inv_pre_lemma(a, r4, rsa.M0D, A, B,
         iter_b.buff, iter_n.buff, iter_c.buff);
-
-
 }
 
 // procedure mont_mul_add()

@@ -74,7 +74,7 @@ module stack {
     }
   }
 
-  predicate frames_diff_one(f1: frames_t, f2: frames_t)
+  predicate frames_top_diff(f1: frames_t, f2: frames_t)
   {
     && |f1.fs| + 1 == |f2.fs|
     && f1.fs == f2.fs[..|f1.fs|]
@@ -103,7 +103,7 @@ module stack {
     }
 
     function push_batch(content: seq<uint16>): (new_frames: frames_t)
-      ensures frames_diff_one(this, new_frames)
+      ensures frames_top_diff(this, new_frames)
     {
       var new_sp := sp - |content| * 2;
       this.(sp := new_sp)
@@ -115,7 +115,7 @@ module stack {
       requires num_bytes % 2 == 0
       requires frames_inv(stack)
       requires in_stack_addr_range(sp - num_bytes)
-      ensures frames_diff_one(this, new_frames)
+      ensures frames_top_diff(this, new_frames)
     {
       var new_sp := sp - num_bytes;
       var start := ptr_to_stack_index(new_sp);

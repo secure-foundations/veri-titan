@@ -623,8 +623,9 @@ module mem {
     requires num_bytes % 2 == 0
     requires in_stack_addr_range(mem.frames.sp - num_bytes)
     ensures new_mem.inv(flat)
-    ensures frames_diff_one(mem.frames, new_mem.frames)
+    ensures frames_top_diff(mem.frames, new_mem.frames)
     ensures |top_frame(new_mem.frames).content| == num_bytes / 2
+    ensures new_mem== mem.(frames := new_mem.frames)
   {
     reveal mem.inv();
     reveal mem.symbols_inv();
