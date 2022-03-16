@@ -151,8 +151,8 @@ module msp_machine {
     /* control flow definitions */
 
     datatype cond =
-        | Eq(o1: operand_t, o2: operand_t)
-        | Ne(o1: operand_t, o2: operand_t)
+        | EQ(o1: operand_t, o2: operand_t)
+        | NE(o1: operand_t, o2: operand_t)
         | LO(o1: operand_t, o2: operand_t) // Jump if lower (unsigned)
         | HS(o1: operand_t, o2: operand_t) // Jump if higher or same (unsigned)
     
@@ -179,8 +179,8 @@ module msp_machine {
     function eval_cond(s: state, c: cond):bool
     {
         match c
-          case Eq(o1, o2)  => (eval_operand(s, o1) == eval_operand(s, o2))
-          case Ne(o1, o2)  => (eval_operand(s, o1) != eval_operand(s, o2))
+          case EQ(o1, o2)  => (eval_operand(s, o1) == eval_operand(s, o2))
+          case NE(o1, o2)  => (eval_operand(s, o1) != eval_operand(s, o2))
           case LO(o1, o2)  => (eval_operand(s, o1) < eval_operand(s, o2))
           case HS(o1, o2)  => (eval_operand(s, o1) >= eval_operand(s, o2))
     }

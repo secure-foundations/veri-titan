@@ -96,10 +96,12 @@ procedure sub_mod(
         r10 == old(r10);
 
         mem.frames == old(mem).frames;
+        next_iter_a.base_ptr == iter_a.base_ptr;
         mem.heap == old(mem).heap[next_iter_a.base_ptr := B16(next_iter_a.buff)];
+        mvar_iter_inv(heap, next_iter_a, r12, (-1), (-1));
 
-        to_nat(next_iter_a.buff) ==
-            to_nat(iter_a.buff) - to_nat(iter_n.buff) + borrow * Pow(BASE_16, 192);
+        to_nat(next_iter_a.buff) - Pow(BASE_16, NUM_WORDS) * borrow ==
+            to_nat(iter_a.buff) - to_nat(iter_n.buff);
         to_nat(iter_a.buff) >= to_nat(iter_n.buff) ==> borrow == 0;
 {
     save_r7__r10();

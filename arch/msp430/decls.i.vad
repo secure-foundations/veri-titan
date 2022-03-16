@@ -400,8 +400,6 @@ function msp_addc(x: uint16, y: uint16, flags: flags_t): tuple(uint16, flags_t) 
 
 procedure add_w(in rs: reg, inout rd: reg)
     {:instruction Ins(MSP_ADD_W(Reg(rs), Reg(rd)))}
-    requires
-        @rs != @rd;
     modifies
         flags;
     ensures 
@@ -426,8 +424,6 @@ procedure add_w_imm(inline imm: int16, inout rd: reg)
 
 procedure addc_w(in rs: reg, inout rd: reg)
     {:instruction Ins(MSP_ADDC_W(Reg(rs), Reg(rd)))}
-    requires
-        @rs != @rd;
     modifies
         flags;
     ensures 

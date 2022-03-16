@@ -255,7 +255,7 @@ module msp_vale {
     function method va_const_cmp(n:uint16):uint16 { n }
     function method va_coerce_reg_to_cmp(r: reg_t): reg_t { r }
 
-    // function method va_cmp_eq(r1:reg_t, r2:reg_t):cond { Eq(r1, r2) }
+    function method va_cmp_eq(r1:reg_t, r2:reg_t):cond { EQ(Reg(r1), Reg(r2))  }
     // function method va_cmp_ne(r1:reg_t, r2:reg_t):cond { Cmp(Ne, r1, r2) }
     // function method va_cmp_le(r1:reg_t, r2:reg_t):cond { Cmp(Le, r1, r2) }
     // function method va_cmp_ge(r1:reg_t, r2:reg_t):cond { Cmp(Ge, r1, r2) }

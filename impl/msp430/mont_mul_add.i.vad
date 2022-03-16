@@ -81,8 +81,8 @@ function mont_loop_cond_sub_lemma(
     next_bout: uint1): void extern;
 
 function montmul_inv(
+    c: seq(uint16),
     a: seq(uint16),
-    x: seq(uint16),
     i: int,
     b: seq(uint16),
     rsa: rsa_params) : bool extern;
@@ -287,14 +287,15 @@ returns (
     next_A := mulaa16();
     mov_w(r12, r14);
     mov_w(r13, r9);
-    assert next_A.full == a * iter_b.buff[j] + iter_c.buff[j] + A.uh;
+    // assert next_A.full == a * iter_b.buff[j] + iter_c.buff[j] + A.uh;
 
     mov_w(r4, r12);
     next_iter_n := lw_iter(r7, true, r13, iter_n);
     mov_w(r10, r15);
 
     next_B := mulaa16();
-    assert next_B.full == r4 * iter_n.buff[j] + next_A.lh + B.uh;
+    // assert next_B.full == r4 * iter_n.buff[j] + next_A.lh + B.uh;
+
     mov_w(r12, r14);
     mov_w(r13, r10);
 
@@ -304,6 +305,82 @@ returns (
         iter_b.buff, iter_n.buff, original_c, iter_c.buff, next_iter_c.buff, j);
 }
 
+procedure mma_post(
+    ghost rsa: rsa_params,
+    ghost A: uint32_view_t,
+    ghost B: uint32_view_t,
+    ghost original_c: seq(uint16),
+    ghost iter_c: iter_t,
+    ghost a: uint16,
+    ghost iter_b: iter_t,
+    ghost iter_n: iter_t,
+    ghost j: nat,
+    ghost iter_a: iter_t,
+    ghost i: nat)
+
+returns (
+    ghost next_iter_c: iter_t)
+
+    {:frame false}
+
+    requires
+        in_stack_addr_range(sp);
+        in_stack_addr_range(sp - 8);
+
+        symbols?["n"];
+
+        iter_c.base_ptr != iter_n.base_ptr;
+        iter_c.base_ptr != iter_b.base_ptr;
+        iter_c.base_ptr != iter_a.base_ptr;
+
+        j == NUM_WORDS;
+        i < NUM_WORDS;
+        r5 == a;
+        mvar_iter_inv(heap, iter_b, r6, j, (-1));
+        mvar_iter_inv(heap, iter_n, load_symbol(mem, "n"), 0, rsa.M);
+        mvar_iter_inv(heap, iter_c, r8, j - 1, (-1));
+        r9 == A.uh;
+        r10 == B.uh;
+
+        montmul_inv(original_c, iter_a.buff, i, iter_b.buff, rsa);
+        iter_a.buff[i] == a;
+
+        mont_loop_inv(a, r4, A, B, iter_b.buff, iter_n.buff,
+            original_c, iter_c.buff, j);
+
+    ensures
+
+        next_iter_c.base_ptr == iter_c.base_ptr;
+        heap == old(heap)[next_iter_c.base_ptr := B16(next_iter_c.buff)];
+
+        montmul_inv(next_iter_c.buff, iter_a.buff, i+1, iter_b.buff, rsa);
+{
+    let d0 := r4;
+    mov_w_imm(0, r15);
+    add_w(r10, r9);
+    addc_w(r15, r15);
+    next_iter_c := sw_iter(r8, true, r9, iter_c);
+    // assert r15 == 0 || r15 == 1;
+    let bout: uint1 := if r15 == 0 then 0 else 1;
+    // assert r9 < r10 ==> r15 == 1;
+    // assert r9 >= r10 ==> r15 == 0;
+    let pre_sub_c := next_iter_c.buff;
+    mont_loop_inv_post_lemma(a, d0, A, B, 
+        iter_b.buff, iter_n.buff, original_c, next_iter_c.buff, bout);
+
+    ghost var next_bout: uint1 := 0;
+    if (r9 < r10) {
+        add_w_imm((-384), r8);
+        mov_w(r8, r12);
+        next_iter_c, next_bout := sub_mod(next_iter_c.(index := 0), iter_n.(index := 0));
+    }
+
+    mont_loop_cond_sub_lemma(
+        a, d0, iter_b.buff, to_nat(iter_n.buff), 
+        to_nat(original_c), pre_sub_c, next_iter_c.buff, bout, next_bout);
+
+    montmul_inv_lemma(original_c, next_iter_c.buff, iter_a.buff, i, d0, iter_b.buff, rsa);
+}
 
 procedure mont_mul_add(
     ghost rsa: rsa_params,
@@ -317,7 +394,7 @@ procedure mont_mul_add(
 
     requires
         in_stack_addr_range(sp);
-        in_stack_addr_range(sp - 28);
+        in_stack_addr_range(sp - 22);
 
         symbols?["n"];
         symbols?["d0inv"];
@@ -389,6 +466,11 @@ procedure mont_mul_add(
         // assert r15 == n_end;
         j := j + 1;
     }
+
+    // set iter_n index
+
+
+
 
 }
 

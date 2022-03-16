@@ -275,6 +275,7 @@ abstract module generic_mm_lemmas {
     requires |dst| == |src1| == |src2|;
     requires subb_inv(dst, carry, src1, src2, |dst|);
     ensures to_nat(dst) == to_nat(src1) - to_nat(src2) + carry * pow_BASE(|dst|);
+    ensures carry * pow_BASE(|dst|) == pow_BASE(|dst|) * carry;
     ensures carry == 0 <==> to_nat(src1) >= to_nat(src2)
     {
         var index := |dst|;
@@ -287,6 +288,7 @@ abstract module generic_mm_lemmas {
         assert to_nat(src1) - to_nat(src2) + carry * pow_BASE(index) == to_nat(dst);
 
         GBV.BVSEQ.LemmaSeqNatBound(dst);
+        Mul.LemmaMulIsCommutativeAuto();
     }
 
 /* end section on multi word subtraction */
