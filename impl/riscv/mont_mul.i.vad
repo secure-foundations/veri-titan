@@ -48,13 +48,13 @@ function mm_vars_inv(
     b_ptr: int, b_idx: int,
     rsa: rsa_params): bool extern;
 
-function montmul_inv_lemma_0(
+function montmul_inv_pre_lemma(
     a: seq(uint32),
     x: seq(uint32), 
     y: seq(uint32), 
     rsa: rsa_params): void extern;
 
- function montmul_inv_lemma_1(
+ function montmul_inv_post_lemma(
     a_view: seq(uint32),
     x: seq(uint32),
     y: seq(uint32),
@@ -197,7 +197,7 @@ procedure mm_pre_loop(
     mv(s1, a1);
     addi(s4, s2, 384);
 
-    montmul_inv_lemma_0(mut_vars.iter_c.buff, mut_vars.iter_a.buff, mut_vars.iter_b.buff, rsa);
+    montmul_inv_pre_lemma(mut_vars.iter_c.buff, mut_vars.iter_a.buff, mut_vars.iter_b.buff, rsa);
 }
 
 procedure mont_mul(
@@ -299,7 +299,7 @@ procedure mont_mul(
     }
 
     next_iter_c := mut_vars.iter_c;
-    montmul_inv_lemma_1(mut_vars.iter_c.buff, mut_vars.iter_a.buff, mut_vars.iter_b.buff, rsa);
+    montmul_inv_post_lemma(mut_vars.iter_c.buff, mut_vars.iter_a.buff, mut_vars.iter_b.buff, rsa);
 
     lw_stack(ra, 24);
     lw_stack(s0, 20);

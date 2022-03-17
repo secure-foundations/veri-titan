@@ -110,6 +110,9 @@ function in_stack_addr_range(addr: int): bool extern;
 type uint64_view_t: Type(0) extern;
 function uint64_cons(lh: uint32, uh: uint32, full: uint64) : uint64_view_t extern;
 function valid_uint64_view(view: uint64_view_t, lh: uint32, uh: uint32) : bool extern;
+function operator(.lh) (value : uint64_view_t): uint32 extern;
+function operator(.uh) (value : uint64_view_t): uint32 extern;
+function operator(.full) (value : uint64_view_t): uint64 extern;
 
 type int64_view_t: Type(0) extern;
 function int64_cons(lh: uint32, uh: uint32, full: int64) : int64_view_t extern;
@@ -220,9 +223,7 @@ function addi(x: uint32, y: int32): uint32 extern;
 
 function uint64_uh(v: uint64) : uint32 extern;
 function uint64_lh(v: uint64) : uint32 extern;
-function operator(.lh) (value : uint64_view_t): uint32 extern;
-function operator(.uh) (value : uint64_view_t): uint32 extern;
-function operator(.full) (value : uint64_view_t): uint64 extern;
+
 
 // --------------------------------------------------------------
 // Base Integer Instructions
@@ -294,9 +295,9 @@ procedure sw_stack(in rs2: reg32, in offset: imm32)
         mem; flat;
     ensures
         let rst := write_frame(old(mem), old(flat), offset / 4, rs2);
-        frame_index_valid(mem, offset / 4);
-        read_top_frame(mem) ==
-            read_top_frame(old(mem))[offset / 4 := rs2];
+        // frame_index_valid(mem, offset / 4);
+        // read_top_frame(mem) ==
+        //     read_top_frame(old(mem))[offset / 4 := rs2];
         mem == fst(rst);
         flat == snd(rst);
 {

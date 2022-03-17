@@ -1,7 +1,7 @@
 include "../../arch/otbn/decls.i.vad"
 include "mont_loop.i.vad"
 
-ghost procedure montmul_inv_lemma_0(
+ghost procedure montmul_inv_pre_lemma(
        ghost a: seq(uint256),
        ghost x: seq(uint256), 
        ghost y: seq(uint256), 
@@ -139,7 +139,7 @@ procedure montmul(ghost vars: mvars)
     ghost var x_it := vars.x_it;
 
     assert montmul_inv(a_view, x_it.buff, x_it.index, vars.y_it.buff, vars.rsa) by {
-        montmul_inv_lemma_0(a_view, x_it.buff, vars.y_it.buff, vars.rsa);
+        montmul_inv_pre_lemma(a_view, x_it.buff, vars.y_it.buff, vars.rsa);
     }
 
     while (LoopImm(12))
