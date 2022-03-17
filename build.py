@@ -5,14 +5,14 @@ from subprocess import PIPE, Popen
 from os.path import exists
 
 TOOLS_DIR = "./tools"
-DAFNY_PATH = "./tools/dafny/dafny"
+DAFNY_PATH = "./tools/dafny/Binaries/Dafny"
 VALE_PATH = "./tools/vale/bin/vale"
 DAFNY_LIB_DIR = "./std_lib"
 
 DAFNY_LIB_HASH = "6ce420782487e592dd9925acf715e0d9548bc300"
 
-DAFNY_ZIP_LINUX = "dafny-3.0.0-x64-ubuntu-16.04.zip"
-DAFNY_ZIP_MACOS = "dafny-3.0.0-x64-osx-10.14.2.zip"
+# DAFNY_ZIP_LINUX = "dafny-3.0.0-x64-ubuntu-16.04.zip"
+# DAFNY_ZIP_MACOS = "dafny-3.0.0-x64-osx-10.14.2.zip"
 
 def rules():
     vale = "" if platform.system() == "Linux" else "mono"
@@ -59,9 +59,7 @@ NINJA_PATH = "build.ninja"
 CODE_DIRS = ["arch", "impl", "lib"]
 GEN_DIR = "gen"
 
-NL_FILES = {
-    "lib/sub_mod_nl_lemmas.i.dfy",
-    "lib/mul256_nl_lemma.i.dfy"}
+NL_FILES = {"lib/sub_mod_nl_lemmas.i.dfy"}
 
 ## misc utils
 
@@ -122,6 +120,7 @@ def setup_tools():
     version = subprocess_run("ninja --version")
     if not version.startswith("1.10."):
         print("[WARN] ninja not found or unexpected version.  Expected 1.10.*, found: " + version)
+
     # dotnet
     version = subprocess_run("dotnet --list-sdks")
     if "5.0" not in version:
@@ -130,21 +129,45 @@ def setup_tools():
         print("[INFO] Found dotnet version: " + version)
 
     # nuget
-    version = subprocess_run("nuget help | grep Version")
+    version = subprocess_run("nuget help | grep -m 1 Version")
     if "5.5" not in version:
         print("[WARN] nuget not found or unexpected version.  Expected 5.5, found: " + version)
     else:
         print("[INFO] Found nuget version: " + version)
 
-    path = subprocess_run("which otbn-as")
+    # C# compiler (Vale)
+    path = subprocess_run("which dmsc")
+    if "dmsc" not in path:
+        # Check for mcs (mono C# compiler) instead
+        path = subprocess_run("which mcs")
+        if "mcs" not in path:
+            print("[WARN] C# compiler (dmsc or mcs - Vale dependency) not found")
+        else:
+            print("[INFO] mcs (Vale dependency) found")
+    else:
+        print("[INFO] dmsc (Vale dependency) found")
 
+    # scons (Vale)
+    path = subprocess_run("which scons")
+    if "scons" not in path:
+        print("[WARN] scons (Vale dependency) not found")
+    else:
+        print("[INFO] scons (Vale dependency) found")
+
+    # F# compiler (Vale)
+    path = subprocess_run("which fsharpc")
+    if "fsharpc" not in path:
+        print("[WARN] fsharpc (Vale dependency) not found")
+    else:
+        print("[INFO] fsharpc (Vale dependency) found")
+
+    path = subprocess_run("which otbn-as")
     if "otbn-as" not in path:
         print("[WARN] otbn-as not found")
     else:
         print("[INFO] otbn-as found")
 
     path = subprocess_run("which otbn-ld")
-
     if "otbn-ld" not in path:
         print("[WARN] otbn-ld not found")
     else:
@@ -161,13 +184,12 @@ def setup_tools():
     if not os.path.exists(TOOLS_DIR):
         os.mkdir(TOOLS_DIR)
 
-    dafny_zip = DAFNY_ZIP_LINUX if os_type == "Linux" else DAFNY_ZIP_MACOS
+    z3_target = "z3-ubuntu" if os_type == "Linux" else "z3-mac"
     if os.path.exists(DAFNY_PATH):
         print("[INFO] dafny binary already exists")
     else:
-        os.system(f"wget https://github.com/dafny-lang/dafny/releases/download/v3.0.0/{dafny_zip}")
-        os.system(f"unzip {dafny_zip} -d {TOOLS_DIR}")
-        os.system(f"rm {dafny_zip}")
+        os.system("cd tools && git clone git@github.com:secure-foundations/dafny.git")
+        os.system("cd tools/dafny && git checkout groebner-extension && make exe && make z3-ubuntu")
 
     if os.path.exists(VALE_PATH):
         print("[INFO] vale binary already exists")
@@ -199,7 +221,7 @@ def list_dfy_deps(dfy_file):
             continue
         if i == 0:
             # print(dfy_file)
-            continue 
+            continue
         else:
             include = get_ver_path(include)
             includes.append(include)
@@ -386,10 +408,15 @@ def verify_single_file(target):
 def generate_dll(dfy_path, dll_path):
     dfy_path = os.path.realpath(dfy_path)
     assert(dll_path.startswith(GEN_DIR) and dll_path.endswith(".dll"))
-    dll_dir = os.path.dirname(dll_path)
-    command = f"dafny /compile:1 /noNLarith /vcsCores:2 {dfy_path} /out:{dll_path}"
-    output = subprocess_run(command, cwd=dll_dir) 
+    output_dir, dll_name = os.path.split(dll_path)
+    json_name = dll_name.replace(".dll", ".runtimeconfig.json")
+    json_path = output_dir + "/" + json_name
+    command = f"{DAFNY_PATH} /compile:1 /spillTargetCode:1 /noNLarith /vcsCores:2 {dfy_path} /out:{dll_path}"
+    print(command)
+    output = subprocess_run(command)
     print(output)
+    # os.system(f"mv {dll_name} {dll_path}")
+    # os.system(f"mv {json_name} {json_path}")
 
 ## command line interface
 

@@ -11,6 +11,7 @@ import opened ot_machine
 import opened ot_abstraction
 import opened ot_decls
 import opened ot_vale
+import opened mem
 
 import opened integers
 import opened bv256_mm_lemmas
@@ -68,7 +69,7 @@ procedure cond_sub_to_reg_inner(
             init_view, iter.buff, iter.index);
 
     reads
-        w3; w31; mem; heap;
+        w3; w31; flat; heap;
 
     modifies
         x8; x12; x13; x16;
@@ -81,7 +82,7 @@ procedure cond_sub_to_reg_inner(
         x13 == 24;
 
         iter_inv(next_iter, heap, x16);
-        next_iter == bn_lid_next_iter(iter, true);
+        next_iter == b256_iter_load_next(iter, true);
 
         w3 == old(w3);
         w31 == old(w31);
@@ -130,7 +131,7 @@ procedure sub_to_reg(
         seq_len(init_iter.buff) == NUM_WORDS;
 
     reads
-        x22; x30; w3; w31; mem; heap;
+        x22; x30; w3; w31; flat; heap;
 
     modifies
         fgroups;

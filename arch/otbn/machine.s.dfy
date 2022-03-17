@@ -1,5 +1,6 @@
 include "../../lib/bv32_ops.dfy"
 include "../../lib/bv256_ops.dfy"
+include "flat.s.dfy"
 
 module ot_machine {
     import Mul
@@ -9,7 +10,7 @@ module ot_machine {
     import bv256_ops
     import opened integers
 
-    const DMEM_LIMIT: int := 0x8000
+    import opened flat
 
     // ignore the mapping
     const NA :int := -1;
@@ -302,65 +303,6 @@ module ot_machine {
         bv32_ops.addi(base, offset * 32)
     }
 
-/* mem_t definion */
-
-    // admissible is aligned and bounded
-    predicate method xword_ptr_admissible(ptr: nat)
-    {
-        && ptr % 4 == 0
-        && ptr < DMEM_LIMIT
-    }
-
-    // admissible is aligned and bounded
-    predicate method wword_ptr_admissible(ptr: nat)
-    {
-        && ptr % 32 == 0
-        && ptr < DMEM_LIMIT
-    }
-
-    type mem_t = map<int, uint32>
-
-    predicate method wword_ptr_valid(mem: mem_t, ptr: nat)
-    {
-        && wword_ptr_admissible(ptr)
-        && ptr + 0 in mem
-        && ptr + 4 in mem
-        && ptr + 8 in mem
-        && ptr + 12 in mem
-        && ptr + 16 in mem
-        && ptr + 20 in mem
-        && ptr + 24 in mem
-        && ptr + 28 in mem
-    }
-
-    function method read_wword(mem: mem_t, ptr: nat): uint256
-        requires wword_ptr_valid(mem, ptr)
-    {
-        var p0 := mem[ptr + 0];
-        var p1 := mem[ptr + 4];
-        var p2 := mem[ptr + 8];
-        var p3 := mem[ptr + 12];
-        var p4 := mem[ptr + 16];
-        var p5 := mem[ptr + 20];
-        var p6 := mem[ptr + 24];
-        var p7 := mem[ptr + 28];
-        bv256_ops.eighth_assemble(p0, p1, p2, p3, p4, p5, p6, p7)
-    }
-
-    function method mem_write_wword(mem: mem_t, ptr: nat, value: uint256): (mem' : mem_t)
-        requires wword_ptr_admissible(ptr)
-        ensures wword_ptr_valid(mem', ptr)
-    {
-        mem[ptr + 0 := bv256_ops.eighth_split(value, 0)]
-            [ptr + 4 := bv256_ops.eighth_split(value, 1)]
-            [ptr + 8 := bv256_ops.eighth_split(value, 2)]
-            [ptr + 12 := bv256_ops.eighth_split(value, 3)]
-            [ptr + 16 := bv256_ops.eighth_split(value, 4)]
-            [ptr + 20 := bv256_ops.eighth_split(value, 5)]
-            [ptr + 24 := bv256_ops.eighth_split(value, 6)]
-            [ptr + 28 := bv256_ops.eighth_split(value, 7)]
-    }
-
 /* control flow definitions */
 
     datatype whileCond = 
@@ -447,7 +389,7 @@ predicate method while_overlap(c:code)
 
         fgroups: fgroups_t,
 
-        mem: mem_t,
+        flat: flat_t,
 
         ok: bool)
     {
@@ -473,36 +415,27 @@ predicate method while_overlap(c:code)
         }
 
         function method read_xword(addr: uint32): uint32
-            requires xword_ptr_admissible(addr)
+            requires ptr_admissible_32(addr)
         {
-            if addr in mem then mem[addr] else 0
+            flat_read_32(flat, addr)
         }
 
         function method write_xword(addr: uint32, v: uint32): state
-            requires xword_ptr_admissible(addr)
+            requires ptr_admissible_32(addr)
         {
-            this.(mem := mem[addr := v])
+            this.(flat := flat_write_32(flat, addr, v))
         }
 
         function method read_wword(addr: uint32): uint256 
-            requires wword_ptr_admissible(addr)
+            requires ptr_admissible_256(addr)
         {
-            var p0 := read_xword(addr + 0);
-            var p1 := read_xword(addr + 4);
-            var p2 := read_xword(addr + 8);
-            var p3 := read_xword(addr + 12);
-            var p4 := read_xword(addr + 16);
-            var p5 := read_xword(addr + 20);
-            var p6 := read_xword(addr + 24);
-            var p7 := read_xword(addr + 28);
-            bv256_ops.eighth_assemble(p0, p1, p2, p3, p4, p5, p6, p7)
+            flat_read_256(flat, addr)
         }
 
         function method write_wword(addr: uint32, v: uint256): state
-            requires wword_ptr_admissible(addr)
+            requires ptr_admissible_256(addr)
         {
-            var mem' := mem_write_wword(mem, addr, v);
-            this.(mem := mem')
+            this.(flat := flat_write_256(flat, addr, v))
         }
 
         function method eval_ADD(xrd: reg32_t, xrs1: reg32_t, xrs2: reg32_t): state
@@ -545,7 +478,7 @@ predicate method while_overlap(c:code)
         {
             var base := read_reg32(xrs1);
             var addr := bv32_ops.addi(base, offset);
-            if !xword_ptr_admissible(addr) then this.(ok := false)
+            if !ptr_admissible_32(addr) then this.(ok := false)
             else write_reg32(xrd, read_xword(addr))
         }
 
@@ -553,7 +486,7 @@ predicate method while_overlap(c:code)
         {
             var base := read_reg32(xrs1);
             var addr := bv32_ops.addi(base, offset);
-            if !xword_ptr_admissible(addr) then this.(ok := false)
+            if !ptr_admissible_32(addr) then this.(ok := false)
             else write_xword(addr, read_reg32(xrs2))
         }
 
@@ -600,7 +533,7 @@ predicate method while_overlap(c:code)
             var di := read_reg32(grd);
             var base := read_reg32(grs);
             var addr := wwrod_offset_ptr(base, offset);
-            if di > 31 || !wword_ptr_admissible(addr) then 
+            if di > 31 || !ptr_admissible_256(addr) then 
                 this.(ok := false)
             else
                 var value := read_wword(addr);
@@ -616,7 +549,7 @@ predicate method while_overlap(c:code)
             var di := read_reg32(grs2);
             var base := read_reg32(grs1);
             var addr := wwrod_offset_ptr(base, offset);
-            if di > 31 || !wword_ptr_admissible(addr) then 
+            if di > 31 || !ptr_admissible_256(addr) then 
                 this.(ok := false)
             else
                 var value := read_reg256(WDR(di));

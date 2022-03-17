@@ -71,15 +71,22 @@ We assume the following packages are installed by the user:
 
 `ninja` (1.10.+)
 
-[`dotnet`](https://dotnet.microsoft.com/download) 
+[`dotnet`](https://dotnet.microsoft.com/download)
 
 [`nuget`](https://www.nuget.org/downloads)
+
+[`python`](https://www.python.org/) >= 3.0
 
 We also assume some otbn tools are available:
 
 [`otbn-as`](https://github.com/lowRISC/opentitan/tree/master/hw/ip/otbn/util)
 
 [`otbn-ld`](https://github.com/lowRISC/opentitan/tree/master/hw/ip/otbn/util)
+
+Finally, you will need all the Vale dependencies listed
+[here](https://github.com/project-everest/vale/blob/otbn-custom/INSTALL.md#building-vale-from-source).
+This is because a custom version of Vale will be compiled from source during
+setup.
 
 To prepare for the build process, run: 
 ```

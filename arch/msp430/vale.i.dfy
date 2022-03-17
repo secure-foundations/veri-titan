@@ -1,10 +1,10 @@
-include "machine.s.dfy"
 include "../../std_lib/src/NonlinearArithmetic/Mul.dfy"
-include "../../arch/riscv/mem.i.dfy"
+include "machine.s.dfy"
+include "mem.i.dfy"
 
-module rv_vale {
+module msp_vale {
     import opened integers
-    import opened rv_machine
+    import opened msp_machine
     import opened flat
     import opened mem
     import opened stack
@@ -48,19 +48,48 @@ module rv_vale {
         if a + b > m then a + b - m else a + b
     }
 
+    function va_mul_nat(a: nat, b: nat): nat
+    {
+        Mul.LemmaMulNonnegativeAuto();
+        a * b
+    }
+
     function va_get_ok(s: va_state): bool
     {
         s.ms.ok
     }
 
-    function va_get_reg32_t(r: reg32_t, s: va_state): uint32
+    function va_update_ok(sM: va_state, sK: va_state): va_state
     {
-        s.ms.read_reg32(r)
+        var temp := sM.ms.ok;
+        sK.(ms := sK.ms.(ok := temp))
     }
 
-    function va_eval_reg32(s: va_state, r : reg32_t): uint32
+    function va_get_reg_t(r: reg_t, s: va_state): uint16
     {
-        s.ms.read_reg32(r)
+        s.ms.read_reg(r)
+    }
+
+    function va_eval_reg(s: va_state, r : reg_t): uint16
+    {
+        s.ms.read_reg(r)
+    }
+
+    function va_update_reg_t(r: reg_t, sM: va_state, sK: va_state): va_state
+    {
+        var temp := sM.ms.read_reg(r);
+        sK.(ms := sK.ms.write_reg(r, temp))
+    }
+
+    function va_get_regs(s: va_state): regs_t
+    {
+        s.ms.regs
+    }
+
+    function va_update_regs(sM: va_state, sK: va_state): va_state
+    {
+        var temp := sM.ms.regs;
+        sK.(ms := sK.ms.(regs := temp))
     }
 
     function va_get_flat(s: va_state): flat_t
@@ -72,6 +101,22 @@ module rv_vale {
     {
         var temp := sM.ms.flat;
         sK.(ms := sK.ms.(flat := temp))
+    }
+
+    function va_get_flags(s: va_state): flags_t
+    {
+        s.ms.flags
+    }
+
+    function va_update_flags(sM: va_state, sK: va_state): va_state
+    {
+        var temp := sM.ms.flags;
+        sK.(ms := sK.ms.(flags := temp))
+    }
+
+    function va_get_symbols(s: va_state): map<string, uint16>
+    {
+        s.mem.symbols
     }
 
     function va_get_mem(s: va_state): mem_t
@@ -104,76 +149,47 @@ module rv_vale {
         sK.(mem := sK.mem.(frames := sM.mem.frames))
     }
 
-    function va_update_ok(sM: va_state, sK: va_state): va_state
-    {
-        var temp := sM.ms.ok;
-        sK.(ms := sK.ms.(ok := temp))
-    }
-
-    function va_update_reg32_t(r: reg32_t, sM: va_state, sK: va_state): va_state
-    {
-        var index := reg32_to_index(r);
-        var temp := sM.ms.regs[index];
-        sK.(ms := sK.ms.write_reg32(r, temp))
-    }
-
-    type va_operand_simm32 = int32
-    predicate va_is_src_simm32(v:int32, s: va_state) { true }
-    function va_eval_simm32(s: va_state, v:int32):int32 { v }
-    function method va_const_simm32(n:int32):int32 { n }
-
-    type va_operand_imm32 = uint32
-    predicate va_is_src_imm32(v:uint32, s: va_state) { true }
-    function va_eval_imm32(s: va_state, v:uint32):uint32 { v }
-    function method va_const_imm32(n:uint32):uint32 { n }
-
-    function va_mul_nat(a: nat, b: nat): nat
-    {
-        Mul.LemmaMulNonnegativeAuto();
-        a * b
-    }
-
-    type iter_t = b32_iter
+    type iter_t = b16_iter
 
     predicate iter_inv(iter: iter_t, heap: heap_t, address: int)
     {
         && iter.cur_ptr() == address
-        && b32_iter_inv(heap, iter)
+        && b16_iter_inv(heap, iter)
     }
 
     predicate iter_safe(iter: iter_t, heap: heap_t, address: int)
     {
         && iter.cur_ptr() == address
-        && b32_iter_safe(heap, iter)
+        && b16_iter_safe(heap, iter)
     }
 
-    // reg32
+    // reg
 
-    type va_value_reg32 = uint32
+    type va_value_reg = uint16
 
-    type va_operand_reg32 = reg32_t
+    type va_operand_reg = reg_t
 
-    predicate va_is_src_reg32(r: reg32_t, s: va_state)
+    predicate va_is_src_reg(r: reg_t, s: va_state)
     {
         true
     }
 
-    predicate va_is_dst_reg32(r: reg32_t, s: va_state)
+    predicate va_is_dst_reg(r: reg_t, s: va_state)
     {
-        !r.X0?
+        true
     }
 
-    function va_read_reg32(s: va_state, r : reg32_t):uint32
+    function va_read_reg(s: va_state, r : reg_t): uint16
     {
-        s.ms.read_reg32(r)
+        s.ms.read_reg(r)
     }
 
-    function va_update_operand_reg32(r: reg32_t, sM: va_state, sK: va_state): va_state
+    function va_update_operand_reg(r: reg_t, sM: va_state, sK: va_state): va_state
     {
-        va_update_reg32_t(r, sM, sK)
+        va_update_reg_t(r, sM, sK)
     }
 
-    function method va_op_cmp_reg32_t(r : reg32_t)  : reg32_t
+    function method va_op_cmp_reg_t(r : reg_t)  : reg_t
     {
         r
     }
@@ -183,6 +199,7 @@ module rv_vale {
         // s0 == s1
         && s0.ms.regs == s1.ms.regs
         && s0.ms.flat == s1.ms.flat
+        && s0.ms.flags == s1.ms.flags
         && s0.ms.ok == s1.ms.ok
         && s0.mem == s1.mem
     }
@@ -205,7 +222,7 @@ module rv_vale {
         // ensures valid_state_opaque(s) ==> valid_state(s.ms);
         // ensures valid_state_opaque(s) ==> s.mem.inv(s.ms.flat);
     {
-        && s.ms.regs[reg32_to_index(SP)] == s.mem.frames.sp
+        && s.ms.read_reg(SP) == s.mem.frames.sp
         && valid_state(s.ms)
         && s.mem.inv(s.ms.flat)
     }
@@ -235,17 +252,17 @@ module rv_vale {
     {
     }
 
-    function method va_const_cmp(n:uint32):uint32 { n }
-    function method va_coerce_reg32_to_cmp(r: reg32_t): reg32_t { r }
+    function method va_const_cmp(n:uint16):uint16 { n }
+    function method va_coerce_reg_to_cmp(r: reg_t): reg_t { r }
 
-    function method va_cmp_eq(r1:reg32_t, r2:reg32_t):cond { Cmp(Eq, r1, r2) }
-    function method va_cmp_ne(r1:reg32_t, r2:reg32_t):cond { Cmp(Ne, r1, r2) }
-    function method va_cmp_le(r1:reg32_t, r2:reg32_t):cond { Cmp(Le, r1, r2) }
-    function method va_cmp_ge(r1:reg32_t, r2:reg32_t):cond { Cmp(Ge, r1, r2) }
-    function method va_cmp_lt(r1:reg32_t, r2:reg32_t):cond { Cmp(Lt, r1, r2) }
-    function method va_cmp_gt(r1:reg32_t, r2:reg32_t):cond { Cmp(Gt, r1, r2) }
+    function method va_cmp_eq(r1:reg_t, r2:reg_t):cond { EQ(Reg(r1), Reg(r2))  }
+    // function method va_cmp_ne(r1:reg_t, r2:reg_t):cond { Cmp(Ne, r1, r2) }
+    // function method va_cmp_le(r1:reg_t, r2:reg_t):cond { Cmp(Le, r1, r2) }
+    // function method va_cmp_ge(r1:reg_t, r2:reg_t):cond { Cmp(Ge, r1, r2) }
+    function method va_cmp_lt(r1: reg_t, r2: reg_t):cond { LO(Reg(r1), Reg(r2)) }
+    // function method va_cmp_gt(r1:reg_t, r2:reg_t):cond { Cmp(Gt, r1, r2) }
 
-    function method va_op_reg32_reg32_t(r: reg32_t): reg32_t { r }
+    function method va_op_reg_reg_t(r: reg_t): reg_t { r }
     function method va_Block(block:codes):code { Block(block) }
     function method va_Function(name: string, body: codes): code { Function(name, body) }
     function method va_While(wcond:cond, wcode:code):code { While(wcond, wcode) }
@@ -288,7 +305,7 @@ module rv_vale {
             case IfElse(cond, ifT, ifF) => {
                 var r' :| eval_if_else(cond, ifT, ifF, s, r');
             }
-            case Ins32(i) => {
+            case Ins(i) => {
                 var r' :| eval_code(c, s, r');
             }
             case Comment(com) => {
@@ -334,7 +351,7 @@ module rv_vale {
         ensures  r.ok ==> valid_state(r);
     {
         if r.ok {
-            if c.Ins32? {
+            if c.Ins? {
                 assert true;
             } else if c.Block? {
                 block_state_validity(c.block, s, r);

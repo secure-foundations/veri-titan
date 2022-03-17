@@ -1,8 +1,10 @@
 include "../../lib/bv32_ops.dfy"
+include "flat.s.dfy"
 
 module rv_machine {
     import opened integers
     import opened bv32_ops
+    import opened flat
 
     const DMEM_LIMIT: int := 0x80000
 
@@ -81,91 +83,13 @@ module rv_machine {
         }
     }
 
-    // datatype uint64_raw = uint64_cons(
-    //     lh: uint32, uh: uint32, full: uint64)
-
-    // type uint64_view_t = num: uint64_raw |
-    //     && num.lh == dw_lh(num.full)
-    //     && num.uh == dw_uh(num.full)
-    //     witness *
-
-   /* memory definitions */ 
-
-    type mem_t = map<int, seq<uint32>>
-
-    predicate mem_base_addr_valid(mem: mem_t, addr: int, size: nat)
-    {
-        && addr in mem
-        // buff is not empty
-        && |mem[addr]| == size != 0
-        // buff does not extend beyond mem limit
-        && addr + 4 * size <= DMEM_LIMIT
-    }
-
-    /* iter_t definion */
-
-    datatype iter_t = iter_cons(base_addr: int, index: nat, buff: seq<uint32>)
-
-    function lw_next_iter(iter: iter_t): iter_t
-    {
-        iter.(index := iter.index + 1)
-    }
-
-    function lw_prev_iter(iter: iter_t): iter_t
-    {
-        if iter.index == 0 then
-            iter
-        else
-            iter.(index := iter.index - 1)
-    }
-
-    function sw_iter(iter: iter_t, value: uint32): iter_t
-        requires iter.index < |iter.buff|
-    {
-        iter.(buff := iter.buff[iter.index := value])
-    }
-    
-    function sw_next_iter(iter: iter_t, value: uint32): iter_t
-        requires iter.index < |iter.buff|
-    {
-        iter.(index := iter.index + 1)
-            .(buff := iter.buff[iter.index := value])
-    }
-
-    predicate iter_inv(iter: iter_t, mem: mem_t, address: int)
-    {
-        var base_addr := iter.base_addr;
-        // address is correct
-        && address == base_addr + 4 * iter.index
-        // base_addr points to a valid buffer
-        && mem_base_addr_valid(mem, base_addr, |iter.buff|)
-        // the view is consistent with mem
-        && mem[base_addr] == iter.buff
-        // the index is within bound (or at end)
-        && iter.index <= |iter.buff|
-    }
-
-    predicate iter_safe(iter: iter_t, mem: mem_t, address: int)
-    {
-        && iter_inv(iter, mem, address)
-        // tighter constraint so we can dereference
-        && iter.index < |iter.buff|
-    }
-
-    predicate valid_frame_ptr(mem: mem_t, address: int, words: nat)
-    {
-        && address in mem
-        && address >= 0
-        && |mem[address]| == words
-    }
-
     /* state definition */
 
     type regs_t = regs : seq<uint32> | |regs| == 32 witness *
 
     datatype state = state(
         regs: regs_t, // 32-bit registers
-        mem: mem_t,
+        flat: flat_t,
         ok: bool)
     {
         function read_reg32(r: reg32_t) : uint32
