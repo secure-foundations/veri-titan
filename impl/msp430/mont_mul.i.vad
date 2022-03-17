@@ -148,7 +148,6 @@ returns (ghost next_iter_c: iter_t)
         in_stack_addr_range(sp);
         in_stack_addr_range(sp - 32);
 
-        symbols?["n"];
         symbols?["d0inv"];
         load_symbol(mem, "d0inv") == rsa.M0D;
 
@@ -159,6 +158,8 @@ returns (ghost next_iter_c: iter_t)
         mvar_iter_inv(heap, iter_c, r12, 0, (-1));
         mvar_iter_inv(heap, iter_a, r13, 0, (-1));
         mvar_iter_inv(heap, iter_b, r14, 0, (-1));
+
+        symbols?["n"];
         mvar_iter_inv(heap, iter_n, load_symbol(mem, "n"), 0, rsa.M);
     
         rsa_params_inv(rsa);
