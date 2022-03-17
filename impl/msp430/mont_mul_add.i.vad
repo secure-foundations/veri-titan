@@ -8,7 +8,7 @@ include "../../../lib/bv16_mm_lemmas.i.dfy"
 include "mul.i.dfy"
 include "sub_mod.i.dfy"
 
-module mul16 {
+module mont_mul_add {
 
 import opened msp_machine
 import opened msp_decls
@@ -119,11 +119,11 @@ procedure save_r4__r10()
 function frames_top_diff(f1: frames_t, f2: frames_t): bool extern;
 
 procedure mma_pre(
-    ghost rsa: rsa_params,
     ghost iter_c: iter_t,
     ghost a: uint16,
     ghost iter_b: iter_t,
-    ghost iter_n: iter_t)
+    ghost iter_n: iter_t,
+    ghost rsa: rsa_params)
 
     returns (
     ghost A: uint32_view_t,
@@ -217,7 +217,6 @@ procedure mma_pre(
 }
 
 procedure mma_loop(
-    ghost rsa: rsa_params,
     ghost A: uint32_view_t,
     ghost B: uint32_view_t,
     ghost original_c: seq(uint16),
@@ -225,6 +224,7 @@ procedure mma_loop(
     ghost a: uint16,
     ghost iter_b: iter_t,
     ghost iter_n: iter_t,
+    ghost rsa: rsa_params,
     ghost j: nat)
 
 returns (
@@ -306,7 +306,6 @@ returns (
 }
 
 procedure mma_post(
-    ghost rsa: rsa_params,
     ghost A: uint32_view_t,
     ghost B: uint32_view_t,
     ghost original_c: seq(uint16),
@@ -316,6 +315,7 @@ procedure mma_post(
     ghost iter_n: iter_t,
     ghost j: nat,
     ghost iter_a: iter_t,
+    ghost rsa: rsa_params,
     ghost i: nat)
 
 returns (ghost next_iter_c: iter_t)
@@ -384,12 +384,12 @@ returns (ghost next_iter_c: iter_t)
 }
 
 procedure mont_mul_add(
-    ghost rsa: rsa_params,
     ghost iter_c: iter_t,
     ghost a: uint16,
     ghost iter_b: iter_t,
     ghost iter_n: iter_t,
     ghost iter_a: iter_t,
+    ghost rsa: rsa_params,
     ghost i: nat)
 
 returns (ghost next_iter_c: iter_t)
@@ -430,6 +430,8 @@ returns (ghost next_iter_c: iter_t)
 
         mem == old(mem).(heap := heap);
         heap == old(heap)[next_iter_c.base_ptr := B16(next_iter_c.buff)];
+        next_iter_c.base_ptr == iter_c.base_ptr;
+        mvar_iter_inv(heap, next_iter_c, (-1), (-1), (-1));
         montmul_inv(next_iter_c.buff, iter_a.buff, i+1, iter_b.buff, rsa);
 {
     save_r4__r10();
@@ -443,7 +445,7 @@ returns (ghost next_iter_c: iter_t)
     ghost var n_end: uint16;
 
     A, B, next_iter_b, next_iter_n, n_end := 
-        mma_pre(rsa, iter_c, a, iter_b, iter_n);
+        mma_pre(iter_c, a, iter_b, iter_n, rsa);
 
     let original_c := iter_c.buff;
     let loop_sp := sp;
@@ -488,14 +490,14 @@ returns (ghost next_iter_c: iter_t)
             r15 - r7;
     {
         A, B, next_iter_b, next_iter_c, next_iter_n := 
-            mma_loop(rsa, A, B, original_c, next_iter_c, a, next_iter_b, next_iter_n, j);
+            mma_loop(A, B, original_c, next_iter_c, a, next_iter_b, next_iter_n, rsa, j);
         lw_stack(0, r15);
         // assert r15 == n_end;
         j := j + 1;
     }
 
-    next_iter_c := mma_post(rsa, A, B, 
-        original_c, next_iter_c, a, next_iter_b, iter_n, j, iter_a, i);
+    next_iter_c := mma_post(A, B, original_c,
+        next_iter_c, a, next_iter_b, iter_n, j, iter_a, rsa, i);
 
     // assert montmul_inv(next_iter_c.buff, iter_a.buff, i+1, iter_b.buff, rsa);
 

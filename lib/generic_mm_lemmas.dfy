@@ -757,7 +757,7 @@ abstract module generic_mm_lemmas {
         }
     }
 
-    lemma montmul_inv_lemma_0(
+    lemma montmul_inv_pre_lemma(
         a: seq<uint>,
         x: seq<uint>, 
         y: seq<uint>, 
@@ -775,7 +775,7 @@ abstract module generic_mm_lemmas {
         assert montmul_inv(a, x, 0, y, rsa);
     }
 
-    lemma montmul_inv_lemma_1(
+    lemma montmul_inv_post_lemma(
         a_view: seq<uint>,
         x: seq<uint>,
         y: seq<uint>,

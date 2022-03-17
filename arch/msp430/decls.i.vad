@@ -385,12 +385,12 @@ procedure sw_iter(inout rs1: reg, inline inc: bool, in rs2: reg, ghost iter: ite
         heap;
     ensures
         rs1 == (if inc then old(rs1) + 2 else old(rs1));
-        next_iter == b16_iter_store_next(iter, old(rs2), inc);
+        next_iter == b16_iter_store_next(iter, rs2, inc);
         iter_inv(next_iter, heap, rs1);
-        heap == heap_b16_write(old(heap), iter, old(rs2));
+        heap == heap_b16_write(old(heap), iter, rs2);
 {
     sw(rs1, inc, rs2, iter);
-    next_iter := b16_iter_store_next(iter, old(rs2), inc);
+    next_iter := b16_iter_store_next(iter, rs2, inc);
 }
 
 function to_uint16(x: int16): uint16 extern;
