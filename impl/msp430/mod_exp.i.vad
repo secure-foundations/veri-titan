@@ -104,26 +104,26 @@ returns (ghost next_iter_ar: iter_t)
         heap == old(heap)[next_iter_ar.base_ptr := B16(next_iter_ar.buff)];
 
         modexp_var_inv(to_nat(next_iter_ar.buff), 0, rsa);        
-    {
-        mov_w(r12, r10);
-        mov_w(r13, r9);
-        mov_w(r13, r8);
-        add_w_imm(384, r8);
-        mov_w(r15, r7);
-        mov_w_imm(8, r6);
-        mov_w_imm(0, r5);
+{
+    mov_w(r12, r10);
+    mov_w(r13, r9);
+    mov_w(r13, r8);
+    add_w_imm(384, r8);
+    mov_w(r15, r7);
+    mov_w_imm(8, r6);
+    mov_w_imm(0, r5);
 
-        mov_w(r9, r12);
-        mov_w(r14, r13);
-        mov_w(r7, r14);
+    mov_w(r9, r12);
+    mov_w(r14, r13);
+    mov_w(r7, r14);
 
-        next_iter_ar := mont_mul(iter_ar, iter_rr, iter_in, iter_n, rsa);
+    next_iter_ar := mont_mul(iter_ar, iter_rr, iter_in, iter_n, rsa);
 
-        modexp_var_inv_pre_lemma(next_iter_ar.buff,
-            iter_rr.buff, iter_in.buff, rsa);
+    modexp_var_inv_pre_lemma(next_iter_ar.buff,
+        iter_rr.buff, iter_in.buff, rsa);
 
-        next_iter_ar := next_iter_ar.(index := 0);
-    }
+    next_iter_ar := next_iter_ar.(index := 0);
+}
 
 procedure mp_loop(
     ghost iter_ar: iter_t,
@@ -179,24 +179,62 @@ returns (ghost next_iter_ar: iter_t,
         mvar_iter_inv(heap, iter_in, r7, 0, rsa.SIG);
 
         modexp_var_inv(to_nat(next_iter_ar.buff), 2 * (i + 1), rsa); 
-    {
-        mov_w(r8, r12);
-        mov_w(r9, r13);
-        mov_w(r9, r14);
+{
+    mov_w(r8, r12);
+    mov_w(r9, r13);
+    mov_w(r9, r14);
 
-        next_iter_aar := mont_mul(iter_aar, iter_ar, iter_ar, iter_n, rsa);
-        next_iter_aar := next_iter_aar.(index := 0);
+    next_iter_aar := mont_mul(iter_aar, iter_ar, iter_ar, iter_n, rsa);
+    next_iter_aar := next_iter_aar.(index := 0);
 
-        modexp_var_inv_peri_lemma(iter_ar.buff, next_iter_aar.buff, 2 * i, rsa);
+    modexp_var_inv_peri_lemma(iter_ar.buff, next_iter_aar.buff, 2 * i, rsa);
 
-        mov_w(r9, r12);
-        mov_w(r8, r13);
-        mov_w(r8, r14);
-        next_iter_ar := mont_mul(iter_ar, next_iter_aar, next_iter_aar, iter_n, rsa);
-        next_iter_ar := next_iter_ar.(index := 0);
-        modexp_var_inv_peri_lemma(next_iter_aar.buff, next_iter_ar.buff, 2 * i + 1, rsa);
-    }
+    mov_w(r9, r12);
+    mov_w(r8, r13);
+    mov_w(r8, r14);
+    next_iter_ar := mont_mul(iter_ar, next_iter_aar, next_iter_aar, iter_n, rsa);
+    next_iter_ar := next_iter_ar.(index := 0);
+    modexp_var_inv_peri_lemma(next_iter_aar.buff, next_iter_ar.buff, 2 * i + 1, rsa);
+}
 
+procedure mp_post(
+    ghost iter_out: iter_t,
+    ghost iter_ar: iter_t,
+    ghost iter_in: iter_t,
+    ghost iter_n: iter_t,
+    ghost rsa: rsa_params)
+returns (ghost next_iter_out: iter_t)
+
+    {:frame false}
+    {:noInline}
+
+    requires
+        in_stack_addr_range(sp);
+        in_stack_addr_range(sp - 32);
+
+        rsa.E0 == 16;
+
+        symbols?["d0inv"];
+        load_symbol(mem, "d0inv") == rsa.M0D;
+
+        iter_out.base_ptr != iter_ar.base_ptr;
+        iter_out.base_ptr != iter_in.base_ptr;
+        iter_out.base_ptr != iter_n.base_ptr;
+
+        mvar_iter_inv(heap, iter_out, r10, 0, (-1));
+        mvar_iter_inv(heap, iter_ar, r9, 0, (-1));
+        mvar_iter_inv(heap, iter_in, r7, 0, rsa.SIG);
+
+        symbols?["n"];
+        mvar_iter_inv(heap, iter_n, load_symbol(mem, "n"), 0, rsa.M);
+
+        modexp_var_inv(to_nat(iter_ar.buff), 16, rsa);
+{
+    mov_w(r10, r12);
+    mov_w(r9, r13);
+    mov_w(r7, r14);
+    next_iter_out := mont_mul(iter_out, iter_ar, iter_in, iter_n, rsa); 
+}
 
 procedure mod_exp(
     ghost iter_out: iter_t,
@@ -208,10 +246,13 @@ procedure mod_exp(
     ghost rsa: rsa_params)
 
     {:frame false}
+    {:noInline}
 
     requires
         in_stack_addr_range(sp);
         in_stack_addr_range(sp - 46);
+
+        rsa.E0 == 16;
 
         symbols?["d0inv"];
         load_symbol(mem, "d0inv") == rsa.M0D;
@@ -250,11 +291,10 @@ procedure mod_exp(
         iter_ar, iter_aar, iter_rr, iter_in, iter_n, rsa);
     let loop_mem := mem;
 
-    assert r5 == 0;
-
     while (r5 < r6)
         invariant
             r6 == 8;
+            r5 <= 8;
 
             symbols?["d0inv"];
             load_symbol(mem, "d0inv") == rsa.M0D;
@@ -286,7 +326,7 @@ procedure mod_exp(
             mem == loop_mem.(heap := heap);
             heap ==  loop_mem.heap[iter_aar.base_ptr := B16(next_iter_aar.buff)]
             [iter_ar.base_ptr := B16(next_iter_ar.buff)];
-        
+
         decreases
             r6 - r5;
     {
@@ -294,6 +334,9 @@ procedure mod_exp(
             mp_loop(next_iter_ar, next_iter_aar, iter_in, iter_n, r5, rsa); 
         add_w_imm(1, r5);
     }
+    assert r5 == 8;
+
+    let _ := mp_post(iter_out, next_iter_ar, iter_in, iter_n, rsa);
 }
 
 #verbatim

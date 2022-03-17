@@ -132,7 +132,6 @@ returns (ghost next_iter_c: iter_t)
     montmul_inv_pre_lemma(next_iter_c.buff, iter_a.buff, iter_b.buff, rsa);
 }
 
-
 procedure mont_mul(
     ghost iter_c: iter_t,
     ghost iter_a: iter_t,
