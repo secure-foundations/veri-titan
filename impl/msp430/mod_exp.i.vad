@@ -18,6 +18,7 @@ import opened integers
 
 import opened sub_mod
 import opened mont_mul
+import opened mont_mul_add
 
 #endverbatim
 
@@ -97,6 +98,7 @@ returns (ghost next_iter_ar: iter_t)
         // mvar_iter_inv(heap, iter_rr, old(r14), 0, rsa.RR);
         mvar_iter_inv(heap, iter_in, r7, 0, rsa.SIG);
         r6 == 8;
+        r5 == 0;
 
         mem == old(mem).(heap := heap);
         heap == old(heap)[next_iter_ar.base_ptr := B16(next_iter_ar.buff)];
@@ -109,6 +111,7 @@ returns (ghost next_iter_ar: iter_t)
         add_w_imm(384, r8);
         mov_w(r15, r7);
         mov_w_imm(8, r6);
+        mov_w_imm(0, r5);
 
         mov_w(r9, r12);
         mov_w(r14, r13);
@@ -123,10 +126,8 @@ returns (ghost next_iter_ar: iter_t)
     }
 
 procedure mp_loop(
-    ghost iter_out: iter_t,
     ghost iter_ar: iter_t,
     ghost iter_aar: iter_t,
-    ghost iter_rr: iter_t,
     ghost iter_in: iter_t,
     ghost iter_n: iter_t,
     ghost i: nat,
@@ -143,11 +144,6 @@ returns (ghost next_iter_ar: iter_t,
         symbols?["d0inv"];
         load_symbol(mem, "d0inv") == rsa.M0D;
 
-        iter_out.base_ptr != iter_ar.base_ptr;
-        iter_out.base_ptr != iter_aar.base_ptr;
-        iter_out.base_ptr != iter_in.base_ptr;
-        iter_out.base_ptr != iter_n.base_ptr;
-
         iter_ar.base_ptr != iter_aar.base_ptr;
         iter_ar.base_ptr != iter_in.base_ptr;
         iter_ar.base_ptr != iter_n.base_ptr;
@@ -155,7 +151,6 @@ returns (ghost next_iter_ar: iter_t,
         iter_aar.base_ptr != iter_in.base_ptr;
         iter_aar.base_ptr != iter_n.base_ptr;
 
-        mvar_iter_inv(heap, iter_out, r10, 0, (-1));
         mvar_iter_inv(heap, iter_ar, r9, 0, (-1));
         mvar_iter_inv(heap, iter_aar, r8, 0, (-1));
         mvar_iter_inv(heap, iter_in, r7, 0, rsa.SIG);
@@ -168,19 +163,22 @@ returns (ghost next_iter_ar: iter_t,
 
     ensures
         sp == old(sp);
+        r5 == old(r5);
+        r6 == old(r6);
+        r10 == old(r10);
+
         mem == old(mem).(heap := heap);
-        heap == old(heap)[iter_aar.base_ptr := B16(iter_aar.buff)]
-            [iter_ar.base_ptr := B16(iter_ar.buff)];
+        heap == old(heap)[iter_aar.base_ptr := B16(next_iter_aar.buff)]
+            [iter_ar.base_ptr := B16(next_iter_ar.buff)];
 
         next_iter_ar.base_ptr == iter_ar.base_ptr;
         next_iter_aar.base_ptr == iter_aar.base_ptr;
 
-        mvar_iter_inv(heap, iter_out, r10, 0, (-1));
         mvar_iter_inv(heap, next_iter_ar, r9, 0, (-1));
         mvar_iter_inv(heap, next_iter_aar, r8, 0, (-1));
         mvar_iter_inv(heap, iter_in, r7, 0, rsa.SIG);
 
-        modexp_var_inv(to_nat(iter_ar.buff), 2 * (i + 1), rsa); 
+        modexp_var_inv(to_nat(next_iter_ar.buff), 2 * (i + 1), rsa); 
     {
         mov_w(r8, r12);
         mov_w(r9, r13);
@@ -191,7 +189,6 @@ returns (ghost next_iter_ar: iter_t,
 
         modexp_var_inv_peri_lemma(iter_ar.buff, next_iter_aar.buff, 2 * i, rsa);
 
-        assume false;
         mov_w(r9, r12);
         mov_w(r8, r13);
         mov_w(r8, r14);
@@ -201,8 +198,103 @@ returns (ghost next_iter_ar: iter_t,
     }
 
 
+procedure mod_exp(
+    ghost iter_out: iter_t,
+    ghost iter_ar: iter_t,
+    ghost iter_aar: iter_t,
+    ghost iter_rr: iter_t,
+    ghost iter_in: iter_t,
+    ghost iter_n: iter_t,
+    ghost rsa: rsa_params)
 
-// procedure save_r7__r10()
+    {:frame false}
+
+    requires
+        in_stack_addr_range(sp);
+        in_stack_addr_range(sp - 46);
+
+        symbols?["d0inv"];
+        load_symbol(mem, "d0inv") == rsa.M0D;
+
+        iter_out.base_ptr != iter_ar.base_ptr;
+        iter_out.base_ptr != iter_aar.base_ptr;
+        iter_out.base_ptr != iter_rr.base_ptr;
+        iter_out.base_ptr != iter_in.base_ptr;
+        iter_out.base_ptr != iter_n.base_ptr;
+
+        iter_ar.base_ptr != iter_aar.base_ptr;
+        iter_ar.base_ptr != iter_rr.base_ptr;
+        iter_ar.base_ptr != iter_in.base_ptr;
+        iter_ar.base_ptr != iter_n.base_ptr;
+
+        iter_aar.base_ptr != iter_rr.base_ptr;
+        iter_aar.base_ptr != iter_in.base_ptr;
+        iter_aar.base_ptr != iter_n.base_ptr;
+
+        mvar_iter_inv(heap, iter_out, r12, 0, (-1));
+        mvar_iter_inv(heap, iter_ar, r13, 0, (-1));
+        mvar_iter_inv(heap, iter_aar, r13 + 384, 0, (-1));
+        mvar_iter_inv(heap, iter_rr, r14, 0, rsa.RR);
+        mvar_iter_inv(heap, iter_in, r15, 0, rsa.SIG);
+
+        symbols?["n"];
+        mvar_iter_inv(heap, iter_n, load_symbol(mem, "n"), 0, rsa.M);
+
+        rsa_params_inv(rsa);
+{
+    save_r4__r10();
+    ghost var next_iter_ar := iter_ar;
+    ghost var next_iter_aar := iter_aar;
+    
+    next_iter_ar := mp_pre(iter_out,
+        iter_ar, iter_aar, iter_rr, iter_in, iter_n, rsa);
+    let loop_mem := mem;
+
+    assert r5 == 0;
+
+    while (r5 < r6)
+        invariant
+            r6 == 8;
+
+            symbols?["d0inv"];
+            load_symbol(mem, "d0inv") == rsa.M0D;
+
+            iter_out.base_ptr != iter_ar.base_ptr;
+            iter_out.base_ptr != iter_aar.base_ptr;
+            iter_out.base_ptr != iter_in.base_ptr;
+            iter_out.base_ptr != iter_n.base_ptr;
+
+            iter_ar.base_ptr != iter_aar.base_ptr;
+            iter_ar.base_ptr != iter_in.base_ptr;
+            iter_ar.base_ptr != iter_n.base_ptr;
+
+            iter_aar.base_ptr != iter_in.base_ptr;
+            iter_aar.base_ptr != iter_n.base_ptr;
+
+            mvar_iter_inv(heap, iter_out, r10, 0, (-1));
+            mvar_iter_inv(heap, next_iter_ar, r9, 0, (-1));
+            next_iter_ar.base_ptr == iter_ar.base_ptr;
+            mvar_iter_inv(heap, next_iter_aar, r8, 0, (-1));
+            next_iter_aar.base_ptr == iter_aar.base_ptr;
+            mvar_iter_inv(heap, iter_in, r7, 0, rsa.SIG);
+
+            symbols?["n"];
+            mvar_iter_inv(heap, iter_n, load_symbol(mem, "n"), 0, rsa.M);
+
+            modexp_var_inv(to_nat(next_iter_ar.buff), 2 * r5, rsa);
+
+            mem == loop_mem.(heap := heap);
+            heap ==  loop_mem.heap[iter_aar.base_ptr := B16(next_iter_aar.buff)]
+            [iter_ar.base_ptr := B16(next_iter_ar.buff)];
+        
+        decreases
+            r6 - r5;
+    {
+        next_iter_ar, next_iter_aar := 
+            mp_loop(next_iter_ar, next_iter_aar, iter_in, iter_n, r5, rsa); 
+        add_w_imm(1, r5);
+    }
+}
 
 #verbatim
 }
