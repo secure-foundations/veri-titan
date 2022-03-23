@@ -6,9 +6,11 @@ module ntt {
     import opened Mul
     import opened pows_of_2
 
-    const G: nat := 7 // 256-th root of unity
+    const G: nat := 7 // 2048-th root of unity
+    const GI: nat := 8778
+
     const Q: nat := 12289
-    const N: nat := 256
+    const N: nat := 2048
 
     type elem = i :nat | i < Q
 
@@ -483,7 +485,7 @@ module ntt {
         }
     }
 
-    method ntt(a: seq<elem>, len: pow2_t) returns (y: seq<elem>)
+    method ntt_rec(a: seq<elem>, len: pow2_t) returns (y: seq<elem>)
         requires 1 <= len.full;
         requires len.exp <= N;
         requires |a| == len.full;
@@ -499,8 +501,8 @@ module ntt {
         var a_e := seq(len'.full, n requires 0 <= n < len'.full => a[n * 2]);
         var a_o := seq(len'.full, n requires 0 <= n < len'.full => a[n * 2 + 1]);
 
-        var y_e := ntt(a_e, len');
-        var y_o := ntt(a_o, len');
+        var y_e := ntt_rec(a_e, len');
+        var y_o := ntt_rec(a_o, len');
 
         y := seq(len.full, n requires 0 <= n < len.full => 0);
 
@@ -560,5 +562,14 @@ module ntt {
             }
         }
     }
+
+
+    // method ntt(a: seq<elem>, len: pow2_t) returns (y: seq<elem>)
+    //     requires len.exp == N;
+    //     requires |a| == 
+    // {
+
+    // }
+    
 }
 
