@@ -1,4 +1,4 @@
-include "../std_lib/src/NonlinearArithmetic/Power.dfy"
+include "../std_lib/src/NonlinearArithmetic/Power2.dfy"
 include "../std_lib/src/NonlinearArithmetic/DivMod.dfy"
 include "../std_lib/src/Collections/Sequences/Seq.dfy"
 
@@ -25,6 +25,7 @@ module pows_of_2 {
 
     lemma pow2_basics(n: pow2_t)
         ensures n.exp == 0 ==> n.full == 1
+        ensures n.exp == 1 ==> n.full == 2
         ensures n.exp != 0 ==> n.full % 2 == 0
     {
         reveal Pow();

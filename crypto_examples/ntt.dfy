@@ -1,243 +1,12 @@
 include "pow2.dfy"
+include "omega.dfy"
 
 module ntt {
     import opened Power
     import opened DivMod
     import opened Mul
     import opened pows_of_2
-
-    const G: nat := 7 // 2048-th root of unity
-    const GI: nat := 8778
-
-    const Q: nat := 12289
-    const N: nat := 2048
-
-    type elem = i :nat | i < Q
-
-    function method omega_n(n: pow2_t): elem
-        requires n.exp <= N
-    {
-        Pow(G, Pow2(N - n.exp)) % Q
-    }
-
-    function method omega_nk(n: pow2_t, k: nat): elem
-        requires n.exp <= N
-    {
-        Pow(omega_n(n), k) % Q
-    }
-
-    lemma omega_nk_mul_lemma(n: pow2_t, k1: nat, k2: nat)
-        requires n.exp <= N
-        ensures 
-            modmul(omega_nk(n, k1), omega_nk(n, k2))
-                ==
-            omega_nk(n, k1 + k2);
-    {
-        calc == {
-            modmul(omega_nk(n, k1), omega_nk(n, k2));
-            ((Pow(omega_n(n), k1) % Q) * (Pow(omega_n(n), k2) % Q)) % Q;
-            {
-               LemmaMulModNoopGeneral(Pow(omega_n(n), k1), Pow(omega_n(n), k2), Q);
-            }
-            (Pow(omega_n(n), k1) * Pow(omega_n(n), k2)) % Q;
-            {
-                LemmaPowAdds(omega_n(n), k1, k2);
-            }
-            Pow(omega_n(n), k1 + k2) % Q;
-        }
-    }
-
-    lemma omega_nk_square(n: pow2_t, k: nat)
-        requires n.exp <= N
-        ensures 
-            modmul(omega_nk(n, k), omega_nk(n, k))
-                ==
-            omega_nk(n, 2 * k);
-    {
-        omega_nk_mul_lemma(n, k, k);
-    }
-
-    lemma mod_pow_cancel(b: nat, e: nat)
-        decreases e
-        ensures IsModEquivalent(Pow(b, e), Pow(b % Q, e), Q)
-    {
-        if e == 0 {
-            reveal Pow();
-            return;
-        }
-    
-        assert IsModEquivalent(Pow(b, e-1), Pow(b % Q, e-1), Q) by {
-            mod_pow_cancel(b, e-1);
-        }
-
-        assert IsModEquivalent(Pow(b, e-1) * b, Pow(b, e), Q) by {
-            reveal Pow();
-        }
-
-        assert IsModEquivalent(Pow(b % Q, e), Pow(b % Q, e-1) * (b % Q), Q) by {
-            reveal Pow();
-        }
-
-        assert IsModEquivalent(Pow(b, e-1) * b, Pow(b % Q, e-1) * b, Q) by {
-            LemmaModMulEquivalentAuto();
-        }
-
-        assert IsModEquivalent(Pow(b % Q, e-1) * b, Pow(b % Q, e-1) * (b % Q), Q) by {
-            assert IsModEquivalent(b, (b % Q), Q) by {
-                LemmaModBasicsAuto();
-            }
-            LemmaModMulEquivalent(b, (b % Q), Pow(b % Q, e-1), Q);
-        }
-    }
-
-    lemma omega_nk_canonical(n: pow2_t, k: nat)
-        requires n.exp <= N
-        ensures Pow2(N - n.exp) * k >= 0;   
-        ensures omega_nk(n, k) == Pow(G, Pow2(N - n.exp) * k) % Q;
-    {
-        var om_nk := omega_nk(n, k);
-        var temp := Pow(G, Pow2(N - n.exp));
-        LemmaPowPositiveAuto();
-
-        assert IsModEquivalent(Pow(temp, k), Pow(temp % Q, k), Q) by {
-            mod_pow_cancel(temp, k);
-        }
-
-        calc == {
-            om_nk;
-            Pow(omega_n(n), k) % Q;
-            Pow(temp % Q, k) % Q;
-            {
-                mod_pow_cancel(temp, k);
-            }
-            Pow(temp, k) % Q;
-            Pow(Pow(G, Pow2(N - n.exp)), k) % Q;
-            {
-                LemmaPowMultiplies(G, Pow2(N - n.exp), k);
-            }
-            Pow(G, Pow2(N - n.exp) * k) % Q;
-        }
-
-        assert Pow2(N - n.exp) * k >= 0 by {
-            LemmaMulStrictlyPositiveAuto();
-        }
-    }
-
-    lemma {:axiom} nth_root_lemma()
-        ensures Pow(G, Pow2(N)) % Q == 1;
-
-    lemma {:axiom} ntt_cancellation_lemma(n: pow2_t, k: nat)
-        requires n.exp != 0;
-        requires n.exp <= N
-        ensures omega_nk(pow2_half(n), k) == omega_nk(n, 2 * k);
-    
-    lemma ntt_zero_lemma(n: pow2_t)
-        requires n.exp <= N;
-        ensures omega_nk(n, n.full) == 1;
-        decreases n.exp;
-    {
-        pow2_basics(n);
-
-        if n.exp == 0 {
-            calc {
-                omega_nk(n, n.full);
-                omega_nk(n, 1);
-                {
-                    LemmaPow1Auto();
-                }
-                omega_n(n) % Q;
-                (Pow(G, Pow2(N - n.exp)) % Q) %Q;
-                {
-                    LemmaModBasicsAuto();
-                }
-                Pow(G, Pow2(N - n.exp)) % Q;
-                Pow(G, Pow2(N)) % Q;
-                {
-                    nth_root_lemma();
-                }
-                1;
-            }
-            return;
-        }
-    
-        var n' := pow2_half(n);
-
-        assert n'.full == n.full / 2;
-
-        calc {
-            omega_nk(n, n.full);
-            {
-                ntt_cancellation_lemma(n, n'.full);
-            }
-            omega_nk(n', n'.full);
-            {
-                ntt_zero_lemma(n');
-            }
-            1;
-        }
-    }
-
-    lemma {:axiom} ntt_neg_one_lemma(n: pow2_t)
-        requires n.exp <= N;
-        requires n.full % 2 == 0;
-        ensures omega_nk(n, n.full / 2) == Q - 1;
-
-    lemma ntt_halving_lemma(n: pow2_t, k: nat)
-        requires 1 <= n.exp <= N
-        ensures omega_nk(n, 2 * k + n.full)
-                ==
-            omega_nk(n, 2 * k);
-    {
-        var x0 := omega_nk(n, k + n.full / 2);
-        var xx0 := modmul(x0, x0);
-
-        var x1 := omega_nk(n, k);
-        var xx1 := modmul(x1, x1);
-
-        pow2_basics(n);
-
-        omega_nk_square(n, k + n.full / 2);
-        assert xx0 == omega_nk(n, 2 * k + n.full);
-
-        omega_nk_square(n, k);
-        assert xx1 == omega_nk(n, 2 * k);
-
-        calc == {
-            omega_nk(n, 2 * k + n.full);
-            {
-                omega_nk_mul_lemma(n, 2 * k, n.full);
-            }
-            modmul(omega_nk(n, 2 * k), omega_nk(n, n.full));
-            {
-                ntt_zero_lemma(n);
-            }
-            omega_nk(n, 2 * k) % Q;
-            {
-                LemmaModBasicsAuto();
-            }
-            omega_nk(n, 2 * k);
-        }
-    }
-
-    function method modpow(a: elem, b: nat): elem
-    {
-        Pow(a, b) % Q
-    }
-
-    function method modmul(a: elem, b: elem): elem
-    {
-        (a * b) % Q
-    }
-
-    function method modadd(a: elem, b: elem): elem
-    {
-        (a + b) % Q
-    }
-
-    function method modsub(a: elem, b: elem): elem
-    {
-        (a - b) % Q
-    }
+    import opened omegas
 
     function poly_eval(a: seq<elem>, x: elem): elem
     // {
@@ -260,7 +29,7 @@ module ntt {
             modadd(poly_eval(a_e, sqr), modmul(x, poly_eval(a_o, sqr)));
 
     predicate poly_eval_all_points(a: seq<elem>, y: seq<elem>, len: pow2_t)
-        requires 0 <= len.exp <= N
+        requires 0 <= len.exp <= L
     {
         && |y| == |a| == len.full
         && (forall i: nat :: i < len.full ==>
@@ -274,8 +43,8 @@ module ntt {
         y_e_k: elem, y_o_k: elem, y_k: elem)
 
         requires |a| == len'.full * 2;
-        requires 1 <= len.exp <= N;
-        requires len'.exp <= N 
+        requires 1 <= len.exp <= L;
+        requires len'.exp <= L 
         requires len' == pow2_half(len);
         requires k < len'.full;
         requires a_e == 
@@ -327,8 +96,8 @@ module ntt {
         y_e_k: elem, y_o_k: elem, y_k': elem)
 
         requires |a| == len'.full * 2;
-        requires 1 <= len.exp <= N;
-        requires len'.exp <= N 
+        requires 1 <= len.exp <= L;
+        requires len'.exp <= L 
         requires len' == pow2_half(len);
         requires k < len'.full;
         requires a_e == 
@@ -443,9 +212,9 @@ module ntt {
             {
                 omega_nk_canonical(len, 0);
                 assert omega_nk(len, 0) == 
-                    Pow(G, Pow2(N - len.exp) * 0) % Q;
+                    Pow(G, Pow2(L - len.exp) * 0) % Q;
             }
-            poly_eval(a, Pow(G, Pow2(N - len.exp) * 0) % Q);
+            poly_eval(a, Pow(G, Pow2(L - len.exp) * 0) % Q);
             poly_eval(a, Pow(G, 0) % Q);
             {
                 LemmaPow0(G);
@@ -460,7 +229,7 @@ module ntt {
     }
 
     lemma omg_inv(omgn: elem, omg: elem, len: pow2_t, k: nat)
-        requires len.exp <= N
+        requires len.exp <= L
         requires omgn == omega_n(len);
         requires omg == modpow(omgn, k);
         ensures modmul(omg, omgn) == modpow(omgn, k+1);
@@ -487,7 +256,7 @@ module ntt {
 
     method ntt_rec(a: seq<elem>, len: pow2_t) returns (y: seq<elem>)
         requires 1 <= len.full;
-        requires len.exp <= N;
+        requires len.exp <= L;
         requires |a| == len.full;
         ensures poly_eval_all_points(a, y, len)
         decreases len.full
@@ -565,11 +334,11 @@ module ntt {
 
 
     // method ntt(a: seq<elem>, len: pow2_t) returns (y: seq<elem>)
-    //     requires len.exp == N;
-    //     requires |a| == 
-    // {
+    //     requires len.full == N;
+    // //     requires |a| == 
+    // // {
 
-    // }
+    // // }
     
 }
 
