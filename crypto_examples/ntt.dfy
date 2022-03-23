@@ -8,24 +8,24 @@ module ntt {
 
     const G: nat := 7 // 256-th root of unity
     const Q: nat := 12289
-    // const N: nat := 256
+    const N: nat := 256
 
     type elem = i :nat | i < Q
 
     function method omega_n(n: pow2_t): elem
-        requires n.exp <= 8
+        requires n.exp <= N
     {
-        Pow(G, Pow2(8 - n.exp)) % Q
+        Pow(G, Pow2(N - n.exp)) % Q
     }
 
     function method omega_nk(n: pow2_t, k: nat): elem
-        requires n.exp <= 8
+        requires n.exp <= N
     {
         Pow(omega_n(n), k) % Q
     }
 
     lemma omega_nk_mul_lemma(n: pow2_t, k1: nat, k2: nat)
-        requires n.exp <= 8
+        requires n.exp <= N
         ensures 
             modmul(omega_nk(n, k1), omega_nk(n, k2))
                 ==
@@ -46,7 +46,7 @@ module ntt {
     }
 
     lemma omega_nk_square(n: pow2_t, k: nat)
-        requires n.exp <= 8
+        requires n.exp <= N
         ensures 
             modmul(omega_nk(n, k), omega_nk(n, k))
                 ==
@@ -89,12 +89,12 @@ module ntt {
     }
 
     lemma omega_nk_canonical(n: pow2_t, k: nat)
-        requires n.exp <= 8
-        ensures Pow2(8 - n.exp) * k >= 0;   
-        ensures omega_nk(n, k) == Pow(G, Pow2(8 - n.exp) * k) % Q;
+        requires n.exp <= N
+        ensures Pow2(N - n.exp) * k >= 0;   
+        ensures omega_nk(n, k) == Pow(G, Pow2(N - n.exp) * k) % Q;
     {
         var om_nk := omega_nk(n, k);
-        var temp := Pow(G, Pow2(8 - n.exp));
+        var temp := Pow(G, Pow2(N - n.exp));
         LemmaPowPositiveAuto();
 
         assert IsModEquivalent(Pow(temp, k), Pow(temp % Q, k), Q) by {
@@ -109,28 +109,28 @@ module ntt {
                 mod_pow_cancel(temp, k);
             }
             Pow(temp, k) % Q;
-            Pow(Pow(G, Pow2(8 - n.exp)), k) % Q;
+            Pow(Pow(G, Pow2(N - n.exp)), k) % Q;
             {
-                LemmaPowMultiplies(G, Pow2(8 - n.exp), k);
+                LemmaPowMultiplies(G, Pow2(N - n.exp), k);
             }
-            Pow(G, Pow2(8 - n.exp) * k) % Q;
+            Pow(G, Pow2(N - n.exp) * k) % Q;
         }
 
-        assert Pow2(8 - n.exp) * k >= 0 by {
+        assert Pow2(N - n.exp) * k >= 0 by {
             LemmaMulStrictlyPositiveAuto();
         }
     }
 
     lemma {:axiom} nth_root_lemma()
-        ensures Pow(G, Pow2(8)) % Q == 1;
+        ensures Pow(G, Pow2(N)) % Q == 1;
 
     lemma {:axiom} ntt_cancellation_lemma(n: pow2_t, k: nat)
         requires n.exp != 0;
-        requires n.exp <= 8
+        requires n.exp <= N
         ensures omega_nk(pow2_half(n), k) == omega_nk(n, 2 * k);
     
     lemma ntt_zero_lemma(n: pow2_t)
-        requires n.exp <= 8;
+        requires n.exp <= N;
         ensures omega_nk(n, n.full) == 1;
         decreases n.exp;
     {
@@ -144,12 +144,12 @@ module ntt {
                     LemmaPow1Auto();
                 }
                 omega_n(n) % Q;
-                (Pow(G, Pow2(8 - n.exp)) % Q) %Q;
+                (Pow(G, Pow2(N - n.exp)) % Q) %Q;
                 {
                     LemmaModBasicsAuto();
                 }
-                Pow(G, Pow2(8 - n.exp)) % Q;
-                Pow(G, Pow2(8)) % Q;
+                Pow(G, Pow2(N - n.exp)) % Q;
+                Pow(G, Pow2(N)) % Q;
                 {
                     nth_root_lemma();
                 }
@@ -176,12 +176,12 @@ module ntt {
     }
 
     lemma {:axiom} ntt_neg_one_lemma(n: pow2_t)
-        requires n.exp <= 8;
+        requires n.exp <= N;
         requires n.full % 2 == 0;
         ensures omega_nk(n, n.full / 2) == Q - 1;
 
     lemma ntt_halving_lemma(n: pow2_t, k: nat)
-        requires 1 <= n.exp <= 8
+        requires 1 <= n.exp <= N
         ensures omega_nk(n, 2 * k + n.full)
                 ==
             omega_nk(n, 2 * k);
@@ -258,7 +258,7 @@ module ntt {
             modadd(poly_eval(a_e, sqr), modmul(x, poly_eval(a_o, sqr)));
 
     predicate poly_eval_all_points(a: seq<elem>, y: seq<elem>, len: pow2_t)
-        requires 0 <= len.exp <= 8
+        requires 0 <= len.exp <= N
     {
         && |y| == |a| == len.full
         && (forall i: nat :: i < len.full ==>
@@ -272,8 +272,8 @@ module ntt {
         y_e_k: elem, y_o_k: elem, y_k: elem)
 
         requires |a| == len'.full * 2;
-        requires 1 <= len.exp <= 8;
-        requires len'.exp <= 8 
+        requires 1 <= len.exp <= N;
+        requires len'.exp <= N 
         requires len' == pow2_half(len);
         requires k < len'.full;
         requires a_e == 
@@ -325,8 +325,8 @@ module ntt {
         y_e_k: elem, y_o_k: elem, y_k': elem)
 
         requires |a| == len'.full * 2;
-        requires 1 <= len.exp <= 8;
-        requires len'.exp <= 8 
+        requires 1 <= len.exp <= N;
+        requires len'.exp <= N 
         requires len' == pow2_half(len);
         requires k < len'.full;
         requires a_e == 
@@ -441,9 +441,9 @@ module ntt {
             {
                 omega_nk_canonical(len, 0);
                 assert omega_nk(len, 0) == 
-                    Pow(G, Pow2(8 - len.exp) * 0) % Q;
+                    Pow(G, Pow2(N - len.exp) * 0) % Q;
             }
-            poly_eval(a, Pow(G, Pow2(8 - len.exp) * 0) % Q);
+            poly_eval(a, Pow(G, Pow2(N - len.exp) * 0) % Q);
             poly_eval(a, Pow(G, 0) % Q);
             {
                 LemmaPow0(G);
@@ -458,7 +458,7 @@ module ntt {
     }
 
     lemma omg_inv(omgn: elem, omg: elem, len: pow2_t, k: nat)
-        requires len.exp <= 8
+        requires len.exp <= N
         requires omgn == omega_n(len);
         requires omg == modpow(omgn, k);
         ensures modmul(omg, omgn) == modpow(omgn, k+1);
@@ -474,7 +474,7 @@ module ntt {
             }
             (Pow(omgn, k) * omgn) % Q;
             {
-                reveal Pow();
+                LemmaPow1(omgn);
                 assert omgn == Pow(omgn, 1);
                 LemmaPowAdds(omgn, k, 1);
             }
@@ -485,7 +485,7 @@ module ntt {
 
     method ntt(a: seq<elem>, len: pow2_t) returns (y: seq<elem>)
         requires 1 <= len.full;
-        requires len.exp <= 8;
+        requires len.exp <= N;
         requires |a| == len.full;
         ensures poly_eval_all_points(a, y, len)
         decreases len.full
