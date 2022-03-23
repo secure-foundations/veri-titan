@@ -8,13 +8,7 @@ module ntt {
     import opened pows_of_2
     import opened omegas
 
-    function poly_eval(a: seq<elem>, x: elem): elem
-    // {
-    //     if |a| == 0
-    //         then 0
-    //     else
-    //         modadd(modpow(First(a), x), modmul(poly_eval(DropFirst(a), x), x))
-    // }
+    function {:axiom} poly_eval(a: seq<elem>, x: elem): elem
 
     lemma {:axiom} poly_eval_split_lemma(a: seq<elem>, 
         a_e: seq<elem>, a_o: seq<elem>, len': pow2_t, x: elem)
@@ -27,6 +21,10 @@ module ntt {
             poly_eval(a, x)
                 == 
             modadd(poly_eval(a_e, sqr), modmul(x, poly_eval(a_o, sqr)));
+
+    lemma {:axiom} poly_eval_base_lemma(a: seq<elem>)
+        requires |a| == 1;
+        ensures poly_eval(a, 1) == a[0];
 
     predicate poly_eval_all_points(a: seq<elem>, y: seq<elem>, len: pow2_t)
         requires 0 <= len.exp <= L
@@ -221,7 +219,7 @@ module ntt {
             }
             poly_eval(a, 1);
             {
-                assume false; // TODO
+                poly_eval_base_lemma(a);
             }
             a[0];
         }
