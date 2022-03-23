@@ -180,7 +180,6 @@ module ntt {
         requires n.full % 2 == 0;
         ensures omega_nk(n, n.full / 2) == Q - 1;
 
-
     lemma ntt_halving_lemma(n: pow2_t, k: nat)
         requires 1 <= n.exp <= 8
         ensures omega_nk(n, 2 * k + n.full)
@@ -246,7 +245,7 @@ module ntt {
     //         modadd(modpow(First(a), x), modmul(poly_eval(DropFirst(a), x), x))
     // }
 
-    lemma poly_eval_split_lemma(a: seq<elem>, 
+    lemma {:axiom} poly_eval_split_lemma(a: seq<elem>, 
         a_e: seq<elem>, a_o: seq<elem>, len': pow2_t, x: elem)
         requires |a| == len'.full * 2;
         requires a_e ==
@@ -339,6 +338,8 @@ module ntt {
         requires y_e_k == poly_eval(a_e, omega_nk(len', k));
         requires y_o_k == poly_eval(a_o, omega_nk(len', k));
         requires y_k' == modsub(y_e_k, modmul(omg, y_o_k));
+
+        ensures y_k' == poly_eval(a, omega_nk(len, k + len'.full));
     {
         var x := omega_nk(len, k + len'.full);
         var sqr := modmul(x, x);
@@ -406,7 +407,23 @@ module ntt {
             {
                 LemmaAddModNoopRight(y_e_k, -(omg as int) * y_o_k, Q);
             }
-            (y_e_k + (- (omg as int) * y_o_k)) % Q;
+            (y_e_k + (-(omg as int) * y_o_k)) % Q;
+            (y_e_k + ((-1 * (omg as int)) * y_o_k)) % Q;
+            {
+                LemmaMulIsAssociativeAuto();
+            }
+            (y_e_k - 1 * (omg as int) * y_o_k) % Q;
+            {
+                LemmaMulBasicsAuto();
+            }
+            (y_e_k - (omg as int) * y_o_k) % Q;
+            (y_e_k - (omg * y_o_k)) % Q;
+            {
+                LemmaSubModNoopRight(y_e_k, omg * y_o_k, Q);
+            }
+            (y_e_k - (omg * y_o_k) % Q) % Q;
+            modsub(y_e_k, modmul(omg, y_o_k));
+            y_k';
         }
     }
 
@@ -494,8 +511,15 @@ module ntt {
         assume omg == modpow(omgn, 0);
 
         while (k < len'.full)
+            invariant k <= len'.full;
             invariant |y| == len.full;
+            invariant len.full == len'.full * 2;
+
             invariant omg == modpow(omgn, k);
+            invariant forall i: nat :: i < k ==> (
+                && y[i] == poly_eval(a, omega_nk(len, i))
+                && y[i + len'.full] == poly_eval(a, omega_nk(len, i + len'.full)))
+            
             decreases len'.full - k;
         {
             var y_e_k := y_e[k];
@@ -521,7 +545,18 @@ module ntt {
 
             k := k + 1;
         }
-        assume false;
+
+        forall i: nat
+            ensures i < len.full ==> y[i] == poly_eval(a, omega_nk(len, i))
+        {
+            if i < len'.full {
+                assert y[i] == poly_eval(a, omega_nk(len, i));
+            } else if i < len.full {
+                var j := i - len'.full;
+                assert y[j + len'.full] ==
+                    poly_eval(a, omega_nk(len, j + len'.full));
+            }
+        }
     }
 }
 
