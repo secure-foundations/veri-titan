@@ -35,7 +35,7 @@ module ntt {
             modmul(omega_nk(n, k1), omega_nk(n, k2));
             ((Pow(omega_n(n), k1) % Q) * (Pow(omega_n(n), k2) % Q)) % Q;
             {
-                assume false;
+               LemmaMulModNoopGeneral(Pow(omega_n(n), k1), Pow(omega_n(n), k2), Q);
             }
             (Pow(omega_n(n), k1) * Pow(omega_n(n), k2)) % Q;
             {
@@ -470,7 +470,7 @@ module ntt {
             modmul(modpow(omgn, k), omgn);
             (Pow(omgn, k) % Q * omgn) % Q;
             {
-                assume false;
+                LemmaMulModNoopLeft(Pow(omgn, k), omgn, Q);
             }
             (Pow(omgn, k) * omgn) % Q;
             {
@@ -508,7 +508,9 @@ module ntt {
         var omg := 1;
         var k := 0;
 
-        assume omg == modpow(omgn, 0);
+        assert omg == modpow(omgn, 0) by {
+            LemmaPow0Auto();
+        }
 
         while (k < len'.full)
             invariant k <= len'.full;
