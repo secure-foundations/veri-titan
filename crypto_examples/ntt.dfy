@@ -8,6 +8,7 @@ module ntt {
 
     const G: nat := 7 // 256-th root of unity
     const Q: nat := 12289
+    // const N: nat := 256
 
     type elem = i :nat | i < Q
 
@@ -21,6 +22,37 @@ module ntt {
         requires n.exp <= 8
     {
         Pow(omega_n(n), k) % Q
+    }
+
+    lemma omega_nk_mul_lemma(n: pow2_t, k1: nat, k2: nat)
+        requires n.exp <= 8
+        ensures 
+            modmul(omega_nk(n, k1), omega_nk(n, k2))
+                ==
+            omega_nk(n, k1 + k2);
+    {
+        calc == {
+            modmul(omega_nk(n, k1), omega_nk(n, k2));
+            ((Pow(omega_n(n), k1) % Q) * (Pow(omega_n(n), k2) % Q)) % Q;
+            {
+                assume false;
+            }
+            (Pow(omega_n(n), k1) * Pow(omega_n(n), k2)) % Q;
+            {
+                LemmaPowAdds(omega_n(n), k1, k2);
+            }
+            Pow(omega_n(n), k1 + k2) % Q;
+        }
+    }
+
+    lemma omega_nk_square(n: pow2_t, k: nat)
+        requires n.exp <= 8
+        ensures 
+            modmul(omega_nk(n, k), omega_nk(n, k))
+                ==
+            omega_nk(n, 2 * k);
+    {
+        omega_nk_mul_lemma(n, k, k);
     }
 
     lemma mod_pow_cancel(b: nat, e: nat)
@@ -89,10 +121,102 @@ module ntt {
         }
     }
 
-    lemma cancellation_lemma(n: pow2_t, k: nat)
+    lemma {:axiom} nth_root_lemma()
+        ensures Pow(G, Pow2(8)) % Q == 1;
+
+    lemma {:axiom} ntt_cancellation_lemma(n: pow2_t, k: nat)
         requires n.exp != 0;
         requires n.exp <= 8
         ensures omega_nk(pow2_half(n), k) == omega_nk(n, 2 * k);
+    
+    lemma ntt_zero_lemma(n: pow2_t)
+        requires n.exp <= 8;
+        ensures omega_nk(n, n.full) == 1;
+        decreases n.exp;
+    {
+        pow2_basics(n);
+
+        if n.exp == 0 {
+            calc {
+                omega_nk(n, n.full);
+                omega_nk(n, 1);
+                {
+                    LemmaPow1Auto();
+                }
+                omega_n(n) % Q;
+                (Pow(G, Pow2(8 - n.exp)) % Q) %Q;
+                {
+                    LemmaModBasicsAuto();
+                }
+                Pow(G, Pow2(8 - n.exp)) % Q;
+                Pow(G, Pow2(8)) % Q;
+                {
+                    nth_root_lemma();
+                }
+                1;
+            }
+            return;
+        }
+    
+        var n' := pow2_half(n);
+
+        assert n'.full == n.full / 2;
+
+        calc {
+            omega_nk(n, n.full);
+            {
+                ntt_cancellation_lemma(n, n'.full);
+            }
+            omega_nk(n', n'.full);
+            {
+                ntt_zero_lemma(n');
+            }
+            1;
+        }
+    }
+
+    lemma {:axiom} ntt_neg_one_lemma(n: pow2_t)
+        requires n.exp <= 8;
+        requires n.full % 2 == 0;
+        ensures omega_nk(n, n.full / 2) == Q - 1;
+
+
+    lemma ntt_halving_lemma(n: pow2_t, k: nat)
+        requires 1 <= n.exp <= 8
+        ensures omega_nk(n, 2 * k + n.full)
+                ==
+            omega_nk(n, 2 * k);
+    {
+        var x0 := omega_nk(n, k + n.full / 2);
+        var xx0 := modmul(x0, x0);
+
+        var x1 := omega_nk(n, k);
+        var xx1 := modmul(x1, x1);
+
+        pow2_basics(n);
+
+        omega_nk_square(n, k + n.full / 2);
+        assert xx0 == omega_nk(n, 2 * k + n.full);
+
+        omega_nk_square(n, k);
+        assert xx1 == omega_nk(n, 2 * k);
+
+        calc == {
+            omega_nk(n, 2 * k + n.full);
+            {
+                omega_nk_mul_lemma(n, 2 * k, n.full);
+            }
+            modmul(omega_nk(n, 2 * k), omega_nk(n, n.full));
+            {
+                ntt_zero_lemma(n);
+            }
+            omega_nk(n, 2 * k) % Q;
+            {
+                LemmaModBasicsAuto();
+            }
+            omega_nk(n, 2 * k);
+        }
+    }
 
     function method modpow(a: elem, b: nat): elem
     {
@@ -142,38 +266,149 @@ module ntt {
             y[i] == poly_eval(a, omega_nk(len, i)))
     }
 
-    // lemma y_k_correct(a: seq<elem>,
-    //     logn: nat,
-    //     a_e: seq<elem>, a_o: seq<elem>, len': nat,
-    //     omg_n: elem, omg_n': elem, k: nat,
-    //     y_e_k: elem, y_o_k: elem, y_k: elem)
+    lemma y_k_value(a: seq<elem>,
+        a_e: seq<elem>, a_o: seq<elem>,
+        len': pow2_t, len: pow2_t,
+        omg: elem, k: nat,
+        y_e_k: elem, y_o_k: elem, y_k: elem)
 
-    //     requires |a| == len' * 2;
-    //     requires |a| == Pow2(logn);
-    //     requires k < len';
-    //     requires a_e == seq(len', n requires 0 <= n < len' => a[n * 2]);
-    //     requires a_o == seq(len', n requires 0 <= n < len' => a[n * 2 + 1]);
-    //     requires logn <= 8
-    //     requires omg_n == modpow(G, Pow2(8 - logn))
-    //     requires omg_n' == modpow(G, Pow2(8 - logn + 1))
+        requires |a| == len'.full * 2;
+        requires 1 <= len.exp <= 8;
+        requires len'.exp <= 8 
+        requires len' == pow2_half(len);
+        requires k < len'.full;
+        requires a_e == 
+            seq(len'.full, n requires 0 <= n < len'.full => a[n * 2]);
+        requires a_o ==
+            seq(len'.full, n requires 0 <= n < len'.full => a[n * 2 + 1]);
 
-    //     requires y_e_k == poly_eval(a_e, modpow(omg_n', k));
-    //     requires y_o_k == poly_eval(a_o, modpow(omg_n', k));
-    //     requires y_k == modadd(y_e_k, modmul(modpow(omg_n, k), y_o_k));
-    // {
-    //     var sqr := modmul(modpow(omg_n, k), modpow(omg_n, k));
+        requires omg == modpow(omega_n(len), k);
+        requires y_e_k == poly_eval(a_e, omega_nk(len', k));
+        requires y_o_k == poly_eval(a_o, omega_nk(len', k));
+        requires y_k == modadd(y_e_k, modmul(omg, y_o_k));
         
-    //     calc == {
-    //         poly_eval(a, modpow(omg_n, k));
-    //         {
-    //             poly_eval_split_lemma(a, a_e, a_o, len', modpow(omg_n, k));
-    //         }
-    //         modadd(poly_eval(a_e, sqr), modmul(modpow(omg_n, k), poly_eval(a_o, sqr)));
+        ensures y_k == poly_eval(a, omega_nk(len, k));
+    {
+        var x := omega_nk(len, k);
+        var sqr := modmul(x, x);
 
-    //     }
+        calc == {
+            sqr;
+            {
+                omega_nk_square(len, k);
+            }
+            omega_nk(len, 2 * k);
+            {
+                ntt_cancellation_lemma(len, k);
+            }
+            omega_nk(len', k);
+        }
 
-    //     // modadd(poly_eval(a_e, sqr), modmul(x, poly_eval(a_o, sqr)));
-    // }
+        calc == {
+            poly_eval(a, x);
+            {
+                poly_eval_split_lemma(a, a_e, a_o, len', x);
+            }
+            modadd(poly_eval(a_e, sqr), modmul(x, poly_eval(a_o, sqr)));
+            {
+                assert poly_eval(a_e, sqr) == y_e_k;
+                assert poly_eval(a_o, sqr) == y_o_k;
+            }
+            modadd(y_e_k, modmul(x, y_o_k));
+            y_k;
+        }
+    }
+
+    lemma y_k'_value(a: seq<elem>,
+        a_e: seq<elem>, a_o: seq<elem>,
+        len': pow2_t, len: pow2_t,
+        omg: elem, k: nat,
+        y_e_k: elem, y_o_k: elem, y_k': elem)
+
+        requires |a| == len'.full * 2;
+        requires 1 <= len.exp <= 8;
+        requires len'.exp <= 8 
+        requires len' == pow2_half(len);
+        requires k < len'.full;
+        requires a_e == 
+            seq(len'.full, n requires 0 <= n < len'.full => a[n * 2]);
+        requires a_o ==
+            seq(len'.full, n requires 0 <= n < len'.full => a[n * 2 + 1]);
+
+        requires omg == omega_nk(len, k);
+        requires y_e_k == poly_eval(a_e, omega_nk(len', k));
+        requires y_o_k == poly_eval(a_o, omega_nk(len', k));
+        requires y_k' == modsub(y_e_k, modmul(omg, y_o_k));
+    {
+        var x := omega_nk(len, k + len'.full);
+        var sqr := modmul(x, x);
+
+        calc == {
+            sqr;
+            {
+                omega_nk_square(len, k + len'.full);
+            }
+            omega_nk(len, 2 * k + len.full);
+            {
+                ntt_halving_lemma(len, k);
+            }
+            omega_nk(len, 2 * k);
+            {
+                ntt_cancellation_lemma(len, k);
+            }
+            omega_nk(len', k);
+        }
+
+        calc {
+            x;
+            omega_nk(len, k + len'.full);
+            {
+                omega_nk_mul_lemma(len, k, len'.full);
+            }
+            modmul(omg, omega_nk(len, len'.full));
+            {
+                ntt_neg_one_lemma(len);
+            }
+            modmul(omg, Q - 1);
+            (omg * (Q - 1)) % Q;
+            {
+                LemmaMulIsDistributiveSubAuto();
+            }
+            (omg * Q - omg) % Q;
+            {
+                LemmaModMultiplesVanishAuto();
+            }
+            (- (omg as int)) % Q;
+        }
+
+        calc == {
+            poly_eval(a, x);
+            {
+                poly_eval_split_lemma(a, a_e, a_o, len', x);
+            }
+            modadd(poly_eval(a_e, sqr), modmul(x, poly_eval(a_o, sqr)));
+            {
+                assert poly_eval(a_e, sqr) == y_e_k;
+                assert poly_eval(a_o, sqr) == y_o_k;
+            }
+            modadd(y_e_k, modmul(x, y_o_k));
+            (y_e_k + (x * y_o_k) % Q) % Q;
+            {
+                LemmaAddModNoopRight(y_e_k, x * y_o_k, Q);
+            }
+            (y_e_k + x * y_o_k) % Q;
+            (y_e_k + (- (omg as int) % Q) * y_o_k ) % Q;
+            (y_e_k + (- (omg as int) % Q) * (y_o_k % Q)) % Q;
+            {
+                LemmaMulModNoopLeft(- (omg as int), y_o_k, Q);
+            }
+            (y_e_k + ((-(omg as int) * y_o_k) % Q)) % Q;
+            {
+                LemmaAddModNoopRight(y_e_k, -(omg as int) * y_o_k, Q);
+            }
+            (y_e_k + (- (omg as int) * y_o_k)) % Q;
+        }
+    }
 
     lemma ntt_base_case(a: seq<elem>, len: pow2_t)
         requires len.full == 1;
@@ -205,6 +440,32 @@ module ntt {
 
     }
 
+    lemma omg_inv(omgn: elem, omg: elem, len: pow2_t, k: nat)
+        requires len.exp <= 8
+        requires omgn == omega_n(len);
+        requires omg == modpow(omgn, k);
+        ensures modmul(omg, omgn) == modpow(omgn, k+1);
+    {
+        var omg' := modmul(omg, omgn);
+        calc == {
+            omg';
+            modmul(omg, omgn);
+            modmul(modpow(omgn, k), omgn);
+            (Pow(omgn, k) % Q * omgn) % Q;
+            {
+                assume false;
+            }
+            (Pow(omgn, k) * omgn) % Q;
+            {
+                reveal Pow();
+                assert omgn == Pow(omgn, 1);
+                LemmaPowAdds(omgn, k, 1);
+            }
+            Pow(omgn, k+1) % Q;
+            modpow(omgn, k+1);
+        }
+    }
+
     method ntt(a: seq<elem>, len: pow2_t) returns (y: seq<elem>)
         requires 1 <= len.full;
         requires len.exp <= 8;
@@ -222,7 +483,6 @@ module ntt {
         var a_o := seq(len'.full, n requires 0 <= n < len'.full => a[n * 2 + 1]);
 
         var y_e := ntt(a_e, len');
-        // assert 
         var y_o := ntt(a_o, len');
 
         y := seq(len.full, n requires 0 <= n < len.full => 0);
@@ -231,9 +491,11 @@ module ntt {
         var omg := 1;
         var k := 0;
 
+        assume omg == modpow(omgn, 0);
+
         while (k < len'.full)
             invariant |y| == len.full;
-            // invariant 
+            invariant omg == modpow(omgn, k);
             decreases len'.full - k;
         {
             var y_e_k := y_e[k];
@@ -248,7 +510,15 @@ module ntt {
             var y_k' := modsub(y_e_k, modmul(omg, y_o_k));
             y := y[k + len'.full := y_k'];
 
+            y_k_value(a, a_e, a_o, len', len, 
+                omg, k, y_e_k, y_o_k, y_k);
+
+            y_k'_value(a, a_e, a_o, len', len, 
+                omg, k, y_e_k, y_o_k, y_k');
+
+            omg_inv(omgn, omg, len, k);
             omg := modmul(omg, omgn);
+
             k := k + 1;
         }
         assume false;
