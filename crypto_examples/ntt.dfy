@@ -2,29 +2,91 @@ include "pow2.dfy"
 include "omega.dfy"
 
 module ntt {
+    import opened Seq
     import opened Power
     import opened DivMod
     import opened Mul
     import opened pows_of_2
     import opened omegas
 
-    function {:axiom} poly_eval(a: seq<elem>, x: elem): elem
+    function {:opaque} poly_eval(a: seq<elem>, x: elem): elem
+    {
+        if |a| == 0 then 0
+        else modadd(First(a), modmul(poly_eval(DropFirst(a), x), x))
+    }
 
-    lemma {:axiom} poly_eval_split_lemma(a: seq<elem>, 
-        a_e: seq<elem>, a_o: seq<elem>, len': pow2_t, x: elem)
-        requires |a| == len'.full * 2;
-        requires a_e ==
-            seq(len'.full, n requires 0 <= n < len'.full => a[n * 2]);
-        requires a_o == 
-            seq(len'.full, n requires 0 <= n < len'.full => a[n * 2 + 1]);
+    function method odd_indexed_terms(a: seq<elem>, len: pow2_t): seq<elem>
+        requires |a| == len.full * 2;
+    {
+        seq(len.full, n requires 0 <= n < len.full => a[n * 2 + 1])
+    }
+
+    function method even_indexed_terms(a: seq<elem>, len: pow2_t): seq<elem>
+        requires |a| == len.full * 2;
+    {
+        seq(len.full, n requires 0 <= n < len.full => a[n * 2])
+    }
+
+    lemma poly_eval_base_lemma(a: seq<elem>, x: elem)
+        requires |a| == 1;
+        ensures poly_eval(a, x) == a[0];
+    {
+        reveal poly_eval();
+    }
+
+    lemma poly_eval_split_lemma(a: seq<elem>, 
+        a_e: seq<elem>, a_o: seq<elem>, len: pow2_t, x: elem)
+        requires |a| == len.full * 2;
+        requires a_e == even_indexed_terms(a, len)
+        requires a_o == odd_indexed_terms(a, len)
         ensures var sqr := modmul(x, x);
             poly_eval(a, x)
                 == 
             modadd(poly_eval(a_e, sqr), modmul(x, poly_eval(a_o, sqr)));
+        decreases |a|;
+    {
+        pow2_basics(len);
 
-    lemma {:axiom} poly_eval_base_lemma(a: seq<elem>)
-        requires |a| == 1;
-        ensures poly_eval(a, 1) == a[0];
+        if |a| == 2 {
+            assert a_e == [a[0]];
+            assert a_o == [a[1]];
+
+            var sqr := modmul(x, x);
+
+            calc == {
+                poly_eval(a, x);
+                {
+                    reveal poly_eval();
+                    assert DropFirst(a) == a_o;
+                }
+                modadd(a[0], modmul(poly_eval(a_o, x), x));
+                {
+                    poly_eval_base_lemma(a_o, x);
+                    assert poly_eval(a_o, x) == a[1];
+                }
+                modadd(a[0], modmul(a[1], x));
+                {
+                    poly_eval_base_lemma(a_e, sqr);
+                    assert poly_eval(a_e, sqr) == a[0];
+                }
+                modadd(poly_eval(a_e, sqr), modmul(a[1], x));
+                {
+                    poly_eval_base_lemma(a_o, sqr);
+                    assert poly_eval(a_o, sqr) == a[1];
+                }
+                modadd(poly_eval(a_e, sqr), modmul(x, poly_eval(a_o, sqr)));
+            }
+            return;
+        }
+        
+        var len' := pow2_half(len);
+        // var a_ee := 
+
+
+        assume false;
+    }
+
+
 
     predicate poly_eval_all_points(a: seq<elem>, y: seq<elem>, len: pow2_t)
         requires 0 <= len.exp <= L
@@ -45,10 +107,8 @@ module ntt {
         requires len'.exp <= L 
         requires len' == pow2_half(len);
         requires k < len'.full;
-        requires a_e == 
-            seq(len'.full, n requires 0 <= n < len'.full => a[n * 2]);
-        requires a_o ==
-            seq(len'.full, n requires 0 <= n < len'.full => a[n * 2 + 1]);
+        requires a_e == even_indexed_terms(a, len');
+        requires a_o == odd_indexed_terms(a, len');
 
         requires omg == modpow(omega_n(len), k);
         requires y_e_k == poly_eval(a_e, omega_nk(len', k));
@@ -98,10 +158,8 @@ module ntt {
         requires len'.exp <= L 
         requires len' == pow2_half(len);
         requires k < len'.full;
-        requires a_e == 
-            seq(len'.full, n requires 0 <= n < len'.full => a[n * 2]);
-        requires a_o ==
-            seq(len'.full, n requires 0 <= n < len'.full => a[n * 2 + 1]);
+        requires a_e == even_indexed_terms(a, len');
+        requires a_o == odd_indexed_terms(a, len');
 
         requires omg == omega_nk(len, k);
         requires y_e_k == poly_eval(a_e, omega_nk(len', k));
@@ -219,7 +277,7 @@ module ntt {
             }
             poly_eval(a, 1);
             {
-                poly_eval_base_lemma(a);
+                poly_eval_base_lemma(a, 1);
             }
             a[0];
         }
@@ -265,8 +323,8 @@ module ntt {
         }
 
         var len' := pow2_half(len);
-        var a_e := seq(len'.full, n requires 0 <= n < len'.full => a[n * 2]);
-        var a_o := seq(len'.full, n requires 0 <= n < len'.full => a[n * 2 + 1]);
+        var a_e := even_indexed_terms(a, len');
+        var a_o := odd_indexed_terms(a, len');
 
         var y_e := ntt_rec(a_e, len');
         var y_o := ntt_rec(a_o, len');
