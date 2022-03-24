@@ -34,7 +34,7 @@ module ntt {
         reveal poly_eval();
     }
 
-    lemma poly_eval_split_lemma(a: seq<elem>, 
+    lemma {:axiom} poly_eval_split_lemma(a: seq<elem>, 
         a_e: seq<elem>, a_o: seq<elem>, len: pow2_t, x: elem)
         requires |a| == len.full * 2;
         requires a_e == even_indexed_terms(a, len)
@@ -44,49 +44,58 @@ module ntt {
                 == 
             modadd(poly_eval(a_e, sqr), modmul(x, poly_eval(a_o, sqr)));
         decreases |a|;
-    {
-        pow2_basics(len);
+    // {
+    //     pow2_basics(len);
 
-        if |a| == 2 {
-            assert a_e == [a[0]];
-            assert a_o == [a[1]];
+    //     if |a| == 2 {
+    //         assert a_e == [a[0]];
+    //         assert a_o == [a[1]];
 
-            var sqr := modmul(x, x);
+    //         var sqr := modmul(x, x);
 
-            calc == {
-                poly_eval(a, x);
-                {
-                    reveal poly_eval();
-                    assert DropFirst(a) == a_o;
-                }
-                modadd(a[0], modmul(poly_eval(a_o, x), x));
-                {
-                    poly_eval_base_lemma(a_o, x);
-                    assert poly_eval(a_o, x) == a[1];
-                }
-                modadd(a[0], modmul(a[1], x));
-                {
-                    poly_eval_base_lemma(a_e, sqr);
-                    assert poly_eval(a_e, sqr) == a[0];
-                }
-                modadd(poly_eval(a_e, sqr), modmul(a[1], x));
-                {
-                    poly_eval_base_lemma(a_o, sqr);
-                    assert poly_eval(a_o, sqr) == a[1];
-                }
-                modadd(poly_eval(a_e, sqr), modmul(x, poly_eval(a_o, sqr)));
-            }
-            return;
-        }
-        
-        var len' := pow2_half(len);
-        // var a_ee := 
+    //         calc == {
+    //             poly_eval(a, x);
+    //             {
+    //                 reveal poly_eval();
+    //                 assert DropFirst(a) == a_o;
+    //             }
+    //             modadd(a[0], modmul(poly_eval(a_o, x), x));
+    //             {
+    //                 poly_eval_base_lemma(a_o, x);
+    //                 assert poly_eval(a_o, x) == a[1];
+    //             }
+    //             modadd(a[0], modmul(a[1], x));
+    //             {
+    //                 poly_eval_base_lemma(a_e, sqr);
+    //                 assert poly_eval(a_e, sqr) == a[0];
+    //             }
+    //             modadd(poly_eval(a_e, sqr), modmul(a[1], x));
+    //             {
+    //                 poly_eval_base_lemma(a_o, sqr);
+    //                 assert poly_eval(a_o, sqr) == a[1];
+    //             }
+    //             modadd(poly_eval(a_e, sqr), modmul(x, poly_eval(a_o, sqr)));
+    //         }
+    //         return;
+    //     }
 
+    //     var len' := pow2_half(len);
+    //     var a_ee := even_indexed_terms(a_e, len');
+    //     var a_eo := odd_indexed_terms(a_e, len');
+    //     var a_oe := even_indexed_terms(a_o, len');
+    //     var a_oo := odd_indexed_terms(a_o, len');
 
-        assume false;
-    }
+    //     calc == {
+    //         poly_eval(a, x);
+    //         {
+    //             reveal poly_eval();
+    //             assert DropFirst(a) == a_o;
+    //         }
+    //         modadd(a[0], modmul(poly_eval(a_o, x), x));
+    //     }
 
-
+    //     assume false;
+    // }
 
     predicate poly_eval_all_points(a: seq<elem>, y: seq<elem>, len: pow2_t)
         requires 0 <= len.exp <= L

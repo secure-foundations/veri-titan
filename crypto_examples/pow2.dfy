@@ -73,7 +73,6 @@ module pows_of_2 {
         ensures n'.full == Pow2(n'.exp);
     {
         pow2_basics(n);
-        // var m := pow2_t_cons(n.full / 2, n.exp - 1);
 
         calc == {
             n'.full;
