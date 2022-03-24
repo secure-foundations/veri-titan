@@ -263,6 +263,32 @@ module ntt {
         }
     }
 
+    lemma omg_inv(omgn: elem, omg: elem, len: pow2_t, k: nat)
+        requires len.exp <= L
+        requires omgn == omega_n(len);
+        requires omg == modpow(omgn, k);
+        ensures modmul(omg, omgn) == modpow(omgn, k+1);
+    {
+        var omg' := modmul(omg, omgn);
+        calc == {
+            omg';
+            modmul(omg, omgn);
+            modmul(modpow(omgn, k), omgn);
+            (Pow(omgn, k) % Q * omgn) % Q;
+            {
+                LemmaMulModNoopLeft(Pow(omgn, k), omgn, Q);
+            }
+            (Pow(omgn, k) * omgn) % Q;
+            {
+                LemmaPow1(omgn);
+                assert omgn == Pow(omgn, 1);
+                LemmaPowAdds(omgn, k, 1);
+            }
+            Pow(omgn, k+1) % Q;
+            modpow(omgn, k+1);
+        }
+    }
+
     lemma ntt_base_case(a: seq<elem>, len: pow2_t)
         requires len.full == 1;
         requires |a| == len.full;
@@ -291,32 +317,6 @@ module ntt {
             a[0];
         }
 
-    }
-
-    lemma omg_inv(omgn: elem, omg: elem, len: pow2_t, k: nat)
-        requires len.exp <= L
-        requires omgn == omega_n(len);
-        requires omg == modpow(omgn, k);
-        ensures modmul(omg, omgn) == modpow(omgn, k+1);
-    {
-        var omg' := modmul(omg, omgn);
-        calc == {
-            omg';
-            modmul(omg, omgn);
-            modmul(modpow(omgn, k), omgn);
-            (Pow(omgn, k) % Q * omgn) % Q;
-            {
-                LemmaMulModNoopLeft(Pow(omgn, k), omgn, Q);
-            }
-            (Pow(omgn, k) * omgn) % Q;
-            {
-                LemmaPow1(omgn);
-                assert omgn == Pow(omgn, 1);
-                LemmaPowAdds(omgn, k, 1);
-            }
-            Pow(omgn, k+1) % Q;
-            modpow(omgn, k+1);
-        }
     }
 
     method ntt_rec(a: seq<elem>, len: pow2_t) returns (y: seq<elem>)
@@ -397,13 +397,135 @@ module ntt {
         }
     }
 
+    lemma index_bounded_lemma(
+        index: nat, j: nat, s: nat, k: nat, ki: nat,
+        m: pow2_t, step_count: pow2_t)
+        requires m.full >= 2;
+        requires 0 <= j < m.full / 2;
+        requires N == pow2(L).full;
+        requires 1 <= m.exp <= L;
+        requires step_count == pow2_div(pow2(L), m);
+        requires k == ki * m.full;
+        requires 1 <= s < L;
+        requires index == k + j + m.full / 2;
+        requires ki < step_count.full;
+        ensures index < N;
+    {
+        pow2_basics(m);
+        var half_step := m.full / 2;
 
-    // method ntt(a: seq<elem>, len: pow2_t) returns (y: seq<elem>)
-    //     requires len.full == N;
-    // //     requires |a| == 
-    // // {
+        calc {
+            index;
+        ==
+            ki * m.full + j + half_step;
+        <
+            ki * m.full + 2 * half_step;
+        ==
+            ki * m.full + m.full;
+        == { LemmaMulIsDistributiveAddOtherWay(m.full, ki, 1); }
+            (ki + 1) * m.full;
+        <= { assert ki + 1 <= step_count.full; LemmaMulInequalityAuto(); }
+            step_count.full * m.full;
+        ==
+            N;
+        }
+    }
 
-    // // }
+    method ntt_loop_1(a: seq<elem>, s: nat,
+        k: nat, ki: nat,
+        m: pow2_t, step_count: pow2_t)
+    returns (a': seq<elem>)
+        requires |a| == N == pow2(L).full;
+        requires 1 <= m.exp <= L;
+        requires step_count == pow2_div(pow2(L), m);
+        requires k == ki * m.full;
+        requires 1 <= s < L;
+        requires ki < step_count.full;
+    {
+        a' := a;
+        var half_step := m.full / 2;
+        var omgm := omega_n(m);
+
+        var omg := 1;
+        var j := 0;
+
+        assert omg == modpow(omgm, 0) by {
+            LemmaPow0Auto();
+        }
+
+        while (j < half_step)
+            invariant 0 <= j <= half_step;
+            invariant omg == modpow(omgm, j);
+            invariant |a'| == |a|;
+        {
+            var index := k + j + half_step;
+            index_bounded_lemma(index, j, s, k, ki, m, step_count);
+            var t := modmul(omg, a[k + j + half_step]);
+            var u := a[k + j];
+            a' := a'[k + j := modadd(u, t)];
+            a' := a'[k + j + half_step := modsub(u, t)];
+
+            omg_inv(omgm, omg, m, j);
+            omg := modmul(omg, omgm);
+            j := j + 1;
+        }
+    }
+
+    method ntt_loop_0(a: seq<elem>, s: nat)
+        requires |a| == N == pow2(L).full;
+        requires 1 <= s < L;
+    {
+        var m := pow2(s);
+        pow2_basics(m);
+        assume 1 <= m.full <= N/2;
+
+        var omgm := omega_nk(m, 1);
+
+        assert omega_nk(m, 1) == omega_n(m) by {
+            LemmaPow1Auto();
+        }
+        var step_size := m.full;
+
+        var step_count := pow2_div(pow2(L), m);
+        // assert step_count.exp == L - m.exp;
     
+        var k := 0;
+        var ki := 0;
+
+        while (ki < step_count.full)
+            // invariant step_count == pow2_div(pow2(L), m);
+            // invariant step_count.exp == L - m.exp;
+            invariant 0 <= k == ki * step_size;
+        {
+            var k' := k + step_size;
+            var ki' := ki + 1;
+
+            var _ := ntt_loop_1(a, s, k, ki, m, step_count);
+
+            assert k' == (ki + 1) * step_size by {
+                LemmaMulIsDistributiveAddOtherWay(step_size, ki, 1);
+                assert (ki + 1) * step_size == ki * step_size + 1 * step_size;
+            }
+            assert (ki + 1) * step_size > 0 by {
+                LemmaMulStrictlyPositiveAuto();
+            }
+            k, ki := k', ki';
+        }
+    }
+
+    method ntt(b: seq<elem>, len: pow2_t) returns (y: seq<elem>)
+        requires |b | == len.full == N;
+        requires len.exp == L;
+        // ensures poly_eval_all_points(a, y, len)
+    {
+        // var s := pow2(0);
+        var s := 1;
+        while (s < L)
+            invariant 1 <= s;
+        {
+            ntt_loop_0(b, s);
+            s := s + 1;
+        }
+    }
 }
 

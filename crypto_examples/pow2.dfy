@@ -17,7 +17,7 @@ module pows_of_2 {
 
     type pow2_t = n: pow2_t_raw | n.full == Pow2(n.exp) witness *
 
-    function pow2(exp: nat): pow2_t
+    function method pow2(exp: nat): pow2_t
     {
         LemmaPowPositiveAuto();
         pow2_t_cons(Pow(2, exp), exp)
@@ -27,29 +27,11 @@ module pows_of_2 {
         ensures n.exp == 0 ==> n.full == 1
         ensures n.exp == 1 ==> n.full == 2
         ensures n.exp != 0 ==> n.full % 2 == 0
+        ensures n.full >= 1
     {
+        LemmaPowPositiveAuto();
         reveal Pow();
     }
-
-    // lemma pow2_double(n: pow2_t) returns (n': pow2_t)
-    //     ensures n'.exp == n.exp + 1
-    //     ensures n'.full == 2 * n.full
-    // {
-    //     var m := pow2_t_cons(2 * n.full, n.exp + 1);
-
-    //     calc == {
-    //         m.full;
-    //         2 * n.full;
-    //         2 * Pow2(n.exp);
-    //         {
-    //             reveal Pow();
-    //         }
-    //         Pow2(n.exp + 1);
-    //         Pow2(m.exp);
-    //     }
-
-    //     n' := m;
-    // }
 
     function method pow2_half(n: pow2_t) : (n': pow2_t)
         requires n.exp != 0 || n.full != 1;
@@ -84,6 +66,32 @@ module pows_of_2 {
             Pow2(n.exp - 1);
             Pow2(n'.exp);
         }
+    }
+
+    function method pow2_mul(n: pow2_t, m: pow2_t) : (n': pow2_t)
+    {
+        LemmaPowAdds(2, n.exp, m.exp);
+        // LemmaPowAdds(2, m.exp, n.exp);
+        // LemmaMulIsCommutative(n.full, m.full);
+        LemmaMulStrictlyPositiveAuto();
+        var a := pow2_t_cons(n.full * m.full, n.exp + m.exp);
+        a
+    }
+
+    function method pow2_div(n: pow2_t, m: pow2_t) : (n': pow2_t)
+        requires m.exp <= n.exp;
+        ensures m.full != 0;
+        ensures n.full % m.full == 0;
+        ensures n.full == n'.full * m.full;
+    {
+        pow2_basics(m);
+        pow2_basics(n);
+        LemmaPowSubtracts(2, m.exp, n.exp);
+        var a := pow2_t_cons(n.full / m.full, n.exp - m.exp);
+        assert n == pow2_mul(m, a);
+        assert n.full == a.full * m.full;
+        LemmaFundamentalDivMod(n.full, m.full);
+        a
     }
 
     // lemma pow2_square(n: pow2_t) returns (n': pow2_t)
