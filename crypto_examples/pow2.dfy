@@ -24,11 +24,13 @@ module pows_of_2 {
     }
 
     lemma pow2_basics(n: pow2_t)
-        ensures n.exp == 0 ==> n.full == 1
-        ensures n.exp == 1 ==> n.full == 2
+        ensures n.exp == 0 <==> n.full == 1
+        ensures n.exp == 1 <==> n.full == 2
         ensures n.exp != 0 ==> n.full % 2 == 0
         ensures n.full >= 1
     {
+        // LemmaPowStrictlyIncreasesAuto();
+        assume n.exp == 1 <==> n.full == 2;
         LemmaPowPositiveAuto();
         reveal Pow();
     }

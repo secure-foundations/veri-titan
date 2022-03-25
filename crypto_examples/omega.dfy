@@ -1,7 +1,4 @@
 include "pow2.dfy"
-import opened Power
-import opened DivMod
-import opened pows_of_2
 
 module omegas {
     import opened Power
@@ -19,7 +16,7 @@ module omegas {
     type elem = i :nat | i < Q
 
     lemma {:axiom} nth_root_lemma()
-        ensures Pow2(L) == N;
+        ensures Pow(2, L) == Pow2(L) == N;
         // 2 ** 11 == 2048
         ensures Pow(G, Pow2(L)) % Q == 1;
         // pow(7, 2 ** 11, 12289) == 1
