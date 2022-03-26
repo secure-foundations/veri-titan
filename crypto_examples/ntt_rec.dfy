@@ -324,6 +324,12 @@ module ntt_rec {
 
     }
 
+    predicate ntt_index_inv(a: seq<elem>, a': seq<elem>, size: pow2_t)
+    {
+
+
+    }
+
     method ntt_rec(a: seq<elem>, len: pow2_t) returns (y: seq<elem>)
         requires len.exp == L ==> a == A();
         requires 1 <= len.full;
@@ -343,6 +349,11 @@ module ntt_rec {
 
         var y_e := ntt_rec(a_e, len');
         var y_o := ntt_rec(a_o, len');
+
+        if len.exp == L {
+            assert a_e == even_indexed_terms(A(), len');
+
+        }
 
         y := seq(len.full, n requires 0 <= n < len.full => 0);
 
@@ -387,12 +398,6 @@ module ntt_rec {
             omg_inv(omgn, omg, len, k);
             omg := modmul(omg, omgn);
 
-            // if len'.full == 1 {
-            //     var i := 0;
-            //     assert k == 0;
-            //     assert y[i] == poly_eval(a, omega_nk(len, i));
-            //     assert y[i + len'.full] == poly_eval(a, omega_nk(len, i + 1));
-            // }
         
             k := k + 1;
         }
