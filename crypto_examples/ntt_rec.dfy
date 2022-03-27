@@ -324,17 +324,21 @@ module ntt_rec {
 
     }
 
-    predicate ntt_index_inv(a: seq<elem>, a': seq<elem>, size: pow2_t)
+    predicate ntt_index_inv(a: seq<elem>, indices: seq<index_t>, len: pow2_t)
+        requires len.full <= N;
     {
-
-
+        && |a| == |indices| == len.full
+        && forall i :: 0 <= i < len.full ==> (
+            && a[i] == A()[indices[i].v]
+            && indices[i].bound == len)
     }
 
-    method ntt_rec(a: seq<elem>, len: pow2_t) returns (y: seq<elem>)
+    method ntt_rec(a: seq<elem>, indices: seq<index_t>, len: pow2_t) returns (y: seq<elem>)
         requires len.exp == L ==> a == A();
+        requires ntt_index_inv(a, indices, len)
         requires 1 <= len.full;
         requires len.exp <= L;
-        requires |a| == len.full;
+        requires |a| == |indices| == len.full;
         ensures poly_eval_all_points(a, y, len)
         decreases len.full
     {
