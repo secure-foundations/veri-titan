@@ -123,12 +123,38 @@ module omegas {
       }
     }
 
-    lemma {:axiom} ntt_cancellation_lemma(n: pow2_t, k: nat)
+    lemma ntt_cancellation_lemma(n: pow2_t, k: nat)
         requires n.exp != 0;
         requires n.exp <= L
         ensures omega_nk(pow2_half(n), k) == omega_nk(n, 2 * k);
 
-   function method modpow(a: elem, b: nat): elem
+    {
+      calc {
+        omega_nk(pow2_half(n), k);
+        Pow(omega_n(pow2_half(n)), k) % Q;
+        Pow(Pow(G, Pow2(L - pow2_half(n).exp)) % Q, k) % Q;
+        Pow(Pow(G, Pow2(L - (n.exp - 1))) % Q, k) % Q;
+        Pow(Pow(G, Pow2(L - n.exp + 1)) % Q, k) % Q;
+          { LemmaPowModNoop(Pow(G, Pow2(L - n.exp + 1)), k, Q); }
+        Pow(Pow(G, Pow2(L - n.exp + 1)), k) % Q;
+          calc {
+            Pow2(L - n.exp + 1);
+              { reveal Pow2(); reveal Pow(); }
+            2*Pow2(L - n.exp);
+          }
+        Pow(Pow(G, Pow2(L - n.exp)*2), k) % Q;
+          { LemmaPowMultiplies(G, Pow2(L - n.exp), 2); }
+        Pow(Pow(Pow(G, Pow2(L - n.exp)), 2), k) % Q;
+          { LemmaPowMultiplies(Pow(G, Pow2(L - n.exp)), 2, k); } 
+        Pow(Pow(G, Pow2(L - n.exp)), 2*k) % Q;
+          { LemmaPowModNoop(Pow(G, Pow2(L - n.exp)), 2*k, Q); }
+        Pow(Pow(G, Pow2(L - n.exp)) % Q, 2*k) % Q;
+        Pow(omega_n(n), 2*k) % Q;
+        omega_nk(n, 2 * k);
+      }
+    }
+
+    function method modpow(a: elem, b: nat): elem
     {
         Pow(a, b) % Q
     }
