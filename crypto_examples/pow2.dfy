@@ -68,6 +68,17 @@ module pows_of_2 {
         }
     }
 
+    function method pow2_double(n: pow2_t) : (n': pow2_t)
+        ensures n'.exp == n.exp + 1;
+        ensures n'.full == n.full * 2;
+    {
+        pow2_basics(n);
+        reveal Pow2();
+        reveal Pow();
+        var m := pow2_t_cons(n.full * 2, n.exp + 1);
+        m
+    }
+
     function method pow2_mul(n: pow2_t, m: pow2_t) : (n': pow2_t)
     {
         LemmaPowAdds(2, n.exp, m.exp);
