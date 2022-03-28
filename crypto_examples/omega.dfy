@@ -2,6 +2,7 @@ include "pow2.dfy"
 
 module omegas {
     import opened Power
+    import opened Power2
     import opened DivMod
     import opened Mul
     import opened pows_of_2
@@ -15,13 +16,112 @@ module omegas {
 
     type elem = i :nat | i < Q
 
-    lemma {:axiom} nth_root_lemma()
+    lemma nth_root_lemma_helper_specific()
+      ensures ((Pow(7468, 16) % Q) * (Pow(7468, 16) % Q)) % Q
+           == (10810 * 10810) % Q;
+    {
+      calc {
+            Pow(7468, 16) % Q;
+              { LemmaPowMultiplies(7468, 4, 4); }
+            Pow(Pow(7468, 4), 4) % Q;
+              { reveal Pow(); }
+            Pow(3110407118008576, 4) % Q;
+              { LemmaPowModNoop(3110407118008576, 4, Q); } 
+            Pow(3110407118008576 % Q, 4) % Q;
+            Pow(10984, 4) % Q;
+              { reveal Pow(); }
+            14556001675841536 % Q;
+            10810;
+          }
+
+    }
+
+    lemma nth_root_lemma_helper()
+        ensures Pow(2, L) == Pow2(L) == N;
+        // 2 ** 11 == 2048
+        ensures Pow(G, Pow2(L)/2) % Q == Q - 1;
+        // pow(7, 2 ** 10, 12289) == 12288
+    {
+      assert Pow2(L) == 2048 by { Lemma2To64(); }
+
+      // First ensures
+      calc {
+        Pow(2, L);
+          { LemmaPow2(L); } 
+        Pow2(L);
+      }
+      calc {
+        Pow2(L); 
+          { Lemma2To64(); }
+        2048;
+        N;
+      }
+
+      // Second ensures
+      calc {
+        Pow(G, Pow2(L)/2);
+        Pow(G, 1024);
+          { LemmaPowMultiplies(G, 32, 32); }
+        Pow(Pow(G, 32), 32);
+          { LemmaPowMultiplies(G, 4, 8); }
+        Pow(Pow(Pow(G, 4), 8), 32);
+          { assert Pow(G, 4) == 2401 by { reveal Pow(); } }
+        Pow(Pow(2401, 8), 32);
+          { assert Pow(2401, 8) == 1104427674243920646305299201 by { reveal Pow(); } }
+        Pow(1104427674243920646305299201, 32);
+      }
+
+      calc {
+        Pow(G, Pow2(L)/2) % Q;
+        Pow(1104427674243920646305299201, 32) % Q;
+        Pow(1104427674243920646305299201, 32) % Q;
+          { LemmaPowModNoop(1104427674243920646305299201, 32, Q); }
+        Pow(1104427674243920646305299201 % Q, 32) % Q;
+        Pow(7468, 32) % Q;
+           { LemmaPowAdds(7468, 16, 16); }
+        (Pow(7468, 16) * Pow(7468, 16)) % Q;
+           { LemmaMulModNoopGeneral(Pow(7468, 16), Pow(7468, 16), Q); }
+        ((Pow(7468, 16) % Q) * (Pow(7468, 16) % Q)) % Q;
+          { nth_root_lemma_helper_specific(); }
+        (10810 * 10810) % Q;
+        12288;
+        Q - 1;
+      }
+    }
+
+    lemma nth_root_lemma()
         ensures Pow(2, L) == Pow2(L) == N;
         // 2 ** 11 == 2048
         ensures Pow(G, Pow2(L)) % Q == 1;
         // pow(7, 2 ** 11, 12289) == 1
         ensures Pow(G, Pow2(L)/2) % Q == Q - 1;
         // pow(7, 2 ** 10, 12289) == 12288
+    {
+      assert Pow2(L) == 2048 by { Lemma2To64(); }
+
+      nth_root_lemma_helper();  // 1st and 3rd ensures
+
+      // Second ensures
+      calc {
+        Pow(G, Pow2(L));
+        Pow(G, 2048);
+          { LemmaPowMultiplies(G, 1024, 2); }
+        Pow(Pow(G, 1024), 2);
+      }
+
+      calc {
+        Pow(G, Pow2(L)) % Q;
+        Pow(Pow(G, 1024), 2) % Q;
+          { LemmaPowModNoop(Pow(G, 1024), 2, Q); }
+        Pow(Pow(G, 1024) % Q, 2) % Q;
+        Pow(Pow(G, Pow2(L) / 2) % Q, 2) % Q;
+        Pow(Q-1, 2) % Q;
+        Pow(12288, 2) % 12289;
+          { reveal Pow(); }
+        150994944 % 12289;
+        1;
+      }
+    }
 
     lemma {:axiom} ntt_cancellation_lemma(n: pow2_t, k: nat)
         requires n.exp != 0;
@@ -160,8 +260,7 @@ module omegas {
                 Pow(G, Pow2(L - 1)) % Q;
                 Pow(G, Pow2(10)) % Q;
                 {
-                    reveal Pow();
-                    assert Pow2(10) == 1024;
+                    assert Pow2(10) == 1024 by {  Lemma2To64(); }
                 }
                 Pow(G, 1024) % Q;
                 {
