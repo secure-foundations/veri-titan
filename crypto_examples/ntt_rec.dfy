@@ -115,11 +115,10 @@ module ntt_rec {
         requires 1 <= len.exp <= L;
         requires len'.exp <= L 
         requires len' == pow2_half(len);
-        requires k < len'.full;
         requires a_e == even_indexed_terms(a, len');
         requires a_o == odd_indexed_terms(a, len');
 
-        requires omg == modpow(omega_n(len), k);
+        requires omg == omega_nk(len, k);
         requires y_e_k == poly_eval(a_e, omega_nk(len', k));
         requires y_o_k == poly_eval(a_o, omega_nk(len', k));
         requires y_k == modadd(y_e_k, modmul(omg, y_o_k));
@@ -166,7 +165,6 @@ module ntt_rec {
         requires 1 <= len.exp <= L;
         requires len'.exp <= L 
         requires len' == pow2_half(len);
-        requires k < len'.full;
         requires a_e == even_indexed_terms(a, len');
         requires a_o == odd_indexed_terms(a, len');
 
