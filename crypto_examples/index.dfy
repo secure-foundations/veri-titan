@@ -3,6 +3,7 @@ include "bins.dfy"
 
 module rindex {
     import opened Power
+    import opened Power2
     import opened Seq
     import opened Mul
     import opened DivMod
@@ -78,6 +79,9 @@ module rindex {
                         reveal ToNatLeft();
                     }
                     ToNatLeft(idx'.bins) + lsb * Pow(2, idx.bound.exp - 1);
+                    {
+                        reveal Pow2();
+                    }
                     ToNatLeft(idx'.bins) + lsb * bound'.full;
                     {
                         LemmaToNatLeftEqToNatRight(idx'.bins);
@@ -87,6 +91,7 @@ module rindex {
             }
             assert idx'.v + lsb * bound'.full < idx.bound.full by {
                 LemmaSeqNatBound(idx'.bins + [lsb]);
+                reveal Pow2();
             }
             assert idx'.bins + [lsb] == Reverse(idx.bins) by {
                 reveal Reverse();
@@ -218,7 +223,7 @@ module rindex {
         requires ntt_indicies_inv(idxs, len, k); 
         requires k < pow2_div(pow2(L), len).full
         requires even_indexed_indices(idxs, len) == idxs';
-        // ensures ntt_indicies_inv(idxs', pow2_half(len), pow2_half(len).full * k);
+        ensures ntt_indicies_inv(idxs', pow2_half(len), k * 2);
     {
         var len' := pow2_half(len);
         assert ntt_indicies_wf(idxs', len');
@@ -337,6 +342,7 @@ module rindex {
                 (ToNatRight(obins) / Pow(2, len.exp-1)) % 2;
                 {
                     assert Pow(2, len.exp-1) == Pow(2, len'.exp);
+                    reveal Pow2();
                     assert Pow(2, len'.exp) == len'.full;
                 }
                 (orignal.v / len'.full) % 2;
