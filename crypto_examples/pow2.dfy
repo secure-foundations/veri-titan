@@ -15,6 +15,7 @@ module pows_of_2 {
     function method pow2(exp: nat): pow2_t
     {
         LemmaPowPositiveAuto();
+        reveal Pow2();
         pow2_t_cons(Pow(2, exp), exp)
     }
 
@@ -28,6 +29,7 @@ module pows_of_2 {
         assume n.exp == 1 <==> n.full == 2;
         LemmaPowPositiveAuto();
         reveal Pow();
+        reveal Pow2();
     }
 
     function method pow2_half(n: pow2_t) : (n': pow2_t)
@@ -58,6 +60,7 @@ module pows_of_2 {
             n.full / 2;
             Pow2(n.exp) / 2;
             {
+                reveal Pow2();
                 reveal Pow();
             }
             Pow2(n.exp - 1);
@@ -71,6 +74,7 @@ module pows_of_2 {
         // LemmaPowAdds(2, m.exp, n.exp);
         // LemmaMulIsCommutative(n.full, m.full);
         LemmaMulStrictlyPositiveAuto();
+        reveal Pow2();
         var a := pow2_t_cons(n.full * m.full, n.exp + m.exp);
         a
     }
@@ -84,6 +88,7 @@ module pows_of_2 {
         pow2_basics(m);
         pow2_basics(n);
         LemmaPowSubtracts(2, m.exp, n.exp);
+        reveal Pow2();
         var a := pow2_t_cons(n.full / m.full, n.exp - m.exp);
         assert n == pow2_mul(m, a);
         assert n.full == a.full * m.full;

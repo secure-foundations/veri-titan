@@ -1,7 +1,7 @@
 include "pow2.dfy"
 include "omega.dfy"
 
-module ntt_rec {
+module poly_eval {
     import opened Seq
     import opened Power
     import opened Power2

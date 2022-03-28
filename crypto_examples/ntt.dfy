@@ -11,6 +11,13 @@ module ntt {
     import opened omegas
     import opened ntt_rec
 
+    function A(): seq<elem>
+        ensures |A()| == N == pow2(L).full;
+
+    function Ar(): seq<elem>
+        ensures |Ar()| == N == pow2(L).full;
+        // ensures forall i | 0 <= i < N :: Ar()[i] == 
+
     lemma index_bounded_lemma(
         j: nat, k: nat, ki: nat,
         m: pow2_t, step_count: pow2_t)
@@ -43,51 +50,51 @@ module ntt {
         }
     }
 
-    lemma ntt_chunk_base_case(a': seq<elem>, 
-        k: nat, ki: nat, t: elem, u: elem,
-        m: pow2_t, step_count: pow2_t)
+    // lemma ntt_chunk_base_case(a': seq<elem>, 
+    //     k: nat, ki: nat, t: elem, u: elem,
+    //     m: pow2_t, step_count: pow2_t)
 
-        requires |a'| == N == pow2(L).full;
-        requires m.exp == 1;
-        // requires step_count == pow2_div(pow2(L), m);
-        // requires k == ki * m.full;
-        // requires ki < step_count.full;
-        requires k < k + 1 < N;
+    //     requires |a'| == N == pow2(L).full;
+    //     requires m.exp == 1;
+    //     // requires step_count == pow2_div(pow2(L), m);
+    //     // requires k == ki * m.full;
+    //     // requires ki < step_count.full;
+    //     requires k < k + 1 < N;
     
-        requires t == modmul(1, Ar()[k + 1]);
-        requires u == Ar()[k];
-        requires a'[k] == modadd(u, t);
-        requires a'[k+1] == modsub(u, t);
-        // ensures 
-    {
-        calc == {
-            t;
-            modmul(1, Ar()[k + 1]);
-            (Ar()[k + 1]) % Q;
-            {
-                assume false;
-            }
-            Ar()[k + 1];
-        }
+    //     requires t == modmul(1, Ar()[k + 1]);
+    //     requires u == Ar()[k];
+    //     requires a'[k] == modadd(u, t);
+    //     requires a'[k+1] == modsub(u, t);
+    //     // ensures 
+    // {
+    //     calc == {
+    //         t;
+    //         modmul(1, Ar()[k + 1]);
+    //         (Ar()[k + 1]) % Q;
+    //         {
+    //             assume false;
+    //         }
+    //         Ar()[k + 1];
+    //     }
 
-        var len := pow2(0);
-        pow2_basics(len);
+    //     var len := pow2(0);
+    //     pow2_basics(len);
 
-        var even := Ar()[k..k+1];
-        var odd := Ar()[k+1..k+2];
+    //     var even := Ar()[k..k+1];
+    //     var odd := Ar()[k+1..k+2];
 
-        ntt_rec_base_case(odd, len);
-        ntt_rec_base_case(even, len);
+    //     ntt_rec_base_case(odd, len);
+    //     ntt_rec_base_case(even, len);
 
-        assert t == poly_eval(odd, omega_nk(len, 0));
-        assert u == poly_eval(even, omega_nk(len, 0));
+    //     assert t == poly_eval(odd, omega_nk(len, 0));
+    //     assert u == poly_eval(even, omega_nk(len, 0));
 
-        var omg := omega_nk(len, 0);
+    //     var omg := omega_nk(len, 0);
 
-        y_k_value(even + odd, even, odd, pow2(0), pow2(1),
-                omg, k,
-                y_e_k: elem, y_o_k: elem, y_k: elem)
-    }
+    //     y_k_value(even + odd, even, odd, pow2(0), pow2(1),
+    //             omg, k,
+    //             y_e_k: elem, y_o_k: elem, y_k: elem)
+    // }
 
     method ntt_chunk_loop(a: seq<elem>,
         k: nat, ki: nat,
@@ -135,9 +142,9 @@ module ntt {
             omg_inv(omgm, omg, m, j);
             omg := modmul(omg, omgm);
 
-            if half_step == 1 {
-                ntt_chunk_base_case(a', k, ki, t, u, m, step_count);
-            }
+            // if half_step == 1 {
+            //     ntt_chunk_base_case(a', k, ki, t, u, m, step_count);
+            // }
 
             j := j + 1;
         }
@@ -145,17 +152,18 @@ module ntt {
         assert a[..k] == a'[..k];
         assert a[k+m.full..] == a'[k+m.full..];
 
-        // if m.exp == 1 {
-        //     j := 0;
-        //     index_bounded_lemma(j, s, k, ki, m, step_count);
+        if m.exp == 1 {
+            assert half_step == 1;
+            // j := 0;
+            // index_bounded_lemma(j, s, k, ki, m, step_count);
 
-        //     var t := modmul(omg, a[k + j + half_step]);
-        //     var u := a[k + j];
+            // var t := modmul(omg, a[k + j + half_step]);
+            // var u := a[k + j];
 
-        //     assert half_step == 1;
-        //     assert a'[k + j] == modadd(u, t);
+            // assert half_step == 1;
+            // assert a'[k + j] == modadd(u, t);
 
-        // }
+        }
     }
 
     // method ntt_level_loop(a: seq<elem>, s: nat)

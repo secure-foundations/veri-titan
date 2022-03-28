@@ -182,31 +182,6 @@ module rindex {
         seq(len.full/2, n requires 0 <= n < len.full/2 => idxs[n * 2])
     }
 
-    lemma SubSeqReverseProperty<T>(s: seq<T>, i: nat)
-        requires 0 < i <= |s|;
-        ensures Reverse(s[i..]) + [s[i-1]] == Reverse(s[i-1..]);
-    {
-        var l1 := |s| - i;
-        var l2 := |s| - i + 1;
-        var s1, s2 := s[i..], s[i-1..];
-
-        var x := Reverse(s1);
-        var y := Reverse(s2);
-
-        assert forall j | 0 <= j < l1 :: x[j] == s1[l1 - j - 1];
-        assert forall j | 0 <= j < l2 :: y[j] == s2[l2 - j - 1];
-
-        forall j | 0 <= j < l1
-            ensures x[j] == y[j];
-        {
-        }
-
-        assert x + [y[l1]] == y;
-        assert y[l1] == s2[0] == s[i - 1];
-
-        assert x + [s[i-1]] ==  y;
-    }
-
     lemma even_indexed_indices_reorder(idxs: seq<index_t>, len: pow2_t, idxs': seq<index_t>, k: nat)
         requires len.full >= 2;
         requires ntt_indicies_inv(idxs, len, k); 

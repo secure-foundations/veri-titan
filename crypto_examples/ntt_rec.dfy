@@ -10,12 +10,6 @@ module ntt_rec {
     import opened pows_of_2
     import opened omegas
 
-    function A(): seq<elem>
-        ensures |A()| == N == pow2(L).full;
-
-    function Ar(): seq<elem>
-        ensures |Ar()| == N == pow2(L).full;
-
     function {:opaque} poly_eval(a: seq<elem>, x: elem): elem
     {
         if |a| == 0 then 0
@@ -326,7 +320,7 @@ module ntt_rec {
     }
 
     method ntt_rec(a: seq<elem>, len: pow2_t) returns (y: seq<elem>)
-        requires len.exp == L ==> a == A();
+        // requires len.exp == L ==> a == A();
         requires 1 <= len.full;
         requires len.exp <= L;
         requires |a| == len.full;
@@ -345,10 +339,9 @@ module ntt_rec {
         var y_e := ntt_rec(a_e, len');
         var y_o := ntt_rec(a_o, len');
 
-        if len.exp == L {
-            assert a_e == even_indexed_terms(A(), len');
-
-        }
+        // if len.exp == L {
+        //     assert a_e == even_indexed_terms(A(), len');
+        // }
 
         y := seq(len.full, n requires 0 <= n < len.full => 0);
 
