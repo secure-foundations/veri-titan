@@ -235,9 +235,6 @@ module poly_eval {
                     { reveal poly_eval_offset(); }
                 modadd(poly_eval_offset(a_e, sqr, offset), modmul(x, poly_eval_offset(a_o, sqr, offset)));
             }
-
-            assume false;
-
         }
     }
 
