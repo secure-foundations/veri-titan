@@ -4,14 +4,9 @@ include "../std_lib/src/Collections/Sequences/Seq.dfy"
 
 module pows_of_2 {
     import opened Power
+    import opened Power2
     import opened DivMod
     import opened Mul
-
-    function method Pow2(e: nat): nat
-    {
-        LemmaPowPositive(2, e);
-        Pow(2, e)
-    }
 
     datatype pow2_t_raw = pow2_t_cons(full: nat, exp: nat)
 
