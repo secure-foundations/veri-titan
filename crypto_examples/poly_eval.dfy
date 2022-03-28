@@ -36,7 +36,7 @@ module poly_eval {
     }
 
     lemma mod_sum_adds(s1: seq<elem>, s2: seq<elem>) 
-        ensures mod_sum(s1 + s2) == mod_sum(s1) + mod_sum(s2)
+        ensures mod_sum(s1 + s2) == modadd(mod_sum(s1), mod_sum(s2))
     {
         assume false;
     }
@@ -200,29 +200,31 @@ module poly_eval {
                         mod_sum_adds(apowers[..len.full], apowers[len.full..]);  
                         assert apowers == apowers[..len.full] + apowers[len.full..]; 
                     }
-                mod_sum(apowers[..len.full]) + mod_sum(apowers[len.full..]);
+                modadd(mod_sum(apowers[..len.full]), mod_sum(apowers[len.full..]));
                     { reveal poly_eval_offset(); }
-                poly_eval_offset(a[..len.full], x, 2*offset) + poly_eval_offset(a[len.full..], x, len.full + 2*offset);
+                modadd(poly_eval_offset(a[..len.full], x, 2*offset), poly_eval_offset(a[len.full..], x, len.full + 2*offset));
                     { 
                         poly_eval_split_lemma_helper(a[..len.full], a_e[..len.full/2], a_o[..len.full/2], new_len, x, offset); 
                         assert even_indexed_terms(a[..len.full], new_len) == a_e[..len.full/2];
                         assert  odd_indexed_terms(a[..len.full], new_len) == a_o[..len.full/2];
                     }
-                modadd(poly_eval_offset(a_e[..len.full/2], sqr, offset), modmul(x, poly_eval_offset(a_o[..len.full/2], sqr, offset))) + poly_eval_offset(a[len.full..], x, len.full + 2*offset);
+                modadd(modadd(poly_eval_offset(a_e[..len.full/2], sqr, offset), modmul(x, poly_eval_offset(a_o[..len.full/2], sqr, offset))), poly_eval_offset(a[len.full..], x, len.full + 2*offset));
                     { 
                         poly_eval_split_lemma_helper(a[len.full..], a_e[len.full/2..], a_o[len.full/2..], new_len, x, len.full/2 + offset); 
                         assert even_indexed_terms(a[len.full..], new_len) == a_e[len.full/2..];
                         assert  odd_indexed_terms(a[len.full..], new_len) == a_o[len.full/2..];
                     }
-                modadd(poly_eval_offset(a_e[..len.full/2], sqr, offset), modmul(x, poly_eval_offset(a_o[..len.full/2], sqr, offset))) + 
-                    modadd(poly_eval_offset(a_e[len.full/2..], sqr, len.full/2 + offset), modmul(x, poly_eval_offset(a_o[len.full/2..], sqr, len.full/2 + offset)));
-
-                    { assume false; }
-
-                modadd(poly_eval_offset(a_e[..len.full/2], sqr, offset) + poly_eval_offset(a_e[len.full/2..], sqr, len.full/2 + offset), 
-                       modmul(x, poly_eval_offset(a_o[..len.full/2], sqr, offset) + poly_eval_offset(a_o[len.full/2..], sqr, len.full/2 + offset))); 
+                modadd(modadd(poly_eval_offset(a_e[..len.full/2], sqr, offset), modmul(x, poly_eval_offset(a_o[..len.full/2], sqr, offset))),
+                       modadd(poly_eval_offset(a_e[len.full/2..], sqr, len.full/2 + offset), modmul(x, poly_eval_offset(a_o[len.full/2..], sqr, len.full/2 + offset))));
+                    { modadd_reassociate(poly_eval_offset(a_e[..len.full/2], sqr, offset), modmul(x, poly_eval_offset(a_o[..len.full/2], sqr, offset)),
+                                         poly_eval_offset(a_e[len.full/2..], sqr, len.full/2 + offset), modmul(x, poly_eval_offset(a_o[len.full/2..], sqr, len.full/2 + offset))); }
+                modadd(modadd(poly_eval_offset(a_e[..len.full/2], sqr, offset), poly_eval_offset(a_e[len.full/2..], sqr, len.full/2 + offset)),
+                       modadd(modmul(x, poly_eval_offset(a_o[..len.full/2], sqr, offset)), modmul(x, poly_eval_offset(a_o[len.full/2..], sqr, len.full/2 + offset))));
+                    { modmul_distributes(x, poly_eval_offset(a_o[..len.full/2], sqr, offset), poly_eval_offset(a_o[len.full/2..], sqr, len.full/2 + offset)); }
+                modadd(modadd(poly_eval_offset(a_e[..len.full/2], sqr, offset), poly_eval_offset(a_e[len.full/2..], sqr, len.full/2 + offset)), 
+                       modmul(x, modadd(poly_eval_offset(a_o[..len.full/2], sqr, offset), poly_eval_offset(a_o[len.full/2..], sqr, len.full/2 + offset)))); 
                     { reveal poly_eval_offset(); }
-                modadd(mod_sum(epowers[..len.full/2]) + mod_sum(epowers[len.full/2..]), modmul(x, mod_sum(opowers[..len.full/2]) + mod_sum(opowers[len.full/2..])));
+                modadd(modadd(mod_sum(epowers[..len.full/2]), mod_sum(epowers[len.full/2..])), modmul(x, modadd(mod_sum(opowers[..len.full/2]), mod_sum(opowers[len.full/2..]))));
                     { 
                         mod_sum_adds(epowers[..len.full/2], epowers[len.full/2..]);  
                         assert epowers == epowers[..len.full/2] + epowers[len.full/2..]; 
