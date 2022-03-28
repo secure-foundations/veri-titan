@@ -16,6 +16,63 @@ module omegas {
 
     type elem = i :nat | i < Q
 
+    /*
+     // Unsuccessful experiment with proof by computation and fuel
+
+    function compute_powmodQ(base: nat, exp:nat) : (result:nat)
+      ensures result == Pow(base, exp) % Q
+    {
+      if exp == 0 then LemmaPow0(base); 1
+      else if exp == 1 then LemmaPow1(base); base % 12289
+      else if exp % 2 == 0 then
+        var part := compute_powmodQ(base, exp / 2);
+        calc {
+          Pow(base, exp);
+            { assert exp/2 + exp/2 == exp; }
+          Pow(base, exp/2 + exp/2);
+            { LemmaPowAdds(base, exp/2, exp/2); }
+          Pow(base, exp/2) * Pow(base, exp/2);
+        }
+        calc {
+          Pow(base, exp) % Q;
+          (Pow(base, exp/2) * Pow(base, exp/2)) % Q;
+            { LemmaMulModNoopGeneral(Pow(base, exp/2), Pow(base, exp/2), Q); }
+          ((Pow(base, exp/2) % Q) * (Pow(base, exp/2) % Q)) % Q;
+          (part * part) % Q;
+        }
+        (part * part) % 12289
+      else 
+        var rest := compute_powmodQ(base, exp - 1);
+        calc {
+          Pow(base, exp);
+            { LemmaPowAdds(base, 1, exp - 1); }
+          Pow(base, 1) * Pow(base, exp - 1);
+            { LemmaPow1(base); }
+          base * Pow(base, exp - 1);
+        }
+
+        calc {
+          Pow(base, exp) % Q;
+          (base * Pow(base, exp-1)) % Q;
+            { LemmaMulModNoopGeneral(base, Pow(base, exp-1), Q); }
+          (base * (Pow(base, exp-1) % Q)) % Q;
+          (base * rest) % Q;
+        }
+        (base * rest) % 12289
+    }
+
+    lemma {:fuel compute_powmodQ, 15} test() 
+    {
+      assert Pow2(L) == Pow2(11) == 2048 by { Lemma2To64(); }
+
+      //assert compute_powmodQ(G, 1024) == Q - 1;
+      assert compute_powmodQ(7, 1024) == 12289 - 1;
+//      assert Pow(G, 1024) % Q == 
+//      Pow(G, Pow2(L)/2) % Q 
+
+    }
+    */
+
     lemma nth_root_lemma_helper_specific()
       ensures ((Pow(7468, 16) % Q) * (Pow(7468, 16) % Q)) % Q
            == (10810 * 10810) % Q;
