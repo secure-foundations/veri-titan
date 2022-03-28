@@ -144,14 +144,14 @@ module rindex {
 
     // base case happens at level 1, chuck size is the whole array
     lemma ntt_indicies_inv_base_case(idxs: seq<index_t>, len: pow2_t, k: nat)
-        requires len == pow2(L) 
-        requires k < pow2_div(pow2(L), len).full
-        requires ntt_indicies_wf(idxs, len)
+        requires len == pow2(L);
+        requires k < pow2_div(pow2(L), len).full;
+        requires ntt_indicies_wf(idxs, len);
         requires forall i: nat :: i < len.full ==> idxs[i].v == i;
         ensures ntt_indicies_inv(idxs, len, k);
     {
         forall i: nat | i < len.full
-            ensures ToNatRight(idxs[i].bins[0..]) == i
+            ensures ToNatRight(idxs[i].bins[0..]) == i;
         {
             calc == {
                 ToNatRight(idxs[i].bins[0..]);
@@ -165,11 +165,11 @@ module rindex {
         assert k == 0;
 
         forall i: nat | i < len.full
-            ensures idxs[i].bins[..0] == Reverse(orignal_index(0, i, len).bins)[..0]
+            ensures idxs[i].bins[..0] == Reverse(orignal_index(0, i, len).bins)[..0];
         {
         }
         forall i: nat, j: nat | i < len.full && j < len.full
-            ensures idxs[i].bins[..0] == idxs[j].bins[..0]
+            ensures idxs[i].bins[..0] == idxs[j].bins[..0];
         {
         }
     }
@@ -309,9 +309,6 @@ module rindex {
                 k * (2 * (len.full / 2)) + i;
                 k * len.full + i;
             }
-
-
-            assert L - offset - 1 == len.exp - 1;
 
             assert orignal_index(k, i, len) == orignal;
 
@@ -481,11 +478,11 @@ module rindex {
     
             assert orignal_index(k, len'.full + i, len) == orignal;
 
-            // calc == {
-            //     idxs'[i].bins[..offset];
-            //     idxs[i].bins[..offset];
-            //     Reverse(orignal.bins[len.exp..]);
-            // }
+            calc == {
+                idxs'[i].bins[..offset];
+                idxs[i].bins[..offset];
+                Reverse(orignal.bins[len.exp..]);
+            }
     
             var obins := orignal.bins;
 
@@ -520,6 +517,74 @@ module rindex {
                 idxs'[i].bins[..offset] + [obins[len.exp-1]];
                 idxs'[i].bins[..offset] + [1];
                 idxs'[i].bins[..offset'];
+            }
+        }
+    }
+
+    lemma ntt_indicies_inv_consequence(idxs: seq<index_t>, len: pow2_t, k: nat)
+        requires len == pow2(1);
+        requires ntt_indicies_inv(idxs, len, k);
+        requires k < pow2_div(pow2(L), len).full
+        ensures forall i: nat | i < len.full ::
+            idxs[i].bins == Reverse(orignal_index(k, i, len).bins);
+    {
+        var offset := L - 1;
+        pow2_basics(len);
+
+        forall i: nat | i < len.full
+            ensures idxs[i].bins == Reverse(orignal_index(k, i, len).bins);
+        {
+            var orignal := orignal_index(k, i, len);
+            var obins := orignal.bins;
+            var bins := idxs[i].bins;
+
+            calc ==> {
+                ToNatRight(bins[offset..]) == i;
+                {
+                    LemmaSeqLen1(bins[offset..]);
+                }
+                bins[offset..][0] == i;
+                bins[offset] == i;
+            }
+
+            calc == {
+                obins[0];
+                {
+                    LemmaSeqLswModEquivalence(obins);
+                }
+                orignal.v % 2;
+                (k * len.full + i) % 2;
+                {
+                    LemmaMulIsCommutativeAuto();
+                }
+                (len.full * k + i) % 2;
+                {
+                    LemmaAddModNoop(len.full * k, i, 2);
+                }
+                ((len.full * k) % 2 + i % 2) % 2;
+                {
+                    pow2_basics(len);
+                    assert (len.full * k) % 2 == 0;
+                }
+                (i % 2) % 2;
+                i % 2;
+                i;
+            }
+
+            calc == {
+                bins;
+                bins[..L-1] + [bins[offset]];
+                {
+                    assert bins[..L-1] == Reverse(obins[1..]);
+                }
+                Reverse(obins[1..]) + [bins[offset]];
+                Reverse(obins[1..]) + [i];
+                Reverse(obins[1..]) + [obins[0]];
+                {
+                    SubSeqReverseProperty(obins, 1);
+                }
+                Reverse(obins[0..]);
+                Reverse(obins);
             }
         }
     }
