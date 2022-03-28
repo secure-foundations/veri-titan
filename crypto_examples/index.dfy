@@ -4,6 +4,8 @@ include "bins.dfy"
 module rindex {
     import opened Power
     import opened Seq
+    import opened Mul
+    import opened DivMod
 
     import opened omegas
     import opened pows_of_2
@@ -100,18 +102,59 @@ module rindex {
             idxs[i].bound == pow2(L))
     }
 
-    predicate ntt_indicies_inv(idxs: seq<index_t>, len: pow2_t)
+    function orignal_index(which_chunk: nat, which_slot: nat, len: pow2_t): index_t
+        requires len.full <= N == Pow2(L)
+        requires len.exp <= L
+        requires which_chunk < pow2_div(pow2(L), len).full
+        requires which_slot < len.full
     {
-        && ntt_indicies_wf(idxs, len)
-        && (forall i: nat :: i < len.full ==> 
-            ToNatRight(idxs[i].bins[(L - len.exp)..]) == i)
+        LemmaMulStrictlyPositive(which_chunk, len.full);
+        assert Pow2(L - len.exp) == N / len.full;
+        var temp := Pow2(L - len.exp) - 1;
+        assert which_chunk * len.full <= N - len.full by {
+            LemmaMulInequality(which_chunk, temp, len.full);
+            assert which_chunk * len.full <= temp * len.full;
+            LemmaMulIsDistributiveAuto();
+        }
+        build_index(which_chunk * len.full + which_slot)
     }
 
-    lemma ntt_indicies_inv_base_case(idxs: seq<index_t>, len: pow2_t)
-        requires len == pow2(L)
+    predicate ntt_indicies_inv(idxs: seq<index_t>, len: pow2_t, k: nat)
+    {
+        && N == Pow2(L)
+        && len.full <= N
+        && len.exp <= L
+        && k < pow2_div(pow2(L), len).full
+        && ntt_indicies_wf(idxs, len)
+        && var offset := L - len.exp;
+        && (forall i: nat | i < len.full :: (
+            && var orignal := orignal_index(k, i, len);
+            // the higher bits equal to i
+            && ToNatRight(idxs[i].bins[offset..]) == i
+            // the lower bits equal to the reverse of the original index (up to offset)
+            && idxs[i].bins[..offset] == Reverse(orignal.bins[len.exp..])))
+        && (forall i: nat, j: nat | i < len.full && j < len.full ::
+            && idxs[i].bins[..offset] == idxs[j].bins[..offset])
+    }
+
+    // lemma ntt_indicies_lower_bits_equal(idxs: seq<index_t>, len: pow2_t, k: nat)
+    //     requires k < pow2(L - len.exp)
+    //     requires len.full <= N
+    //     requires ntt_indicies_wf(idxs, len)
+    //     // requires idxs[i].bins[..offset] == 
+    // {
+    //     var offset := L - len.exp;
+    //     forall i, j :: 0 <= i < len.full && 0 <= j < len.full
+    //         ensures 
+    // }
+
+    // base case happens at level 1, chuck size is the whole array
+    lemma ntt_indicies_inv_base_case(idxs: seq<index_t>, len: pow2_t, k: nat)
+        requires len == pow2(L) 
+        requires k < pow2_div(pow2(L), len).full
         requires ntt_indicies_wf(idxs, len)
         requires forall i: nat :: i < len.full ==> idxs[i].v == i;
-        requires ntt_indicies_inv(idxs, len)
+        ensures ntt_indicies_inv(idxs, len, k);
     {
         forall i: nat | i < len.full
             ensures ToNatRight(idxs[i].bins[0..]) == i
@@ -123,6 +166,18 @@ module rindex {
                 i;
             }
         }
+
+        nth_root_lemma();
+        assert k == 0;
+
+        forall i: nat | i < len.full
+            ensures idxs[i].bins[..0] == Reverse(orignal_index(0, i, len).bins)[..0]
+        {
+        }
+        forall i: nat, j: nat | i < len.full && j < len.full
+            ensures idxs[i].bins[..0] == idxs[j].bins[..0]
+        {
+        }
     }
 
     function method even_indexed_indices(idxs: seq<index_t>, len: pow2_t): (idx': seq<index_t>)
@@ -133,24 +188,53 @@ module rindex {
         seq(len.full/2, n requires 0 <= n < len.full/2 => idxs[n * 2])
     }
 
-    lemma even_indexed_indices_reorder(idxs: seq<index_t>, len: pow2_t, idxs': seq<index_t>)
+    lemma SubSeqReverseProperty<T>(s: seq<T>, i: nat)
+        requires 0 < i <= |s|;
+        ensures Reverse(s[i..]) + [s[i-1]] == Reverse(s[i-1..]);
+    {
+        var l1 := |s| - i;
+        var l2 := |s| - i + 1;
+        var s1, s2 := s[i..], s[i-1..];
+
+        var x := Reverse(s1);
+        var y := Reverse(s2);
+
+        assert forall j | 0 <= j < l1 :: x[j] == s1[l1 - j - 1];
+        assert forall j | 0 <= j < l2 :: y[j] == s2[l2 - j - 1];
+
+        forall j | 0 <= j < l1
+            ensures x[j] == y[j];
+        {
+        }
+
+        assert x + [y[l1]] == y;
+        assert y[l1] == s2[0] == s[i - 1];
+
+        assert x + [s[i-1]] ==  y;
+    }
+
+    lemma even_indexed_indices_reorder(idxs: seq<index_t>, len: pow2_t, idxs': seq<index_t>, k: nat)
         requires len.full >= 2;
-        requires ntt_indicies_inv(idxs, len); 
+        requires ntt_indicies_inv(idxs, len, k); 
+        requires k < pow2_div(pow2(L), len).full
         requires even_indexed_indices(idxs, len) == idxs';
-        ensures ntt_indicies_inv(idxs', pow2_half(len));
+        // ensures ntt_indicies_inv(idxs', pow2_half(len), pow2_half(len).full * k);
     {
         var len' := pow2_half(len);
         assert ntt_indicies_wf(idxs', len');
 
+        var offset := L - len.exp;
+        var offset' := offset + 1;
+
         forall i: nat | i < len'.full
-            ensures ToNatRight(idxs'[i].bins[(L - len'.exp)..]) == i
+            ensures ToNatRight(idxs'[i].bins[offset'..]) == i
+            ensures idxs'[i].bins[offset] == 0
         {
             var bins := idxs[i * 2].bins;
             assert bins == idxs'[i].bins;
 
-            var offset := L - len.exp;
             var prev := bins[offset..];
-            var curr := bins[offset+1..];
+            var curr := bins[offset'..];
 
             calc == {
                 2 * i;
@@ -161,19 +245,173 @@ module rindex {
                     reveal ToNatRight();
                 }
                 ToNatRight(curr) * 2 + bins[offset];
-                {
-                    LemmaSeqLswModEquivalence(prev);
-                    assert ToNatRight(prev) == 2 * i;
-                    assert bins[offset] == 0;
-                }
-                ToNatRight(curr) * 2;
             }
+
+            assert bins[offset] == 0 by {
+                LemmaSeqLswModEquivalence(prev);
+                assert ToNatRight(prev) == 2 * i;
+            }
+
+            assert 2 * i == ToNatRight(curr) * 2;
 
             calc == {
                 i;
                 ToNatRight(curr);
-                ToNatRight(idxs'[i].bins[(L - len'.exp)..]);
+                ToNatRight(idxs'[i].bins[offset'..]);
+            }
+        }
+
+        forall i: nat, j: nat | i < len'.full && j < len'.full
+            ensures idxs'[i].bins[..offset'] == idxs'[j].bins[..offset']
+        {
+            var i_bins := idxs[i * 2].bins;
+            assert i_bins == idxs'[i].bins;
+
+            var j_bins := idxs[j * 2].bins;
+            assert j_bins == idxs'[j].bins;
+
+            assert i_bins[..offset] == j_bins[..offset];
+
+            calc == {
+                i_bins[..offset'];
+                i_bins[..offset] + [i_bins[offset]];
+                i_bins[..offset] + [0];
+                j_bins[..offset] + [j_bins[offset]];
+                j_bins[..offset'];
+            }
+        }
+
+        var k' := k * 2;
+
+        calc {
+            k';
+            k * 2;
+        <   
+            pow2(L - len.exp).full * 2;
+            { pow2_basics(pow2(1)); }
+            pow2(L - len.exp).full * pow2(1).full;
+            { var _ := pow2_mul(pow2(L - len.exp), pow2(1)); }
+            pow2(L - len.exp + 1).full;
+            pow2(L - len'.exp).full;
+            { var _ := pow2_div(pow2(L), pow2(len.exp)); }
+            pow2_div(pow2(L), len').full;
+        }
+
+        forall i: nat | i < len'.full
+            ensures idxs'[i].bins[..offset'] ==
+                Reverse(orignal_index(k', i, len').bins[len'.exp..])
+        {
+            pow2_basics(len);
+
+            var orignal := orignal_index(k', i, len');
+
+            calc == {
+                orignal.v;
+                k' * len'.full + i;
+                2 * k * (len.full / 2) + i;
+                {
+                    LemmaMulIsAssociativeAuto();
+                }
+                k * (2 * (len.full / 2)) + i;
+                k * len.full + i;
+            }
+
+
+            assert L - offset - 1 == len.exp - 1;
+
+            assert orignal_index(k, i, len) == orignal;
+
+            calc == {
+                idxs'[i].bins[..offset];
+                idxs[i].bins[..offset];
+                Reverse(orignal.bins[len.exp..]);
+            }
+
+            var obins := orignal.bins;
+
+            calc == {
+                obins[len.exp-1];
+                {
+                    BitSelModEquivalence(obins, len.exp-1);
+                }
+                (ToNatRight(obins) / Pow(2, len.exp-1)) % 2;
+                {
+                    assert Pow(2, len.exp-1) == Pow(2, len'.exp);
+                    assert Pow(2, len'.exp) == len'.full;
+                }
+                (orignal.v / len'.full) % 2;
+                ((k' * len'.full + i) / len'.full) % 2;
+                {
+                    LemmaFundamentalDivModConverse(orignal.v, len'.full, k', i);
+                    assert (k' * len'.full + i) / len'.full == k';
+                }
+                k' % 2;
+                0;
+            }
+
+            calc == {
+                Reverse(obins[len'.exp..]);
+                Reverse(obins[len.exp-1..]);
+                {
+                    SubSeqReverseProperty(obins, len.exp);
+                }
+                Reverse(obins[len.exp..]) + [obins[len.exp-1]];
+                idxs'[i].bins[..offset] + [obins[len.exp-1]];
+                idxs'[i].bins[..offset] + [0];
+                idxs'[i].bins[..offset'];
             }
         }
     }
+
+//     function method odd_indexed_indices(idxs: seq<index_t>, len: pow2_t): (idx': seq<index_t>)
+//         requires |idxs| == len.full >= 2;
+//         ensures |idx'| == len.full / 2;
+//     {
+//         pow2_basics(len);
+//         seq(len.full/2, n requires 0 <= n < len.full/2 => idxs[n * 2 + 1])
+//     }
+
+//    lemma odd_indexed_indices_reorder(idxs: seq<index_t>, len: pow2_t, idxs': seq<index_t>)
+//         requires len.full >= 2;
+//         requires ntt_indicies_inv(idxs, len); 
+//         requires odd_indexed_indices(idxs, len) == idxs';
+//         ensures ntt_indicies_inv(idxs', pow2_half(len));
+//     {
+//         var len' := pow2_half(len);
+//         assert ntt_indicies_wf(idxs', len');
+
+//         forall i: nat | i < len'.full
+//             ensures ToNatRight(idxs'[i].bins[(L - len'.exp)..]) == i
+//         {
+//             var bins := idxs[i * 2 + 1].bins;
+//             assert bins == idxs'[i].bins;
+
+//             var offset := L - len.exp;
+//             var prev := bins[offset..];
+//             var curr := bins[offset'..];
+
+//             calc == {
+//                 2 * i + 1;
+//                 ToNatRight(prev);
+//                 {
+//                     assert [bins[offset]] + curr == prev;
+//                     assert DropFirst(prev) == curr;
+//                     reveal ToNatRight();
+//                 }
+//                 ToNatRight(curr) * 2 + bins[offset];
+//                 {
+//                     LemmaSeqLswModEquivalence(prev);
+//                     assert ToNatRight(prev) == 2 * i + 1;
+//                     assert bins[offset] == 1;
+//                 }
+//                 ToNatRight(curr) * 2 + 1;
+//             }
+
+//             calc == {
+//                 i;
+//                 ToNatRight(curr);
+//                 ToNatRight(idxs'[i].bins[(L - len'.exp)..]);
+//             }
+//         }
+//     }
 }
