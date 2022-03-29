@@ -1,5 +1,6 @@
 include "pow2.dfy"
 include "omega.dfy"
+include "index.dfy"
 
 module ntt_rec {
     import opened Seq
@@ -9,6 +10,7 @@ module ntt_rec {
     import opened Mul
     import opened pows_of_2
     import opened omegas
+    import opened rindex
 
     function {:opaque} poly_eval(a: seq<elem>, x: elem): elem
     {
@@ -314,10 +316,183 @@ module ntt_rec {
             }
             a[0];
         }
-
     }
 
-    method ntt_rec(a: seq<elem>, len: pow2_t) returns (y: seq<elem>)
+    // method ntt_rec(a: seq<elem>, len: pow2_t) returns (y: seq<elem>)
+    //     // requires len.exp == L ==> a == A();
+    //     requires 1 <= len.full;
+    //     requires len.exp <= L;
+    //     requires |a| == len.full;
+    //     ensures poly_eval_all_points(a, y, len)
+    //     decreases len.full
+    // {
+    //     if len.full == 1 {
+    //         ntt_rec_base_case(a, len);
+    //         return a;
+    //     }
+
+    //     var len' := pow2_half(len);
+    //     var a_e := even_indexed_terms(a, len');
+    //     var a_o := odd_indexed_terms(a, len');
+
+    //     var y_e := ntt_rec(a_e, len');
+    //     var y_o := ntt_rec(a_o, len');
+
+    //     y := seq(len.full, n requires 0 <= n < len.full => 0);
+
+    //     var omgn := omega_n(len);
+    //     var omg := 1;
+    //     var k := 0;
+
+    //     assert omg == modpow(omgn, 0) by {
+    //         LemmaPow0Auto();
+    //     }
+
+    //     while (k < len'.full)
+    //         invariant k <= len'.full;
+    //         invariant |y| == len.full;
+    //         invariant len.full == len'.full * 2;
+
+    //         invariant omg == modpow(omgn, k);
+    //         invariant forall i: nat :: i < k ==> (
+    //             && y[i] == poly_eval(a, omega_nk(len, i))
+    //             && y[i + len'.full] == poly_eval(a, omega_nk(len, i + len'.full)))
+            
+    //         decreases len'.full - k;
+    //     {
+    //         var y_e_k := y_e[k];
+    //         var y_o_k := y_o[k];
+
+    //         assert y_e_k == poly_eval(a_e, omega_nk(len', k));
+    //         assert y_o_k == poly_eval(a_o, omega_nk(len', k));
+
+    //         var y_k := modadd(y_e_k, modmul(omg, y_o_k));
+    //         y := y[k := y_k];
+
+    //         var y_k' := modsub(y_e_k, modmul(omg, y_o_k));
+    //         y := y[k + len'.full := y_k'];
+
+    //         y_k_value(a, a_e, a_o, len', len, 
+    //             omg, k, y_e_k, y_o_k, y_k);
+
+    //         y_k'_value(a, a_e, a_o, len', len, 
+    //             omg, k, y_e_k, y_o_k, y_k');
+
+    //         omg_inv(omgn, omg, len, k);
+    //         omg := modmul(omg, omgn);
+
+        
+    //         k := k + 1;
+    //     }
+
+    //     forall i: nat
+    //         ensures i < len.full ==> y[i] == poly_eval(a, omega_nk(len, i))
+    //     {
+    //         if i < len'.full {
+    //             assert y[i] == poly_eval(a, omega_nk(len, i));
+    //         } else if i < len.full {
+    //             var j := i - len'.full;
+    //             assert y[j + len'.full] ==
+    //                 poly_eval(a, omega_nk(len, j + len'.full));
+    //         }
+    //     }
+    // }
+
+    function method compute_y_k(a: seq<elem>,
+        a_e: seq<elem>, a_o: seq<elem>,
+        y_e: seq<elem>, y_o: seq<elem>,
+        len: pow2_t, k: nat): (y_k: elem)
+        requires len.exp <= L;
+        requires 1 < |a| == len.full;
+        requires k < pow2_half(len).full;
+        requires a_e == even_indexed_terms(a, pow2_half(len));
+        requires a_o == odd_indexed_terms(a, pow2_half(len));
+        requires poly_eval_all_points(a_e, y_e, pow2_half(len));
+        requires poly_eval_all_points(a_o, y_o, pow2_half(len));
+        ensures y_k == poly_eval(a, omega_nk(len, k));
+    {
+        var len' := pow2_half(len);
+        var y_e_k := y_e[k];
+        var y_o_k := y_o[k];
+
+        var omg := modpow(omega_n(len), k);
+        assert y_e_k == poly_eval(a_e, omega_nk(len', k));
+        assert y_o_k == poly_eval(a_o, omega_nk(len', k));
+
+        var r := modadd(y_e_k, modmul(omg, y_o_k));
+
+        y_k_value(a, a_e, a_o, len', len, 
+            omg, k, y_e_k, y_o_k, r);
+
+        r
+    }
+
+    function method compute_y_ks(a: seq<elem>, 
+        a_e: seq<elem>, a_o: seq<elem>,
+        y_e: seq<elem>, y_o: seq<elem>,
+        len: pow2_t): (a': seq<elem>)
+        requires len.exp <= L;
+        requires 1 < |a| == len.full;
+        requires a_e == even_indexed_terms(a, pow2_half(len));
+        requires a_o == odd_indexed_terms(a, pow2_half(len));
+        requires poly_eval_all_points(a_e, y_e, pow2_half(len));
+        requires poly_eval_all_points(a_o, y_o, pow2_half(len));
+        ensures |a'| == pow2_half(len).full;
+        ensures forall i: nat | i < |a'| :: a'[i] == poly_eval(a, omega_nk(len, i));
+    {
+        var half := pow2_half(len).full;
+        seq(half, i requires 0 <= i < half => 
+            compute_y_k(a, a_e, a_o, y_e, y_o, len, i))
+    }
+
+    function method compute_y_k'(a: seq<elem>,
+        a_e: seq<elem>, a_o: seq<elem>,
+        y_e: seq<elem>, y_o: seq<elem>,
+        len: pow2_t, k: nat): (y_k: elem)
+        requires len.exp <= L;
+        requires 1 < |a| == len.full;
+        requires k < pow2_half(len).full;
+        requires a_e == even_indexed_terms(a, pow2_half(len));
+        requires a_o == odd_indexed_terms(a, pow2_half(len));
+        requires poly_eval_all_points(a_e, y_e, pow2_half(len));
+        requires poly_eval_all_points(a_o, y_o, pow2_half(len));
+        ensures y_k == poly_eval(a, omega_nk(len, k + pow2_half(len).full));
+    {
+        var len' := pow2_half(len);
+        var y_e_k := y_e[k];
+        var y_o_k := y_o[k];
+
+        var omg := modpow(omega_n(len), k);
+        assert y_e_k == poly_eval(a_e, omega_nk(len', k));
+        assert y_o_k == poly_eval(a_o, omega_nk(len', k));
+
+        var r := modsub(y_e_k, modmul(omg, y_o_k));
+
+        y_k'_value(a, a_e, a_o, len', len, 
+            omg, k, y_e_k, y_o_k, r);
+
+        r
+    }
+    
+    function method compute_y_k's(a: seq<elem>, 
+        a_e: seq<elem>, a_o: seq<elem>,
+        y_e: seq<elem>, y_o: seq<elem>,
+        len: pow2_t): (a': seq<elem>)
+        requires len.exp <= L;
+        requires 1 < |a| == len.full;
+        requires a_e == even_indexed_terms(a, pow2_half(len));
+        requires a_o == odd_indexed_terms(a, pow2_half(len));
+        requires poly_eval_all_points(a_e, y_e, pow2_half(len));
+        requires poly_eval_all_points(a_o, y_o, pow2_half(len));
+        ensures |a'| == pow2_half(len).full;
+        ensures forall i: nat | i < |a'| :: a'[i] == poly_eval(a, omega_nk(len, i+ pow2_half(len).full));
+    {
+        var half := pow2_half(len).full;
+        seq(half, i requires 0 <= i < half => 
+            compute_y_k'(a, a_e, a_o, y_e, y_o, len, i))
+    }
+
+    function method ntt_rec(a: seq<elem>, len: pow2_t) : (y: seq<elem>)
         // requires len.exp == L ==> a == A();
         requires 1 <= len.full;
         requires len.exp <= L;
@@ -325,80 +500,77 @@ module ntt_rec {
         ensures poly_eval_all_points(a, y, len)
         decreases len.full
     {
-        if len.full == 1 {
+        if len.full == 1 then 
             ntt_rec_base_case(a, len);
-            return a;
-        }
+            a
+        else
+            var len' := pow2_half(len);
+            var a_e := even_indexed_terms(a, len');
+            var a_o := odd_indexed_terms(a, len');
 
-        var len' := pow2_half(len);
-        var a_e := even_indexed_terms(a, len');
-        var a_o := odd_indexed_terms(a, len');
+            var y_e := ntt_rec(a_e, len');
+            var y_o := ntt_rec(a_o, len');
 
-        var y_e := ntt_rec(a_e, len');
-        var y_o := ntt_rec(a_o, len');
+            var y_ks := compute_y_ks(a, a_e, a_o, y_e, y_o, len);
+            var y_k's := compute_y_k's(a, a_e, a_o, y_e, y_o, len);
+            var y := y_ks + y_k's;
 
-        // if len.exp == L {
-        //     assert a_e == even_indexed_terms(A(), len');
-        // }
-
-        y := seq(len.full, n requires 0 <= n < len.full => 0);
-
-        var omgn := omega_n(len);
-        var omg := 1;
-        var k := 0;
-
-        assert omg == modpow(omgn, 0) by {
-            LemmaPow0Auto();
-        }
-
-        while (k < len'.full)
-            invariant k <= len'.full;
-            invariant |y| == len.full;
-            invariant len.full == len'.full * 2;
-
-            invariant omg == modpow(omgn, k);
-            invariant forall i: nat :: i < k ==> (
-                && y[i] == poly_eval(a, omega_nk(len, i))
-                && y[i + len'.full] == poly_eval(a, omega_nk(len, i + len'.full)))
-            
-            decreases len'.full - k;
-        {
-            var y_e_k := y_e[k];
-            var y_o_k := y_o[k];
-
-            assert y_e_k == poly_eval(a_e, omega_nk(len', k));
-            assert y_o_k == poly_eval(a_o, omega_nk(len', k));
-
-            var y_k := modadd(y_e_k, modmul(omg, y_o_k));
-            y := y[k := y_k];
-
-            var y_k' := modsub(y_e_k, modmul(omg, y_o_k));
-            y := y[k + len'.full := y_k'];
-
-            y_k_value(a, a_e, a_o, len', len, 
-                omg, k, y_e_k, y_o_k, y_k);
-
-            y_k'_value(a, a_e, a_o, len', len, 
-                omg, k, y_e_k, y_o_k, y_k');
-
-            omg_inv(omgn, omg, len, k);
-            omg := modmul(omg, omgn);
-
-        
-            k := k + 1;
-        }
-
-        forall i: nat
-            ensures i < len.full ==> y[i] == poly_eval(a, omega_nk(len, i))
-        {
-            if i < len'.full {
-                assert y[i] == poly_eval(a, omega_nk(len, i));
-            } else if i < len.full {
-                var j := i - len'.full;
-                assert y[j + len'.full] ==
-                    poly_eval(a, omega_nk(len, j + len'.full));
+            assert forall i: nat | i < len.full ::
+                y[i] == poly_eval(a, omega_nk(len, i)) by {
+                forall i: nat | i < len.full
+                    ensures y[i] == poly_eval(a, omega_nk(len, i))
+                {
+                    if i < len'.full {
+                        assert y[i] == y_ks[i];
+                    } else {
+                        var j := i - len'.full;
+                        assert y[i] == y_k's[j];
+                    }
+                }
             }
-        }
+            y
     }
+
+    function method A(): seq<elem>
+        ensures |A()| == N == pow2(L).full;
+
+    function method Ar(): seq<elem>
+        ensures |Ar()| == N == pow2(L).full;
+        ensures forall i | 0 <= i < N ::
+            Ar()[i] == A()[build_rev_index(i).v];
+
+    function method {:fuel 1} build_level_chunks(len: pow2_t): (cs: seq<seq<elem>>)
+        requires 1 <= len.exp <= L
+        ensures |cs| == pow2_div(pow2(L), len).full;
+        ensures forall i | 0 <= i < |cs| :: |cs[i]| == len.full
+        decreases L - len.exp
+    {
+        if len.exp == L then [A()]
+        else 
+            var a := build_level_chunks(pow2_double(len));
+            assert |a| == pow2(L - len.exp - 1).full by {
+                assert |a| == pow2(L).full / (pow2(len.exp + 1).full);
+                reveal Pow2();
+                assert len.exp + 1 <= L;
+                LemmaPowSubtracts(2, len.exp + 1, L);
+            }
+            assert |a| * 2 == pow2(L - len.exp).full by {
+                reveal Pow2();
+                LemmaPowAdds(2, L - len.exp - 1, 1);
+                LemmaPow1(2);
+            }
+            seq(|a| * 2, k requires 0 <= k < |a| * 2 => 
+                if k % 2 == 0 then even_indexed_terms(a[k/2], len)
+                else odd_indexed_terms(a[(k-1)/2], len))
+    }
+
+    function method get_level_chunk(len: pow2_t, ki: nat): (chunk: seq<elem>)
+        requires 1 <= len.exp <= L
+        requires ki < pow2_div(pow2(L), len).full;
+        ensures |chunk| == len.full
+    {
+        build_level_chunks(len)[ki]
+    }
+
 }
 

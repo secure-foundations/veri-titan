@@ -13,47 +13,6 @@ module ntt {
     import opened ntt_rec
     import opened rindex
 
-    function method A(): seq<elem>
-        ensures |A()| == N == pow2(L).full;
-
-    function method Ar(): seq<elem>
-        ensures |Ar()| == N == pow2(L).full;
-        ensures forall i | 0 <= i < N ::
-            Ar()[i] == A()[build_rev_index(i).v];
-
-    function method {:fuel 4} build_level_chunks(len: pow2_t): (cs: seq<seq<elem>>)
-        requires 1 <= len.exp <= L
-        ensures |cs| == pow2_div(pow2(L), len).full;
-        ensures forall i | 0 <= i < |cs| :: |cs[i]| == len.full
-        decreases L - len.exp
-    {
-        if len.exp == L then [A()]
-        else 
-            var a := build_level_chunks(pow2_double(len));
-            assert |a| == pow2(L - len.exp - 1).full by {
-                assert |a| == pow2(L).full / (pow2(len.exp + 1).full);
-                reveal Pow2();
-                assert len.exp + 1 <= L;
-                LemmaPowSubtracts(2, len.exp + 1, L);
-            }
-            assert |a| * 2 == pow2(L - len.exp).full by {
-                reveal Pow2();
-                LemmaPowAdds(2, L - len.exp - 1, 1);
-                LemmaPow1(2);
-            }
-            seq(|a| * 2, k requires 0 <= k < |a| * 2 => 
-                if k % 2 == 0 then even_indexed_terms(a[k/2], len)
-                else odd_indexed_terms(a[(k-1)/2], len))
-    }
-
-    function method get_level_chunk(len: pow2_t, ki: nat): (chunk: seq<elem>)
-        requires 1 <= len.exp <= L
-        requires ki < pow2_div(pow2(L), len).full;
-        ensures |chunk| == len.full
-    {
-        build_level_chunks(len)[ki]
-    }
-
     lemma index_bounded_lemma(
         j: nat, k: nat, ki: nat,
         m: pow2_t)
@@ -100,11 +59,10 @@ module ntt {
         requires a'[k] == modadd(u, t);
         requires a'[k+1] == modsub(u, t);
 
-        ensures a'[k] == poly_eval(Ar()[k..k+2], omega_nk(m, 0));
-        ensures a'[k+1] == poly_eval(Ar()[k..k+2], omega_nk(m, 1));
-        // ensures Ar()[k..k+2] == get_level_chunk();
+        ensures Ar()[k..k+2] == get_level_chunk(m, ki);
+        ensures a'[k] == poly_eval(get_level_chunk(m, ki), omega_nk(m, 0));
+        ensures a'[k+1] == poly_eval(get_level_chunk(m, ki), omega_nk(m, 1));
     {
-        // nth_root_lemma();
         pow2_basics(m);
         var m' := pow2_half(m);
 
@@ -141,6 +99,9 @@ module ntt {
 
         y_k'_value(chunk, even, odd, pow2(0), pow2(1),
             omg, 0, u, t, a'[k+1]);
+
+        // assert |get_level_chunk(m, ki)| == 2;
+        assume Ar()[k..k+2] == get_level_chunk(m, ki);
     }
 
     method ntt_chunk_loop(a: seq<elem>, k: nat, ki: nat, m: pow2_t)
@@ -181,6 +142,7 @@ module ntt {
             invariant a[..k] == a'[..k];
             invariant a[k+j..k+len'.full] == a'[k+j..k+len'.full];
             invariant a[k+len'.full+j..] == a'[k+len'.full+j..];
+            
         {
             index_bounded_lemma(j, k, ki, m);
             var t := modmul(omg, a[k + j + len'.full]);
