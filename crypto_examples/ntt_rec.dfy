@@ -389,8 +389,8 @@ module ntt_rec {
     //     }
     // }
 
-    function method compute_y_k(a: seq<elem>,
-        a_e: seq<elem>, a_o: seq<elem>,
+    function method compute_y_k(ghost a: seq<elem>,
+        ghost a_e: seq<elem>, ghost a_o: seq<elem>,
         y_e: seq<elem>, y_o: seq<elem>,
         len: pow2_t, k: nat): (y_k: elem)
         requires len.exp <= L;
@@ -418,8 +418,8 @@ module ntt_rec {
         r
     }
 
-    function method compute_y_ks(a: seq<elem>, 
-        a_e: seq<elem>, a_o: seq<elem>,
+    function method compute_y_ks(ghost a: seq<elem>, 
+        ghost a_e: seq<elem>, ghost a_o: seq<elem>,
         y_e: seq<elem>, y_o: seq<elem>,
         len: pow2_t): (a': seq<elem>)
         requires len.exp <= L;
@@ -436,8 +436,8 @@ module ntt_rec {
             compute_y_k(a, a_e, a_o, y_e, y_o, len, i))
     }
 
-    function method compute_y_k'(a: seq<elem>,
-        a_e: seq<elem>, a_o: seq<elem>,
+    function method compute_y_k'(ghost a: seq<elem>,
+        ghost a_e: seq<elem>, ghost a_o: seq<elem>,
         y_e: seq<elem>, y_o: seq<elem>,
         len: pow2_t, k: nat): (y_k: elem)
         requires len.exp <= L;
@@ -465,8 +465,8 @@ module ntt_rec {
         r
     }
     
-    function method compute_y_k's(a: seq<elem>, 
-        a_e: seq<elem>, a_o: seq<elem>,
+    function method compute_y_k's(ghost a: seq<elem>, 
+        ghost a_e: seq<elem>, ghost a_o: seq<elem>,
         y_e: seq<elem>, y_o: seq<elem>,
         len: pow2_t): (a': seq<elem>)
         requires len.exp <= L;

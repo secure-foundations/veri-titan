@@ -61,25 +61,39 @@ module ntt_rec2 {
     //         ys'
     // }
 
-    function method ntt_rec2(a: seq<elem>, len: pow2_t, ghost idxs: seq<index_t>, ghost ki: nat) : (y: seq<elem>)
+    function method ntt_rec2(ghost a: seq<elem>, len: pow2_t, ghost idxs: seq<index_t>, ki: nat) : (y: seq<elem>)
         requires 2 <= len.full;
         requires len.exp <= L;
         requires |a| == |idxs| == len.full;
         requires ki < pow2_div(pow2(L), len).full;
         requires ntt_indicies_inv(a, idxs, len, ki); 
         ensures poly_eval_all_points(a, y, len);
-        // ensures len.full == 2 ==> 
-        //     idxs[0].bins == Reverse(orignal_index(ki, 0, len).bins);
-        // ensures len.full == 2 ==> 
-        //     idxs[1].bins == Reverse(orignal_index(ki, 1, len).bins);
         decreases len.full
     {
         if len.full == 2 then 
             var len' := pow2_half(len);
             pow2_basics(len');
 
-            var a_e := even_indexed_terms(a, len);
-            var a_o := odd_indexed_terms(a, len);
+            ntt_indicies_inv_consequence(a, idxs, len, ki);
+
+            var a_e := [Ar()[ki * len.full]];
+            var a_o := [Ar()[ki * len.full + 1]];
+
+            calc == {
+                a_e[0];
+                Ar()[ki * len.full];
+                A()[idxs[0].v];
+                a[0];
+                even_indexed_terms(a, len)[0];
+            }
+
+            calc == {
+                a_o[0];
+                Ar()[ki * len.full + 1];
+                A()[idxs[1].v];
+                a[1];
+                odd_indexed_terms(a, len)[0];
+            }
 
             assert a_e[0] == poly_eval(a_e, omega_nk(len', 0)) by {
                 assert a_e[0] == a[0];
@@ -93,12 +107,11 @@ module ntt_rec2 {
             var y_ks := compute_y_k(a, a_e, a_o, a_e, a_o, len, 0);
             var y_k's := compute_y_k'(a, a_e, a_o, a_e, a_o, len, 0);
 
-            ntt_indicies_inv_consequence(a, idxs, len, ki);
             [y_ks, y_k's]
         else
             var len' := pow2_half(len);
-            var a_e := even_indexed_terms(a, len);
-            var a_o := odd_indexed_terms(a, len);
+            ghost var a_e := even_indexed_terms(a, len);
+            ghost var a_o := odd_indexed_terms(a, len);
 
             ghost var idx_e := even_indexed_indices(idxs, len);
             ghost var idx_o := odd_indexed_indices(idxs, len);
