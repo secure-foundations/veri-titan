@@ -35,6 +35,13 @@ module poly_eval {
         else modadd(s[0], mod_sum(s[1..]))
     }
 
+    lemma mod_sum2(s: seq<elem>)
+      requires |s| == 2;
+      ensures mod_sum(s) == modadd(s[0], s[1])
+    {
+      assert mod_sum(s) == modadd(s[0], mod_sum(s[1..]));
+    }
+
     lemma mod_sum_adds(s1: seq<elem>, s2: seq<elem>) 
         ensures mod_sum(s1 + s2) == modadd(mod_sum(s1), mod_sum(s2))
     {
@@ -91,6 +98,9 @@ module poly_eval {
     lemma {:axiom} modmul_distributes(x: elem, y: elem, z: elem)
         ensures modmul(x, modadd(y, z)) == modadd(modmul(x, y), modmul(x, z))
     
+    lemma {:axiom} modmul_associates(x: elem, y: elem, z: elem)
+        ensures modmul(x, modmul(y, z)) == modmul(modmul(x, y), z)
+
     lemma {:axiom} modadd_associates(x: elem, y: elem, z: elem)
         ensures modadd(x, modadd(y, z)) == modadd(modadd(x, y), z)
 
@@ -127,6 +137,10 @@ module poly_eval {
 //          
     }
 
+    lemma modpow_group(x:elem, offset:nat)
+      ensures modpow(modmul(x, x), offset) == modpow(x, 2*offset)
+      ensures modmul(x, modpow(x, 2*offset)) == modpow(x, 1+2*offset)
+
 
     lemma poly_eval_split_lemma_helper(a: seq<elem>, 
         a_e: seq<elem>, a_o: seq<elem>, len: pow2_t, x: elem, offset:nat)
@@ -156,10 +170,28 @@ module poly_eval {
                   }
                 mod_sum([modmul(a[0], modpow(x, 2*offset)), 
                          modmul(a[1], modpow(x, 1 + 2*offset))]);
-            
-
-                  { assume false; }
-
+                  { mod_sum2([modmul(a[0], modpow(x, 2*offset)), modmul(a[1], modpow(x, 1 + 2*offset))]); }
+                modadd(modmul(a[0], modpow(x, 2*offset)), 
+                       modadd(modmul(a[1], modpow(x, 1 + 2*offset)), 0));
+                modadd(modmul(a[0], modpow(x, 2*offset)), 
+                       modmul(a[1], modpow(x, 1 + 2*offset)));
+                  { modpow_group(x, offset); }
+                modadd(modmul(a[0], modpow(sqr, offset)), 
+                      modmul(a[1], modmul(x, modpow(sqr, offset)))); 
+                  { modmul_associates(a[1], x, modpow(sqr, offset)); }
+                modadd(modmul(a[0], modpow(sqr, offset)), 
+                      modmul(modmul(a[1], x), modpow(sqr, offset))); 
+                modadd(modmul(a[0], modpow(sqr, offset)), 
+                      modmul(modmul(x, a[1]), modpow(sqr, offset))); 
+                  { modmul_associates(x, a[1], modpow(sqr, offset)); }
+                modadd(modmul(a[0], modpow(sqr, offset)), 
+                      modmul(x, modmul(a[1], modpow(sqr, offset)))); 
+//                  { 
+//                    mod_sum2([modmul(a[0], modpow(sqr, offset))]); 
+//                    mod_sum2([modmul(a[1], modpow(sqr, offset))]);
+//                  }
+                modadd(mod_sum([modmul(a[0], modpow(sqr, offset))]), 
+                      modmul(x, mod_sum([modmul(a[1], modpow(sqr, offset))]))); 
                 modadd(mod_sum([modmul(a_e[0], modpow(sqr, offset))]), 
                       modmul(x, mod_sum([modmul(a_o[0], modpow(sqr, offset))]))); 
                   { 
@@ -170,28 +202,6 @@ module poly_eval {
                            [modmul(a_o[0], modpow(sqr, offset))];
                   }
                 modadd(poly_eval_offset(a_e, sqr, offset), modmul(x, poly_eval_offset(a_o, sqr, offset)));
-
-//
-//                {
-//                    reveal poly_eval();
-//                    assert DropFirst(a) == a_o;
-//                }
-//                modadd(a[0], modmul(poly_eval(a_o, x), x));
-//                {
-//                    poly_eval_base_lemma(a_o, x);
-//                    assert poly_eval(a_o, x) == a[1];
-//                }
-//                modadd(a[0], modmul(a[1], x));
-//                {
-//                    poly_eval_base_lemma(a_e, sqr);
-//                    assert poly_eval(a_e, sqr) == a[0];
-//                }
-//                modadd(poly_eval(a_e, sqr), modmul(a[1], x));
-//                {
-//                    poly_eval_base_lemma(a_o, sqr);
-//                    assert poly_eval(a_o, sqr) == a[1];
-//                }
-//                modadd(poly_eval(a_e, sqr), modmul(x, poly_eval(a_o, sqr)));
             }
         } else {
             var sqr := modmul(x, x);
