@@ -16,11 +16,18 @@ module rindex {
 
     datatype index_raw = index_cons(v: nat, bins: seq<uint1>, bound: pow2_t)
 
-    predicate valid_index(idx: index_raw)
+    predicate wf_index(idx: index_raw)
     {
         && 1 <= idx.bound.exp == |idx.bins| // exp is the number of bits, we have at least 1 bit
         && idx.v < idx.bound.full
         && idx.v == ToNatRight(idx.bins)
+    }
+
+    predicate valid_index(idx: index_raw)
+    {
+        && wf_index(idx)
+        && idx.bound.exp == L
+        && idx.bound.full == Pow2(L) == N
     }
 
     type index_t =  i: index_raw | valid_index(i) witness *
@@ -41,7 +48,16 @@ module rindex {
         index_cons(ToNatRight(bins), bins, pow2(L))
     }
 
-    lemma valid_index_correspondence(idx: index_t)
+    function method A(): seq<elem>
+        ensures |A()| == N == pow2(L).full;
+
+    function method Ar(): seq<elem>
+        ensures |Ar()| == N == pow2(L).full;
+        ensures forall i | 0 <= i < N ::
+            Ar()[i] == A()[build_rev_index(i).v];
+
+    lemma wf_index_correspondence(idx: index_raw)
+        requires wf_index(idx);
         ensures idx.v % 2 == First(idx.bins);
         ensures idx.v / 2 == ToNatRight(DropFirst(idx.bins));
     {
@@ -56,13 +72,14 @@ module rindex {
     function method lsb(idx: index_t): (lsb: uint1)
         ensures lsb == First(idx.bins);
     {
-        valid_index_correspondence(idx);
+        wf_index_correspondence(idx);
         idx.v % 2
     }
 
-    function method bit_rev_index(idx: index_t): (new_idx: index_raw)
+    function method bit_rev_index(idx: index_raw): (new_idx: index_raw)
+        requires wf_index(idx);
         requires idx.bound.exp < N == Pow(2, L);
-        ensures valid_index(new_idx);
+        ensures wf_index(new_idx);
         ensures new_idx.bins == Reverse(idx.bins);
         // ensures forall i: 0 <= i < |idx.bin| ==>
         //     new_idx.bin[i] == idx.bin[idx.bound.full - i - 1];
@@ -73,10 +90,10 @@ module rindex {
             var lsb, v' := idx.v % 2, idx.v / 2;
             var bound' := pow2_half(idx.bound);
             var bins' := DropFirst(idx.bins);
-            valid_index_correspondence(idx);
+            wf_index_correspondence(idx);
             var temp := index_cons(v', bins', bound');
             var idx' := bit_rev_index(temp);
-            valid_index_correspondence(idx');
+            wf_index_correspondence(idx');
             assert idx'.v + lsb * bound'.full == ToNatRight(idx'.bins + [lsb]) by {
                 calc == {
                     ToNatRight(idx'.bins + [lsb]);
@@ -133,13 +150,25 @@ module rindex {
         build_index(which_chunk * len.full + which_slot)
     }
 
-    predicate ntt_indicies_inv(idxs: seq<index_t>, len: pow2_t, ki: nat)
+    function A_get_elem(idx: index_t): elem
+    {
+        A()[idx.v]
+    }
+
+    predicate elem_indicies_map(a: seq<elem>, idxs: seq<index_t>)
+    {
+        && |a| == |idxs| <= N
+        && (forall i: nat | i < |a| :: a[i] == A_get_elem(idxs[i]))
+    }
+
+    predicate ntt_indicies_inv(a: seq<elem>, idxs: seq<index_t>, len: pow2_t, ki: nat)
     {
         && N == Pow2(L)
         && len.full <= N
         && len.exp <= L
         && ki < pow2_div(pow2(L), len).full
         && ntt_indicies_wf(idxs, len)
+        && elem_indicies_map(a, idxs)
         && var offset := L - len.exp;
         && (forall i: nat | i < len.full :: (
             && var orignal := orignal_index(ki, i, len);
@@ -156,7 +185,7 @@ module rindex {
         requires ki < pow2_div(pow2(L), len).full;
         requires ntt_indicies_wf(idxs, len);
         requires forall i: nat :: i < len.full ==> idxs[i].v == i;
-        ensures ntt_indicies_inv(idxs, len, ki);
+        ensures ntt_indicies_inv(A(), idxs, len, ki);
     {
         forall i: nat | i < len.full
             ensures ToNatRight(idxs[i].bins[0..]) == i;
@@ -180,6 +209,10 @@ module rindex {
             ensures idxs[i].bins[..0] == idxs[j].bins[..0];
         {
         }
+        forall i: nat | i < len.full
+            ensures A()[i] == A_get_elem(idxs[i])
+        {
+        }
     }
 
     function method even_indexed_indices(idxs: seq<index_t>, len: pow2_t): (idx': seq<index_t>)
@@ -190,12 +223,20 @@ module rindex {
         seq(len.full/2, n requires 0 <= n < len.full/2 => idxs[n * 2])
     }
 
-    lemma even_indexed_indices_reorder(idxs: seq<index_t>, len: pow2_t, idxs': seq<index_t>, ki: nat)
+    function method even_indexed_terms(a: seq<elem>, len: pow2_t): seq<elem>
+        requires |a| == len.full >= 2;
+    {
+        pow2_basics(len);
+        seq(len.full/2, n requires 0 <= n < len.full/2 => a[n * 2])
+    }
+
+    lemma even_indexed_indices_reorder(a: seq<elem>, idxs: seq<index_t>, len: pow2_t, a': seq<elem>, idxs': seq<index_t>, ki: nat)
         requires len.full >= 2;
-        requires ntt_indicies_inv(idxs, len, ki); 
+        requires ntt_indicies_inv(a, idxs, len, ki); 
         requires ki < pow2_div(pow2(L), len).full
         requires even_indexed_indices(idxs, len) == idxs';
-        ensures ntt_indicies_inv(idxs', pow2_half(len), ki * 2);
+        requires even_indexed_terms(a, len) == a';
+        ensures ntt_indicies_inv(a', idxs', pow2_half(len), ki * 2);
     {
         var len' := pow2_half(len);
         assert ntt_indicies_wf(idxs', len');
@@ -336,6 +377,11 @@ module rindex {
                 idxs'[i].bins[..offset'];
             }
         }
+
+        forall i: nat | i < len'.full
+            ensures a'[i] == A_get_elem(idxs'[i])
+        {
+        }
     }
 
     function method odd_indexed_indices(idxs: seq<index_t>, len: pow2_t): (idx': seq<index_t>)
@@ -346,12 +392,20 @@ module rindex {
         seq(len.full/2, n requires 0 <= n < len.full/2 => idxs[n * 2 + 1])
     }
 
-    lemma odd_indexed_indices_reorder(idxs: seq<index_t>, len: pow2_t, idxs': seq<index_t>, ki: nat)
+    function method odd_indexed_terms(a: seq<elem>, len: pow2_t): seq<elem>
+        requires |a| == len.full;
+    {
+        pow2_basics(len);
+        seq(len.full/2, n requires 0 <= n < len.full/2 => a[n * 2 + 1])
+    }
+
+    lemma odd_indexed_indices_reorder(a: seq<elem>, idxs: seq<index_t>, len: pow2_t, a': seq<elem>, idxs': seq<index_t>, ki: nat)
         requires len.full >= 2;
-        requires ntt_indicies_inv(idxs, len, ki); 
+        requires ntt_indicies_inv(a, idxs, len, ki); 
         requires ki < pow2_div(pow2(L), len).full
         requires odd_indexed_indices(idxs, len) == idxs';
-        ensures ntt_indicies_inv(idxs', pow2_half(len), ki * 2 + 1);
+        requires odd_indexed_terms(a, len) == a';
+        ensures ntt_indicies_inv(a', idxs', pow2_half(len), ki * 2 + 1);
     {
         var len' := pow2_half(len);
         assert ntt_indicies_wf(idxs', len');
@@ -502,15 +556,22 @@ module rindex {
                 idxs'[i].bins[..offset'];
             }
         }
+
+        forall i: nat | i < len'.full
+            ensures a'[i] == A_get_elem(idxs'[i])
+        {
+        }
     }
 
-    lemma ntt_indicies_inv_consequence(idxs: seq<index_t>, len: pow2_t, ki: nat)
+    lemma ntt_indicies_inv_consequence(a: seq<elem>, idxs: seq<index_t>, len: pow2_t, ki: nat)
         requires len == pow2(1);
-        requires ntt_indicies_inv(idxs, len, ki);
+        requires ntt_indicies_inv(a, idxs, len, ki);
         requires ki < pow2_div(pow2(L), len).full
         ensures len.full == 2;
         ensures idxs[0].bins == Reverse(orignal_index(ki, 0, len).bins);
+        ensures a[0] == A_get_elem(idxs[0]);
         ensures idxs[1].bins == Reverse(orignal_index(ki, 1, len).bins);
+        ensures a[1] == A_get_elem(idxs[1]);
     {
         var offset := L - 1;
         pow2_basics(len);

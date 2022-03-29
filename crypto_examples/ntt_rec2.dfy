@@ -65,21 +65,21 @@ module ntt_rec2 {
         requires 2 <= len.full;
         requires len.exp <= L;
         requires |a| == |idxs| == len.full;
-        requires ki < pow2_div(pow2(L), len).full
-        requires ntt_indicies_inv(idxs, len, ki); 
+        requires ki < pow2_div(pow2(L), len).full;
+        requires ntt_indicies_inv(a, idxs, len, ki); 
         ensures poly_eval_all_points(a, y, len);
-        ensures len.full == 2 ==> 
-            idxs[0].bins == Reverse(orignal_index(ki, 0, len).bins);
-        ensures len.full == 2 ==> 
-            idxs[1].bins == Reverse(orignal_index(ki, 1, len).bins);
+        // ensures len.full == 2 ==> 
+        //     idxs[0].bins == Reverse(orignal_index(ki, 0, len).bins);
+        // ensures len.full == 2 ==> 
+        //     idxs[1].bins == Reverse(orignal_index(ki, 1, len).bins);
         decreases len.full
     {
         if len.full == 2 then 
             var len' := pow2_half(len);
             pow2_basics(len');
 
-            var a_e := even_indexed_terms(a, len');
-            var a_o := odd_indexed_terms(a, len');
+            var a_e := even_indexed_terms(a, len);
+            var a_o := odd_indexed_terms(a, len);
 
             assert a_e[0] == poly_eval(a_e, omega_nk(len', 0)) by {
                 assert a_e[0] == a[0];
@@ -93,18 +93,18 @@ module ntt_rec2 {
             var y_ks := compute_y_k(a, a_e, a_o, a_e, a_o, len, 0);
             var y_k's := compute_y_k'(a, a_e, a_o, a_e, a_o, len, 0);
 
-            ntt_indicies_inv_consequence(idxs, len, ki);
+            ntt_indicies_inv_consequence(a, idxs, len, ki);
             [y_ks, y_k's]
         else
             var len' := pow2_half(len);
-            var a_e := even_indexed_terms(a, len');
-            var a_o := odd_indexed_terms(a, len');
+            var a_e := even_indexed_terms(a, len);
+            var a_o := odd_indexed_terms(a, len);
 
             ghost var idx_e := even_indexed_indices(idxs, len);
             ghost var idx_o := odd_indexed_indices(idxs, len);
 
-            even_indexed_indices_reorder(idxs, len, idx_e, ki);
-            odd_indexed_indices_reorder(idxs, len, idx_o, ki);
+            even_indexed_indices_reorder(a, idxs, len, a_e, idx_e, ki);
+            odd_indexed_indices_reorder(a, idxs, len, a_o, idx_o, ki);
 
             var y_e := ntt_rec2(a_e, len', idx_e, 2 * ki);
             var y_o := ntt_rec2(a_o, len', idx_o, 2 * ki + 1);
@@ -128,13 +128,6 @@ module ntt_rec2 {
             }
             y
     }
-    function method A(): seq<elem>
-        ensures |A()| == N == pow2(L).full;
-
-    function method Ar(): seq<elem>
-        ensures |Ar()| == N == pow2(L).full;
-        ensures forall i | 0 <= i < N ::
-            Ar()[i] == A()[build_rev_index(i).v];
 
     // function method {:fuel 1} build_level_chunks(len: pow2_t): (cs: seq<seq<elem>>)
     //     requires 1 <= len.exp <= L

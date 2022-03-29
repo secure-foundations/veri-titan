@@ -18,18 +18,6 @@ module ntt_rec {
         else modadd(First(a), modmul(poly_eval(DropFirst(a), x), x))
     }
 
-    function method odd_indexed_terms(a: seq<elem>, len: pow2_t): seq<elem>
-        requires |a| == len.full * 2;
-    {
-        seq(len.full, n requires 0 <= n < len.full => a[n * 2 + 1])
-    }
-
-    function method even_indexed_terms(a: seq<elem>, len: pow2_t): seq<elem>
-        requires |a| == len.full * 2;
-    {
-        seq(len.full, n requires 0 <= n < len.full => a[n * 2])
-    }
-
     lemma poly_eval_base_lemma(a: seq<elem>, x: elem)
         requires |a| == 1;
         ensures poly_eval(a, x) == a[0];
@@ -39,7 +27,7 @@ module ntt_rec {
 
     lemma {:axiom} poly_eval_split_lemma(a: seq<elem>, 
         a_e: seq<elem>, a_o: seq<elem>, len: pow2_t, x: elem)
-        requires |a| == len.full * 2;
+        requires |a| == len.full >= 2;
         requires a_e == even_indexed_terms(a, len)
         requires a_o == odd_indexed_terms(a, len)
         ensures var sqr := modmul(x, x);
@@ -117,8 +105,8 @@ module ntt_rec {
         requires 1 <= len.exp <= L;
         requires len'.exp <= L 
         requires len' == pow2_half(len);
-        requires a_e == even_indexed_terms(a, len');
-        requires a_o == odd_indexed_terms(a, len');
+        requires a_e == even_indexed_terms(a, len);
+        requires a_o == odd_indexed_terms(a, len);
 
         requires omg == omega_nk(len, k);
         requires y_e_k == poly_eval(a_e, omega_nk(len', k));
@@ -145,7 +133,7 @@ module ntt_rec {
         calc == {
             poly_eval(a, x);
             {
-                poly_eval_split_lemma(a, a_e, a_o, len', x);
+                poly_eval_split_lemma(a, a_e, a_o, len, x);
             }
             modadd(poly_eval(a_e, sqr), modmul(x, poly_eval(a_o, sqr)));
             {
@@ -167,8 +155,8 @@ module ntt_rec {
         requires 1 <= len.exp <= L;
         requires len'.exp <= L 
         requires len' == pow2_half(len);
-        requires a_e == even_indexed_terms(a, len');
-        requires a_o == odd_indexed_terms(a, len');
+        requires a_e == even_indexed_terms(a, len);
+        requires a_o == odd_indexed_terms(a, len);
 
         requires omg == omega_nk(len, k);
         requires y_e_k == poly_eval(a_e, omega_nk(len', k));
@@ -221,7 +209,7 @@ module ntt_rec {
         calc == {
             poly_eval(a, x);
             {
-                poly_eval_split_lemma(a, a_e, a_o, len', x);
+                poly_eval_split_lemma(a, a_e, a_o, len, x);
             }
             modadd(poly_eval(a_e, sqr), modmul(x, poly_eval(a_o, sqr)));
             {
@@ -332,8 +320,8 @@ module ntt_rec {
     //     }
 
     //     var len' := pow2_half(len);
-    //     var a_e := even_indexed_terms(a, len');
-    //     var a_o := odd_indexed_terms(a, len');
+    //     var a_e := even_indexed_terms(a, len);
+    //     var a_o := odd_indexed_terms(a, len);
 
     //     var y_e := ntt_rec(a_e, len');
     //     var y_o := ntt_rec(a_o, len');
@@ -405,8 +393,8 @@ module ntt_rec {
         requires len.exp <= L;
         requires 1 < |a| == len.full;
         requires k < pow2_half(len).full;
-        requires a_e == even_indexed_terms(a, pow2_half(len));
-        requires a_o == odd_indexed_terms(a, pow2_half(len));
+        requires a_e == even_indexed_terms(a, len);
+        requires a_o == odd_indexed_terms(a, len);
         requires poly_eval_all_points(a_e, y_e, pow2_half(len));
         requires poly_eval_all_points(a_o, y_o, pow2_half(len));
         ensures y_k == poly_eval(a, omega_nk(len, k));
@@ -433,8 +421,8 @@ module ntt_rec {
         len: pow2_t): (a': seq<elem>)
         requires len.exp <= L;
         requires 1 < |a| == len.full;
-        requires a_e == even_indexed_terms(a, pow2_half(len));
-        requires a_o == odd_indexed_terms(a, pow2_half(len));
+        requires a_e == even_indexed_terms(a, len);
+        requires a_o == odd_indexed_terms(a, len);
         requires poly_eval_all_points(a_e, y_e, pow2_half(len));
         requires poly_eval_all_points(a_o, y_o, pow2_half(len));
         ensures |a'| == pow2_half(len).full;
@@ -452,8 +440,8 @@ module ntt_rec {
         requires len.exp <= L;
         requires 1 < |a| == len.full;
         requires k < pow2_half(len).full;
-        requires a_e == even_indexed_terms(a, pow2_half(len));
-        requires a_o == odd_indexed_terms(a, pow2_half(len));
+        requires a_e == even_indexed_terms(a, len);
+        requires a_o == odd_indexed_terms(a, len);
         requires poly_eval_all_points(a_e, y_e, pow2_half(len));
         requires poly_eval_all_points(a_o, y_o, pow2_half(len));
         ensures y_k == poly_eval(a, omega_nk(len, k + pow2_half(len).full));
@@ -480,8 +468,8 @@ module ntt_rec {
         len: pow2_t): (a': seq<elem>)
         requires len.exp <= L;
         requires 1 < |a| == len.full;
-        requires a_e == even_indexed_terms(a, pow2_half(len));
-        requires a_o == odd_indexed_terms(a, pow2_half(len));
+        requires a_e == even_indexed_terms(a, len);
+        requires a_o == odd_indexed_terms(a, len);
         requires poly_eval_all_points(a_e, y_e, pow2_half(len));
         requires poly_eval_all_points(a_o, y_o, pow2_half(len));
         ensures |a'| == pow2_half(len).full;
@@ -504,8 +492,8 @@ module ntt_rec {
             a
         else
             var len' := pow2_half(len);
-            var a_e := even_indexed_terms(a, len');
-            var a_o := odd_indexed_terms(a, len');
+            var a_e := even_indexed_terms(a, len);
+            var a_o := odd_indexed_terms(a, len);
 
             var y_e := ntt_rec(a_e, len');
             var y_o := ntt_rec(a_o, len');
