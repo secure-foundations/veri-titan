@@ -151,7 +151,6 @@ module rindex {
             && idxs[i].bins[..offset] == idxs[j].bins[..offset])
     }
 
-    // base case happens at level 1, chuck size is the whole array
     lemma ntt_indicies_inv_base_case(idxs: seq<index_t>, len: pow2_t, ki: nat)
         requires len == pow2(L);
         requires ki < pow2_div(pow2(L), len).full;
@@ -509,8 +508,9 @@ module rindex {
         requires len == pow2(1);
         requires ntt_indicies_inv(idxs, len, ki);
         requires ki < pow2_div(pow2(L), len).full
-        ensures forall i: nat | i < len.full ::
-            idxs[i].bins == Reverse(orignal_index(ki, i, len).bins);
+        ensures len.full == 2;
+        ensures idxs[0].bins == Reverse(orignal_index(ki, 0, len).bins);
+        ensures idxs[1].bins == Reverse(orignal_index(ki, 1, len).bins);
     {
         var offset := L - 1;
         pow2_basics(len);

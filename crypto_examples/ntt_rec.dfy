@@ -103,7 +103,7 @@ module ntt_rec {
         requires 0 <= len.exp <= L
     {
         && |y| == |a| == len.full
-        && (forall i: nat :: i < len.full ==>
+        && (forall i: nat | i < len.full ::
             y[i] == poly_eval(a, omega_nk(len, i)))
     }
 
@@ -485,7 +485,7 @@ module ntt_rec {
         requires poly_eval_all_points(a_e, y_e, pow2_half(len));
         requires poly_eval_all_points(a_o, y_o, pow2_half(len));
         ensures |a'| == pow2_half(len).full;
-        ensures forall i: nat | i < |a'| :: a'[i] == poly_eval(a, omega_nk(len, i+ pow2_half(len).full));
+        ensures forall i: nat | i < |a'| :: a'[i] == poly_eval(a, omega_nk(len, i + pow2_half(len).full));
     {
         var half := pow2_half(len).full;
         seq(half, i requires 0 <= i < half => 
@@ -493,7 +493,6 @@ module ntt_rec {
     }
 
     function method ntt_rec(a: seq<elem>, len: pow2_t) : (y: seq<elem>)
-        // requires len.exp == L ==> a == A();
         requires 1 <= len.full;
         requires len.exp <= L;
         requires |a| == len.full;
@@ -530,47 +529,5 @@ module ntt_rec {
             }
             y
     }
-
-    function method A(): seq<elem>
-        ensures |A()| == N == pow2(L).full;
-
-    function method Ar(): seq<elem>
-        ensures |Ar()| == N == pow2(L).full;
-        ensures forall i | 0 <= i < N ::
-            Ar()[i] == A()[build_rev_index(i).v];
-
-    function method {:fuel 1} build_level_chunks(len: pow2_t): (cs: seq<seq<elem>>)
-        requires 1 <= len.exp <= L
-        ensures |cs| == pow2_div(pow2(L), len).full;
-        ensures forall i | 0 <= i < |cs| :: |cs[i]| == len.full
-        decreases L - len.exp
-    {
-        if len.exp == L then [A()]
-        else 
-            var a := build_level_chunks(pow2_double(len));
-            assert |a| == pow2(L - len.exp - 1).full by {
-                assert |a| == pow2(L).full / (pow2(len.exp + 1).full);
-                reveal Pow2();
-                assert len.exp + 1 <= L;
-                LemmaPowSubtracts(2, len.exp + 1, L);
-            }
-            assert |a| * 2 == pow2(L - len.exp).full by {
-                reveal Pow2();
-                LemmaPowAdds(2, L - len.exp - 1, 1);
-                LemmaPow1(2);
-            }
-            seq(|a| * 2, k requires 0 <= k < |a| * 2 => 
-                if k % 2 == 0 then even_indexed_terms(a[k/2], len)
-                else odd_indexed_terms(a[(k-1)/2], len))
-    }
-
-    function method get_level_chunk(len: pow2_t, ki: nat): (chunk: seq<elem>)
-        requires 1 <= len.exp <= L
-        requires ki < pow2_div(pow2(L), len).full;
-        ensures |chunk| == len.full
-    {
-        build_level_chunks(len)[ki]
-    }
-
 }
 
