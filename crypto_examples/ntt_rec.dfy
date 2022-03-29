@@ -222,7 +222,10 @@ module ntt_rec {
                 LemmaAddModNoopRight(y_e_k, x * y_o_k, Q);
             }
             (y_e_k + x * y_o_k) % Q;
-            (y_e_k + (- (omg as int) % Q) * y_o_k ) % Q;
+            (y_e_k + (- (omg as int) % Q) * y_o_k) % Q;
+            {
+                assert y_o_k % Q == y_o_k;
+            }
             (y_e_k + (- (omg as int) % Q) * (y_o_k % Q)) % Q;
             {
                 LemmaMulModNoopLeft(- (omg as int), y_o_k, Q);

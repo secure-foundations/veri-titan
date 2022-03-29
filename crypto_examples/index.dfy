@@ -39,8 +39,9 @@ module rindex {
         index_cons(v, FromNatWithLen(v, L), pow2(L))
     }
 
-    function method build_rev_index(v: nat): index_t
+    function method build_rev_index(v: nat): (i: index_t)
         requires v < N;
+        ensures i.bins == Reverse(build_index(v).bins)
     {
         nth_root_lemma();
         var bins := Reverse(FromNatWithLen(v, L));
@@ -53,8 +54,11 @@ module rindex {
 
     function method Ar(): seq<elem>
         ensures |Ar()| == N == pow2(L).full;
-        ensures forall i | 0 <= i < N ::
-            Ar()[i] == A()[build_rev_index(i).v];
+
+    lemma {:axiom} A_Ar_indicies(i: nat)
+        requires 0 <= i < N;
+        ensures Ar()[i] == A()[build_rev_index(i).v];
+        ensures A()[i] == Ar()[build_rev_index(i).v];
 
     lemma wf_index_correspondence(idx: index_raw)
         requires wf_index(idx);
@@ -150,15 +154,10 @@ module rindex {
         build_index(which_chunk * len.full + which_slot)
     }
 
-    function A_get_elem(idx: index_t): elem
-    {
-        A()[idx.v]
-    }
-
     predicate elem_indicies_map(a: seq<elem>, idxs: seq<index_t>)
     {
         && |a| == |idxs| <= N
-        && (forall i: nat | i < |a| :: a[i] == A_get_elem(idxs[i]))
+        && (forall i: nat | i < |a| :: a[i] == A()[idxs[i].v])
     }
 
     predicate ntt_indicies_inv(a: seq<elem>, idxs: seq<index_t>, len: pow2_t, ki: nat)
@@ -210,7 +209,7 @@ module rindex {
         {
         }
         forall i: nat | i < len.full
-            ensures A()[i] == A_get_elem(idxs[i])
+            ensures A()[i] == A()[idxs[i].v]
         {
         }
     }
@@ -379,7 +378,7 @@ module rindex {
         }
 
         forall i: nat | i < len'.full
-            ensures a'[i] == A_get_elem(idxs'[i])
+            ensures a'[i] == A()[idxs'[i].v]
         {
         }
     }
@@ -558,7 +557,7 @@ module rindex {
         }
 
         forall i: nat | i < len'.full
-            ensures a'[i] == A_get_elem(idxs'[i])
+            ensures a'[i] == A()[idxs'[i].v]
         {
         }
     }
@@ -568,16 +567,15 @@ module rindex {
         requires ntt_indicies_inv(a, idxs, len, ki);
         requires ki < pow2_div(pow2(L), len).full
         ensures len.full == 2;
-        ensures idxs[0].bins == Reverse(orignal_index(ki, 0, len).bins);
-        ensures a[0] == A_get_elem(idxs[0]);
-        ensures idxs[1].bins == Reverse(orignal_index(ki, 1, len).bins);
-        ensures a[1] == A_get_elem(idxs[1]);
+        ensures A()[idxs[0].v] == Ar()[ki * len.full];
+        ensures A()[idxs[1].v] == Ar()[ki * len.full + 1];
     {
         var offset := L - 1;
         pow2_basics(len);
 
         forall i: nat | i < len.full
-            ensures idxs[i].bins == Reverse(orignal_index(ki, i, len).bins);
+            // ensures idxs[i].bins == Reverse(orignal_index(ki, i, len).bins);
+            ensures A()[idxs[i].v] == Ar()[ki * len.full + i];
         {
             var orignal := orignal_index(ki, i, len);
             var obins := orignal.bins;
@@ -631,6 +629,23 @@ module rindex {
                 Reverse(obins[0..]);
                 Reverse(obins);
             }
+
+            var rev_index := build_rev_index(idxs[i].v);
+
+            LemmaSeqEq(build_index(idxs[i].v).bins, idxs[i].bins);
+            assert rev_index.bins == Reverse(build_index(idxs[i].v).bins);
+
+            assert A()[idxs[i].v] == Ar()[rev_index.v] by {
+                A_Ar_indicies(idxs[i].v);
+            }
+
+            calc == {
+                rev_index.bins;
+                Reverse(idxs[i].bins);
+                orignal_index(ki, i, len).bins;
+            }
+
+            assert A()[idxs[i].v] == Ar()[ki * len.full + i];
         }
     }
 }
