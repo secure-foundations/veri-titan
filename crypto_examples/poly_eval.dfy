@@ -10,12 +10,6 @@ module poly_eval {
     import opened pows_of_2
     import opened omegas
 
-//    function {:opaque} poly_eval(a: seq<elem>, x: elem): elem
-//    {
-//        if |a| == 0 then 0
-//        else modadd(First(a), modmul(poly_eval(DropFirst(a), x), x))
-//    }
-
     function a_i_times_x_to_the_i(a: seq<elem>, x: elem): seq<elem>
     {
         seq(|a|, i requires 0 <= i < |a| => modmul(a[i], modpow(x, i)))
@@ -25,7 +19,6 @@ module poly_eval {
     function a_i_times_x_to_the_i_plus_k(a: seq<elem>, x: elem, k: nat): seq<elem>
     {
         seq(|a|, i requires 0 <= i < |a| => modmul(a[i], modpow(x, i + k)))
-        //Map(i => modmul(a[i], modpow(x, i)), a)
     }
 
     function mod_sum(s: seq<elem>) : elem
@@ -45,7 +38,21 @@ module poly_eval {
     lemma mod_sum_adds(s1: seq<elem>, s2: seq<elem>) 
         ensures mod_sum(s1 + s2) == modadd(mod_sum(s1), mod_sum(s2))
     {
-        assume false;
+      if |s1| == 0 {
+        assert mod_sum(s1) == 0;
+        assert s1 + s2 == s2;
+      } else {
+        calc {
+          mod_sum(s1 + s2);
+            { assert (s1 + s2)[1..] == s1[1..] + s2; }
+          modadd(s1[0], mod_sum(s1[1..] + s2));
+            { mod_sum_adds(s1[1..], s2); }
+          modadd(s1[0], modadd(mod_sum(s1[1..]), mod_sum(s2)));
+            { modadd_associates(s1[0], mod_sum(s1[1..]), mod_sum(s2)); }
+          modadd(modadd(s1[0], mod_sum(s1[1..])), mod_sum(s2));
+          modadd(mod_sum(s1), mod_sum(s2));
+        }
+      }
     }
     
     function {:opaque} poly_eval(a: seq<elem>, x: elem): elem
@@ -95,14 +102,54 @@ module poly_eval {
         
     }
 
-    lemma {:axiom} modmul_distributes(x: elem, y: elem, z: elem)
+    lemma modmul_distributes(x: elem, y: elem, z: elem)
         ensures modmul(x, modadd(y, z)) == modadd(modmul(x, y), modmul(x, z))
+    {
+      calc {
+        modmul(x, modadd(y, z));
+        (x * ((y + z) % Q)) % Q;
+          { LemmaMulModNoopGeneral(x, y+z, Q); }
+        (x * (y + z)) % Q;
+          { LemmaMulIsDistributiveAdd(x, y, z); }
+        (x * y + x * z) % Q;
+          { LemmaAddModNoop(x*y, x*z, Q); }
+        (((x * y) % Q) + ((x * z) % Q)) % Q;
+        (modmul(x, y) + modmul(x, z)) % Q;
+        modadd(modmul(x, y), modmul(x, z));
+      }
+    }
     
-    lemma {:axiom} modmul_associates(x: elem, y: elem, z: elem)
+    lemma modmul_associates(x: elem, y: elem, z: elem)
         ensures modmul(x, modmul(y, z)) == modmul(modmul(x, y), z)
+    {
+      calc {
+        modmul(x, modmul(y, z));
+        (x * ((y * z) % Q)) % Q;
+          { LemmaMulModNoopGeneral(x, y*z, Q); }
+        (x * (y * z)) % Q;
+          { LemmaMulIsAssociative(x, y, z); }
+        ((x * y) * z) % Q;
+          { LemmaMulModNoopGeneral(x*y, z, Q); }
+        (((x * y) % Q) * z) % Q;
+        modmul(modmul(x, y), z);
+      }
+    }
 
-    lemma {:axiom} modadd_associates(x: elem, y: elem, z: elem)
+    lemma modadd_associates(x: elem, y: elem, z: elem)
         ensures modadd(x, modadd(y, z)) == modadd(modadd(x, y), z)
+    {
+      calc {
+        modadd(x, modadd(y, z));
+        (x + ((y + z) % Q)) % Q;
+          { LemmaAddModNoop(x, y+z, Q); }
+        (x + (y + z)) % Q;
+          { assert x + (y + z) == (x + y) + z; }
+        ((x + y) + z) % Q;
+          { LemmaAddModNoop(x+y, z, Q); }
+        (((x + y) % Q) + z) % Q;
+        modadd(modadd(x, y), z);
+      }
+    }
 
     lemma modadd_reassociate(a: elem, b: elem, y: elem, z: elem)
         ensures modadd(modadd(a, b), modadd(y, z)) 
@@ -110,36 +157,46 @@ module poly_eval {
     {
         calc {
             modadd(modadd(a, b), modadd(y, z));
-                { assume false; }
+              { modadd_associates(a, b, modadd(y, z)); }
+            modadd(a, modadd(b, modadd(y, z)));
+              { modadd_associates(b, y, z); }
+            modadd(a, modadd(modadd(b, y), z));
+              { assert modadd(b, y) == modadd(y, b); }
+            modadd(a, modadd(modadd(y, b), z));
+              { modadd_associates(y, b, z); }
+            modadd(a, modadd(y, modadd(b, z)));
+              { modadd_associates(a, y, modadd(b, z)); }
             modadd(modadd(a, y), modadd(b, z));
         }
     }
     
-    lemma a_i_offset(a: seq<elem>, x: elem, offset:nat)
-        requires |a| >= offset
-        ensures a_i_times_x_to_the_i(a, x)[offset..] == a_i_times_x_to_the_i_plus_k(a[offset..], x, offset)
-    {
-//        var a_orig   := a_i_times_x_to_the_i(a, x)[offset..];
-//        var a_offset := a_i_times_x_to_the_i_plus_k(a[offset..], x, offset);
-//        assert |a_orig| == |a_offset|;
-////        forall i | 0 <= i < |a_orig|
-////            ensures a_orig[i] == a_offset[i];
-////        {
-////            calc {
-////                a_orig[i];
-////                modmul(a[i], modpow(x, i));
-////                modmul(a[offset..][i], modpow(x, i + offset))
-////                a_offset[i];
-////            }
-////        }
-//
-//
-//          
-    }
-
     lemma modpow_group(x:elem, offset:nat)
       ensures modpow(modmul(x, x), offset) == modpow(x, 2*offset)
       ensures modmul(x, modpow(x, 2*offset)) == modpow(x, 1+2*offset)
+    {
+      calc {
+        modpow(modmul(x, x), offset);
+        Pow((x * x) % Q, offset) % Q;
+          { LemmaPowModNoop(x*x, offset, Q); }
+        Pow(x * x, offset) % Q;
+          { reveal Pow(); assert Pow(x, 2) == x * x; }
+        Pow(Pow(x, 2), offset) % Q;
+          { LemmaPowMultiplies(x, 2, offset); }
+        Pow(x, 2*offset) % Q;
+        modpow(x, 2*offset);
+      }
+      
+      calc {
+        modmul(x, modpow(x, 2*offset));
+        modmul(x, Pow(x, 2*offset) % Q);
+        (x * (Pow(x, 2*offset) % Q)) % Q;
+          { LemmaMulModNoopGeneral(x, Pow(x, 2*offset), Q); }
+        (x * Pow(x, 2*offset)) % Q;
+          { reveal Pow(); }
+        Pow(x, 1+2*offset) % Q;
+        modpow(x, 1+2*offset);
+      }
+    }
 
 
     lemma poly_eval_split_lemma_helper(a: seq<elem>, 
