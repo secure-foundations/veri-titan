@@ -71,8 +71,8 @@ module ntt_rec2 {
         var a_e := [Ar()[ki * len.full]];
         var a_o := [Ar()[ki * len.full + 1]];
 
-        var y_ks := compute_y_k(a, a_e, a_o, a_e, a_o, len, 0);
-        var y_k's := compute_y_k'(a, a_e, a_o, a_e, a_o, len, 0);
+        var y_ks := compute_y_k(a, a_e, a_o, len, 0);
+        var y_k's := compute_y_k'(a, a_e, a_o, len, 0);
 
         assert poly_eval_all_points(a, [y_ks, y_k's], len) by {
             reveal poly_eval_all_points();
@@ -102,8 +102,8 @@ module ntt_rec2 {
         reveal poly_eval_all_points();
         var len' := pow2_half(len);
 
-        var y_ks := compute_y_ks(a, a_e, a_o, y_e, y_o, len);
-        var y_k's := compute_y_k's(a, a_e, a_o, y_e, y_o, len);
+        var y_ks := compute_y_ks(a, y_e, y_o, len);
+        var y_k's := compute_y_k's(a, y_e, y_o, len);
         var y := y_ks + y_k's;
 
         assert forall i: nat | i < len.full ::

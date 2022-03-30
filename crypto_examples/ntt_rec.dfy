@@ -97,7 +97,6 @@ module ntt_rec {
     }
 
     lemma y_k_value(a: seq<elem>,
-        a_e: seq<elem>, a_o: seq<elem>,
         len': pow2_t, len: pow2_t,
         omg: elem, k: nat,
         y_e_k: elem, y_o_k: elem, y_k: elem)
@@ -106,18 +105,19 @@ module ntt_rec {
         requires 1 <= len.exp <= L;
         requires len'.exp <= L 
         requires len' == pow2_half(len);
-        requires a_e == even_indexed_terms(a, len);
-        requires a_o == odd_indexed_terms(a, len);
 
         requires omg == omega_nk(len, k);
-        requires y_e_k == poly_eval(a_e, omega_nk(len', k));
-        requires y_o_k == poly_eval(a_o, omega_nk(len', k));
+        requires y_e_k == poly_eval(even_indexed_terms(a, len), omega_nk(len', k));
+        requires y_o_k == poly_eval(odd_indexed_terms(a, len), omega_nk(len', k));
         requires y_k == modadd(y_e_k, modmul(omg, y_o_k));
         
         ensures y_k == poly_eval(a, omega_nk(len, k));
     {
         var x := omega_nk(len, k);
         var sqr := modmul(x, x);
+
+        var a_e := even_indexed_terms(a, len);
+        var a_o := odd_indexed_terms(a, len);
 
         calc == {
             sqr;
@@ -147,7 +147,6 @@ module ntt_rec {
     }
 
     lemma y_k'_value(a: seq<elem>,
-        a_e: seq<elem>, a_o: seq<elem>,
         len': pow2_t, len: pow2_t,
         omg: elem, k: nat,
         y_e_k: elem, y_o_k: elem, y_k': elem)
@@ -156,17 +155,17 @@ module ntt_rec {
         requires 1 <= len.exp <= L;
         requires len'.exp <= L 
         requires len' == pow2_half(len);
-        requires a_e == even_indexed_terms(a, len);
-        requires a_o == odd_indexed_terms(a, len);
 
         requires omg == omega_nk(len, k);
-        requires y_e_k == poly_eval(a_e, omega_nk(len', k));
-        requires y_o_k == poly_eval(a_o, omega_nk(len', k));
+        requires y_e_k == poly_eval(even_indexed_terms(a, len), omega_nk(len', k));
+        requires y_o_k == poly_eval(odd_indexed_terms(a, len), omega_nk(len', k));
         requires y_k' == modsub(y_e_k, modmul(omg, y_o_k));
 
         ensures y_k' == poly_eval(a, omega_nk(len, k + len'.full));
     {
         var x := omega_nk(len, k + len'.full);
+        var a_e := even_indexed_terms(a, len);
+        var a_o := odd_indexed_terms(a, len);
         var sqr := modmul(x, x);
 
         calc == {
@@ -394,21 +393,20 @@ module ntt_rec {
     // }
 
     function method compute_y_k(ghost a: seq<elem>,
-        ghost a_e: seq<elem>, ghost a_o: seq<elem>,
         y_e: seq<elem>, y_o: seq<elem>,
         len: pow2_t, k: nat): (y_k: elem)
         requires len.exp <= L;
         requires 1 < |a| == len.full;
         requires k < pow2_half(len).full;
-        requires a_e == even_indexed_terms(a, len);
-        requires a_o == odd_indexed_terms(a, len);
-        requires poly_eval_all_points(a_e, y_e, pow2_half(len));
-        requires poly_eval_all_points(a_o, y_o, pow2_half(len));
+        requires poly_eval_all_points(even_indexed_terms(a, len), y_e, pow2_half(len));
+        requires poly_eval_all_points(odd_indexed_terms(a, len), y_o, pow2_half(len));
         ensures y_k == poly_eval(a, omega_nk(len, k));
     {
         var len' := pow2_half(len);
         var y_e_k := y_e[k];
         var y_o_k := y_o[k];
+        ghost var a_e := even_indexed_terms(a, len);
+        ghost var a_o := odd_indexed_terms(a, len);
 
         var omg := modpow(omega_n(len), k);
         assert y_e_k == poly_eval(a_e, omega_nk(len', k)) by  {
@@ -419,47 +417,43 @@ module ntt_rec {
         }
         var r := modadd(y_e_k, modmul(omg, y_o_k));
 
-        y_k_value(a, a_e, a_o, len', len, 
+        y_k_value(a, len', len, 
             omg, k, y_e_k, y_o_k, r);
 
         r
     }
 
     function method compute_y_ks(ghost a: seq<elem>, 
-        ghost a_e: seq<elem>, ghost a_o: seq<elem>,
         y_e: seq<elem>, y_o: seq<elem>,
         len: pow2_t): (a': seq<elem>)
         requires len.exp <= L;
         requires 1 < |a| == len.full;
-        requires a_e == even_indexed_terms(a, len);
-        requires a_o == odd_indexed_terms(a, len);
-        requires poly_eval_all_points(a_e, y_e, pow2_half(len));
-        requires poly_eval_all_points(a_o, y_o, pow2_half(len));
+        requires poly_eval_all_points(even_indexed_terms(a, len), y_e, pow2_half(len));
+        requires poly_eval_all_points(odd_indexed_terms(a, len), y_o, pow2_half(len));
         ensures |a'| == pow2_half(len).full;
         ensures forall i: nat | i < |a'| :: a'[i] == poly_eval(a, omega_nk(len, i));
     {
         var half := pow2_half(len).full;
         seq(half, i requires 0 <= i < half => 
-            compute_y_k(a, a_e, a_o, y_e, y_o, len, i))
+            compute_y_k(a, y_e, y_o, len, i))
     }
 
     function method compute_y_k'(ghost a: seq<elem>,
-        ghost a_e: seq<elem>, ghost a_o: seq<elem>,
         y_e: seq<elem>, y_o: seq<elem>,
         len: pow2_t, k: nat): (y_k: elem)
         requires len.exp <= L;
         requires 1 < |a| == len.full;
         requires k < pow2_half(len).full;
-        requires a_e == even_indexed_terms(a, len);
-        requires a_o == odd_indexed_terms(a, len);
-        requires poly_eval_all_points(a_e, y_e, pow2_half(len));
-        requires poly_eval_all_points(a_o, y_o, pow2_half(len));
+        requires poly_eval_all_points(even_indexed_terms(a, len), y_e, pow2_half(len));
+        requires poly_eval_all_points(odd_indexed_terms(a, len), y_o, pow2_half(len));
         ensures y_k == poly_eval(a, omega_nk(len, k + pow2_half(len).full));
     {
         var len' := pow2_half(len);
         var y_e_k := y_e[k];
         var y_o_k := y_o[k];
-
+        ghost var a_e := even_indexed_terms(a, len);
+        ghost var a_o := odd_indexed_terms(a, len);
+    
         var omg := modpow(omega_n(len), k);
         assert y_e_k == poly_eval(a_e, omega_nk(len', k)) by  {
             reveal poly_eval_all_points();
@@ -470,28 +464,25 @@ module ntt_rec {
 
         var r := modsub(y_e_k, modmul(omg, y_o_k));
 
-        y_k'_value(a, a_e, a_o, len', len, 
+        y_k'_value(a, len', len, 
             omg, k, y_e_k, y_o_k, r);
 
         r
     }
     
     function method compute_y_k's(ghost a: seq<elem>, 
-        ghost a_e: seq<elem>, ghost a_o: seq<elem>,
         y_e: seq<elem>, y_o: seq<elem>,
         len: pow2_t): (a': seq<elem>)
         requires len.exp <= L;
         requires 1 < |a| == len.full;
-        requires a_e == even_indexed_terms(a, len);
-        requires a_o == odd_indexed_terms(a, len);
-        requires poly_eval_all_points(a_e, y_e, pow2_half(len));
-        requires poly_eval_all_points(a_o, y_o, pow2_half(len));
+        requires poly_eval_all_points(even_indexed_terms(a, len), y_e, pow2_half(len));
+        requires poly_eval_all_points(odd_indexed_terms(a, len), y_o, pow2_half(len));
         ensures |a'| == pow2_half(len).full;
         ensures forall i: nat | i < |a'| :: a'[i] == poly_eval(a, omega_nk(len, i + pow2_half(len).full));
     {
         var half := pow2_half(len).full;
         seq(half, i requires 0 <= i < half => 
-            compute_y_k'(a, a_e, a_o, y_e, y_o, len, i))
+            compute_y_k'(a, y_e, y_o, len, i))
     }
 
     function method ntt_rec(a: seq<elem>, len: pow2_t) : (y: seq<elem>)
@@ -512,8 +503,8 @@ module ntt_rec {
             var y_e := ntt_rec(a_e, len');
             var y_o := ntt_rec(a_o, len');
 
-            var y_ks := compute_y_ks(a, a_e, a_o, y_e, y_o, len);
-            var y_k's := compute_y_k's(a, a_e, a_o, y_e, y_o, len);
+            var y_ks := compute_y_ks(a, y_e, y_o, len);
+            var y_k's := compute_y_k's(a, y_e, y_o, len);
             var y := y_ks + y_k's;
 
             assert poly_eval_all_points(a, y, len) by {
