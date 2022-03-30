@@ -1,6 +1,6 @@
 include "ntt_rec.dfy"
 
-module ntt_rec2 {
+module ntt_recs2 {
     import opened Seq
     import opened Power
     import opened Power2
@@ -89,7 +89,7 @@ module ntt_rec2 {
         y_e: seq<elem>,
         y_o: seq<elem>,
         ki: nat): (y: seq<elem>)
-        requires 3 <= len.full;
+        requires 2 <= len.full;
         requires len.exp <= L;
         requires ntt_indicies_inv(a, idxs, len, ki); 
         requires ki < pow2_div(pow2(L), len).full;
@@ -152,7 +152,7 @@ module ntt_rec2 {
 
     predicate ntt_chunk_indicies_inv(a: seq<seq<elem>>, idxs: seq<seq<index_t>>, len: pow2_t)
     {
-        && 1 <= len.exp <= L
+        && 0 <= len.exp <= L
         && |a| == |idxs| == pow2_div(pow2(L), len).full
         && (forall ki: nat | ki < |a| :: (
             && ntt_indicies_inv(a[ki], idxs[ki], len, ki)
@@ -188,7 +188,7 @@ module ntt_rec2 {
         idxs': seq<seq<index_t>>,
         ys': seq<seq<elem>>)
 
-        requires 3 <= len.full;
+        requires 2 <= len.full;
         requires 1 <= len.exp <= L;
         requires count == pow2_div(pow2(L), len).full;
         requires count' == pow2_div(pow2(L), pow2_half(len)).full;

@@ -648,4 +648,39 @@ module rindex {
             assert A()[idxs[i].v] == Ar()[ki * len.full + i];
         }
     }
+
+    lemma ntt_indicies_inv_consequence0(a: seq<elem>, idxs: seq<index_t>, len: pow2_t, ki: nat)
+        requires len == pow2(0);
+        requires ntt_indicies_inv(a, idxs, len, ki);
+        requires ki < pow2_div(pow2(L), len).full
+        ensures len.full == 1;
+        ensures A()[idxs[0].v] == Ar()[ki * len.full];
+    {
+        var offset := L;
+        pow2_basics(len);
+
+        var i := 0;
+
+        var orignal := orignal_index(ki, i, len);
+        var obins := orignal.bins;
+        var bins := idxs[i].bins;
+
+        var rev_index := build_rev_index(idxs[i].v);
+
+        LemmaSeqEq(build_index(idxs[i].v).bins, idxs[i].bins);
+        assert rev_index.bins == Reverse(build_index(idxs[i].v).bins);
+
+        assert A()[idxs[i].v] == Ar()[rev_index.v] by {
+            A_Ar_indicies(idxs[i].v);
+        }
+
+        calc == {
+            rev_index.bins;
+            Reverse(idxs[i].bins);
+            orignal_index(ki, i, len).bins;
+        }
+
+        assert A()[idxs[i].v] == Ar()[ki * len.full + i];
+    }
+
 }
