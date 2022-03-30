@@ -11,103 +11,121 @@ module ntt_rec2 {
     import opened rindex
     import opened ntt_rec
 
-    predicate poly_eval_chunks(ys: seq<seq<elem>>, clen: pow2_t)
-        requires 0 <= clen.exp <= L
-        requires |A()| == N == pow2(L).full
+    lemma ntt_rec2_base_case_correct(a: seq<elem>, len: pow2_t, idxs: seq<index_t>, ki: nat) 
+        requires len.full == 2 && len.exp == 1;
+        requires ki < pow2_div(pow2(L), len).full;
+        requires ntt_indicies_inv(a, idxs, len, ki); 
+
+        ensures 
+            var a_e := [Ar()[ki * len.full]];
+            var a_o := [Ar()[ki * len.full + 1]];
+            && a_e == even_indexed_terms(a, len)
+            && a_o == odd_indexed_terms(a, len)
+            && a_e[0] == poly_eval(a_e, omega_nk(pow2_half(len), 0))
+            && a_o[0] == poly_eval(a_o, omega_nk(pow2_half(len), 0))
     {
-        && |ys| == pow2_div(pow2(L), clen).full
-        && (forall ki: nat, i: nat | ki < |ys| && i < clen.full ::(
-            && |ys[ki]| == clen.full
-            && clen.full * ki + i >= 0
-            && ys[ki][i] == poly_eval(A(), omega_nk(clen, clen.full * ki + i))))
+        var len' := pow2_half(len);
+        pow2_basics(len');
+
+        ntt_indicies_inv_consequence(a, idxs, len, ki);
+
+        var a_e := [Ar()[ki * len.full]];
+        var a_o := [Ar()[ki * len.full + 1]];
+
+        calc == {
+            a_e[0];
+            Ar()[ki * len.full];
+            A()[idxs[0].v];
+            a[0];
+            even_indexed_terms(a, len)[0];
+        }
+
+        calc == {
+            a_o[0];
+            Ar()[ki * len.full + 1];
+            A()[idxs[1].v];
+            a[1];
+            odd_indexed_terms(a, len)[0];
+        }
+
+        assert a_e[0] == poly_eval(a_e, omega_nk(len', 0)) by {
+            assert a_e[0] == a[0];
+            ntt_rec_base_case(a_e, len');
+        }
+        assert a_o[0] == poly_eval(a_o, omega_nk(len', 0)) by {
+            assert a_o[0] == a[1];
+            ntt_rec_base_case(a_o, len');
+        }
     }
 
-    // lemma ntt_chunks_base_case(clen: pow2_t)
-    //     requires clen.exp == 0
-    //     ensures poly_eval_chunks(ys, len);
+    function method ntt_rec2_base(ghost a: seq<elem>, len: pow2_t, ghost idxs: seq<index_t>, ki: nat) : (y: seq<elem>)
+        requires len.full == 2 && len.exp == 1;
+        requires ki < pow2_div(pow2(L), len).full;
+        requires ntt_indicies_inv(a, idxs, len, ki);
+        ensures poly_eval_all_points(a, y, len);
+    {
+        ntt_rec2_base_case_correct(a, len, idxs, ki);
 
-    // lemma ntt_chunks_rec_case(ys': seq<seq<elem>>, k: nat,
-    //     ys: seq<seq<elem>>, clen: pow2_t)
-    //     requires 1 <= clen.exp <= L
-    //     requires k < |ys'| == pow2_div(pow2(L), clen).full
-    //     requires |ys'[k]| == clen.full;
-    //     requires poly_eval_chunks(ys, pow2_half(clen));
-    // {
-    //     assume |ys| == 2 * |ys'|;
-    //     var y_e := ys[2 * k];
-    //     var y_o := ys[2 * k + 1];
-    //     compute_y_ks(a: seq<elem>, 
-    //     a_e: seq<elem>, a_o: seq<elem>,
-    //     y_e, y_o,
-    //     len):
-    // }
+        var a_e := [Ar()[ki * len.full]];
+        var a_o := [Ar()[ki * len.full + 1]];
 
-    // function method ntt_rec_chunk_combine()
+        var y_ks := compute_y_k(a, a_e, a_o, a_e, a_o, len, 0);
+        var y_k's := compute_y_k'(a, a_e, a_o, a_e, a_o, len, 0);
 
-    // function method {:fuel 1} ntt_rec_chunks(clen: pow2_t): (ys: seq<seq<elem>>)
-    //     requires 0 <= clen.exp <= L
-    //     ensures poly_eval_chunks(ys, clen);
-    //     decreases clen.exp
-    // {
-    //     if clen.exp == 0 then
-    //         var ys := seq(N, i requires 0 <= i < N => [Ar()[i]]);
-    //         assume poly_eval_chunks(ys, clen);
-    //         ys
-    //     else
-    //         var ys := ntt_rec_chunks(pow2_half(clen));
-    //         var ccount := pow2_div(pow2(L), clen).full;
-    //         var ys' := seq(ccount, i requires 0 <= i < ccount => [0]);
-    //         assume false;
-    //         ys'
-    // }
+        [y_ks, y_k's]
+    }
+
+    function method ntt_rec2_combine(ghost a: seq<elem>,
+        ghost a_e: seq<elem>,
+        ghost a_o: seq<elem>,
+        len: pow2_t,
+        ghost idxs: seq<index_t>,
+        y_e: seq<elem>,
+        y_o: seq<elem>,
+        ki: nat): (y: seq<elem>)
+        requires 3 <= len.full;
+        requires len.exp <= L;
+        requires ntt_indicies_inv(a, idxs, len, ki); 
+        requires ki < pow2_div(pow2(L), len).full;
+        requires a_e == even_indexed_terms(a, len);
+        requires a_o == odd_indexed_terms(a, len);
+        requires poly_eval_all_points(a_e, y_e, pow2_half(len));
+        requires poly_eval_all_points(a_o, y_o, pow2_half(len));
+        ensures poly_eval_all_points(a, y, len);
+    {
+        var len' := pow2_half(len);
+
+        var y_ks := compute_y_ks(a, a_e, a_o, y_e, y_o, len);
+        var y_k's := compute_y_k's(a, a_e, a_o, y_e, y_o, len);
+        var y := y_ks + y_k's;
+
+        assert forall i: nat | i < len.full ::
+            y[i] == poly_eval(a, omega_nk(len, i)) by {
+            forall i: nat | i < len.full
+                ensures y[i] == poly_eval(a, omega_nk(len, i))
+            {
+                if i < len'.full {
+                    assert y[i] == y_ks[i];
+                } else {
+                    var j := i - len'.full;
+                    assert y[i] == y_k's[j];
+                }
+            }
+        }
+        y
+    }
 
     function method ntt_rec2(ghost a: seq<elem>, len: pow2_t, ghost idxs: seq<index_t>, ki: nat) : (y: seq<elem>)
         requires 2 <= len.full;
         requires len.exp <= L;
-        requires |a| == |idxs| == len.full;
         requires ki < pow2_div(pow2(L), len).full;
         requires ntt_indicies_inv(a, idxs, len, ki); 
         ensures poly_eval_all_points(a, y, len);
         decreases len.full
     {
         if len.full == 2 then 
-            var len' := pow2_half(len);
-            pow2_basics(len');
-
-            ntt_indicies_inv_consequence(a, idxs, len, ki);
-
-            var a_e := [Ar()[ki * len.full]];
-            var a_o := [Ar()[ki * len.full + 1]];
-
-            calc == {
-                a_e[0];
-                Ar()[ki * len.full];
-                A()[idxs[0].v];
-                a[0];
-                even_indexed_terms(a, len)[0];
-            }
-
-            calc == {
-                a_o[0];
-                Ar()[ki * len.full + 1];
-                A()[idxs[1].v];
-                a[1];
-                odd_indexed_terms(a, len)[0];
-            }
-
-            assert a_e[0] == poly_eval(a_e, omega_nk(len', 0)) by {
-                assert a_e[0] == a[0];
-                ntt_rec_base_case(a_e, len');
-            }
-            assert a_o[0] == poly_eval(a_o, omega_nk(len', 0)) by {
-                assert a_o[0] == a[1];
-                ntt_rec_base_case(a_o, len');
-            }
-
-            var y_ks := compute_y_k(a, a_e, a_o, a_e, a_o, len, 0);
-            var y_k's := compute_y_k'(a, a_e, a_o, a_e, a_o, len, 0);
-
-            [y_ks, y_k's]
+            pow2_basics(len);
+            ntt_rec2_base(a, len, idxs, ki)
         else
             var len' := pow2_half(len);
             ghost var a_e := even_indexed_terms(a, len);
@@ -122,57 +140,116 @@ module ntt_rec2 {
             var y_e := ntt_rec2(a_e, len', idx_e, 2 * ki);
             var y_o := ntt_rec2(a_o, len', idx_o, 2 * ki + 1);
 
-            var y_ks := compute_y_ks(a, a_e, a_o, y_e, y_o, len);
-            var y_k's := compute_y_k's(a, a_e, a_o, y_e, y_o, len);
-            var y := y_ks + y_k's;
+            ntt_rec2_combine(a, a_e, a_o, len, idxs, y_e, y_o, ki)
+    }
 
-            assert forall i: nat | i < len.full ::
-                y[i] == poly_eval(a, omega_nk(len, i)) by {
-                forall i: nat | i < len.full
-                    ensures y[i] == poly_eval(a, omega_nk(len, i))
+    predicate ntt_chunk_indicies_inv(a: seq<seq<elem>>, idxs: seq<seq<index_t>>, len: pow2_t)
+    {
+        && 1 <= len.exp <= L
+        && |a| == |idxs| == pow2_div(pow2(L), len).full
+        && (forall ki: nat | ki < |a| :: (
+            && ntt_indicies_inv(a[ki], idxs[ki], len, ki)
+            && |a[ki]| == |a[ki]| == len.full))
+    }
+
+    predicate ntt_chunks_eval_inv(a: seq<seq<elem>>, idxs: seq<seq<index_t>>, ys: seq<seq<elem>>, len: pow2_t)
+    {
+        && ntt_chunk_indicies_inv(a, idxs, len)
+        && |ys| == pow2_div(pow2(L), len).full
+        && (forall ki: nat | ki < |a| ::(
+            && |ys[ki]| == len.full
+            && poly_eval_all_points(a[ki], ys[ki], len)))
+    }
+
+    function method ntt_rec2_chunk_base(ghost a: seq<seq<elem>>, len: pow2_t, ghost idxs: seq<seq<index_t>>): (ys: seq<seq<elem>>)
+        requires ntt_chunk_indicies_inv(a, idxs, len);
+        requires len.full == 2 && len.exp == 1;
+        ensures ntt_chunks_eval_inv(a, idxs, ys, len);
+    {
+        var num_chunks := pow2_div(pow2(L), len).full;
+        var ys := seq(num_chunks, i requires 0 <= i < num_chunks => ntt_rec2_base(a[i], len, idxs[i], i));
+        ys
+    }
+
+    function method ntt_rec2_chunk_rec(ghost a: seq<seq<elem>>, len: pow2_t, ghost idxs: seq<seq<index_t>>): (ys: seq<seq<elem>>)
+        requires ntt_chunk_indicies_inv(a, idxs, len);
+        requires 2 <= len.full;
+        requires 1 <= len.exp <= L;
+        ensures ntt_chunks_eval_inv(a, idxs, ys, len);
+        decreases len.exp;
+    {
+        pow2_basics(len);
+        if len.full == 2 then 
+            ntt_rec2_chunk_base(a, len, idxs)
+        else
+            var len' := pow2_half(len);
+            var count := pow2_div(pow2(L), len).full;
+            var count' := pow2_div(pow2(L), len').full;
+            assume count' == pow2_div(pow2(L), len).full * 2;
+
+            ghost var a' := seq(count', i  requires 0 <= i < count' => 
+                if i % 2 == 0 then even_indexed_terms(a[i/2], len)
+                else odd_indexed_terms(a[i/2], len));
+
+            ghost var idxs' := seq(count', i  requires 0 <= i < count' => 
+                if i % 2 == 0 then even_indexed_indices(idxs[i/2], len)
+                else odd_indexed_indices(idxs[i/2], len));
+
+            assert ntt_chunk_indicies_inv(a', idxs', len') by {
+                forall i | 0 <= i < count'
+                    ensures ntt_indicies_inv(a'[i], idxs'[i], len', i);
                 {
-                    if i < len'.full {
-                        assert y[i] == y_ks[i];
+                    var ki := i/2;
+
+                    var ai: seq<elem> := a[i/2];
+                    var idx := idxs[i/2];
+        
+                    assert ntt_indicies_inv(a[ki], idxs[ki], len, ki);
+    
+                    if i % 2 == 0 {
+                        ghost var a_e := even_indexed_terms(ai, len);
+                        ghost var idx_e := even_indexed_indices(idx, len);
+                        even_indexed_indices_reorder(ai, idx, len, a_e, idx_e, ki);
                     } else {
-                        var j := i - len'.full;
-                        assert y[i] == y_k's[j];
+                        ghost var a_o := odd_indexed_terms(ai, len);
+                        ghost var idx_o := odd_indexed_indices(idx, len);
+                        odd_indexed_indices_reorder(ai, idx, len, a_o, idx_o, ki);
                     }
                 }
             }
-            y
+            var ys' := ntt_rec2_chunk_rec(a', len', idxs');
+
+            assert true
+            // forall i |  0 <= i < count ::
+            //     ntt_rec2_combine.requires(a[i], a'[2 * i], a'[2 * i + 1], len, idxs[i], ys'[i * 2], ys'[i * 2 + 1], i) 
+            by {
+                forall i |  0 <= i < count
+                    ensures true
+                    // ntt_rec2_combine.requires(a[i], a'[2 * i], a'[2 * i + 1], len, idxs[i], ys'[i * 2], ys'[i * 2 + 1], i);
+                {
+                    var ai := a[i];
+                    var a_e := a'[2 * i];
+                    var a_o := a'[2 * i + 1];
+                    assert a_e == even_indexed_terms(ai, len);
+                    assert a_o == odd_indexed_terms(ai, len);
+
+                    var y_e := ys'[i * 2];
+                    var y_o := ys'[i * 2 + 1];
+            
+                    assert poly_eval_all_points(a_e, y_e, len');
+                    assert poly_eval_all_points(a_o, y_o, len');
+
+                    assert ntt_rec2_combine.requires(ai, a_e, a_o, len, idxs[i], y_e, y_o, i);
+                }
+                assume false;
+            }
+
+                assume false;
+
+            var ys := seq(count, i  requires 0 <= i < count => 
+                ntt_rec2_combine(a[i], a'[2 * i], a'[2 * i + 1], len, idxs[i], ys'[i * 2], ys'[i * 2 + 1], i));
+            ys
     }
 
-    // function method {:fuel 1} build_level_chunks(len: pow2_t): (cs: seq<seq<elem>>)
-    //     requires 1 <= len.exp <= L
-    //     ensures |cs| == pow2_div(pow2(L), len).full;
-    //     ensures forall i | 0 <= i < |cs| :: |cs[i]| == len.full
-    //     decreases L - len.exp
-    // {
-    //     if len.exp == L then [A()]
-    //     else 
-    //         var a := build_level_chunks(pow2_double(len));
-    //         assert |a| == pow2(L - len.exp - 1).full by {
-    //             assert |a| == pow2(L).full / (pow2(len.exp + 1).full);
-    //             reveal Pow2();
-    //             assert len.exp + 1 <= L;
-    //             LemmaPowSubtracts(2, len.exp + 1, L);
-    //         }
-    //         assert |a| * 2 == pow2(L - len.exp).full by {
-    //             reveal Pow2();
-    //             LemmaPowAdds(2, L - len.exp - 1, 1);
-    //             LemmaPow1(2);
-    //         }
-    //         seq(|a| * 2, k requires 0 <= k < |a| * 2 => 
-    //             if k % 2 == 0 then even_indexed_terms(a[k/2], len)
-    //             else odd_indexed_terms(a[(k-1)/2], len))
-    // }
-
-    // function method get_level_chunk(len: pow2_t, ki: nat): (chunk: seq<elem>)
-    //     requires 1 <= len.exp <= L
-    //     requires ki < pow2_div(pow2(L), len).full;
-    //     ensures |chunk| == len.full
-    // {
-    //     build_level_chunks(len)[ki]
-    // }
 }
 
