@@ -87,8 +87,9 @@ module ntt_rec {
         assume false;
     }
 
-    predicate poly_eval_all_points(a: seq<elem>, y: seq<elem>, len: pow2_t)
-        requires 0 <= len.exp <= L
+    predicate {:opaque} poly_eval_all_points(a: seq<elem>, y: seq<elem>, len: pow2_t)
+        requires 0 <= len.exp <= L;
+        ensures poly_eval_all_points(a, y, len) ==> |y| == |a| == len.full;
     {
         && |y| == |a| == len.full
         && (forall i: nat | i < len.full ::
@@ -285,8 +286,11 @@ module ntt_rec {
         requires |a| == len.full;
         ensures len.exp == 0;
         ensures a[0] == poly_eval(a, omega_nk(len, 0));
+        ensures poly_eval_all_points(a, a, len)
     {
         pow2_basics(len);
+        reveal poly_eval_all_points();
+        
         assert len.exp == 0;
 
         calc {
@@ -407,9 +411,12 @@ module ntt_rec {
         var y_o_k := y_o[k];
 
         var omg := modpow(omega_n(len), k);
-        assert y_e_k == poly_eval(a_e, omega_nk(len', k));
-        assert y_o_k == poly_eval(a_o, omega_nk(len', k));
-
+        assert y_e_k == poly_eval(a_e, omega_nk(len', k)) by  {
+            reveal poly_eval_all_points();
+        }
+        assert y_o_k == poly_eval(a_o, omega_nk(len', k)) by  {
+            reveal poly_eval_all_points();
+        }
         var r := modadd(y_e_k, modmul(omg, y_o_k));
 
         y_k_value(a, a_e, a_o, len', len, 
@@ -454,8 +461,12 @@ module ntt_rec {
         var y_o_k := y_o[k];
 
         var omg := modpow(omega_n(len), k);
-        assert y_e_k == poly_eval(a_e, omega_nk(len', k));
-        assert y_o_k == poly_eval(a_o, omega_nk(len', k));
+        assert y_e_k == poly_eval(a_e, omega_nk(len', k)) by  {
+            reveal poly_eval_all_points();
+        }
+        assert y_o_k == poly_eval(a_o, omega_nk(len', k)) by  {
+            reveal poly_eval_all_points();
+        }
 
         var r := modsub(y_e_k, modmul(omg, y_o_k));
 
@@ -505,8 +516,8 @@ module ntt_rec {
             var y_k's := compute_y_k's(a, a_e, a_o, y_e, y_o, len);
             var y := y_ks + y_k's;
 
-            assert forall i: nat | i < len.full ::
-                y[i] == poly_eval(a, omega_nk(len, i)) by {
+            assert poly_eval_all_points(a, y, len) by {
+                reveal poly_eval_all_points();
                 forall i: nat | i < len.full
                     ensures y[i] == poly_eval(a, omega_nk(len, i))
                 {
