@@ -1,0 +1,83 @@
+include "../../../arch/riscv/decls.i.vad"
+
+#verbatim
+include "../../../arch/riscv/decls.i.dfy"
+include "../../../../lib/bv32_falcon_lemmas.i.dfy"
+
+module mq_arith {
+
+import opened integers
+import opened rv_machine
+import opened rv_decls
+import opened rv_vale
+
+import opened bv32_ops
+import opened bv32_falcon_lemmas
+
+#endverbatim
+    
+ghost procedure lemma_mq_add_correct(
+    ghost d: uint32,
+    ghost b: uint32,
+    ghost c: uint32,
+    ghost r: uint32,
+    ghost x: nat,
+    ghost y: nat) extern;
+
+procedure mq_add() returns (ghost r: uint32)
+    {:noInline}
+    requires
+        a0 < 12289;
+        a1 < 12289;
+    modifies
+        a0; a1; a5;
+    ensures
+      r == a0;
+      r == (old(a0) + old(a1)) % 12289;
+{
+    ghost var Q: int := 12289;
+    ghost var x: nat := a0;
+    ghost var y: nat := a1;
+
+    // load -12289 into a5
+    li(a5, 0xffffcfff);
+    assert to_int32(a5) == (-Q);
+    let negQ := to_int32(a5);
+
+    // a1 = y - Q
+    add(a1, a1, a5);
+    assert a1 == uint32_add(to_uint32(y), to_uint32(negQ));
+
+    // a1 = y - Q + x
+    add(a1, a1, a0);
+    assert a1 == uint32_add(to_uint32(x), uint32_add(to_uint32(y), to_uint32(negQ)));
+    ghost var d := a1;
+
+    // lui(a5, 0x3);
+    // addi(a5, a5, 1);
+    li(a5, 0x3001); // 12289
+    assert a5 == Q;
+
+    // a1 = d
+    // a0 = d >> 31
+    srai(a0, a1, 0x1f); // 31
+    ghost var b := a0;
+
+    // a0 = (Q & -(d >> 31)) + d
+    and(a0, a0, a5);
+    
+    // c == b & Q
+    ghost var c := uint32_and(b, to_uint32(Q));
+    assert c == a0;
+   
+    add(a0, a0, a1);
+    r := a0;
+    
+    lemma_mq_add_correct(d, b, c, r, x, y);
+
+}
+
+
+#verbatim
+}
+#endverbatim
