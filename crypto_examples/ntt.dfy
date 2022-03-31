@@ -50,15 +50,9 @@ module ntt {
     type n_sized = s: seq<elem>
         | |s| == N == pow2(L).full witness *
 
-    function method chunk_count(len: pow2_t): pow2_t
-        requires 0 <= len.exp <= L;
-    {
-        pow2_div(pow2(L), len)
-    }
-
     lemma chunk_index_bounded(len: pow2_t, ki: nat)
         requires 0 <= len.exp <= L;
-        requires ki < chunk_count(len).full;
+        requires ki < chunk_count(len);
         ensures 0 <= ki * len.full <= N - len.full;
     {
         var max_count := pow2_div(pow2(L), len).full;
@@ -79,33 +73,58 @@ module ntt {
 
     lemma chunk_index_bounded_auto(len: pow2_t)
         requires 0 <= len.exp <= L;
-        ensures forall ki | 0 <= ki < chunk_count(len).full ::
+        ensures forall ki | 0 <= ki < chunk_count(len) ::
             0 <= ki * len.full <= N - len.full;
     {
-        forall ki |  0 <= ki < chunk_count(len).full 
+        forall ki |  0 <= ki < chunk_count(len)
             ensures 0 <= ki * len.full <= N - len.full;
         {
             chunk_index_bounded(len, ki);
         }
     }
 
-    predicate n_sized_diff_chunk(y: n_sized, y': n_sized, len: pow2_t, ki: nat)
+    predicate n_sized_diff_chunk(y1: n_sized, y2: n_sized, len: pow2_t, ki: nat)
         requires 0 <= len.exp <= L;
-        requires ki < chunk_count(len).full;
+        requires ki < chunk_count(len);
     {
         var offset := ki * len.full;
         chunk_index_bounded(len, ki);
         forall i | (0 <= i < offset || offset + len.full <= i < N) :: 
-            y'[i] == y[i] 
+            y1[i] == y2[i]
     }
 
     function view_as_chunks(y: n_sized, len: pow2_t): seq<seq<elem>>
         requires 0 <= len.exp <= L;
     {
-        var max_count := pow2_div(pow2(L), len).full;
+        var max_count := chunk_count(len);
         var csize := len.full;
         chunk_index_bounded_auto(len);
         seq(max_count, ki requires 0 <= ki < max_count => y[ki * csize..ki * csize + csize])
+    }
+
+    lemma n_sized_diff_chunk_view(y1: n_sized, y2: n_sized, len: pow2_t, ki: nat)
+        requires 0 <= len.exp <= L;
+        requires ki < chunk_count(len);
+        requires n_sized_diff_chunk(y1, y2, len, ki);
+        ensures view_as_chunks(y2, len) ==
+            view_as_chunks(y1, len)[ki := view_as_chunks(y2, len)[ki]]
+    {
+        var v1 := view_as_chunks(y1, len);
+        var v2 := view_as_chunks(y2, len);
+        chunk_index_bounded_auto(len);
+        var csize := len.full;
+
+        forall i | 0 <= i < chunk_count(len)
+            ensures i != ki ==> v1[i] == v2[i];
+        {
+            if i != ki {
+                var lo := i * csize;
+                var hi := i * csize + csize;
+                assume y1[lo..hi] == y2[lo..hi]; // TODO
+                assert v1[i] == v2[i];
+            }
+        }
+        assert v2 == v1[ki := v2[ki]];
     }
 
     function view_as_chunks_prefix(y: n_sized, len: pow2_t, i: nat): seq<seq<elem>>
@@ -130,127 +149,86 @@ module ntt {
         seq(count, ki requires 0 <= ki < count => y[ki * csize..ki * csize + csize]) 
     }
 
-    // lemma chunks_view_update(y: n_sized, y': n_sized,
-    //     len1: pow2_t, view1: seq<seq<elem>>,
-    //     len2: pow2_t, view2: seq<seq<elem>>,
-    //     ki: nat)
-    //     requires ki < |view2|;
-    //     requires 1 <= len2.exp <= L;
-    //     requires len1 == pow2_half(len2);
-    //     requires view_as_chunks(y, len1) == view1;
-    //     requires view_as_chunks(y, len2) == view2;
-    //     requires forall i | 0 <= i < ki * len2.full < N :: y'[i] == y[i];
-    //     requires forall i | 0 <= ki * len2.full <= i < N :: y'[i] == y[i];
-    // {
+    predicate ntt_chunk_loop_inv(
+        y: seq<elem>,
+        lv1: level_view,
+        lv2: level_view,
+        ki: nat)
+    {
+        && |y| == N == pow2(L).full
+        && 2 <= lv2.m.full
+        && 1 <= lv2.m.exp <= L
+        && lv1.m == pow2_half(lv2.m)
+        && ki * 2 < chunk_count(lv1.m)
+        && ki < chunk_count(lv2.m)
+        && lv1.valid_level_view()
+        && lv2.valid_level_view()
+        && view_as_chunks_suffix(y, lv1.m, ki * 2)
+            == lv1.ntt_rec3()[..ki*2]
+        && view_as_chunks_prefix(y, lv2.m, ki)
+            == lv2.ntt_rec3()[ki..]
+    }
 
-    // }
+    method ntt_chunk_loop(
+        y: seq<elem>,
+        k: nat,
+        m: pow2_t,
+        ghost ki: nat,
+        ghost lv1: level_view,
+        ghost lv2: level_view)
 
-    // predicate ntt_chunk_loop_inv(
-    //     y: seq<elem>,
-    //     m: pow2_t, 
-    //     a: seq<seq<elem>>,
-    //     idxs: seq<seq<index_t>>,
-    //     ki: nat)
-    //     requires |y| == N == pow2(L).full
-    //     requires 1 <= m.full;
-    //     requires 0 <= m.exp <= L;
-    //     requires ki < pow2_div(pow2(L), m).full;
-    //     requires ntt_chunk_indicies_inv(a, idxs, m);
-    // {
-    //     view_as_chunks(y, m)[..ki] == ntt_rec3(a, m, idxs)[..ki]
-    // }
+    returns (y': seq<elem>)
+        requires ntt_chunk_loop_inv(y, lv1, lv2, ki)
+    {
+        assume false;
+        y' := y;
+        var len' := pow2_half(m);
+        var omgm := omega_n(m);
 
-    // lemma init_implies_inv(
-    //     y: seq<elem>,
-    //     m: pow2_t, 
-    //     a: seq<seq<elem>>,
-    //     idxs: seq<seq<index_t>>)
+        var omg := 1;
+        var j := 0;
 
-    //     requires |y| == N == pow2(L).full
-    //     requires 1 == m.full;
-    //     requires 0 == m.exp;
-    //     requires ntt_chunk_indicies_inv(a, idxs, m);
-    //     requires y == Ar();
-    //     ensures ntt_chunk_loop_inv(y, m, a, idxs);
-    // {
-    //     var view := view_as_chunks(y, m);
-    //     var base := ntt_rec3_base(a, m, idxs);
-    //     forall ki | 0 <= ki < N
-    //         ensures view[ki] == base[ki];
-    //     {
-    //         calc == {
-    //             view[ki];
-    //             y[ki..ki+1];
-    //             [y[ki]];
-    //             [Ar()[ki]];
-    //             base[ki];
-    //         }
-    //     }
-    // }
+        assert omg == modpow(omgm, 0) by {
+            LemmaPow0Auto();
+        }
 
-    // method ntt_chunk_loop(
-    //     y: seq<elem>,
-    //     k: nat,
-    //     m: pow2_t,
-    //     ghost ki: nat,
-    //     ghost a: seq<seq<elem>>,
-    //     ghost idxs: seq<seq<index_t>>)
+        pow2_basics(m);
 
-    // returns (y': seq<elem>)
-    //     requires 1 <= m.exp <= L;
-    //     requires ntt_chunk_indicies_inv(a, idxs, pow2_half(m));
-    //     requires |y| == N == pow2(L).full;
-    //     requires ki < pow2_div(pow2(L), m).full;
-    //     requires k == ki * m.full;
-    //     requires ntt_chunk_loop_inv(y, pow2_half(m), a, idxs, ki);
-    // {
-    //     y' := y;
-    //     var len' := pow2_half(m);
-    //     var omgm := omega_n(m);
+        index_bounded_lemma(0, k, ki, m);
 
-    //     var omg := 1;
-    //     var j := 0;
+        // ghost var y_o := y[k..k+len'.full];
+        // ghost var y_e := y[k+len'.full..k+m.full];
+        // ghost var y_ks := compute_y_ks(a[ki], y_e, y_o, m);
 
-    //     assert omg == modpow(omgm, 0) by {
-    //         LemmaPow0Auto();
-    //     }
+        while (j < len'.full)
+            invariant 0 <= j <= len'.full;
+            invariant omg == modpow(omgm, j);
+            invariant |y'| == |y|;
+            invariant k + j + len'.full <= N;
+            invariant y[..k] == y'[..k];
+            invariant y[k+j..k+len'.full] == y'[k+j..k+len'.full];
+            invariant y[k+len'.full+j..] == y'[k+len'.full+j..];
+        {
+            index_bounded_lemma(j, k, ki, m);
+            var t := modmul(omg, y[k + j + len'.full]);
+            var u := y[k + j];
+            y' := y'[k + j := modadd(u, t)];
+            y' := y'[k + j + len'.full := modsub(u, t)];
 
-    //     pow2_basics(m);
+            omg_inv(omgm, omg, m, j);
+            omg := modmul(omg, omgm);
+            j := j + 1;
 
-    //     index_bounded_lemma(0, k, ki, m);
-
-    //     // ghost var y_o := y[k..k+len'.full];
-    //     // ghost var y_e := y[k+len'.full..k+m.full];
-    //     // ghost var y_ks := compute_y_ks(a[ki], y_e, y_o, m);
-
-    //     while (j < len'.full)
-    //         invariant 0 <= j <= len'.full;
-    //         invariant omg == modpow(omgm, j);
-    //         invariant |y'| == |y|;
-    //         invariant k + j + len'.full <= N;
-    //         invariant y[..k] == y'[..k];
-    //         invariant y[k+j..k+len'.full] == y'[k+j..k+len'.full];
-    //         invariant y[k+len'.full+j..] == y'[k+len'.full+j..];
-    //     {
-    //         index_bounded_lemma(j, k, ki, m);
-    //         var t := modmul(omg, y[k + j + len'.full]);
-    //         var u := y[k + j];
-    //         y' := y'[k + j := modadd(u, t)];
-    //         y' := y'[k + j + len'.full := modsub(u, t)];
-
-    //         omg_inv(omgm, omg, m, j);
-    //         omg := modmul(omg, omgm);
-    //         j := j + 1;
-
-    //         // if m.exp == 1 {
-    //         //    ghost var y_exp := ntt_rec2_base(a[ki], m, idxs[ki], ki);
-    //         //    assert y'[k..k+2] == y_exp; 
-    //         // }
-    //     }
+            // if m.exp == 1 {
+            //    ghost var y_exp := ntt_rec2_base(a[ki], m, idxs[ki], ki);
+            //    assert y'[k..k+2] == y_exp; 
+            // }
+        }
 
     //     // assert y[..k] == y'[..k];
     //     // assert y[k+m.full..] == y'[k+m.full..];
-    // }
+    }
+
 
     // method ntt_level_loop(a: seq<elem>, s: nat)
     //     requires |a| == N == pow2(L).full;
@@ -303,6 +281,35 @@ module ntt {
     //     {
     //         ntt_level_loop(b, s);
     //         s := s + 1;
+    //     }
+    // }
+
+
+      // lemma init_implies_inv(
+    //     y: seq<elem>,
+    //     m: pow2_t, 
+    //     a: seq<seq<elem>>,
+    //     idxs: seq<seq<index_t>>)
+
+    //     requires |y| == N == pow2(L).full
+    //     requires 1 == m.full;
+    //     requires 0 == m.exp;
+    //     requires ntt_chunk_indicies_inv(a, idxs, m);
+    //     requires y == Ar();
+    //     ensures ntt_chunk_loop_inv(y, m, a, idxs);
+    // {
+    //     var view := view_as_chunks(y, m);
+    //     var base := ntt_rec3_base(a, m, idxs);
+    //     forall ki | 0 <= ki < N
+    //         ensures view[ki] == base[ki];
+    //     {
+    //         calc == {
+    //             view[ki];
+    //             y[ki..ki+1];
+    //             [y[ki]];
+    //             [Ar()[ki]];
+    //             base[ki];
+    //         }
     //     }
     // }
 }
