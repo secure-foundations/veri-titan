@@ -16,36 +16,6 @@ module ntt {
     import opened ntt_recs2
     import opened ntt_recs3
 
-    lemma index_bounded_lemma(
-        j: nat, k: nat, ki: nat,
-        m: pow2_t)
-        requires m.full >= 2;
-        requires 0 <= j < m.full / 2;
-        requires N == pow2(L).full;
-        requires 1 <= m.exp <= L;
-        requires k == ki * m.full;
-        requires ki < pow2_div(pow2(L), m).full;
-        ensures k + j + m.full / 2 < N;
-    {
-        pow2_basics(m);
-        var half_step := m.full / 2;
-
-        calc {
-            k + j + m.full / 2;
-        ==
-            ki * m.full + j + half_step;
-        <
-            ki * m.full + 2 * half_step;
-        ==
-            ki * m.full + m.full;
-        == { LemmaMulIsDistributiveAddOtherWay(m.full, ki, 1); }
-            (ki + 1) * m.full;
-        <= { assert ki + 1 <= pow2_div(pow2(L), m).full; LemmaMulInequalityAuto(); }
-            pow2_div(pow2(L), m).full * m.full;
-        ==
-            N;
-        }
-    }
 
     type n_sized = s: seq<elem>
         | |s| == N == pow2(L).full witness *
@@ -55,7 +25,7 @@ module ntt {
         requires ki < chunk_count(len);
         ensures 0 <= ki * len.full <= N - len.full;
     {
-        var max_count := pow2_div(pow2(L), len).full;
+        var max_count := chunk_count(len);
         var csize := len.full;
         nth_root_lemma();
         calc {
@@ -127,63 +97,106 @@ module ntt {
         assert v2 == v1[ki := v2[ki]];
     }
 
-    function view_as_chunks_prefix(y: n_sized, len: pow2_t, i: nat): seq<seq<elem>>
+    function {:opaque} view_as_chunks_prefix(y: n_sized, len: pow2_t, i: nat): seq<seq<elem>>
         requires 0 <= len.exp <= L;
-        requires i <= pow2_div(pow2(L), len).full;
+        requires i <= chunk_count(len);
     {
-        var max_count := pow2_div(pow2(L), len).full;
+        var max_count := chunk_count(len);
         var count := i;
         var csize := len.full;
         chunk_index_bounded_auto(len);
         seq(count, ki requires 0 <= ki < count => y[ki * csize..ki * csize + csize])    
     }
 
-    function view_as_chunks_suffix(y: n_sized, len: pow2_t, i: nat): seq<seq<elem>>
+    function {:opaque} view_as_chunks_suffix(y: n_sized, len: pow2_t, i: nat): seq<seq<elem>>
         requires 0 <= len.exp <= L;
-        requires i <= pow2_div(pow2(L), len).full;
+        requires i <= chunk_count(len);
     {
-        var max_count := pow2_div(pow2(L), len).full;
+        var max_count := chunk_count(len);
         var count := max_count - i;
         var csize := len.full;
         chunk_index_bounded_auto(len);
         seq(count, ki requires 0 <= ki < count => y[ki * csize..ki * csize + csize]) 
     }
 
-    predicate ntt_chunk_loop_inv(
-        y: seq<elem>,
-        lv1: level_view,
-        lv2: level_view,
+    datatype ntt_loop_lvls = ntt_loop_lvls(
+        lower: level_view,
+        higher: level_view,
         ki: nat)
     {
+        predicate ntt_loop_views_wf()
+        {
+            && N == pow2(L).full
+            && 2 <= higher.m.full <= N
+            && 1 <= higher.m.exp <= L
+            && lower.m == pow2_half(higher.m)
+            && ki <= chunk_count(higher.m)
+            && lower.valid_level_view()
+            && higher.valid_level_view()
+        }
+
+        function lower_idx(): (i: nat)
+            requires ntt_loop_views_wf();
+            ensures i <= chunk_count(lower.m);
+        {
+            chunk_count_half(higher.m);
+            ki * 2
+        }
+
+        function higher_idx(): nat
+        {
+            ki
+        }
+
+        function lower_suffix(): seq<seq<elem>>
+            requires ntt_loop_views_wf()
+        {
+            lower.ntt_rec3()[..lower_idx()]
+        }
+
+        function higher_prefix(): seq<seq<elem>>
+            requires ntt_loop_views_wf()
+        {
+            higher.ntt_rec3()[higher_idx()..]
+        }
+
+        lemma index_bounded_lemma(
+            j: nat)
+            requires ntt_loop_views_wf();
+            requires 0 <= j < lower.m.full;
+            requires ki < chunk_count(higher.m);
+            ensures 0 <= ki * higher.m.full + j + lower.m.full < N;
+        {
+            var len := higher.m.full;
+            chunk_index_bounded(higher.m, ki);
+            assert 0 <= ki * len <= N - len;
+        }
+    }
+    
+    predicate ntt_chunk_loop_inv(
+        y: seq<elem>,
+        view: ntt_loop_lvls)
+    {
+        && view.ntt_loop_views_wf()
         && |y| == N == pow2(L).full
-        && 2 <= lv2.m.full
-        && 1 <= lv2.m.exp <= L
-        && lv1.m == pow2_half(lv2.m)
-        && ki * 2 < chunk_count(lv1.m)
-        && ki < chunk_count(lv2.m)
-        && lv1.valid_level_view()
-        && lv2.valid_level_view()
-        && view_as_chunks_suffix(y, lv1.m, ki * 2)
-            == lv1.ntt_rec3()[..ki*2]
-        && view_as_chunks_prefix(y, lv2.m, ki)
-            == lv2.ntt_rec3()[ki..]
+        && view_as_chunks_suffix(y, view.lower.m, view.lower_idx())
+            == view.lower_suffix()
+        && view_as_chunks_prefix(y, view.higher.m, view.higher_idx())
+            == view.higher_prefix()
     }
 
     method ntt_chunk_loop(
-        y: seq<elem>,
+        y: seq<elem>, 
         k: nat,
-        m: pow2_t,
-        ghost ki: nat,
-        ghost lv1: level_view,
-        ghost lv2: level_view)
-
+        view: ntt_loop_lvls)
     returns (y': seq<elem>)
-        requires ntt_chunk_loop_inv(y, lv1, lv2, ki)
+        requires ntt_chunk_loop_inv(y, view);
+        requires view.ki < chunk_count(view.higher.m);
+        requires k == view.higher_idx() * view.higher.m.full;
     {
-        assume false;
         y' := y;
-        var len' := pow2_half(m);
-        var omgm := omega_n(m);
+        var len' := view.lower.m;
+        var omgm := omega_n(view.higher.m);
 
         var omg := 1;
         var j := 0;
@@ -192,13 +205,9 @@ module ntt {
             LemmaPow0Auto();
         }
 
-        pow2_basics(m);
+        pow2_basics(view.higher.m);
 
-        index_bounded_lemma(0, k, ki, m);
-
-        // ghost var y_o := y[k..k+len'.full];
-        // ghost var y_e := y[k+len'.full..k+m.full];
-        // ghost var y_ks := compute_y_ks(a[ki], y_e, y_o, m);
+        view.index_bounded_lemma(0);
 
         while (j < len'.full)
             invariant 0 <= j <= len'.full;
@@ -209,13 +218,14 @@ module ntt {
             invariant y[k+j..k+len'.full] == y'[k+j..k+len'.full];
             invariant y[k+len'.full+j..] == y'[k+len'.full+j..];
         {
-            index_bounded_lemma(j, k, ki, m);
+            view.index_bounded_lemma(j);
+
             var t := modmul(omg, y[k + j + len'.full]);
             var u := y[k + j];
             y' := y'[k + j := modadd(u, t)];
             y' := y'[k + j + len'.full := modsub(u, t)];
 
-            omg_inv(omgm, omg, m, j);
+            omg_inv(omgm, omg, view.higher.m, j);
             omg := modmul(omg, omgm);
             j := j + 1;
 
@@ -225,8 +235,8 @@ module ntt {
             // }
         }
 
-    //     // assert y[..k] == y'[..k];
-    //     // assert y[k+m.full..] == y'[k+m.full..];
+    // //     // assert y[..k] == y'[..k];
+    // //     // assert y[k+m.full..] == y'[k+m.full..];
     }
 
 

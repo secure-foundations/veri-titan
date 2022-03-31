@@ -18,6 +18,19 @@ module ntt_recs3 {
         pow2_div(pow2(L), m).full
     }
 
+    lemma chunk_count_half(m: pow2_t)
+        requires 1 <= m.exp <= L;
+        ensures chunk_count(pow2_half(m)) == chunk_count(m) * 2;
+    {
+        assume false; // TODO
+        // nth_root_lemma();
+        // var m' := pow2_half(m);
+        // var count := chunk_count(m);
+        // assert count == N / m.full;
+        // var count' := chunk_count(m');
+        // assert count' == N / m'.full;
+    }
+
     datatype level_view = level_cons(
         ghost a: seq<seq<elem>>,
         ghost idxs: seq<seq<index_t>>,
