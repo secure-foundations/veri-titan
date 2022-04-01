@@ -151,17 +151,6 @@ module ntt {
             assert 0 <= ki * len <= N - len;
         }
 
-        function hi_idx_as_glb_offset(ki: nat): (k: nat)
-            requires ntt_loop_views_wf();
-            requires ki < chunk_count(higher.m);
-            ensures k == hi_idx(ki) * higher.m.full;
-            ensures 0 <= k <= N - lower.m.full;
-        {
-            hi_lo_idx_relations(ki);
-            chunk_index_bounded(lower.m, lo_idx(ki));
-            lo_idx(ki) * lower.m.full
-        }
-
         predicate ntt_level_loop_inv(y: n_sized, ki: nat)
         {
             && ntt_loop_views_wf()
@@ -173,14 +162,79 @@ module ntt {
             //     == higher_prefix()
         }
 
+        function start_point(ki: nat): (k: nat)
+            requires ntt_loop_views_wf();
+            requires ki < chunk_count(higher.m);
+            ensures k == hi_idx(ki) * higher.m.full;
+            ensures 0 <= k <= N - higher.m.full;
+        {
+            hi_lo_idx_relations(ki);
+            chunk_index_bounded(higher.m, ki);
+            lo_idx(ki) * lower.m.full
+        }
+
+        function split_point(ki: nat): (k: nat)
+            requires ntt_loop_views_wf();
+            requires ki < chunk_count(higher.m);
+            ensures 0 <= k <= N - lower.m.full;
+        {
+            start_point(ki) + lower.m.full
+        }
+
+        function end_point(ki: nat): (k: nat)
+            requires ntt_loop_views_wf();
+            requires ki < chunk_count(higher.m);
+            ensures 0 <= k <= N;
+        {
+            start_point(ki) + higher.m.full
+        }
+
+        function read_even_chunk(y: n_sized, ki: nat): (c: seq<elem>)
+            requires ntt_level_loop_inv(y, ki);
+            requires ki < chunk_count(higher.m);
+            ensures c == y[start_point(ki)..split_point(ki)];
+        {
+            hi_lo_idx_relations(ki);
+            read_chunk(y, lower.m, lo_idx(ki))
+        }
+
+        function read_odd_chunk(y: n_sized, ki: nat): (c: seq<elem>)
+            requires ntt_level_loop_inv(y, ki);
+            requires ki < chunk_count(higher.m);
+            ensures c == y[split_point(ki)..end_point(ki)];
+        {
+            chunk_index_bounded(higher.m, ki);
+            hi_lo_idx_relations(ki);
+            assert y[split_point(ki)..end_point(ki)]
+                == read_chunk(y, lower.m, lo_idx(ki)+1)
+            by {
+                var csize := lower.m.full;
+                var kl := lo_idx(ki);
+                calc == {
+                    y[split_point(ki)..end_point(ki)];
+                    y[kl*csize+csize..kl*csize+2*csize];
+                    {
+                        LemmaMulIsDistributiveAddOtherWayAuto();
+                    }
+                    y[(kl+1) * csize..kl*csize+csize+csize];
+                    {
+                        LemmaMulIsDistributiveAddOtherWayAuto();
+                    }
+                    y[(kl+1) * csize..(kl+1) * csize+csize];
+                    read_chunk(y, lower.m, kl + 1);
+                }
+            }
+            read_chunk(y, lower.m, lo_idx(ki)+1)
+        }
+
         lemma lower_view_correspondence(y: n_sized, ki: nat)
             requires ntt_level_loop_inv(y, ki);
-            requires hi_idx(ki) < chunk_count(higher.m);
+            requires ki < chunk_count(higher.m);
             ensures lo_idx(ki) < |lower.a| - 1;
-            ensures poly_eval_all_points(lower.a[lo_idx(ki)], read_chunk(y, lower.m, lo_idx(ki)), lower.m);
-            ensures poly_eval_all_points(lower.a[lo_idx(ki)+1], read_chunk(y, lower.m, lo_idx(ki)+1), lower.m);
+            ensures poly_eval_all_points(lower.a[lo_idx(ki)], read_even_chunk(y, ki), lower.m);
+            ensures poly_eval_all_points(lower.a[lo_idx(ki)+1], read_odd_chunk(y, ki), lower.m);
         {
-            var k := hi_idx_as_glb_offset(ki);
+            var k := start_point(ki);
             var len' := lower.m;
             var csize := len'.full;
             index_bounded_lemma(ki, csize);
@@ -214,26 +268,32 @@ module ntt {
             assert odd_chunk == vy[kl + 1];
         }
 
-        // function method even_lo(): (elo: nat)
-        //     ensures elo == lo_idx() * lower.m.full
-        //     ensures 
-        // {
-        //     hi_lo_idx_relations();
-        //     hi_idx() * higher.m.full
-        // }
+        predicate ntt_chunk_loop_inv(y: n_sized, y': n_sized, ki: nat, j: nat)
+        {
+            && ntt_level_loop_inv(y, ki)
+            && j <= lower.m.full
+            && ki < chunk_count(higher.m)
+            && var a := start_point(ki);
+            && var b := split_point(ki);
+            && var c := end_point(ki);
+            && y'[..a] == y[..a]
+            && y'[a+j..b] == y[a+j..b] == read_even_chunk(y, ki)[j..]
+            && y'[b+j..c] == y[b+j..c] == read_odd_chunk(y, ki)[j..]
+            && y'[c..] == y[c..]
+        }
 
-        // function method even_hi(): (ehi: nat)
-        //     ensures ehi == lo_idx() * lower.m.full + lower.m.full
-        // {
-        //     even_lo() + lower.m.full
-        // }
+        lemma ntt_level_implies_chunk_inv(y: n_sized, ki: nat)
+            requires ntt_level_loop_inv(y, ki);
+            requires ki < chunk_count(higher.m);
+            ensures ntt_chunk_loop_inv(y, y, ki, 0);
+        {
+            var a := start_point(ki);
+            var b := split_point(ki);
+            var c := end_point(ki);
 
-        // predicate ntt_chunk_loop_inv(y: n_sized, y': n_sized, , ki: nat, j: nat)
-        // {
-        //     && ntt_level_loop_inv(y, ki)
-        //     // && y'[k+j..k+len'.full] == y[k+j..k+len'.full] == read_chunk(y, view.lower.m, view.lo_idx())[j..]
-        //     // && y'[k+len'.full+j..k+len'.full * 2] == y[k+len'.full+j..k+len'.full * 2] == 
-        // }
+            assert y[a..b] == read_even_chunk(y, ki);
+            assert y[b..c] == read_odd_chunk(y, ki);
+        }
     }
 
     // method ntt_chunk_loop(
