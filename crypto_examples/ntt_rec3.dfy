@@ -117,7 +117,7 @@ module ntt_recs3 {
                 ntt_rec2_chunk_combine_feasible(a, a', m, count, count', idxs, idxs', ys');
 
                 var ys := seq(count, i  requires 0 <= i < count => 
-                    ntt_rec2_combine(a[i], a'[2 * i], a'[2 * i + 1], m, idxs[i], ys'[i * 2], ys'[i * 2 + 1], i));
+                    ntt_rec2_combine(a[i], m, idxs[i], ys'[i * 2], ys'[i * 2 + 1], i));
                 ys
         }        
     }

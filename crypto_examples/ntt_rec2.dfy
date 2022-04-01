@@ -82,8 +82,6 @@ module ntt_recs2 {
     }
 
     function method ntt_rec2_combine(ghost a: seq<elem>,
-        ghost a_e: seq<elem>,
-        ghost a_o: seq<elem>,
         len: pow2_t,
         ghost idxs: seq<index_t>,
         y_e: seq<elem>,
@@ -93,10 +91,8 @@ module ntt_recs2 {
         requires len.exp <= L;
         requires ntt_indicies_inv(a, idxs, len, ki); 
         requires ki < pow2_div(pow2(L), len).full;
-        requires a_e == even_indexed_terms(a, len);
-        requires a_o == odd_indexed_terms(a, len);
-        requires poly_eval_all_points(a_e, y_e, pow2_half(len));
-        requires poly_eval_all_points(a_o, y_o, pow2_half(len));
+        requires poly_eval_all_points(even_indexed_terms(a, len), y_e, pow2_half(len));
+        requires poly_eval_all_points(odd_indexed_terms(a, len), y_o, pow2_half(len));
         ensures poly_eval_all_points(a, y, len);
     {
         reveal poly_eval_all_points();
@@ -147,7 +143,7 @@ module ntt_recs2 {
             var y_e := ntt_rec2(a_e, len', idx_e, 2 * ki);
             var y_o := ntt_rec2(a_o, len', idx_o, 2 * ki + 1);
 
-            ntt_rec2_combine(a, a_e, a_o, len, idxs, y_e, y_o, ki)
+            ntt_rec2_combine(a, len, idxs, y_e, y_o, ki)
     }
 
     predicate ntt_chunk_indicies_inv(a: seq<seq<elem>>, idxs: seq<seq<index_t>>, len: pow2_t)
@@ -202,12 +198,12 @@ module ntt_recs2 {
                 else odd_indexed_indices(idxs[i/2], len));
         requires ntt_chunks_eval_inv(a', idxs', ys', pow2_half(len));
         ensures forall i |  0 <= i < count ::
-            ntt_rec2_combine.requires(a[i], a'[2 * i], a'[2 * i + 1], len, idxs[i], ys'[i * 2], ys'[i * 2 + 1], i);
+            ntt_rec2_combine.requires(a[i], len, idxs[i], ys'[i * 2], ys'[i * 2 + 1], i);
     {
         var len' := pow2_half(len);
 
         forall i |  0 <= i < count
-            ensures ntt_rec2_combine.requires(a[i], a'[2 * i], a'[2 * i + 1], len, idxs[i], ys'[i * 2], ys'[i * 2 + 1], i);
+            ensures ntt_rec2_combine.requires(a[i], len, idxs[i], ys'[i * 2], ys'[i * 2 + 1], i);
         {
             var ai := a[i];
             var a_e := a'[2 * i];
@@ -221,7 +217,7 @@ module ntt_recs2 {
             assert poly_eval_all_points(a_e, y_e, len');
             assert poly_eval_all_points(a_o, y_o, len');
 
-            assert ntt_rec2_combine.requires(ai, a_e, a_o, len, idxs[i], y_e, y_o, i);
+            assert ntt_rec2_combine.requires(ai, len, idxs[i], y_e, y_o, i);
         }
     }
 
@@ -276,7 +272,7 @@ module ntt_recs2 {
             ntt_rec2_chunk_combine_feasible(a, a', len, count, count', idxs, idxs', ys');
 
             var ys := seq(count, i  requires 0 <= i < count => 
-                ntt_rec2_combine(a[i], a'[2 * i], a'[2 * i + 1], len, idxs[i], ys'[i * 2], ys'[i * 2 + 1], i));
+                ntt_rec2_combine(a[i], len, idxs[i], ys'[i * 2], ys'[i * 2 + 1], i));
             ys
     }
 
