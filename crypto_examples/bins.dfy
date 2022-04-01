@@ -52,4 +52,6 @@ module bins refines LittleEndianNat {
         ensures Reverse(Reverse(s)) == s;
     {
     }
+
+    // lemma SubsequenceIndcies<T>(s: seq<T>)
 }
