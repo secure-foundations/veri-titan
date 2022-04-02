@@ -61,4 +61,13 @@ module bins refines LittleEndianNat {
         var s' := s[a..b];
         assert s'[c] == s[a + c];
     }
+
+
+    lemma LemmaSeqSuffixSame<T>(s: seq<T>, s': seq, a: nat, b: nat)
+        requires a <= |s| == |s'|;
+        requires a <= b <= |s|;
+        requires s[a..] == s'[a..];
+        ensures s[b..] == s'[b..];
+    {
+    }
 }

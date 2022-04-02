@@ -23,12 +23,16 @@ module ntt {
 
     lemma chunk_index_bounded(len: pow2_t, ki: nat)
         requires 0 <= len.exp <= L;
-        requires ki < chunk_count(len);
-        ensures 0 <= ki * len.full <= N - len.full;
+        requires ki <= chunk_count(len);
+        ensures ki < chunk_count(len) ==> 0 <= ki * len.full <= N - len.full;
+        ensures ki == chunk_count(len) ==> 0 <= ki * len.full == N;
     {
+        nth_root_lemma();
+        if ki == chunk_count(len) {
+            return;
+        }
         var max_count := chunk_count(len);
         var csize := len.full;
-        nth_root_lemma();
         calc {
             ki * csize;
         <=  { LemmaMulUpperBound(ki, max_count - 1, csize, csize); }
@@ -75,6 +79,66 @@ module ntt {
         requires ki < chunk_count(len);
         ensures y_as_chunks(y, len)[ki] == read_chunk(y, len, ki);
     {
+    }
+
+    lemma y_as_chunks_prefix_lemma(y: n_sized, y': n_sized, len: pow2_t, i: nat)
+        requires 0 <= len.exp <= L;
+        requires i <= chunk_count(len);
+        requires 0 <= i * len.full <= N;
+        requires y[..i * len.full] == y'[..i * len.full];
+        ensures y_as_chunks(y, len)[..i] == y_as_chunks(y', len)[..i];
+    {
+        var csize := len.full;
+        var v1 := y_as_chunks(y, len)[..i];
+        var v2 := y_as_chunks(y', len)[..i];
+
+        forall ki: nat | 0 <= ki < i
+            ensures v1[ki] == v2[ki];
+        {
+            chunk_index_bounded(len, ki);
+
+            var lo := ki * csize;
+            var hi := ki * csize + csize;
+
+            assert hi <= i * len.full by {
+                LemmaMulInequality(ki, i-1, len.full);
+                LemmaMulIsCommutativeAuto();
+                LemmaMulIsDistributiveSubAuto();
+            }
+
+            assert y[..hi] == y'[..hi];
+            assert y[lo..hi] == y'[lo..hi];
+        }
+    }
+
+    lemma y_as_chunks_suffix_lemma(y: n_sized, y': n_sized, len: pow2_t, i: nat)
+        requires 0 <= len.exp <= L;
+        requires i <= chunk_count(len);
+        requires 0 <= i * len.full <= N;
+        requires y[i * len.full..] == y'[i * len.full..];
+        ensures y_as_chunks(y, len)[i..] == y_as_chunks(y', len)[i..];
+    {
+        var count := chunk_count(len) - i;
+        var csize := len.full;
+        var v1 := y_as_chunks(y, len)[i..];
+        var v2 := y_as_chunks(y', len)[i..];
+
+        forall ki: nat | 0 <= ki < count
+            ensures v1[ki] == v2[ki];
+        {
+            chunk_index_bounded(len, ki + i);
+
+            var lo := (ki + i) * csize;
+            var hi := lo + csize;
+
+            assert i * len.full <= lo by {
+                assert i <= ki + i;
+                LemmaMulInequality(i, i+ki, len.full);
+            }
+
+            assert y[lo..] == y'[lo..];
+            assert y[lo..hi] == y'[lo..hi];
+        }
     }
 
     datatype ntt_loop_lvls = ntt_loop_lvls(
@@ -146,9 +210,8 @@ module ntt {
 
         lemma index_bounded_lemma(ki: nat, j: nat)
             requires ntt_loop_views_wf();
-            requires ki <= chunk_count(higher.m);
-            requires 0 <= j <= lower.m.full;
             requires ki < chunk_count(higher.m);
+            requires 0 <= j <= lower.m.full;
             ensures j != lower.m.full ==>
                 0 <= ki * higher.m.full + j + lower.m.full < N;
             ensures j == lower.m.full ==>
@@ -156,18 +219,19 @@ module ntt {
         {
             var len := higher.m.full;
             chunk_index_bounded(higher.m, ki);
-            assert 0 <= ki * len <= N - len;
+            // assert 0 <= ki * len <= N - len;
         }
 
         predicate ntt_level_loop_inv(y: n_sized, ki: nat)
+            ensures ntt_level_loop_inv(y, ki) ==> ntt_loop_views_wf()
         {
             && ntt_loop_views_wf()
             && ki <= chunk_count(higher.m)
             && |y| == N == pow2(L).full
             && y_as_chunks(y, lower.m)[lo_idx(ki)..]
                 == lower.ntt_rec3()[lo_idx(ki)..]
-            // && y_as_chunks(y, higher.m)[..hi_idx(ki)]
-            //     == higher_prefix()
+            && y_as_chunks(y, higher.m)[..hi_idx(ki)]
+                == higher.ntt_rec3()[..hi_idx(ki)]
         }
 
         function start_point(ki: nat): (k: nat)
@@ -273,7 +337,6 @@ module ntt {
             assert odd_chunk == read_chunk(y, len', kl + 1) == vy[kl + 1];
 
             assert poly_eval_all_points(lower.a[lo_idx(ki)], read_even_chunk(y, ki), lower.m);
-
             assert poly_eval_all_points(lower.a[lo_idx(ki)+1], read_odd_chunk(y, ki), lower.m);
         }
 
@@ -311,6 +374,32 @@ module ntt {
             }
         }
 
+        predicate poly_eval_first_half(y: elem, ki: nat, i: nat)
+            requires ntt_loop_views_wf();
+            requires ki < chunk_count(higher.m);
+        {
+            y == poly_eval(hi_coeffs(ki), omega_nk(higher.m, i))
+        }
+
+        predicate poly_eval_second_half(y: elem, ki: nat, i: nat)
+            requires ntt_loop_views_wf();
+            requires ki < chunk_count(higher.m);
+        {
+            y == poly_eval(hi_coeffs(ki), omega_nk(higher.m, i+lower.m.full))
+        }
+
+        predicate {:opaque} poly_eval_halves(y': n_sized, ki: nat, j: nat)
+            requires ntt_loop_views_wf();
+            requires ki < chunk_count(higher.m);
+            requires j <= lower.m.full;
+        {
+            var a := start_point(ki);
+            var b := split_point(ki);
+            forall i | 0 <= i < j :: (
+                && poly_eval_first_half(y'[a+i], ki, i) 
+                && poly_eval_second_half(y'[b+i], ki, i))
+        }
+
         predicate ntt_chunk_loop_inv(y: n_sized, y': n_sized,
             omg: elem, ki: nat, j: nat)
         {
@@ -326,10 +415,20 @@ module ntt {
             && y'[c..] == y[c..]
             && y'[a+j..b] == y[a+j..b] == read_even_chunk(y, ki)[j..]
             && y'[b+j..c] == y[b+j..c] == read_odd_chunk(y, ki)[j..]
-            && (forall i | 0 <= i < j ::
-                y'[a+i] == poly_eval(hi_coeffs(ki), omega_nk(higher.m, i)))
-            && (forall i | 0 <= i < j ::
-                y'[b+i] == poly_eval(hi_coeffs(ki), omega_nk(higher.m, i+lower.m.full)))
+            && poly_eval_halves(y', ki, j)
+        }
+
+        // this is pretty stupid
+        lemma ntt_chunk_loop_post_point_specialized_lemma(y: n_sized, y': n_sized,
+            omg: elem, ki: nat, i: nat)
+            requires ntt_loop_views_wf();
+            requires 0 <= i < lower.m.full;
+            requires ki < chunk_count(higher.m);
+            requires poly_eval_halves(y', ki, lower.m.full);
+            ensures poly_eval_first_half(y'[start_point(ki)+i], ki, i);
+            ensures poly_eval_second_half(y'[split_point(ki)+i], ki, i);
+        {
+            reveal poly_eval_halves();
         }
 
         lemma chunk_loop_pre_lemma(y: n_sized, ki: nat)
@@ -344,23 +443,22 @@ module ntt {
             assert y[a..b] == read_even_chunk(y, ki);
             assert y[b..c] == read_odd_chunk(y, ki);
 
-            assert 1 == omega_nk(lower.m, 0) by {
+            assert 1 == omega_nk(higher.m, 0) by {
                 LemmaPow0Auto();
             }
-            assume false;
+
+            reveal poly_eval_halves();
         }
 
-        lemma chunk_loop_point_lemma(y: n_sized, y1: n_sized,
+        lemma chunk_loop_peir_point_lemma(y: n_sized, y1: n_sized,
             omg: elem, t: elem, u: elem,
             ki: nat, j: nat)
             requires ntt_chunk_loop_inv(y, y1, omg, ki, j);
             requires j < lower.m.full;
             requires t == modmul(omg, y[split_point(ki) + j]);
             requires u == y[start_point(ki) + j];
-            ensures modadd(u, t) ==
-                poly_eval(hi_coeffs(ki), omega_nk(higher.m, j));
-            ensures modsub(u, t) ==
-                poly_eval(hi_coeffs(ki), omega_nk(higher.m, j + lower.m.full));
+            ensures poly_eval_first_half(modadd(u, t), ki, j);
+            ensures poly_eval_second_half(modsub(u, t), ki, j);
         {
             lower_view_point_lemma(y, ki, j);
 
@@ -410,21 +508,120 @@ module ntt {
                 read_odd_chunk(y, ki)[j+1..];
             }
 
-            forall i | 0 <= i <= j
-                ensures y2[a+i] == poly_eval(hi_coeffs(ki), omega_nk(higher.m, i));
-                ensures y2[b+i] == poly_eval(hi_coeffs(ki), omega_nk(higher.m, i + lower.m.full));
-            {
-                if i != j {
-                    assert y2[a+i] == y1[a+i];
-                    assert y2[b+i] == y1[b+i];
-                } else {
-                    assert y2[a+i] == modadd(u, t);
-                    assert y2[b+i] == modsub(u, t);
-                    chunk_loop_point_lemma(y, y1, omg, t, u, ki, j);
+            assert poly_eval_halves(y2, ki, j+1) by {
+                reveal poly_eval_halves();
+                forall i | 0 <= i < j+1
+                    ensures poly_eval_first_half(y2[a+i], ki, i);
+                    ensures poly_eval_second_half(y2[b+i], ki, i);
+                {
+                    if i != j {
+                        assert y2[a+i] == y1[a+i];
+                        assert y2[b+i] == y1[b+i];
+                    } else {
+                        assert y2[a+i] == modadd(u, t);
+                        assert y2[b+i] == modsub(u, t);
+                        chunk_loop_peir_point_lemma(y, y1, omg, t, u, ki, j);
+                    }
                 }
             }
 
+
             omg_inv(omgm, omg, higher.m, j);
+        }
+
+        lemma chunk_loop_post_points_lemma(y: n_sized, y': n_sized, omg: elem, ki: nat)
+            requires ntt_chunk_loop_inv(y, y', omg, ki, lower.m.full);
+            // ensures poly_eval_all_points(hi_coeffs(ki), y'[start_point(ki)..end_point(ki)], higher.m);
+            ensures higher.ntt_rec3()[hi_idx(ki)] == y'[start_point(ki)..end_point(ki)];
+        {
+            var a := start_point(ki);
+            var b := split_point(ki);
+            var c := end_point(ki);
+            hi_lo_idx_relations(ki);
+
+            forall i: nat | 0 <= i < higher.m.full
+                ensures y'[a..c][i] == poly_eval(hi_coeffs(ki), omega_nk(higher.m, i));
+            {
+                assert y'[a+i] == y'[a..c][i];
+                if i < lower.m.full {
+                    ntt_chunk_loop_post_point_specialized_lemma(y, y', omg, ki, i);
+                } else {
+                    var l := i - lower.m.full;
+                    ntt_chunk_loop_post_point_specialized_lemma(y, y', omg, ki, l);
+                }
+            }
+
+            assert poly_eval_all_points(hi_coeffs(ki), y'[a..c], higher.m) by {
+                reveal poly_eval_all_points();
+            }
+
+            assert poly_eval_all_points(hi_coeffs(ki), higher.ntt_rec3()[hi_idx(ki)], higher.m);
+
+            assert higher.ntt_rec3()[hi_idx(ki)] == y'[a..c] by {
+                reveal poly_eval_all_points();
+            }
+        }
+
+        lemma chunk_loop_post_lemma(y: n_sized, y': n_sized, omg: elem, ki: nat)
+            requires ntt_chunk_loop_inv(y, y', omg, ki, lower.m.full);
+            ensures ntt_level_loop_inv(y', ki+1);
+        {
+            var old_y_lo := y_as_chunks(y, lower.m);
+            var new_y_lo := y_as_chunks(y', lower.m);
+
+            var old_y_hi := y_as_chunks(y, higher.m);
+            var new_y_hi := y_as_chunks(y', higher.m);
+
+            var lo_view := lower.ntt_rec3();
+            var hi_view := higher.ntt_rec3();
+    
+            hi_lo_idx_relations(ki);
+
+            chunk_index_bounded(lower.m, lo_idx(ki+1));
+
+            assert y[lo_idx(ki+1)*lower.m.full..] == y'[lo_idx(ki+1)*lower.m.full..] by {
+                calc {
+                    end_point(ki);
+                    lo_idx(ki) * lower.m.full + higher.m.full;
+                    lo_idx(ki) * lower.m.full + 2 * lower.m.full;
+                    {
+                        LemmaMulIsDistributiveAddOtherWay(lower.m.full, lo_idx(ki), 2);
+                    }
+                    (lo_idx(ki) + 2) * lower.m.full;
+                    lo_idx(ki+1)*lower.m.full;
+                }
+            }
+
+            calc == {
+                new_y_lo[lo_idx(ki+1)..];
+                {
+                    y_as_chunks_suffix_lemma(y, y', lower.m, lo_idx(ki+1));
+                    assert new_y_lo[lo_idx(ki+1)..] == old_y_lo[lo_idx(ki+1)..];
+                }
+                old_y_lo[lo_idx(ki+1)..];
+                lo_view[lo_idx(ki+1)..];
+            }
+
+            var new_chunk := y'[start_point(ki)..end_point(ki)];
+
+            calc == {
+                new_y_hi[..hi_idx(ki+1)];
+                new_y_hi[..hi_idx(ki)] + [new_y_hi[hi_idx(ki)]];
+                new_y_hi[..hi_idx(ki)] + [new_chunk];
+                {
+                    y_as_chunks_prefix_lemma(y, y', higher.m, hi_idx(ki));
+                    assert old_y_hi[..hi_idx(ki)] == new_y_hi[..hi_idx(ki)];
+                }
+                old_y_hi[..hi_idx(ki)] + [new_chunk];
+                {
+                    assert old_y_hi[..hi_idx(ki)] == hi_view[..hi_idx(ki)];
+                }
+                hi_view[..hi_idx(ki)] + [new_chunk];
+                {
+                    chunk_loop_post_points_lemma(y, y', omg, ki);
+                }
+                hi_view[..hi_idx(ki)] + [higher.ntt_rec3()[hi_idx(ki)]];
+            }
         }
     }
 
@@ -433,10 +630,11 @@ module ntt {
         k: nat,
         ki: nat,
         view: ntt_loop_lvls)
-    returns (y': seq<elem>)
+    returns (y': n_sized)
         requires view.ntt_level_loop_inv(y, ki);
         requires ki < chunk_count(view.higher.m);
         requires k == view.hi_idx(ki) * view.higher.m.full;
+        ensures view.ntt_level_loop_inv(y', ki+1);
     {
         y' := y;
         var len' := view.lower.m;
@@ -466,12 +664,9 @@ module ntt {
             view.chunk_loop_peri_lemma(y, y1, y', omg, t, u, ki, j);
             omg := modmul(omg, omgm);
             j := j + 1;
-
-            assert view.ntt_chunk_loop_inv(y, y', omg, ki, j);
         }
 
-        // assert y[..k] == y'[..k];
-        // assert y[k+m.full..] == y'[k+m.full..];
+        view.chunk_loop_post_lemma(y, y', omg, ki);
     }
 
 
@@ -559,96 +754,3 @@ module ntt {
     // }
 }
 
-
-
-
-    // function {:opaque} y_as_chunks_prefix(y: n_sized, len: pow2_t, i: nat): seq<seq<elem>>
-    //     requires 0 <= len.exp <= L;
-    //     requires i <= chunk_count(len);
-    // {
-    //     var count := i;
-    //     var csize := len.full;
-    //     chunk_index_bounded_auto(len);
-    //     seq(count, ki requires 0 <= ki < count => y[ki * csize..ki * csize + csize])    
-    // }
-
-    // lemma y_as_chunks_prefix_lemma(y: n_sized, y': n_sized, len: pow2_t, i: nat)
-    //     requires 0 <= len.exp <= L;
-    //     requires i <= chunk_count(len);
-    //     requires 0 <= i * len.full <= N;
-    //     requires y[..i * len.full] == y'[..i * len.full];
-    //     ensures y_as_chunks_prefix(y, len, i) == y_as_chunks_prefix(y', len, i);
-    // {
-    //     reveal y_as_chunks_prefix();
-    //     var csize := len.full;
-    //     var v1 := y_as_chunks_prefix(y, len, i);
-    //     var v2 := y_as_chunks_prefix(y', len, i);
-
-    //     forall ki: nat | 0 <= ki < i
-    //         ensures v1[ki] == v2[ki];
-    //     {
-    //         chunk_index_bounded(len, ki);
-
-    //         var lo := ki * csize;
-    //         var hi := ki * csize + csize;
-
-    //         assert hi <= i * len.full by {
-    //             LemmaMulInequality(ki, i-1, len.full);
-    //             LemmaMulIsCommutativeAuto();
-    //             LemmaMulIsDistributiveSubAuto();
-    //         }
-
-    //         assert y[..hi] == y'[..hi];
-    //         assert y[lo..hi] == y'[lo..hi];
-
-    //     }
-    // }
-
-    // function {:opaque} y_as_chunks_suffix(y: n_sized, len: pow2_t, i: nat): seq<seq<elem>>
-    //     requires 0 <= len.exp <= L;
-    //     requires i <= chunk_count(len);
-    // {
-    //     var count := chunk_count(len) - i;
-    //     var csize := len.full;
-        
-    //     assert forall ki | 0 <= ki < count ::
-    //         0 <= (ki + i) * csize <= N - csize by {
-    //         forall ki | 0 <= ki < count 
-    //             ensures 0 <= (ki + i) * csize <= N - csize;
-    //         {
-    //             chunk_index_bounded(len, ki + i);
-    //         }
-    //     }
-    //     seq(count, ki requires 0 <= ki < count => y[(ki + i) * csize..(ki + i) * csize + csize]) 
-    // }
-
-    // lemma y_as_chunks_suffix_lemma(y: n_sized, y': n_sized, len: pow2_t, i: nat)
-    //     requires 0 <= len.exp <= L;
-    //     requires i <= chunk_count(len);
-    //     requires 0 <= i * len.full <= N;
-    //     requires y[i * len.full..] == y'[i * len.full..];
-    //     ensures y_as_chunks_suffix(y, len, i) == y_as_chunks_suffix(y', len, i);
-    // {
-    //     reveal y_as_chunks_suffix();
-    //     var count := chunk_count(len) - i;
-    //     var csize := len.full;
-    //     var v1 := y_as_chunks_suffix(y, len, i);
-    //     var v2 := y_as_chunks_suffix(y', len, i);
-
-    //     forall ki: nat | 0 <= ki < count
-    //         ensures v1[ki] == v2[ki];
-    //     {
-    //         chunk_index_bounded(len, ki + i);
-
-    //         var lo := (ki + i) * csize;
-    //         var hi := lo + csize;
-
-    //         assert i * len.full <= lo by {
-    //             assert i <= ki + i;
-    //             LemmaMulInequality(i, i+ki, len.full);
-    //         }
-
-    //         assert y[lo..] == y'[lo..];
-    //         assert y[lo..hi] == y'[lo..hi];
-    //     }
-    // }

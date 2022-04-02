@@ -67,7 +67,7 @@ module ntt_recs3 {
             ys
         }
 
-        function method ntt_rec3(): (ys: seq<seq<elem>>)
+        function method {:opaque} ntt_rec3(): (ys: seq<seq<elem>>)
             requires valid_level_view()
             ensures level_eval(ys)
             decreases m.exp;
