@@ -316,7 +316,7 @@ module ntt {
         {
             && ntt_level_loop_inv(y, ki)
             && j <= lower.m.full
-            && omg == omega_nk(higher.m, j)
+            && omg == modpow(omega_n(higher.m), j)
             && ki < chunk_count(higher.m)
             && var a := start_point(ki);
             && var b := split_point(ki);
@@ -344,9 +344,10 @@ module ntt {
             assert y[a..b] == read_even_chunk(y, ki);
             assert y[b..c] == read_odd_chunk(y, ki);
 
-            assert 1 == omega_nk(higher.m, 0) by {
+            assert 1 == omega_nk(lower.m, 0) by {
                 LemmaPow0Auto();
             }
+            assume false;
         }
 
         lemma chunk_loop_point_lemma(y: n_sized, y1: n_sized,
@@ -388,12 +389,12 @@ module ntt {
             requires u == y[start_point(ki) + j];
             requires y2 == y1[start_point(ki) + j := modadd(u, t)]
                 [split_point(ki) + j := modsub(u, t)];
-            
-            // ensures ntt_chunk_loop_inv(y, y2, omg, ki, j+1);
+            ensures ntt_chunk_loop_inv(y, y2, modmul(omg, omega_n(higher.m)), ki, j+1);
         {
             var a := start_point(ki);
             var b := split_point(ki);
             var c := end_point(ki);
+            var omgm := omega_n(higher.m);
 
             calc == {
                 y2[a+j+1..b];
@@ -423,7 +424,7 @@ module ntt {
                 }
             }
 
-            // omg_inv(omgm, omg, higher.m, j);
+            omg_inv(omgm, omg, higher.m, j);
         }
     }
 
@@ -447,12 +448,14 @@ module ntt {
         pow2_basics(view.higher.m);
 
         view.index_bounded_lemma(ki, 0);
+        view.hi_lo_idx_relations(ki);
         view.chunk_loop_pre_lemma(y, ki);
 
         while (j < len'.full)
+            invariant |y'| == |y|;
             invariant view.ntt_chunk_loop_inv(y, y', omg, ki, j);
         {
-            var y1 := y;
+            var y1 := y';
             view.index_bounded_lemma(ki, j);
 
             var t := modmul(omg, y[k + j + len'.full]);
@@ -461,10 +464,10 @@ module ntt {
             y' := y'[k + j + len'.full := modsub(u, t)];
 
             view.chunk_loop_peri_lemma(y, y1, y', omg, t, u, ki, j);
-
             omg := modmul(omg, omgm);
             j := j + 1;
-            assume false;
+
+            assert view.ntt_chunk_loop_inv(y, y', omg, ki, j);
         }
 
         // assert y[..k] == y'[..k];
