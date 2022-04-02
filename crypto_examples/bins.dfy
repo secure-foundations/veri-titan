@@ -53,5 +53,12 @@ module bins refines LittleEndianNat {
     {
     }
 
-    // lemma SubsequenceIndcies<T>(s: seq<T>)
+    lemma SubsequenceIndex<T>(s: seq<T>, a: nat, b: nat, c: nat)
+        requires a <= b <= |s|;
+        requires c < b - a;
+        ensures s[a..b][c] == s[a + c];
+    {
+        var s' := s[a..b];
+        assert s'[c] == s[a + c];
+    }
 }

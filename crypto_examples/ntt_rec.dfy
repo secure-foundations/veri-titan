@@ -96,6 +96,14 @@ module ntt_rec {
             y[i] == poly_eval(a, omega_nk(len, i)))
     }
 
+    lemma poly_eval_all_points_lemma(a: seq<elem>, y: seq<elem>, len: pow2_t, i: nat)
+        requires poly_eval_all_points(a, y, len);
+        requires i < len.full;
+        ensures  y[i] == poly_eval(a, omega_nk(len, i));
+    {
+        reveal poly_eval_all_points();
+    }
+
     lemma y_k_value(a: seq<elem>,
         len': pow2_t, len: pow2_t,
         omg: elem, k: nat,

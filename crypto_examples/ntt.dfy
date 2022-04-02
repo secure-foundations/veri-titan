@@ -12,6 +12,7 @@ module ntt {
     import opened omegas
     import opened ntt_rec
     import opened rindex
+    import opened bins
 
     import opened ntt_recs2
     import opened ntt_recs3
@@ -136,6 +137,13 @@ module ntt {
             LemmaMulNonnegative(lo_idx(ki), lower.m.full);
         }
 
+        function hi_coeffs(ki: nat): seq<elem>
+            requires ntt_loop_views_wf();
+            requires ki < chunk_count(higher.m);
+        {
+            higher.a[hi_idx(ki)]
+        }
+
         lemma index_bounded_lemma(ki: nat, j: nat)
             requires ntt_loop_views_wf();
             requires ki <= chunk_count(higher.m);
@@ -227,7 +235,7 @@ module ntt {
             read_chunk(y, lower.m, lo_idx(ki)+1)
         }
 
-        lemma lower_view_correspondence(y: n_sized, ki: nat)
+        lemma lower_view_points_lemma(y: n_sized, ki: nat)
             requires ntt_level_loop_inv(y, ki);
             requires ki < chunk_count(higher.m);
             ensures lo_idx(ki) < |lower.a| - 1;
@@ -261,11 +269,46 @@ module ntt {
                 y[(kl+1) * csize..(kl+1) * csize+csize];
                 read_chunk(y, len', kl + 1);
             }
-            assert even_chunk == read_chunk(y, len', kl);
-            assert odd_chunk == read_chunk(y, len', kl + 1);
+            assert even_chunk == read_chunk(y, len', kl) == vy[kl];
+            assert odd_chunk == read_chunk(y, len', kl + 1) == vy[kl + 1];
 
-            assert even_chunk == vy[kl];
-            assert odd_chunk == vy[kl + 1];
+            assert poly_eval_all_points(lower.a[lo_idx(ki)], read_even_chunk(y, ki), lower.m);
+
+            assert poly_eval_all_points(lower.a[lo_idx(ki)+1], read_odd_chunk(y, ki), lower.m);
+        }
+
+        lemma lower_view_point_lemma(y: n_sized, ki: nat, j: nat)
+            requires ntt_level_loop_inv(y, ki);
+            requires ki < chunk_count(higher.m);
+            requires j < lower.m.full;
+            ensures lo_idx(ki) < |lower.a| - 1;
+            ensures y[start_point(ki)+j]
+                == poly_eval(lower.a[lo_idx(ki)], omega_nk(lower.m, j));
+            ensures y[split_point(ki)+j]
+                == poly_eval(lower.a[lo_idx(ki)+1], omega_nk(lower.m, j));
+        {
+            lower_view_points_lemma(y, ki);
+            var kl := lo_idx(ki);
+            var a_e := lower.a[kl];
+            var a_o := lower.a[kl + 1];
+            var even_chunk := read_even_chunk(y, ki);
+            var odd_chunk := read_odd_chunk(y, ki);
+
+            assert even_chunk[j] == y[start_point(ki)+j] by {
+                SubsequenceIndex(y, start_point(ki), split_point(ki), j);
+            }
+
+            assert odd_chunk[j] == y[split_point(ki)+j] by {
+                SubsequenceIndex(y, split_point(ki), end_point(ki), j);
+            }
+
+            assert even_chunk[j] == poly_eval(a_e, omega_nk(lower.m, j)) by {
+                poly_eval_all_points_lemma(a_e, even_chunk, lower.m, j);
+            }
+
+            assert odd_chunk[j] == poly_eval(a_o, omega_nk(lower.m, j)) by {
+                poly_eval_all_points_lemma(a_o, odd_chunk, lower.m, j);
+            }
         }
 
         predicate ntt_chunk_loop_inv(y: n_sized, y': n_sized,
@@ -280,11 +323,13 @@ module ntt {
             && var c := end_point(ki);
             && |y'| == |y|
             && y'[..a] == y[..a]
-            && y'[a+j..b] == y[a+j..b] == read_even_chunk(y, ki)[j..]
-            && y'[a..a+j] == 
-            && y'[b+j..c] == y[b+j..c] == read_odd_chunk(y, ki)[j..]
-            && y'[b..b+j] == 
             && y'[c..] == y[c..]
+            && y'[a+j..b] == y[a+j..b] == read_even_chunk(y, ki)[j..]
+            && y'[b+j..c] == y[b+j..c] == read_odd_chunk(y, ki)[j..]
+            && (forall i | 0 <= i < j ::
+                y'[a+i] == poly_eval(hi_coeffs(ki), omega_nk(higher.m, i)))
+            && (forall i | 0 <= i < j ::
+                y'[b+i] == poly_eval(hi_coeffs(ki), omega_nk(higher.m, i+lower.m.full)))
         }
 
         lemma chunk_loop_pre_lemma(y: n_sized, ki: nat)
@@ -304,37 +349,82 @@ module ntt {
             }
         }
 
-        // lemma chunk_loop_peri_lemma(y: n_sized,
-        //     y1: n_sized, y2: n_sized,
-        //     omg: elem, t: elem, u: elem,
-        //     ki: nat, j: nat)
-        //     requires ntt_chunk_loop_inv(y, y1, omg, ki, j);
-        //     requires j < lower.m.full;
-        //     requires t == modmul(omg, y[split_point(ki) + j]);
-        //     requires u == y[start_point(ki) + j];
-        //     requires y2 == y1[start_point(ki) + j := modadd(u, t)]
-        //         [split_point(ki) + j := modsub(u, t)];
-        // {
-        //     var a := start_point(ki);
-        //     var b := split_point(ki);
-        //     var c := end_point(ki);
+        lemma chunk_loop_point_lemma(y: n_sized, y1: n_sized,
+            omg: elem, t: elem, u: elem,
+            ki: nat, j: nat)
+            requires ntt_chunk_loop_inv(y, y1, omg, ki, j);
+            requires j < lower.m.full;
+            requires t == modmul(omg, y[split_point(ki) + j]);
+            requires u == y[start_point(ki) + j];
+            ensures modadd(u, t) ==
+                poly_eval(hi_coeffs(ki), omega_nk(higher.m, j));
+            ensures modsub(u, t) ==
+                poly_eval(hi_coeffs(ki), omega_nk(higher.m, j + lower.m.full));
+        {
+            lower_view_point_lemma(y, ki, j);
 
-        //     calc == {
-        //         y2[a+j+1..b];
-        //         y1[a+j+1..b];
-        //         y[a+j+1..b];
-        //         read_even_chunk(y, ki)[j+1..];
-        //     }
+            var y_e_k := y[start_point(ki)+j];
+            var y_o_k := y[split_point(ki)+j];
+            assert y_e_k == poly_eval(lower.a[lo_idx(ki)], omega_nk(lower.m, j));
+            assert y_o_k == poly_eval(lower.a[lo_idx(ki)+1], omega_nk(lower.m, j));
+            
+            assume lower.a[lo_idx(ki)] == even_indexed_terms(hi_coeffs(ki), higher.m);
+            assume lower.a[lo_idx(ki)+1] == odd_indexed_terms(hi_coeffs(ki), higher.m);
 
-        //     calc == {
-        //         y2[b+j+1..c];
-        //         y1[b+j+1..c];
-        //         y[b+j+1..c];
-        //         read_odd_chunk(y, ki)[j+1..];
-        //     }
+            y_k_value(hi_coeffs(ki), lower.m, higher.m, 
+                omg, j, y_e_k, y_o_k, modadd(u, t));
 
-        //     omg_inv(omgm, omg, higher.m, j);
-        // }
+            y_k'_value(hi_coeffs(ki), lower.m, higher.m, 
+                omg, j, y_e_k, y_o_k, modsub(u, t));
+        }
+
+        lemma chunk_loop_peri_lemma(y: n_sized,
+            y1: n_sized, y2: n_sized,
+            omg: elem, t: elem, u: elem,
+            ki: nat, j: nat)
+            requires ntt_chunk_loop_inv(y, y1, omg, ki, j);
+            requires j < lower.m.full;
+            requires t == modmul(omg, y[split_point(ki) + j]);
+            requires u == y[start_point(ki) + j];
+            requires y2 == y1[start_point(ki) + j := modadd(u, t)]
+                [split_point(ki) + j := modsub(u, t)];
+            
+            // ensures ntt_chunk_loop_inv(y, y2, omg, ki, j+1);
+        {
+            var a := start_point(ki);
+            var b := split_point(ki);
+            var c := end_point(ki);
+
+            calc == {
+                y2[a+j+1..b];
+                y1[a+j+1..b];
+                y[a+j+1..b];
+                read_even_chunk(y, ki)[j+1..];
+            }
+
+            calc == {
+                y2[b+j+1..c];
+                y1[b+j+1..c];
+                y[b+j+1..c];
+                read_odd_chunk(y, ki)[j+1..];
+            }
+
+            forall i | 0 <= i <= j
+                ensures y2[a+i] == poly_eval(hi_coeffs(ki), omega_nk(higher.m, i));
+                ensures y2[b+i] == poly_eval(hi_coeffs(ki), omega_nk(higher.m, i + lower.m.full));
+            {
+                if i != j {
+                    assert y2[a+i] == y1[a+i];
+                    assert y2[b+i] == y1[b+i];
+                } else {
+                    assert y2[a+i] == modadd(u, t);
+                    assert y2[b+i] == modsub(u, t);
+                    chunk_loop_point_lemma(y, y1, omg, t, u, ki, j);
+                }
+            }
+
+            // omg_inv(omgm, omg, higher.m, j);
+        }
     }
 
     method ntt_chunk_loop(
