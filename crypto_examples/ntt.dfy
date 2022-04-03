@@ -449,7 +449,7 @@ module ntt {
             reveal poly_eval_halves();
         }
 
-        lemma chunk_loop_peir_point_lemma(y: n_sized, y1: n_sized,
+        lemma chunk_loop_peri_point_lemma(y: n_sized, y1: n_sized,
             omg: elem, t: elem, u: elem,
             ki: nat, j: nat)
             requires ntt_chunk_loop_inv(y, y1, omg, ki, j);
@@ -519,7 +519,7 @@ module ntt {
                     } else {
                         assert y2[a+i] == modadd(u, t);
                         assert y2[b+i] == modsub(u, t);
-                        chunk_loop_peir_point_lemma(y, y1, omg, t, u, ki, j);
+                        chunk_loop_peri_point_lemma(y, y1, omg, t, u, ki, j);
                     }
                 }
             }
@@ -650,12 +650,40 @@ module ntt {
             && get_chunk_loop_view(s).ntt_level_loop_inv(y, 0)
         }
 
+       lemma level_loop_post_special_lemma(y: n_sized, y': n_sized, s: nat)
+            requires lvl_loop_views_inv(y, s);
+            requires s == L;
+            requires get_chunk_loop_view(s).ntt_level_loop_inv(y', chunk_count(pow2(s)));
+            ensures poly_eval_all_points(A(), y', pow2(s));
+        {
+            var c_view := get_chunk_loop_view(s);
+            var m := pow2(s);
+            nth_root_lemma();
+            assert m.full == N;
+            
+            calc == {
+                y';
+                y_as_chunks(y', m)[0];
+                c_view.higher.ntt_rec3()[0];
+            }
+
+            assert poly_eval_all_points(c_view.higher.a[0], y', m);
+            assert c_view.higher.a[0] == A();
+        }
+
         lemma level_loop_post_lemma(y: n_sized, y': n_sized, s: nat)
             requires lvl_loop_views_inv(y, s);
-            requires 1 <= s < L;
+            requires 1 <= s <= L;
             requires get_chunk_loop_view(s).ntt_level_loop_inv(y', chunk_count(pow2(s)));
-            ensures lvl_loop_views_inv(y', s+1);
+            ensures 1 <= s < L ==> lvl_loop_views_inv(y', s+1);
+            ensures s == L ==>
+                poly_eval_all_points(A(), y', pow2(s));
         {
+            if s == L {
+                level_loop_post_special_lemma(y, y', s);
+                return;
+            }
+
             var c_view := get_chunk_loop_view(s);
             var c_view' := get_chunk_loop_view(s+1);
     
@@ -674,24 +702,6 @@ module ntt {
                 == y_as_chunks(y', c_view'.higher.m)[..0];
 
             assert c_view'.ntt_level_loop_inv(y', 0);
-        }
-
-        lemma ntt_loop_post_lemma(y: n_sized)
-            requires lvl_loop_views_inv(y, L+1);
-        {
-            var m := pow2(L);
-            nth_root_lemma();
-            // var count := chunk_count(m);
-            // assert count == 1;
-   
-            var c_view := get_chunk_loop_view(L);
-
-            // calc == {
-            //     y_as_chunks(y, m);
-            //     c_view.lower.ntt_rec3();
-            //     // lvls[L].ntt_rec3();
-            // }
-            // assert lvls[L].ntt_rec3() == y_as_chunks(y, m);
         }
     }
 
@@ -742,7 +752,7 @@ module ntt {
     method ntt_level_loop(y: n_sized, s: nat, l_view: lvl_loop_view)
     returns (y': n_sized)
         requires l_view.lvl_loop_views_inv(y, s);
-        requires 1 <= s < L;
+        requires 1 <= s <= L;
         ensures l_view.lvl_loop_views_inv(y', s + 1);
     {
         y' := y;
@@ -780,6 +790,7 @@ module ntt {
 
     method ntt(y: n_sized, l_view: lvl_loop_view) returns (y': n_sized)
         requires l_view.lvl_loop_views_inv(y, 1);
+        ensures poly_eval_all_points(A(), y', pow2(L));
     {
         y' := y;
         var s := 1;
@@ -790,6 +801,5 @@ module ntt {
             y' := ntt_level_loop(y', s, l_view);
             s := s + 1;
         }
-        l_view.ntt_loop_post_lemma(y');
     }
 }
