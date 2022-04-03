@@ -97,6 +97,7 @@ module ntt_rec {
     }
 
     lemma poly_eval_all_points_lemma(a: seq<elem>, y: seq<elem>, len: pow2_t, i: nat)
+        requires 0 <= len.exp <= L;
         requires poly_eval_all_points(a, y, len);
         requires i < len.full;
         ensures  y[i] == poly_eval(a, omega_nk(len, i));
