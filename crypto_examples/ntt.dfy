@@ -465,7 +465,7 @@ module ntt {
             var y_o_k := y[split_point(ki)+j];
             assert y_e_k == poly_eval(lower.a[lo_idx(ki)], omega_nk(lower.m, j));
             assert y_o_k == poly_eval(lower.a[lo_idx(ki)+1], omega_nk(lower.m, j));
-            
+
             assume lower.a[lo_idx(ki)] == even_indexed_terms(hi_coeffs(ki), higher.m);
             assume lower.a[lo_idx(ki)+1] == odd_indexed_terms(hi_coeffs(ki), higher.m);
 
@@ -787,7 +787,7 @@ module ntt {
 
     method ntt(y: n_sized, l_view: lvl_loop_view) returns (y': n_sized)
         requires l_view.lvl_loop_views_inv(y, 1);
-        // ensures poly_eval_all_points(A(), y', pow2(L));
+        ensures poly_eval_all_points(A(), y', pow2(L));
     {
         y' := y;
         var s := 1;
