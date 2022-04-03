@@ -141,7 +141,7 @@ module ntt {
         }
     }
 
-    datatype ntt_loop_lvls = ntt_loop_lvls(
+    datatype chunk_loop_view = chunk_loop_view(
         lower: level_view,
         higher: level_view)
     {
@@ -223,7 +223,6 @@ module ntt {
         }
 
         predicate ntt_level_loop_inv(y: n_sized, ki: nat)
-            ensures ntt_level_loop_inv(y, ki) ==> ntt_loop_views_wf()
         {
             && ntt_loop_views_wf()
             && ki <= chunk_count(higher.m)
@@ -625,11 +624,82 @@ module ntt {
         }
     }
 
+    datatype lvl_loop_view = lvl_loop_view(lvls: seq<level_view>)
+    {
+        predicate lvl_loop_views_wf()
+        {
+            && |lvls| == L + 1
+            && (forall i| 0 <= i <= L :: lvls[i].m == pow2(i))
+            && (forall i| 0 <= i < L ::
+                chunk_loop_view(lvls[i], lvls[i+1]).ntt_loop_views_wf())
+        }
+
+        function method get_chunk_loop_view(s: nat): (cv: chunk_loop_view)
+            requires 1 <= s <= L;
+            requires lvl_loop_views_wf();
+            ensures cv.ntt_loop_views_wf();
+            ensures cv.higher.m == pow2(s);
+        {
+            chunk_loop_view(lvls[s-1], lvls[s])
+        }
+
+        predicate lvl_loop_views_inv(y: n_sized, s: nat)
+        {
+            && 1 <= s <= L
+            && lvl_loop_views_wf()
+            && get_chunk_loop_view(s).ntt_level_loop_inv(y, 0)
+        }
+
+        lemma level_loop_post_lemma(y: n_sized, y': n_sized, s: nat)
+            requires lvl_loop_views_inv(y, s);
+            requires 1 <= s < L;
+            requires get_chunk_loop_view(s).ntt_level_loop_inv(y', chunk_count(pow2(s)));
+            ensures lvl_loop_views_inv(y', s+1);
+        {
+            var c_view := get_chunk_loop_view(s);
+            var c_view' := get_chunk_loop_view(s+1);
+    
+            var m := pow2(s);
+            var count := chunk_count(m);
+            c_view.hi_lo_idx_relations(count);
+
+            calc == {
+                y_as_chunks(y', m);
+                c_view.higher.ntt_rec3();
+                lvls[s].ntt_rec3();
+                c_view'.lower.ntt_rec3();
+            }
+
+            assert c_view'.higher.ntt_rec3()[..0]
+                == y_as_chunks(y', c_view'.higher.m)[..0];
+
+            assert c_view'.ntt_level_loop_inv(y', 0);
+        }
+
+        lemma ntt_loop_post_lemma(y: n_sized)
+            requires lvl_loop_views_inv(y, L+1);
+        {
+            var m := pow2(L);
+            nth_root_lemma();
+            // var count := chunk_count(m);
+            // assert count == 1;
+   
+            var c_view := get_chunk_loop_view(L);
+
+            // calc == {
+            //     y_as_chunks(y, m);
+            //     c_view.lower.ntt_rec3();
+            //     // lvls[L].ntt_rec3();
+            // }
+            // assert lvls[L].ntt_rec3() == y_as_chunks(y, m);
+        }
+    }
+
     method ntt_chunk_loop(
         y: n_sized, 
         k: nat,
         ki: nat,
-        view: ntt_loop_lvls)
+        view: chunk_loop_view)
     returns (y': n_sized)
         requires view.ntt_level_loop_inv(y, ki);
         requires ki < chunk_count(view.higher.m);
@@ -669,88 +739,57 @@ module ntt {
         view.chunk_loop_post_lemma(y, y', omg, ki);
     }
 
+    method ntt_level_loop(y: n_sized, s: nat, l_view: lvl_loop_view)
+    returns (y': n_sized)
+        requires l_view.lvl_loop_views_inv(y, s);
+        requires 1 <= s < L;
+        ensures l_view.lvl_loop_views_inv(y', s + 1);
+    {
+        y' := y;
+        var c_view := l_view.get_chunk_loop_view(s);
+        var m := pow2(s);
+        assert m == c_view.higher.m;
+        pow2_basics(m);
 
-    // method ntt_level_loop(a: seq<elem>, s: nat)
-    //     requires |a| == N == pow2(L).full;
-    //     requires 1 <= s < L;
-    // {
-    //     var m := pow2(s);
-    //     pow2_basics(m);
-    //     assume 1 <= m.full <= N/2;
+        assume 1 <= m.full <= N/2;
 
-    //     var omgm := omega_nk(m, 1);
+        var k := 0;
+        var ki := 0;
 
-    //     assert omega_nk(m, 1) == omega_n(m) by {
-    //         LemmaPow1Auto();
-    //     }
+        while (ki < chunk_count(m)) 
+            invariant c_view.ntt_level_loop_inv(y', ki);
+            invariant 0 <= k == ki * m.full;
+        {
+            var k' := k + m.full;
+            var ki' := ki + 1;
 
-    //     var k := 0;
-    //     var ki := 0;
+            y' := ntt_chunk_loop(y', k, ki, c_view);
 
-    //     while (ki < pow2_div(pow2(L), m).full) 
-    //         // at level s, each chunk is 2 ** s big
-    //         // invariant step_count == pow2_div(pow2(L), m);
-    //         // invariant step_count.exp == L - m.exp;
-    //         invariant 0 <= k == ki * m.full;
-    //     {
-    //         var k' := k + m.full;
-    //         var ki' := ki + 1;
+            assert k' == (ki + 1) * m.full by {
+                LemmaMulIsDistributiveAddOtherWay(m.full, ki, 1);
+                assert (ki + 1) * m.full == ki * m.full + 1 * m.full;
+            }
+            assert (ki + 1) * m.full > 0 by {
+                LemmaMulStrictlyPositiveAuto();
+            }
+            k, ki := k', ki';
+        }
 
-    //         var _ := ntt_chunk_loop(a, k, ki, m);
+        l_view.level_loop_post_lemma(y, y', s);
+    }
 
-    //         assert k' == (ki + 1) * m.full by {
-    //             LemmaMulIsDistributiveAddOtherWay(m.full, ki, 1);
-    //             assert (ki + 1) * m.full == ki * m.full + 1 * m.full;
-    //         }
-    //         assert (ki + 1) * m.full > 0 by {
-    //             LemmaMulStrictlyPositiveAuto();
-    //         }
-    //         k, ki := k', ki';
-    //     }
-    // }
-
-    // method ntt(b: seq<elem>, len: pow2_t) returns (y: n_sized)
-    //     requires |b | == len.full == N;
-    //     requires len.exp == L;
-    //     // ensures poly_eval_all_points(a, y, len)
-    // {
-    //     // var s := pow2(0);
-    //     var s := 1;
-    //     while (s < L) // L levels totoal, combine results at each level 
-    //         invariant 1 <= s;
-    //     {
-    //         ntt_level_loop(b, s);
-    //         s := s + 1;
-    //     }
-    // }
-
-
-      // lemma init_implies_inv(
-    //     y: n_sized,
-    //     m: pow2_t, 
-    //     a: seq<seq<elem>>,
-    //     idxs: seq<seq<index_t>>)
-
-    //     requires |y| == N == pow2(L).full
-    //     requires 1 == m.full;
-    //     requires 0 == m.exp;
-    //     requires ntt_chunk_indicies_inv(a, idxs, m);
-    //     requires y == Ar();
-    //     ensures ntt_level_loop_inv(y, m, a, idxs);
-    // {
-    //     var view := y_as_chunks(y, m);
-    //     var base := ntt_rec3_base(a, m, idxs);
-    //     forall ki | 0 <= ki < N
-    //         ensures view[ki] == base[ki];
-    //     {
-    //         calc == {
-    //             view[ki];
-    //             y[ki..ki+1];
-    //             [y[ki]];
-    //             [Ar()[ki]];
-    //             base[ki];
-    //         }
-    //     }
-    // }
+    method ntt(y: n_sized, l_view: lvl_loop_view) returns (y': n_sized)
+        requires l_view.lvl_loop_views_inv(y, 1);
+    {
+        y' := y;
+        var s := 1;
+        while (s <= L)
+            invariant l_view.lvl_loop_views_inv(y', s);
+            invariant 1 <= s;
+        {
+            y' := ntt_level_loop(y', s, l_view);
+            s := s + 1;
+        }
+        l_view.ntt_loop_post_lemma(y');
+    }
 }
-
