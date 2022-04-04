@@ -492,7 +492,18 @@ module ntt_recs {
             ys[2 * ki + 1]
         }
 
-        lemma ntt_rec_chunk_combine_feasible(lower: level_view, ys: seq<seq<elem>>)
+        lemma ntt_level_terms_correspondence_lemma(lower: level_view, ki: nat)
+            requires m.exp >= 1;
+            requires valid_level_view();
+            requires ki < |a|;
+            requires lower == build_lower_level();
+            ensures lower.a[ki*2] == even_indexed_terms(a[ki], m);
+            ensures lower.a[ki*2+1] == odd_indexed_terms(a[ki], m);
+        {
+            reveal build_lower_level();
+        }
+
+        lemma ntt_rec_chunk_combine_lemma(lower: level_view, ys: seq<seq<elem>>)
             requires m.exp >= 1;
             requires valid_level_view();
             requires lower == build_lower_level();
@@ -536,7 +547,7 @@ module ntt_recs {
             else
                 var lower := build_lower_level();
                 var ys' := lower.ntt_rec();
-                ntt_rec_chunk_combine_feasible(lower, ys');
+                ntt_rec_chunk_combine_lemma(lower, ys');
                 var count := chunk_count(m);
 
                 var ys := seq(count, i  requires 0 <= i < count => 

@@ -147,8 +147,8 @@ module ntt {
             && 2 <= higher.m.full <= N
             && 1 <= higher.m.exp <= L
             && lower.m == pow2_half(higher.m)
-            && lower.valid_level_view()
             && higher.valid_level_view()
+            && lower == higher.build_lower_level()
         }
 
         function lo_idx(ki: nat): (i: nat)
@@ -462,8 +462,12 @@ module ntt {
             assert y_e_k == poly_eval(lower.a[lo_idx(ki)], omega_nk(lower.m, j));
             assert y_o_k == poly_eval(lower.a[lo_idx(ki)+1], omega_nk(lower.m, j));
 
-            assume lower.a[lo_idx(ki)] == even_indexed_terms(hi_coeffs(ki), higher.m);
-            assume lower.a[lo_idx(ki)+1] == odd_indexed_terms(hi_coeffs(ki), higher.m);
+            assert lower.a[lo_idx(ki)] == even_indexed_terms(hi_coeffs(ki), higher.m) by {
+                higher.ntt_level_terms_correspondence_lemma(lower, ki);
+            }
+            assert lower.a[lo_idx(ki)+1] == odd_indexed_terms(hi_coeffs(ki), higher.m) by {
+                higher.ntt_level_terms_correspondence_lemma(lower, ki);
+            }
 
             y_k_value_lemma(hi_coeffs(ki), lower.m, higher.m, 
                 omg, j, y_e_k, y_o_k, modadd(u, t));
