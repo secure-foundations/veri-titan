@@ -330,7 +330,24 @@ module ntt_recs {
         requires 1 <= m.exp <= L;
         ensures chunk_count(pow2_half(m)) == chunk_count(m) * 2;
     {
-        assume false; // TODO
+        nth_root_lemma();
+        var left := pow2_div(pow2(L), pow2_half(m));
+        assert left.full * (m.full / 2) == N;
+        var right := pow2_div(pow2(L), m);
+        var half := m.full / 2;
+        pow2_basics(m);
+
+        calc == {
+            left.full * half;
+            left.full * (m.full / 2);
+            right.full * (2 * half);
+            {
+                LemmaMulIsAssociativeAuto();
+            }
+            (right.full * 2) * half;
+        }
+
+        LemmaMulEqualityConverse(half, left.full, right.full * 2);
     }
 
     predicate ntt_rec_combine_enable(a: seq<elem>,
