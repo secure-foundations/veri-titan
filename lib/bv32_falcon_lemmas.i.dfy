@@ -65,7 +65,6 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         assert int32_rs(to_int32(d), 31) == 0 by { lemma_rs_by_31(to_int32(d)); }
         assert uint32_and(0, Q) == 0 by { reveal_and(); }
         assert IsModEquivalent(r, x + y, Q);
-        assert false;
       }
       else {
         assert int32_rs(to_int32(d), 31) == -1 by { lemma_rs_by_31(to_int32(d)); }
