@@ -1,6 +1,6 @@
 include "polys.dfy"
 
-module ntt_recs3 {
+module ntt_recs {
     import opened Seq
     import opened Power
     import opened Power2
@@ -288,7 +288,7 @@ module ntt_recs3 {
         }
     }
 
-    lemma ntt_rec_base_case(a: seq<elem>, len: pow2_t)
+    lemma ntt_rec_base_case_lemma(a: seq<elem>, len: pow2_t)
         requires len.full == 1;
         requires |a| == len.full;
         ensures len.exp == 0;
@@ -333,7 +333,7 @@ module ntt_recs3 {
         assume false; // TODO
     }
 
-    predicate ntt_rec2_combine_enable(a: seq<elem>,
+    predicate ntt_rec_combine_enable(a: seq<elem>,
         len: pow2_t,
         idxs: seq<index_t>,
         y_e: seq<elem>,
@@ -348,13 +348,13 @@ module ntt_recs3 {
         && poly_eval_all_points(odd_indexed_terms(a, len), y_o, pow2_half(len))
     }
 
-    function method ntt_rec2_combine(ghost a: seq<elem>,
+    function method ntt_rec_combine(ghost a: seq<elem>,
         len: pow2_t,
         ghost idxs: seq<index_t>,
         y_e: seq<elem>,
         y_o: seq<elem>,
         ki: nat): (y: seq<elem>)
-        requires ntt_rec2_combine_enable(a, len, idxs, y_e, y_o, ki);
+        requires ntt_rec_combine_enable(a, len, idxs, y_e, y_o, ki);
         ensures poly_eval_all_points(a, y, len);
     {
         var len' := pow2_half(len);
@@ -401,7 +401,7 @@ module ntt_recs3 {
                 && poly_eval_all_points(a[ki], ys[ki], m)))
         }
 
-        function method ntt_rec3_base(): (ys: seq<seq<elem>>)
+        function method ntt_rec_base(): (ys: seq<seq<elem>>)
             requires valid_level_view()
             requires m.full == 1 && m.exp == 0;
             ensures level_eval(ys)
@@ -413,7 +413,7 @@ module ntt_recs3 {
                     ensures poly_eval_all_points(a[ki], ys[ki], m)
                 {
                     ntt_indicies_inv_consequence0(a[ki], idxs[ki], m, ki);
-                    ntt_rec_base_case(a[ki], m);
+                    ntt_rec_base_case_lemma(a[ki], m);
                     assert a[ki] == ys[ki];
                 }
             }
@@ -492,14 +492,14 @@ module ntt_recs3 {
             ys[2 * ki + 1]
         }
 
-        lemma ntt_rec2_chunk_combine_feasible(lower: level_view, ys: seq<seq<elem>>)
+        lemma ntt_rec_chunk_combine_feasible(lower: level_view, ys: seq<seq<elem>>)
             requires m.exp >= 1;
             requires valid_level_view();
             requires lower == build_lower_level();
             requires lower.level_eval(ys);
             requires |ys| == chunk_count(m) * 2;
             ensures forall i |  0 <= i < chunk_count(m) ::
-                ntt_rec2_combine_enable(a[i], m, idxs[i],
+                ntt_rec_combine_enable(a[i], m, idxs[i],
                     lower_even_chunk(ys, i), lower_odd_index(ys, i), i);
         {
             var len := m;
@@ -507,7 +507,7 @@ module ntt_recs3 {
             chunk_count_half(m);
 
             forall i |  0 <= i < chunk_count(m) 
-                ensures ntt_rec2_combine_enable(a[i], len, idxs[i],
+                ensures ntt_rec_combine_enable(a[i], len, idxs[i],
                     lower_even_chunk(ys, i), lower_odd_index(ys, i), i);
             {
                 reveal build_lower_level();
@@ -525,22 +525,22 @@ module ntt_recs3 {
             }
         }
 
-        function method {:opaque} ntt_rec3(): (ys: seq<seq<elem>>)
+        function method {:opaque} ntt_rec(): (ys: seq<seq<elem>>)
             requires valid_level_view()
             ensures level_eval(ys)
             decreases m.exp;
         {
             pow2_basics(m);
             if m.full == 1 then 
-                ntt_rec3_base()
+                ntt_rec_base()
             else
                 var lower := build_lower_level();
-                var ys' := lower.ntt_rec3();
-                ntt_rec2_chunk_combine_feasible(lower, ys');
+                var ys' := lower.ntt_rec();
+                ntt_rec_chunk_combine_feasible(lower, ys');
                 var count := chunk_count(m);
 
                 var ys := seq(count, i  requires 0 <= i < count => 
-                    ntt_rec2_combine(a[i], m, idxs[i], lower_even_chunk(ys', i), lower_odd_index(ys', i), i));
+                    ntt_rec_combine(a[i], m, idxs[i], lower_even_chunk(ys', i), lower_odd_index(ys', i), i));
                 ys
         }        
     }
