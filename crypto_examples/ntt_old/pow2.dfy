@@ -1,6 +1,6 @@
-include "../std_lib/src/NonlinearArithmetic/Power2.dfy"
-include "../std_lib/src/NonlinearArithmetic/DivMod.dfy"
-include "../std_lib/src/Collections/Sequences/Seq.dfy"
+include "../../std_lib/src/NonlinearArithmetic/Power2.dfy"
+include "../../std_lib/src/NonlinearArithmetic/DivMod.dfy"
+include "../../std_lib/src/Collections/Sequences/Seq.dfy"
 
 module pows_of_2 {
     import opened Power
