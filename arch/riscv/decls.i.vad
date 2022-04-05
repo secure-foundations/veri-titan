@@ -13,7 +13,7 @@ import opened stack
 #endverbatim
 
 type seq(a: Type(0)): Type(0) {: primitive} extern;
-function operator([]) #[a: Type(0)](s: seq(a), i: int): a extern; 
+function operator([]) #[a: Type(0)](s: seq(a), i: int): a extern;
 function operator([ := ]) #[a: Type(0)](s: seq(a), i: int, v: a): seq(a) extern;
 function operator([ .. ]) #[a: Type(0)](s: seq(a), begin: int, end: int): seq(a) extern;
 function seq_len #[a: Type(0)] (s: seq(a)): nat extern;
@@ -36,23 +36,23 @@ type uint256: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff_ffff
 
 type int32:  Type(0) := int_range((-0x80000000), 0x7fffffff);
 type int64:  Type(0) := int_range((-0x80000000_00000000), 0x7fffffff_ffffffff);
-    
+
 function power(b: int, e: nat) : nat extern;
 function cong(a: int, b: int, n: int) : bool extern;
 function cong_B32(a: int, b: int): bool extern;
 
 const BASE_32:  nat extern;
-const BASE_64:  nat extern; 
-const BASE_128: nat extern; 
+const BASE_64:  nat extern;
+const BASE_128: nat extern;
 const BASE_256: nat extern;
 const BASE_512: nat extern;
 const NUM_WORDS:nat extern;
-    
+
 const BASE_31:  int extern;
-const BASE_63:  int extern; 
+const BASE_63:  int extern;
 
 const NA: int extern;
-    
+
 function to_uint32(i:int) : uint32 extern;
 function to_int32(i:uint32) : int32 extern;
 
@@ -65,7 +65,7 @@ type reg32_t: Type(0) extern;
 function mem_base_ptr_valid(wmem: mem_t, ptr: int, size: nat): bool extern;
 
 type gprs_t: Type(0) extern;
-function operator([]) (s: gprs_t, i: int): uint32 extern; 
+function operator([]) (s: gprs_t, i: int): uint32 extern;
 function operator([ := ]) (s: gprs_t, i: int, v: uint32): gprs_t extern;
 function operator([ .. ]) (s: gprs_t, begin: int, end: int): seq(uint32) extern;
 
@@ -188,17 +188,17 @@ var t5: uint32 {:state reg32_t(T5)};
 var t6: uint32 {:state reg32_t(T6)};
 
 operand_type reg32: uint32 @ reg32_t :=
-| inout x0 | inout ra | inout sp | inout gp | inout tp 
-| inout t0 | inout t1 | inout t2 | inout s0 | inout s1 
-| inout a0 | inout a1 | inout a2 | inout a3 | inout a4 
-| inout a5 | inout a6 | inout a7 | inout s2 | inout s3 
-| inout s4 | inout s5 | inout s6 | inout s7 | inout s8 
-| inout s9 | inout s10 | inout s11 | inout t3 | inout t4 
+| inout x0 | inout ra | inout sp | inout gp | inout tp
+| inout t0 | inout t1 | inout t2 | inout s0 | inout s1
+| inout a0 | inout a1 | inout a2 | inout a3 | inout a4
+| inout a5 | inout a6 | inout a7 | inout s2 | inout s3
+| inout s4 | inout s5 | inout s6 | inout s7 | inout s8
+| inout s9 | inout s10 | inout s11 | inout t3 | inout t4
 | inout t5 | inout t6;
 
 operand_type imm128: uint128 := const;
 operand_type imm32: uint32 := const;
-    
+
 // signed immediate
 operand_type simm32: int32 := const;
 
@@ -228,7 +228,7 @@ function uint64_lh(v: uint64) : uint32 extern;
 // --------------------------------------------------------------
 // Base Integer Instructions
 // --------------------------------------------------------------
-    
+
 // load instructions
 
 function mod(a: int, n: nat): int extern;
@@ -402,7 +402,7 @@ procedure sw_next(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: i
 
 // immediate instructions
 // all immediate instructions take a 12-bit immediate and sign extend it
-    
+
 procedure addi(inout dst: reg32, in src1: reg32, inline src2: int32)
     {:instruction Ins32(RV_ADDI(dst, src1, src2))}
     ensures
@@ -450,7 +450,7 @@ procedure andi(inout dst: reg32, in src1: reg32, in src2: imm32)
     assume false;
 }
 
-    
+
 procedure srli(inout dst: reg32, in src1: reg32, in src2: imm32)
     {:instruction Ins32(RV_SRLI(dst, src1, src2))}
     requires
@@ -476,7 +476,7 @@ procedure srai(inout dst: reg32, in src1: reg32, in src2: imm32)
 
 
 // register-register operations
-    
+
 procedure add(inout dst: reg32, in src1: reg32, in src2: reg32)
     {:instruction Ins32(RV_ADD(dst, src1, src2))}
     ensures
@@ -576,6 +576,13 @@ procedure li(inout dst: reg32, in src: imm32)
     assume false;
 }
 
+procedure neg(inout dst: reg32, in src: reg32)
+    {:instruction Ins32(RV_NEG(dst, src))}
+    ensures
+        dst == uint32_sub(0, old(src));
+{
+    assume false;
+}
 
 // --------------------------------------------------------------
 // Integer Multiplication and Division Extension
@@ -598,7 +605,7 @@ procedure mulhu(inout dst: reg32, in src1: reg32, in src2: reg32)
 {
     assume false;
 }
-    
+
 #verbatim
 } // end module bignum_decls
 #endverbatim
