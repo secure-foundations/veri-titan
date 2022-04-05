@@ -24,6 +24,14 @@ ghost procedure lemma_mq_add_correct(
     ghost x: nat,
     ghost y: nat) extern;
 
+ghost procedure lemma_mq_sub_correct(
+    ghost d: uint32,
+    ghost b: uint32,
+    ghost c: uint32,
+    ghost r: uint32,
+    ghost x: nat,
+    ghost y: nat) extern;
+
 procedure mq_add() returns (ghost r: uint32)
     {:noInline}
     requires
@@ -74,7 +82,43 @@ procedure mq_add() returns (ghost r: uint32)
     r := a0;
     
     lemma_mq_add_correct(d, b, c, r, x, y);
+}
+    
+procedure mq_sub() returns (ghost r: uint32)
+    {:noInline}
+    requires
+        a0 < 12289;
+        a1 < 12289;
+    modifies
+        a0; a1; a5;
+    ensures
+      r == a0;
+      r == (old(a0) - old(a1)) % 12289;
+{
+    ghost var Q: int := 12289;
+    ghost var x: nat := a0;
+    ghost var y: nat := a1;
+    
+    // a1 == x - y;
+    sub(a1, a0, a1);
+    ghost var d := a1;
+    
+    // lui(a5, 0x3);
+    // addi(a5, a5, 1)
+    li(a5, 0x3001);
+    assert a5 == Q;
 
+    srai(a0, a1, 0x1f);
+    ghost var b := a0;
+
+    and(a0, a0, a5);
+    ghost var c := uint32_and(b, to_uint32(Q));
+    assert c == a0;
+
+    add(a0, a0, a1);
+    r := a0;
+    
+    lemma_mq_sub_correct(d, b, c, r, x, y);
 }
 
 
