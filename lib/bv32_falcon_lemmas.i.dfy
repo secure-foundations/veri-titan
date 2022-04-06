@@ -100,4 +100,37 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
       }
     }
 
+    lemma lemma_mq_rshift1_correct(par: uint32, b: uint32, c: uint32, d: uint32, r: uint32, x: int)
+        requires 0 <= x < 12289;
+        requires par == uint32_and(x, 1);
+        requires b == uint32_sub(0, par);
+        requires c == uint32_and(b, 12289);
+        requires d == uint32_add(x, c);
+        requires r == uint32_rs(d, 1);
+        ensures r == (x / 2) % 12289;
+    {
+      var Q : int := 12289;
+      assert par == 0 || par == 1 by { reveal_and(); }
+      
+      if par == 0 {
+        assert b == 0;
+        assert c == 0 by { reveal_and(); }
+        assert d == x;
+        
+        assume uint32_rs(x, 1) == x / 2;
+        
+      } else {
+        assert b == 0xffff_ffff;
+        assert c == Q by { reveal_and(); }
+        assert d == uint32_add(x, Q);
+
+        assert IsModEquivalent(x, d, Q);
+
+        // (x+Q) % 2 == 0 since x, Q odd
+        // (x+Q)/2 * 2 === x mod Q
+        assume false;
+        
+      }
+    }
+
 }
