@@ -21,8 +21,10 @@ module omegas {
 
 	lemma {:axiom} Nth_root_lemma()
 		ensures Pow(PSI, Pow2(LOGDN)) % Q == 1;
+		ensures Pow2(LOGDN) == DN;
 		ensures Pow(PSI, Pow2(LOGN)) % Q == Q - 1;
 		ensures Pow(OMEGA, Pow2(LOGN)) % Q == 1;
+		ensures Pow2(LOGN) == N;
 
 	function method omega(n: pow2_t): (v: elem)
 		requires n.exp <=LOGDN;
