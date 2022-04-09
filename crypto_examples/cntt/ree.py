@@ -58,13 +58,14 @@ def eval_poly(p, x):
         v = (v * x + coeff) % Q
     return v
 
+def mod_sqr(x):
+    return (x * x) % Q
+
 poly = [1371,8801,5676,4025,3388,10753,6940,10684,10682,2458,679,11161,3648,5512,10142,10189]
 
 # poly = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]
 
-
 saved = list(poly)
-
 # scaled = scale_poly(poly)
 
 def find_exp(p, y):
@@ -94,13 +95,13 @@ def mulntt_ct_std2rev(a, n, p):
         d = int(d / 2)
         assert (d * 2 * t == n)
   
-        print("blocks(d)=%d, size(2t)=%d" %(d, 2*t))
+        # print("blocks(d)=%d, size(2t)=%d" %(d, 2*t))
 
-        wtf = dict()
+        sources = dict()
         for j in range(t):
             w = p[t + j]
             u = 2 * d * j
-            print("\tj=%d"  % j);
+            # print("\tj=%d"  % j);
             width = math.log(n / d, 2) - 1
 
             # w_t = pow(OMEGA, d, Q)
@@ -110,31 +111,19 @@ def mulntt_ct_std2rev(a, n, p):
             for s in range(u, u + d):
                 e, o = a[s], a[s + d]
                 x = (o * w) % Q
-                # print("\t\te=%d o=%d w=%d" % (e, o, w))
                 a[s + d] = (e - x) % Q
                 a[s] = (e + x) % Q
-                if t == 1:
-                    assert d == 8
-                    assert (w == pow(PSI, 2 * d * bit_rev_int(j, width) + d, Q))
-                    assert (a[s] == (e + o * w) % Q)
-                    assert (w == pow(PSI, d, Q) == pow(OMEGA, 4, Q))
-                    assert (eval_poly([e, o], w) == a[s])
-                    assert (eval_poly([e, o], (w * (OMEGA ** d))%Q) == a[s+d])
 
-                wtf[a[s]] = (e, o, w, "even")
-                wtf[a[s+d]] = (e, o, w, "odd")
+                sources[a[s]] = (e, o, w, "even")
+                sources[a[s+d]] = (e, o, w, "odd")
         level = []
         for i in range(d):
             values = []
             for k in range(i, i+d*(2* t), d):
                 # values += [a[k]]
-                values += [(a[k], wtf[a[k]])]
+                values += [(a[k], sources[a[k]])]
             level.append(values)
         levels.append(level)
-        #     # assert False
-        #     # assert(values[0] == eval_poly(bpoly[::-1], OMEGA))
-        #     # assert False
-        #     print("")
         t = t * 2
 
 rev_shoup_scaled_ntt16_12289 = [0,  1479,  4043,  7143,  6553,  8155, 10984, 11567, 1212, 10643,  9094,  5860,  3542,  3504,  3621,  9744]
@@ -142,39 +131,50 @@ rev_shoup_scaled_ntt16_12289 = [0,  1479,  4043,  7143,  6553,  8155, 10984, 115
 mulntt_ct_std2rev(poly, 16, rev_shoup_scaled_ntt16_12289)
 ys = poly
 
-# for k, y in enumerate(ys):
-#     x = (pow(OMEGA, bit_rev_int(k, LOGN), Q) * PSI) % Q
-#     print(y, eval_poly(saved, x))
-#     assert eval_poly(saved, x) == y
+levels = levels[::-1]
 
-# for i in range(16):
-#     x = pow(OMEGA, bit_rev_int(i, LOGN), Q)
-#     split_eval_debug(scaled, x)
+def build_level_poly_aux(last):
+    assert len(last) <= 16
+    curr = []
+    for poly in last:
+        curr += [even_poly(poly), odd_poly(poly)]
+    return curr
 
-tl = levels[-1][0]
+def build_level_polys():
+    level_polys = []
+    assert len(saved) == N
+    curr = [list(saved)]
+    for i in range(LOGN):
+        level_polys += [curr]
+        curr = build_level_poly_aux(curr)
+    return level_polys
 
-for i in range(16):
-    x = (pow(OMEGA, bit_rev_int(i, LOGN), Q) * PSI) % Q
-    ve, vo, pd, v = split_eval_debug(saved, x)
-    # print(ve, vo, v)
-    (k, (a, b, w, tp)) = tl[i]
-    assert ve == a
-    assert vo == b
-    assert v == k
-    # print(a, b, w, k)
+polys = build_level_polys()
 
-#     assert eval_poly(saved, x) == ys[i]
-#     print(vo, w, b)
-    # tx = (b * w) % Q
-    # w_inv = pow(w, Q-2, Q)
+def check_block(block, poly):
+    logn = int(math.log(len(block), 2))
+    exp = pow(2, LOGN - logn)
+    for i in range(len(block)):
+        x = (pow(OMEGA, exp * bit_rev_int(i, logn), Q) * pow(PSI, exp, Q)) % Q
+        de, do, pd, dv = split_eval_debug(poly, x)
+        (v, (ve, vo, w, tp)) = block[i]
+        # print("e: %d o: %d v: %d"  % (ve, vo, v))
+        assert de == ve and do == vo and dv == v
 
-    # if tp == "even":
-    #     assert(k == (ve + tx) % Q)
-    #     assert((vo * x) % Q == (tx) % Q)
-    #     assert((vo * x) % Q == (b * w) % Q)
-    #     assert((vo * x * w_inv) % Q == (b) % Q)
-    # else:
-    #     assert(k == (ve - tx) % Q)
-    #     assert((vo * x) % Q == (-tx) % Q)
-    #     assert((vo * x) % Q == (-b * w) % Q)
-    #     assert((-vo * x * w_inv) % Q == (b) % Q)
+# check_block(levels[0][0], polys[0][0])
+# check_block(levels[1][1], polys[1][1])
+# check_block(levels[1][0], polys[1][0])
+# check_block(levels[2][1], polys[2][2])
+
+def validate_level(polys, blocks):
+    assert len(polys) == len(blocks)
+    logc = int(math.log(len(polys), 2))
+    for i in range(len(polys)):
+        check_block(blocks[i], polys[bit_rev_int(i, logc)])
+
+def validate_levels():
+    level_polys = build_level_polys()
+    for i in range(len(level_polys)):
+        validate_level(level_polys[i], levels[i])
+
+validate_levels()
