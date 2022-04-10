@@ -1,6 +1,8 @@
 # from ast import literal_eval
 import random, math
 
+from numpy import polysub, save
+
 Q = 12289
 N = 16
 PSI = 1212
@@ -165,6 +167,28 @@ def build_level_polys():
         level_polys += [curr]
     return level_polys
 
+# def build_level_poly_rev_aux(last):
+#     curr = []
+#     even_polys = even_poly(last)
+#     odd_polys = odd_poly(last)
+#     assert len(even_polys) == len(odd_polys)
+#     for i in range(len(even_polys)):
+#         curr += [[v for pair in zip(even_polys[i], odd_polys[i]) for v in pair]]
+#     return curr
+
+# def build_level_polys_rev():
+#     assert len(saved) == N
+#     curr = [0 for _ in range(len(saved))]
+#     for i in range(len(saved)):
+#         curr[i] = [saved[bit_rev_int(i, LOGN)]]
+#     level_polys = [curr]
+#     for _ in range(LOGN):
+#         curr = build_level_poly_rev_aux(curr)
+#         level_polys += [curr]
+#     return level_polys
+
+# rev_polys = build_level_polys_rev()[::-1]
+
 def check_partial_block(block, poly):
     assert len(block) <= len(poly)
     logn = int(math.log(len(poly), 2))
@@ -181,7 +205,8 @@ def check_block(block, poly):
     check_partial_block(block, poly)
 
 level_polys = build_level_polys()
-# print(level_polys)
+# for lp in level_polys:
+#     print(lp)
 
 def mulntt_ct_std2rev_aug(a, n, p):
     d = n
@@ -191,6 +216,7 @@ def mulntt_ct_std2rev_aug(a, n, p):
         d = int(d / 2)
         lgd = int(math.log(d, 2))
         polys = level_polys[lgd]
+        last_polys = level_polys[lgd+1]
         assert (d * 2 * t == n)
         # print(polys)
   
@@ -221,22 +247,32 @@ def mulntt_ct_std2rev_aug(a, n, p):
                 block.append((a[s+d], (e, o, w, "odd")))
 
                 poly = polys[bit_rev_int(s-u, logc)]
-                logn = int(math.log(len(poly), 2))
-                exp = pow(2, LOGN - logn)
 
-                x = (pow(OMEGA, exp * bit_rev_int(2 * j, logn), Q) * pow(PSI, exp, Q)) % Q
+                logn = int(math.log(len(poly), 2))
+                # assert d * bit_rev_int(j, width) == d * bit_rev_int(2*j, logn)
+                # print(d * bit_rev_int(j, width), d * bit_rev_int(2*j+1, logn))
+
+                x = (pow(OMEGA, d * bit_rev_int(2*j, logn), Q) * pow(PSI, d, Q)) % Q
                 de, do, _, dv = split_eval_debug(poly, x)
                 assert de == e and do == o and dv == a[s]
+                assert(even_poly(poly) == last_polys[2 * bit_rev_int(s-u, logc)])
+                assert(even_poly(poly) == last_polys[2 * bit_rev_int(s-u, logc)])
 
-                x = (pow(OMEGA, exp * bit_rev_int(2 * j+1, logn), Q) * pow(PSI, exp, Q)) % Q
+                x = (pow(OMEGA, d * bit_rev_int(2*j+1, logn), Q) * pow(PSI, d, Q)) % Q
                 de, do, _, dv = split_eval_debug(poly, x)
                 assert de == e and do == o and dv == a[s+d]
 
                 check_partial_block(blocks[s-u], polys[bit_rev_int(s-u, logc)])
 
+        print(polys)
         for i in range(d):
+            print(bit_rev_int(i, logc)),
+            print(polys[bit_rev_int(i, logc)])
             check_block(blocks[i], polys[bit_rev_int(i, logc)])
         # print("")
         t = t * 2
 
 mulntt_ct_std2rev_aug(saved, 16, rev_shoup_scaled_ntt16_12289)
+
+# for polys in build_level_polys_rev():
+#     print(polys)
