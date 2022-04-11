@@ -67,7 +67,7 @@ poly = [1371,8801,5676,4025,3388,10753,6940,10684,10682,2458,679,11161,3648,5512
 
 # poly = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]
 
-saved = list(poly)
+saved = poly[::]
 # scaled = scale_poly(poly)
 
 def find_exp(p, y):
@@ -86,65 +86,6 @@ def split_eval_debug(p, x):
     v = (ve + vo * x) % Q
     assert v == eval_poly(p, x)
     return (ve, vo, vo * x, v)
-
-# levels = []
-
-# def mulntt_ct_std2rev(a, n, p):
-#     d = n
-#     t = 1
-
-#     while t < n:
-#         d = int(d / 2)
-#         assert (d * 2 * t == n)
-  
-#         # print("blocks(d)=%d, size(2t)=%d" %(d, 2*t))
-
-#         sources = dict()
-#         for j in range(t):
-#             w = p[t + j]
-#             u = 2 * d * j
-#             # print("\tj=%d"  % j);
-#             width = math.log(n / d, 2) - 1
-
-#             # w_t = pow(OMEGA, d, Q)
-#             # psi_t = pow(PSI, d, Q)
-#             # assert(w == (psi_t * pow(w_t, bit_rev_int(j, width), Q)) % Q)
-#             assert(w == pow(PSI, 2 * d * bit_rev_int(j, width) + d, Q))
-#             for s in range(u, u + d):
-#                 e, o = a[s], a[s + d]
-#                 x = (o * w) % Q
-#                 a[s + d] = (e - x) % Q
-#                 a[s] = (e + x) % Q
-#                 sources[a[s]] = (e, o, w, "even")
-#                 sources[a[s+d]] = (e, o, w, "odd")
-    
-#         level = []
-#         for i in range(d):
-#             values = []
-#             for k in range(i, i+d*(2* t), d):
-#                 # values += [a[k]]
-#                 values += [(a[k], sources[a[k]])]
-#             level.append(values)
-#         levels.append(level)
-#         t = t * 2
-
-# mulntt_ct_std2rev(poly, 16, rev_shoup_scaled_ntt16_12289)
-# ys = poly
-
-# levels = levels[::-1]
-
-# def validate_level(polys, blocks):
-#     assert len(polys) == len(blocks)
-#     logc = int(math.log(len(polys), 2))
-#     for i in range(len(polys)):
-#         check_block(blocks[i], polys[bit_rev_int(i, logc)])
-
-# def validate_levels():
-#     level_polys = build_level_polys()
-#     for i in range(len(level_polys)):
-#         validate_level(level_polys[i], levels[i])
-
-# validate_levels()
 
 rev_shoup_scaled_ntt16_12289 = [0,  1479,  4043,  7143,  6553,  8155, 10984, 11567, 1212, 10643,  9094,  5860,  3542,  3504,  3621,  9744]
 
@@ -237,11 +178,17 @@ def mulntt_ct_std2rev_aug(a, n, p):
             for block in blocks:
                 assert len(block) == 2 * j
             for s in range(u, u + d):
+
                 e, o = a[s], a[s + d]
+
+                # if t == 1:
+                #     assert e == saved[s]
+                #     assert o == saved[s+d]
+
                 x = (o * w) % Q
                 a[s + d] = (e - x) % Q
                 a[s] = (e + x) % Q
-        
+
                 block = blocks[s-u]
                 block.append((a[s], (e, o, w, "even")))
                 block.append((a[s+d], (e, o, w, "odd")))
@@ -272,7 +219,7 @@ def mulntt_ct_std2rev_aug(a, n, p):
         # print("")
         t = t * 2
 
-mulntt_ct_std2rev_aug(saved, 16, rev_shoup_scaled_ntt16_12289)
+mulntt_ct_std2rev_aug(poly, 16, rev_shoup_scaled_ntt16_12289)
 
 # for polys in build_level_polys_rev():
 #     print(polys)
