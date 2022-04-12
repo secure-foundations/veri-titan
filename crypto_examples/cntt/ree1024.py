@@ -6,6 +6,11 @@ N = 1024
 PSI = 1014
 OMEGA = 8209
 
+def log2(num):
+    r = math.log(num, 2)
+    assert r % 1.0 == 0
+    return int(r)
+
 rev_shoup_scaled_ntt1024_12289 = [
         0,  1479,  4043,  7143,  6553,  8155, 10984, 11567,
     11077,  1646,  3195,  6429,  8747,  8785,  8668,  2545,
@@ -274,6 +279,17 @@ def split_eval_debug(p, x):
 
 # validate_levels()
 
+# def check_partial_block(block, poly):
+#     assert len(block) <= len(poly)
+#     logn = int(math.log(len(poly), 2))
+#     exp = pow(2, LOGN - logn)
+#     for i in range(len(block)):
+#         x = (pow(OMEGA, exp * bit_rev_int(i, logn), Q) * pow(PSI, exp, Q)) % Q
+#         de, do, pd, dv = split_eval_debug(poly, x)
+#         (v, (ve, vo, w, tp)) = block[i]
+#         # print("e: %d o: %d v: %d"  % (ve, vo, v))
+#         assert de == ve and do == vo and dv == v
+
 def build_level_poly_aux(last):
     curr = []
     if len(last) == N / 2:
@@ -293,32 +309,35 @@ def build_level_polys():
         level_polys += [curr]
     return level_polys
 
-# def check_partial_block(block, poly):
-#     assert len(block) <= len(poly)
-#     logn = int(math.log(len(poly), 2))
-#     exp = pow(2, LOGN - logn)
-#     for i in range(len(block)):
-#         x = (pow(OMEGA, exp * bit_rev_int(i, logn), Q) * pow(PSI, exp, Q)) % Q
-#         de, do, pd, dv = split_eval_debug(poly, x)
-#         (v, (ve, vo, w, tp)) = block[i]
-#         # print("e: %d o: %d v: %d"  % (ve, vo, v))
-#         assert de == ve and do == vo and dv == v
-
-def check_partial_block(block, poly, l):
+def check_prefix_block(block, poly, l):
     assert l <= len(block) == len(poly)
-    logn = int(math.log(len(poly), 2))
-    exp = pow(2, LOGN - logn)
+    logn = log2(len(poly))
+    count = N / len(poly)
     for i in range(l):
-        x = (pow(OMEGA, exp * bit_rev_int(i, logn), Q) * pow(PSI, exp, Q)) % Q
+        x = (pow(OMEGA, count * bit_rev_int(i, logn), Q) * pow(PSI, count, Q)) % Q
+        de, do, pd, dv = split_eval_debug(poly, x)
+        assert dv == block[i]
+        # (v, (ve, vo, w, tp)) = block[i]
+        # print("e: %d o: %d v: %d"  % (ve, vo, v))
+        # assert de == ve and do == vo and dv == v
+
+def check_suffix_block(block, poly, l):
+    assert l <= len(block) == len(poly)
+    logn = log2(len(poly))
+    count = N / len(poly)
+    for i in range(l, len(block)):
+        x = (pow(OMEGA, count * bit_rev_int(i, logn), Q) * pow(PSI, count, Q)) % Q
         de, do, pd, dv = split_eval_debug(poly, x)
         assert dv == block[i]
 
 def check_block(block, poly):
     assert len(block) == len(poly)
-    check_partial_block(block, poly, len(poly))
+    check_prefix_block(block, poly, len(poly))
 
 level_polys = build_level_polys()
-# print(level_polys)
+# print(len((level_polys)))
+# for lp in level_polys:
+#     print(len((lp))
 
 def read_as_blocks(a, d):
     blocks = []
@@ -328,22 +347,76 @@ def read_as_blocks(a, d):
         blocks.append(block)
     return blocks
 
+def check_t_loop_inv(a, d):
+    lgd = log2(d)
+    polys = level_polys[lgd]
+    blocks = read_as_blocks(a, d)
+    for i in range(d):
+        check_block(blocks[i], polys[bit_rev_int(i, lgd)])
+
+def check_j_loop_inv(a, d, j):
+    lgd = log2(d)
+    polys = level_polys[lgd]
+    blocks = read_as_blocks(a, d)
+
+    # current level has d blocks
+    # each block is valid [0..2*j]
+    for i in range(d):
+        check_prefix_block(blocks[i], polys[bit_rev_int(i, lgd)], 2*j)
+
+    # previous level has 2d blocks
+    # each block is valid [j..]
+    s_d = d * 2
+    s_blocks = read_as_blocks(a, s_d)
+    s_lgd = log2(s_d)
+    s_polys = level_polys[s_lgd]
+    for i in range(d * 2):
+        check_suffix_block(s_blocks[i], s_polys[bit_rev_int(i, s_lgd)], j)
+
+def check_s_loop_inv(a, d, j, s, u):
+    lgd = log2(d)
+    polys = level_polys[lgd]
+    blocks = read_as_blocks(a, d)
+    bi = s-u
+    # current level has d blocks
+    # bi is the working block
+    # advances 2 indicies
+    for i in range(bi):
+        check_prefix_block(blocks[i], polys[bit_rev_int(i, lgd)], 2*j)
+    for i in range(bi, d):
+        check_prefix_block(blocks[i], polys[bit_rev_int(i, lgd)], 2*j-2)
+
+    # previous level has 2d blocks
+    # bi and bi + d are the working blocks
+    # advance 1 index each
+    s_d = d * 2
+    s_blocks = read_as_blocks(a, s_d)
+    s_lgd = log2(s_d)
+    s_polys = level_polys[s_lgd]
+
+    for i in range(bi):
+        check_suffix_block(s_blocks[i], s_polys[bit_rev_int(i, s_lgd)], j+1) 
+    for i in range(bi, d):
+        check_suffix_block(s_blocks[i], s_polys[bit_rev_int(i, s_lgd)], j) 
+    for i in range(d, bi+d):
+        check_suffix_block(s_blocks[i], s_polys[bit_rev_int(i, s_lgd)], j+1) 
+    for i in range(bi+d, 2*d):
+        check_suffix_block(s_blocks[i], s_polys[bit_rev_int(i, s_lgd)], j) 
+
 def mulntt_ct_std2rev_aug(a, p):
     d = N
     t = 1
 
     while t < N:
         p_d = d
-        p_lgd = int(math.log(p_d, 2))
+        p_lgd = log2(p_d)
         p_blocks = read_as_blocks(a, p_d)
         p_polys = level_polys[p_lgd]
-
-        for i in range(d):
-            check_block(p_blocks[i], p_polys[bit_rev_int(i, p_lgd)])
+        check_t_loop_inv(a, d)
 
         d = int(d / 2)
 
-        lgd = int(math.log(d, 2))
+        lgd = log2(d)
         lgt = LOGN - lgd - 1
 
         polys = level_polys[lgd]
@@ -352,59 +425,40 @@ def mulntt_ct_std2rev_aug(a, p):
         assert (lgt == int(math.log(t, 2)))
 
         for j in range(t):
-            # blocks = read_as_blocks(a, d)
-            # for i in range(d):
-            #     check_partial_block(blocks[i], polys[bit_rev_int(i, lgd)], 2 * j - 2)
-
+            check_j_loop_inv(a, d, j)
+    
             w = p[t + j]
             u = 2 * d * j
-  
+
             assert(w == pow(PSI, 2 * d * bit_rev_int(j, lgt) + d, Q))
 
             for s in range(u, u + d):
-                poly = polys[bit_rev_int(s-u, lgd)]
-                blocks = read_as_blocks(a, d)
-                check_partial_block(blocks[s-u], poly, 2 * j - 2)
+                check_s_loop_inv(a, d, j, s, u)
 
                 e, o = a[s], a[s + d]
-
-                # if t == 1:
-                #     assert e == saved[s]
-                #     assert o == saved[s+d]
 
                 x = (o * w) % Q
                 a[s + d] = (e - x) % Q
                 a[s] = (e + x) % Q
 
-
-                x = (pow(OMEGA, d * bit_rev_int(2*j, lgt+1), Q) * pow(PSI, d, Q)) % Q
-                dee, deo, _, dev  = split_eval_debug(poly, x)
+                # x = (pow(OMEGA, d * bit_rev_int(2*j, lgt+1), Q) * pow(PSI, d, Q)) % Q
+                # dee, deo, _, dev  = split_eval_debug(poly, x)
             
-                # assert(even_poly(poly) == last_polys[2 * bit_rev_int(s-u, lgd)])
-                # assert(even_poly(poly) == last_polys[2 * bit_rev_int(s-u, lgd)])
+                # assert(even_poly(poly) == p_polys[2 * bit_rev_int(s-u, lgd)])
+                # # assert(even_poly(poly) == last_polys[2 * bit_rev_int(s-u, lgd)])
 
-                x = (pow(OMEGA, d * bit_rev_int(2*j+1, lgt+1), Q) * pow(PSI, d, Q)) % Q
-                doe, doo, _, dov = split_eval_debug(poly, x)
+                # x = (pow(OMEGA, d * bit_rev_int(2*j+1, lgt+1), Q) * pow(PSI, d, Q)) % Q
+                # doe, doo, _, dov = split_eval_debug(poly, x)
    
-                assert dee == doe == e == p_blocks[s-u][j]
-                assert deo == doo == o == p_blocks[s-u+d][j]
-                assert dev == a[s]
-                assert dov == a[s+d]
+                # assert dee == doe == e == p_blocks[s-u][j]
+                # assert deo == doo == o == p_blocks[s-u+d][j]
+                # assert dev == a[s]
+                # assert dov == a[s+d]
+                check_s_loop_inv(a, d, j, s+1, u)
+            check_j_loop_inv(a, d, j+1)
 
-                blocks = read_as_blocks(a, d)
-                check_partial_block(blocks[s-u], poly, 2 * j)
-            
-            blocks = read_as_blocks(a, d)
-            for i in range(d):
-                check_partial_block(blocks[i], polys[bit_rev_int(i, lgd)], 2 * j)
-
-        # print(polys)
-        blocks = read_as_blocks(a, d)
-        # print(a)
-        # print(blocks)
-
-        for i in range(d):
-            check_block(blocks[i], polys[bit_rev_int(i, lgd)])
+        # d is already updated
+        check_t_loop_inv(a, d)
 
         t = t * 2
 

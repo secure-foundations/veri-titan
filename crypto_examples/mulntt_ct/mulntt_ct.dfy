@@ -110,22 +110,6 @@ module ntt {
         vs
     }
 
-    function x_value(i: nat, bsize: pow2_t): elem
-        requires bsize.exp <= LOGN;
-        requires i < bsize.full;
-    {
-        var count := block_count(bsize);
-        LemmaMulNonnegative(count, bit_rev_int(i, bsize));
-        modmul(modpow(OMEGA, count * bit_rev_int(i, bsize)), modpow(PSI, count))
-    }
-
-    predicate points_eval_inv(points: seq<elem>, poly: seq<elem>, bsize: pow2_t, k: nat)
-        requires bsize.exp <= LOGN;
-        requires k <= |points| == |poly| == bsize.full;
-    {
-        forall i | 0 <= i < k :: poly_eval(poly, x_value(i, bsize)) == points[i]
-    }
-
     function method A(): n_sized
 
     function method P(): n_sized
@@ -174,6 +158,13 @@ module ntt {
         {
             higher.level_index_correspondence_lemma(which, lower);
             lower.blocks[2 * which + 1]
+        }
+
+        predicate slice_view_inv(a: seq_ j: nat)
+        {
+            // && forall i | 0 <= i < |lower
+            //      block_eval_inv(, lower.block[i], bsize, k)
+
         }
     }
 
