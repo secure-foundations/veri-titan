@@ -111,9 +111,9 @@ def build_level_polys():
 def check_partial_block(block, poly, l):
     assert l <= len(block) == len(poly)
     logn = int(math.log(len(poly), 2))
-    exp = pow(2, LOGN - logn)
+    count = N / len(poly)
     for i in range(l):
-        x = (pow(OMEGA, exp * bit_rev_int(i, logn), Q) * pow(PSI, exp, Q)) % Q
+        x = (pow(OMEGA, count * bit_rev_int(i, logn), Q) * pow(PSI, count, Q)) % Q
         de, do, pd, dv = split_eval_debug(poly, x)
         assert dv == block[i]
         # (v, (ve, vo, w, tp)) = block[i]

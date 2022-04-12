@@ -1,6 +1,6 @@
 include "../ntt_cleanup/pow2.dfy"
 
-module omegas {
+module nth_root {
 	import opened Power
 	import opened Power2
 	import opened DivMod
