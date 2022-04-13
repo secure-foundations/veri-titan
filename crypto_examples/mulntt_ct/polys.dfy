@@ -1,6 +1,6 @@
 include "ntt_index.dfy"
 
-module polys {
+module ntt_polys {
     import opened Seq
     import opened pows_of_2
 

@@ -36,47 +36,46 @@ module ntt {
     //     // assert block_count(t) * t.full == N;
     // }
 
-    datatype slice_loop_view = slice_loop_view(
-        lower: lpolys,
-        higher: lpolys)
-    {
-        predicate slice_view_wf()
-        {
-            && higher.level_wf()
-            && lower.level_wf()
-            && 1 <= higher.bsize.exp <= LOGN
-            && higher.build_smaller_level() == lower
-        }
+    // datatype slice_loop_view = slice_loop_view(
+    //     lower: lpolys,
+    //     higher: lpolys)
+    // {
+    //     predicate slice_view_wf()
+    //     {
+    //         && higher.level_wf()
+    //         && lower.level_wf()
+    //         && 1 <= higher.bsize.exp <= LOGN
+    //         && higher.build_smaller_level() == lower
+    //     }
 
-        function get_even_poly(which: nat): (r: seq<elem>)
-            requires slice_view_wf();
-            requires which < |higher.blocks|;
-            ensures |higher.blocks[which]| == higher.bsize.full;
-            ensures r == even_indexed_items(higher.blocks[which], higher.bsize);
-        {
-            higher.level_index_correspondence_lemma(which, lower);
-            lower.blocks[2 * which]
-        }
+    //     function get_even_poly(which: nat): (r: seq<elem>)
+    //         requires slice_view_wf();
+    //         requires which < |higher.blocks|;
+    //         ensures |higher.blocks[which]| == higher.bsize.full;
+    //         ensures r == even_indexed_items(higher.blocks[which], higher.bsize);
+    //     {
+    //         higher.level_index_correspondence_lemma(which, lower);
+    //         lower.blocks[2 * which]
+    //     }
 
-        function get_odd_poly(which: nat): (r: seq<elem>)
-            requires slice_view_wf();
-            requires which < |higher.blocks|;
-            ensures |higher.blocks[which]| == higher.bsize.full;
-            ensures r == odd_indexed_items(higher.blocks[which], higher.bsize);
-        {
-            higher.level_index_correspondence_lemma(which, lower);
-            lower.blocks[2 * which + 1]
-        }
+    //     function get_odd_poly(which: nat): (r: seq<elem>)
+    //         requires slice_view_wf();
+    //         requires which < |higher.blocks|;
+    //         ensures |higher.blocks[which]| == higher.bsize.full;
+    //         ensures r == odd_indexed_items(higher.blocks[which], higher.bsize);
+    //     {
+    //         higher.level_index_correspondence_lemma(which, lower);
+    //         lower.blocks[2 * which + 1]
+    //     }
 
-        predicate slice_view_inv(a: seq_ j: nat)
-        {
-            // && forall i | 0 <= i < |lower
-            //      block_eval_inv(, lower.block[i], bsize, k)
+    //     predicate slice_view_inv(a: seq_ j: nat)
+    //     {
+    //         // && forall i | 0 <= i < |lower
+    //         //      block_eval_inv(, lower.block[i], bsize, k)
 
-        }
-    }
+    //     }
+    // }
 
-    function bit_rev_int(j: nat, bound: pow2_t): nat
 
     // method slice_loop(
     //     a: n_sized,

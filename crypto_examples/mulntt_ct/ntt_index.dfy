@@ -20,9 +20,4 @@ module ntt_index {
         pow2_basics(len);
         seq(len.full/2, n requires 0 <= n < len.full/2 => a[n * 2 + 1])
     }
-
-    predicate {:opaque} unifromly_sized(blocks: seq<seq<elem>>, bsize: pow2_t)
-    {
-        && (forall i: nat | i < |blocks| :: |blocks[i]| == bsize.full)
-    }
 }
