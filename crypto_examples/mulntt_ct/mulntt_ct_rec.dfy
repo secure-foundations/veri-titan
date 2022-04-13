@@ -199,21 +199,20 @@ module mulntt_ct_rec {
         modmul(modpow(OMEGA, d.full * bit_rev_int(i, bound)), modpow(PSI, d.full))
     }
 
-    // d is the block count
-    predicate {:opaque} points_eval_prefix_inv(points: seq<elem>, poly: seq<elem>, l: nat, d: pow2_t)
+    predicate {:opaque} points_eval_prefix_inv(points: seq<elem>, poly: seq<elem>, l: nat, count: pow2_t)
     {
-        && d.exp <= LOGN
-        && l <= |points| == |poly| == block_size(d).full
-        && forall i | 0 <= i < l :: poly_eval(poly, x_value(i, d)) == points[i]
+        && count.exp <= LOGN
+        && l <= |points| == |poly| == block_size(count).full
+        && forall i | 0 <= i < l :: poly_eval(poly, x_value(i, count)) == points[i]
     }
 
     // d is the block count
-    predicate {:opaque} points_eval_suffix_inv(points: seq<elem>, poly: seq<elem>, l: nat, d: pow2_t)
+    predicate {:opaque} points_eval_suffix_inv(points: seq<elem>, poly: seq<elem>, l: nat, count: pow2_t)
     {
-        && d.exp <= LOGN
-        && l <= |points| == |poly| == block_size(d).full
-        && forall i | l <= i < block_size(d).full ::
-            poly_eval(poly, x_value(i, d)) == points[i]
+        && count.exp <= LOGN
+        && l <= |points| == |poly| == block_size(count).full
+        && forall i | l <= i < block_size(count).full ::
+            poly_eval(poly, x_value(i, count)) == points[i]
     }
 
     datatype s_loop_view = s_loop_view(
@@ -279,8 +278,8 @@ module mulntt_ct_rec {
             size_count_lemma();
             && var lcount := lcount();
             && var lpoints := level_points_view(a, lsize());
-            && (forall i | (0 <= i < bi || hcount.full <= i < bi + hcount.full) ::
-                && (points_eval_suffix_inv(lpoints[i], lower[bit_rev_int(i, lcount)], j+1, lcount)))
+            // && (forall i | (0 <= i < bi || hcount.full <= i < bi + hcount.full) ::
+            //     && (points_eval_suffix_inv(lpoints[i], lower[bit_rev_int(i, lcount)], j+1, lcount)))
             && (forall i | (bi <= i < hcount.full || bi + hcount.full <= i < lcount.full) ::
                 points_eval_suffix_inv(lpoints[i], lower[bit_rev_int(i, lcount)], j, lcount))
         }
@@ -379,6 +378,56 @@ module mulntt_ct_rec {
                 points_view(a, bi+hcount.full, lsize())[j];
                 a[point_view_index(bi+hcount.full, j, lsize())];
                 a[s+hcount.full];
+            }
+        }
+
+        function get_epoly(bi: nat): seq<elem>
+            requires s_loop_wf();
+            requires bi < lcount().full;
+        {
+            lower[bit_rev_int(bi, lcount())]
+        }
+
+        function get_opoly(bi: nat): seq<elem>
+            requires s_loop_wf();
+            requires bi + hcount().full < lcount().full;
+        {
+            lower[bit_rev_int(bi+hcount().full, lcount())]
+        }
+
+        lemma lower_points_view_value_lemma(a: n_sized, hcount: pow2_t, j: nat, bi: nat, s: nat)
+            requires s_loop_inv(a, hcount, j, bi);
+            requires s == bi + (2*j) * hcount.full;
+            ensures s + hcount.full < N;
+            ensures bi + hcount.full < lcount().full;
+            ensures a[s] == poly_eval(get_epoly(bi), x_value(j, lcount()));
+            ensures a[s+hcount.full] == poly_eval(get_opoly(bi), x_value(j, lcount()));
+        {
+            size_count_lemma();
+            lower_points_view_index_lemma(a, hcount, j, bi, s);
+            var lpoints := level_points_view(a, lsize());
+            var lcount := lcount();
+
+            var e_poly := get_epoly(bi);
+            var e_points := lpoints[bi];
+
+            assert a[s] == poly_eval(e_poly, x_value(j, lcount)) by {
+                assert points_eval_suffix_inv(e_points, e_poly, j, lcount) by {
+                    reveal s_loop_lower_inv();
+                }
+                reveal points_eval_suffix_inv();
+                assert a[s] == e_points[j];
+            }
+
+            var o_poly := get_opoly(bi);
+            var o_points := lpoints[bi+hcount.full];
+
+            assert a[s+hcount.full] == poly_eval(o_poly, x_value(j, lcount)) by {
+                assert points_eval_suffix_inv(o_points, o_poly, j, lcount) by {
+                    reveal s_loop_lower_inv();
+                }
+                reveal points_eval_suffix_inv();
+                assert a[s+hcount.full] == lpoints[bi+hcount.full][j];
             }
         }
 
