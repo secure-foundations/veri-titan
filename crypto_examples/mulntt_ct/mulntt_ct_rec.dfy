@@ -254,11 +254,12 @@ module mulntt_ct_rec {
     }
 
     // d is the block count
+    // i is the offset in the block
     function x_value(i: nat, d: pow2_t): elem
         requires d.exp <= LOGN;
         requires i < block_size(d).full;
     {
-        var bound := pow2_div(pow2(LOGN), d);
+        var bound := block_size(d);
         LemmaMulNonnegative(bit_rev_int(i, bound), d.full);
         LemmaMulIsAssociative(2, bit_rev_int(i, bound), d.full);
         // modmul(modpow(OMEGA, d.full * (i, bound)), modpow(PSI, d.full))bit_rev_int
@@ -324,27 +325,60 @@ module mulntt_ct_rec {
 
         lemma x_value_square_lemma(j: nat, w: elem)
             requires s_loop_wf();
-            // requires d.exp <= LOGN;
             requires 2 * j < hsize.full;
             requires w == x_value(2 * j, hcount());
+            ensures modmul(w, w) == x_value(j, lcount());
         {
-                reveal bit_rev_int();
+            size_count_lemma();
+            var hc := hcount();
 
-            var sqr := x_value(j, lcount());
+            LemmaMulNonnegative(bit_rev_int(2 * j, hsize), hc.full);
+            LemmaMulIsAssociative(2, bit_rev_int(2 * j, hsize), hc.full);
+            var exp := 2 * bit_rev_int(2 * j , hsize) * hc.full + hc.full;
 
-            // assert w == modpow(PSI, d.full * 2 * bit_rev_int(j, bound) + d.full);
-            // calc == {
-            //     modmul(w, w);
-            //     // modpow(PSI, hcount().full * 2 * bit_rev_int(2 * j, bound) + hcount().full);
-
-            // }
-            // calc == {
-            //     sqr;
-            //     modpow(PSI, d.full * 2 * bit_rev_int(j, bound) + d.full);
-            // }
-
+            calc == {
+                2 * exp;
+                2 * (2 * bit_rev_int(2 * j , hsize) * hc.full + hc.full);
+                {
+                    LemmaMulIsDistributive(2, 2 * bit_rev_int(2 * j , hsize) * hc.full, hc.full);
+                }
+                2 * (2 * bit_rev_int(2 * j , hsize) * hc.full) + 2 * hc.full;
+                2 * (2 * bit_rev_int(2 * j , hsize) * hc.full) + lcount().full;
+                {
+                    LemmaMulIsCommutative(2, bit_rev_int(2 * j , hsize));
+                }
+                2 * (bit_rev_int(2 * j , hsize) * 2 * hc.full) + lcount().full;
+                {
+                    LemmaMulIsAssociative(bit_rev_int(2 * j , hsize), 2, hc.full);
+                }
+                2 * (bit_rev_int(2 * j , hsize) * (2 * hc.full)) + lcount().full;
+                2 * (bit_rev_int(2 * j , hsize) * lcount().full) + lcount().full;
+                {
+                    LemmaMulIsAssociative(2, bit_rev_int(2 * j , hsize), lcount().full);
+                }
+                2 * bit_rev_int(2 * j , hsize) * lcount().full + lcount().full;
+                {
+                    assume bit_rev_int(2 * j , hsize) == bit_rev_int(j, lsize());
+                }
+                2 * bit_rev_int(j , lsize()) * lcount().full + lcount().full;
+            }
+    
+            var temp := Pow(PSI, exp);
+    
+            calc == {
+                modmul(w, w);
+                ((temp % Q) * (temp % Q)) % Q;
+                {
+                    LemmaMulModNoopGeneral(temp, temp, Q);
+                }
+                (temp * temp) % Q;
+                {
+                    LemmaPowAdds(PSI, exp, exp);
+                }
+                Pow(PSI, 2 * exp) % Q;
+                x_value(j, lcount());
+            }
         }
-        //  modmul(w, w) == sqr;
 
 
         predicate {:opaque} s_loop_higher_inv(a: n_sized, hcount: pow2_t, j: nat, bi: nat)
@@ -579,15 +613,14 @@ module mulntt_ct_rec {
             assert e == poly_eval(e_poly, sqr);
             assert o == poly_eval(o_poly, sqr);
 
-            assume modmul(w, w) == sqr;
+            x_value_square_lemma(j, w);
 
             poly_eval_split_lemma(f_poly, e_poly, o_poly, hsize, w);
 
-            var w' := x_value(2*j + 1, hcount);
+            // var w' := x_value(2*j + 1, hcount);
 
             // var sqr' := x_value(j, lcount());
-
-            poly_eval_split_lemma(f_poly, e_poly, o_poly, hsize, w');
+            // poly_eval_split_lemma(f_poly, e_poly, o_poly, hsize, w');
 
             // assert poly_eval(f_poly, w) == sum;
         }
