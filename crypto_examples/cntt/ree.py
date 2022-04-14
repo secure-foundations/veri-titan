@@ -113,12 +113,15 @@ def build_level_polys():
         level_polys += [curr]
     return level_polys
 
+def x_value(i, d):
+    logn = LOGN - log2(d)
+    return (pow(OMEGA, d * bit_rev_int(i, logn), Q) * pow(PSI, d, Q)) % Q
+
 def check_prefix_block(block, poly, l, d):
     assert l <= len(block) == len(poly)
-    logn = log2(len(poly))
-    assert logn == LOGN - log2(d)
+
     for i in range(l):
-        x = (pow(OMEGA, d * bit_rev_int(i, logn), Q) * pow(PSI, d, Q)) % Q
+        x = x_value(i, d)
         de, do, pd, dv = split_eval_debug(poly, x)
         assert dv == block[i]
         # (v, (ve, vo, w, tp)) = block[i]
@@ -127,9 +130,8 @@ def check_prefix_block(block, poly, l, d):
 
 def check_suffix_block(block, poly, l, d):
     assert l <= len(block) == len(poly)
-    logn = log2(len(poly))
     for i in range(l, len(block)):
-        x = (pow(OMEGA, d * bit_rev_int(i, logn), Q) * pow(PSI, d, Q)) % Q
+        x = x_value(i, d)
         de, do, pd, dv = split_eval_debug(poly, x)
         assert dv == block[i]
 
@@ -157,6 +159,7 @@ def check_t_loop_inv(a, d):
     for i in range(d):
         check_block(blocks[i], polys[bit_rev_int(i, lgd)], d)
 
+    
 def check_j_loop_inv(a, d, j):
     lgd = log2(d)
     polys = level_polys[lgd]
@@ -232,7 +235,8 @@ def mulntt_ct_std2rev_aug(a, p):
             w = p[t + j]
             u = 2 * d * j
 
-            assert(w == pow(PSI, 2 * d * bit_rev_int(j, lgt) + d, Q))
+            assert w == x_value(2 * j, d)
+            assert (w * w) % Q == x_value(j, d * 2)
 
             for s in range(u, u + d):
                 check_s_loop_inv(a, d, j, s-u)
@@ -244,6 +248,7 @@ def mulntt_ct_std2rev_aug(a, p):
                 a[s] = (e + x) % Q
 
                 # x = (pow(OMEGA, d * bit_rev_int(2*j, lgt+1), Q) * pow(PSI, d, Q)) % Q
+                # assert x == w
                 # dee, deo, _, dev  = split_eval_debug(poly, x)
             
                 # assert(even_poly(poly) == p_polys[2 * bit_rev_int(s-u, lgd)])

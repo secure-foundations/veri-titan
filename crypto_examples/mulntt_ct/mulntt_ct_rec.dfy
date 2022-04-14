@@ -69,7 +69,6 @@ module mulntt_ct_rec {
         && |blocks| == block_count(bsize).full
     }
 
-
     type n_sized = s: seq<elem>
         | |s| == N == pow2(LOGN).full witness *
     
@@ -185,9 +184,74 @@ module mulntt_ct_rec {
         reveal build_lower_level();
     }
 
-    function bit_rev_int(i: nat, bound: pow2_t): (j: nat)
+    function split_bits(i: nat, bound: pow2_t): (r: (nat, nat))
         requires i < bound.full;
-        ensures j < bound.full;
+        requires bound.exp > 0;
+        ensures r.0 == 0 || r.0 == 1;
+        ensures r.0 * pow2_half(bound).full + r.1 == i;
+    {
+        var half_bound := pow2_half(bound);
+        var msbv := i/half_bound.full;
+        var reaminder := i % half_bound.full;
+        LemmaFundamentalDivMod(i, half_bound.full);
+
+        assert msbv == 0 || msbv == 1 by {
+            if msbv > 1 {
+                calc {
+                    i;
+                    msbv * half_bound.full + reaminder;
+                    >= { LemmaMulInequalityAuto(); }
+                    2 * half_bound.full + reaminder;
+                    bound.full + reaminder;
+                }
+                assert false;
+            }
+            LemmaDivBasicsAuto();
+        }
+        (msbv, reaminder)
+    }
+
+    function {:opaque} bit_rev_int(i: nat, bound: pow2_t): (ri: nat)
+        requires i < bound.full;
+        ensures ri < bound.full;
+        decreases bound.exp;
+    {
+        if bound.exp == 0 then
+            0
+        else
+            var half_bound := pow2_half(bound);
+            var (msb, rest):= split_bits(i, bound);
+            var ri := msb + bit_rev_int(rest, half_bound) * 2;
+            ri
+    }
+
+    lemma bit_rev_int_lemma(i: nat, bound: pow2_t)
+        requires i < bound.full;
+        ensures bit_rev_int(i, pow2_double(bound)) == 2 * bit_rev_int(i, bound);
+        ensures bit_rev_int(i+bound.full, pow2_double(bound)) == 2 * bit_rev_int(i, bound) + 1;
+    {
+        reveal bit_rev_int();
+        var ri := bit_rev_int(i, bound);
+        var dbound := pow2_double(bound);
+        var dri := bit_rev_int(i, dbound);
+        var (msbi, _):= split_bits(i, dbound);
+
+        assert i % bound.full == i by {
+            LemmaSmallMod(i, bound.full);
+        }
+
+        assert dri == 2 * ri by {
+            assert msbi == 0;
+        }
+
+        var j := i + bound.full;
+        var drj := bit_rev_int(j, dbound);
+        var (msbj, _):= split_bits(j, dbound);
+
+        assert drj == 2 * ri + 1 by {
+            assert msbj == 1; 
+        }
+    }
 
     // d is the block count
     function x_value(i: nat, d: pow2_t): elem
@@ -195,8 +259,10 @@ module mulntt_ct_rec {
         requires i < block_size(d).full;
     {
         var bound := pow2_div(pow2(LOGN), d);
-        LemmaMulNonnegative(d.full, bit_rev_int(i, bound));
-        modmul(modpow(OMEGA, d.full * bit_rev_int(i, bound)), modpow(PSI, d.full))
+        LemmaMulNonnegative(bit_rev_int(i, bound), d.full);
+        LemmaMulIsAssociative(2, bit_rev_int(i, bound), d.full);
+        // modmul(modpow(OMEGA, d.full * (i, bound)), modpow(PSI, d.full))bit_rev_int
+        modpow(PSI, 2 * bit_rev_int(i, bound) * d.full + d.full)
     }
 
     predicate {:opaque} points_eval_prefix_inv(points: seq<elem>, poly: seq<elem>, l: nat, count: pow2_t)
@@ -255,6 +321,31 @@ module mulntt_ct_rec {
             Nth_root_lemma();
             block_count_half_lemma(hsize);
         }
+
+        lemma x_value_square_lemma(j: nat, w: elem)
+            requires s_loop_wf();
+            // requires d.exp <= LOGN;
+            requires 2 * j < hsize.full;
+            requires w == x_value(2 * j, hcount());
+        {
+                reveal bit_rev_int();
+
+            var sqr := x_value(j, lcount());
+
+            // assert w == modpow(PSI, d.full * 2 * bit_rev_int(j, bound) + d.full);
+            // calc == {
+            //     modmul(w, w);
+            //     // modpow(PSI, hcount().full * 2 * bit_rev_int(2 * j, bound) + hcount().full);
+
+            // }
+            // calc == {
+            //     sqr;
+            //     modpow(PSI, d.full * 2 * bit_rev_int(j, bound) + d.full);
+            // }
+
+        }
+        //  modmul(w, w) == sqr;
+
 
         predicate {:opaque} s_loop_higher_inv(a: n_sized, hcount: pow2_t, j: nat, bi: nat)
             requires hcount.exp <= LOGN;
@@ -381,34 +472,41 @@ module mulntt_ct_rec {
             }
         }
 
-        function get_epoly(bi: nat): seq<elem>
+        function get_even_poly(bi: nat): seq<elem>
             requires s_loop_wf();
             requires bi < lcount().full;
         {
             lower[bit_rev_int(bi, lcount())]
         }
 
-        function get_opoly(bi: nat): seq<elem>
+        function get_odd_poly(bi: nat): seq<elem>
             requires s_loop_wf();
             requires bi + hcount().full < lcount().full;
         {
             lower[bit_rev_int(bi+hcount().full, lcount())]
         }
 
+        function get_full_poly(bi: nat): seq<elem>
+            requires s_loop_wf();
+            requires bi < hcount().full;
+        {
+            higher[bit_rev_int(bi, hcount())]
+        }
+    
         lemma lower_points_view_value_lemma(a: n_sized, hcount: pow2_t, j: nat, bi: nat, s: nat)
             requires s_loop_inv(a, hcount, j, bi);
             requires s == bi + (2*j) * hcount.full;
             ensures s + hcount.full < N;
             ensures bi + hcount.full < lcount().full;
-            ensures a[s] == poly_eval(get_epoly(bi), x_value(j, lcount()));
-            ensures a[s+hcount.full] == poly_eval(get_opoly(bi), x_value(j, lcount()));
+            ensures a[s] == poly_eval(get_even_poly(bi), x_value(j, lcount()));
+            ensures a[s+hcount.full] == poly_eval(get_odd_poly(bi), x_value(j, lcount()));
         {
             size_count_lemma();
             lower_points_view_index_lemma(a, hcount, j, bi, s);
             var lpoints := level_points_view(a, lsize());
             var lcount := lcount();
 
-            var e_poly := get_epoly(bi);
+            var e_poly := get_even_poly(bi);
             var e_points := lpoints[bi];
 
             assert a[s] == poly_eval(e_poly, x_value(j, lcount)) by {
@@ -419,7 +517,7 @@ module mulntt_ct_rec {
                 assert a[s] == e_points[j];
             }
 
-            var o_poly := get_opoly(bi);
+            var o_poly := get_odd_poly(bi);
             var o_points := lpoints[bi+hcount.full];
 
             assert a[s+hcount.full] == poly_eval(o_poly, x_value(j, lcount)) by {
@@ -430,6 +528,70 @@ module mulntt_ct_rec {
                 assert a[s+hcount.full] == lpoints[bi+hcount.full][j];
             }
         }
+
+        lemma level_polys_bitrev_index_correspondence_lemma(a: n_sized, hcount: pow2_t, j: nat, bi: nat)
+            requires s_loop_inv(a, hcount, j, bi);
+            ensures |get_full_poly(bi)| == hsize.full;
+            ensures bi + hcount.full < lcount().full;
+            ensures get_even_poly(bi) == even_indexed_items(get_full_poly(bi), hsize);
+            ensures get_odd_poly(bi) == odd_indexed_items(get_full_poly(bi), hsize);
+        {
+            size_count_lemma();
+
+            var ri := bit_rev_int(bi, hcount);
+            var poly := higher[ri];
+
+            level_polys_index_correspondence_lemma(higher, hsize, ri, lower);
+
+            assert even_indexed_items(poly, hsize) == lower[2 * ri];
+            assert odd_indexed_items(poly, hsize) == lower[2 * ri + 1];
+
+            bit_rev_int_lemma(bi, hcount);
+            assert bit_rev_int(bi, lcount()) == 2 * ri;
+            assert bit_rev_int(bi + hcount.full, lcount()) == 2 * ri + 1;
+        }
+
+        lemma ct_butterfly_even_lemma(a: n_sized, hcount: pow2_t, j: nat, bi: nat, s: nat, w: elem)
+            requires s_loop_inv(a, hcount, j, bi);
+            requires s == bi + (2*j) * hcount.full;
+            requires w == x_value(2 * j, hcount);
+            ensures s + hcount.full < N;
+            ensures bi + hcount.full < lcount().full;
+            ensures poly_eval(get_full_poly(bi), w) == modadd(a[s], modmul(a[s+hcount.full], w));
+        {
+            size_count_lemma();
+            lower_points_view_value_lemma(a, hcount, j, bi, s);
+            var e := a[s];
+            var o := a[s+hcount.full];
+            var p := modmul(o, w);
+
+            var sum := modadd(e, p);
+            var diff := modsub(e, p);
+
+            var e_poly := get_even_poly(bi);
+            var o_poly := get_odd_poly(bi);
+            var f_poly := get_full_poly(bi);
+
+            level_polys_bitrev_index_correspondence_lemma(a, hcount, j, bi);
+
+            var sqr := x_value(j, lcount());
+
+            assert e == poly_eval(e_poly, sqr);
+            assert o == poly_eval(o_poly, sqr);
+
+            assume modmul(w, w) == sqr;
+
+            poly_eval_split_lemma(f_poly, e_poly, o_poly, hsize, w);
+
+            var w' := x_value(2*j + 1, hcount);
+
+            // var sqr' := x_value(j, lcount());
+
+            poly_eval_split_lemma(f_poly, e_poly, o_poly, hsize, w');
+
+            // assert poly_eval(f_poly, w) == sum;
+        }
+            
 
         // lemma s_loop_inv_preserved(a: n_sized, a': n_sized, hcount: pow2_t, j: nat, bi: nat)
         //     requires s_loop_inv(a, hcount, j, bi);
