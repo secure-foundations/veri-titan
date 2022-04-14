@@ -34,6 +34,7 @@ def bit_str(i, lg):
     return r
 
 def bit_rev_int(i, lg):
+    assert i < pow(2, lg)
     r = bit_rev_str(i, lg)
     return int(r, base=2)
 
@@ -235,8 +236,12 @@ def mulntt_ct_std2rev_aug(a, p):
             w = p[t + j]
             u = 2 * d * j
 
-            assert w == x_value(2 * j, d)
-            assert (w * w) % Q == x_value(j, d * 2)
+            # x = (pow(OMEGA, d * bit_rev_int(2*j+1, lgt+1), Q) * pow(PSI, d, Q)) % Q
+            x_e = x_value(2*j, d)
+            x_o = x_value(2*j+1, d)
+            assert x_e == w
+            assert x_o == Q - w
+            assert (x_e * x_e) % Q == (x_o * x_o) % Q == x_value(j, d * 2)
 
             for s in range(u, u + d):
                 check_s_loop_inv(a, d, j, s-u)
@@ -254,7 +259,6 @@ def mulntt_ct_std2rev_aug(a, p):
                 # assert(even_poly(poly) == p_polys[2 * bit_rev_int(s-u, lgd)])
                 # # assert(even_poly(poly) == last_polys[2 * bit_rev_int(s-u, lgd)])
 
-                # x = (pow(OMEGA, d * bit_rev_int(2*j+1, lgt+1), Q) * pow(PSI, d, Q)) % Q
                 # doe, doo, _, dov = split_eval_debug(poly, x)
    
                 # assert dee == doe == e == p_blocks[s-u][j]
