@@ -316,7 +316,7 @@ module mulntt_ct_rec {
         higher: seq<seq<elem>>, // higher polys
         hsize: pow2_t)
     {
-        predicate s_loop_wf()
+        predicate sj_loop_wf()
         {
             && 1 <= hsize.exp <= LOGN
             && unifromly_sized(higher, hsize)
@@ -324,25 +324,25 @@ module mulntt_ct_rec {
         }
 
         function lsize(): pow2_t
-            requires s_loop_wf();
+            requires sj_loop_wf();
         {
             pow2_half(hsize)
         }
 
         function lcount(): pow2_t
-            requires s_loop_wf();
+            requires sj_loop_wf();
         {
             block_count(lsize())
         }
 
         function hcount(): pow2_t
-            requires s_loop_wf();
+            requires sj_loop_wf();
         {
             block_count(hsize)
         }
 
         lemma size_count_lemma()
-            requires s_loop_wf();
+            requires sj_loop_wf();
             ensures pow2_double(lsize()) == hsize;
             ensures lcount() == pow2_double(hcount());
             ensures lcount().full * lsize().full
@@ -353,7 +353,7 @@ module mulntt_ct_rec {
         }
 
         lemma x_value_even_square_lemma(j: nat, x: elem)
-            requires s_loop_wf();
+            requires sj_loop_wf();
             requires 2 * j < hsize.full;
             requires x == x_value(2 * j, hcount());
             ensures modmul(x, x) == x_value(j, lcount());
@@ -410,7 +410,7 @@ module mulntt_ct_rec {
         }
 
         lemma x_value_odd_square_lemma(j: nat, x: elem)
-            requires s_loop_wf();
+            requires sj_loop_wf();
             requires 2 * j < hsize.full;
             requires x == x_value(2 * j + 1, hcount());
             ensures modmul(x, x) == x_value(j, lcount());
@@ -463,10 +463,38 @@ module mulntt_ct_rec {
             assume false;         
         }
 
+        predicate {:opaque} j_loop_higher_inv(a: n_sized, hcount: pow2_t, j: nat)
+            requires hcount.exp <= LOGN;
+            requires sj_loop_wf();
+            requires hsize == block_size(hcount);
+        {
+            && var hpoints := level_points_view(a, hsize);
+            && (forall i | 0 <= i < hcount.full ::
+                points_eval_prefix_inv(hpoints[i], higher[bit_rev_int(i, hcount)], 2*j, hcount))
+        }
+
+        predicate {:opaque} j_loop_lower_inv(a: n_sized, hcount: pow2_t, j: nat)
+            requires hcount.exp <= LOGN;
+            requires sj_loop_wf();
+            requires hsize == block_size(hcount);
+        {
+            && var lcount := lcount();
+            && var lpoints := level_points_view(a, lsize());
+            && (forall i | 0 <= i < lcount.full ::
+                points_eval_suffix_inv(lpoints[i], lower[bit_rev_int(i, lcount)], j, lcount))
+        }
+
+      // predicate j_loop_inv(a: n_sized, hcount: pow2_t, j: nat)
+        // {
+        //     && sj_loop_wf()
+        //     && hcount.exp <= LOGN
+        //     && j <= lsize().full
+        // }
+
         predicate {:opaque} s_loop_higher_inv(a: n_sized, hcount: pow2_t, j: nat, bi: nat)
             requires hcount.exp <= LOGN;
             requires bi <= hcount.full;
-            requires s_loop_wf();
+            requires sj_loop_wf();
             requires hsize == block_size(hcount);
         {
             && var hpoints := level_points_view(a, hsize);
@@ -479,21 +507,21 @@ module mulntt_ct_rec {
         predicate {:opaque} s_loop_lower_inv(a: n_sized, hcount: pow2_t, j: nat, bi: nat)
             requires hcount.exp <= LOGN;
             requires bi <= hcount.full;
-            requires s_loop_wf();
+            requires sj_loop_wf();
             requires hsize == block_size(hcount);
         {
             size_count_lemma();
             && var lcount := lcount();
             && var lpoints := level_points_view(a, lsize());
-            // && (forall i | (0 <= i < bi || hcount.full <= i < bi + hcount.full) ::
-            //     && (points_eval_suffix_inv(lpoints[i], lower[bit_rev_int(i, lcount)], j+1, lcount)))
+            && (forall i | (0 <= i < bi || hcount.full <= i < bi + hcount.full) ::
+                && (points_eval_suffix_inv(lpoints[i], lower[bit_rev_int(i, lcount)], j+1, lcount)))
             && (forall i | (bi <= i < hcount.full || bi + hcount.full <= i < lcount.full) ::
                 points_eval_suffix_inv(lpoints[i], lower[bit_rev_int(i, lcount)], j, lcount))
         }
 
         predicate s_loop_inv(a: n_sized, hcount: pow2_t, j: nat, bi: nat)
         {
-            && s_loop_wf()
+            && sj_loop_wf()
             && hcount.exp <= LOGN
             && bi <= hcount.full
             && j < lsize().full
@@ -503,7 +531,7 @@ module mulntt_ct_rec {
         }
 
         // lemma s_loop_index_bound(a: n_sized, hcount: pow2_t, j: nat, bi: nat)
-        //     requires s_loop_wf();
+        //     requires sj_loop_wf();
         //     requires hcount.exp <= LOGN;
         //     requires bi < hcount.full;
         //     requires j < lsize().full;
@@ -618,21 +646,21 @@ module mulntt_ct_rec {
         }
 
         function get_even_poly(bi: nat): seq<elem>
-            requires s_loop_wf();
+            requires sj_loop_wf();
             requires bi < lcount().full;
         {
             lower[bit_rev_int(bi, lcount())]
         }
 
         function get_odd_poly(bi: nat): seq<elem>
-            requires s_loop_wf();
+            requires sj_loop_wf();
             requires bi + hcount().full < lcount().full;
         {
             lower[bit_rev_int(bi+hcount().full, lcount())]
         }
 
         function get_full_poly(bi: nat): seq<elem>
-            requires s_loop_wf();
+            requires sj_loop_wf();
             requires bi < hcount().full;
         {
             higher[bit_rev_int(bi, hcount())]
@@ -888,6 +916,7 @@ module mulntt_ct_rec {
             requires s_loop_update(a, a', hcount, j, bi);
             ensures s_loop_lower_inv(a', hcount, j, bi+1);
         {
+            size_count_lemma();
             var s := lower_points_view_index_lemma(a, hcount, j, bi);
             var s' := s+hcount.full;
             assert s == point_view_index(bi, j, lsize());
@@ -916,9 +945,47 @@ module mulntt_ct_rec {
                     }
                 }
             }
+        
+            forall i | (0 <= i <= bi || hcount.full <= i <= bi + hcount.full)
+                ensures points_eval_suffix_inv(lpoints'[i], lower[bit_rev_int(i, count)], j+1, count);
+            {
+                var left := lpoints[i];
+                var right := lpoints'[i];
+                var poly := lower[bit_rev_int(i, count)];
+
+                if i == bi || i == bi + hcount.full {
+                    assert points_eval_suffix_inv(right, poly, j+1, count) by {
+                        reveal points_eval_suffix_inv();
+                        forall k | j + 1 <= k < lsize.full
+                            ensures right[k] == left[k];
+                            ensures poly_eval(poly, x_value(k, count)) == right[k];
+                        {
+                            // assert left[k] == a[point_view_index(bi, k, lsize)];
+                            // assert right[k] == a'[point_view_index(bi, k, lsize)];
+
+                            point_view_index_disjont_lemma(bi, k, bi, j, lsize);
+                            point_view_index_disjont_lemma(bi, k, bi + hcount.full, j, lsize);
+                            point_view_index_disjont_lemma(bi + hcount.full, k, bi, j, lsize);
+                            point_view_index_disjont_lemma(bi + hcount.full, k, bi + hcount.full, j, lsize);
+
+                            assert right[k] == left[k];
+                        }
+                    }
+                } else {
+                    assert left == right by {
+                        forall k | 0 <= k < lsize.full 
+                            ensures a[point_view_index(i, k, lsize)]
+                                == a'[point_view_index(i, k, lsize)];
+                        {
+                            point_view_index_disjont_lemma(i, k, bi, j, lsize);
+                            point_view_index_disjont_lemma(i, k, bi + hcount.full, j, lsize);
+                        }
+                    }
+                }
+            }
         }
 
-        lemma s_loop_perserves_inv_lemma(a: n_sized, a': n_sized, hcount: pow2_t, j: nat, bi: nat)
+        lemma s_loop_inv_peri_lemma(a: n_sized, a': n_sized, hcount: pow2_t, j: nat, bi: nat)
             requires s_loop_inv(a, hcount, j, bi);
             requires bi < hcount.full
             requires s_loop_update(a, a', hcount, j, bi);
@@ -927,5 +994,37 @@ module mulntt_ct_rec {
             s_loop_perserves_higher_inv_lemma(a, a', hcount, j, bi);
             s_loop_perserves_lower_inv_lemma(a, a', hcount, j, bi);
         }
+
+        lemma s_loop_inv_post_lemma(a: n_sized, hcount: pow2_t, j: nat, bi: nat)
+            requires s_loop_inv(a, hcount, j, bi);
+            requires bi == hcount.full;
+        {
+            assert j_loop_higher_inv(a, hcount, j+1) by {
+                var hpoints := level_points_view(a, hsize);
+                reveal s_loop_higher_inv();
+                forall i | 0 <= i < |hpoints|
+                    ensures points_eval_prefix_inv(hpoints[i], higher[bit_rev_int(i, hcount)], 2*j+2, hcount);
+                {
+                }
+                reveal j_loop_higher_inv();
+            }
+
+            // assert j_loop_lower_inv(a, hcount, j+1) by {
+            //     var lcount := lcount();
+            //     var lpoints := level_points_view(a, lsize());
+            //     reveal s_loop_lower_inv();
+            //     forall i | 0 <= i < |lpoints|
+            //         ensures points_eval_suffix_inv(lpoints[i], lower[bit_rev_int(i, lcount)], j, lcount);
+            //     {
+            //     }
+            //     reveal j_loop_lower_inv();
+            // }
+        }
+
+
+            // reveal s_loop_lower_inv();
+
+
+
     }
 }
