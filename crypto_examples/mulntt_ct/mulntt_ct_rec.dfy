@@ -484,12 +484,15 @@ module mulntt_ct_rec {
                 points_eval_suffix_inv(lpoints[i], lower[bit_rev_int(i, lcount)], j, lcount))
         }
 
-      // predicate j_loop_inv(a: n_sized, hcount: pow2_t, j: nat)
-        // {
-        //     && sj_loop_wf()
-        //     && hcount.exp <= LOGN
-        //     && j <= lsize().full
-        // }
+        predicate j_loop_inv(a: n_sized, hcount: pow2_t, j: nat)
+        {
+            && sj_loop_wf()
+            && hcount.exp <= LOGN
+            && hsize == block_size(hcount)
+            && j <= lsize().full
+            && j_loop_higher_inv(a, hcount, j)
+            && j_loop_lower_inv(a, hcount, j)
+        }
 
         predicate {:opaque} s_loop_higher_inv(a: n_sized, hcount: pow2_t, j: nat, bi: nat)
             requires hcount.exp <= LOGN;
@@ -995,9 +998,38 @@ module mulntt_ct_rec {
             s_loop_perserves_lower_inv_lemma(a, a', hcount, j, bi);
         }
 
+        lemma s_loop_inv_pre_lemma(a: n_sized, hcount: pow2_t, j: nat)
+            requires j_loop_inv(a, hcount, j);
+            requires j < lsize().full;
+            ensures s_loop_inv(a, hcount, j, 0);
+        {
+            assert s_loop_higher_inv(a, hcount, j, 0) by {
+                reveal s_loop_higher_inv();
+                reveal j_loop_higher_inv();
+            }
+
+            size_count_lemma();
+    
+            assert s_loop_lower_inv(a, hcount, j, 0) by {
+                reveal s_loop_lower_inv();
+                reveal j_loop_lower_inv();
+
+                var lcount := lcount();
+                var lpoints := level_points_view(a, lsize());
+
+                forall i | (0 <= i < hcount.full || hcount.full <= i < lcount.full)
+                    ensures points_eval_suffix_inv(lpoints[i], lower[bit_rev_int(i, lcount)], j, lcount);
+                {
+                    assert (0 <= i < hcount.full || hcount.full <= i < lcount.full)
+                        ==> (0 <= i < lcount.full);
+                }
+            }
+        }
+
         lemma s_loop_inv_post_lemma(a: n_sized, hcount: pow2_t, j: nat, bi: nat)
             requires s_loop_inv(a, hcount, j, bi);
             requires bi == hcount.full;
+            ensures j_loop_inv(a, hcount, j + 1)
         {
             assert j_loop_higher_inv(a, hcount, j+1) by {
                 var hpoints := level_points_view(a, hsize);
@@ -1009,20 +1041,19 @@ module mulntt_ct_rec {
                 reveal j_loop_higher_inv();
             }
 
-            // assert j_loop_lower_inv(a, hcount, j+1) by {
-            //     var lcount := lcount();
-            //     var lpoints := level_points_view(a, lsize());
-            //     reveal s_loop_lower_inv();
-            //     forall i | 0 <= i < |lpoints|
-            //         ensures points_eval_suffix_inv(lpoints[i], lower[bit_rev_int(i, lcount)], j, lcount);
-            //     {
-            //     }
-            //     reveal j_loop_lower_inv();
-            // }
+            size_count_lemma();
+
+            assert j_loop_lower_inv(a, hcount, j+1) by {
+                var lcount := lcount();
+                var lpoints := level_points_view(a, lsize());
+                reveal s_loop_lower_inv();
+                forall i | 0 <= i < |lpoints|
+                    ensures points_eval_suffix_inv(lpoints[i], lower[bit_rev_int(i, lcount)], j+1, lcount);
+                {
+                }
+                reveal j_loop_lower_inv();
+            }
         }
-
-
-            // reveal s_loop_lower_inv();
 
 
 
