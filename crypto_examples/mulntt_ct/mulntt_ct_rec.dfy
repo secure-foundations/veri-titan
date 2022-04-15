@@ -172,6 +172,32 @@ module mulntt_ct_rec {
             else odd_indexed_items(higher[n/2], bsize))
     }
 
+    function method {:opaque} build_higher_level(lower: seq<seq<elem>>, bsize: pow2_t): (higher: seq<seq<elem>>)
+        requires 0 <= bsize.exp < LOGN;
+        requires unifromly_sized(lower, bsize);
+        ensures unifromly_sized(higher, pow2_double(bsize));
+    {
+        reveal unifromly_sized();
+        pow2_basics(bsize);
+        var new_size := pow2_double(bsize);
+        block_count_half_lemma(new_size);
+        var new_count := |lower| / 2;
+        seq(new_count, n requires 0 <= n < new_count => 
+            merge_even_odd_indexed_items(lower[n*2], lower[n*2+1], bsize))
+    }
+
+    lemma build_higher_inverse_lemma(lower: seq<seq<elem>>, bsize: pow2_t)
+        requires 0 <= bsize.exp < LOGN;
+        requires unifromly_sized(lower, bsize);
+        ensures build_lower_level(build_higher_level(lower, bsize), pow2_double(bsize)) == lower;
+    {
+        reveal build_higher_level();
+        reveal build_lower_level();
+        var higher := build_higher_level(lower, bsize);
+        var new_size := pow2_double(bsize);
+        assert build_lower_level(higher, new_size) == lower;
+    }
+
     lemma base_level_correct()
         ensures unifromly_sized([A()], pow2(LOGN));
     {
@@ -311,7 +337,7 @@ module mulntt_ct_rec {
             poly_eval(poly, x_value(i, count)) == points[i]
     }
 
-    datatype s_loop_view = s_loop_view(
+    datatype sj_loop_view = sj_loop_view(
         lower: seq<seq<elem>>, // lower polys
         higher: seq<seq<elem>>, // higher polys
         hsize: pow2_t)
@@ -1054,8 +1080,5 @@ module mulntt_ct_rec {
                 reveal j_loop_lower_inv();
             }
         }
-
-
-
     }
 }
