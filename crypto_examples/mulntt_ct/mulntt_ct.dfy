@@ -87,6 +87,8 @@ module mulntt_ct {
             a' := j_loop(a', d, j, view);
             j := j + 1;
         }
+
+        // j_loop_inv_post_lemma();
     }
 
     // method mulntt_ct()
