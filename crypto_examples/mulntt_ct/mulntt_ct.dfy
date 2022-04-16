@@ -18,14 +18,6 @@ module mulntt_ct {
 
     // function method P(): n_sized
 
-    // lemma P_table_index_bounded_lemma(t: pow2_t, j: nat)
-    //     requires t.exp < LOGN;
-    //     requires j < t.full;
-    //     ensures t.full + j < N;
-    // {
-    //     assume false;
-    // }
-
     method j_loop(a: n_sized, d: pow2_t, j: nat, ghost view: loop_view)
     returns (a': n_sized)
 
@@ -69,17 +61,21 @@ module mulntt_ct {
     }
 
     method t_loop(a: n_sized, t: pow2_t, d: pow2_t, ghost view: loop_view)
-        returns (a': n_sized)
+        returns (a': n_sized, ghost view': loop_view)
 
-        requires view.j_loop_inv(a, d, 0);
+        requires view.t_loop_inv(a, d);
         requires t == view.lsize();
-        // requires t.exp < LOGN;
-        // requires d.exp + 1 + t.exp == LOGN;
-        // requires block_count(pow2_double(t)) == d.full;
-        // requires block_count(t) == 2 * d.full;
+        requires t.exp < LOGN;
+       
+        ensures view.hsize.exp < LOGN ==> view'.t_loop_inv(a', pow2_half(d));
+        ensures view.hsize.exp == LOGN ==> view' == view;
+        ensures view.hsize.exp == LOGN ==> view'.t_loop_end(a');
     {
         var j := 0;
         a' := a;
+
+        assume view.hsize.exp < LOGN;
+        view.j_loop_inv_pre_lemma(a', d);
 
         while (j < t.full)
             invariant view.j_loop_inv(a', d, j);
@@ -88,31 +84,40 @@ module mulntt_ct {
             j := j + 1;
         }
 
-        // j_loop_inv_post_lemma();
+        view' := view.j_loop_inv_post_lemma(a', d, j);
     }
 
-    // method mulntt_ct()
-    // {
-    //     var d := pow2(LOGN);
-    //     var t := pow2(0);
-    //     Nth_root_lemma();
+    method mulntt_ct(a: n_sized, ghost view: loop_view)
+        returns (a': n_sized, ghost view': loop_view)
+        requires view.t_loop_inv(a, pow2(LOGN-1));
+        ensures view'.t_loop_end(a');
+    {
+        var d := pow2(LOGN);
+        var t := pow2(0);
+        a' := a;
+        view' := view;
 
-    //     while (t.full < N)
-    //         invariant d.exp + t.exp == LOGN;
-    //         invariant t.exp <= LOGN;
-    //         invariant block_count(t) == d.full;
-    //     {
-    //         d := pow2_half(d);
+        assume view'.lsize() == pow2(0); // lower level starts with size 1
+        pow2_basics(t);
 
-    //         block_count_half_lemma(pow2_double(t));
-    //         // assert block_count(pow2_double(t)) == d.full;
-    //         // assert block_count(t) == 2 * d.full;
+        Nth_root_lemma();
 
-    //         // assert d.exp + 1 + t.exp == LOGN;
-    //         // assume d.full * 2 * t.full == N;
-    //         j_loop(t, d);
-    //         t := pow2_double(t);
-    //         // block_count_half_lemma(t);
-    //     }
-    // }
+        while (t.full < N)
+            invariant 1 <= d.exp <= LOGN;
+            invariant view'.t_loop_inv(a', pow2_half(d));
+            invariant t.full >= N ==> view'.hsize.exp == LOGN;
+            // invariant view'.hsize.exp == LOGN ==> view'.t_loop_end(a');
+            invariant t == view'.lsize();
+        {
+            d := pow2_half(d);
+            a', view' := t_loop(a', t, d, view');
+            t := pow2_double(t);
+
+            if t.full >= N {
+                assume view'.hsize.exp == LOGN;
+            }
+        }
+
+        assert view'.hsize.exp == LOGN;
+    }
 }

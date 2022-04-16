@@ -405,7 +405,7 @@ module mulntt_ct_rec {
         }
 
         predicate {:opaque} t_loop_low_inv(a: n_sized, hcount: pow2_t)
-            requires hcount.exp <= LOGN;
+            requires hcount.exp < LOGN;
             requires loop_view_wf();
             requires hsize == block_size(hcount);
         {
@@ -418,9 +418,19 @@ module mulntt_ct_rec {
         predicate t_loop_inv(a: n_sized, hcount: pow2_t)
         {
             && loop_view_wf()
-            && 0 <= hcount.exp <= LOGN
+            && 0 <= hcount.exp < LOGN
             && hsize == block_size(hcount)
-            && t_loop_low_inv(a, hcount)
+            && (hsize.exp < LOGN ==> t_loop_low_inv(a, hcount))
+        }
+
+        predicate t_loop_end(a: n_sized)
+        {
+            && loop_view_wf()
+            && hsize.exp == LOGN
+            && var hpoints := level_points_view(a, hsize);
+            && |hpoints| == 1
+            && |higher| == 1
+            && points_eval_inv(hpoints[0], higher[0], pow2(0))
         }
 
         lemma x_value_even_square_lemma(j: nat, x: elem)
@@ -1128,6 +1138,7 @@ module mulntt_ct_rec {
 
         lemma j_loop_inv_pre_lemma(a: n_sized, hcount: pow2_t)
             requires t_loop_inv(a, hcount);
+            requires hsize.exp < LOGN;
             ensures j_loop_inv(a, hcount, 0);
         {
             assert j_loop_higher_inv(a, hcount, 0) by {
@@ -1157,23 +1168,27 @@ module mulntt_ct_rec {
 
         function next_t_loop_view(hcount: pow2_t): (v': loop_view)
             requires loop_view_wf();
-            requires 0 <= hsize.exp < LOGN;
+            requires 0 <= hsize.exp <= LOGN;
             requires 0 <= hcount.exp < LOGN;
             requires hsize == block_size(hcount);
             ensures v'.loop_view_wf();
         {
-            var v' := loop_view(higher, build_higher_level(higher, hsize), pow2_double(hsize));
-            build_higher_inverse_lemma(higher, hsize);
-            v'
+            if hsize.exp == LOGN then
+                this
+            else
+                var v' := loop_view(higher, build_higher_level(higher, hsize), pow2_double(hsize));
+                build_higher_inverse_lemma(higher, hsize);
+                v'
         }
 
         lemma j_loop_inv_post_lemma(a: n_sized, hcount: pow2_t, j: nat)
             returns (v': loop_view)
             requires j_loop_inv(a, hcount, j);
             requires j == lsize().full;
-            requires 0 <= hsize.exp < LOGN;
+            requires 0 <= hsize.exp <= LOGN;
             ensures v' == next_t_loop_view(hcount);
-            ensures v'.t_loop_inv(a, pow2_half(hcount));
+            ensures hsize.exp < LOGN ==> v'.t_loop_inv(a, pow2_half(hcount));
+            ensures hsize.exp == LOGN ==> v'.t_loop_end(a);
         {
             reveal j_loop_higher_inv();
             size_count_lemma();
@@ -1189,9 +1204,18 @@ module mulntt_ct_rec {
             v' := next_t_loop_view(hcount);
             v'.size_count_lemma();
 
-            assert v'.t_loop_inv(a, pow2_half(hcount)) by {
-                reveal v'.t_loop_low_inv();
-                assert v'.t_loop_low_inv(a, v'.hcount());
+            if hsize.exp < LOGN {
+                assert v'.t_loop_inv(a, pow2_half(hcount)) by {
+                    reveal v'.t_loop_low_inv();
+                    assert v'.t_loop_low_inv(a, v'.hcount());
+                }
+            } else {
+                Nth_root_lemma();
+                assert hsize.exp == LOGN;
+                assert hsize.full == N;
+                assert |hpoints| * N == N;
+                assert |hpoints| == 1;
+                assert bit_rev_int(0, hcount) == 0;
             }
         }
     }
