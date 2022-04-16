@@ -66,7 +66,7 @@ module mulntt_ct {
         requires view.t_loop_inv(a, d);
         requires t == view.lsize();
         requires t.exp < LOGN;
-       
+
         ensures view.hsize.exp < LOGN ==> view'.t_loop_inv(a', pow2_half(d));
         ensures view.hsize.exp == LOGN ==> view' == view;
         ensures view.hsize.exp == LOGN ==> view'.t_loop_end(a');
@@ -74,7 +74,6 @@ module mulntt_ct {
         var j := 0;
         a' := a;
 
-        assume view.hsize.exp < LOGN;
         view.j_loop_inv_pre_lemma(a', d);
 
         while (j < t.full)
@@ -97,7 +96,10 @@ module mulntt_ct {
         a' := a;
         view' := view;
 
-        assume view'.lsize() == pow2(0); // lower level starts with size 1
+        assert view'.lsize() == pow2(0) by {
+            view'.size_count_lemma();
+        }
+
         pow2_basics(t);
 
         Nth_root_lemma();
@@ -106,7 +108,6 @@ module mulntt_ct {
             invariant 1 <= d.exp <= LOGN;
             invariant view'.t_loop_inv(a', pow2_half(d));
             invariant t.full >= N ==> view'.hsize.exp == LOGN;
-            // invariant view'.hsize.exp == LOGN ==> view'.t_loop_end(a');
             invariant t == view'.lsize();
         {
             d := pow2_half(d);

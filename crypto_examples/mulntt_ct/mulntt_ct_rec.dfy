@@ -207,7 +207,7 @@ module mulntt_ct_rec {
         assert build_lower_level(higher, new_size) == lower;
     }
 
-    lemma base_level_correct()
+    lemma poly_base_level_correct_lemma()
         ensures unifromly_sized([A()], pow2(LOGN));
     {
         reveal unifromly_sized();
@@ -216,17 +216,15 @@ module mulntt_ct_rec {
     // construct polys level view 
     // each block is a poly, has bsize coefficients
     function level_polys(bsize: pow2_t): (lps: seq<seq<elem>>)
-        requires 1 <= bsize.exp <= LOGN;
+        requires 0 <= bsize.exp <= LOGN;
         decreases LOGN - bsize.exp;
         ensures unifromly_sized(lps, bsize);
     {
         if bsize.exp == LOGN then
-            base_level_correct();
+            poly_base_level_correct_lemma();
             [A()]
         else
-            assert 1 <= bsize.exp <= LOGN;
             var double_size := pow2_double(bsize);
-            assert 1 <= double_size.exp <= LOGN;
             var higher := level_polys(double_size);
             build_lower_level(higher, double_size)
     }
@@ -420,8 +418,42 @@ module mulntt_ct_rec {
             && loop_view_wf()
             && 0 <= hcount.exp < LOGN
             && hsize == block_size(hcount)
-            && (hsize.exp < LOGN ==> t_loop_low_inv(a, hcount))
+            && t_loop_low_inv(a, hcount)
         }
+
+        static function init_loop_view(): (v: loop_view) 
+            ensures v.loop_view_wf();
+        {   
+            var hsize := pow2(1);
+            loop_view(
+                level_polys(pow2_half(hsize)), 
+                level_polys(hsize),
+                hsize)
+        }
+
+        // lemma init_loop_view_lemma(a: n_sized)
+        //     requires this == init_loop_view();
+        // {
+        //     pow2_basics(hsize);
+        //     size_count_lemma();
+        //     assert lsize() == pow2(0);
+        //     var lcount := lcount();
+        //     var lpoints := level_points_view(a, lsize());
+        //     var hcount := hcount();
+
+        //     Nth_root_lemma();
+        //     assert lcount == pow2(LOGN); 
+        //     assert hcount == pow2(LOGN-1);
+
+        //     assert t_loop_low_inv(a, hcount) by {
+        //         forall i | 0 <= i < lcount.full
+        //             ensures points_eval_inv(lpoints[i], lower[bit_rev_int(i, lcount)], lcount);
+        //         {
+        //             assume false;
+        //         }
+        //         reveal t_loop_low_inv(); 
+        //     }
+        // }
 
         predicate t_loop_end(a: n_sized)
         {
@@ -1138,7 +1170,6 @@ module mulntt_ct_rec {
 
         lemma j_loop_inv_pre_lemma(a: n_sized, hcount: pow2_t)
             requires t_loop_inv(a, hcount);
-            requires hsize.exp < LOGN;
             ensures j_loop_inv(a, hcount, 0);
         {
             assert j_loop_higher_inv(a, hcount, 0) by {
