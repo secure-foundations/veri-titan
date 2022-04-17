@@ -1,11 +1,17 @@
 include "nth_root.dfy"
+include "bins.dfy"
 include "../ntt_cleanup/pow2.dfy"
 
 module ntt_index {
     import opened Seq
+    import opened Power
+    import opened Power2
+    import opened DivMod
+    import opened Mul
 
     import opened nth_root
     import opened pows_of_2
+    import opened bins
 
     function method {:opaque} even_indexed_items<T>(a: seq<T>, len: pow2_t): seq<T>
         requires |a| == len.full;
@@ -39,4 +45,99 @@ module ntt_index {
         }
         r
     }
+
+    function method bit_rev_int(i: nat, bound: pow2_t): (ri: nat)
+        requires i < bound.full;
+        ensures ri < bound.full;
+    {
+        if bound.exp == 0 then
+            i
+        else
+            reveal Pow2();
+            var rs := Reverse(FromNatWithLen(i, bound.exp));
+            LemmaSeqNatBound(rs);
+            ToNatRight(rs)
+    }
+
+    lemma bit_rev_int_lemma0(i: nat, bound: pow2_t)
+        requires i < bound.full;
+        ensures bit_rev_int(i, pow2_double(bound)) == 2 * bit_rev_int(i, bound);
+    {
+        var dbound := pow2_double(bound);
+        reveal Pow2();
+
+        var bis := FromNatWithLen(i, bound.exp);
+        var bdis := FromNatWithLen(i, dbound.exp);
+        var normal := FromNat(i);
+
+        assert bdis[bound.exp] == 0 && bdis[..bound.exp] == bis by {
+            BitSelModEquivalence(bdis, bound.exp);
+            LemmaFundamentalDivModConverse(i, bound.full, 0, i);
+
+            assert ToNatLeft(bdis) == ToNatLeft(bdis[..bound.exp]) by {
+                reveal ToNatLeft();
+            }
+
+            LemmaToNatLeftEqToNatRight(bdis);
+            LemmaToNatLeftEqToNatRight(bdis[..bound.exp]);
+            LemmaSeqEq(bdis[..bound.exp], bis);
+        }
+
+        calc == {
+            bit_rev_int(i, dbound);
+            ToNatRight(Reverse(bdis));
+            {
+                assert Reverse(bdis) == [0] + Reverse(bdis[..bound.exp]);
+            }
+            ToNatRight([0] + Reverse(bdis[..bound.exp]));
+            ToNatRight([0] + Reverse(bis));
+            {
+                reveal ToNatRight();
+            }
+            2 * ToNatRight(Reverse(bis));
+            2 * bit_rev_int(i, bound);
+        }
+    }
+
+    lemma bit_rev_int_lemma1(i: nat, bound: pow2_t)
+        requires i < bound.full;
+        ensures bit_rev_int(i+bound.full, pow2_double(bound)) == 2 * bit_rev_int(i, bound) + 1;
+    {
+        var j := i+bound.full;
+        var dbound := pow2_double(bound);
+        reveal Pow2();
+
+        var bis := FromNatWithLen(i, bound.exp);
+        var bdis := FromNatWithLen(j, dbound.exp);
+        var normal := FromNat(j);
+
+       assert bdis[bound.exp] == 1 && bdis[..bound.exp] == bis by {
+            BitSelModEquivalence(bdis, bound.exp);
+            LemmaFundamentalDivModConverse(j, bound.full, 1, i);
+
+            assert ToNatLeft(bdis) == ToNatLeft(bdis[..bound.exp]) + bound.full by {
+                reveal ToNatLeft();
+            }
+
+            LemmaToNatLeftEqToNatRight(bdis);
+            LemmaToNatLeftEqToNatRight(bdis[..bound.exp]);
+            LemmaSeqEq(bdis[..bound.exp], bis);
+        }
+
+        calc == {
+            bit_rev_int(j, dbound);
+            ToNatRight(Reverse(bdis));
+            {
+                assert Reverse(bdis) == [1] + Reverse(bdis[..bound.exp]);
+            }
+            ToNatRight([1] + Reverse(bdis[..bound.exp]));
+            ToNatRight([1] + Reverse(bis));
+            {
+                reveal ToNatRight();
+            }
+            2 * ToNatRight(Reverse(bis)) + 1;
+            2 * bit_rev_int(i, bound) + 1;
+        }
+    }
+
 }

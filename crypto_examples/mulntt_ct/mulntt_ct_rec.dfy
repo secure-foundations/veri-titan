@@ -246,75 +246,6 @@ module mulntt_ct_rec {
         reveal build_lower_level();
     }
 
-    function method split_bits(i: nat, bound: pow2_t): (r: (nat, nat))
-        requires i < bound.full;
-        requires bound.exp > 0;
-        ensures r.0 == 0 || r.0 == 1;
-        ensures r.0 * pow2_half(bound).full + r.1 == i;
-    {
-        var half_bound := pow2_half(bound);
-        var msbv := i/half_bound.full;
-        var reaminder := i % half_bound.full;
-        LemmaFundamentalDivMod(i, half_bound.full);
-
-        assert msbv == 0 || msbv == 1 by {
-            if msbv > 1 {
-                calc {
-                    i;
-                    msbv * half_bound.full + reaminder;
-                    >= { LemmaMulInequalityAuto(); }
-                    2 * half_bound.full + reaminder;
-                    bound.full + reaminder;
-                }
-                assert false;
-            }
-            LemmaDivBasicsAuto();
-        }
-        (msbv, reaminder)
-    }
-
-    function method {:opaque} bit_rev_int(i: nat, bound: pow2_t): (ri: nat)
-        requires i < bound.full;
-        ensures ri < bound.full;
-        decreases bound.exp;
-    {
-        if bound.exp == 0 then
-            0
-        else
-            var half_bound := pow2_half(bound);
-            var (msb, rest):= split_bits(i, bound);
-            var ri := msb + bit_rev_int(rest, half_bound) * 2;
-            ri
-    }
-
-    lemma bit_rev_int_lemma(i: nat, bound: pow2_t)
-        requires i < bound.full;
-        ensures bit_rev_int(i, pow2_double(bound)) == 2 * bit_rev_int(i, bound);
-        ensures bit_rev_int(i+bound.full, pow2_double(bound)) == 2 * bit_rev_int(i, bound) + 1;
-    {
-        reveal bit_rev_int();
-        var ri := bit_rev_int(i, bound);
-        var dbound := pow2_double(bound);
-        var dri := bit_rev_int(i, dbound);
-        var (msbi, _):= split_bits(i, dbound);
-
-        assert i % bound.full == i by {
-            LemmaSmallMod(i, bound.full);
-        }
-
-        assert dri == 2 * ri by {
-            assert msbi == 0;
-        }
-
-        var j := i + bound.full;
-        var drj := bit_rev_int(j, dbound);
-        var (msbj, _):= split_bits(j, dbound);
-
-        assert drj == 2 * ri + 1 by {
-            assert msbj == 1; 
-        }
-    }
-
     // d is the block count
     // i is the offset in the block
     function method x_value(i: nat, d: pow2_t): elem
@@ -537,28 +468,28 @@ module mulntt_ct_rec {
 
             var temp := Pow(PSI, exp);
     
-            // calc == {
-            //     2 * exp;
-            //     2 * (2 * bit_rev_int(2 * j + 1, hsize) * hc.full + hc.full);
-            //     {
-            //         LemmaMulIsDistributive(2, 2 * bit_rev_int(2 * j + 1, hsize) * hc.full, hc.full);
-            //     }
-            //     2 * (2 * bit_rev_int(2 * j + 1, hsize) * hc.full) + 2 * hc.full;
-            //     2 * (2 * bit_rev_int(2 * j + 1, hsize) * hc.full) + lcount().full;
-            //     {
-            //         LemmaMulIsCommutative(2, bit_rev_int(2 * j + 1, hsize));
-            //     }
-            //     2 * (bit_rev_int(2 * j + 1, hsize) * 2 * hc.full) + lcount().full;
-            //     {
-            //         LemmaMulIsAssociative(bit_rev_int(2 * j + 1, hsize), 2, hc.full);
-            //     }
-            //     2 * (bit_rev_int(2 * j + 1, hsize) * (2 * hc.full)) + lcount().full;
-            //     2 * (bit_rev_int(2 * j + 1, hsize) * lcount().full) + lcount().full;
-            //     {
-            //         LemmaMulIsAssociative(2, bit_rev_int(2 * j + 1, hsize), lcount().full);
-            //     }
-            //     2 * bit_rev_int(2 * j + 1, hsize) * lcount().full + lcount().full;
-            // }
+            calc == {
+                2 * exp;
+                2 * (2 * bit_rev_int(2 * j + 1, hsize) * hc.full + hc.full);
+                {
+                    LemmaMulIsDistributive(2, 2 * bit_rev_int(2 * j + 1, hsize) * hc.full, hc.full);
+                }
+                2 * (2 * bit_rev_int(2 * j + 1, hsize) * hc.full) + 2 * hc.full;
+                2 * (2 * bit_rev_int(2 * j + 1, hsize) * hc.full) + lcount().full;
+                {
+                    LemmaMulIsCommutative(2, bit_rev_int(2 * j + 1, hsize));
+                }
+                2 * (bit_rev_int(2 * j + 1, hsize) * 2 * hc.full) + lcount().full;
+                {
+                    LemmaMulIsAssociative(bit_rev_int(2 * j + 1, hsize), 2, hc.full);
+                }
+                2 * (bit_rev_int(2 * j + 1, hsize) * (2 * hc.full)) + lcount().full;
+                2 * (bit_rev_int(2 * j + 1, hsize) * lcount().full) + lcount().full;
+                {
+                    LemmaMulIsAssociative(2, bit_rev_int(2 * j + 1, hsize), lcount().full);
+                }
+                2 * bit_rev_int(2 * j + 1, hsize) * lcount().full + lcount().full;
+            }
 
             calc == {
                 modmul(x, x);
@@ -837,9 +768,10 @@ module mulntt_ct_rec {
             assert even_indexed_items(poly, hsize) == lower[2 * ri];
             assert odd_indexed_items(poly, hsize) == lower[2 * ri + 1];
 
-            bit_rev_int_lemma(bi, hcount);
-            assert bit_rev_int(bi, lcount()) == 2 * ri;
-            assert bit_rev_int(bi + hcount.full, lcount()) == 2 * ri + 1;
+            bit_rev_int_lemma0(bi, hcount);
+            bit_rev_int_lemma1(bi, hcount);
+            // assert bit_rev_int(bi, lcount()) == 2 * ri;
+            // assert bit_rev_int(bi + hcount.full, lcount()) == 2 * ri + 1;
         }
 
         lemma ct_butterfly_even_lemma(a: n_sized, hcount: pow2_t, j: nat, bi: nat, s: nat, w: elem)
