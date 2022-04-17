@@ -26,6 +26,30 @@ module nth_root {
 		ensures Pow(OMEGA, Pow2(LOGN)) % Q == 1;
 		ensures Pow2(LOGN) == N;
 
+	lemma full_rotation_lemma(a: nat)
+		ensures Pow(PSI, a + 2 * N) % Q == Pow(PSI, a) % Q;
+	{
+		calc == {
+			Pow(PSI, a + 2 * N) % Q;
+			{
+				LemmaPowAdds(PSI, a, 2 * N);
+			}
+			(Pow(PSI, a) * Pow(PSI, 2 * N)) % Q;
+			{
+				LemmaMulModNoopGeneral(Pow(PSI, a), Pow(PSI, 2 * N), Q);
+			}
+			((Pow(PSI, a) % Q) * (Pow(PSI, 2 * N) % Q)) % Q;
+			{
+				Nth_root_lemma();
+			}
+			(Pow(PSI, a) % Q) % Q;
+			{
+				LemmaModBasicsAuto();
+			}
+			Pow(PSI, a) % Q;
+		}
+	}
+
 	function method omega(n: pow2_t): (v: elem)
 		requires n.exp <=LOGDN;
 		ensures Pow(v, n.full) % Q == 1;

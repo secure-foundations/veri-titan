@@ -489,6 +489,30 @@ module mulntt_ct_rec {
                     LemmaMulIsAssociative(2, bit_rev_int(2 * j + 1, hsize), lcount().full);
                 }
                 2 * bit_rev_int(2 * j + 1, hsize) * lcount().full + lcount().full;
+                {
+                    bit_rev_int_lemma3(j, lsize());
+                }
+                2 * (bit_rev_int(j, lsize()) + lsize().full) * lcount().full + lcount().full;
+                {
+                    LemmaMulIsAssociative(2, bit_rev_int(j, lsize()) + lsize().full, lcount().full);
+                }
+                2 * ((bit_rev_int(j, lsize()) + lsize().full) * lcount().full) + lcount().full;
+                {
+                    LemmaMulIsDistributive(lcount().full, bit_rev_int(j, lsize()), lsize().full);
+                }
+                2 * (bit_rev_int(j, lsize()) * lcount().full + lsize().full * lcount().full) + lcount().full;
+                {
+                    assert lsize().full * lcount().full == N;
+                }
+                2 * (bit_rev_int(j, lsize()) * lcount().full + N) + lcount().full;
+                {
+                    LemmaMulIsDistributive(2, bit_rev_int(j, lsize()) * lcount().full, N);
+                }
+                2 * (bit_rev_int(j, lsize()) * lcount().full) + 2 * N + lcount().full;
+                {
+                    LemmaMulIsAssociativeAuto();
+                }
+                2 * bit_rev_int(j, lsize()) * lcount().full + 2 * N + lcount().full;
             }
 
             calc == {
@@ -502,9 +526,13 @@ module mulntt_ct_rec {
                     LemmaPowAdds(PSI, exp, exp);
                 }
                 Pow(PSI, 2 * exp) % Q;
+                Pow(PSI, 2 * bit_rev_int(j, lsize()) * lcount().full + 2 * N + lcount().full) % Q;
+                {
+                    LemmaMulNonnegative(2 * bit_rev_int(j, lsize()), lcount().full);
+                    full_rotation_lemma(2 * bit_rev_int(j, lsize()) * lcount().full + lcount().full);
+                }
+                Pow(PSI, 2 * bit_rev_int(j, lsize()) * lcount().full + lcount().full) % Q;
             }
-
-            assume false;         
         }
 
         predicate {:opaque} j_loop_higher_inv(a: n_sized, hcount: pow2_t, j: nat)
