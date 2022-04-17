@@ -431,7 +431,7 @@ module mulntt_ct_rec {
                 }
                 2 * bit_rev_int(2 * j , hsize) * lcount().full + lcount().full;
                 {
-                    assume bit_rev_int(2 * j , hsize) == bit_rev_int(j, lsize());
+                    bit_rev_int_lemma2(j, lsize());
                 }
                 2 * bit_rev_int(j , lsize()) * lcount().full + lcount().full;
             }

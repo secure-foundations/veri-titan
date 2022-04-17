@@ -140,4 +140,56 @@ module ntt_index {
         }
     }
 
+    lemma bit_rev_int_lemma2(i: nat, bound: pow2_t)
+        requires i < bound.full;
+        ensures bit_rev_int(2 * i, pow2_double(bound)) == bit_rev_int(i, bound);
+    {
+        var dbound := pow2_double(bound);
+        reveal Pow2();
+
+        var bis := FromNatWithLen(i, bound.exp);
+        var bdis := FromNatWithLen(2 * i, dbound.exp);
+
+        assert bdis[0] == 0 && bdis[1..] == bis by {
+            BitSelModEquivalence(bdis, 0);
+            LemmaPow0(2);
+            LemmaModMultiplesBasic(2 * i, 2);
+            assert bdis[0] == 0 % 2;
+            LemmaSmallMod(0, 2);
+            LemmaFundamentalDivModConverse(2 * i, 2, i, 0);
+
+            assert ToNatRight(bdis) == 2 * ToNatRight(bdis[1..]) by {
+                reveal ToNatRight();
+            }
+
+            LemmaToNatLeftEqToNatRight(bdis);
+            LemmaToNatLeftEqToNatRight(bdis[1..]);
+            LemmaSeqEq(bdis[1..], bis);
+        }
+        
+        calc == {
+            bit_rev_int(2 * i, dbound);
+            ToNatRight(Reverse(bdis));
+            {
+                assert Reverse(bdis) == Reverse(bdis[1..]) + [0];
+            }
+            ToNatRight(Reverse(bdis[1..]) + [0]);
+            ToNatRight(Reverse(bis) + [0]);
+            {
+                LemmaToNatLeftEqToNatRight(Reverse(bis) + [0]);
+            }
+            ToNatLeft(Reverse(bis) + [0]);
+            {
+                reveal ToNatLeft();
+            }
+            ToNatLeft(Reverse(bis)) + 0 * Pow(2, bound.exp);
+            {
+                LemmaMulByZeroIsZeroAuto();
+            }
+            ToNatLeft(Reverse(bis));
+        }
+    }
+
+// bit_rev_int(2 * j + 1, hsize)
+
 }
