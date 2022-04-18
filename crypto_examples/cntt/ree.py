@@ -1,5 +1,6 @@
 # from ast import literal_eval
 import random, math
+from matplotlib import scale
 
 from numpy import polysub, save
 
@@ -142,8 +143,8 @@ def check_block(block, poly, d):
 
 level_polys = build_level_polys()
 # print(len(level_polys))
-for lp in level_polys:
-    print(lp)
+# for lp in level_polys:
+#     print(lp)
 
 def read_as_blocks(a, d):
     blocks = []
@@ -275,5 +276,55 @@ def mulntt_ct_std2rev_aug(a, p):
 
 mulntt_ct_std2rev_aug(poly, rev_shoup_scaled_ntt16_12289)
 
-# for polys in build_level_polys_rev():
-#     print(polys)
+scaled = scale_poly(saved)
+
+for i in range(N):
+    x = pow(OMEGA, bit_rev_int(i, LOGN - log2(1)), Q)
+    assert eval_poly(scaled, x) == poly[i]
+
+for i in range(N):
+    x = x_value(i, 1)
+    assert eval_poly(saved, x) == poly[i]
+
+
+def intt(a):
+    d = N
+    t = 1
+
+    while t < N:
+        p_d = d
+        p_lgd = log2(p_d)
+        d = int(d / 2)
+
+        lgd = log2(d)
+        lgt = LOGN - lgd - 1
+
+        polys = level_polys[lgd]
+
+        assert (d * 2 * t == N)
+        assert (lgt == int(math.log(t, 2)))
+
+        for j in range(t):
+            # w = p[t + j]
+            u = 2 * d * j
+
+            # assert w == x_value(2*j, d)
+            logn = LOGN - log2(d)
+            w =  pow(OMEGA, d * bit_rev_int(2*j, logn), Q)
+
+            for s in range(u, u + d):
+
+                e, o = a[s], a[s + d]
+
+                x = (o * w) % Q
+                a[s + d] = (e - x) % Q
+                a[s] = (e + x) % Q
+
+        t = t * 2
+
+# mulntt_ct_std2rev_aug(poly, rev_shoup_scaled_ntt16_12289)
+
+# for i in range(N):
+#     x = pow(OMEGA, bit_rev_int(i, LOGN - log2(1)), Q)
+#     assert eval_poly(saved, x) == poly[i]
+
