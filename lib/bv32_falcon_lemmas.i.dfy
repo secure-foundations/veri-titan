@@ -100,37 +100,67 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
       }
     }
 
-    lemma lemma_mq_rshift1_correct(par: uint32, b: uint32, c: uint32, d: uint32, r: uint32, x: int)
-        requires 0 <= x < 12289;
-        requires par == uint32_and(x, 1);
-        requires b == uint32_sub(0, par);
-        requires c == uint32_and(b, 12289);
-        requires d == uint32_add(x, c);
-        requires r == uint32_rs(d, 1);
-        ensures r == (x / 2) % 12289;
+    lemma lemma_positive_rs(x: uint32, shift: nat)
+      requires x >= 0;
+      requires x < BASE_31;
+      ensures to_uint32(int32_rs(x, shift)) == int32_rs(x, shift)
     {
-      var Q : int := 12289;
-      assert par == 0 || par == 1 by { reveal_and(); }
-      
-      if par == 0 {
-        assert b == 0;
-        assert c == 0 by { reveal_and(); }
-        assert d == x;
-        
-        assume uint32_rs(x, 1) == x / 2;
-        
-      } else {
-        assert b == 0xffff_ffff;
-        assert c == Q by { reveal_and(); }
-        assert d == uint32_add(x, Q);
-
-        assert IsModEquivalent(x, d, Q);
-
-        // (x+Q) % 2 == 0 since x, Q odd
-        // (x+Q)/2 * 2 === x mod Q
-        assume false;
-        
-      }
+      assert to_int32(x) == x;
+      assert int32_rs(to_int32(x), shift) >= 0 by { DivMod.LemmaDivBasicsAuto(); }
     }
+
+     lemma lemma_mq_rshift1_correct(par: uint32, b: uint32, c: uint32, d: uint32, r: uint32, x: int)
+         requires 0 <= x < 12289;
+         requires par == uint32_and(x, 1);
+         requires b == uint32_sub(0, par);
+         requires c == uint32_and(b, 12289);
+         requires d == uint32_add(x, c);
+         requires r == to_uint32(int32_rs(to_int32(d), 1));
+ 
+         //ensures r == (x / 2) % 12289;
+         ensures IsModEquivalent(2 * r, x, 12289);
+         ensures r < 12289;
+     {
+       var Q : int := 12289;
+       assert par == 0 || par == 1 by { reveal_and(); }
+ 
+       if par == 0 {
+         assert b == 0;
+         assert c == 0 by { reveal_and(); }
+         assert x % 2 == 0 by { reveal_and(); }
+         assert d == x;
+         
+         assert 0 <= to_int32(d) < Q;
+         assert r == int32_rs(to_int32(d), 1) by { lemma_positive_rs(x, 1); }
+ 
+         assert r == d / Power2.Pow2(1);
+         assert r == d / 2 by { Power2.Lemma2To64(); }
+ 
+         assert IsModEquivalent(r, x / 2, Q);
+         
+       } else {
+         assert b == 0xffff_ffff;
+         assert c == Q by { reveal_and(); }
+         assert d == uint32_add(x, Q);
+         assert d == x + Q;
+
+         assert 0 <= to_int32(d) <= x + Q;
+         assert r == int32_rs(to_int32(d), 1) by { lemma_positive_rs(x + Q, 1); }
+ 
+         assert IsModEquivalent(d, x, Q);
+ 
+         assert r == d / Power2.Pow2(1);
+         assert r == d / 2 by { Power2.Lemma2To64(); }
+ 
+         assert r == (x + Q) / 2;
+         
+         assert x % 2 == 1 by { reveal_and(); }
+         assert Q % 2 == 1;
+         assert (x + Q) % 2 == 0 by { DivMod.LemmaModAdds(x, Q, 2); }
+ 
+         assert r == (x + Q) / 2;
+         assert IsModEquivalent(2 * r, x + Q, Q);
+       }
+     }
 
 }

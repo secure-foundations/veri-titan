@@ -136,7 +136,9 @@ procedure mq_rshift1() returns (ghost r: uint32)
     modifies
         a0; a4; a5;
     ensures
-        r == (old(a0) / 2) % 12289;
+        //r == (old(a0) / 2) % 12289;
+        r < 12289;
+        (2 * r) % 12289 == old(a0) % 12289;
 {
     ghost var Q: int := 12289;
     ghost var x: nat := a0;
@@ -158,7 +160,7 @@ procedure mq_rshift1() returns (ghost r: uint32)
     add(a0, a5, a0);
     ghost var d := uint32_add(to_uint32(x), c); // x + (Q or 0)
      
-    srli(a0, a0, 0x1);
+    srai(a0, a0, 0x1);
     r := a0;
 
     lemma_mq_rshift1_correct(par, b, c, d, r, x);
