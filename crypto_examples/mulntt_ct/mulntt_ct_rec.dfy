@@ -1,6 +1,4 @@
-include "nth_root.dfy"
-include "ntt_index.dfy"
-include "polys.dfy"
+include "twiddle_factors.dfy"
 
 module mulntt_ct_rec {
     import opened Seq
@@ -14,51 +12,7 @@ module mulntt_ct_rec {
     import opened nth_root
     import opened ntt_index
     import opened ntt_polys
-
-    function method A(): seq<elem>
-        ensures |A()| == N == pow2(LOGN).full;
-
-    function method block_count(m: pow2_t): pow2_t
-        requires 0 <= m.exp <= LOGN;
-    {
-        pow2_div(pow2(LOGN), m)
-    }
-
-    function method block_size(c: pow2_t): pow2_t
-        requires 0 <= c.exp <= LOGN;
-    {
-        pow2_div(pow2(LOGN), c)
-    }
-
-    lemma block_count_product_lemma(m: pow2_t)
-        requires 0 <= m.exp <= LOGN;
-        ensures block_count(m).full * m.full == N;
-    {
-        Nth_root_lemma();
-    }
-
-    lemma block_count_half_lemma(m: pow2_t)
-        requires 1 <= m.exp <= LOGN;
-        ensures block_count(pow2_half(m)) == pow2_double(block_count(m));
-    {
-        Nth_root_lemma();
-        var left := pow2_div(pow2(LOGN), pow2_half(m));
-        assert left.full * (m.full / 2) == N;
-        var right := pow2_div(pow2(LOGN), m);
-        var half := m.full / 2;
-        pow2_basics(m);
-
-        calc == {
-            left.full * half;
-            left.full * (m.full / 2);
-            right.full * (2 * half);
-            {
-                LemmaMulIsAssociativeAuto();
-            }
-            (right.full * 2) * half;
-        }
-        LemmaMulEqualityConverse(half, left.full, right.full * 2);
-    }
+    import opened twiddle_factors
 
     predicate {:opaque} unifromly_sized(blocks: seq<seq<elem>>, bsize: pow2_t)
         requires bsize.exp <= LOGN;
@@ -78,9 +32,6 @@ module mulntt_ct_rec {
         reveal unifromly_sized();
     }
 
-    type n_sized = s: seq<elem>
-        | |s| == N == pow2(LOGN).full witness *
-    
     lemma point_view_index_bound_lemma(i: nat, j: nat, bsize: pow2_t)
         requires bsize.exp <= LOGN;
         requires i < block_count(bsize).full;
@@ -244,46 +195,6 @@ module mulntt_ct_rec {
     {
         reveal unifromly_sized();
         reveal build_lower_level();
-    }
-
-    // d is the block count
-    // i is the offset in the block
-    function method x_value(i: nat, d: pow2_t): (r: elem)
-        requires d.exp <= LOGN;
-        requires i < block_size(d).full;
-        ensures r > 0;
-    {
-        var bound := block_size(d);
-        LemmaMulNonnegative(2 * bit_rev_int(i, bound), d.full);
-        var r := modpow(PSI, 2 * bit_rev_int(i, bound) * d.full + d.full);
-        // LemmaPowPositive(PSI, 2 * bit_rev_int(i, bound) * d.full + d.full);
-        calc {
-            2 * bit_rev_int(i, bound) * d.full + d.full;
-            {
-                LemmaMulProperties();
-            }
-            (bit_rev_int(i, bound) * (2 * d.full)) + d.full;
-            <=
-            {
-                LemmaMulInequality(bit_rev_int(i, bound), bound.full - 1, 2 * d.full);
-            }
-            (bound.full - 1) * (2 * d.full) + d.full;
-            {
-                LemmaMulIsDistributive(2 * d.full, bound.full, - 1);
-            }
-            bound.full * (2 * d.full) - (2 * d.full) + d.full;
-            bound.full * (2 * d.full) - d.full;
-            {
-                LemmaMulProperties();
-            }
-            2 * (bound.full * d.full) - d.full;
-            {
-                block_count_product_lemma(bound);
-            }
-            2 * N - d.full;
-        }
-        primitive_root_lemma(2 * bit_rev_int(i, bound) * d.full + d.full);
-        r
     }
 
     predicate {:opaque} points_eval_prefix_inv(points: seq<elem>, poly: seq<elem>, l: nat, count: pow2_t)
@@ -879,7 +790,7 @@ module mulntt_ct_rec {
 
             poly_eval_split_lemma(f_poly, e_poly, o_poly, hsize, x);
         }
-        
+
         lemma ct_butterfly_odd_lemma(a: n_sized, hcount: pow2_t, j: nat, bi: nat, s: nat, w: elem)
             requires s_loop_inv(a, hcount, j, bi);
             requires bi < hcount.full
@@ -939,26 +850,8 @@ module mulntt_ct_rec {
                 }
                 modpow(PSI, 2 * (bit_rev_int(j, lsize()) + lsize().full) * hcount.full + hcount.full);
                 {
-                    calc == {
-                        2 * (bit_rev_int(j, lsize()) + lsize().full) * hcount.full;
-                        {
-                            LemmaMulIsAssociative(2, bit_rev_int(j, lsize()) + lsize().full, hcount.full);
-                        }
-                        2 * ((bit_rev_int(j, lsize()) + lsize().full) * hcount.full);
-                        {
-                            LemmaMulIsDistributive(hcount.full, bit_rev_int(j, lsize()), lsize().full);
-                        }
-                        2 * (bit_rev_int(j, lsize()) * hcount.full + lsize().full * hcount.full);
-                        {
-                            LemmaMulIsDistributive(2, bit_rev_int(j, lsize()) * hcount.full, lsize().full * hcount.full);
-                        }
-                        2 * (bit_rev_int(j, lsize()) * hcount.full) + 2 * (lsize().full * hcount.full);
-                        {
-                            LemmaMulIsAssociative(2, lsize().full, hcount.full);
-                        }
-                        2 * (bit_rev_int(j, lsize()) * hcount.full) + (2 * lsize().full) * hcount.full;
-                        2 * (bit_rev_int(j, lsize()) * hcount.full) + hsize.full * hcount.full;
-                        2 * (bit_rev_int(j, lsize()) * hcount.full) + N;
+                    gbassert 2 * (bit_rev_int(j, lsize()) + lsize().full) * hcount.full == 2 * (bit_rev_int(j, lsize()) * hcount.full) + N by {
+                        assert 2 * lsize().full * hcount.full == N;
                     }
                 }
                 modpow(PSI, 2 * (bit_rev_int(j, lsize()) * hcount.full) + N + hcount.full);
@@ -982,6 +875,7 @@ module mulntt_ct_rec {
                 Q - x_e;
             }
   
+
             calc == {
                 diff;
                 modsub(e, modmul(o, x_e));
@@ -1011,6 +905,11 @@ module mulntt_ct_rec {
                     LemmaAddModNoop(e, x_o * o, Q);
                 }
                 ((e % Q) + (x_o * o) % Q) % Q;
+                {
+                    LemmaSmallMod(e, Q);
+                }
+                (e + (x_o * o) % Q) % Q;
+                (e + modmul(x_o, o)) % Q;
                 modadd(e, modmul(x_o, o));
                 modadd(poly_eval(e_poly, sqr), modmul(x_o, poly_eval(o_poly, sqr)));
                 {
