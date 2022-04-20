@@ -19,6 +19,12 @@ module nth_root {
 	const LOGN: nat := 10
 	const LOGDN: nat := 11
 
+	const R: nat := 4091
+	const R_INV: nat := 2304
+
+	lemma {:axiom} R_INV_lemma()
+		ensures (R_INV * R) % Q == 1;
+
 	lemma {:axiom} Nth_root_lemma()
 		ensures Pow(PSI, Pow2(LOGDN)) % Q == 1;
 		ensures Pow2(LOGDN) == DN;
@@ -187,6 +193,9 @@ module nth_root {
 	{
 		(a * b) % Q
 	}
+
+	function method {:axiom} montmul(a: elem, b: elem): (c: elem)
+		ensures c == (a * b * R_INV) % Q
 
 	function method modadd(a: elem, b: elem): elem
 	{

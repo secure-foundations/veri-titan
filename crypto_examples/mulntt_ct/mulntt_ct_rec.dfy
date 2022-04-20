@@ -1,6 +1,4 @@
-include "nth_root.dfy"
-include "ntt_index.dfy"
-include "polys.dfy"
+include "twiddle_factors.dfy"
 
 module mulntt_ct_rec {
     import opened Seq
@@ -14,51 +12,7 @@ module mulntt_ct_rec {
     import opened nth_root
     import opened ntt_index
     import opened ntt_polys
-
-    function method A(): seq<elem>
-        ensures |A()| == N == pow2(LOGN).full;
-
-    function method block_count(m: pow2_t): pow2_t
-        requires 0 <= m.exp <= LOGN;
-    {
-        pow2_div(pow2(LOGN), m)
-    }
-
-    function method block_size(c: pow2_t): pow2_t
-        requires 0 <= c.exp <= LOGN;
-    {
-        pow2_div(pow2(LOGN), c)
-    }
-
-    lemma block_count_product_lemma(m: pow2_t)
-        requires 0 <= m.exp <= LOGN;
-        ensures block_count(m).full * m.full == N;
-    {
-        Nth_root_lemma();
-    }
-
-    lemma block_count_half_lemma(m: pow2_t)
-        requires 1 <= m.exp <= LOGN;
-        ensures block_count(pow2_half(m)) == pow2_double(block_count(m));
-    {
-        Nth_root_lemma();
-        var left := pow2_div(pow2(LOGN), pow2_half(m));
-        assert left.full * (m.full / 2) == N;
-        var right := pow2_div(pow2(LOGN), m);
-        var half := m.full / 2;
-        pow2_basics(m);
-
-        calc == {
-            left.full * half;
-            left.full * (m.full / 2);
-            right.full * (2 * half);
-            {
-                LemmaMulIsAssociativeAuto();
-            }
-            (right.full * 2) * half;
-        }
-        LemmaMulEqualityConverse(half, left.full, right.full * 2);
-    }
+    import opened twiddle_factors
 
     predicate {:opaque} unifromly_sized(blocks: seq<seq<elem>>, bsize: pow2_t)
         requires bsize.exp <= LOGN;
@@ -78,9 +32,6 @@ module mulntt_ct_rec {
         reveal unifromly_sized();
     }
 
-    type n_sized = s: seq<elem>
-        | |s| == N == pow2(LOGN).full witness *
-    
     lemma point_view_index_bound_lemma(i: nat, j: nat, bsize: pow2_t)
         requires bsize.exp <= LOGN;
         requires i < block_count(bsize).full;
@@ -244,46 +195,6 @@ module mulntt_ct_rec {
     {
         reveal unifromly_sized();
         reveal build_lower_level();
-    }
-
-    // d is the block count
-    // i is the offset in the block
-    function method x_value(i: nat, d: pow2_t): (r: elem)
-        requires d.exp <= LOGN;
-        requires i < block_size(d).full;
-        ensures r > 0;
-    {
-        var bound := block_size(d);
-        LemmaMulNonnegative(2 * bit_rev_int(i, bound), d.full);
-        var r := modpow(PSI, 2 * bit_rev_int(i, bound) * d.full + d.full);
-        // LemmaPowPositive(PSI, 2 * bit_rev_int(i, bound) * d.full + d.full);
-        calc {
-            2 * bit_rev_int(i, bound) * d.full + d.full;
-            {
-                LemmaMulProperties();
-            }
-            (bit_rev_int(i, bound) * (2 * d.full)) + d.full;
-            <=
-            {
-                LemmaMulInequality(bit_rev_int(i, bound), bound.full - 1, 2 * d.full);
-            }
-            (bound.full - 1) * (2 * d.full) + d.full;
-            {
-                LemmaMulIsDistributive(2 * d.full, bound.full, - 1);
-            }
-            bound.full * (2 * d.full) - (2 * d.full) + d.full;
-            bound.full * (2 * d.full) - d.full;
-            {
-                LemmaMulProperties();
-            }
-            2 * (bound.full * d.full) - d.full;
-            {
-                block_count_product_lemma(bound);
-            }
-            2 * N - d.full;
-        }
-        primitive_root_lemma(2 * bit_rev_int(i, bound) * d.full + d.full);
-        r
     }
 
     predicate {:opaque} points_eval_prefix_inv(points: seq<elem>, poly: seq<elem>, l: nat, count: pow2_t)
@@ -833,16 +744,32 @@ module mulntt_ct_rec {
             requires s_loop_inv(a, hcount, j, bi);
             requires s == bi + (2*j) * hcount.full;
             requires bi < hcount.full
-            requires w == x_value(2 * j, hcount);
+            requires w == modmul(x_value(2 * j, hcount), R);
             ensures s + hcount.full < N;
             ensures bi + hcount.full < lcount().full;
-            ensures poly_eval(get_full_poly(bi), w) == modadd(a[s], modmul(a[s+hcount.full], w));
+            ensures poly_eval(get_full_poly(bi), x_value(2*j, hcount)) == modadd(a[s], montmul(a[s+hcount.full], w));
         {
             size_count_lemma();
             lower_points_view_value_lemma(a, hcount, j, bi, s);
             var e := a[s];
             var o := a[s+hcount.full];
-            var p := modmul(o, w);
+            var p := montmul(o, w);
+
+            gbassert IsModEquivalent(p, o * x_value(2 * j, hcount), Q) by {
+                assert IsModEquivalent(p, o * w * R_INV, Q) by {
+                    LemmaSmallMod(p, Q);
+                }
+                assert IsModEquivalent(R_INV * R, 1, Q) by {
+                    R_INV_lemma();
+                }
+                assert IsModEquivalent(w, x_value(2 * j, hcount) * R, Q) by {
+                    LemmaSmallMod(w, Q);
+                }
+            }
+
+            assert p == (o * x_value(2 * j, hcount)) % Q by {
+                LemmaSmallMod(p, Q);
+            }
 
             var sum := modadd(e, p);
             var diff := modsub(e, p);
@@ -853,7 +780,7 @@ module mulntt_ct_rec {
 
             level_polys_bitrev_index_correspondence_lemma(a, hcount, j, bi);
 
-            var x := w;
+            var x := x_value(2*j, hcount);
             var sqr := x_value(j, lcount());
 
             assert e == poly_eval(e_poly, sqr);
@@ -863,22 +790,38 @@ module mulntt_ct_rec {
 
             poly_eval_split_lemma(f_poly, e_poly, o_poly, hsize, x);
         }
-        
+
         lemma ct_butterfly_odd_lemma(a: n_sized, hcount: pow2_t, j: nat, bi: nat, s: nat, w: elem)
             requires s_loop_inv(a, hcount, j, bi);
             requires bi < hcount.full
             requires s == bi + (2*j) * hcount.full;
-            requires w == x_value(2 * j, hcount);
+            requires w == modmul(x_value(2 * j, hcount), R);
             ensures s + hcount.full < N;
             ensures bi + hcount.full < lcount().full;
             ensures poly_eval(get_full_poly(bi), x_value(2*j+1, hcount))
-                == modsub(a[s], modmul(a[s+hcount.full], w));
+                == modsub(a[s], montmul(a[s+hcount.full], w));
         {
             size_count_lemma();
             lower_points_view_value_lemma(a, hcount, j, bi, s);
             var e := a[s];
             var o := a[s+hcount.full];
-            var p := modmul(o, w);
+            var p := montmul(o, w);
+
+            gbassert IsModEquivalent(p, o * x_value(2*j, hcount), Q) by {
+                assert IsModEquivalent(p, o * w * R_INV, Q) by {
+                    LemmaSmallMod(p, Q);
+                }
+                assert IsModEquivalent(R_INV * R, 1, Q) by {
+                    R_INV_lemma();
+                }
+                assert IsModEquivalent(w, x_value(2*j, hcount) * R, Q) by {
+                    LemmaSmallMod(w, Q);
+                }
+            }
+
+            assert p == (o * x_value(2 * j, hcount)) % Q by {
+                LemmaSmallMod(p, Q);
+            }
 
             var diff := modsub(e, p);
 
@@ -886,6 +829,7 @@ module mulntt_ct_rec {
             var o_poly := get_odd_poly(bi);
             var f_poly := get_full_poly(bi);
 
+            var x_e := x_value(2*j, hcount);
             var x_o := x_value(2*j+1, hcount);
         
             x_value_odd_square_lemma(j, x_o);
@@ -893,7 +837,6 @@ module mulntt_ct_rec {
             level_polys_bitrev_index_correspondence_lemma(a, hcount, j, bi);
 
             var sqr := x_value(j, lcount());
-
 
             calc == {
                 x_o;
@@ -907,26 +850,8 @@ module mulntt_ct_rec {
                 }
                 modpow(PSI, 2 * (bit_rev_int(j, lsize()) + lsize().full) * hcount.full + hcount.full);
                 {
-                    calc == {
-                        2 * (bit_rev_int(j, lsize()) + lsize().full) * hcount.full;
-                        {
-                            LemmaMulIsAssociative(2, bit_rev_int(j, lsize()) + lsize().full, hcount.full);
-                        }
-                        2 * ((bit_rev_int(j, lsize()) + lsize().full) * hcount.full);
-                        {
-                            LemmaMulIsDistributive(hcount.full, bit_rev_int(j, lsize()), lsize().full);
-                        }
-                        2 * (bit_rev_int(j, lsize()) * hcount.full + lsize().full * hcount.full);
-                        {
-                            LemmaMulIsDistributive(2, bit_rev_int(j, lsize()) * hcount.full, lsize().full * hcount.full);
-                        }
-                        2 * (bit_rev_int(j, lsize()) * hcount.full) + 2 * (lsize().full * hcount.full);
-                        {
-                            LemmaMulIsAssociative(2, lsize().full, hcount.full);
-                        }
-                        2 * (bit_rev_int(j, lsize()) * hcount.full) + (2 * lsize().full) * hcount.full;
-                        2 * (bit_rev_int(j, lsize()) * hcount.full) + hsize.full * hcount.full;
-                        2 * (bit_rev_int(j, lsize()) * hcount.full) + N;
+                    gbassert 2 * (bit_rev_int(j, lsize()) + lsize().full) * hcount.full == 2 * (bit_rev_int(j, lsize()) * hcount.full) + N by {
+                        assert 2 * lsize().full * hcount.full == N;
                     }
                 }
                 modpow(PSI, 2 * (bit_rev_int(j, lsize()) * hcount.full) + N + hcount.full);
@@ -943,24 +868,25 @@ module mulntt_ct_rec {
                     bit_rev_int_lemma2(j, lsize());
                 }
                 (Q - modpow(PSI, 2 * bit_rev_int(2*j, hsize) * hcount.full + hcount.full)) % Q;
-                (Q - w) % Q;
+                (Q - x_e) % Q;
                 {
-                    LemmaSmallMod(Q- w, Q);
+                    LemmaSmallMod(Q- x_e, Q);
                 }
-                Q - w;
+                Q - x_e;
             }
   
+
             calc == {
                 diff;
-                modsub(e, modmul(o, w));
+                modsub(e, modmul(o, x_e));
                 {
-                    LemmaMulNonnegative(o, w);
+                    LemmaMulNonnegative(o, x_e);
                 }
-                (e as int - ((o * w) % Q)) % Q;
+                (e as int - ((o * x_e) % Q)) % Q;
                 {
-                    LemmaSubModNoopRight(e, o * w, Q);
+                    LemmaSubModNoopRight(e, o * x_e, Q);
                 }
-                (e as int - (o * w)) % Q;
+                (e as int - (o * x_e)) % Q;
                 (e as int - ((o * (Q - x_o)))) % Q;
                 {
                     LemmaMulIsCommutative(o, Q - x_o);
@@ -979,6 +905,11 @@ module mulntt_ct_rec {
                     LemmaAddModNoop(e, x_o * o, Q);
                 }
                 ((e % Q) + (x_o * o) % Q) % Q;
+                {
+                    LemmaSmallMod(e, Q);
+                }
+                (e + (x_o * o) % Q) % Q;
+                (e + modmul(x_o, o)) % Q;
                 modadd(e, modmul(x_o, o));
                 modadd(poly_eval(e_poly, sqr), modmul(x_o, poly_eval(o_poly, sqr)));
                 {
@@ -993,14 +924,14 @@ module mulntt_ct_rec {
             requires bi < hcount.full
         {
             var s := bi + (2*j) * hcount.full;
-            var w := x_value(2 * j, hcount);
+            var w := modmul(x_value(2 * j, hcount), R);
             point_view_index_bound_lemma(bi, 2 * j+1, hsize);
             point_view_index_bound_lemma(bi, 2 * j, hsize);
             LemmaMulIsDistributive(hcount.full, 2*j, 1);
             assert (2*j) * hcount.full + hcount.full == (2*j + 1) * hcount.full;
             var s' := s+hcount.full; 
-            a' == a[s := modadd(a[s], modmul(a[s'], w))]
-                [s' := modsub(a[s], modmul(a[s'], w))]
+            a' == a[s := modadd(a[s], montmul(a[s'], w))]
+                [s' := modsub(a[s], montmul(a[s'], w))]
         }
 
         lemma s_loop_perserves_higher_inv_lemma(a: n_sized, a': n_sized, hcount: pow2_t, j: nat, bi: nat)
@@ -1016,9 +947,8 @@ module mulntt_ct_rec {
             assert s == point_view_index(bi, 2*j, hsize);
             assert s' == point_view_index(bi, 2*j + 1, hsize);
 
-            var w := x_value(2 * j, hcount);
-            var vo := modadd(a[s], modmul(a[s'], w));
-            var ve := modsub(a[s], modmul(a[s'], w));
+            // var vo := modadd(a[s], modmul(a[s'], w));
+            // var ve := modsub(a[s], modmul(a[s'], w));
 
             var hpoints := level_points_view(a, hsize);
             var hpoints' := level_points_view(a', hsize);
@@ -1057,6 +987,7 @@ module mulntt_ct_rec {
                         point_view_index_disjont_lemma(bi, k, bi, 2*j+1, hsize);
                         assert right[k] == left[k];
                     } else {
+                        var w := modmul(x_value(2 * j, hcount), R);
                         ct_butterfly_even_lemma(a, hcount, j, bi, s, w);
                         ct_butterfly_odd_lemma(a, hcount, j, bi, s, w);
                     }
