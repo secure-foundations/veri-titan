@@ -23,6 +23,14 @@ def bit_rev_int(i, lg):
     r = bit_rev_str(i, lg)
     return int(r, base=2)
 
+def bit_rev_shuffle(a):
+    n = len(a)
+    logn = log2(n)
+    c = [0 for i in range(n)]
+    for i in range(n):
+        c[bit_rev_int(i, logn)] = a[i]
+    return c
+
 # def scale_poly(p, psi, q):
 #     r = []
 #     for i, a in enumerate(p):
@@ -86,12 +94,7 @@ def build_level_polys(poly):
         level_polys += [curr]
     return level_polys
 
-# poly = [1371,8801,5676,4025,3388,10753,6940,10684,10682,2458,679,11161,3648,5512,10142,10189]
 
-# lpolys = build_level_polys(ModQPoly(poly, 12289))
-
-# for i in range(len(lpolys)):
-#     print(lpolys[i])
 
 # def find_exp(p, y):
 #     results = []

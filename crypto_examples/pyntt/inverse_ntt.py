@@ -1,28 +1,19 @@
-from sympy import mod_inverse
 from polys import *
 
-# Q0I   12287
-
-class ForwardNTT:
-    def __init__(self, q, n, psi, omega):
+class InverseNTT:
+    def __init__(self, q, n, psi_inv, omega_inv):
         self.Q = q
         self.N = n
-        self.PSI = psi
-        self.OMEGA = omega
+        self.PSI_INV = psi_inv
+        self.OMEGA_INV = omega_inv
         self.LOGN = log2(self.N)
-        self.R = 2 ** 16
-        self.R_INV = mod_inverse(2 ** 16, self.Q)
 
-        assert ((self.R * self.R_INV) % self.Q == 1)
-        assert pow(self.PSI, self.N * 2, self.Q) == 1
-        assert pow(self.OMEGA, self.N * 2, self.Q) == 1
-
-    def montmul(self, a, b):
-        return (a * b * self.R_INV) % self.Q
+        # assert pow(self.PSI, self.N * 2, self.Q) == 1
+        # assert pow(self.OMEGA, self.N * 2, self.Q) == 1
 
     def x_value(self, i, d):
         logn = self.LOGN - log2(d)
-        return (pow(self.OMEGA, d * bit_rev_int(i, logn), self.Q) * pow(self.PSI, d, self.Q)) % self.Q
+        return (pow(self.OMEGA_INV, d * bit_rev_int(i, logn), self.Q) * pow(self.PSI_INV, d, self.Q)) % self.Q
 
     def read_as_blocks(self, a, d):
         blocks = []
@@ -111,20 +102,9 @@ class ForwardNTT:
         for i in range(bi+d, 2*d):
             self.check_suffix_block(s_blocks[i], s_polys[bit_rev_int(i, s_lgd)], j, s_d) 
 
-    def check_twiddle_factors(self, p):
-        assert len(p) == self.N
-        t = 1
-        while t < self.N:
-            for j in range(t):
-                d = self.N / (t * 2)
-                assert p[t+j] == (self.x_value(2*j, d) * self.R) % self.Q
-            t = t * 2
-
-    def mulntt_ct_std2rev(self, a, p, disable_checks=False):
-        self.check_twiddle_factors(p)
+    def intt(self, a, disable_checks=False):
         self.disable_checks = disable_checks
-
-        assert len(a) == len(p) == self.N
+        assert len(a) == self.N
         self.saved = ModQPoly(a, self.Q)
         self.level_polys = build_level_polys(self.saved)
 
@@ -145,10 +125,11 @@ class ForwardNTT:
             for j in range(t):
                 self.check_j_loop_inv(a, d, j)
         
-                w = p[t + j]
+                # w = p[t + j]
+                # * pow(self.PSI_INV, d, Q)
+                logn = self.LOGN - log2(d)
+                w = pow(self.OMEGA_INV, d * bit_rev_int(2*j, logn), self.Q)
                 u = 2 * d * j
-                # assert w == self.x_value(2*j, d)
-                # w_r = (w * self.R) % self.Q
 
                 # x = (pow(OMEGA, d * bit_rev_int(2*j+1, lgt+1), Q) * pow(PSI, d, Q)) % Q
                 # x_e = self.x_value(2*j, d)
@@ -162,7 +143,7 @@ class ForwardNTT:
 
                     e, o = a[s], a[s + d]
 
-                    x = self.montmul(o, w)
+                    x = (o * w) % self.Q
                     a[s + d] = (e - x) % self.Q
                     a[s] = (e + x) % self.Q
 
@@ -187,8 +168,19 @@ class ForwardNTT:
             self.check_t_loop_inv(a, d)
             t = t * 2
 
-        # always do this check
+        c = bit_rev_shuffle(a)
+
+        # this check is always done
         for i in range(self.N):
-            x = self.x_value(i, 1)
-            assert self.saved.eval(x) == a[i]
+            x = pow(self.OMEGA_INV, i, self.Q)
+            assert self.saved.eval(x) == c[i]
         print("final check done")
+
+poly = [6444, 5276, 7855, 4706, 5013, 9024, 10391, 2319, 4959, 6918, 342, 8541, 2165, 6368, 11386, 9437]
+points3 = [2832, 9915, 3280, 1991, 5022, 8577, 1107, 9207, 6121, 3183, 9547, 3932, 10436, 6465, 9353, 7462]
+
+# for i in range(N):
+#     assert (eval_poly(poly3, pow(OMEGA_INV, i, Q)) * pow(PSI_INV, i, Q)) % Q == points3[i]
+
+intt16 = InverseNTT(12289, 16, 2545, 722)
+intt16.intt(poly, True)
