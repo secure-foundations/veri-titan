@@ -28,7 +28,7 @@ module mulntt_ct {
         view.s_loop_inv_pre_lemma(a, d, j);
 
         var u := (2 * j) * d.full;
-        var w := x_value(2 * j, d); // TODO: read from table
+        var w := modmul(x_value(2 * j, d), R); // TODO: read from table
         // P_table_index_bounded_lemma(t, j);
         // var w := P()[t.full + j]; // psi_t * w_t^bitrev(j)
 
@@ -48,7 +48,7 @@ module mulntt_ct {
             var e := a[s];
             var o := a[s + d.full];
 
-            var x := modmul(o, w);
+            var x := montmul(o, w);
             a' := a[s+d.full := modsub(e, x)];
             a' := a'[s := modadd(e, x)];
             s := s + 1;

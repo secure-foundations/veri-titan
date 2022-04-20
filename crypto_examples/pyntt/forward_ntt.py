@@ -1,8 +1,6 @@
 from sympy import mod_inverse
 from polys import *
 
-# Q0I   12287
-
 class ForwardNTT:
     def __init__(self, q, n, psi, omega):
         self.Q = q
