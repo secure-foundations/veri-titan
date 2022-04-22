@@ -625,8 +625,8 @@ PQCLEAN_FALCON512_CLEAN_verify_raw(const uint16_t *c0, const int16_t *s2,
     /*
      * Compute -s1 = s2*h - c0 mod phi mod q (in tt[]).
      */
-    print_uint16_array(stdout, h, 512);
-    print_uint16_array(stdout, tt, 512);
+    // print_uint16_array(stdout, h, 512);
+    // print_uint16_array(stdout, tt, 512);
 
     mq_NTT(h, logn);
     mq_poly_tomonty(h, logn);
@@ -635,7 +635,7 @@ PQCLEAN_FALCON512_CLEAN_verify_raw(const uint16_t *c0, const int16_t *s2,
     mq_iNTT(tt, logn);
 
     // this should end up doing poly multiplication 
-    print_uint16_array(stdout, tt, 512);
+    // print_uint16_array(stdout, tt, 512);
 
     mq_poly_sub(tt, c0, logn);
 
@@ -650,10 +650,10 @@ PQCLEAN_FALCON512_CLEAN_verify_raw(const uint16_t *c0, const int16_t *s2,
         ((int16_t *)tt)[u] = (int16_t)w;
     }
 
+    // check against the reference result
     for (u = 0; u < 512; u ++) {
         assert(tt[u] == buff_tt[u]);
     }
-
 
     /*
      * Signature is valid if and only if the aggregate (-s1,s2) vector
