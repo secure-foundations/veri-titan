@@ -1,0 +1,59 @@
+include "../../../arch/otbn/decls.i.vad"
+
+#verbatim
+
+include "../../../arch/otbn/decls.i.dfy"
+include "../../../../lib/bv256_falcon_lemmas.s.dfy"
+
+module mq_arith {
+
+import opened ot_machine
+import opened ot_abstraction
+import opened ot_decls
+import opened ot_vale
+
+import opened integers
+import opened bv256_ops
+
+#endverbatim
+    
+procedure mq_add() returns (ghost r: uint256)
+    {:noInline}
+    requires
+        w0 < 12289;
+        w1 < 12289;
+        w5 == 12289;
+    modifies
+        w0; w1; w5;
+    ensures
+      r == w0;
+      r == (old(w0) + old(w1)) % 12289;
+{
+    ghost var Q: int := 12289;
+    ghost var x: nat := w0;
+    ghost var y: nat := w1;
+
+    // w1 == y - Q
+    bn_sub(w1, w1, w5);
+    assert w1 == uint256_sub(to_uint256(y), Q);
+
+    // get y - Q + x
+    bn.add(w1, w1, w0);
+    assert w1 == uint256_add(to_uint256(x), uint256_add(to_uint256(y), to_uint256(Q)));
+    ghost var d := a1;
+
+    // >> 31
+    bn.rshi
+
+    // bn.and
+
+    // bn.add
+
+
+    
+
+}
+
+#verbatim
+}
+#endverbatim

@@ -104,7 +104,7 @@ module ot_machine {
         | BN_ADD(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
         | BN_ADDC(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
         | BN_ADDI(wrd: reg256_t, wrs1: reg256_t, imm: uint10, fg: uint1)
-        // | BN_ADDM(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t)
+        | BN_ADDM(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t)
         | BN_MULQACC(zero: bool, wrs1: reg256_t, qwsel1: uint2, wrs2: reg256_t, qwsel2: uint2, shift_qws: uint2)
         | BN_MULQACC_SO(zero: bool, wrd: reg256_t, lower: bool,
             wrs1: reg256_t, qwsel1: uint2, wrs2: reg256_t, qwsel2: uint2,
@@ -148,6 +148,22 @@ module ot_machine {
         var cin := if carry then 1 else 0;
         var (sum, cout) := bv256_ops.addc(x, otbn_shift(y, shift), cin);
         (sum, set_mlz_flags(cout, sum))
+    }
+
+    function method otbn_addm(x: uint256, y: uint256, mod: uint256) : (r: uint256)
+    {
+      var interm := x + y;
+      if interm < mod then interm else (interm - mod)
+    }
+
+    lemma addm_correct_lemma(x: uint256, y:uint256, mod: uint256)
+      requires x < mod;
+      requires y < mod;
+      ensures 0 <= otbn_addm(x, y, mod) < mod;
+      ensures otbn_addm(x, y, mod) == (x + y) % mod;
+    {
+      assert x + y < 2 * mod;
+      assert otbn_addm(x, y, mod) == (x + y) % mod;
     }
 
     function method otbn_subb(x: uint256, y: uint256, shift: shift_t, borrow: bool) : (uint256, flags_t)
@@ -581,6 +597,15 @@ predicate method while_overlap(c:code)
             var v1 := read_reg256(wrs1);
             var (sum, flags) := otbn_addc(v1, imm, SFT_DFT, false);
             write_reg256(wrd, sum).write_flags(fg, flags)
+        }
+
+        function method eval_BN_ADDM(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t) : state
+        {
+          var v1 := read_reg256(wrs1);
+          var v2 := read_reg256(wrs2);
+          var vmod := read_reg256(WMOD);
+          var sum := otbn_addm(v1, v2, mod);
+          write_reg256(wrd, sum)
         }
 
         function method eval_BN_MULQACC(zero: bool,
