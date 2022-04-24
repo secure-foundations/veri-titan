@@ -123,10 +123,10 @@ class InverseNTT(NTTConsts):
                 u = 2 * d * j
 
                 # x = (pow(OMEGA, d * bit_rev_int(2*j+1, lgt+1), Q) * pow(PSI, d, Q)) % Q
-                # x_e = self.x_value(2*j, d)
-                # x_o = self.x_value(2*j+1, d)
-                # assert x_e == w
-                # assert x_o == self.Q - w
+                x_e = self.x_value(2*j, d)
+                x_o = self.x_value(2*j+1, d)
+                assert x_e == w
+                assert x_o == self.Q - w
                 # assert (x_e * x_e) % self.Q == (x_o * x_o) % self.Q == x_value(j, d * 2)
 
                 for s in range(u, u + d):

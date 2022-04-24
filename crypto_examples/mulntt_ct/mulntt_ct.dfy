@@ -1,6 +1,6 @@
 include "mulntt_ct_rec.dfy"
 
-module mulntt_ct {
+abstract module mulntt_ct {
     import opened Seq
     import opened Power
     import opened Power2
@@ -13,20 +13,19 @@ module mulntt_ct {
 
     import opened mulntt_ct_rec
     import opened ntt_polys
-    import opened twiddle_factors
 
     method j_loop(a: n_sized, p: n_sized, t: pow2_t, d: pow2_t, j: nat, ghost view: loop_view)
     returns (a': n_sized)
         requires view.j_loop_inv(a, d, j);
         requires t == view.lsize();
-        requires p == P();
+        requires p == rev_mixed_powers_mont_table();
         requires j < view.lsize().full;
         ensures view.j_loop_inv(a', d, j + 1);
     {
         view.s_loop_inv_pre_lemma(a, d, j);
 
         var u := (2 * j) * d.full;
-        twiddle_factors_value_lemma(t, d, j);
+        rev_mixed_powers_mont_table_lemma(t, d, j);
         var w := p[t.full + j];
         // modmul(x_value(2 * j, d), R);
 
@@ -47,8 +46,8 @@ module mulntt_ct {
             var o := a[s + d.full];
 
             var x := montmul(o, w);
-            a' := a[s+d.full := modsub(e, x)];
-            a' := a'[s := modadd(e, x)];
+            a' := a[s+d.full := mqsub(e, x)];
+            a' := a'[s := mqadd(e, x)];
             s := s + 1;
 
             view.s_loop_inv_peri_lemma(a, a', d, j, bi);
@@ -62,13 +61,13 @@ module mulntt_ct {
         returns (a': n_sized, ghost view': loop_view)
 
         requires view.t_loop_inv(a, d);
-        requires p == P();
+        requires p == rev_mixed_powers_mont_table();
         requires t == view.lsize();
-        requires t.exp < LOGN;
+        requires t.exp < N.exp;
 
-        ensures view.hsize.exp < LOGN ==> view'.t_loop_inv(a', pow2_half(d));
-        ensures view.hsize.exp == LOGN ==> view' == view;
-        ensures view.hsize.exp == LOGN ==> view'.t_loop_end(a');
+        ensures view.hsize.exp < N.exp ==> view'.t_loop_inv(a', pow2_half(d));
+        ensures view.hsize.exp == N.exp ==> view' == view;
+        ensures view.hsize.exp == N.exp ==> view'.t_loop_end(a');
     {
         var j := 0;
         a' := a;
@@ -88,11 +87,12 @@ module mulntt_ct {
 
     method mulntt_ct(a: n_sized, p: n_sized, ghost view: loop_view)
         returns (a': n_sized, ghost view': loop_view)
-        requires view.t_loop_inv(a, pow2(LOGN-1));
-        requires p == P();
+        requires N.exp >= 1;
+        requires view.t_loop_inv(a, pow2(N.exp-1));
+        requires p == rev_mixed_powers_mont_table();
         ensures view'.t_loop_end(a');
     {
-        var d := pow2(LOGN);
+        var d := pow2(N.exp);
         var t := pow2(0);
         a' := a;
         view' := view;
@@ -105,21 +105,21 @@ module mulntt_ct {
 
         Nth_root_lemma();
 
-        while (t.full < N)
-            invariant 1 <= d.exp <= LOGN;
+        while (t.full < N.full)
+            invariant 1 <= d.exp <= N.exp;
             invariant view'.t_loop_inv(a', pow2_half(d));
-            invariant t.full >= N ==> view'.hsize.exp == LOGN;
+            invariant t.full >= N.full ==> view'.hsize.exp == N.exp;
             invariant t == view'.lsize();
         {
             d := pow2_half(d);
             a', view' := t_loop(a', p, t, d, view');
             t := pow2_double(t);
 
-            if t.full >= N {
-                assume view'.hsize.exp == LOGN;
+            if t.full >= N.full {
+                assume view'.hsize.exp == N.exp;
             }
         }
 
-        assert view'.hsize.exp == LOGN;
+        assert view'.hsize.exp == N.exp;
     }
 }

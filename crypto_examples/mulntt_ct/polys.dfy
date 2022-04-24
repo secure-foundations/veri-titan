@@ -2,15 +2,39 @@ include "ntt_index.dfy"
 
 module ntt_polys {
     import opened Seq
-    import opened pows_of_2
+	import opened Power
 
-    import opened nth_root
+    import opened pows_of_2
     import opened ntt_index
+
+	const Q: nat := 12289
+
+	type elem = i :nat | i < Q
+
+	function method mqpow(a: elem, b: nat): elem
+	{
+		Pow(a, b) % Q
+	}
+
+	function method mqmul(a: elem, b: elem): elem
+	{
+		(a * b) % Q
+	}
+
+	function method mqadd(a: elem, b: elem): elem
+	{
+		(a + b) % Q
+	}
+
+	function method mqsub(a: elem, b: elem): elem
+	{
+		(a - b) % Q
+	}
 
     function {:opaque} poly_eval(a: seq<elem>, x: elem): elem
     {
         if |a| == 0 then 0
-        else modadd(First(a), modmul(poly_eval(DropFirst(a), x), x))
+        else mqadd(First(a), mqmul(poly_eval(DropFirst(a), x), x))
     }
 
     lemma poly_eval_base_lemma(a: seq<elem>, x: elem)
@@ -25,10 +49,10 @@ module ntt_polys {
         requires |a| == len.full >= 2;
         requires a_e == even_indexed_items(a, len)
         requires a_o == odd_indexed_items(a, len)
-        ensures var sqr := modmul(x, x);
+        ensures var sqr := mqmul(x, x);
             poly_eval(a, x)
                 == 
-            modadd(poly_eval(a_e, sqr), modmul(x, poly_eval(a_o, sqr)));
+            mqadd(poly_eval(a_e, sqr), mqmul(x, poly_eval(a_o, sqr)));
         decreases |a|;
 
     // predicate {:opaque} poly_eval_all_points(a: seq<elem>, y: seq<elem>, len: pow2_t)
