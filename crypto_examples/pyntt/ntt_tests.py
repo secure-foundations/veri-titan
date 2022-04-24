@@ -10,11 +10,11 @@ poly1 = generate_random_poly(N, Q)
 poly2 = generate_random_poly(N, Q)
 product = reference_poly_mul(poly1, poly2, Q)
 
-# forward transform
+# forward transformation
 fntt = ForwardNTT(N, Q, BITS)
 points1 = fntt.mulntt_ct_std2rev(poly1, True)
 
-# forward transform
+# forward transformation
 fntt = ForwardNTT(N, Q, BITS)
 points2 = fntt.mulntt_ct_std2rev(poly2, True)
 
