@@ -25,3 +25,7 @@ int main(void) {
 
     return dummy;
 }
+
+
+// gcc -O3 falcon_verify_alt.c -c && gcc -O3 compare.c falcon_verify_alt.o -o falcon_verify_alt.out && time ./falcon_verify_alt.out
+// gcc -O3 falcon_verify.c -c && gcc -O3 compare.c falcon_verify.o -o falcon_verify.out && time ./falcon_verify.out
