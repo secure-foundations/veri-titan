@@ -64,6 +64,16 @@ class NTTConsts:
         self.N_INV = mod_inverse(self.N, q)
         self.RR = (self.R * self.R) % q
 
+    def read_as_blocks(self, a, d):
+        assert len(a) == self.N
+        assert self.N % d == 0
+        blocks = []
+        sz = self.N / d
+        for i in range(d):
+            block = [a[i + j * d] for j in range(sz)]
+            blocks.append(block)
+        return blocks
+
     def montmul(self, a, b):
         return (a * b * self.R_INV) % self.Q
 

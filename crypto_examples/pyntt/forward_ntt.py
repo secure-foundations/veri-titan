@@ -12,14 +12,6 @@ class ForwardNTT(NTTConsts):
         logn = self.LOGN - log2(d)
         return (pow(self.OMEGA, d * bit_rev_int(i, logn), self.Q) * pow(self.PSI, d, self.Q)) % self.Q
 
-    def read_as_blocks(self, a, d):
-        blocks = []
-        sz = self.N / d
-        for i in range(d):
-            block = [a[i + j * d] for j in range(sz)]
-            blocks.append(block)
-        return blocks
-
     def check_prefix_block(self, block, poly, l, d):
         assert l <= len(block) == len(poly)
         for i in range(l):
