@@ -39,23 +39,30 @@ def check_nth_primitive_root(r, n, q):
             return False
     return True
 
+def find_nth_primitive_root(n, q):
+    for r in range(q):
+        if check_nth_primitive_root(r, n, q):
+            return r
+    assert False
+
 class NTTConsts:
-    def __init__(self, n, q, psi, bits):
+    def __init__(self, n, q, bits):
         self.N = n
         self.LOGN = log2(self.N)
         self.Q = q
         self.R = 2 ** bits
         self.R_INV = mod_inverse(self.R, q)
 
-        self.PSI = psi
+        self.PSI = find_nth_primitive_root(2 * n, q)
         assert(check_nth_primitive_root(self.PSI, 2 * n, q))
         self.PSI_INV = mod_inverse(self.PSI, q)
 
-        self.OMEGA = (psi * psi) % q
+        self.OMEGA = find_nth_primitive_root(n, q)
         assert(check_nth_primitive_root(self.OMEGA, n, q))
         self.OMEGA_INV = mod_inverse(self.OMEGA, q)
 
         self.N_INV = mod_inverse(self.N, q)
+        self.RR = (self.R * self.R) % q
 
     def montmul(self, a, b):
         return (a * b * self.R_INV) % self.Q
@@ -96,7 +103,7 @@ if __name__ == "__main__":
     Q = 12289
     # nttconst = NTTConsts(16, Q, 1212, 16)
     # NTTConsts(256, Q, 1002, 16)
-    nttconst = NTTConsts(512, Q, 1003, 16)
+    nttconst = NTTConsts(512, Q, 16)
     print(nttconst.build_rev_mixed_powers_mont_table())
     print(nttconst.build_intt_scalling_table())
 

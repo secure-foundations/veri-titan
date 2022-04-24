@@ -2,8 +2,8 @@ from ntt_consts import *
 from polys import *
 
 class InverseNTT(NTTConsts):
-    def __init__(self, n, q, psi, bits):
-        NTTConsts.__init__(self, n, q, psi, bits)
+    def __init__(self, n, q, bits):
+        NTTConsts.__init__(self, n, q, bits)
         assert ((self.R * self.R_INV) % self.Q == 1)
         assert pow(self.PSI, self.N * 2, self.Q) == 1
         assert pow(self.OMEGA, self.N * 2, self.Q) == 1
@@ -182,7 +182,7 @@ class InverseNTT(NTTConsts):
 
 if __name__ == "__main__":
     Q = 12289
-    intt16 = InverseNTT(16, Q, 1212, 16)
+    intt16 = InverseNTT(16, Q, 16)
     poly = ModQPoly([1371,8801,5676,4025,3388,10753,6940,10684,10682,2458,679,11161,3648,5512,10142,10189], Q)
     points = intt16.intt(poly)
     intt16.check_inverse_ntt(poly, points)
