@@ -1,41 +1,6 @@
-from cmath import log
-import random, math
-
-def log2(num):
-    r = math.log(num, 2)
-    assert r % 1.0 == 0
-    return int(r)
-
-modder = lambda t: t % Q
-
-def bit_rev_str(i, lg):
-    fmt = "0%db" % lg
-    r = format(i, fmt)[::-1]
-    return r
-
-def bit_str(i, lg):
-    fmt = "0%db" % lg
-    r = format(i, fmt)
-    return r
-
-def bit_rev_int(i, lg):
-    assert i < pow(2, lg)
-    r = bit_rev_str(i, lg)
-    return int(r, base=2)
-
-def bit_rev_shuffle(a):
-    n = len(a)
-    logn = log2(n)
-    c = [0 for i in range(n)]
-    for i in range(n):
-        c[bit_rev_int(i, logn)] = a[i]
-    return c
-
-# def scale_poly(p, psi, q):
-#     r = []
-#     for i, a in enumerate(p):
-#         r.append(pow(psi, i, q) * a % q)
-#     return r
+import random
+from ntt_consts import log2
+import numpy as np
 
 class ModQPoly:
     def __init__(self, coeffs, q):
@@ -47,6 +12,9 @@ class ModQPoly:
 
     def __len__(self):
         return len(self.coeffs)
+
+    def __getitem__(self, i):
+        return self.coeffs[i]
 
     def eval(self, x):
         v = 0
@@ -94,15 +62,17 @@ def build_level_polys(poly):
         level_polys += [curr]
     return level_polys
 
+def reference_poly_mul(p1, p2, q):
+    assert len(p1) == len(p2) 
 
+    product = np.polymul(p1.coeffs[::-1], p2.coeffs[::-1])
+    product = [c % q for c in product]
+    mod = [1] + [0 for _ in range(len(p1)-1)] + [1]
+    assert len(mod) == len(p1) + 1
+    reaminder = np.polydiv(product, mod)[1]
+    reaminder = [int(c % q) for c in reaminder][::-1]
+    return ModQPoly(reaminder, q)
 
-# def find_exp(p, y):
-#     results = []
-#     for i in range(2 * N):
-#         x = pow(PSI, i, Q)
-#         if eval(p, x) == y:
-#             # print(format(i, fmt))
-#             results += [i]
-#     assert False
-
+def generate_random_poly(n, q):
+    return ModQPoly([random.randint(0, q) for i in range(n)], q)
 

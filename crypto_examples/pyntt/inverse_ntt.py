@@ -1,27 +1,16 @@
+from ntt_consts import *
 from polys import *
 
-class InverseNTT:
-    def __init__(self, q, n, psi_inv, omega_inv):
-        self.Q = q
-        self.N = n
-        self.PSI_INV = psi_inv
-        self.OMEGA_INV = omega_inv
-        self.LOGN = log2(self.N)
-
-        # assert pow(self.PSI, self.N * 2, self.Q) == 1
-        # assert pow(self.OMEGA, self.N * 2, self.Q) == 1
+class InverseNTT(NTTConsts):
+    def __init__(self, n, q, bits):
+        NTTConsts.__init__(self, n, q, bits)
+        assert ((self.R * self.R_INV) % self.Q == 1)
+        assert pow(self.PSI, self.N * 2, self.Q) == 1
+        assert pow(self.OMEGA, self.N * 2, self.Q) == 1
 
     def x_value(self, i, d):
         logn = self.LOGN - log2(d)
-        return (pow(self.OMEGA_INV, d * bit_rev_int(i, logn), self.Q) * pow(self.PSI_INV, d, self.Q)) % self.Q
-
-    def read_as_blocks(self, a, d):
-        blocks = []
-        sz = self.N / d
-        for i in range(d):
-            block = [a[i + j * d] for j in range(sz)]
-            blocks.append(block)
-        return blocks
+        return pow(self.OMEGA_INV, d * bit_rev_int(i, logn), self.Q)
 
     def check_prefix_block(self, block, poly, l, d):
         assert l <= len(block) == len(poly)
@@ -102,11 +91,13 @@ class InverseNTT:
         for i in range(bi+d, 2*d):
             self.check_suffix_block(s_blocks[i], s_polys[bit_rev_int(i, s_lgd)], j, s_d) 
 
-    def intt(self, a, disable_checks=False):
+    def intt(self, poly, disable_checks=False):
         self.disable_checks = disable_checks
+
+        p = self.build_rev_omega_inv_powers_mont_table()
+        a = poly.coeffs[::] # make a copy
         assert len(a) == self.N
-        self.saved = ModQPoly(a, self.Q)
-        self.level_polys = build_level_polys(self.saved)
+        self.level_polys = build_level_polys(poly)
 
         d = self.N
         t = 1
@@ -125,10 +116,10 @@ class InverseNTT:
             for j in range(t):
                 self.check_j_loop_inv(a, d, j)
         
-                # w = p[t + j]
+                w = p[t + j]
                 # * pow(self.PSI_INV, d, Q)
                 logn = self.LOGN - log2(d)
-                w = pow(self.OMEGA_INV, d * bit_rev_int(2*j, logn), self.Q)
+                # assert w == pow(self.OMEGA_INV, d * bit_rev_int(2*j, logn), self.Q)
                 u = 2 * d * j
 
                 # x = (pow(OMEGA, d * bit_rev_int(2*j+1, lgt+1), Q) * pow(PSI, d, Q)) % Q
@@ -143,7 +134,7 @@ class InverseNTT:
 
                     e, o = a[s], a[s + d]
 
-                    x = (o * w) % self.Q
+                    x = self.montmul(o, w)
                     a[s + d] = (e - x) % self.Q
                     a[s] = (e + x) % self.Q
 
@@ -169,18 +160,17 @@ class InverseNTT:
             t = t * 2
 
         c = bit_rev_shuffle(a)
+        return c
 
-        # this check is always done
+    def check_inverse_ntt(self, poly, points):
         for i in range(self.N):
-            x = pow(self.OMEGA_INV, i, self.Q)
-            assert self.saved.eval(x) == c[i]
-        print("final check done")
+            x = pow(self.OMEGA_INV, i)
+            assert poly.eval(x) == points[i]
+        print("inverse ntt check done")
 
-poly = [6444, 5276, 7855, 4706, 5013, 9024, 10391, 2319, 4959, 6918, 342, 8541, 2165, 6368, 11386, 9437]
-points3 = [2832, 9915, 3280, 1991, 5022, 8577, 1107, 9207, 6121, 3183, 9547, 3932, 10436, 6465, 9353, 7462]
-
-# for i in range(N):
-#     assert (eval_poly(poly3, pow(OMEGA_INV, i, Q)) * pow(PSI_INV, i, Q)) % Q == points3[i]
-
-intt16 = InverseNTT(12289, 16, 2545, 722)
-intt16.intt(poly, True)
+if __name__ == "__main__":
+    Q = 12289
+    intt16 = InverseNTT(16, Q, 16)
+    poly = generate_random_poly(16, Q)
+    points = intt16.intt(poly)
+    intt16.check_inverse_ntt(poly, points)
