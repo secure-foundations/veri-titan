@@ -1,6 +1,6 @@
-include "mulntt_ct_rec.dfy"
+include "intt_rec.dfy"
 
-abstract module mulntt_ct {
+abstract module intt_ct {
     import opened Seq
     import opened Power
     import opened Power2
@@ -11,23 +11,22 @@ abstract module mulntt_ct {
     import opened nth_root
     import opened ntt_index
 
-    import opened mulntt_ct_rec
+    import opened innt_model
     import opened ntt_polys
 
-    method j_loop(a: n_sized, p: n_sized, t: pow2_t, d: pow2_t, j: nat, ghost view: loop_view)
+    method j_loop(a: n_sized, p: n_sized, t: pow2_t, d: pow2_t, j: nat, ghost view: intt_loop_view)
     returns (a': n_sized)
         requires view.j_loop_inv(a, d, j);
         requires t == view.lsize();
-        requires p == rev_mixed_powers_mont_table();
+        requires p == rev_omega_inv_powers_mont_table();
         requires j < view.lsize().full;
         ensures view.j_loop_inv(a', d, j + 1);
     {
         view.s_loop_inv_pre_lemma(a, d, j);
 
         var u := (2 * j) * d.full;
-        rev_mixed_powers_mont_table_lemma(t, d, j);
+        rev_omega_inv_powers_mont_table_lemma(t, d, j);
         var w := p[t.full + j];
-        // modmul(x_value(2 * j, d), R);
 
         var s := u;
         a' := a;
@@ -57,11 +56,11 @@ abstract module mulntt_ct {
         view.s_loop_inv_post_lemma(a', d, j, d.full);
     }
 
-    method t_loop(a: n_sized, p: n_sized, t: pow2_t, d: pow2_t, ghost view: loop_view)
-        returns (a': n_sized, ghost view': loop_view)
+    method t_loop(a: n_sized, p: n_sized, t: pow2_t, d: pow2_t, ghost view: intt_loop_view)
+        returns (a': n_sized, ghost view': intt_loop_view)
 
         requires view.t_loop_inv(a, d);
-        requires p == rev_mixed_powers_mont_table();
+        requires p == rev_omega_inv_powers_mont_table();
         requires t == view.lsize();
         requires t.exp < N.exp;
 
@@ -85,11 +84,11 @@ abstract module mulntt_ct {
         view' := view.j_loop_inv_post_lemma(a', d, j);
     }
 
-    method mulntt_ct(a: n_sized, p: n_sized, ghost view: loop_view)
-        returns (a': n_sized, ghost view': loop_view)
+    method mulntt_ct(a: n_sized, p: n_sized, ghost view: intt_loop_view)
+        returns (a': n_sized, ghost view': intt_loop_view)
         requires N.exp >= 1;
         requires view.t_loop_inv(a, pow2(N.exp-1));
-        requires p == rev_mixed_powers_mont_table();
+        requires p == rev_omega_inv_powers_mont_table();
         ensures view'.t_loop_end(a');
     {
         var d := pow2(N.exp);
