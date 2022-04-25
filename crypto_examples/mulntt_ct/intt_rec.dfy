@@ -632,7 +632,7 @@ abstract module innt_model {
                 }
                 (Q - x_e) % Q;
                 {
-                    assume x_e != 0;
+                    LemmaSmallMod(Q - x_e, Q);
                 }
                 Q - x_e;
             }

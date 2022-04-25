@@ -603,10 +603,46 @@ abstract module nth_root {
 	function method rev_omega_inv_powers_x_value(i: nat, d: pow2_t): (r: elem)
 		requires d.exp <= N.exp;
 		requires i < block_size(d).full;
+		ensures r > 0;
 	{
 		var bound := block_size(d);
 		LemmaMulNonnegative(bit_rev_int(i, bound), d.full);
-		mqpow(OMEGA_INV, bit_rev_int(i, bound) * d.full)
+		var r := mqpow(OMEGA_INV, bit_rev_int(i, bound) * d.full);
+		assert r > 0 by {
+			if r == 0 {
+				var exp := bit_rev_int(i, bound) * d.full;
+
+				calc == {
+					1;
+					{
+						Lemma1Pow(exp);
+					}
+					Pow(1, exp) % Q;
+					{
+						Nth_root_lemma();
+					}
+					Pow((OMEGA_INV * OMEGA) % Q, exp) % Q;
+					{
+						LemmaPowModNoop(OMEGA_INV * OMEGA, exp, Q);
+					}
+					Pow(OMEGA_INV * OMEGA, exp) % Q;
+					{
+						LemmaPowDistributes(OMEGA_INV, OMEGA, exp);
+					}
+					(Pow(OMEGA_INV, exp) * Pow(OMEGA, exp)) % Q;
+					{
+						LemmaMulModNoop(Pow(OMEGA_INV, exp), Pow(OMEGA, exp), Q);
+					}
+					((Pow(OMEGA_INV, exp) % Q) * (Pow(OMEGA, exp) % Q)) % Q;
+					{
+						assert Pow(OMEGA_INV, exp) % Q == 0;
+					}
+					0;
+				}
+				assert false;
+			}
+		}
+		r
 	}
 
 	function {:axiom} rev_omega_inv_powers_mont_table(): (t: n_sized)
