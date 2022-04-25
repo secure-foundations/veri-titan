@@ -5,6 +5,7 @@ include "flat.s.dfy"
 module ot_machine {
     import Mul
     import Seq
+    import DivMod
 
     import bv32_ops
     import bv256_ops
@@ -153,7 +154,7 @@ module ot_machine {
     function method otbn_addm(x: uint256, y: uint256, mod: uint256) : (r: uint256)
     {
       var interm := x + y;
-      if interm < mod then interm else (interm - mod)
+      if interm < mod then interm else (interm - mod) % BASE_256
     }
 
     lemma addm_correct_lemma(x: uint256, y:uint256, mod: uint256)
@@ -162,8 +163,27 @@ module ot_machine {
       ensures 0 <= otbn_addm(x, y, mod) < mod;
       ensures otbn_addm(x, y, mod) == (x + y) % mod;
     {
-      assert x + y < 2 * mod;
-      assert otbn_addm(x, y, mod) == (x + y) % mod;
+      assert (x + y) < 2 * mod;
+
+      if (x + y) < mod {
+        assert (x + y) % mod == otbn_addm(x, y, mod) by { DivMod.LemmaSmallMod((x + y), mod); }
+      } else { 
+        assert mod <= x + y < 2 * mod;
+        
+        calc == {
+          otbn_addm(x, y, mod);
+          (x + y - mod) % BASE_256;
+          { assert x + y - mod < BASE_256; }
+          (x + y - mod);
+          {
+            assert 0 <= x + y - mod < mod;
+            DivMod.LemmaSmallMod(x + y - mod, mod);
+          }
+          (x + y - mod) % mod;
+          { DivMod.LemmaModSubMultiplesVanishAuto(); }
+          (x + y) % mod;
+        }
+      }
     }
 
     function method otbn_subb(x: uint256, y: uint256, shift: shift_t, borrow: bool) : (uint256, flags_t)
@@ -604,7 +624,7 @@ predicate method while_overlap(c:code)
           var v1 := read_reg256(wrs1);
           var v2 := read_reg256(wrs2);
           var vmod := read_reg256(WMOD);
-          var sum := otbn_addm(v1, v2, mod);
+          var sum := otbn_addm(v1, v2, vmod);
           write_reg256(wrd, sum)
         }
 
@@ -738,6 +758,8 @@ predicate method while_overlap(c:code)
                     eval_BN_ADDC(wrd, wrs1, wrs2, shift, fg)
                 case BN_ADDI(wrd, wrs1, imm, fg) =>
                     eval_BN_ADDI(wrd, wrs1, imm, fg)
+                case BN_ADDM(wrd, wrs1, wrs2) =>
+                    eval_BN_ADDM(wrd, wrs1, wrs2)
                 case BN_MULQACC(zero, wrs1, qwsel1, wrs2, qwsel2, shift_qws) =>
                     eval_BN_MULQACC(zero, wrs1, qwsel1, wrs2, qwsel2, shift_qws)
                 case BN_MULQACC_SO(zero, wrd, lower, wrs1, qwsel1, wrs2, qwsel2, shift_qws, fg) =>
