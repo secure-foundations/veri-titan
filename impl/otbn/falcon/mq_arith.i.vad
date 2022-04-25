@@ -16,24 +16,26 @@ import opened bv256_ops
 
 #endverbatim
     
-procedure mq_add() returns (ghost r: uint256)
+ghost procedure addm_correct_lemma(ghost x: uint256, ghost y: uint256, ghost mod: uint256) extern;
+    
+procedure mq_add()
     {:noInline}
     requires
-        w0 < 12289;
-        w1 < 12289;
-        w5 == 12289;
+        w0 < wmod;
+        w1 < wmod;
+        wmod == 12289;
+    reads
+        wmod;
     modifies
-        w0; w1; w5;
+        w0; w1;
     ensures
-      r == w0;
-      r == (old(w0) + old(w1)) % 12289;
+      w0 == (old(w0) + old(w1)) % 12289;
 {
-    ghost var Q: int := 12289;
-    ghost var x: nat := w0;
-    ghost var y: nat := w1;
+    ghost var x := w0;
+    ghost var y := w1;
 
-    assume false;
-
+    bn_addm(w0, w0, w1);
+    addm_correct_lemma(x, y, wmod);
 }
 
 #verbatim
