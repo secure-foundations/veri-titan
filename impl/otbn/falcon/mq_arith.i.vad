@@ -1,0 +1,43 @@
+include "../../../arch/otbn/decls.i.vad"
+
+#verbatim
+
+include "../../../arch/otbn/decls.i.dfy"
+
+module mq_arith {
+
+import opened ot_machine
+import opened ot_abstraction
+import opened ot_decls
+import opened ot_vale
+
+import opened integers
+import opened bv256_ops
+
+#endverbatim
+    
+function mod(a: int, n: int): int extern;
+ghost procedure addm_correct_lemma(ghost x: uint256, ghost y: uint256, ghost mod: uint256) extern;
+    
+procedure mq_add()
+    {:noInline}
+    requires
+        w0 < wmod;
+        w1 < wmod;
+    reads
+        wmod;
+    modifies
+        w0; w1;
+    ensures
+      w0 == mod(old(w0) + old(w1), old(wmod));
+{
+    ghost var x := w0;
+    ghost var y := w1;
+
+    bn_addm(w0, w0, w1);
+    addm_correct_lemma(x, y, wmod);
+}
+
+#verbatim
+}
+#endverbatim

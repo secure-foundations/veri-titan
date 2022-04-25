@@ -304,6 +304,7 @@ function otbn_xor(a: uint256, b: uint256, shift: shift_t, cin: bool): tuple(uint
 function otbn_addc(a: uint256, b: uint256, shift: shift_t, cin: bool): tuple(uint256, flags_t) extern;
 function otbn_subb(a: uint256, b: uint256, shift: shift_t, bin: bool): tuple(uint256, flags_t) extern;
 function otbn_subbi(a: uint256, b: uint256): tuple(uint256, flags_t) extern;
+function otbn_addm(a: uint256, b: uint256, mod: uint256): uint256 extern;
 function otbn_subm(a: uint256, b: uint256, mod: uint256): uint256 extern;
 function otbn_rshi(src1: uint256, src2: uint256, imm: uint32): uint256 extern;
 function otbn_mulqacc_is_safe(shift: uint32, macc: uint256): bool extern;
@@ -452,6 +453,18 @@ procedure bn_addi(inout dst: reg256, in src: reg256, inline imm: uint10, inline 
         let result := otbn_addc(old(src), imm, SFT_DFT, false) in
         dst == fst(result) &&
         fgroups == update_fgroups(old(fgroups), which_group, snd(result));
+{
+    reveal eval_code_opaque;
+    reveal valid_state_opaque;
+    this := this.(mem := old(this).mem);
+}
+
+procedure bn_addm(inout dst: reg256, in src1: reg256, in src2: reg256)
+    {:instruction Ins256(BN_ADDM(dst, src1, src2))}
+    reads
+        wmod;
+    ensures
+        dst == otbn_addm(old(src1), old(src2), old(wmod));
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;

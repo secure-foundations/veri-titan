@@ -150,4 +150,3 @@ module bv32_ops refines generic_bv_ops
         sub(x, y)
     }
 }
-        

@@ -152,6 +152,11 @@ method printIns32(ins:ins32)
             printReg32(rd); print(", "); print(imm);
             print("\n");
 
+        case RV_NEG(rd, rs1) =>
+            print ("neg ");
+            printReg32(rd); print(", "); print(rs1);
+            print("\n");
+
         case RV_MUL(rd, rs1, rs2) =>
             print ("mul ");
             printReg32(rd); print(", "); printReg32(rs1); print(", "); printReg32(rs2);

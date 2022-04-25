@@ -5,6 +5,7 @@ include "flat.s.dfy"
 module ot_machine {
     import Mul
     import Seq
+    import DivMod
 
     import bv32_ops
     import bv256_ops
@@ -104,7 +105,7 @@ module ot_machine {
         | BN_ADD(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
         | BN_ADDC(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
         | BN_ADDI(wrd: reg256_t, wrs1: reg256_t, imm: uint10, fg: uint1)
-        // | BN_ADDM(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t)
+        | BN_ADDM(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t)
         | BN_MULQACC(zero: bool, wrs1: reg256_t, qwsel1: uint2, wrs2: reg256_t, qwsel2: uint2, shift_qws: uint2)
         | BN_MULQACC_SO(zero: bool, wrd: reg256_t, lower: bool,
             wrs1: reg256_t, qwsel1: uint2, wrs2: reg256_t, qwsel2: uint2,
@@ -148,6 +149,41 @@ module ot_machine {
         var cin := if carry then 1 else 0;
         var (sum, cout) := bv256_ops.addc(x, otbn_shift(y, shift), cin);
         (sum, set_mlz_flags(cout, sum))
+    }
+
+    function method otbn_addm(x: uint256, y: uint256, mod: uint256) : (r: uint256)
+    {
+      var interm := x + y;
+      if interm < mod then interm else (interm - mod) % BASE_256
+    }
+
+    lemma addm_correct_lemma(x: uint256, y:uint256, mod: uint256)
+      requires x < mod;
+      requires y < mod;
+      ensures 0 <= otbn_addm(x, y, mod) < mod;
+      ensures otbn_addm(x, y, mod) == (x + y) % mod;
+    {
+      assert (x + y) < 2 * mod;
+
+      if (x + y) < mod {
+        assert (x + y) % mod == otbn_addm(x, y, mod) by { DivMod.LemmaSmallMod((x + y), mod); }
+      } else { 
+        assert mod <= x + y < 2 * mod;
+        
+        calc == {
+          otbn_addm(x, y, mod);
+          (x + y - mod) % BASE_256;
+          { assert x + y - mod < BASE_256; }
+          (x + y - mod);
+          {
+            assert 0 <= x + y - mod < mod;
+            DivMod.LemmaSmallMod(x + y - mod, mod);
+          }
+          (x + y - mod) % mod;
+          { DivMod.LemmaModSubMultiplesVanishAuto(); }
+          (x + y) % mod;
+        }
+      }
     }
 
     function method otbn_subb(x: uint256, y: uint256, shift: shift_t, borrow: bool) : (uint256, flags_t)
@@ -583,6 +619,15 @@ predicate method while_overlap(c:code)
             write_reg256(wrd, sum).write_flags(fg, flags)
         }
 
+        function method eval_BN_ADDM(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t) : state
+        {
+          var v1 := read_reg256(wrs1);
+          var v2 := read_reg256(wrs2);
+          var vmod := read_reg256(WMOD);
+          var sum := otbn_addm(v1, v2, vmod);
+          write_reg256(wrd, sum)
+        }
+
         function method eval_BN_MULQACC(zero: bool,
             wrs1: reg256_t, qwsel1: uint2,
             wrs2: reg256_t, qwsel2: uint2,
@@ -713,6 +758,8 @@ predicate method while_overlap(c:code)
                     eval_BN_ADDC(wrd, wrs1, wrs2, shift, fg)
                 case BN_ADDI(wrd, wrs1, imm, fg) =>
                     eval_BN_ADDI(wrd, wrs1, imm, fg)
+                case BN_ADDM(wrd, wrs1, wrs2) =>
+                    eval_BN_ADDM(wrd, wrs1, wrs2)
                 case BN_MULQACC(zero, wrs1, qwsel1, wrs2, qwsel2, shift_qws) =>
                     eval_BN_MULQACC(zero, wrs1, qwsel1, wrs2, qwsel2, shift_qws)
                 case BN_MULQACC_SO(zero, wrd, lower, wrs1, qwsel1, wrs2, qwsel2, shift_qws, fg) =>
