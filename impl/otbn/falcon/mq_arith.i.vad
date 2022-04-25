@@ -16,6 +16,7 @@ import opened bv256_ops
 
 #endverbatim
     
+function mod(a: int, n: int): int extern;
 ghost procedure addm_correct_lemma(ghost x: uint256, ghost y: uint256, ghost mod: uint256) extern;
     
 procedure mq_add()
@@ -23,13 +24,12 @@ procedure mq_add()
     requires
         w0 < wmod;
         w1 < wmod;
-        wmod == 12289;
     reads
         wmod;
     modifies
         w0; w1;
     ensures
-      w0 == (old(w0) + old(w1)) % 12289;
+      w0 == mod(old(w0) + old(w1), old(wmod));
 {
     ghost var x := w0;
     ghost var y := w1;
