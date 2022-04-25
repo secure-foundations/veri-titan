@@ -1,4 +1,3 @@
-include "nth_root.dfy"
 include "bins.dfy"
 include "../ntt_cleanup/pow2.dfy"
 
@@ -9,7 +8,6 @@ module ntt_index {
     import opened DivMod
     import opened Mul
 
-    import opened nth_root
     import opened pows_of_2
     import opened bins
 

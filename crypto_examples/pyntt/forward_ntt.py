@@ -1,34 +1,16 @@
-from sympy import mod_inverse
+from ntt_consts import *
 from polys import *
 
-class ForwardNTT:
-    def __init__(self, q, n, psi, omega):
-        self.Q = q
-        self.N = n
-        self.PSI = psi
-        self.OMEGA = omega
-        self.LOGN = log2(self.N)
-        self.R = 2 ** 16
-        self.R_INV = mod_inverse(2 ** 16, self.Q)
-
+class ForwardNTT(NTTConsts):
+    def __init__(self, n, q, bits):
+        NTTConsts.__init__(self, n, q, bits)
         assert ((self.R * self.R_INV) % self.Q == 1)
         assert pow(self.PSI, self.N * 2, self.Q) == 1
         assert pow(self.OMEGA, self.N * 2, self.Q) == 1
 
-    def montmul(self, a, b):
-        return (a * b * self.R_INV) % self.Q
-
     def x_value(self, i, d):
         logn = self.LOGN - log2(d)
         return (pow(self.OMEGA, d * bit_rev_int(i, logn), self.Q) * pow(self.PSI, d, self.Q)) % self.Q
-
-    def read_as_blocks(self, a, d):
-        blocks = []
-        sz = self.N / d
-        for i in range(d):
-            block = [a[i + j * d] for j in range(sz)]
-            blocks.append(block)
-        return blocks
 
     def check_prefix_block(self, block, poly, l, d):
         assert l <= len(block) == len(poly)
@@ -109,22 +91,23 @@ class ForwardNTT:
         for i in range(bi+d, 2*d):
             self.check_suffix_block(s_blocks[i], s_polys[bit_rev_int(i, s_lgd)], j, s_d) 
 
-    def check_twiddle_factors(self, p):
-        assert len(p) == self.N
-        t = 1
-        while t < self.N:
-            for j in range(t):
-                d = self.N / (t * 2)
-                assert p[t+j] == (self.x_value(2*j, d) * self.R) % self.Q
-            t = t * 2
+    # def check_twiddle_factors(self, p):
+    #     assert len(p) == self.N
+    #     t = 1
+    #     while t < self.N:
+    #         for j in range(t):
+    #             d = self.N / (t * 2)
+    #             assert p[t+j] == (self.x_value(2*j, d) * self.R) % self.Q
+    #         t = t * 2
 
-    def mulntt_ct_std2rev(self, a, p, disable_checks=False):
-        self.check_twiddle_factors(p)
+    def mulntt_ct_std2rev(self, poly, disable_checks=False):
+        # self.check_twiddle_factors(p)
         self.disable_checks = disable_checks
+        p = self.build_rev_mixed_powers_mont_table()
+        a = poly.coeffs[::] # make a copy
 
-        assert len(a) == len(p) == self.N
-        self.saved = ModQPoly(a, self.Q)
-        self.level_polys = build_level_polys(self.saved)
+        assert len(a) == self.N
+        self.level_polys = build_level_polys(poly)
 
         d = self.N
         t = 1
@@ -184,9 +167,17 @@ class ForwardNTT:
             # d is already updated
             self.check_t_loop_inv(a, d)
             t = t * 2
+        return a
 
-        # always do this check
+    def check_forward_ntt(self, poly, points):
         for i in range(self.N):
             x = self.x_value(i, 1)
-            assert self.saved.eval(x) == a[i]
-        print("final check done")
+            assert poly.eval(x) == points[i]
+        print("forward ntt check done")
+
+if __name__ == "__main__":
+    Q = 12289
+    fntt16 = ForwardNTT(16, Q, 16)
+    poly = ModQPoly([1371,8801,5676,4025,3388,10753,6940,10684,10682,2458,679,11161,3648,5512,10142,10189], Q)
+    points = fntt16.mulntt_ct_std2rev(poly)
+    fntt16.check_forward_ntt(poly, points)
