@@ -28,13 +28,16 @@ abstract module nth_root {
 
 	// obligations
 	lemma Nth_root_lemma()
+		ensures N.exp >= 2;
 		ensures Pow(PSI, 2 * N.full) % Q == 1
 		ensures Pow(PSI, N.full) % Q == Q - 1
 		ensures (PSI * PSI_INV) % Q == 1
+
 		ensures Pow(OMEGA, N.full) % Q == 1
+		ensures Pow(OMEGA_INV, pow2_half(N).full) % Q == Q - 1
 		ensures (OMEGA * OMEGA_INV) % Q == 1
+
 		ensures (R_INV * R) % Q == 1
-		ensures N.exp >= 2;
 
 	function method block_count(m: pow2_t): pow2_t
 		requires 0 <= m.exp <= N.exp;
@@ -264,7 +267,9 @@ abstract module nth_root {
 	{
 		&& count.exp <= N.exp
 		&& l <= |points| == |poly| == block_size(count).full
-		&& (forall i | 0 <= i < l :: poly_eval(poly, x_value(i, count)) == points[i])
+		&& (forall i | 0 <= i < l :: 
+			(&& x_value.requires(i, count)
+			&& poly_eval(poly, x_value(i, count)) == points[i]))
 	}
 
 	lemma points_eval_prefix_inv_vacuous_lemma(points: seq<elem>, poly: seq<elem>, x_value: x_fun, count: pow2_t)
@@ -285,7 +290,8 @@ abstract module nth_root {
 		&& count.exp <= N.exp
 		&& l <= |points| == |poly| == block_size(count).full
 		&& (forall i | l <= i < block_size(count).full ::
-			poly_eval(poly, x_value(i, count)) == points[i])
+			(&& x_value.requires(i, count)
+			&& poly_eval(poly, x_value(i, count)) == points[i]))
 	}
 
 	predicate points_eval_inv(points: seq<elem>, poly: seq<elem>, x_value: x_fun, count: pow2_t)
@@ -349,6 +355,60 @@ abstract module nth_root {
 		}
 	}
 
+	lemma inv_full_rotation_lemma(a: nat)
+		ensures mqpow(OMEGA_INV, a + N.full) == mqpow(OMEGA_INV, a);
+	{
+		var N := N.full;
+		Nth_root_lemma();
+
+		calc == {
+			1;
+			{
+				Lemma1Pow(N);
+			}
+			Pow(1, N) % Q;
+			Pow(1 % Q, N) % Q;
+			Pow((OMEGA * OMEGA_INV) % Q, N) % Q;
+			{
+  				LemmaPowModNoop(OMEGA * OMEGA_INV, N, Q);
+			}
+			Pow(OMEGA * OMEGA_INV, N) % Q;
+			{
+				LemmaPowDistributes(OMEGA, OMEGA_INV, N);
+			}
+			(Pow(OMEGA, N) * Pow(OMEGA_INV, N)) % Q;
+			{
+				LemmaMulModNoopGeneral(Pow(OMEGA, N), Pow(OMEGA_INV, N), Q);
+			}
+			((Pow(OMEGA, N) % Q) * (Pow(OMEGA_INV, N)) % Q) % Q;
+			((Pow(OMEGA_INV, N)) % Q) % Q;
+			{
+				LemmaModBasicsAuto();
+			}
+			Pow(OMEGA_INV, N) % Q;
+		}
+
+		calc == {
+			Pow(OMEGA_INV, a + N) % Q;
+			{
+				LemmaPowAdds(OMEGA_INV, a, N);
+			}
+			(Pow(OMEGA_INV, a) * Pow(OMEGA_INV, N)) % Q;
+			{
+				LemmaMulModNoopGeneral(Pow(OMEGA_INV, a), Pow(OMEGA_INV, N), Q);
+			}
+			((Pow(OMEGA_INV, a) % Q) * (Pow(OMEGA_INV, N) % Q)) % Q;
+			{
+				assert Pow(OMEGA_INV, N) % Q == 1;
+			}
+			(Pow(OMEGA_INV, a) % Q) % Q;
+			{
+				LemmaModBasicsAuto();
+			}
+			Pow(OMEGA_INV, a) % Q;
+		}
+	}
+
 	lemma half_rotation_lemma(a: nat)
 		ensures Pow(PSI, a + N.full) % Q == (Q - Pow(PSI, a)) % Q;
 	{
@@ -388,44 +448,46 @@ abstract module nth_root {
 		}
 	}
 
-	// d is the block count
-	// i is the offset in the block
-	function method rev_mixed_powers_mont_x_value(i: nat, d: pow2_t): (r: elem)
-		requires d.exp <= N.exp;
-		requires i < block_size(d).full;
-		ensures r > 0;
+	lemma inv_half_rotation_lemma(a: nat)
+		ensures (N.full / 2) * 2 == N.full;
+		ensures Pow(OMEGA_INV, a + N.full / 2) % Q == (Q - Pow(OMEGA_INV, a)) % Q;
 	{
-		var bound := block_size(d);
-		LemmaMulNonnegative(2 * bit_rev_int(i, bound), d.full);
-		var r := mqpow(PSI, 2 * bit_rev_int(i, bound) * d.full + d.full);
-		// LemmaPowPositive(PSI, 2 * bit_rev_int(i, bound) * d.full + d.full);
-		calc {
-			2 * bit_rev_int(i, bound) * d.full + d.full;
+		Nth_root_lemma();
+		pow2_basics(N);
+		var HN := N.full / 2;
+
+		calc == {
+			Pow(OMEGA_INV, a + HN) % Q;
 			{
-				LemmaMulProperties();
+				LemmaPowAdds(OMEGA_INV, a, HN);
 			}
-			(bit_rev_int(i, bound) * (2 * d.full)) + d.full;
-			<=
+			(Pow(OMEGA_INV, a) * Pow(OMEGA_INV, HN)) % Q;
 			{
-				LemmaMulInequality(bit_rev_int(i, bound), bound.full - 1, 2 * d.full);
+				LemmaMulModNoopGeneral(Pow(OMEGA_INV, a), Pow(OMEGA_INV, HN), Q);
 			}
-			(bound.full - 1) * (2 * d.full) + d.full;
+			((Pow(OMEGA_INV, a) % Q) * (Pow(OMEGA_INV, HN) % Q)) % Q;
 			{
-				LemmaMulIsDistributive(2 * d.full, bound.full, - 1);
+				Nth_root_lemma();
+				assert Pow(OMEGA_INV, HN) % Q == Q - 1;
 			}
-			bound.full * (2 * d.full) - (2 * d.full) + d.full;
-			bound.full * (2 * d.full) - d.full;
+			((Pow(OMEGA_INV, a) % Q) * (Q - 1)) % Q;
 			{
-				LemmaMulProperties();
+				LemmaMulIsDistributive(Pow(OMEGA_INV, a) % Q, Q, 1);
 			}
-			2 * (bound.full * d.full) - d.full;
-			// {
-			// 	block_count_product_lemma(bound);
-			// }
-			2 * N.full - d.full;
+			((Pow(OMEGA_INV, a) % Q) * Q - Pow(OMEGA_INV, a) % Q) % Q;
+			{
+				LemmaModMultiplesVanish((Pow(OMEGA_INV, a) % Q), -Pow(OMEGA_INV, a) % Q, Q);
+			}
+			(- Pow(OMEGA_INV, a) % Q) % Q;
+			{
+				LemmaModBasicsAuto();
+			}
+			(- Pow(OMEGA_INV, a)) % Q;
+			{
+				LemmaModMultiplesVanish(1, - Pow(OMEGA_INV, a), Q);
+			}
+			(Q - Pow(OMEGA_INV, a)) % Q;
 		}
-		primitive_root_non_zero_lemma(2 * bit_rev_int(i, bound) * d.full + d.full);
-		r
 	}
 
 	lemma twiddle_factors_index_bound_lemma(t: pow2_t, j: nat)
@@ -472,6 +534,46 @@ abstract module nth_root {
 		d := pow2_half(block_count(t));
 	}
 
+	// d is the block count
+	// i is the offset in the block
+	function method rev_mixed_powers_mont_x_value(i: nat, d: pow2_t): (r: elem)
+		requires d.exp <= N.exp;
+		requires i < block_size(d).full;
+		ensures r > 0;
+	{
+		var bound := block_size(d);
+		LemmaMulNonnegative(2 * bit_rev_int(i, bound), d.full);
+		var r := mqpow(PSI, 2 * bit_rev_int(i, bound) * d.full + d.full);
+		// LemmaPowPositive(PSI, 2 * bit_rev_int(i, bound) * d.full + d.full);
+		calc {
+			2 * bit_rev_int(i, bound) * d.full + d.full;
+			{
+				LemmaMulProperties();
+			}
+			(bit_rev_int(i, bound) * (2 * d.full)) + d.full;
+			<=
+			{
+				LemmaMulInequality(bit_rev_int(i, bound), bound.full - 1, 2 * d.full);
+			}
+			(bound.full - 1) * (2 * d.full) + d.full;
+			{
+				LemmaMulIsDistributive(2 * d.full, bound.full, - 1);
+			}
+			bound.full * (2 * d.full) - (2 * d.full) + d.full;
+			bound.full * (2 * d.full) - d.full;
+			{
+				LemmaMulProperties();
+			}
+			2 * (bound.full * d.full) - d.full;
+			// {
+			// 	block_count_product_lemma(bound);
+			// }
+			2 * N.full - d.full;
+		}
+		primitive_root_non_zero_lemma(2 * bit_rev_int(i, bound) * d.full + d.full);
+		r
+	}
+
 	function {:axiom} rev_mixed_powers_mont_table(): (t: n_sized)
 	
 	lemma {:axiom} rev_mixed_powers_mont_table_axiom(t: pow2_t, d: pow2_t, j: nat)
@@ -495,4 +597,41 @@ abstract module nth_root {
 		var _ := twiddle_factors_index_bound_lemma(t, j);
 		rev_mixed_powers_mont_table_axiom(t, d, j);
 	}
+
+	// d is the block count
+	// i is the offset in the block
+	function method rev_omega_inv_powers_x_value(i: nat, d: pow2_t): (r: elem)
+		requires d.exp <= N.exp;
+		requires i < block_size(d).full;
+	{
+		var bound := block_size(d);
+		LemmaMulNonnegative(bit_rev_int(i, bound), d.full);
+		mqpow(OMEGA_INV, bit_rev_int(i, bound) * d.full)
+	}
+
+	function {:axiom} rev_omega_inv_powers_mont_table(): (t: n_sized)
+
+	lemma {:axiom} rev_omega_inv_powers_mont_table_axiom(t: pow2_t, d: pow2_t, j: nat)
+		requires t.exp < N.exp;
+		requires j < t.full;
+		requires t.full + j < N.full;
+		requires d == pow2_half(block_count(t));
+		requires 2 * j < block_size(d).full;
+		ensures rev_omega_inv_powers_mont_table()[t.full + j] ==
+			mqmul(rev_omega_inv_powers_x_value(2 * j, d), R);
+
+	lemma rev_omega_inv_powers_mont_table_lemma(t: pow2_t, d: pow2_t, j: nat)
+		requires t.exp < N.exp;
+		requires j < t.full;
+		requires d == pow2_half(block_count(t));
+		ensures t.full + j < N.full;
+		ensures 2 * j < block_size(d).full;
+		ensures rev_omega_inv_powers_mont_table()[t.full + j] ==
+			mqmul(rev_omega_inv_powers_x_value(2 * j, d), R);
+	{
+		var _ := twiddle_factors_index_bound_lemma(t, j);
+		rev_omega_inv_powers_mont_table_axiom(t, d, j);
+	}
+
+
 }

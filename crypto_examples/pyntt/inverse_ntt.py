@@ -119,18 +119,20 @@ class InverseNTT(NTTConsts):
                 w = p[t + j]
                 # * pow(self.PSI_INV, d, Q)
                 logn = self.LOGN - log2(d)
-                # assert w == pow(self.OMEGA_INV, d * bit_rev_int(2*j, logn), self.Q)
+                assert w == (self.x_value(2 * j, d) * self.R) % self.Q
                 u = 2 * d * j
 
                 # x = (pow(OMEGA, d * bit_rev_int(2*j+1, lgt+1), Q) * pow(PSI, d, Q)) % Q
                 x_e = self.x_value(2*j, d)
                 x_o = self.x_value(2*j+1, d)
-                assert x_e == w
-                assert x_o == self.Q - w
-                # assert (x_e * x_e) % self.Q == (x_o * x_o) % self.Q == x_value(j, d * 2)
+                # assert x_e == w
+                # assert x_o == self.Q - w
+                assert (x_e * x_e) % self.Q == (x_o * x_o) % self.Q == self.x_value(j, d * 2)
 
                 for s in range(u, u + d):
+                    bi = s-u
                     self.check_s_loop_inv(a, d, j, s-u)
+                    poly = self.level_polys[lgd][bit_rev_int(bi, lgd)]
 
                     e, o = a[s], a[s + d]
 
@@ -138,19 +140,16 @@ class InverseNTT(NTTConsts):
                     a[s + d] = (e - x) % self.Q
                     a[s] = (e + x) % self.Q
 
-                    # x = (pow(OMEGA, d * bit_rev_int(2*j, lgt+1), Q) * pow(PSI, d, Q)) % Q
-                    # assert x == w
-                    # dee, deo, _, dev  = split_eval_debug(poly, x)
-                
-                    # assert(even_poly(poly) == p_polys[2 * bit_rev_int(s-u, lgd)])
-                    # assert(even_poly(poly) == last_polys[2 * bit_rev_int(s-u, lgd)])
+                    dee, deo, _, dev  = poly.split_eval_debug(x_e)
+                    doe, doo, _, dov = poly.split_eval_debug(x_o)
 
-                    # doe, doo, _, dov = split_eval_debug(poly, x)
-    
-                    # assert dee == doe == e == p_blocks[s-u][j]
-                    # assert deo == doo == o == p_blocks[s-u+d][j]
-                    # assert dev == a[s]
-                    # assert dov == a[s+d]
+                    # assert(even_poly(poly) == p_polys[2 * bit_rev_int(bi, lgd)])
+                    # assert(even_poly(poly) == last_polys[2 * bit_rev_int(bi, lgd)])
+
+                    assert dee == doe == e # == p_blocks[s-u][j]
+                    assert deo == doo == o # == p_blocks[s-u+d][j]
+                    assert dev == a[s]
+                    assert dov == a[s+d]
     
                     self.check_s_loop_inv(a, d, j, s-u+1)
                 self.check_j_loop_inv(a, d, j+1)
@@ -174,3 +173,4 @@ if __name__ == "__main__":
     poly = generate_random_poly(16, Q)
     points = intt16.intt(poly)
     intt16.check_inverse_ntt(poly, points)
+    print(pow(intt16.OMEGA_INV, 8, Q))
