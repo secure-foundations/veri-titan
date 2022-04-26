@@ -22,43 +22,37 @@ function mod(a: int, n: int): int extern;
 ghost procedure addm_correct_lemma(ghost x: uint256, ghost y: uint256, ghost mod: uint256) extern;
 ghost procedure subm_correct_lemma(ghost x: uint256, ghost y: uint256, ghost mod: uint256) extern;
     
-procedure mq_add()
-    {:noInline}
+procedure mq_add(inout dst: reg256, in src1: reg256, in src2: reg256)
     requires
-        w0 < wmod;
-        w1 < wmod;
+        src1 < wmod;
+        src2 < wmod;
         wmod == NTT_PRIME;
     reads
         wmod;
-    modifies
-        w0; w1;
     ensures
-      w0 == mod(old(w0) + old(w1), old(wmod));
+      dst == mod(old(src1) + old(src2), old(wmod));
 {
-    ghost var x := w0;
-    ghost var y := w1;
+    ghost var x := src1;
+    ghost var y := src2;
 
-    bn_addm(w0, w0, w1);
+    bn_addm(dst, src1, src2);
     addm_correct_lemma(x, y, wmod);
 }
     
-procedure mq_sub()
-    {:noInline}
+procedure mq_sub(inout dst: reg256, in src1: reg256, in src2: reg256)
     requires
-        w0 < wmod;
-        w1 < wmod;
+        src1 < wmod;
+        src2 < wmod;
         wmod == NTT_PRIME;
     reads
         wmod;
-    modifies
-        w0; w1;
     ensures
-      w0 == mod(old(w0) - old(w1), old(wmod));
+      dst == mod(old(src1) - old(src2), old(wmod));
 {
-    ghost var x := w0;
-    ghost var y := w1;
+    ghost var x := src1;
+    ghost var y := src2;
 
-    bn_subm(w0, w0, w1);
+    bn_subm(dst, src1, src2);
     subm_correct_lemma(x, y, wmod);
 }
 
