@@ -1,9 +1,11 @@
 include "stack.i.dfy"
+include "../../lib/bv32_ops.dfy"
 
 module mem {
   import opened integers
   import opened flat
   import opened stack
+  import bv32_ops
 
   datatype entry_t = 
     | W32(w32: uint32)
@@ -98,7 +100,6 @@ module mem {
     // base_ptr points to a valid buffer
     && heap_b32_ptr_valid(heap, base_ptr)
     // ptr is correct
-    && iter.cur_ptr() == heap_b32_index_ptr(base_ptr, iter.index)
     // the view is consistent with heap
     && heap[base_ptr].b32 == iter.buff
     // the index is within bound (or at end)
@@ -108,6 +109,49 @@ module mem {
   predicate b32_iter_safe(heap: heap_t, iter: b32_iter)
   {
     && b32_iter_inv(heap, iter)
+    // tighter constraint so we can dereference
+    && iter.index < |iter.buff|
+  }
+
+  datatype b16_iter = b16_iter_cons(base_ptr: nat, index: nat, buff: seq<uint16>)
+  {
+    function cur_ptr(): nat {
+      base_ptr + 2 * index
+    }
+  }
+  // function b16_as_b32(buff: seq<uint16>): seq<uint32>
+  //   requires |buff| % 2 == 0;
+  // {
+  //   var len := |buff| / 2;
+  //   seq(len, i requires 0 <= i < len => bv32_ops.half_combine(buff[2 * i], buff[2 * i + 1]))
+  // }
+
+  function b32_as_b16(buff: seq<uint32>): seq<uint16>
+  {
+    var len := |buff| * 2;
+    seq(len, i requires 0 <= i < len => if i % 2 == 0 then bv32_ops.lh(buff[i/2]) else bv32_ops.uh(buff[i/2]))
+  }
+
+  function b16_iter_load_next(iter: b16_iter, inc: bool): b16_iter
+  {
+    iter.(index := if inc then iter.index + 1 else iter.index)
+  }
+
+  predicate b16_iter_inv(iter: b16_iter, heap: heap_t, ptr: nat)
+  {
+    var base_ptr := iter.base_ptr;
+    && iter.cur_ptr() == ptr
+    // base_ptr points to a valid buffer
+    && heap_b32_ptr_valid(heap, base_ptr)
+    // the view is consistent with heap
+    && b32_as_b16(heap[base_ptr].b32) == iter.buff
+    // the index is within bound (or at end)
+    && iter.index <= |iter.buff|
+  }
+
+  predicate b16_iter_safe(iter: b16_iter, heap: heap_t, ptr: nat)
+  {
+    && b16_iter_inv(iter, heap, ptr)
     // tighter constraint so we can dereference
     && iter.index < |iter.buff|
   }

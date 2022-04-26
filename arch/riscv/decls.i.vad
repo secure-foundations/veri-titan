@@ -29,6 +29,7 @@ type nat:     Type(0) := int_range(0, _);
 type uint1:   Type(0) := int_range(0, 1);
 type uint2:   Type(0) := int_range(0, 3);
 type uint5:   Type(0) := int_range(0, 31);
+type uint16:  Type(0) := int_range(0, 0xffff);
 type uint32:  Type(0) := int_range(0, 0xffffffff);
 type uint64:  Type(0) := int_range(0, 0xffffffff_ffffffff);
 type uint128: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff);
@@ -332,6 +333,59 @@ procedure lw(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_
         dst == heap[iter.base_ptr].b32[iter.index];
 {
     assume false;
+}
+
+type b16_iter: Type(0) extern;
+function b16_iter_inv(iter: b16_iter, h: heap_t, ptr: int): bool extern;
+function b16_iter_safe(iter: b16_iter, h: heap_t, ptr: int): bool extern;
+function b16_iter_cons(base_ptr: int, index: nat, buff: seq(uint16)): b16_iter extern;
+function b16_iter_load_next(iter: b16_iter, inc: bool): b16_iter extern;
+// function b16_iter_store_next(iter: iter_t, value: uint32, inc: bool): iter_t extern;
+function operator(.base_ptr) (iter: b16_iter): int extern;
+function operator(.index) (iter: b16_iter): int extern;
+function operator(.index := ) (iter: b16_iter, i :int): iter_t extern;
+function operator(.buff) (iter: b16_iter): seq(uint16) extern;
+function operator(.buff := ) (iter: b16_iter, buff: seq(uint16)): iter_t extern;
+
+procedure lhu(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: b16_iter)
+    {:instruction Ins32(RV_LHU(dst, src1, src2))}
+    requires
+        src2 < 4096; // 12-bit
+        b16_iter_safe(iter, heap, src1 + src2);
+    reads
+        heap;
+    ensures
+        heap == old(heap);
+        dst == iter.buff[iter.index];
+{
+    assume false;
+}
+
+function lh(x: uint32): uint32 extern;
+function uh(x: uint32): uint32 extern;
+
+procedure lhu_next(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: b16_iter)
+    returns (ghost next_iter: b16_iter)
+
+    requires
+        src2 < 4096; // 12-bit
+        b16_iter_safe(iter, heap, src1 + src2);
+    reads
+        heap;
+    ensures
+        dst == iter.buff[iter.index];
+        next_iter == b16_iter_load_next(iter, true);
+        b16_iter_inv(next_iter, heap, old(src1) + old(src2) + 2);
+{
+    next_iter := b16_iter_load_next(iter, true);
+    lhu(dst, src1, src2, iter);
+    let idx := iter.index;
+    // sanity checks
+    ghost if (idx % 2 == 0) {
+        assert dst == lh(heap[iter.base_ptr].b32[iter.index/2]);
+    } else {
+        assert dst == uh(heap[iter.base_ptr].b32[iter.index/2]);
+    }
 }
 
 procedure lw_next(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
