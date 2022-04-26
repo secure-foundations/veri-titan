@@ -41,12 +41,13 @@ function power(b: int, e: nat) : nat extern;
 function cong(a: int, b: int, n: int) : bool extern;
 function cong_B32(a: int, b: int): bool extern;
 
-const BASE_32:  nat extern;
-const BASE_64:  nat extern;
-const BASE_128: nat extern;
-const BASE_256: nat extern;
-const BASE_512: nat extern;
-const NUM_WORDS:nat extern;
+const BASE_32:   nat extern;
+const BASE_64:   nat extern;
+const BASE_128:  nat extern;
+const BASE_256:  nat extern;
+const BASE_512:  nat extern;
+const NUM_WORDS: nat extern;
+const NTT_PRIME: nat extern;
 
 const BASE_31:  int extern;
 const BASE_63:  int extern;

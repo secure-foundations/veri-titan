@@ -113,7 +113,7 @@ module ot_machine {
         | BN_SUB(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
         | BN_SUBB(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
         // | BN_SUBI(wrd: reg256_t, wrs1: reg256_t, imm: uint10, fg: uint1)
-        // | BN_SUBM(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t)
+        | BN_SUBM(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t)
         // | BN_AND(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
         // | BN_OR(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
         | BN_NOT(wrd: reg256_t, wrs: reg256_t, shift: shift_t, fg: uint1)
@@ -182,6 +182,42 @@ module ot_machine {
           (x + y - mod) % mod;
           { DivMod.LemmaModSubMultiplesVanishAuto(); }
           (x + y) % mod;
+        }
+      }
+    }
+
+    function method otbn_subm(x: uint256, y: uint256, mod: uint256) : (r: uint256)
+    {
+      var interm : int := x as int - y as int;
+      if interm < 0 then (interm + mod) % BASE_256 else interm
+    }
+
+    lemma subm_correct_lemma(x: uint256, y: uint256, mod: uint256)
+      requires x < mod;
+      requires y < mod;
+      ensures 0 <= otbn_subm(x, y, mod) < mod;
+      ensures otbn_subm(x, y, mod) == (x - y) % mod;
+    {
+      var diff : int := x as int - y as int;
+      assert -(mod as int) < diff < mod;
+
+      if diff >= 0 {
+        assert diff < mod;
+        assert diff % mod == otbn_subm(x, y, mod) by { DivMod.LemmaSmallMod(diff, mod); }
+      } else {
+
+        calc == {
+          otbn_subm(x, y, mod);
+          (diff + mod) % BASE_256;
+          { assert 0 <= diff + mod < BASE_256; }
+          (diff + mod);
+          {
+            assert 0 <= diff + mod < mod;
+            DivMod.LemmaSmallMod(diff + mod, mod);
+          }
+          (diff + mod) % mod;
+          { DivMod.LemmaModAddMultiplesVanish(diff, mod); }
+          diff % mod;
         }
       }
     }
@@ -679,6 +715,15 @@ predicate method while_overlap(c:code)
             write_reg256(wrd, diff).write_flags(fg, flags)
         }
 
+        function method eval_BN_SUBM(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t) : state
+        {
+          var v1 := read_reg256(wrs1);
+          var v2 := read_reg256(wrs2);
+          var vmod := read_reg256(WMOD);
+          var diff := otbn_subm(v1, v2, vmod);
+          write_reg256(wrd, diff)
+        }
+
         function method eval_BN_NOT(wrd: reg256_t, wrs: reg256_t, shift: shift_t, fg: uint1): state
         {
             var v := read_reg256(wrs);
@@ -768,6 +813,8 @@ predicate method while_overlap(c:code)
                     eval_BN_SUB(wrd, wrs1, wrs2, shift, fg)
                 case BN_SUBB(wrd, wrs1, wrs2, shift, fg) => 
                     eval_BN_SUBB(wrd, wrs1, wrs2, shift, fg)
+                case BN_SUBM(wrd, wrs1, wrs2) =>
+                    eval_BN_SUBM(wrd, wrs1, wrs2)
                 case BN_NOT(wrd, wrs, shift, fg) => 
                     eval_BN_NOT(wrd, wrs, shift, fg)
                 case BN_XOR(wrd, wrs1, wrs2, shift, fg) => 

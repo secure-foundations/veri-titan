@@ -1,28 +1,23 @@
 include "../arch/riscv/machine.s.dfy"
-include "bv32_ops.dfy"
 include "../arch/riscv/vale.i.dfy"
 
+include "bv32_ops.dfy"
+
+include "generic_ntt_lemmas.dfy"
 include "DivModNeg.dfy"
 
-abstract module generic_falcon_lemmas {
-  
-    import opened GBV: generic_bv_ops
-
-    import opened Mul
-    import opened Power
-    import opened DivMod
-    import opened DivModNeg
-    import opened integers
-
-    type uint = GBV.BVSEQ.uint
-
-}
-
-module bv32_falcon_lemmas refines generic_falcon_lemmas {
+module bv32_ntt_lemmas refines generic_ntt_lemmas {
     import opened GBV = bv32_ops
 
     import opened rv_machine
     import opened rv_vale
+
+    const NTT_PRIME := 12289;
+
+    predicate valid_ntt_prime(q: nat) {
+      NTT_PRIME < BASE_32
+      // TODO: is_prime(q)
+    }
 
     lemma lemma_rs_by_31(x: int32)
       ensures x >= 0 ==> int32_rs(x, 31) == 0;
@@ -41,17 +36,16 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
       }
     }
 
-
     lemma lemma_mq_add_correct(d: uint32, b: uint32, c: uint32, r: uint32, x: int, y: int)
-        requires 0 <= x < 12289;
-        requires 0 <= y < 12289;
-        requires d == uint32_add(to_uint32(x), uint32_add(to_uint32(y), to_uint32((-12289))));
+        requires 0 <= x < NTT_PRIME;
+        requires 0 <= y < NTT_PRIME;
+        requires d == uint32_add(to_uint32(x), uint32_add(to_uint32(y), to_uint32((-(NTT_PRIME as int)))));
         requires b == to_uint32(int32_rs(to_int32(d), 31));
-        requires c == uint32_and(b, to_uint32(12289));
+        requires c == uint32_and(b, to_uint32(NTT_PRIME));
         requires r == uint32_add(c, d);
-        ensures r == (x + y) % 12289;
+        ensures r == (x + y) % NTT_PRIME;
     {
-      var Q : int := 12289;
+      var Q : int := NTT_PRIME;
 
       // d == x + y - Q
       assert IsModEquivalent(d, x + y - Q, BASE_32);
@@ -75,15 +69,15 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
     } 
 
     lemma lemma_mq_sub_correct(d: uint32, b: uint32, c: uint32, r: uint32, x: int, y: int)
-        requires 0 <= x < 12289;
-        requires 0 <= y < 12289;
+        requires 0 <= x < NTT_PRIME;
+        requires 0 <= y < NTT_PRIME;
         requires d == uint32_sub(to_uint32(x), to_uint32(y));
         requires b == to_uint32(int32_rs(to_int32(d), 31));
-        requires c == uint32_and(b, to_uint32(12289));
+        requires c == uint32_and(b, to_uint32(NTT_PRIME));
         requires r == uint32_add(c, d);
-        ensures r == (x - y) % 12289;
+        ensures r == (x - y) % NTT_PRIME;
     {
-      var Q : int := 12289;
+      var Q : int := NTT_PRIME;
       
       assert IsModEquivalent(d, x - y, BASE_32);
       assert -Q <= to_int32(d) < 2 * Q;
@@ -110,18 +104,18 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
     }
 
      lemma lemma_mq_rshift1_correct(par: uint32, b: uint32, c: uint32, d: uint32, r: uint32, x: int)
-         requires 0 <= x < 12289;
+         requires 0 <= x < NTT_PRIME;
          requires par == uint32_and(x, 1);
          requires b == uint32_sub(0, par);
-         requires c == uint32_and(b, 12289);
+         requires c == uint32_and(b, NTT_PRIME);
          requires d == uint32_add(x, c);
          requires r == to_uint32(int32_rs(to_int32(d), 1));
  
-         //ensures r == (x / 2) % 12289;
-         ensures IsModEquivalent(2 * r, x, 12289);
-         ensures r < 12289;
+         //ensures r == (x / 2) % NTT_PRIME;
+         ensures IsModEquivalent(2 * r, x, NTT_PRIME);
+         ensures r < NTT_PRIME;
      {
-       var Q : int := 12289;
+       var Q : int := NTT_PRIME;
        assert par == 0 || par == 1 by { reveal_and(); }
  
        if par == 0 {

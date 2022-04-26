@@ -46,12 +46,13 @@ function pow_BASE(e: nat): nat extern;
 
 function GPR(index: nat): reg32_t extern;
 
-const BASE_32:  nat extern;
-const BASE_64:  nat extern; 
-const BASE_128: nat extern; 
-const BASE_256: nat extern;
-const BASE_512: nat extern;
-const NUM_WORDS:nat extern;
+const BASE_32:   nat extern;
+const BASE_64:   nat extern; 
+const BASE_128:  nat extern; 
+const BASE_256:  nat extern;
+const BASE_512:  nat extern;
+const NUM_WORDS: nat extern;
+const NTT_PRIME: nat extern;
 
 type state: Type(0) {: primitive} extern;
 
@@ -465,6 +466,18 @@ procedure bn_addm(inout dst: reg256, in src1: reg256, in src2: reg256)
         wmod;
     ensures
         dst == otbn_addm(old(src1), old(src2), old(wmod));
+{
+    reveal eval_code_opaque;
+    reveal valid_state_opaque;
+    this := this.(mem := old(this).mem);
+}
+    
+procedure bn_subm(inout dst: reg256, in src1: reg256, in src2: reg256)
+    {:instruction Ins256(BN_SUBM(dst, src1, src2))}
+    reads
+        wmod;
+    ensures
+        dst == otbn_subm(old(src1), old(src2), old(wmod));
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
