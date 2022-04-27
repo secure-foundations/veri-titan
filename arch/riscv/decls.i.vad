@@ -364,7 +364,7 @@ procedure lhu(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: b16_
 function lh(x: uint32): uint32 extern;
 function uh(x: uint32): uint32 extern;
 
-procedure lhu_next(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: b16_iter)
+procedure lhu_next(inout dst: reg32, in src1: reg32, in src2: imm32, ghost inc: bool, ghost iter: b16_iter)
     returns (ghost next_iter: b16_iter)
 
     requires
@@ -374,18 +374,47 @@ procedure lhu_next(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter:
         heap;
     ensures
         dst == iter.buff[iter.index];
-        next_iter == b16_iter_load_next(iter, true);
-        b16_iter_inv(next_iter, heap, old(src1) + old(src2) + 2);
+        next_iter == b16_iter_load_next(iter, inc);
+        b16_iter_inv(next_iter, heap,
+            if inc then old(src1) + old(src2) + 2 else old(src1) + old(src2));
 {
-    next_iter := b16_iter_load_next(iter, true);
+    next_iter := b16_iter_load_next(iter, inc);
     lhu(dst, src1, src2, iter);
-    let idx := iter.index;
-    // sanity checks
-    ghost if (idx % 2 == 0) {
-        assert dst == lh(heap[iter.base_ptr].b32[iter.index/2]);
-    } else {
-        assert dst == uh(heap[iter.base_ptr].b32[iter.index/2]);
-    }
+}
+
+function heap_b16_write(heap: heap_t, b16_it: b16_iter, value: uint32): (heap': heap_t) extern;
+
+procedure sh(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: b16_iter)
+    {:instruction Ins32(RV_SH(rs2, base, offset))}
+    requires
+        b16_iter_safe(iter, heap, base + offset);
+        offset < 4096;
+    modifies
+        heap;
+    ensures
+        heap == heap_b16_write(old(heap), iter, rs2);
+{
+    assume false;
+}
+
+function b16_iter_store_next(iter: b16_iter, value: uint32, inc: bool): b16_iter extern;
+
+procedure sh_next(in rs2: reg32, in base: reg32, in offset: imm32, ghost inc: bool, ghost iter: b16_iter)
+    returns (ghost next_iter: b16_iter)
+
+    requires
+        b16_iter_safe(iter, heap, base + offset);
+        offset < 4096;
+    modifies
+        heap;
+    ensures
+        heap == heap_b16_write(old(heap), iter, rs2);
+        next_iter == b16_iter_store_next(iter, rs2, inc);
+        b16_iter_inv(next_iter, heap,
+            if inc then base + offset + 2 else base + offset);
+{
+    next_iter := b16_iter_store_next(iter, rs2, inc);
+    sh(rs2, base, offset, iter);
 }
 
 procedure lw_next(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
@@ -433,12 +462,11 @@ procedure sw(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: iter_t
         heap;
     ensures
         heap == heap_b32_write(old(heap), iter, rs2);
-        iter_safe(b32_iter_store_next(iter, rs2, false), heap, base + offset);
 {
     assume false;
 }
 
-procedure sw_next(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: iter_t)
+procedure sw_next(in rs2: reg32, in base: reg32, in offset: imm32, ghost inc: bool, ghost iter: iter_t)
     returns (ghost next_iter: iter_t)
     requires
         iter_safe(iter, heap, base + offset);
@@ -447,10 +475,11 @@ procedure sw_next(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: i
         heap;
     ensures
         heap == heap_b32_write(old(heap), iter, rs2);
-        next_iter == b32_iter_store_next(iter, rs2, true);
-        iter_inv(next_iter, heap, base + offset + 4);
+        next_iter == b32_iter_store_next(iter, rs2, inc);
+        iter_inv(next_iter, heap,
+            if inc then base + offset + 4 else base + offset);
 {
-    next_iter := b32_iter_store_next(iter, rs2, true);
+    next_iter := b32_iter_store_next(iter, rs2, inc);
     sw(rs2, base, offset, iter);
 }
 

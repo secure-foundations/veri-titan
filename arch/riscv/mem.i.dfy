@@ -7,6 +7,8 @@ module mem {
   import opened stack
   import bv32_ops
 
+  import DivMod
+
   datatype entry_t = 
     | W32(w32: uint32)
     | B32(b32: seq<uint32>)
@@ -113,23 +115,49 @@ module mem {
     && iter.index < |iter.buff|
   }
 
+  function {:opaque} b16_as_b32(buff: seq<uint16>): seq<uint32>
+    requires |buff| % 2 == 0;
+  {
+    var len := |buff| / 2;
+    seq(len, i requires 0 <= i < len => bv32_ops.half_combine(buff[2 * i], buff[2 * i + 1]))
+  }
+
+  function {:opaque} b32_as_b16(buff: seq<uint32>): seq<uint16>
+  {
+    var len := |buff| * 2;
+    seq(len, i requires 0 <= i < len => if i % 2 == 0 then bv32_ops.lh(buff[i/2]) else bv32_ops.uh(buff[i/2]))
+  }
+
+  lemma casting_b16_inverse(b16: seq<uint16>)
+    requires |b16| % 2 == 0;
+    ensures b32_as_b16(b16_as_b32(b16)) == b16;
+  {
+    reveal b16_as_b32();
+    reveal b32_as_b16();
+  }
+  
+  lemma casting_b32_inverse(b32: seq<uint16>)
+    ensures |b32_as_b16(b32)| % 2 == 0;
+    ensures b16_as_b32(b32_as_b16(b32)) == b32;
+  {
+    reveal b16_as_b32();
+    reveal b32_as_b16();
+    // assert (|b32| * 2) % 2 == 0 by {
+    //   DivMod.LemmaDivMultiplesVanish(|b32|, 2);
+    // }
+  }
+
   datatype b16_iter = b16_iter_cons(base_ptr: nat, index: nat, buff: seq<uint16>)
   {
     function cur_ptr(): nat {
       base_ptr + 2 * index
     }
   }
-  // function b16_as_b32(buff: seq<uint16>): seq<uint32>
-  //   requires |buff| % 2 == 0;
-  // {
-  //   var len := |buff| / 2;
-  //   seq(len, i requires 0 <= i < len => bv32_ops.half_combine(buff[2 * i], buff[2 * i + 1]))
-  // }
 
-  function b32_as_b16(buff: seq<uint32>): seq<uint16>
+  function b16_iter_as_b32_iter(iter: b16_iter): b32_iter
+    requires |iter.buff| % 2 == 0;
   {
-    var len := |buff| * 2;
-    seq(len, i requires 0 <= i < len => if i % 2 == 0 then bv32_ops.lh(buff[i/2]) else bv32_ops.uh(buff[i/2]))
+    b32_iter_cons(iter.base_ptr, iter.index/2, b16_as_b32(iter.buff))
   }
 
   function b16_iter_load_next(iter: b16_iter, inc: bool): b16_iter
@@ -137,13 +165,22 @@ module mem {
     iter.(index := if inc then iter.index + 1 else iter.index)
   }
 
+  function b16_iter_store_next(iter: b16_iter, value: uint32, inc: bool): b16_iter
+    requires iter.index < |iter.buff|
+  {
+      iter.(index := if inc then iter.index + 1 else iter.index)
+          .(buff := iter.buff[iter.index := bv32_ops.lh(value)])
+  }
+
   predicate b16_iter_inv(iter: b16_iter, heap: heap_t, ptr: nat)
   {
     var base_ptr := iter.base_ptr;
     && iter.cur_ptr() == ptr
+    && |iter.buff| % 2 == 0
     // base_ptr points to a valid buffer
     && heap_b32_ptr_valid(heap, base_ptr)
     // the view is consistent with heap
+    && heap[base_ptr].b32 == b16_as_b32(iter.buff)
     && b32_as_b16(heap[base_ptr].b32) == iter.buff
     // the index is within bound (or at end)
     && iter.index <= |iter.buff|
@@ -154,6 +191,26 @@ module mem {
     && b16_iter_inv(iter, heap, ptr)
     // tighter constraint so we can dereference
     && iter.index < |iter.buff|
+  }
+
+  function {:opaque} heap_b16_write(heap: heap_t, b16_it: b16_iter, value: uint32): (heap': heap_t)
+    requires b16_iter_safe(b16_it, heap, b16_it.cur_ptr())
+    ensures b16_it.base_ptr in heap';
+    ensures heap'[b16_it.base_ptr].B32?;
+    ensures var iter' := b16_iter_store_next(b16_it, value, true);
+      && heap'[b16_it.base_ptr].b32 == b16_as_b32(iter'.buff)
+      && b32_as_b16(heap'[b16_it.base_ptr].b32) == iter'.buff
+      && heap' == heap[b16_it.base_ptr := B32(b16_as_b32(iter'.buff))]
+      && b16_iter_inv(iter', heap', iter'.cur_ptr());
+  {
+    reveal b16_as_b32();
+    reveal b32_as_b16();
+    var b32_it := b16_iter_as_b32_iter(b16_it);
+    var old_full := b32_it.buff[b32_it.index];
+    var new_lo := if b16_it.index % 2 == 0 then bv32_ops.lh(value) else bv32_ops.lh(old_full);
+    var new_hi := if b16_it.index % 2 == 0 then bv32_ops.uh(old_full) else bv32_ops.lh(value);
+    var new_v := bv32_ops.half_combine(new_lo, new_hi);
+    heap_b32_write(heap, b32_it, new_v)
   }
 
   // valid pointer for W32 heaplet entry
