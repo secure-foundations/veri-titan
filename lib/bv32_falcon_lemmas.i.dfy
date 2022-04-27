@@ -23,6 +23,18 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
 
     import opened rv_machine
     import opened rv_vale
+    import opened mem
+
+
+    const NUM_WORDS = 512
+
+    predicate fvar_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int, value: int)
+    {
+        && (address >= 0 ==> b16_iter_inv(iter, heap, address))
+        && (value >= 0 ==> to_nat(iter.buff) == value)
+        && (index >= 0 ==> iter.index == index)
+        && |iter.buff| == NUM_WORDS
+    }
 
     lemma lemma_rs_by_31(x: int32)
       ensures x >= 0 ==> int32_rs(x, 31) == 0;

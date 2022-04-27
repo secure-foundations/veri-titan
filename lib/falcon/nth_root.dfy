@@ -1,6 +1,6 @@
-include "../ntt_cleanup/pow2.dfy"
-include "ntt_index.dfy"
 include "polys.dfy"
+include "pow2.dfy"
+include "ntt_index.dfy"
 
 abstract module nth_root {
 	import opened Power

@@ -1,5 +1,5 @@
 include "bins.dfy"
-include "../ntt_cleanup/pow2.dfy"
+include "pow2.dfy"
 
 module ntt_index {
     import opened Seq

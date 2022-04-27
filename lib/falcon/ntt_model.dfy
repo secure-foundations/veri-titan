@@ -1,6 +1,6 @@
 include "nth_root.dfy"
 
-abstract module mulntt_ct_rec {
+abstract module ntt_model {
     import opened Seq
     import opened Power
     import opened Power2

@@ -1,6 +1,6 @@
-include "../mulntt_ct/nth_root.dfy"
+include "nth_root.dfy"
 
-abstract module innt_model {
+abstract module intt_model {
     import opened Seq
     import opened Power
     import opened Power2
