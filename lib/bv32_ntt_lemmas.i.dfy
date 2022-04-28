@@ -39,7 +39,7 @@ module bv32_ntt_lemmas refines generic_ntt_lemmas {
     lemma lemma_mq_add_correct(d: uint32, b: uint32, c: uint32, r: uint32, x: int, y: int)
         requires 0 <= x < NTT_PRIME;
         requires 0 <= y < NTT_PRIME;
-        requires d == uint32_add(to_uint32(x), uint32_add(to_uint32(y), to_uint32((-(NTT_PRIME as int)))));
+        requires d == uint32_add(to_uint32(x), uint32_sub(to_uint32(y), to_uint32(NTT_PRIME)));
         requires b == to_uint32(int32_rs(to_int32(d), 31));
         requires c == uint32_and(b, to_uint32(NTT_PRIME));
         requires r == uint32_add(c, d);
