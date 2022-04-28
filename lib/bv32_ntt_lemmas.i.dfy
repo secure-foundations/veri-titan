@@ -40,7 +40,7 @@ module bv32_ntt_lemmas refines generic_ntt_lemmas {
         requires 0 <= x < NTT_PRIME;
         requires 0 <= y < NTT_PRIME;
         requires Q == NTT_PRIME as int;
-        requires d == uint32_add(to_uint32(x), uint32_add(to_uint32(y), to_uint32((-(NTT_PRIME as int)))));
+        requires d == uint32_add(to_uint32(x), uint32_sub(to_uint32(y), to_uint32(NTT_PRIME)));
         requires b == to_uint32(int32_rs(to_int32(d), 31));
         requires c == uint32_and(b, to_uint32(NTT_PRIME));
         requires r == uint32_add(c, d);

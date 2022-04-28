@@ -41,73 +41,50 @@ ghost procedure lemma_mq_rshift1_correct(
     ghost r: uint32,
     ghost x: nat) extern;
 
-procedure mq_add(inout dst: reg32, inout src1: reg32, inout src2: reg32, inout mod: reg32) returns (ghost r: uint32)
+procedure mq_add(inout r1: reg32, inout r2: reg32, in rmod: reg32) returns (ghost sum: uint32)
     requires
-        src1 < NTT_PRIME;
-        src2 < NTT_PRIME;
-
-        @src1 != @src2;
-        @dst != @src2;
-        @dst != @mod;
-        @mod != @src1;
-        @mod != @src2;
+        r1 < NTT_PRIME;
+        r2 < NTT_PRIME;
+        
+        @r1 != @r2;
+        @rmod != @r1;
+        @rmod != @r2;
+    
+        rmod == NTT_PRIME;
     ensures
-      r == dst;
-      // r == mod(old(src1) + old(src2), NTT_PRIME);
+      sum == r1;
+      sum == mod(old(r1) + old(r2), NTT_PRIME);
 {
     ghost var Q: int := NTT_PRIME;
-    ghost var x: nat := src1;
-    ghost var y: nat := src2;
+    ghost var x: nat := r1;
+    ghost var y: nat := r2;
 
-    // load -NTT_PRIME into mod
-    li(mod, 0xffffcfff);
-    assert to_int32(mod) == (-Q);
-    let negQ := to_int32(mod);
+    // r2 = y - Q
+    sub(r2, r2, rmod);
+    assert r2 == uint32_sub(to_uint32(y), to_uint32(Q));
 
-    // src2 = y - Q
-    add(src2, src2, mod);
-    assert src2 == uint32_add(to_uint32(y), to_uint32(negQ));
+    // r2 = y - Q + x
+    add(r2, r2, r1);
+    assert r2 == uint32_add(to_uint32(x), uint32_sub(to_uint32(y), to_uint32(Q)));
+    ghost var d := r2;
 
-    // src2 = y - Q + x
-    add(src2, src2, src1);
-    assert src2 == uint32_add(to_uint32(x), uint32_add(to_uint32(y), to_uint32(negQ)));
-    ghost var d := src2;
+    // r2 = d
+    // r1 = d >> 31
+    srai(r1, r2, 0x1f); // 31
+    ghost var b := r1;
 
-    // lui(mod, 0x3);
-    // addi(mod, mod, 1);
-    li(mod, 0x3001); // NTT_PRIME
-    assert mod == Q;
-    assert mod == NTT_PRIME;
-
-    // src2 = d
-    // src1 = d >> 31
-    srai(src1, src2, 0x1f); // 31
-    ghost var b := src1;
-
-    // src1 = (Q & -(d >> 31)) + d
-    and(src1, src1, mod);
+    // r1 = (Q & -(d >> 31)) + d
+    and(r1, r1, rmod);
     
     // c == b & Q
     ghost var c := uint32_and(b, to_uint32(Q));
-    assert c == src1;
    
-    add(dst, src1, src2);
-    r := dst;
-    assert r == uint32_add(c, d);
+    add(r1, r1, r2);
+    sum := r1;
+    assert r1 == uint32_add(c, d);
     
     // preconditions for lemma_mq_add_correct
-    assert 0 <= x < NTT_PRIME;
-    assert 0 <= y < NTT_PRIME;
-    assert Q == NTT_PRIME;
-    assert d == uint32_add(to_uint32(x), uint32_add(to_uint32(y), to_uint32((-(Q)))));
-    assert b == to_uint32(int32_rs(to_int32(d), 31));
-    assert c == uint32_and(b, to_uint32(NTT_PRIME));
-    assert r == uint32_add(c, d);
-
-    lemma_mq_add_correct(d, b, c, r, x, y, Q);
-
-    assert r == dst;
-    assume false;
+    lemma_mq_add_correct(d, b, c, sum, x, y, Q);
 }
     
 // procedure mq_sub(inout dst: reg32, in src1: reg32, in src2: reg32) returns (ghost r: uint32)
