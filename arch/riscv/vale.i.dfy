@@ -84,6 +84,11 @@ module rv_vale {
         sK.(mem := sM.mem)
     }
 
+    function va_get_symbols(s: va_state): map<string, uint32>
+    {
+        s.mem.symbols
+    }
+
     function va_get_heap(s: va_state): heap_t
     {
         s.mem.heap

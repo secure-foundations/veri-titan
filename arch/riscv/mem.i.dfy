@@ -605,7 +605,7 @@ module mem {
     }
   }
 
-  datatype mem_t = mem_cons(heap: heap_t, frames: frames_t)
+  datatype mem_t = mem_cons(heap: heap_t, frames: frames_t, symbols: map<string, uint32>)
   {
     function as_imem(flat: flat_t): imem_t
       requires stack_addrs_valid(flat)
@@ -614,10 +614,28 @@ module mem {
     }
 
     predicate {:opaque} inv(flat: flat_t)
+      ensures inv(flat) ==> symbols_inv()
+      ensures inv(flat) ==> |frames.fs| >= 1
     {
       && stack_addrs_valid(flat)
       && as_imem(flat).inv(flat)
       && frames.frames_inv(get_stack(flat))
+      && symbols_inv()
+    }
+
+    predicate {:opaque} symbols_inv()
+    {
+      forall name: string :: 
+        name in symbols ==> heap_w32_ptr_valid(heap, symbols[name])
+    }
+
+    function load_symbol(name: string): uint32
+      requires name in symbols
+      requires symbols_inv()
+    {
+      reveal symbols_inv();
+      assert heap_w32_ptr_valid(heap, symbols[name]);
+      heap[symbols[name]].w32
     }
 
     lemma heap_b32_write_preverses_inv(
@@ -630,6 +648,7 @@ module mem {
         inv(flat_write_32(flat, iter.cur_ptr(), value))
     {
       reveal inv();
+      reveal symbols_inv();
       var new_flat := flat_write_32(flat, iter.cur_ptr(), value);
       as_imem(flat).heap_b32_write_preverses_inv(flat, new_flat,
         iter, value);
@@ -644,6 +663,7 @@ module mem {
         inv(flat_write_32(flat, write_ptr, value))
     {
       reveal inv();
+      reveal symbols_inv();
       var new_flat := flat_write_32(flat, write_ptr, value);
       as_imem(flat).heap_w32_write_preverses_inv(flat, new_flat,
         write_ptr, value);
@@ -658,6 +678,7 @@ module mem {
         inv(flat_write_32(flat, frames.sp + index * 4, value))
     {
       reveal inv();
+      reveal symbols_inv();
 
       var new_mem := this.(frames := frames.write(index, value));
       var stack_index := ptr_to_stack_index(frames.sp) + index;
@@ -707,6 +728,7 @@ module mem {
     ensures |top_frame(new_mem.frames).content| == num_bytes / 4
   {
     reveal mem.inv();
+    reveal mem.symbols_inv();
     var stack := get_stack(flat);
     mem.frames.push_preserves_inv(num_bytes, stack);
     var new_mem := mem.(frames := mem.frames.push(num_bytes, stack));
@@ -721,6 +743,7 @@ module mem {
     ensures stack_depth(new_mem) == stack_depth(mem) - 1
   {
     reveal mem.inv();
+    reveal mem.symbols_inv();
     var stack := get_stack(flat);
     mem.frames.pop_preserves_inv(stack);
     var new_mem := mem.(frames := mem.frames.pop(stack));
@@ -766,5 +789,12 @@ module mem {
     // ensures value == flat_read_32(flat, mem.frames.sp + index * 4)
   {
     mem.frames.read(index)
+  }
+  
+  function load_symbol(mem: mem_t, name: string): (value: uint32)
+    requires name in mem.symbols
+    requires mem.symbols_inv()
+  {
+    mem.load_symbol(name)
   }
 }

@@ -1,18 +1,18 @@
 include "nth_root.dfy"
 
-abstract module ntt_model {
+module ntt_model {
     import opened Seq
-    import opened Power
-    import opened Power2
-    import opened DivMod
-    import opened Mul
+	import opened Power
+	import opened Power2
+	import opened DivMod
+	import opened Mul
 
 	import opened pows_of_2
     import opened ntt_index
+	import opened ntt_polys
     import opened nth_root
-    import opened ntt_polys
 
-    const x_value: x_fun := rev_mixed_powers_mont_x_value;
+    ghost const x_value: x_fun := rev_mixed_powers_mont_x_value;
 
     datatype loop_view = loop_view(
         lower: seq<seq<elem>>, // lower polys

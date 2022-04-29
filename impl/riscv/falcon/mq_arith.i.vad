@@ -2,7 +2,7 @@ include "../../../arch/riscv/decls.i.vad"
 
 #verbatim
 include "../../../arch/riscv/decls.i.dfy"
-include "../../../../lib/bv32_falcon_lemmas.i.dfy"
+include "../../../../lib/falcon/bv32_falcon_lemmas.i.dfy"
 
 module mq_arith {
 

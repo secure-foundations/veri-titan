@@ -2,7 +2,7 @@ include "polys.dfy"
 include "pow2.dfy"
 include "ntt_index.dfy"
 
-abstract module nth_root {
+module nth_root {
 	import opened Power
 	import opened Power2
 	import opened DivMod
@@ -12,13 +12,15 @@ abstract module nth_root {
     import opened ntt_index
 	import opened ntt_polys
 
-	const N: pow2_t;
-	const PSI: elem;
-	const PSI_INV: elem;
-	const OMEGA: elem;
-	const OMEGA_INV: elem;
-	const R: elem;
-	const R_INV: elem;
+	type x_fun = (nat, pow2_t) --> elem
+
+	ghost const N: pow2_t;
+	ghost const PSI: elem;
+	ghost const PSI_INV: elem;
+	ghost const OMEGA: elem;
+	ghost const OMEGA_INV: elem;
+	ghost const R: elem;
+	ghost const R_INV: elem;
 
 	type n_sized = s: seq<elem>
         | |s| == N.full witness *
@@ -26,8 +28,7 @@ abstract module nth_root {
 	function method {:axiom} montmul(a: elem, b: elem): (c: elem)
 		ensures c == (a * b * R_INV) % Q
 
-	// obligations
-	lemma Nth_root_lemma()
+	lemma {:axiom} Nth_root_lemma()
 		ensures N.exp >= 2;
 		ensures Pow(PSI, 2 * N.full) % Q == 1
 		ensures Pow(PSI, N.full) % Q == Q - 1
@@ -39,23 +40,17 @@ abstract module nth_root {
 
 		ensures (R_INV * R) % Q == 1
 
-	function method block_count(m: pow2_t): pow2_t
+	function block_count(m: pow2_t): pow2_t
 		requires 0 <= m.exp <= N.exp;
 	{
 		pow2_div(N, m)
 	}
 
-	function method block_size(c: pow2_t): pow2_t
+	function block_size(c: pow2_t): pow2_t
 		requires 0 <= c.exp <= N.exp;
 	{
 		pow2_div(N, c)
 	}
-
-	// lemma block_count_product_lemma(m: pow2_t)
-	// 	requires 0 <= m.exp <= N.exp;
-	// 	ensures block_count(m).full * m.full == N.full;
-	// {
-	// }
 
 	lemma block_count_half_lemma(m: pow2_t)
 		requires 1 <= m.exp <= N.exp;
@@ -157,28 +152,30 @@ abstract module nth_root {
 		}
 	}
 
-	function points_view(a: n_sized, i: nat, bsize: pow2_t): (v: seq<elem>)
-        requires bsize.exp <= N.exp;
-        requires i < block_count(bsize).full;
-        // ensures |v| == bsize.full;
-    {
-        var size := bsize.full;
-        seq(size, j requires 0 <= j < size => a[point_view_index(i, j, bsize)])
-    }
+	function points_view(a: seq<elem>, i: nat, bsize: pow2_t): (v: seq<elem>)
+		requires |a| == N.full;
+		requires bsize.exp <= N.exp;
+		requires i < block_count(bsize).full;
+		// ensures |v| == bsize.full;
+	{
+		var size := bsize.full;
+		seq(size, j requires 0 <= j < size => a[point_view_index(i, j, bsize)])
+	}
 
-    // interpret an n_sized buffer as a level view
-    // contains blocks of points, each block has bsize
-    function level_points_view(a: n_sized, bsize: pow2_t): (vs: seq<seq<elem>>)
-        requires bsize.exp <= N.exp;
-        ensures unifromly_sized(vs, bsize);
-    {
-        var count := block_count(bsize).full;
-        var vs := seq(count, i requires 0 <= i < count => points_view(a, i, bsize));
-        assert unifromly_sized(vs, bsize) by {
-            reveal unifromly_sized();
-        }
-        vs
-    }
+	// interpret an n_sized buffer as a level view
+	// contains blocks of points, each block has bsize
+	function level_points_view(a: seq<elem>, bsize: pow2_t): (vs: seq<seq<elem>>)
+		requires |a| == N.full;
+		requires bsize.exp <= N.exp;
+		ensures unifromly_sized(vs, bsize);
+	{
+		var count := block_count(bsize).full;
+		var vs := seq(count, i requires 0 <= i < count => points_view(a, i, bsize));
+		assert unifromly_sized(vs, bsize) by {
+			reveal unifromly_sized();
+		}
+		vs
+	}
 
 	function method {:opaque} build_lower_level(higher: seq<seq<elem>>, bsize: pow2_t): (lower: seq<seq<elem>>)
 		requires 1 <= bsize.exp <= N.exp;
@@ -221,7 +218,8 @@ abstract module nth_root {
 		assert build_lower_level(higher, new_size) == lower;
 	}
 
-	lemma poly_base_level_correct_lemma(coeffs: n_sized)
+	lemma poly_base_level_correct_lemma(coeffs: seq<elem>)
+		requires |coeffs| == N.full;
 		ensures unifromly_sized([coeffs], pow2(N.exp));
 	{
 		reveal unifromly_sized();
@@ -230,7 +228,8 @@ abstract module nth_root {
 
 	// construct polys level view 
 	// each block is a poly, has bsize coefficients
-	function level_polys(coeffs: n_sized, bsize: pow2_t): (lps: seq<seq<elem>>)
+	function level_polys(coeffs: seq<elem>, bsize: pow2_t): (lps: seq<seq<elem>>)
+		requires |coeffs| == N.full;
 		requires 0 <= bsize.exp <= N.exp;
 		decreases N.exp - bsize.exp;
 		ensures unifromly_sized(lps, bsize);
@@ -260,8 +259,6 @@ abstract module nth_root {
 		reveal unifromly_sized();
 		reveal build_lower_level();
 	}
-
-	type x_fun = (nat, pow2_t) --> elem
 
 	predicate {:opaque} points_eval_prefix_inv(points: seq<elem>, poly: seq<elem>, x_value: x_fun, l: nat, count: pow2_t)
 	{
@@ -370,7 +367,7 @@ abstract module nth_root {
 			Pow(1 % Q, N) % Q;
 			Pow((OMEGA * OMEGA_INV) % Q, N) % Q;
 			{
-  				LemmaPowModNoop(OMEGA * OMEGA_INV, N, Q);
+				LemmaPowModNoop(OMEGA * OMEGA_INV, N, Q);
 			}
 			Pow(OMEGA * OMEGA_INV, N) % Q;
 			{
@@ -536,7 +533,7 @@ abstract module nth_root {
 
 	// d is the block count
 	// i is the offset in the block
-	function method rev_mixed_powers_mont_x_value(i: nat, d: pow2_t): (r: elem)
+	function rev_mixed_powers_mont_x_value(i: nat, d: pow2_t): (r: elem)
 		requires d.exp <= N.exp;
 		requires i < block_size(d).full;
 		ensures r > 0;
@@ -574,7 +571,8 @@ abstract module nth_root {
 		r
 	}
 
-	function {:axiom} rev_mixed_powers_mont_table(): (t: n_sized)
+	function {:axiom} rev_mixed_powers_mont_table(): (t: seq<elem>)
+		ensures |t| == N.full;
 	
 	lemma {:axiom} rev_mixed_powers_mont_table_axiom(t: pow2_t, d: pow2_t, j: nat)
 		requires t.exp < N.exp;
@@ -600,7 +598,7 @@ abstract module nth_root {
 
 	// d is the block count
 	// i is the offset in the block
-	function method rev_omega_inv_powers_x_value(i: nat, d: pow2_t): (r: elem)
+	function rev_omega_inv_powers_x_value(i: nat, d: pow2_t): (r: elem)
 		requires d.exp <= N.exp;
 		requires i < block_size(d).full;
 		ensures r > 0;
@@ -645,7 +643,8 @@ abstract module nth_root {
 		r
 	}
 
-	function {:axiom} rev_omega_inv_powers_mont_table(): (t: n_sized)
+	function {:axiom} rev_omega_inv_powers_mont_table(): (t: seq<elem>)
+		ensures |t| == N.full;
 
 	lemma {:axiom} rev_omega_inv_powers_mont_table_axiom(t: pow2_t, d: pow2_t, j: nat)
 		requires t.exp < N.exp;
@@ -668,6 +667,4 @@ abstract module nth_root {
 		var _ := twiddle_factors_index_bound_lemma(t, j);
 		rev_omega_inv_powers_mont_table_axiom(t, d, j);
 	}
-
-
 }

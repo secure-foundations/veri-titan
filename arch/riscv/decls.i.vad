@@ -104,6 +104,7 @@ type mem_t: Type(0) extern;
 var mem: mem_t {:state mem()};
 function operator(.frames) (m: mem_t): frames_t extern;
 function operator(.heap) (m: mem_t): heap_t extern;
+function operator(.heap := ) (m: mem_t, h: heap_t): mem_t extern;
 function read_top_frame(fs: mem_t): seq(uint32) extern;
 
 function in_stack_addr_range(addr: int): bool extern;
@@ -152,6 +153,8 @@ function operator(.R_INV) (rsa: rsa_params): nat extern;
 function rsa_params_inv(rsa: rsa_params): bool extern;
 
 function mvar_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int, value: int): bool extern;
+
+var symbols: map(string, uint32) {:state symbols()};
 
 type string: Type(0) extern;
 
@@ -320,6 +323,21 @@ procedure lw_stack(inout dst: reg32, in offset: imm32)
     assume false;
 }
 
+function load_symbol(mem: mem_t, name: string): uint16 extern;
+
+procedure lw_symbol(inout rd: reg32, inline name: string)
+    {:instruction Ins32(RV_LA(rd, name))}
+    requires
+        symbols?[name];
+    reads
+        mem;
+    ensures
+        mem == old(mem);
+        rd == load_symbol(mem, name);
+{
+    assume false;
+}
+
 procedure lw(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
     {:instruction Ins32(RV_LW(dst, src1, src2))}
     requires
@@ -343,9 +361,9 @@ function b16_iter_load_next(iter: b16_iter, inc: bool): b16_iter extern;
 // function b16_iter_store_next(iter: iter_t, value: uint32, inc: bool): iter_t extern;
 function operator(.base_ptr) (iter: b16_iter): int extern;
 function operator(.index) (iter: b16_iter): int extern;
-function operator(.index := ) (iter: b16_iter, i :int): iter_t extern;
+function operator(.index := ) (iter: b16_iter, i :int): b16_iter extern;
 function operator(.buff) (iter: b16_iter): seq(uint16) extern;
-function operator(.buff := ) (iter: b16_iter, buff: seq(uint16)): iter_t extern;
+function operator(.buff := ) (iter: b16_iter, buff: seq(uint16)): b16_iter extern;
 
 procedure lhu(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: b16_iter)
     {:instruction Ins32(RV_LHU(dst, src1, src2))}
@@ -572,6 +590,17 @@ procedure sub(inout dst: reg32, in src1: reg32, in src2: reg32)
     {:instruction Ins32(RV_SUB(dst, src1, src2))}
     ensures
         dst == uint32_sub(old(src1), old(src2));
+{
+    assume false;
+}
+
+procedure slli(inout dst: reg32, in src1: reg32, inline src2: uint32)
+    {:instruction Ins32(RV_SLLI(dst, src1, src2))}
+    requires
+        0 <= src2 <= 31;
+    ensures
+        // left shift src1 by amount in lowest 5 bits of src2
+        dst == uint32_ls(old(src1), src2);
 {
     assume false;
 }
