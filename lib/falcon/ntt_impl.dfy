@@ -14,8 +14,9 @@ abstract module ntt_impl {
     import opened ntt_model
     import opened ntt_polys
 
-    method j_loop(a: n_sized, p: n_sized, t: pow2_t, d: pow2_t, j: nat, ghost view: loop_view)
+    method j_loop(a: n_sized, p: n_sized, t: pow2_t, d: pow2_t, j: nat, u: nat, ghost view: loop_view)
     returns (a': n_sized)
+        requires u == j * (2 * d.full);
         requires view.j_loop_inv(a, d, j);
         requires t == view.lsize();
         requires p == rev_mixed_powers_mont_table();
@@ -24,7 +25,10 @@ abstract module ntt_impl {
     {
         view.s_loop_inv_pre_lemma(a, d, j);
 
-        var u := (2 * j) * d.full;
+        assert  (2 * j) * d.full == j * (2 * d.full) by {
+            LemmaMulProperties();
+        }
+
         rev_mixed_powers_mont_table_lemma(t, d, j);
         var w := p[t.full + j];
         // modmul(x_value(2 * j, d), R);
@@ -70,16 +74,29 @@ abstract module ntt_impl {
         ensures view.hsize.exp == N.exp ==> view'.t_loop_end(a');
     {
         var j := 0;
+        var u: nat := 0;
         a' := a;
 
         view.j_loop_inv_pre_lemma(a', d);
 
         while (j < t.full)
             invariant t == view.lsize();
+            invariant u == j * (2 * d.full);
             invariant view.j_loop_inv(a', d, j);
         {
-            a' := j_loop(a', p, t, d, j, view);
+            a' := j_loop(a', p, t, d, j, u, view);
+
+            calc == {
+                u + 2 * d.full;
+                j * (2 * d.full) + 2 * d.full;
+                {
+                    LemmaMulProperties();
+                }
+                (j + 1) * (2 * d.full);
+            }
+
             j := j + 1;
+            u := u + 2 * d.full;
         }
 
         view' := view.j_loop_inv_post_lemma(a', d, j);
@@ -87,12 +104,12 @@ abstract module ntt_impl {
 
     method mulntt_ct(a: n_sized, p: n_sized, ghost view: loop_view)
         returns (a': n_sized, ghost view': loop_view)
-        requires N.exp >= 1;
+        requires N == pow2_t_cons(9, 512);
         requires view.t_loop_inv(a, pow2(N.exp-1));
         requires p == rev_mixed_powers_mont_table();
         ensures view'.t_loop_end(a');
     {
-        var d := pow2(N.exp);
+        var d := pow2(9);
         var t := pow2(0);
         a' := a;
         view' := view;
@@ -105,7 +122,7 @@ abstract module ntt_impl {
 
         Nth_root_lemma();
 
-        while (t.full < N.full)
+        while (t.full < 512)
             invariant 1 <= d.exp <= N.exp;
             invariant view'.t_loop_inv(a', pow2_half(d));
             invariant t.full >= N.full ==> view'.hsize.exp == N.exp;

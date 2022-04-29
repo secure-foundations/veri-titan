@@ -571,7 +571,7 @@ module nth_root {
 		r
 	}
 
-	function {:axiom} rev_mixed_powers_mont_table(): (t: seq<elem>)
+	function method {:axiom} rev_mixed_powers_mont_table(): (t: seq<elem>)
 		ensures |t| == N.full;
 	
 	lemma {:axiom} rev_mixed_powers_mont_table_axiom(t: pow2_t, d: pow2_t, j: nat)
@@ -643,7 +643,7 @@ module nth_root {
 		r
 	}
 
-	function {:axiom} rev_omega_inv_powers_mont_table(): (t: seq<elem>)
+	function method {:axiom} rev_omega_inv_powers_mont_table(): (t: seq<elem>)
 		ensures |t| == N.full;
 
 	lemma {:axiom} rev_omega_inv_powers_mont_table_axiom(t: pow2_t, d: pow2_t, j: nat)
