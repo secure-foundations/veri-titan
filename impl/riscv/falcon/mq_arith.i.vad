@@ -13,9 +13,61 @@ import opened rv_vale
 
 import opened bv32_ops
 import opened bv32_falcon_lemmas
+import opened pows_of_2
 
 #endverbatim
-    
+
+type pow2_t: Type(0) extern;
+function pow2(exp: int): pow2_t extern;
+function operator(.full) (p :pow2_t): nat extern;
+function operator(.exp) (p :pow2_t): nat extern;
+function pow2_half(p: pow2_t): pow2_t extern;
+function pow2_double(p: pow2_t): pow2_t extern;
+
+const N: pow2_t extern;
+const R: nat extern;
+
+function rs1_is_half(a: uint32): void extern;
+
+procedure p2_half(inout dst: reg32, ghost p: pow2_t)
+    returns (ghost p': pow2_t)
+    requires
+        dst == p.full;
+        p.full >= 2;
+    ensures
+        dst == old(dst) / 2;
+        dst == p'.full;
+        p' == pow2_half(p);
+{
+    srli(dst, dst, 1);
+    p' := pow2_half(p);
+    rs1_is_half(old(dst));
+}
+
+procedure half(inout dst: reg32)
+    ensures dst == old(dst) / 2;
+{
+    srli(dst, dst, 1);
+    rs1_is_half(old(dst));
+}
+
+function ls1_is_double(a: uint32): void extern;
+
+procedure p2_double(inout dst: reg32, ghost p: pow2_t)
+    returns (ghost p': pow2_t)
+    requires
+        dst == p.full;
+        p.full <= 512;
+    ensures
+        dst == old(dst) * 2;
+        dst == p'.full;
+        p' == pow2_double(p);
+{
+    slli(dst, dst, 1);
+    p' := pow2_double(p);
+    ls1_is_double(old(dst));
+}
+
 ghost procedure lemma_mq_add_correct(
     ghost d: uint32,
     ghost b: uint32,

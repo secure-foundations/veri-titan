@@ -124,7 +124,7 @@ static void ntt512_bitrev_shuffle(uint16_t *a) {
 /*
  * Addition modulo q. Operands must be in the 0..q-1 range.
  */
-static inline uint32_t
+uint32_t
 mq_add(uint32_t x, uint32_t y) {
     /*
      * We compute x + y - q. If the result is negative, then the
@@ -144,7 +144,7 @@ mq_add(uint32_t x, uint32_t y) {
 /*
  * Subtraction modulo q. Operands must be in the 0..q-1 range.
  */
-static inline uint32_t
+uint32_t
 mq_sub(uint32_t x, uint32_t y) {
     /*
      * As in mq_add(), we use a conditional addition to ensure the
@@ -161,7 +161,7 @@ mq_sub(uint32_t x, uint32_t y) {
 /*
  * Division by 2 modulo q. Operand must be in the 0..q-1 range.
  */
-static inline uint32_t
+uint32_t
 mq_rshift1(uint32_t x) {
     x += Q & -(x & 1);
     return (x >> 1);
@@ -187,7 +187,7 @@ mq_poly_sub(uint16_t *f, const uint16_t *g, unsigned logn) {
  * this function computes: x * y / R mod q
  * Operands must be in the 0..q-1 range.
  */
-static inline uint32_t
+uint32_t
 mq_montymul(uint32_t x, uint32_t y) {
     uint32_t z, w;
 

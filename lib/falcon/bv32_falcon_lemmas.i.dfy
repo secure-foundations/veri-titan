@@ -33,16 +33,16 @@ module bv32_falcon_lemmas {
 
     predicate {:opaque} buff_is_nsized(a: seq<uint16>)
     {
-      && (|a| == N.full)
-      && (forall i | 0 <= i < N.full :: a[i] < Q)
+        && (|a| == N.full)
+        && (forall i | 0 <= i < N.full :: a[i] < Q)
     }
 
     function {:opaque} buff_as_nsized(a: seq<uint16>): (a': n_sized)
-      requires buff_is_nsized(a);
-      ensures a == a';
+        requires buff_is_nsized(a);
+        ensures a == a';
     {
-      reveal buff_is_nsized();
-      a
+        reveal buff_is_nsized();
+        a
     }
 
     function lsize(view: loop_view): (r: pow2_t)
@@ -58,6 +58,9 @@ module bv32_falcon_lemmas {
         && view.s_loop_inv(buff_as_nsized(a), d, j, bi)
     }
 
+    lemma {:axiom} rs1_is_half(a: uint32)
+        ensures uint32_rs(a, 1) == a / 2;
+
     lemma {:axiom} ls1_is_double(a: uint32)
         requires a < BASE_31;
         ensures uint32_ls(a, 1) == a * 2;
@@ -67,7 +70,8 @@ module bv32_falcon_lemmas {
         d: pow2_t,
         j: nat,
         t: pow2_t,
-        u: uint32,
+        u: nat,
+        ot3: uint32,
         t3: uint32,
         t6: uint32,
         s5: uint32,
@@ -79,13 +83,14 @@ module bv32_falcon_lemmas {
         requires j < lsize(view).full;
         requires t.full < BASE_32;
         requires s5 == uint32_ls(uint32_add(t.full, j), 1);
-        requires t6 == d.full;
-        requires t3 == uint32_add(u, t6);
+        requires t6 == 2 * d.full;
+        requires ot3 == 2 * u;
+        requires t3 == uint32_add(ot3, t6);
 
         ensures s_loop_inv(a, d, j, 0, view);
         ensures s5 == (t.full + j) * 2; 
         ensures t.full + j < N.full;
-        ensures t3 == u + d.full;
+        ensures t3 == 2 * u + 2 * d.full;
         ensures rev_mixed_powers_mont_table()[t.full + j] == 
             mqmul(rev_mixed_powers_mont_x_value(2 * j, d), R);
     {
@@ -121,41 +126,45 @@ module bv32_falcon_lemmas {
     
         requires N == pow2_t_cons(512, 9);
         requires bi == d.full;
-        requires t6 == d.full;
+        requires t6 == 2 * d.full;
         requires u == j * (2 * d.full);
         requires s_loop_inv(a, d, j, bi, view);
-        requires ot3 == u + d.full;
+        requires ot3 == 2 * u + 2 * d.full;
         requires t3 == uint32_add(ot3, t6);
-        ensures j_loop_inv(a, d, j + 1, t3, view);
+        ensures t3 == 2 * (u + 2 * d.full);
+        ensures j_loop_inv(a, d, j + 1, u + 2 * d.full, view);
     {
         view.s_loop_inv_post_lemma(buff_as_nsized(a), d, j, bi);
+
+        assert u + 2 * d.full == (j + 1) * (2 * d.full) by {
+            LemmaMulProperties();
+        }
+
         calc == {
             ot3 + t6;
-            u + d.full + d.full;
-            j * (2 * d.full) + 2 * d.full;
+            2 * u + 2 * d.full + 2 * d.full;
+            2 * (j * (2 * d.full)) + 2 * d.full + 2 * d.full;
             {
                 LemmaMulProperties();
             }
-            (j + 1) * (2 * d.full);
+            (2 * j + 2) * (2 * d.full);
         }
 
         assert d == view.hcount();
 
         calc {
-            (j + 1) * (2 * d.full);
+            (2 * j + 2) * (2 * d.full);
             <= 
             {
-                LemmaMulInequality(j + 1, 512, 2 * d.full);
+                LemmaMulInequality(2 * j + 2, 1024, 2 * d.full);
             }
-            512 * (2 * d.full);
+            1024 * (2 * d.full);
             <
             {
                 assert d.full <= 512;
             }
             BASE_31;
         }
-
-        assert t3 == (j + 1) * (2 * d.full);
     }
 
     predicate s_loop_update(a: seq<uint16>, a': seq<uint16>, d: pow2_t, j: nat, bi: nat, view: loop_view)
