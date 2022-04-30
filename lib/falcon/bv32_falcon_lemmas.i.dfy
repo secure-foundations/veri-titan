@@ -49,106 +49,181 @@ module bv32_falcon_lemmas {
         requires view.loop_view_wf();
         ensures r.full <= N.full
     {
-        assume view.hsize.full <= N.full;
         view.lsize()
     }
 
-    predicate s_loop_inv(a: seq<uint16>, hcount: pow2_t, j: nat, bi: nat, view: loop_view)
+    predicate s_loop_inv(a: seq<uint16>, d: pow2_t, j: nat, bi: nat, view: loop_view)
     {
         && buff_is_nsized(a)
-        && view.s_loop_inv(buff_as_nsized(a), hcount, j, bi)
+        && view.s_loop_inv(buff_as_nsized(a), d, j, bi)
     }
+
+    lemma {:axiom} ls1_is_double(a: uint32)
+        requires a < BASE_31;
+        ensures uint32_ls(a, 1) == a * 2;
 
     lemma s_loop_inv_pre_lemma(
         a: seq<uint16>,
-        p: seq<uint16>,
-        hcount: pow2_t,
+        d: pow2_t,
         j: nat,
         t: pow2_t,
+        u: uint32,
+        t3: uint32,
+        t6: uint32,
         s5: uint32,
         view: loop_view)
 
-        requires N == pow2_t_cons(9, 512);
-        requires j_loop_inv(a, hcount, j, view);
+        requires N == pow2_t_cons(512, 9);
+        requires j_loop_inv(a, d, j, u, view);
         requires t == lsize(view);
         requires j < lsize(view).full;
         requires t.full < BASE_32;
         requires s5 == uint32_ls(uint32_add(t.full, j), 1);
+        requires t6 == d.full;
+        requires t3 == uint32_add(u, t6);
 
-        ensures s_loop_inv(a, hcount, j, 0, view);
+        ensures s_loop_inv(a, d, j, 0, view);
+        ensures s5 == (t.full + j) * 2; 
+        ensures t.full + j < N.full;
+        ensures t3 == u + d.full;
+        ensures rev_mixed_powers_mont_table()[t.full + j] == 
+            mqmul(rev_mixed_powers_mont_x_value(2 * j, d), R);
     {
-        view.s_loop_inv_pre_lemma(buff_as_nsized(a), hcount, j);
-        rev_mixed_powers_mont_table_lemma(t, hcount, j);
-
+        view.s_loop_inv_pre_lemma(buff_as_nsized(a), d, j);
+        rev_mixed_powers_mont_table_lemma(t, d, j);
         assert uint32_add(t.full, j) == t.full + j;
+        ls1_is_double(t.full + j);
+        rev_mixed_powers_mont_table_lemma(t, d, j);
 
+        assert u == j * (2 * d.full);
+        assert d == view.hcount();
+
+        calc {
+            j * (2 * d.full) + d.full;
+            <= 
+            {
+                LemmaMulInequality(j, 512, 2 * d.full);
+            }
+            512 * (2 * d.full) + d.full;
+        }
     }
 
-    predicate s_loop_update(a: seq<uint16>, a': seq<uint16>, hcount: pow2_t, j: nat, bi: nat, view: loop_view)
-        requires s_loop_inv(a, hcount, j, bi, view);
-        requires bi < hcount.full
+    lemma s_loop_inv_post_lemma(
+        a: seq<uint16>,
+        d: pow2_t,
+        j: nat,
+        u: uint32,
+        bi: nat,
+        ot3: uint32,
+        t3: uint32,
+        t6: uint32,
+        view: loop_view)
+    
+        requires N == pow2_t_cons(512, 9);
+        requires bi == d.full;
+        requires t6 == d.full;
+        requires u == j * (2 * d.full);
+        requires s_loop_inv(a, d, j, bi, view);
+        requires ot3 == u + d.full;
+        requires t3 == uint32_add(ot3, t6);
+        ensures j_loop_inv(a, d, j + 1, t3, view);
+    {
+        view.s_loop_inv_post_lemma(buff_as_nsized(a), d, j, bi);
+        calc == {
+            ot3 + t6;
+            u + d.full + d.full;
+            j * (2 * d.full) + 2 * d.full;
+            {
+                LemmaMulProperties();
+            }
+            (j + 1) * (2 * d.full);
+        }
+
+        assert d == view.hcount();
+
+        calc {
+            (j + 1) * (2 * d.full);
+            <= 
+            {
+                LemmaMulInequality(j + 1, 512, 2 * d.full);
+            }
+            512 * (2 * d.full);
+            <
+            {
+                assert d.full <= 512;
+            }
+            BASE_31;
+        }
+
+        assert t3 == (j + 1) * (2 * d.full);
+    }
+
+    predicate s_loop_update(a: seq<uint16>, a': seq<uint16>, d: pow2_t, j: nat, bi: nat, view: loop_view)
+        requires s_loop_inv(a, d, j, bi, view);
+        requires bi < d.full
     {
         && buff_is_nsized(a')
-        && view.s_loop_update(buff_as_nsized(a), buff_as_nsized(a'), hcount, j, bi)
+        && view.s_loop_update(buff_as_nsized(a), buff_as_nsized(a'), d, j, bi)
     }
 
-    lemma s_loop_inv_peri_lemma(a: seq<uint16>, a': seq<uint16>, hcount: pow2_t, j: nat, bi: nat, view: loop_view)
-        requires s_loop_inv(a, hcount, j, bi, view);
-        requires bi < hcount.full
-        requires s_loop_update(a, a', hcount, j, bi, view);
-        ensures s_loop_inv(a', hcount, j, bi+1, view);
+    lemma s_loop_inv_peri_lemma(a: seq<uint16>, a': seq<uint16>, d: pow2_t, j: nat, bi: nat, view: loop_view)
+        requires s_loop_inv(a, d, j, bi, view);
+        requires bi < d.full
+        requires s_loop_update(a, a', d, j, bi, view);
+        ensures s_loop_inv(a', d, j, bi+1, view);
     {
-        view.s_loop_inv_peri_lemma(a, a', hcount, j, bi);
+        view.s_loop_inv_peri_lemma(a, a', d, j, bi);
     }
 
-    lemma higher_points_view_index_lemma(a: seq<uint16>, hcount: pow2_t, j: nat, bi: nat, view: loop_view)
+    lemma higher_points_view_index_lemma(a: seq<uint16>, d: pow2_t, j: nat, bi: nat, view: loop_view)
         returns (s: nat)
     
-        requires s_loop_inv(a, hcount, j, bi, view);
-        requires bi < hcount.full
-        ensures s == bi + (2*j) * hcount.full;
-        ensures s + hcount.full < N.full;
+        requires s_loop_inv(a, d, j, bi, view);
+        requires bi < d.full
+        ensures s == bi + (2*j) * d.full;
+        ensures s + d.full < N.full;
         ensures a[s] ==
             level_points_view(buff_as_nsized(a), view.hsize)[bi][2*j];
         ensures s == point_view_index(bi, 2*j, view.hsize);
-        ensures a[s+hcount.full] ==
+        ensures a[s+d.full] ==
             level_points_view(buff_as_nsized(a), view.hsize)[bi][2*j+1];
-        ensures s+hcount.full == point_view_index(bi, 2*j+1, view.hsize);
+        ensures s+d.full == point_view_index(bi, 2*j+1, view.hsize);
     {
-        s := view. higher_points_view_index_lemma(buff_as_nsized(a), hcount, j, bi);
+        s := view. higher_points_view_index_lemma(buff_as_nsized(a), d, j, bi);
     }
 
-    predicate t_loop_inv(a: seq<uint16>, hcount: pow2_t, view: loop_view)
-    {
-      && buff_is_nsized(a)
-      && view.t_loop_inv(buff_as_nsized(a), hcount)
-    }
-
-    predicate j_loop_inv(a: seq<uint16>, hcount: pow2_t, j: nat, view: loop_view)
+    predicate t_loop_inv(a: seq<uint16>, d: pow2_t, view: loop_view)
     {
         && buff_is_nsized(a)
-        && view.j_loop_inv(buff_as_nsized(a), hcount, j)
+        && view.t_loop_inv(buff_as_nsized(a), d)
     }
 
-    lemma j_loop_inv_pre_lemma(a: seq<uint16>, hcount: pow2_t, view: loop_view)
-        requires t_loop_inv(a, hcount, view);
-        ensures j_loop_inv(a, hcount, 0, view);
+    predicate j_loop_inv(a: seq<uint16>, d: pow2_t, j: nat, u: nat, view: loop_view)
     {
-        view.j_loop_inv_pre_lemma(buff_as_nsized(a), hcount);
+        && buff_is_nsized(a)
+        && u == j * (2 * d.full)
+        && view.j_loop_inv(buff_as_nsized(a), d, j)
     }
 
-    lemma j_loop_inv_post_lemma(a: seq<uint16>, hcount: pow2_t, j: nat, view: loop_view)
+    lemma j_loop_inv_pre_lemma(a: seq<uint16>, d: pow2_t, view: loop_view)
+        requires t_loop_inv(a, d, view);
+        ensures j_loop_inv(a, d, 0, 0, view);
+    {
+        view.j_loop_inv_pre_lemma(buff_as_nsized(a), d);
+    }
+
+    lemma j_loop_inv_post_lemma(a: seq<uint16>, d: pow2_t, j: nat, u: nat, view: loop_view)
         returns (v': loop_view)
     
-        requires j_loop_inv(a, hcount, j, view);
+        requires j_loop_inv(a, d, j, u, view);
         requires j == lsize(view).full;
         requires 0 <= view.hsize.exp <= N.exp;
 
-        ensures v' == view.next_t_loop_view(hcount);
-        ensures view.hsize.exp < N.exp ==> t_loop_inv(a, pow2_half(hcount), v');
+        ensures v' == view.next_t_loop_view(d);
+        ensures view.hsize.exp < N.exp ==> t_loop_inv(a, pow2_half(d), v');
         ensures view.hsize.exp == N.exp ==> t_loop_end(a, v');
     {
-        v' := view.j_loop_inv_post_lemma(a, hcount, j);
+        v' := view.j_loop_inv_post_lemma(a, d, j);
     }
 
     predicate t_loop_end(a: seq<uint16>, view: loop_view)

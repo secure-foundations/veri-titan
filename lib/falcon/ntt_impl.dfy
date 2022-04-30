@@ -104,7 +104,7 @@ abstract module ntt_impl {
 
     method mulntt_ct(a: n_sized, p: n_sized, ghost view: loop_view)
         returns (a': n_sized, ghost view': loop_view)
-        requires N == pow2_t_cons(9, 512);
+        requires N == pow2_t_cons(512, 9);
         requires view.t_loop_inv(a, pow2(N.exp-1));
         requires p == rev_mixed_powers_mont_table();
         ensures view'.t_loop_end(a');

@@ -26,22 +26,34 @@ module ntt_model {
             && build_lower_level(higher, hsize) == lower
         }
 
-        function lsize(): pow2_t
+        function lsize(): (r: pow2_t)
             requires loop_view_wf();
+            ensures r.full <= N.full;
         {
-            pow2_half(hsize)
+            var r := pow2_half(hsize);
+            assert r.full <= N.full by {
+                reveal Pow2();
+                LemmaPowIncreases(2, r.exp, N.exp);
+            }
+            r
         }
 
-        function lcount(): pow2_t
+        function lcount(): (r: pow2_t)
             requires loop_view_wf();
         {
             block_count(lsize())
         }
 
-        function hcount(): pow2_t
+        function hcount(): (r: pow2_t)
             requires loop_view_wf();
+            ensures r.full <= N.full;
         {
-            block_count(hsize)
+            var r := block_count(hsize);
+            assert r.full <= N.full by {
+                reveal Pow2();
+                LemmaPowIncreases(2, r.exp, N.exp);
+            }
+            r            
         }
 
         lemma size_count_lemma()
@@ -54,6 +66,15 @@ module ntt_model {
             Nth_root_lemma();
             block_count_half_lemma(hsize);
         }
+
+        // lemma size_count_bound_lemma()
+        //     requires loop_view_wf();
+        //     ensures lsize().full <= N.full;
+        //     ensures hsize.full <= N.full;
+        // {
+        //     reveal Pow2();
+        //     LemmaPowIncreases(2, hsize.exp, N.exp);
+        // }
 
         predicate {:opaque} t_loop_low_inv(a: n_sized, hcount: pow2_t)
             requires hcount.exp < N.exp;
