@@ -115,14 +115,16 @@ module mem {
     && iter.index < |iter.buff|
   }
 
-  function {:opaque} b16_as_b32(buff: seq<uint16>): seq<uint32>
+  function {:opaque} b16_as_b32(buff: seq<uint16>): (r: seq<uint32>)
     requires |buff| % 2 == 0;
+    ensures |r| == |buff| / 2;
   {
     var len := |buff| / 2;
     seq(len, i requires 0 <= i < len => bv32_ops.half_combine(buff[2 * i], buff[2 * i + 1]))
   }
 
-  function {:opaque} b32_as_b16(buff: seq<uint32>): seq<uint16>
+  function {:opaque} b32_as_b16(buff: seq<uint32>): (r: seq<uint16>)
+    ensures |r| == 2 * |buff|;
   {
     var len := |buff| * 2;
     seq(len, i requires 0 <= i < len => if i % 2 == 0 then bv32_ops.lh(buff[i/2]) else bv32_ops.uh(buff[i/2]))

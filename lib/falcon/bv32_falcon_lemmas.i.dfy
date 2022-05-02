@@ -17,6 +17,7 @@ module bv32_falcon_lemmas {
     import opened rv_machine
     import opened rv_vale
     import opened mem
+    import flat
 
     import opened ntt_model
     import opened nth_root
@@ -30,6 +31,12 @@ module bv32_falcon_lemmas {
         && |iter.buff| == N.full
         && buff_is_nsized(iter.buff)
     }
+
+    // lemma fvar_iter_index_bound(heap: heap_t, iter: b16_iter, address: int, index: int)
+    //     requires fvar_iter_inv(heap, iter, address: int, index: int)
+    // {
+
+    // }
 
     predicate {:opaque} buff_is_nsized(a: seq<uint16>)
     {
@@ -164,6 +171,41 @@ module bv32_falcon_lemmas {
                 assert d.full <= 512;
             }
             BASE_31;
+        }
+    }
+
+    lemma s_loop_index_lemma(a: seq<uint16>,
+        d: pow2_t,
+        j: nat,
+        bi: nat,
+        s4: uint32,
+        s2: uint32,
+        t4: uint32,
+        t5: uint32,
+        t6: uint32,
+        view: loop_view)
+        returns (s: nat)
+
+        requires s_loop_inv(a, d, j, bi, view);
+        requires bi < d.full
+        requires s2 == 2 * bi + 2 * (j * (2 * d.full)); 
+        requires flat.ptr_admissible_32(heap_b32_index_ptr(s4, N.full / 2 - 1));
+        requires t4 == uint32_add(s4, s2);
+        requires t5 == uint32_add(t4, t6);
+        requires t6 == 2 * d.full;
+
+        ensures s == bi + (2*j) * d.full;
+        ensures t4 == s4 + 2 * s;
+        ensures t5 == s4 + 2 * (s + d.full);
+        ensures s + d.full < N.full;
+        ensures a[s] == level_points_view(a, view.hsize)[bi][2*j];
+        ensures s == point_view_index(bi, 2*j, view.hsize);
+        ensures a[s+d.full] == level_points_view(a, view.hsize)[bi][2*j+1];
+        ensures s+d.full == point_view_index(bi, 2*j+1, view.hsize);
+    {
+        s := view.higher_points_view_index_lemma(buff_as_nsized(a), d, j, bi);
+        assert 2 * (bi + (2*j) * d.full) == 2 * bi + 2 * (j * (2 * d.full)) by {
+            LemmaMulProperties();
         }
     }
 

@@ -74,12 +74,25 @@ function t_loop_end(a: seq(uint16), view: loop_view): bool extern;
 function s_loop_inv(a: seq(uint16), d: pow2_t, j: nat, bi: nat, view: loop_view): bool extern;
 function s_loop_inv_pre_lemma(a: seq(uint16), d: pow2_t, j: nat, t: pow2_t, u: nat, ot3:nat, t3: nat, t6: nat, s5: nat, view: loop_view): void extern;
 function s_loop_inv_post_lemma(a: seq(uint16), d: pow2_t, j: nat, u: nat, bi: nat, ot3: nat, t3: nat, t6: nat, view: loop_view): void extern;
+// function s_loop_index_lemma(a: seq(uint16), d: pow2_t, j: nat, bi: nat, s2: nat, view: loop_view): (s: nat) extern;
+
+// function heap_b32_ptr_valid(heap: heap_t, base_ptr: nat): bool extern;
+
+function s_loop_index_lemma(a: seq(uint16),
+        d: pow2_t,
+        j: nat,
+        bi: nat,
+        s4: nat,
+        s2: nat,
+        t4: nat,
+        t5: nat,
+        t6: nat,
+        view: loop_view): (s: nat) extern;
 
 procedure s_loop(ghost iter_a: b16_iter,
     ghost t: pow2_t,
     ghost d: pow2_t,
     ghost j: nat,
-    ghost u: nat,
     ghost bi: nat,
     ghost view: loop_view)
 
@@ -93,14 +106,15 @@ procedure s_loop(ghost iter_a: b16_iter,
 
         t1 == 0xffffcfff;
         t2 == j;
-        t3 == 2 * u + 2 * d.full;
+        t3 == 2 * (j * (2 * d.full)) + 2 * d.full;
         t6 == 2 * d.full;
 
-        s2 == 2 * bi + 2 * u;// s
+        s2 == 2 * bi + 2 * (j * (2 * d.full));// s
 
     requires
         fvar_iter_inv(heap, iter_a, s4, 0);
         s_loop_inv(iter_a.buff, d, j, bi, view);
+        bi < d.full;
         s5 == mqmul(rev_mixed_powers_mont_x_value(2 * j, d), R);
 
     ensures
@@ -123,12 +137,18 @@ procedure s_loop(ghost iter_a: b16_iter,
         fvar_iter_inv(heap, iter_a', s4, 0);
         mem == old(mem).(heap := heap);
         heap == old(heap)[iter_a.base_ptr := heap[iter_a.base_ptr]];
-    
+
     ensures
         s_loop_inv(iter_a'.buff, d, j, bi+1, view);
 {
-    // add(t4, s4, s2);
-    // lhu(dst: reg32, t4, 0, iter_a.(index := ));
+    add(t4, s4, s2);
+    add(t5, t4, t6);
+
+    let s := s_loop_index_lemma(iter_a.buff, d, j, bi, s4, s2, t4, t5, t6, view);
+
+    lhu(t4, t4, 0, iter_a.(index := s));
+    lhu(t5, t5, 0, iter_a.(index := s + d.full));
+
     assume false;
 }
 
@@ -230,7 +250,7 @@ procedure j_loop(ghost iter_a: b16_iter,
         decreases
             t3 - s2;
     {
-        iter_a' := s_loop(iter_a', t, d, j, u, bi, view);
+        iter_a' := s_loop(iter_a', t, d, j, bi, view);
         bi := bi + 1;
         addi(s2, s2, 2);
     }
