@@ -209,21 +209,33 @@ module bv32_falcon_lemmas {
         }
     }
 
-    predicate s_loop_update(a: seq<uint16>, a': seq<uint16>, d: pow2_t, j: nat, bi: nat, view: loop_view)
+    predicate s_loop_update(a: seq<uint16>, a': seq<uint16>, d: pow2_t, j: nat, bi: nat, s: nat, e: uint32, o: uint32, view: loop_view)
         requires s_loop_inv(a, d, j, bi, view);
         requires bi < d.full
     {
-        && buff_is_nsized(a')
+        && e < Q
+        && o < Q
+        && |a'| == |a|
+        && s + d.full < |a|
+        && a'[s + d.full] == o
+        && a'[s] == e
+        && a' == a[s + d.full := o][s := e]
+        && assert buff_is_nsized(a') by {
+            reveal buff_is_nsized();
+        }
         && view.s_loop_update(buff_as_nsized(a), buff_as_nsized(a'), d, j, bi)
     }
 
-    lemma s_loop_inv_peri_lemma(a: seq<uint16>, a': seq<uint16>, d: pow2_t, j: nat, bi: nat, view: loop_view)
+    lemma s_loop_inv_peri_lemma(a: seq<uint16>, a': seq<uint16>, d: pow2_t, j: nat, bi: nat, s: nat, e: uint32, o: uint32, view: loop_view)
         requires s_loop_inv(a, d, j, bi, view);
         requires bi < d.full
-        requires s_loop_update(a, a', d, j, bi, view);
+        requires s_loop_update(a, a', d, j, bi, s, e, o, view);
         ensures s_loop_inv(a', d, j, bi+1, view);
     {
         view.s_loop_inv_peri_lemma(a, a', d, j, bi);
+        assert buff_is_nsized(a') by {
+            reveal buff_is_nsized();
+        }
     }
 
     lemma higher_points_view_index_lemma(a: seq<uint16>, d: pow2_t, j: nat, bi: nat, view: loop_view)

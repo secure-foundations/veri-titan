@@ -34,6 +34,23 @@ function lsize(p :loop_view): pow2_t extern;
 
 function fvar_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int): bool extern;
 
+function pow2_t_cons(n: nat, exp: nat): pow2_t extern;
+function j_loop_inv(a: seq(uint16), hcount: pow2_t, j: nat, u: nat, view: loop_view): bool extern;
+function j_loop_inv_pre_lemma(a: seq(uint16), hcount: pow2_t, view: loop_view): void extern;
+function j_loop_inv_post_lemma(a: seq(uint16), hcount: pow2_t, j: nat, u: nat, view: loop_view): loop_view extern;
+
+function t_loop_inv(a: seq(uint16), d: pow2_t, view: loop_view): bool extern;
+function t_loop_end(a: seq(uint16), view: loop_view): bool extern;
+
+function s_loop_inv(a: seq(uint16), d: pow2_t, j: nat, bi: nat, view: loop_view): bool extern;
+function s_loop_inv_pre_lemma(a: seq(uint16), d: pow2_t, j: nat, t: pow2_t, u: nat, ot3:nat, t3: nat, t6: nat, s5: nat, view: loop_view): void extern;
+function s_loop_inv_post_lemma(a: seq(uint16), d: pow2_t, j: nat, u: nat, bi: nat, ot3: nat, t3: nat, t6: nat, view: loop_view): void extern;
+function s_loop_index_lemma(a: seq(uint16), d: pow2_t, j: nat, bi: nat, s4: nat, s2: nat, t4: nat, t5: nat, t6: nat, view: loop_view): (s: nat) extern;
+
+function s_loop_update(a: seq(uint16), a': seq(uint16), d: pow2_t, j: nat, bi: nat, s: nat, e: uint32, o: uint32, view: loop_view): bool extern;
+
+function s_loop_inv_peri_lemma(a: seq(uint16), a': seq(uint16), d: pow2_t, j: nat, bi: nat, s: nat, e: uint32, o: uint32, view: loop_view): void extern;
+
 procedure save_s0__r5()
     requires
         in_stack_addr_range(sp);
@@ -60,34 +77,6 @@ procedure save_s0__r5()
     let target := stack_push_batch(old(mem), old(flat), seq(s5, s4, s3, s2, s1, s0));
     assert top_frame(target.frames) == top_frame(mem.frames);
 }
-
-function mqmul(a: nat, b: nat): uint32 extern;
-
-function pow2_t_cons(n: nat, exp: nat): pow2_t extern;
-function j_loop_inv(a: seq(uint16), hcount: pow2_t, j: nat, u: nat, view: loop_view): bool extern;
-function j_loop_inv_pre_lemma(a: seq(uint16), hcount: pow2_t, view: loop_view): void extern;
-function j_loop_inv_post_lemma(a: seq(uint16), hcount: pow2_t, j: nat, u: nat, view: loop_view): loop_view extern;
-
-function t_loop_inv(a: seq(uint16), d: pow2_t, view: loop_view): bool extern;
-function t_loop_end(a: seq(uint16), view: loop_view): bool extern;
-
-function s_loop_inv(a: seq(uint16), d: pow2_t, j: nat, bi: nat, view: loop_view): bool extern;
-function s_loop_inv_pre_lemma(a: seq(uint16), d: pow2_t, j: nat, t: pow2_t, u: nat, ot3:nat, t3: nat, t6: nat, s5: nat, view: loop_view): void extern;
-function s_loop_inv_post_lemma(a: seq(uint16), d: pow2_t, j: nat, u: nat, bi: nat, ot3: nat, t3: nat, t6: nat, view: loop_view): void extern;
-// function s_loop_index_lemma(a: seq(uint16), d: pow2_t, j: nat, bi: nat, s2: nat, view: loop_view): (s: nat) extern;
-
-// function heap_b32_ptr_valid(heap: heap_t, base_ptr: nat): bool extern;
-
-function s_loop_index_lemma(a: seq(uint16),
-        d: pow2_t,
-        j: nat,
-        bi: nat,
-        s4: nat,
-        s2: nat,
-        t4: nat,
-        t5: nat,
-        t6: nat,
-        view: loop_view): (s: nat) extern;
 
 procedure s_loop(ghost iter_a: b16_iter,
     ghost t: pow2_t,
@@ -146,10 +135,31 @@ procedure s_loop(ghost iter_a: b16_iter,
 
     let s := s_loop_index_lemma(iter_a.buff, d, j, bi, s4, s2, t4, t5, t6, view);
 
-    lhu(t4, t4, 0, iter_a.(index := s));
-    lhu(t5, t5, 0, iter_a.(index := s + d.full));
+    lhu(a1, t5, 0, iter_a.(index := s + d.full)); // a[s + d]
 
-    assume false;
+    assert a1 == iter_a.buff[s + d.full];
+
+    mq_montymul();
+
+    assert a1 == montmul(iter_a.buff[s + d.full], s5);
+
+    lhu(a2, t4, 0, iter_a.(index := s)); // a[s]
+
+    assert a2 == iter_a.buff[s];
+
+    mq_sub();
+    let o := a3;
+    iter_a' := sh_next(a3, t5, 0, false, iter_a.(index := s + d.full));
+    // assert iter_a'.buff[s + d.full] == o;
+    
+    mq_add(); // a2 + a1
+    let e := a3;
+    iter_a' := sh_next(a3, t4, 0, false, iter_a'.(index := s));
+
+    // assert s_loop_update(iter_a.buff, iter_a'.buff, d, j, bi, s, e, o, view);
+    s_loop_inv_peri_lemma(iter_a.buff, iter_a'.buff, d, j, bi, s, e, o, view);
+
+    iter_a' := iter_a'.(index := 0);
 }
 
 procedure j_loop(ghost iter_a: b16_iter,

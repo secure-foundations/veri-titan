@@ -167,11 +167,11 @@ module mem {
     iter.(index := if inc then iter.index + 1 else iter.index)
   }
 
-  function b16_iter_store_next(iter: b16_iter, value: uint32, inc: bool): b16_iter
+  function b16_iter_store_next(iter: b16_iter, value: uint16, inc: bool): b16_iter
     requires iter.index < |iter.buff|
   {
       iter.(index := if inc then iter.index + 1 else iter.index)
-          .(buff := iter.buff[iter.index := bv32_ops.lh(value)])
+          .(buff := iter.buff[iter.index := value])
   }
 
   predicate b16_iter_inv(iter: b16_iter, heap: heap_t, ptr: nat)
@@ -195,7 +195,7 @@ module mem {
     && iter.index < |iter.buff|
   }
 
-  function {:opaque} heap_b16_write(heap: heap_t, b16_it: b16_iter, value: uint32): (heap': heap_t)
+  function {:opaque} heap_b16_write(heap: heap_t, b16_it: b16_iter, value: uint16): (heap': heap_t)
     requires b16_iter_safe(b16_it, heap, b16_it.cur_ptr())
     ensures b16_it.base_ptr in heap';
     ensures heap'[b16_it.base_ptr].B32?;
@@ -209,8 +209,8 @@ module mem {
     reveal b32_as_b16();
     var b32_it := b16_iter_as_b32_iter(b16_it);
     var old_full := b32_it.buff[b32_it.index];
-    var new_lo := if b16_it.index % 2 == 0 then bv32_ops.lh(value) else bv32_ops.lh(old_full);
-    var new_hi := if b16_it.index % 2 == 0 then bv32_ops.uh(old_full) else bv32_ops.lh(value);
+    var new_lo := if b16_it.index % 2 == 0 then value else bv32_ops.lh(old_full);
+    var new_hi := if b16_it.index % 2 == 0 then bv32_ops.uh(old_full) else value;
     var new_v := bv32_ops.half_combine(new_lo, new_hi);
     heap_b32_write(heap, b32_it, new_v)
   }

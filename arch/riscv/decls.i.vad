@@ -42,6 +42,7 @@ function power(b: int, e: nat) : nat extern;
 function cong(a: int, b: int, n: int) : bool extern;
 function cong_B32(a: int, b: int): bool extern;
 
+const BASE_16:  nat extern;
 const BASE_32:  nat extern;
 const BASE_64:  nat extern;
 const BASE_128: nat extern;
@@ -405,12 +406,13 @@ function heap_b16_write(heap: heap_t, b16_it: b16_iter, value: uint32): (heap': 
 procedure sh(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: b16_iter)
     {:instruction Ins32(RV_SH(rs2, base, offset))}
     requires
+        rs2 < BASE_16;
         b16_iter_safe(iter, heap, base + offset);
         offset < 4096;
     modifies
         heap;
     ensures
-        heap == heap_b16_write(old(heap), iter, rs2);
+        heap == heap_b16_write(old(heap), iter, old(rs2));
 {
     assume false;
 }
@@ -421,13 +423,14 @@ procedure sh_next(in rs2: reg32, in base: reg32, in offset: imm32, ghost inc: bo
     returns (ghost next_iter: b16_iter)
 
     requires
+        rs2 < BASE_16;
         b16_iter_safe(iter, heap, base + offset);
         offset < 4096;
     modifies
         heap;
     ensures
-        heap == heap_b16_write(old(heap), iter, rs2);
-        next_iter == b16_iter_store_next(iter, rs2, inc);
+        heap == heap_b16_write(old(heap), iter, old(rs2));
+        next_iter == b16_iter_store_next(iter, old(rs2), inc);
         b16_iter_inv(next_iter, heap,
             if inc then base + offset + 2 else base + offset);
 {

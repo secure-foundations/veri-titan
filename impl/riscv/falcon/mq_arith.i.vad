@@ -14,6 +14,8 @@ import opened rv_vale
 import opened bv32_ops
 import opened bv32_falcon_lemmas
 import opened pows_of_2
+import opened ntt_polys
+import opened nth_root
 
 #endverbatim
 
@@ -68,6 +70,58 @@ procedure p2_double(inout dst: reg32, ghost p: pow2_t)
     ls1_is_double(old(dst));
 }
 
+function montmul(a: nat, b: nat): uint32 extern;
+function mqmul(a: nat, b: nat): uint32 extern;
+function mqsub(a: nat, b: nat): uint32 extern;
+function mqadd(a: nat, b: nat): uint32 extern;
+
+procedure mq_montymul()
+    requires
+        a0 == 12289;
+        a1 < 12289;
+        s5 < 12289;
+    reads
+        s5;
+    modifies
+        a1; a2; a3; a4;
+    
+    ensures
+        a1 == montmul(old(a1), old(s5));
+{
+    // mul(a1, s5);
+    assume false;
+}
+
+procedure mq_sub()
+    requires
+        a0 == 12289;
+        a1 < 12289;
+        a2 < 12289;
+    reads
+        a1; a2;
+    modifies
+        a3; a4;
+    ensures
+        a3 == mqsub(old(a2), old(a1));
+{
+    assume false;
+}
+
+procedure mq_add()
+    requires
+        a0 == 12289;
+        a1 < 12289;
+        a2 < 12289;
+    reads
+        a1; a2;
+    modifies
+        a3; a4;
+    ensures
+      a3 == mqadd(old(a2), old(a1));
+{
+    assume false;
+}
+
 ghost procedure lemma_mq_add_correct(
     ghost d: uint32,
     ghost b: uint32,
@@ -92,94 +146,94 @@ ghost procedure lemma_mq_rshift1_correct(
     ghost r: uint32,
     ghost x: nat) extern;
 
-procedure mq_add() returns (ghost r: uint32)
-    {:noInline}
-    requires
-        a0 < 12289;
-        a1 < 12289;
-    modifies
-        a0; a1; a5;
-    ensures
-      r == a0;
-      r == (old(a0) + old(a1)) % 12289;
-{
-    ghost var Q: int := 12289;
-    ghost var x: nat := a0;
-    ghost var y: nat := a1;
+// procedure mq_add() returns (ghost r: uint32)
+//     {:noInline}
+//     requires
+//         a0 < 12289;
+//         a1 < 12289;
+//     modifies
+//         a0; a1; a5;
+//     ensures
+//       r == a0;
+//       r == (old(a0) + old(a1)) % 12289;
+// {
+//     ghost var Q: int := 12289;
+//     ghost var x: nat := a0;
+//     ghost var y: nat := a1;
 
-    // load -12289 into a5
-    li(a5, 0xffffcfff);
-    assert to_int32(a5) == (-Q);
-    let negQ := to_int32(a5);
+//     // load -12289 into a5
+//     li(a5, 0xffffcfff);
+//     assert to_int32(a5) == (-Q);
+//     let negQ := to_int32(a5);
 
-    // a1 = y - Q
-    add(a1, a1, a5);
-    assert a1 == uint32_add(to_uint32(y), to_uint32(negQ));
+//     // a1 = y - Q
+//     add(a1, a1, a5);
+//     assert a1 == uint32_add(to_uint32(y), to_uint32(negQ));
 
-    // a1 = y - Q + x
-    add(a1, a1, a0);
-    assert a1 == uint32_add(to_uint32(x), uint32_add(to_uint32(y), to_uint32(negQ)));
-    ghost var d := a1;
+//     // a1 = y - Q + x
+//     add(a1, a1, a0);
+//     assert a1 == uint32_add(to_uint32(x), uint32_add(to_uint32(y), to_uint32(negQ)));
+//     ghost var d := a1;
 
-    // lui(a5, 0x3);
-    // addi(a5, a5, 1);
-    li(a5, 0x3001); // 12289
-    assert a5 == Q;
+//     // lui(a5, 0x3);
+//     // addi(a5, a5, 1);
+//     li(a5, 0x3001); // 12289
+//     assert a5 == Q;
 
-    // a1 = d
-    // a0 = d >> 31
-    srai(a0, a1, 0x1f); // 31
-    ghost var b := a0;
+//     // a1 = d
+//     // a0 = d >> 31
+//     srai(a0, a1, 0x1f); // 31
+//     ghost var b := a0;
 
-    // a0 = (Q & -(d >> 31)) + d
-    and(a0, a0, a5);
+//     // a0 = (Q & -(d >> 31)) + d
+//     and(a0, a0, a5);
     
-    // c == b & Q
-    ghost var c := uint32_and(b, to_uint32(Q));
-    assert c == a0;
+//     // c == b & Q
+//     ghost var c := uint32_and(b, to_uint32(Q));
+//     assert c == a0;
    
-    add(a0, a0, a1);
-    r := a0;
+//     add(a0, a0, a1);
+//     r := a0;
     
-    lemma_mq_add_correct(d, b, c, r, x, y);
-}
+//     lemma_mq_add_correct(d, b, c, r, x, y);
+// }
     
-procedure mq_sub() returns (ghost r: uint32)
-    {:noInline}
-    requires
-        a0 < 12289;
-        a1 < 12289;
-    modifies
-        a0; a1; a5;
-    ensures
-      r == a0;
-      r == (old(a0) - old(a1)) % 12289;
-{
-    ghost var Q: int := 12289;
-    ghost var x: nat := a0;
-    ghost var y: nat := a1;
+// procedure mq_sub() returns (ghost r: uint32)
+//     {:noInline}
+//     requires
+//         a0 < 12289;
+//         a1 < 12289;
+//     modifies
+//         a0; a1; a5;
+//     ensures
+//       r == a0;
+//       r == (old(a0) - old(a1)) % 12289;
+// {
+//     ghost var Q: int := 12289;
+//     ghost var x: nat := a0;
+//     ghost var y: nat := a1;
     
-    // a1 == x - y;
-    sub(a1, a0, a1);
-    ghost var d := a1;
+//     // a1 == x - y;
+//     sub(a1, a0, a1);
+//     ghost var d := a1;
     
-    // lui(a5, 0x3);
-    // addi(a5, a5, 1)
-    li(a5, 0x3001);
-    assert a5 == Q;
+//     // lui(a5, 0x3);
+//     // addi(a5, a5, 1)
+//     li(a5, 0x3001);
+//     assert a5 == Q;
 
-    srai(a0, a1, 0x1f);
-    ghost var b := a0;
+//     srai(a0, a1, 0x1f);
+//     ghost var b := a0;
 
-    and(a0, a0, a5);
-    ghost var c := uint32_and(b, to_uint32(Q));
-    assert c == a0;
+//     and(a0, a0, a5);
+//     ghost var c := uint32_and(b, to_uint32(Q));
+//     assert c == a0;
 
-    add(a0, a0, a1);
-    r := a0;
+//     add(a0, a0, a1);
+//     r := a0;
     
-    lemma_mq_sub_correct(d, b, c, r, x, y);
-}
+//     lemma_mq_sub_correct(d, b, c, r, x, y);
+// }
     
 procedure mq_rshift1() returns (ghost r: uint32)
     {:noInline}
