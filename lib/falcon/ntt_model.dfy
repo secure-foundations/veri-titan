@@ -64,6 +64,25 @@ module ntt_model {
         }
     }
 
+    lemma t_loop_inv_post_lemma(a: n_sized, one: pow2_t)
+        requires one.exp == 0;
+        requires t_loop_inv(a, one);
+        ensures points_eval_inv(a, A(), x_value, one);
+    {
+        reveal t_loop_inv();
+        var sz := block_size(one);
+        var points := level_points_view(a, sz);
+        var polys := level_polys(sz);
+        Nth_root_lemma();
+        pow2_basics(one);
+        assert one.full == 1;
+        assert sz == N;
+        assert points[0] == a;
+
+        assert polys[0] == A() by {
+            reveal level_polys();
+        }
+    }
 
     datatype loop_view = loop_view(
         lower: seq<seq<elem>>, // lower polys

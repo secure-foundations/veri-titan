@@ -106,6 +106,7 @@ abstract module ntt_impl {
         requires N == pow2_t_cons(512, 9);
         requires a == A();
         requires p == rev_mixed_powers_mont_table();
+        ensures points_eval_inv(a', A(), x_value, pow2(0));
     {
         var d := pow2(9);
 
@@ -128,5 +129,7 @@ abstract module ntt_impl {
             a' := t_loop(a', p, t, d);
             t := pow2_double(t);
         }
+    
+        t_loop_inv_post_lemma(a', d);
     }
 }
