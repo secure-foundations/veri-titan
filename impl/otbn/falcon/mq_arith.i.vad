@@ -3,6 +3,7 @@ include "../../../arch/otbn/decls.i.vad"
 #verbatim
 
 include "../../../arch/otbn/decls.i.dfy"
+include "../../../../lib/bv256_ntt_lemmas.i.dfy"
 
 module mq_arith {
 
@@ -13,17 +14,20 @@ import opened ot_vale
 
 import opened integers
 import opened bv256_ops
+import opened bv256_ntt_lemmas
 
 #endverbatim
     
 function mod(a: int, n: int): int extern;
 ghost procedure addm_correct_lemma(ghost x: uint256, ghost y: uint256, ghost mod: uint256) extern;
+ghost procedure subm_correct_lemma(ghost x: uint256, ghost y: uint256, ghost mod: uint256) extern;
     
 procedure mq_add()
     {:noInline}
     requires
         w0 < wmod;
         w1 < wmod;
+        wmod == NTT_PRIME;
     reads
         wmod;
     modifies
@@ -36,6 +40,26 @@ procedure mq_add()
 
     bn_addm(w0, w0, w1);
     addm_correct_lemma(x, y, wmod);
+}
+    
+procedure mq_sub()
+    {:noInline}
+    requires
+        w0 < wmod;
+        w1 < wmod;
+        wmod == NTT_PRIME;
+    reads
+        wmod;
+    modifies
+        w0; w1;
+    ensures
+      w0 == mod(old(w0) - old(w1), old(wmod));
+{
+    ghost var x := w0;
+    ghost var y := w1;
+
+    bn_subm(w0, w0, w1);
+    subm_correct_lemma(x, y, wmod);
 }
 
 #verbatim

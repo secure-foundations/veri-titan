@@ -77,11 +77,13 @@ We assume the following packages are installed by the user:
 
 [`python`](https://www.python.org/) >= 3.0
 
-We also assume some otbn tools are available:
+We assume some otbn tools are available:
 
 [`otbn-as`](https://github.com/lowRISC/opentitan/tree/master/hw/ip/otbn/util)
 
 [`otbn-ld`](https://github.com/lowRISC/opentitan/tree/master/hw/ip/otbn/util)
+
+We also assume the [`Singular`](https://www.singular.uni-kl.de/) tool is installed, which is used by the custom version of the Dafny language installed by our builds script.
 
 Finally, you will need all the Vale dependencies listed
 [here](https://github.com/project-everest/vale/blob/otbn-custom/INSTALL.md#building-vale-from-source).
