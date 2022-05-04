@@ -19,10 +19,12 @@ module bv32_falcon_lemmas {
     import opened mem
     import flat
 
-    import opened ntt_model
+	import opened pows_of_2
+    import opened ntt_index
+	import opened mq_polys
+	import opened poly_view
     import opened nth_root
-    import opened pows_of_2
-  	import opened ntt_polys
+    import opened ntt_model
 
     predicate fvar_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int)
     {
@@ -31,12 +33,6 @@ module bv32_falcon_lemmas {
         && |iter.buff| == N.full
         && buff_is_nsized(iter.buff)
     }
-
-    // lemma fvar_iter_index_bound(heap: heap_t, iter: b16_iter, address: int, index: int)
-    //     requires fvar_iter_inv(heap, iter, address: int, index: int)
-    // {
-
-    // }
 
     predicate {:opaque} buff_is_nsized(a: seq<uint16>)
     {
@@ -209,7 +205,15 @@ module bv32_falcon_lemmas {
         }
     }
 
-    predicate s_loop_update(a: seq<uint16>, a': seq<uint16>, d: pow2_t, j: nat, bi: nat, s: nat, e: uint32, o: uint32, view: loop_view)
+    predicate s_loop_update(a: seq<uint16>,
+        a': seq<uint16>,
+        d: pow2_t,
+        j: nat,
+        bi: nat,
+        s: nat,
+        e: uint32,
+        o: uint32,
+        view: loop_view)
         requires s_loop_inv(a, d, j, bi, view);
         requires bi < d.full
     {
@@ -255,10 +259,17 @@ module bv32_falcon_lemmas {
         s := view. higher_points_view_index_lemma(buff_as_nsized(a), d, j, bi);
     }
 
-    predicate t_loop_inv(a: seq<uint16>, d: pow2_t, view: loop_view)
+    predicate rv_t_loop_inv(a: seq<uint16>, d: pow2_t)
+        requires 0 <= d.exp <= N.exp;
     {
         && buff_is_nsized(a)
-        && view.t_loop_inv(buff_as_nsized(a), d)
+        && t_loop_inv(buff_as_nsized(a), d)
+    }
+
+    predicate rv_ntt_eval_all(a: seq<uint16>)
+    {
+        && buff_is_nsized(a)
+        && ntt_eval_all(buff_as_nsized(a))
     }
 
     predicate j_loop_inv(a: seq<uint16>, d: pow2_t, j: nat, u: nat, view: loop_view)
@@ -269,30 +280,25 @@ module bv32_falcon_lemmas {
     }
 
     lemma j_loop_inv_pre_lemma(a: seq<uint16>, d: pow2_t, view: loop_view)
-        requires t_loop_inv(a, d, view);
+        requires 0 <= d.exp < N.exp;
+        requires rv_t_loop_inv(a, pow2_double(d));
+        requires view.loop_view_wf();
+        requires view.hsize == block_size(d);
         ensures j_loop_inv(a, d, 0, 0, view);
     {
         view.j_loop_inv_pre_lemma(buff_as_nsized(a), d);
     }
 
     lemma j_loop_inv_post_lemma(a: seq<uint16>, d: pow2_t, j: nat, u: nat, view: loop_view)
-        returns (v': loop_view)
     
         requires j_loop_inv(a, d, j, u, view);
         requires j == lsize(view).full;
         requires 0 <= view.hsize.exp <= N.exp;
+        requires view.hsize == block_size(d);
 
-        ensures v' == view.next_t_loop_view(d);
-        ensures view.hsize.exp < N.exp ==> t_loop_inv(a, pow2_half(d), v');
-        ensures view.hsize.exp == N.exp ==> t_loop_end(a, v');
+        ensures t_loop_inv(a, d);
     {
-        v' := view.j_loop_inv_post_lemma(a, d, j);
-    }
-
-    predicate t_loop_end(a: seq<uint16>, view: loop_view)
-    {
-        && buff_is_nsized(a)
-        && view.t_loop_end(buff_as_nsized(a))
+        view.j_loop_inv_post_lemma(a, d, j);
     }
 
     lemma lemma_rs_by_31(x: int32)
@@ -311,7 +317,6 @@ module bv32_falcon_lemmas {
         }
       }
     }
-
 
     lemma lemma_mq_add_correct(d: uint32, b: uint32, c: uint32, r: uint32, x: int, y: int)
         requires 0 <= x < 12289;
@@ -434,5 +439,4 @@ module bv32_falcon_lemmas {
          assert IsModEquivalent(2 * r, x + Q, Q);
        }
      }
-
 }

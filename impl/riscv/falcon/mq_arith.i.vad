@@ -14,7 +14,7 @@ import opened rv_vale
 import opened bv32_ops
 import opened bv32_falcon_lemmas
 import opened pows_of_2
-import opened ntt_polys
+import opened mq_polys
 import opened nth_root
 
 #endverbatim

@@ -64,10 +64,15 @@ module ntt_model {
         }
     }
 
+    predicate ntt_eval_all(a: n_sized)
+    {
+        points_eval_inv(a, A(), x_value, pow2(0))
+    }
+
     lemma t_loop_inv_post_lemma(a: n_sized, one: pow2_t)
         requires one.exp == 0;
         requires t_loop_inv(a, one);
-        ensures points_eval_inv(a, A(), x_value, one);
+        ensures ntt_eval_all(a);
     {
         reveal t_loop_inv();
         var sz := block_size(one);

@@ -66,7 +66,6 @@ abstract module ntt_impl {
         requires 0 <= d.exp < N.exp;
         requires t_loop_inv(a, pow2_double(d));
         requires p == rev_mixed_powers_mont_table();
-        requires t.exp < N.exp;
         requires t == block_size(pow2_double(d));
 
         ensures t_loop_inv(a', d);
