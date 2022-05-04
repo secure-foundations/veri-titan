@@ -38,10 +38,10 @@ rule dll-run
     command = dotnet $in > $out
 
 rule otbn-as
-    command = otbn-as $in -o $out
+    command = otbn_as.py $in -o $out
 
 rule otbn-ld
-    command = otbn-ld $in -o $out
+    command = otbn_ld.py $in -o $out
 """
 
 OTBN_ASM_PATH = "gen/otbn_modexp.s"
@@ -161,17 +161,17 @@ def setup_tools():
     else:
         print("[INFO] fsharpc (Vale dependency) found")
 
-    path = subprocess_run("which otbn-as")
-    if "otbn-as" not in path:
-        print("[WARN] otbn-as not found")
+    path = subprocess_run("which otbn_as.py")
+    if "otbn_as.py" not in path:
+        print("[WARN] otbn_as.py not found")
     else:
-        print("[INFO] otbn-as found")
+        print("[INFO] otbn_as.py found")
 
-    path = subprocess_run("which otbn-ld")
-    if "otbn-ld" not in path:
-        print("[WARN] otbn-ld not found")
+    path = subprocess_run("which otbn_ld.py")
+    if "otbn_ld.py" not in path:
+        print("[WARN] otbn_ld.py not found")
     else:
-        print("[INFO] otbn-ld found")
+        print("[INFO] otbn_ld.py found")
 
     while 1:
         print("confirm dependecies are installed [y/n] ", end='')
