@@ -79,9 +79,9 @@ We assume the following packages are installed by the user:
 
 We assume some otbn tools are available:
 
-[`otbn-as`](https://github.com/lowRISC/opentitan/tree/master/hw/ip/otbn/util)
+[`otbn_as.py`](https://github.com/lowRISC/opentitan/tree/master/hw/ip/otbn/util)
 
-[`otbn-ld`](https://github.com/lowRISC/opentitan/tree/master/hw/ip/otbn/util)
+[`otbn_ld.py`](https://github.com/lowRISC/opentitan/tree/master/hw/ip/otbn/util)
 
 We also assume the [`Singular`](https://www.singular.uni-kl.de/) tool is installed, which is used by the custom version of the Dafny language installed by our builds script.
 
