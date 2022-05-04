@@ -1,6 +1,6 @@
-include "../mulntt_ct/nth_root.dfy"
+include "nth_root.dfy"
 
-abstract module innt_model {
+abstract module intt_model {
     import opened Seq
     import opened Power
     import opened Power2
@@ -632,7 +632,7 @@ abstract module innt_model {
                 }
                 (Q - x_e) % Q;
                 {
-                    assume x_e != 0;
+                    LemmaSmallMod(Q - x_e, Q);
                 }
                 Q - x_e;
             }

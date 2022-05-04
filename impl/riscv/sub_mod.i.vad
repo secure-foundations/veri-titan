@@ -179,7 +179,7 @@ procedure sub_mod(
         
         let carry_sub := a5;
 
-        let iter_a'_next := sw_next(a3, a0, 0, iter_a');
+        let iter_a'_next := sw_next(a3, a0, 0, true, iter_a');
 
         addi(a0, a0, 4); // increment a pointer
         sub(a5, a4, a5); // subtract underflow carry from upper half of A

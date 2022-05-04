@@ -28,20 +28,23 @@ class ForwardNTT(NTTConsts):
         assert len(block) == len(poly)
         self.check_prefix_block(block, poly, len(poly), d)
 
-    def check_t_loop_inv(self, a, d):
+    def check_t_loop_inv(self, a):
         if self.disable_checks:
             return
 
-        lgd = log2(d)
+        # current level has d blocks
+        print(self.d)
+        lgd = log2(self.d)
         polys = self.level_polys[lgd]
-        blocks = self.read_as_blocks(a, d)
-        for i in range(d):
-            self.check_block(blocks[i], polys[bit_rev_int(i, lgd)], d)
+        print(len(polys))
+        blocks = self.read_as_blocks(a, self.d)
+        for i in range(self.d):
+            self.check_block(blocks[i], polys[bit_rev_int(i, lgd)], self.d)
         
-    def check_j_loop_inv(self, a, d, j):
+    def check_j_loop_inv(self, a, j):
         if self.disable_checks:
             return
-
+        d = self.d
         lgd = log2(d)
         polys = self.level_polys[lgd]
         blocks = self.read_as_blocks(a, d)
@@ -60,9 +63,10 @@ class ForwardNTT(NTTConsts):
         for i in range(d * 2):
             self.check_suffix_block(s_blocks[i], s_polys[bit_rev_int(i, s_lgd)], j, s_d)
 
-    def check_s_loop_inv(self, a, d, j, bi):
+    def check_s_loop_inv(self, a, j, bi):
         if self.disable_checks:
             return
+        d = self.d
         lgd = log2(d)
         polys = self.level_polys[lgd]
         blocks = self.read_as_blocks(a, d)
@@ -109,25 +113,25 @@ class ForwardNTT(NTTConsts):
         assert len(a) == self.N
         self.level_polys = build_level_polys(poly)
 
-        d = self.N
+        self.d = self.N
         t = 1
 
         while t < self.N:
-            self.check_t_loop_inv(a, d)
+            self.check_t_loop_inv(a)
 
-            d = int(d / 2)
+            self.d = int(self.d / 2)
 
-            lgd = log2(d)
-            lgt = self.LOGN - lgd - 1
+            # lgd = log2(d)
+            # lgt = self.LOGN - lgd - 1
 
             # assert (d * 2 * t == self.N)
             # assert (lgt == log2(t))
 
             for j in range(t):
-                self.check_j_loop_inv(a, d, j)
+                self.check_j_loop_inv(a, j)
         
                 w = p[t + j]
-                u = 2 * d * j
+                u = 2 * self.d * j
                 # assert w == self.x_value(2*j, d)
                 # w_r = (w * self.R) % self.Q
 
@@ -138,13 +142,13 @@ class ForwardNTT(NTTConsts):
                 # assert x_o == self.Q - w
                 # assert (x_e * x_e) % self.Q == (x_o * x_o) % self.Q == x_value(j, d * 2)
 
-                for s in range(u, u + d):
-                    self.check_s_loop_inv(a, d, j, s-u)
+                for s in range(u, u + self.d):
+                    self.check_s_loop_inv(a, j, s-u)
 
-                    e, o = a[s], a[s + d]
+                    e, o = a[s], a[s + self.d]
 
                     x = self.montmul(o, w)
-                    a[s + d] = (e - x) % self.Q
+                    a[s + self.d] = (e - x) % self.Q
                     a[s] = (e + x) % self.Q
 
                     # x = (pow(OMEGA, d * bit_rev_int(2*j, lgt+1), Q) * pow(PSI, d, Q)) % Q
@@ -161,11 +165,11 @@ class ForwardNTT(NTTConsts):
                     # assert dev == a[s]
                     # assert dov == a[s+d]
     
-                    self.check_s_loop_inv(a, d, j, s-u+1)
-                self.check_j_loop_inv(a, d, j+1)
+                    self.check_s_loop_inv(a, j, s-u+1)
+                self.check_j_loop_inv(a, j+1)
 
             # d is already updated
-            self.check_t_loop_inv(a, d)
+            self.check_t_loop_inv(a)
             t = t * 2
         return a
 
@@ -177,7 +181,15 @@ class ForwardNTT(NTTConsts):
 
 if __name__ == "__main__":
     Q = 12289
-    fntt16 = ForwardNTT(16, Q, 16)
-    poly = ModQPoly([1371,8801,5676,4025,3388,10753,6940,10684,10682,2458,679,11161,3648,5512,10142,10189], Q)
-    points = fntt16.mulntt_ct_std2rev(poly)
-    fntt16.check_forward_ntt(poly, points)
+    BITS = 16
+
+    # fntt16 = ForwardNTT(16, Q, 16)
+    # poly = ModQPoly([1371,8801,5676,4025,3388,10753,6940,10684,10682,2458,679,11161,3648,5512,10142,10189], Q)
+    # points = fntt16.mulntt_ct_std2rev(poly)
+    # fntt16.check_forward_ntt(poly, points)
+
+    N = 512
+    poly1 = generate_random_poly(N, Q)
+    fntt = ForwardNTT(N, Q, BITS)
+    points1 = fntt.mulntt_ct_std2rev(poly1)
+    print(pow(fntt.PSI, 512, Q))

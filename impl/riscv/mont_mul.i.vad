@@ -107,7 +107,7 @@ procedure mm_clear(ghost iter_c: iter_t)
         decreases
             s4 - s1;
     {
-        iter_c := sw_next(x0, s1, 0, iter_c);
+        iter_c := sw_next(x0, s1, 0, true, iter_c);
         addi(s1, s1, 4);
     }
     next_iter_c := iter_c.(index := 0);

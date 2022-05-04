@@ -348,7 +348,7 @@ procedure mma_loop(
     // assert next_B.full == d0 * iter_n.buff[i] + next_A.lh + B.uh;
 
     // c[i-1] <- B(lh) -- store to c
-    let next_iter_c := sw_next(a0, s3, 0, vars.iter_c);
+    let next_iter_c := sw_next(a0, s3, 0, true, vars.iter_c);
     assert next_iter_c.buff[j-1] == next_B.lh;
 
     // s2 <- n[i] -- increment pointer to n
@@ -424,7 +424,7 @@ procedure mma_post_loop(
 
     // ghost var next_iter_c := vars.iter_c;
 
-    next_iter_c := sw_next(s0, s3, 0, vars.iter_c);
+    next_iter_c := sw_next(s0, s3, 0, true, vars.iter_c);
 
     ghost var bout: uint1 := if s0 < s1 then 1 else 0;
     ghost var presub_c := next_iter_c.buff;

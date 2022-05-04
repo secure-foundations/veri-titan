@@ -29,6 +29,7 @@ type nat:     Type(0) := int_range(0, _);
 type uint1:   Type(0) := int_range(0, 1);
 type uint2:   Type(0) := int_range(0, 3);
 type uint5:   Type(0) := int_range(0, 31);
+type uint16:  Type(0) := int_range(0, 0xffff);
 type uint32:  Type(0) := int_range(0, 0xffffffff);
 type uint64:  Type(0) := int_range(0, 0xffffffff_ffffffff);
 type uint128: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff);
@@ -41,13 +42,13 @@ function power(b: int, e: nat) : nat extern;
 function cong(a: int, b: int, n: int) : bool extern;
 function cong_B32(a: int, b: int): bool extern;
 
-const BASE_32:   nat extern;
-const BASE_64:   nat extern;
-const BASE_128:  nat extern;
-const BASE_256:  nat extern;
-const BASE_512:  nat extern;
-const NUM_WORDS: nat extern;
-const NTT_PRIME: nat extern;
+const BASE_16:  nat extern;
+const BASE_32:  nat extern;
+const BASE_64:  nat extern;
+const BASE_128: nat extern;
+const BASE_256: nat extern;
+const BASE_512: nat extern;
+const NUM_WORDS:nat extern;
 
 const BASE_31:  int extern;
 const BASE_63:  int extern;
@@ -104,6 +105,7 @@ type mem_t: Type(0) extern;
 var mem: mem_t {:state mem()};
 function operator(.frames) (m: mem_t): frames_t extern;
 function operator(.heap) (m: mem_t): heap_t extern;
+function operator(.heap := ) (m: mem_t, h: heap_t): mem_t extern;
 function read_top_frame(fs: mem_t): seq(uint32) extern;
 
 function in_stack_addr_range(addr: int): bool extern;
@@ -152,6 +154,8 @@ function operator(.R_INV) (rsa: rsa_params): nat extern;
 function rsa_params_inv(rsa: rsa_params): bool extern;
 
 function mvar_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int, value: int): bool extern;
+
+var symbols: map(string, uint32) {:state symbols()};
 
 type string: Type(0) extern;
 
@@ -320,6 +324,21 @@ procedure lw_stack(inout dst: reg32, in offset: imm32)
     assume false;
 }
 
+function load_symbol(mem: mem_t, name: string): uint16 extern;
+
+procedure lw_symbol(inout rd: reg32, inline name: string)
+    {:instruction Ins32(RV_LA(rd, name))}
+    requires
+        symbols?[name];
+    reads
+        mem;
+    ensures
+        mem == old(mem);
+        rd == load_symbol(mem, name);
+{
+    assume false;
+}
+
 procedure lw(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
     {:instruction Ins32(RV_LW(dst, src1, src2))}
     requires
@@ -333,6 +352,90 @@ procedure lw(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_
         dst == heap[iter.base_ptr].b32[iter.index];
 {
     assume false;
+}
+
+type b16_iter: Type(0) extern;
+function b16_iter_inv(iter: b16_iter, h: heap_t, ptr: int): bool extern;
+function b16_iter_safe(iter: b16_iter, h: heap_t, ptr: int): bool extern;
+function b16_iter_cons(base_ptr: int, index: nat, buff: seq(uint16)): b16_iter extern;
+function b16_iter_load_next(iter: b16_iter, inc: bool): b16_iter extern;
+// function b16_iter_store_next(iter: iter_t, value: uint32, inc: bool): iter_t extern;
+function operator(.base_ptr) (iter: b16_iter): int extern;
+function operator(.index) (iter: b16_iter): int extern;
+function operator(.index := ) (iter: b16_iter, i :int): b16_iter extern;
+function operator(.buff) (iter: b16_iter): seq(uint16) extern;
+function operator(.buff := ) (iter: b16_iter, buff: seq(uint16)): b16_iter extern;
+
+procedure lhu(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: b16_iter)
+    {:instruction Ins32(RV_LHU(dst, src1, src2))}
+    requires
+        src2 < 4096; // 12-bit
+        b16_iter_safe(iter, heap, src1 + src2);
+    reads
+        heap;
+    ensures
+        heap == old(heap);
+        dst == iter.buff[iter.index];
+{
+    assume false;
+}
+
+function lh(x: uint32): uint32 extern;
+function uh(x: uint32): uint32 extern;
+
+procedure lhu_next(inout dst: reg32, in src1: reg32, in src2: imm32, ghost inc: bool, ghost iter: b16_iter)
+    returns (ghost next_iter: b16_iter)
+
+    requires
+        src2 < 4096; // 12-bit
+        b16_iter_safe(iter, heap, src1 + src2);
+    reads
+        heap;
+    ensures
+        dst == iter.buff[iter.index];
+        next_iter == b16_iter_load_next(iter, inc);
+        b16_iter_inv(next_iter, heap,
+            if inc then old(src1) + old(src2) + 2 else old(src1) + old(src2));
+{
+    next_iter := b16_iter_load_next(iter, inc);
+    lhu(dst, src1, src2, iter);
+}
+
+function heap_b16_write(heap: heap_t, b16_it: b16_iter, value: uint32): (heap': heap_t) extern;
+
+procedure sh(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: b16_iter)
+    {:instruction Ins32(RV_SH(rs2, base, offset))}
+    requires
+        rs2 < BASE_16;
+        b16_iter_safe(iter, heap, base + offset);
+        offset < 4096;
+    modifies
+        heap;
+    ensures
+        heap == heap_b16_write(old(heap), iter, old(rs2));
+{
+    assume false;
+}
+
+function b16_iter_store_next(iter: b16_iter, value: uint32, inc: bool): b16_iter extern;
+
+procedure sh_next(in rs2: reg32, in base: reg32, in offset: imm32, ghost inc: bool, ghost iter: b16_iter)
+    returns (ghost next_iter: b16_iter)
+
+    requires
+        rs2 < BASE_16;
+        b16_iter_safe(iter, heap, base + offset);
+        offset < 4096;
+    modifies
+        heap;
+    ensures
+        heap == heap_b16_write(old(heap), iter, old(rs2));
+        next_iter == b16_iter_store_next(iter, old(rs2), inc);
+        b16_iter_inv(next_iter, heap,
+            if inc then base + offset + 2 else base + offset);
+{
+    next_iter := b16_iter_store_next(iter, rs2, inc);
+    sh(rs2, base, offset, iter);
 }
 
 procedure lw_next(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: iter_t)
@@ -380,12 +483,11 @@ procedure sw(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: iter_t
         heap;
     ensures
         heap == heap_b32_write(old(heap), iter, rs2);
-        iter_safe(b32_iter_store_next(iter, rs2, false), heap, base + offset);
 {
     assume false;
 }
 
-procedure sw_next(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: iter_t)
+procedure sw_next(in rs2: reg32, in base: reg32, in offset: imm32, ghost inc: bool, ghost iter: iter_t)
     returns (ghost next_iter: iter_t)
     requires
         iter_safe(iter, heap, base + offset);
@@ -394,10 +496,11 @@ procedure sw_next(in rs2: reg32, in base: reg32, in offset: imm32, ghost iter: i
         heap;
     ensures
         heap == heap_b32_write(old(heap), iter, rs2);
-        next_iter == b32_iter_store_next(iter, rs2, true);
-        iter_inv(next_iter, heap, base + offset + 4);
+        next_iter == b32_iter_store_next(iter, rs2, inc);
+        iter_inv(next_iter, heap,
+            if inc then base + offset + 4 else base + offset);
 {
-    next_iter := b32_iter_store_next(iter, rs2, true);
+    next_iter := b32_iter_store_next(iter, rs2, inc);
     sw(rs2, base, offset, iter);
 }
 
@@ -490,6 +593,17 @@ procedure sub(inout dst: reg32, in src1: reg32, in src2: reg32)
     {:instruction Ins32(RV_SUB(dst, src1, src2))}
     ensures
         dst == uint32_sub(old(src1), old(src2));
+{
+    assume false;
+}
+
+procedure slli(inout dst: reg32, in src1: reg32, inline src2: uint32)
+    {:instruction Ins32(RV_SLLI(dst, src1, src2))}
+    requires
+        0 <= src2 <= 31;
+    ensures
+        // left shift src1 by amount in lowest 5 bits of src2
+        dst == uint32_ls(old(src1), src2);
 {
     assume false;
 }

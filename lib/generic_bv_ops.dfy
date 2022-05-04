@@ -184,6 +184,40 @@ abstract module generic_bv_ops
         x / HW_BASE()
     }
 
+    function method {:opaque} half_combine(lo: uint, hi: uint): (x: uint)
+        requires lo < HW_BASE();
+        requires hi < HW_BASE();
+        ensures x == lo + hi * HW_BASE();
+        ensures lh(x) == lo;
+        ensures uh(x) == hi;
+    {
+        Mul.LemmaMulNonnegative(hi, HW_BASE());
+        var temp:int := lo + hi * HW_BASE();
+        assert temp < BASE() by {
+            calc {
+                temp;
+                <
+                HW_BASE() + hi * HW_BASE();
+                {
+                    Mul.LemmaMulProperties();
+                }
+                (hi + 1) * HW_BASE();
+                <=
+                {
+                    Mul.LemmaMulInequality(hi + 1, HW_BASE(), HW_BASE());
+                }
+                HW_BASE() * HW_BASE();
+                BASE();
+            }
+        }
+  
+        DivMod.LemmaFundamentalDivModConverse(temp, HW_BASE(), hi, lo);
+        Mul.LemmaMulIsCommutativeAuto();
+        reveal lh();
+        reveal uh();
+        temp
+    }
+
     lemma half_split_lemma(x: uint)
         ensures x == lh(x) + uh(x) * HW_BASE();
     {
