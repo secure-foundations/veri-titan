@@ -1,9 +1,13 @@
 include "stack.i.dfy"
+include "../../lib/bv32_ops.dfy"
 
 module mem {
   import opened integers
   import opened flat
   import opened stack
+  import bv32_ops
+
+  import DivMod
 
   datatype entry_t = 
     | W32(w32: uint32)
@@ -98,7 +102,6 @@ module mem {
     // base_ptr points to a valid buffer
     && heap_b32_ptr_valid(heap, base_ptr)
     // ptr is correct
-    && iter.cur_ptr() == heap_b32_index_ptr(base_ptr, iter.index)
     // the view is consistent with heap
     && heap[base_ptr].b32 == iter.buff
     // the index is within bound (or at end)
@@ -110,6 +113,106 @@ module mem {
     && b32_iter_inv(heap, iter)
     // tighter constraint so we can dereference
     && iter.index < |iter.buff|
+  }
+
+  function {:opaque} b16_as_b32(buff: seq<uint16>): (r: seq<uint32>)
+    requires |buff| % 2 == 0;
+    ensures |r| == |buff| / 2;
+  {
+    var len := |buff| / 2;
+    seq(len, i requires 0 <= i < len => bv32_ops.half_combine(buff[2 * i], buff[2 * i + 1]))
+  }
+
+  function {:opaque} b32_as_b16(buff: seq<uint32>): (r: seq<uint16>)
+    ensures |r| == 2 * |buff|;
+  {
+    var len := |buff| * 2;
+    seq(len, i requires 0 <= i < len => if i % 2 == 0 then bv32_ops.lh(buff[i/2]) else bv32_ops.uh(buff[i/2]))
+  }
+
+  lemma casting_b16_inverse(b16: seq<uint16>)
+    requires |b16| % 2 == 0;
+    ensures b32_as_b16(b16_as_b32(b16)) == b16;
+  {
+    reveal b16_as_b32();
+    reveal b32_as_b16();
+  }
+  
+  lemma casting_b32_inverse(b32: seq<uint16>)
+    ensures |b32_as_b16(b32)| % 2 == 0;
+    ensures b16_as_b32(b32_as_b16(b32)) == b32;
+  {
+    reveal b16_as_b32();
+    reveal b32_as_b16();
+    // assert (|b32| * 2) % 2 == 0 by {
+    //   DivMod.LemmaDivMultiplesVanish(|b32|, 2);
+    // }
+  }
+
+  datatype b16_iter = b16_iter_cons(base_ptr: nat, index: nat, buff: seq<uint16>)
+  {
+    function cur_ptr(): nat {
+      base_ptr + 2 * index
+    }
+  }
+
+  function b16_iter_as_b32_iter(iter: b16_iter): b32_iter
+    requires |iter.buff| % 2 == 0;
+  {
+    b32_iter_cons(iter.base_ptr, iter.index/2, b16_as_b32(iter.buff))
+  }
+
+  function b16_iter_load_next(iter: b16_iter, inc: bool): b16_iter
+  {
+    iter.(index := if inc then iter.index + 1 else iter.index)
+  }
+
+  function b16_iter_store_next(iter: b16_iter, value: uint16, inc: bool): b16_iter
+    requires iter.index < |iter.buff|
+  {
+      iter.(index := if inc then iter.index + 1 else iter.index)
+          .(buff := iter.buff[iter.index := value])
+  }
+
+  predicate b16_iter_inv(iter: b16_iter, heap: heap_t, ptr: nat)
+  {
+    var base_ptr := iter.base_ptr;
+    && iter.cur_ptr() == ptr
+    && |iter.buff| % 2 == 0
+    // base_ptr points to a valid buffer
+    && heap_b32_ptr_valid(heap, base_ptr)
+    // the view is consistent with heap
+    && heap[base_ptr].b32 == b16_as_b32(iter.buff)
+    && b32_as_b16(heap[base_ptr].b32) == iter.buff
+    // the index is within bound (or at end)
+    && iter.index <= |iter.buff|
+  }
+
+  predicate b16_iter_safe(iter: b16_iter, heap: heap_t, ptr: nat)
+  {
+    && b16_iter_inv(iter, heap, ptr)
+    // tighter constraint so we can dereference
+    && iter.index < |iter.buff|
+  }
+
+  function {:opaque} heap_b16_write(heap: heap_t, b16_it: b16_iter, value: uint16): (heap': heap_t)
+    requires b16_iter_safe(b16_it, heap, b16_it.cur_ptr())
+    ensures b16_it.base_ptr in heap';
+    ensures heap'[b16_it.base_ptr].B32?;
+    ensures var iter' := b16_iter_store_next(b16_it, value, true);
+      && heap'[b16_it.base_ptr].b32 == b16_as_b32(iter'.buff)
+      && b32_as_b16(heap'[b16_it.base_ptr].b32) == iter'.buff
+      && heap' == heap[b16_it.base_ptr := B32(b16_as_b32(iter'.buff))]
+      && b16_iter_inv(iter', heap', iter'.cur_ptr());
+  {
+    reveal b16_as_b32();
+    reveal b32_as_b16();
+    var b32_it := b16_iter_as_b32_iter(b16_it);
+    var old_full := b32_it.buff[b32_it.index];
+    var new_lo := if b16_it.index % 2 == 0 then value else bv32_ops.lh(old_full);
+    var new_hi := if b16_it.index % 2 == 0 then bv32_ops.uh(old_full) else value;
+    var new_v := bv32_ops.half_combine(new_lo, new_hi);
+    heap_b32_write(heap, b32_it, new_v)
   }
 
   // valid pointer for W32 heaplet entry
@@ -504,7 +607,7 @@ module mem {
     }
   }
 
-  datatype mem_t = mem_cons(heap: heap_t, frames: frames_t)
+  datatype mem_t = mem_cons(heap: heap_t, frames: frames_t, symbols: map<string, uint32>)
   {
     function as_imem(flat: flat_t): imem_t
       requires stack_addrs_valid(flat)
@@ -513,10 +616,28 @@ module mem {
     }
 
     predicate {:opaque} inv(flat: flat_t)
+      ensures inv(flat) ==> symbols_inv()
+      ensures inv(flat) ==> |frames.fs| >= 1
     {
       && stack_addrs_valid(flat)
       && as_imem(flat).inv(flat)
       && frames.frames_inv(get_stack(flat))
+      && symbols_inv()
+    }
+
+    predicate {:opaque} symbols_inv()
+    {
+      forall name: string :: 
+        name in symbols ==> heap_w32_ptr_valid(heap, symbols[name])
+    }
+
+    function load_symbol(name: string): uint32
+      requires name in symbols
+      requires symbols_inv()
+    {
+      reveal symbols_inv();
+      assert heap_w32_ptr_valid(heap, symbols[name]);
+      heap[symbols[name]].w32
     }
 
     lemma heap_b32_write_preverses_inv(
@@ -529,6 +650,7 @@ module mem {
         inv(flat_write_32(flat, iter.cur_ptr(), value))
     {
       reveal inv();
+      reveal symbols_inv();
       var new_flat := flat_write_32(flat, iter.cur_ptr(), value);
       as_imem(flat).heap_b32_write_preverses_inv(flat, new_flat,
         iter, value);
@@ -543,6 +665,7 @@ module mem {
         inv(flat_write_32(flat, write_ptr, value))
     {
       reveal inv();
+      reveal symbols_inv();
       var new_flat := flat_write_32(flat, write_ptr, value);
       as_imem(flat).heap_w32_write_preverses_inv(flat, new_flat,
         write_ptr, value);
@@ -557,6 +680,7 @@ module mem {
         inv(flat_write_32(flat, frames.sp + index * 4, value))
     {
       reveal inv();
+      reveal symbols_inv();
 
       var new_mem := this.(frames := frames.write(index, value));
       var stack_index := ptr_to_stack_index(frames.sp) + index;
@@ -606,6 +730,7 @@ module mem {
     ensures |top_frame(new_mem.frames).content| == num_bytes / 4
   {
     reveal mem.inv();
+    reveal mem.symbols_inv();
     var stack := get_stack(flat);
     mem.frames.push_preserves_inv(num_bytes, stack);
     var new_mem := mem.(frames := mem.frames.push(num_bytes, stack));
@@ -620,6 +745,7 @@ module mem {
     ensures stack_depth(new_mem) == stack_depth(mem) - 1
   {
     reveal mem.inv();
+    reveal mem.symbols_inv();
     var stack := get_stack(flat);
     mem.frames.pop_preserves_inv(stack);
     var new_mem := mem.(frames := mem.frames.pop(stack));
@@ -665,5 +791,12 @@ module mem {
     // ensures value == flat_read_32(flat, mem.frames.sp + index * 4)
   {
     mem.frames.read(index)
+  }
+  
+  function load_symbol(mem: mem_t, name: string): (value: uint32)
+    requires name in mem.symbols
+    requires mem.symbols_inv()
+  {
+    mem.load_symbol(name)
   }
 }

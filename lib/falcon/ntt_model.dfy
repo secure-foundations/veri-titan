@@ -1,20 +1,95 @@
-include "../mulntt_ct/nth_root.dfy"
+include "nth_root.dfy"
 
-abstract module innt_model {
+module ntt_model {
     import opened Seq
-    import opened Power
-    import opened Power2
-    import opened DivMod
-    import opened Mul
+	import opened Power
+	import opened Power2
+	import opened DivMod
+	import opened Mul
 
 	import opened pows_of_2
     import opened ntt_index
     import opened nth_root
-    import opened ntt_polys
+	import opened mq_polys
+    import opened poly_view
 
-    const x_value: x_fun := rev_omega_inv_powers_x_value;
+    ghost const x_value: x_fun := rev_mixed_powers_mont_x_value;
 
-    datatype intt_loop_view = intt_loop_view(
+    predicate {:opaque} t_loop_inv(a: n_sized, count: pow2_t)
+        requires 0 <= count.exp <= N.exp;
+    {
+        var sz := block_size(count);
+        var points := level_points_view(a, sz);
+        var polys := level_polys(sz);
+        forall i | 0 <= i < count.full ::
+            points_eval_inv(points[i], polys[bit_rev_int(i, count)], x_value, count)
+    }
+
+    lemma t_loop_inv_pre_specialized_lemma(points: seq<elem>, poly: seq<elem>, A_i: elem)
+        requires poly == [A_i];
+        requires points == [A_i];
+        ensures points_eval_inv(points,
+            poly, x_value, N)
+    {
+        assert points_eval_inv(points,
+            poly, x_value, N) by
+        {
+            reveal points_eval_suffix_inv();
+            assert x_value.requires(0, N);
+            poly_eval_base_lemma(poly, x_value(0, N));
+            assert points[0] == poly_eval(poly, x_value(0, N));
+        }
+    }
+
+    lemma t_loop_inv_pre_lemma()
+        ensures t_loop_inv(A(), N);
+    {
+        reveal t_loop_inv();
+        assert N.exp <= N.exp; // ??
+        var sz := block_size(N);
+        assert sz.full == 1;
+        assert sz.exp == 0;
+        var lpoints := level_points_view(A(), sz);
+        var lpolys := base_level_polys();
+
+        forall i | 0 <= i < N.full
+            ensures points_eval_inv(lpoints[i],
+                lpolys[bit_rev_int(i, N)], x_value, N)
+        {
+            base_level_polys_lemma(i);
+            var points := lpoints[i];
+            var poly := lpolys[bit_rev_int(i, N)];
+            assert poly == [A()[i]];
+            t_loop_inv_pre_specialized_lemma(points, poly, A()[i]);
+        }
+    }
+
+    predicate ntt_eval_all(a: n_sized)
+    {
+        points_eval_inv(a, A(), x_value, pow2(0))
+    }
+
+    lemma t_loop_inv_post_lemma(a: n_sized, one: pow2_t)
+        requires one.exp == 0;
+        requires t_loop_inv(a, one);
+        ensures ntt_eval_all(a);
+    {
+        reveal t_loop_inv();
+        var sz := block_size(one);
+        var points := level_points_view(a, sz);
+        var polys := level_polys(sz);
+        Nth_root_lemma();
+        pow2_basics(one);
+        assert one.full == 1;
+        assert sz == N;
+        assert points[0] == a;
+
+        assert polys[0] == A() by {
+            reveal level_polys();
+        }
+    }
+
+    datatype loop_view = loop_view(
         lower: seq<seq<elem>>, // lower polys
         higher: seq<seq<elem>>, // higher polys
         hsize: pow2_t)
@@ -23,69 +98,60 @@ abstract module innt_model {
         {
             && 1 <= hsize.exp <= N.exp
             && unifromly_sized(higher, hsize)
-            && build_lower_level(higher, hsize) == lower
+		    && higher == level_polys(hsize)
+		    && lower == level_polys(pow2_half(hsize))
         }
 
-        function lsize(): pow2_t
+        function lsize(): (r: pow2_t)
             requires loop_view_wf();
+            ensures r.full <= N.full;
         {
-            pow2_half(hsize)
+            var r := pow2_half(hsize);
+            assert r.full <= N.full by {
+                reveal Pow2();
+                LemmaPowIncreases(2, r.exp, N.exp);
+            }
+            r
         }
 
-        function lcount(): pow2_t
+        function lcount(): (r: pow2_t)
             requires loop_view_wf();
         {
             block_count(lsize())
         }
 
-        function hcount(): pow2_t
+        function hcount(): (r: pow2_t)
             requires loop_view_wf();
+            ensures r.full <= N.full;
         {
-            block_count(hsize)
+            var r := block_count(hsize);
+            assert r.full <= N.full by {
+                reveal Pow2();
+                LemmaPowIncreases(2, r.exp, N.exp);
+            }
+            r            
         }
 
-        // a very boring lemma 
         lemma size_count_lemma()
             requires loop_view_wf();
             ensures pow2_double(lsize()) == hsize;
             ensures lcount() == pow2_double(hcount());
-            ensures N.full
-                == lcount().full * lsize().full
-                == lsize().full * lcount().full 
-                == hcount().full * hsize.full
-                == hsize.full * hcount().full;
-            ensures pow2_half(N).full
-                == lsize().full * hcount().full
+            ensures lcount().full * lsize().full
+                == hcount().full * hsize.full == N.full;
         {
             Nth_root_lemma();
             block_count_half_lemma(hsize);
-            LemmaMulIsCommutative(lcount().full, lsize().full);
-            LemmaMulIsCommutative(hsize.full, hcount().full);
-            block_count_half_lemma(lcount());
-
-            LemmaMulIsAssociative(2, lsize().full, hcount().full);
-            assert 2 * lsize().full * hcount().full == N.full;
-            LemmaFundamentalDivModConverse(N.full, 2, lsize().full * hcount().full, 0);
         }
 
-        predicate {:opaque} t_loop_low_inv(a: n_sized, hcount: pow2_t)
-            requires hcount.exp < N.exp;
-            requires loop_view_wf();
-            requires hsize == block_size(hcount);
-        {
-            && var lcount := lcount();
-            && var lpoints := level_points_view(a, lsize());
-            && (forall i | 0 <= i < lcount.full ::
-                points_eval_inv(lpoints[i], lower[bit_rev_int(i, lcount)], x_value, lcount))
-        }
+        // lemma size_count_bound_lemma()
+        //     requires loop_view_wf();
+        //     ensures lsize().full <= N.full;
+        //     ensures hsize.full <= N.full;
+        // {
+        //     reveal Pow2();
+        //     LemmaPowIncreases(2, hsize.exp, N.exp);
+        // }
 
-        predicate t_loop_inv(a: n_sized, hcount: pow2_t)
-        {
-            && loop_view_wf()
-            && 0 <= hcount.exp < N.exp
-            && hsize == block_size(hcount)
-            && t_loop_low_inv(a, hcount)
-        }
 
         // static function init_loop_view(): (v: loop_view) 
         //     ensures v.loop_view_wf();
@@ -97,70 +163,47 @@ abstract module innt_model {
         //         hsize)
         // }
 
-        // lemma init_loop_view_lemma(a: n_sized)
-        //     requires this == init_loop_view();
-        // {
-        //     pow2_basics(hsize);
-        //     size_count_lemma();
-        //     assert lsize() == pow2(0);
-        //     var lcount := lcount();
-        //     var lpoints := level_points_view(a, lsize());
-        //     var hcount := hcount();
-
-        //     Nth_root_lemma();
-        //     assert lcount == pow2(N.exp); 
-        //     assert hcount == pow2(N.exp-1);
-
-        //     assert t_loop_low_inv(a, hcount) by {
-        //         forall i | 0 <= i < lcount.full
-        //             ensures points_eval_inv(lpoints[i], lower[bit_rev_int(i, lcount)], lcount);
-        //         {
-        //             assume false;
-        //         }
-        //         reveal t_loop_low_inv(); 
-        //     }
-        // }
-
-        predicate t_loop_end(a: n_sized)
-        {
-            && loop_view_wf()
-            && hsize.exp == N.exp
-            && var hpoints := level_points_view(a, hsize);
-            && |hpoints| == 1
-            && |higher| == 1
-            && points_eval_inv(hpoints[0], higher[0], x_value, pow2(0))
-        }
-
         lemma x_value_even_square_lemma(j: nat, x: elem)
             requires loop_view_wf();
             requires 2 * j < hsize.full;
-            requires x == x_value(2 * j, hcount());
-            ensures mqmul(x, x) == x_value(j, lcount());
+            requires x == rev_mixed_powers_mont_x_value(2 * j, hcount());
+            ensures mqmul(x, x) == rev_mixed_powers_mont_x_value(j, lcount());
         {
             size_count_lemma();
             var hc := hcount();
 
             LemmaMulNonnegative(bit_rev_int(2 * j, hsize), hc.full);
             LemmaMulIsAssociative(2, bit_rev_int(2 * j, hsize), hc.full);
-            var exp := bit_rev_int(2 * j , hsize) * hc.full;
-
-            assert x == mqpow(OMEGA_INV, exp);
+            var exp := 2 * bit_rev_int(2 * j , hsize) * hc.full + hc.full;
 
             calc == {
                 2 * exp;
-                2 * (bit_rev_int(2 * j , hsize) * hc.full);
+                2 * (2 * bit_rev_int(2 * j , hsize) * hc.full + hc.full);
+                {
+                    LemmaMulIsDistributive(2, 2 * bit_rev_int(2 * j , hsize) * hc.full, hc.full);
+                }
+                2 * (2 * bit_rev_int(2 * j , hsize) * hc.full) + 2 * hc.full;
+                2 * (2 * bit_rev_int(2 * j , hsize) * hc.full) + lcount().full;
+                {
+                    LemmaMulIsCommutative(2, bit_rev_int(2 * j , hsize));
+                }
+                2 * (bit_rev_int(2 * j , hsize) * 2 * hc.full) + lcount().full;
+                {
+                    LemmaMulIsAssociative(bit_rev_int(2 * j , hsize), 2, hc.full);
+                }
+                2 * (bit_rev_int(2 * j , hsize) * (2 * hc.full)) + lcount().full;
+                2 * (bit_rev_int(2 * j , hsize) * lcount().full) + lcount().full;
+                {
+                    LemmaMulIsAssociative(2, bit_rev_int(2 * j , hsize), lcount().full);
+                }
+                2 * bit_rev_int(2 * j , hsize) * lcount().full + lcount().full;
                 {
                     bit_rev_int_lemma2(j, lsize());
                 }
-                2 * (bit_rev_int(j, lsize()) * hc.full);
-                {
-                    LemmaMulProperties();
-                }
-                bit_rev_int(j, lsize()) * (2 * hc.full);
-                bit_rev_int(j, lsize()) * lcount().full;
+                2 * bit_rev_int(j , lsize()) * lcount().full + lcount().full;
             }
     
-            var temp := Pow(OMEGA_INV, exp);
+            var temp := Pow(PSI, exp);
     
             calc == {
                 mqmul(x, x);
@@ -170,54 +213,75 @@ abstract module innt_model {
                 }
                 (temp * temp) % Q;
                 {
-                    LemmaPowAdds(OMEGA_INV, exp, exp);
-                    assert exp + exp == 2 * exp;
+                    LemmaPowAdds(PSI, exp, exp);
                 }
-                Pow(OMEGA_INV, 2 * exp) % Q;
-                x_value(j, lcount());
+                Pow(PSI, 2 * exp) % Q;
+                rev_mixed_powers_mont_x_value(j, lcount());
             }
         }
 
         lemma x_value_odd_square_lemma(j: nat, x: elem)
             requires loop_view_wf();
             requires 2 * j < hsize.full;
-            requires x == x_value(2 * j + 1, hcount());
-            ensures mqmul(x, x) == x_value(j, lcount());
+            requires x == rev_mixed_powers_mont_x_value(2 * j + 1, hcount());
+            ensures mqmul(x, x) == rev_mixed_powers_mont_x_value(j, lcount());
         {
             size_count_lemma();
             var hc := hcount();
 
             LemmaMulNonnegative(bit_rev_int(2 * j + 1, hsize), hc.full);
             LemmaMulIsAssociative(2, bit_rev_int(2 * j + 1, hsize), hc.full);
-            var exp := bit_rev_int(2 * j + 1, hsize) * hc.full;   
-            assert x == mqpow(OMEGA_INV, exp);
-            var temp := Pow(OMEGA_INV, exp);
+            var exp := 2 * bit_rev_int(2 * j + 1, hsize) * hc.full + hc.full;   
+
+            var temp := Pow(PSI, exp);
     
             calc == {
                 2 * exp;
-                2 * (bit_rev_int(2 * j + 1, hsize) * hc.full);
+                2 * (2 * bit_rev_int(2 * j + 1, hsize) * hc.full + hc.full);
                 {
-                    LemmaMulProperties();
+                    LemmaMulIsDistributive(2, 2 * bit_rev_int(2 * j + 1, hsize) * hc.full, hc.full);
                 }
-                (2 * bit_rev_int(2 * j + 1, hsize)) * hc.full;
+                2 * (2 * bit_rev_int(2 * j + 1, hsize) * hc.full) + 2 * hc.full;
+                2 * (2 * bit_rev_int(2 * j + 1, hsize) * hc.full) + lcount().full;
+                {
+                    LemmaMulIsCommutative(2, bit_rev_int(2 * j + 1, hsize));
+                }
+                2 * (bit_rev_int(2 * j + 1, hsize) * 2 * hc.full) + lcount().full;
+                {
+                    LemmaMulIsAssociative(bit_rev_int(2 * j + 1, hsize), 2, hc.full);
+                }
+                2 * (bit_rev_int(2 * j + 1, hsize) * (2 * hc.full)) + lcount().full;
+                2 * (bit_rev_int(2 * j + 1, hsize) * lcount().full) + lcount().full;
+                {
+                    LemmaMulIsAssociative(2, bit_rev_int(2 * j + 1, hsize), lcount().full);
+                }
+                2 * bit_rev_int(2 * j + 1, hsize) * lcount().full + lcount().full;
                 {
                     bit_rev_int_lemma3(j, lsize());
                 }
-                (2 * (bit_rev_int(j, lsize()) + lsize().full)) * hc.full;
+                2 * (bit_rev_int(j, lsize()) + lsize().full) * lcount().full + lcount().full;
                 {
-                    LemmaMulIsDistributive(2, bit_rev_int(j, lsize()), lsize().full);
+                    LemmaMulIsAssociative(2, bit_rev_int(j, lsize()) + lsize().full, lcount().full);
                 }
-                (2 * bit_rev_int(j, lsize()) + 2 * lsize().full) * hc.full;
+                2 * ((bit_rev_int(j, lsize()) + lsize().full) * lcount().full) + lcount().full;
                 {
-                    LemmaMulIsDistributive(hc.full, 2 * bit_rev_int(j, lsize()), 2 * lsize().full);
+                    LemmaMulIsDistributive(lcount().full, bit_rev_int(j, lsize()), lsize().full);
                 }
-                2 * bit_rev_int(j, lsize()) * hc.full + 2 * lsize().full * hc.full;
-                2 * bit_rev_int(j, lsize()) * hc.full + N.full;
+                2 * (bit_rev_int(j, lsize()) * lcount().full + lsize().full * lcount().full) + lcount().full;
                 {
-                    LemmaMulProperties();
+                    size_count_lemma();
+                    LemmaMulIsCommutative(lsize().full, lcount().full);
+                    assert lsize().full * lcount().full == N.full;
                 }
-                bit_rev_int(j, lsize()) * (2 * hc.full) + N.full;
-                bit_rev_int(j, lsize()) * lcount().full + N.full;
+                2 * (bit_rev_int(j, lsize()) * lcount().full + N.full) + lcount().full;
+                {
+                    LemmaMulIsDistributive(2, bit_rev_int(j, lsize()) * lcount().full, N.full);
+                }
+                2 * (bit_rev_int(j, lsize()) * lcount().full) + 2 * N.full + lcount().full;
+                {
+                    LemmaMulIsAssociativeAuto();
+                }
+                2 * bit_rev_int(j, lsize()) * lcount().full + 2 * N.full + lcount().full;
             }
 
             calc == {
@@ -228,15 +292,15 @@ abstract module innt_model {
                 }
                 (temp * temp) % Q;
                 {
-                    LemmaPowAdds(OMEGA_INV, exp, exp);
+                    LemmaPowAdds(PSI, exp, exp);
                 }
-                Pow(OMEGA_INV, 2 * exp) % Q;
-                Pow(OMEGA_INV, bit_rev_int(j, lsize()) * lcount().full + N.full) % Q;
+                Pow(PSI, 2 * exp) % Q;
+                Pow(PSI, 2 * bit_rev_int(j, lsize()) * lcount().full + 2 * N.full + lcount().full) % Q;
                 {
-                    LemmaMulNonnegative(bit_rev_int(j, lsize()), lcount().full);
-                    inv_full_rotation_lemma(bit_rev_int(j, lsize()) * lcount().full);
+                    LemmaMulNonnegative(2 * bit_rev_int(j, lsize()), lcount().full);
+                    full_rotation_lemma(2 * bit_rev_int(j, lsize()) * lcount().full + lcount().full);
                 }
-                Pow(OMEGA_INV, bit_rev_int(j, lsize()) * lcount().full) % Q;
+                Pow(PSI, 2 * bit_rev_int(j, lsize()) * lcount().full + lcount().full) % Q;
             }
         }
 
@@ -247,7 +311,7 @@ abstract module innt_model {
         {
             && var hpoints := level_points_view(a, hsize);
             && (forall i | 0 <= i < hcount.full ::
-                points_eval_prefix_inv(hpoints[i], higher[bit_rev_int(i, hcount)], x_value, 2*j, hcount))
+                points_eval_prefix_inv(hpoints[i], higher[bit_rev_int(i, hcount)], rev_mixed_powers_mont_x_value, 2*j, hcount))
         }
 
         predicate {:opaque} j_loop_lower_inv(a: n_sized, hcount: pow2_t, j: nat)
@@ -258,7 +322,7 @@ abstract module innt_model {
             && var lcount := lcount();
             && var lpoints := level_points_view(a, lsize());
             && (forall i | 0 <= i < lcount.full ::
-                points_eval_suffix_inv(lpoints[i], lower[bit_rev_int(i, lcount)], x_value, j, lcount))
+                points_eval_suffix_inv(lpoints[i], lower[bit_rev_int(i, lcount)], rev_mixed_powers_mont_x_value, j, lcount))
         }
 
         predicate j_loop_inv(a: n_sized, hcount: pow2_t, j: nat)
@@ -279,9 +343,9 @@ abstract module innt_model {
         {
             && var hpoints := level_points_view(a, hsize);
             && (forall i | 0 <= i < bi ::
-                points_eval_prefix_inv(hpoints[i], higher[bit_rev_int(i, hcount)], x_value, 2*j+2, hcount))
+                points_eval_prefix_inv(hpoints[i], higher[bit_rev_int(i, hcount)], rev_mixed_powers_mont_x_value, 2*j+2, hcount))
             && (forall i | bi <= i < hcount.full ::
-                points_eval_prefix_inv(hpoints[i], higher[bit_rev_int(i, hcount)], x_value, 2*j, hcount))
+                points_eval_prefix_inv(hpoints[i], higher[bit_rev_int(i, hcount)], rev_mixed_powers_mont_x_value, 2*j, hcount))
         }
 
         predicate {:opaque} s_loop_lower_inv(a: n_sized, hcount: pow2_t, j: nat, bi: nat)
@@ -294,9 +358,9 @@ abstract module innt_model {
             && var lcount := lcount();
             && var lpoints := level_points_view(a, lsize());
             && (forall i | (0 <= i < bi || hcount.full <= i < bi + hcount.full) ::
-                && (points_eval_suffix_inv(lpoints[i], lower[bit_rev_int(i, lcount)], x_value, j+1, lcount)))
+                && (points_eval_suffix_inv(lpoints[i], lower[bit_rev_int(i, lcount)], rev_mixed_powers_mont_x_value, j+1, lcount)))
             && (forall i | (bi <= i < hcount.full || bi + hcount.full <= i < lcount.full) ::
-                points_eval_suffix_inv(lpoints[i], lower[bit_rev_int(i, lcount)], x_value, j, lcount))
+                points_eval_suffix_inv(lpoints[i], lower[bit_rev_int(i, lcount)], rev_mixed_powers_mont_x_value, j, lcount))
         }
 
         predicate s_loop_inv(a: n_sized, hcount: pow2_t, j: nat, bi: nat)
@@ -393,7 +457,7 @@ abstract module innt_model {
                 s;
                 bi + (2*j) * hcount.full;
                 {
-                    LemmaMulIsAssociativeAuto();
+                    LemmaMulProperties();
                 }
                 bi + j * (2*hcount.full);
                 point_view_index(bi, j, lsize());
@@ -608,35 +672,40 @@ abstract module innt_model {
             calc == {
                 x_o;
                 {
-                    LemmaMulNonnegative(bit_rev_int(2*j+1, hsize), hcount.full);
+                    LemmaMulNonnegative(2 * bit_rev_int(2*j+1, hsize), hcount.full);
                 }
-                mqpow(OMEGA_INV, bit_rev_int(2*j+1, hsize) * hcount.full);
+                mqpow(PSI, 2 * bit_rev_int(2*j+1, hsize) * hcount.full + hcount.full);
                 {
                     bit_rev_int_lemma3(j, lsize());
                     assert bit_rev_int(2*j+1, hsize) == bit_rev_int(j, lsize()) + lsize().full;
                 }
-                mqpow(OMEGA_INV, (bit_rev_int(j, lsize()) + lsize().full) * hcount.full);
+                mqpow(PSI, 2 * (bit_rev_int(j, lsize()) + lsize().full) * hcount.full + hcount.full);
                 {
-                    LemmaMulIsDistributive(hcount.full, bit_rev_int(j, lsize()), lsize().full);
+                    gbassert 2 * (bit_rev_int(j, lsize()) + lsize().full) * hcount.full == 2 * (bit_rev_int(j, lsize()) * hcount.full) + N.full by {
+                        assert 2 * lsize().full * hcount.full == N.full;
+                    }
                 }
-                mqpow(OMEGA_INV, bit_rev_int(j, lsize()) * hcount.full + lsize().full * hcount.full);
+                mqpow(PSI, 2 * (bit_rev_int(j, lsize()) * hcount.full) + N.full + hcount.full);
+                {
+                    LemmaMulNonnegative(bit_rev_int(j, lsize()), hcount.full);
+                    half_rotation_lemma(2 * (bit_rev_int(j, lsize()) * hcount.full) + hcount.full);
+                }
+                (Q - mqpow(PSI, 2 * (bit_rev_int(j, lsize()) * hcount.full) + hcount.full)) % Q;
+                {
+                    LemmaMulIsAssociative(2, bit_rev_int(j, lsize()), hcount.full);
+                }
+                (Q - mqpow(PSI, 2 * bit_rev_int(j, lsize()) * hcount.full + hcount.full)) % Q;
                 {
                     bit_rev_int_lemma2(j, lsize());
                 }
-                mqpow(OMEGA_INV, bit_rev_int(2 * j, hsize) * hcount.full + lsize().full * hcount.full);
-                {
-                    LemmaMulNonnegative(bit_rev_int(2 * j, hsize), hcount.full);
-                    inv_half_rotation_lemma(bit_rev_int(2 * j, hsize) * hcount.full);
-                    Nth_root_lemma();
-                    assert lsize().full * hcount.full == N.full / 2;
-                }
+                (Q - mqpow(PSI, 2 * bit_rev_int(2*j, hsize) * hcount.full + hcount.full)) % Q;
                 (Q - x_e) % Q;
                 {
-                    assume x_e != 0;
+                    LemmaSmallMod(Q- x_e, Q);
                 }
                 Q - x_e;
             }
-
+  
             calc == {
                 diff;
                 mqsub(e, mqmul(o, x_e));
@@ -899,7 +968,10 @@ abstract module innt_model {
         }
 
         lemma j_loop_inv_pre_lemma(a: n_sized, hcount: pow2_t)
-            requires t_loop_inv(a, hcount);
+            requires 0 <= hcount.exp < N.exp;
+            requires t_loop_inv(a, pow2_double(hcount));
+            requires loop_view_wf();
+            requires hsize == block_size(hcount);
             ensures j_loop_inv(a, hcount, 0);
         {
             assert j_loop_higher_inv(a, hcount, 0) by {
@@ -914,8 +986,10 @@ abstract module innt_model {
                 reveal j_loop_higher_inv();
             }
     
+            assert pow2_double(hcount) == lcount();
+
             assert j_loop_lower_inv(a, hcount, 0) by {
-                reveal t_loop_low_inv();
+                reveal t_loop_inv();
                 var lcount := lcount();
                 var lpoints := level_points_view(a, lsize());
                 forall i | 0 <= i < lcount.full
@@ -927,29 +1001,12 @@ abstract module innt_model {
             }
         }
 
-        function next_t_loop_view(hcount: pow2_t): (v': intt_loop_view)
-            requires loop_view_wf();
-            requires 0 <= hsize.exp <= N.exp;
-            requires 0 <= hcount.exp < N.exp;
-            requires hsize == block_size(hcount);
-            ensures v'.loop_view_wf();
-        {
-            if hsize.exp == N.exp then
-                this
-            else
-                var v' := intt_loop_view(higher, build_higher_level(higher, hsize), pow2_double(hsize));
-                build_higher_inverse_lemma(higher, hsize);
-                v'
-        }
-
         lemma j_loop_inv_post_lemma(a: n_sized, hcount: pow2_t, j: nat)
-            returns (v': intt_loop_view)
             requires j_loop_inv(a, hcount, j);
             requires j == lsize().full;
             requires 0 <= hsize.exp <= N.exp;
-            ensures v' == next_t_loop_view(hcount);
-            ensures hsize.exp < N.exp ==> v'.t_loop_inv(a, pow2_half(hcount));
-            ensures hsize.exp == N.exp ==> v'.t_loop_end(a);
+            requires hsize == block_size(hcount);
+            ensures t_loop_inv(a, hcount);
         {
             reveal j_loop_higher_inv();
             size_count_lemma();
@@ -962,23 +1019,20 @@ abstract module innt_model {
                 reveal points_eval_prefix_inv();
             }
 
-            v' := next_t_loop_view(hcount);
-            v'.size_count_lemma();
-
-            if hsize.exp < N.exp {
-                assert v'.t_loop_inv(a, pow2_half(hcount)) by {
-                    reveal v'.t_loop_low_inv();
-                    assert v'.t_loop_low_inv(a, v'.hcount());
-                }
-            } else {
-                Nth_root_lemma();
-                assert hsize.exp == N.exp;
-                assert hsize.full == N.full;
-                assert |hpoints| * N.full == N.full;
-                LemmaFundamentalDivModConverse(|hpoints| * N.full, N.full, 1, 0);
-                assert |hpoints| == 1;
-                assert bit_rev_int(0, hcount) == 0;
+            assert t_loop_inv(a, hcount) by {
+                reveal t_loop_inv();
             }
         }
+    }
+
+    function build_loop_view(hcount: pow2_t): (view: loop_view)
+        requires 0 <= hcount.exp < N.exp
+        ensures view.loop_view_wf();
+    {
+        var hsize := block_size(hcount);
+        loop_view(
+            level_polys(pow2_half(hsize)),
+            level_polys(hsize),
+            hsize)
     }
 }

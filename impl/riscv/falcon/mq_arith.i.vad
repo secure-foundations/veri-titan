@@ -2,20 +2,80 @@ include "../../../arch/riscv/decls.i.vad"
 
 #verbatim
 include "../../../arch/riscv/decls.i.dfy"
-include "../../../../lib/bv32_ntt_lemmas.i.dfy"
+include "../../../../lib/falcon/bv32_falcon_lemmas.i.dfy"
 
 module mq_arith {
 
+import opened integers
 import opened rv_machine
 import opened rv_decls
 import opened rv_vale
 
-import opened integers
 import opened bv32_ops
-import opened bv32_ntt_lemmas
+import opened bv32_falcon_lemmas
+import opened pows_of_2
+import opened mq_polys
+import opened nth_root
 
 #endverbatim
-    
+
+type pow2_t: Type(0) extern;
+function pow2(exp: int): pow2_t extern;
+function operator(.full) (p :pow2_t): nat extern;
+function operator(.exp) (p :pow2_t): nat extern;
+function pow2_half(p: pow2_t): pow2_t extern;
+function pow2_double(p: pow2_t): pow2_t extern;
+
+const N: pow2_t extern;
+const R: nat extern;
+
+function rs1_is_half(a: uint32): void extern;
+
+procedure p2_half(inout dst: reg32, ghost p: pow2_t)
+    returns (ghost p': pow2_t)
+    requires
+        dst == p.full;
+        p.full >= 2;
+    ensures
+        dst == old(dst) / 2;
+        dst == p'.full;
+        p' == pow2_half(p);
+{
+    srli(dst, dst, 1);
+    p' := pow2_half(p);
+    rs1_is_half(old(dst));
+}
+
+procedure half(inout dst: reg32)
+    ensures dst == old(dst) / 2;
+{
+    srli(dst, dst, 1);
+    rs1_is_half(old(dst));
+}
+
+function ls1_is_double(a: uint32): void extern;
+
+procedure p2_double(inout dst: reg32, ghost p: pow2_t)
+    returns (ghost p': pow2_t)
+    requires
+        dst == p.full;
+        p.exp <= 9;
+    ensures
+        dst == old(dst) * 2;
+        dst == p'.full;
+        p' == pow2_double(p);
+{
+    slli(dst, dst, 1);
+    assume p.full <= 512;
+    p' := pow2_double(p);
+    ls1_is_double(old(dst));
+}
+
+function montmul(a: nat, b: nat): uint32 extern;
+function mqmul(a: nat, b: nat): uint32 extern;
+function mqsub(a: nat, b: nat): uint32 extern;
+function mqadd(a: nat, b: nat): uint32 extern;
+
 ghost procedure lemma_mq_add_correct(
     ghost d: uint32,
     ghost b: uint32,
@@ -40,106 +100,116 @@ ghost procedure lemma_mq_rshift1_correct(
     ghost r: uint32,
     ghost x: nat) extern;
 
-procedure mq_add(inout r1: reg32, inout r2: reg32, in rmod: reg32) returns (ghost sum: uint32)
+procedure mq_montymul()
     requires
-        r1 < NTT_PRIME;
-        r2 < NTT_PRIME;
-        
-        @r1 != @r2;
-        @rmod != @r1;
-        @rmod != @r2;
+        a0 == 12289;
+        a1 < 12289;
+        s5 < 12289;
+    reads
+        s5;
+    modifies
+        a1; a2; a3; a4;
     
-        rmod == NTT_PRIME;
     ensures
-      sum == r1;
-      sum == mod(old(r1) + old(r2), NTT_PRIME);
+        a1 == montmul(old(a1), old(s5));
 {
-    ghost var Q: int := NTT_PRIME;
-    ghost var x: nat := r1;
-    ghost var y: nat := r2;
+    // mul(a1, s5);
+    assume false;
+}
 
-    // r2 = y - Q
-    sub(r2, r2, rmod);
-    assert r2 == uint32_sub(to_uint32(y), to_uint32(Q));
+procedure ntt_inline_mq_add()
+    requires
+        a0 == 12289;
+        t1 == 0xffffcfff;
 
-    // r2 = y - Q + x
-    add(r2, r2, r1);
-    assert r2 == uint32_add(to_uint32(x), uint32_sub(to_uint32(y), to_uint32(Q)));
-    ghost var d := r2;
+        a1 < 12289;
+        a2 < 12289;
+    reads
+        a0; a1; a2; t1;
+    modifies
+        a3; a4;
+    ensures
+      a3 == mqadd(old(a2), old(a1));
+{
+    ghost var Q := 12289;
+    ghost var x := a1;
+    ghost var y := a2;
 
-    // r2 = d
-    // r1 = d >> 31
-    srai(r1, r2, 0x1f); // 31
-    ghost var b := r1;
+    assert to_int32(t1) == (-Q);
+    let negQ := to_int32(t1);
 
-    // r1 = (Q & -(d >> 31)) + d
-    and(r1, r1, rmod);
+    // a1 = y - Q
+    add(a4, a2, t1);
+    assert a4 == uint32_add(y, to_uint32(negQ));
+
+    add(a4, a1, a4);
+    assert a4 == uint32_add(x, uint32_add(y, to_uint32(negQ)));
+    ghost var d := a4;
+
+    srai(a3, a4, 0x1f); // 31
+    ghost var b := a3;
+
+    // a3 = (Q & -(d >> 31)) + d
+    and(a3, a3, a0);
     
     // c == b & Q
     ghost var c := uint32_and(b, to_uint32(Q));
+    assert c == a3;
    
-    add(r1, r1, r2);
-    sum := r1;
-    assert r1 == uint32_add(c, d);
+    add(a3, a3, a4);
     
-    // preconditions for lemma_mq_add_correct
-    lemma_mq_add_correct(d, b, c, sum, x, y);
+    lemma_mq_add_correct(d, b, c, a3, x, y);
 }
-    
-procedure mq_sub(inout r1: reg32, inout r2: reg32, in rmod: reg32) returns (ghost diff: uint32)
+
+procedure ntt_inline_mq_sub()
     requires
-        r1 < NTT_PRIME;
-        r2 < NTT_PRIME;
-
-        @r1 != @r2;
-        @rmod != @r1;
-        @rmod != @r2;
-
-        rmod == NTT_PRIME;
+        a0 == 12289;
+        a1 < 12289;
+        a2 < 12289;
+    reads
+        a0; a1; a2;
+    modifies
+        a3; a4;
     ensures
-      diff == r1;
-      diff == mod(old(r1) - old(r2), NTT_PRIME);
+        a3 == mqsub(old(a2), old(a1));
 {
-    ghost var Q: int := NTT_PRIME;
-    ghost var x: nat := r1;
-    ghost var y: nat := r2;
+    ghost var x := a2;
+    ghost var y := a1;
     
-    // r2 == x - y;
-    sub(r2, r1, r2);
-    ghost var d := r2;
-    
-    srai(r1, r2, 0x1f);
-    ghost var b := r1;
+    sub(a3, a2, a1);
+    ghost var d := a3;
 
-    and(r1, r1, rmod);
-    ghost var c := uint32_and(b, to_uint32(Q));
-    assert c == r1;
+    srai(a4, a3, 31);
+    ghost var b := a4;
 
-    add(r1, r1, r2);
-    assert r1 == uint32_add(c, d);
-    diff := r1;
-    
+    and(a4, a4, a0);
+    ghost var c := uint32_and(b, 12289);
+    assert c == a4;
+
+    add(a3, a4, a3);
+    let r := a3;
     lemma_mq_sub_correct(d, b, c, diff, x, y);
 }
     
 procedure mq_rshift1(inout r1: reg32, inout r2: reg32, in rmod: reg32) returns (ghost r: uint32)
     requires
-        r1 < NTT_PRIME;
-        rmod == NTT_PRIME;
-        
-        @r1 != @rmod;
-        @r2 != @rmod;
-        @r1 != @r2;
+        a0 < 12289;
+    modifies
+        a0; a4; a5;
     ensures
-        //r == (old(r1) / 2) % NTT_PIME;
-        r < NTT_PRIME;
-        mod((2 * r), NTT_PRIME) == mod(old(r1), NTT_PRIME);
+        //r == (old(a0) / 2) % 12289;
+        r < 12289;
+        (2 * r) % 12289 == old(a0) % 12289;
 {
-    ghost var Q: int := NTT_PRIME;
-    ghost var x: nat := r1;
+    ghost var Q: int := 12289;
+    ghost var x: nat := a0;
 
-    andi(r2, r1, 1);
-    ghost var par := r2; // 1 if x is odd
+    andi(a5, a0, 1);
+    ghost var par := a5; // 1 if x is odd
+    
+    // lui(a4, 0x3);
+    // addi(a4, a4, 1);
+    li(a4, 0x3001); // 12289
     
     neg(r2, r2); // 0 or 0xffff_ffff
     ghost var b := r2;
@@ -156,7 +226,6 @@ procedure mq_rshift1(inout r1: reg32, inout r2: reg32, in rmod: reg32) returns (
 
     lemma_mq_rshift1_correct(par, b, c, d, r, x);
 }
-    
 #verbatim
 }
 #endverbatim

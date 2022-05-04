@@ -149,6 +149,7 @@ module rv_machine {
 
     | RV_LUI (rd: reg32_t, imm20: uint32)
     | RV_LI (rd: reg32_t, imm20: uint32)
+    | RV_LA (rd: reg32_t, symbol: string)
 
     | RV_NEG(rd: reg32_t, rs1: reg32_t)
 

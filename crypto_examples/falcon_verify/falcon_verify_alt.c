@@ -124,7 +124,7 @@ static void ntt512_bitrev_shuffle(uint16_t *a) {
 /*
  * Addition modulo q. Operands must be in the 0..q-1 range.
  */
-static inline uint32_t
+uint32_t
 mq_add(uint32_t x, uint32_t y) {
     /*
      * We compute x + y - q. If the result is negative, then the
@@ -144,7 +144,7 @@ mq_add(uint32_t x, uint32_t y) {
 /*
  * Subtraction modulo q. Operands must be in the 0..q-1 range.
  */
-static inline uint32_t
+uint32_t
 mq_sub(uint32_t x, uint32_t y) {
     /*
      * As in mq_add(), we use a conditional addition to ensure the
@@ -161,7 +161,7 @@ mq_sub(uint32_t x, uint32_t y) {
 /*
  * Division by 2 modulo q. Operand must be in the 0..q-1 range.
  */
-static inline uint32_t
+uint32_t
 mq_rshift1(uint32_t x) {
     x += Q & -(x & 1);
     return (x >> 1);
@@ -187,7 +187,7 @@ mq_poly_sub(uint16_t *f, const uint16_t *g, unsigned logn) {
  * this function computes: x * y / R mod q
  * Operands must be in the 0..q-1 range.
  */
-static inline uint32_t
+uint32_t
 mq_montymul(uint32_t x, uint32_t y) {
     uint32_t z, w;
 
@@ -307,12 +307,12 @@ static void print_uint16_array(FILE *f, uint16_t *a, uint16_t n) {
   fprintf(f, "]\n");
 }
 
-void mulntt_ct_std2rev(uint16_t *a, uint32_t n, const uint16_t *p) {
+void mulntt_ct_std2rev(uint16_t *a) {
   uint32_t j, s, t, u, d;
   uint32_t x, w;
-
-  d = n;
-  for (t=1; t<n; t <<= 1) {
+  
+  d = 512;
+  for (t=1; t<512; t <<= 1) {
     d >>= 1;
     /*
      * Invariant: d * 2t = n.
@@ -328,7 +328,7 @@ void mulntt_ct_std2rev(uint16_t *a, uint32_t n, const uint16_t *p) {
      *   w_t,j = psi_t * w_t^bitrev(j)
      */
     for (j=0, u=0; j<t; j++, u+=2*d) { // u = j * 2d
-      w = p[t + j]; // psi_t * w_t^bitrev(j)
+      w = ntt512_mixed_powers_rev[t + j]; // psi_t * w_t^bitrev(j)
       for (s=u; s<u+d; s++) {
         x = mq_montymul(a[s + d], w);
         a[s + d] = mq_sub(a[s], x);
@@ -338,26 +338,26 @@ void mulntt_ct_std2rev(uint16_t *a, uint32_t n, const uint16_t *p) {
   }
 }
 
-/* Internal signature verification code:
- *   c0[]      contains the hashed nonce+message
- *   s2[]      is the decoded signature
- *   h[]       contains the public key, in NTT + Montgomery format
- *   logn      is the degree log
- *   tmp[]     temporary, must have at least 2*2^logn bytes
- * Returned value is 1 on success, 0 on error.
- *
- * tmp[] must have 16-bit alignment.
- */
+// /* Internal signature verification code:
+//  *   c0[]      contains the hashed nonce+message
+//  *   s2[]      is the decoded signature
+//  *   h[]       contains the public key, in NTT + Montgomery format
+//  *   logn      is the degree log
+//  *   tmp[]     temporary, must have at least 2*2^logn bytes
+//  * Returned value is 1 on success, 0 on error.
+//  *
+//  * tmp[] must have 16-bit alignment.
+//  */
 
-static void
-mq_poly_tomonty(uint16_t *f, unsigned logn) {
-    size_t u, n;
+// static void
+// mq_poly_tomonty(uint16_t *f, unsigned logn) {
+//     size_t u, n;
 
-    n = (size_t)1 << logn;
-    for (u = 0; u < n; u ++) {
-        f[u] = (uint16_t)mq_montymul(f[u], R2);
-    }
-}
+//     n = (size_t)1 << logn;
+//     for (u = 0; u < n; u ++) {
+//         f[u] = (uint16_t)mq_montymul(f[u], R2);
+//     }
+// }
 
 uint16_t factors[] = {128, 2034, 1215, 5674, 11437, 8735, 8426, 6012, 4135, 7527, 12272, 1458, 4351, 6351, 10482, 280, 12130, 4962, 1659, 7353, 9123, 7679, 10079, 5205, 336, 2267, 10870, 11822, 3908, 6032, 6757, 9637, 6246, 2861, 7636, 755, 6813, 12063, 12154, 735, 4191, 9953, 5891, 11621, 906, 3260, 9560, 12127, 882, 7487, 7028, 9527, 4114, 3545, 3912, 11472, 7179, 5974, 1611, 3518, 4059, 2479, 4254, 9610, 6393, 6157, 4711, 4391, 11595, 2413, 517, 2647, 11532, 2756, 15, 8111, 7727, 1625, 10269, 5536, 8092, 6465, 5765, 18, 12191, 1899, 1950, 9865, 9101, 2337, 7758, 6918, 7395, 4798, 12110, 2340, 11838, 1090, 7720, 4394, 3386, 8874, 842, 2243, 2808, 9290, 1308, 9264, 2815, 6521, 8191, 5926, 10065, 10743, 11148, 8943, 8659, 3378, 10283, 12287, 9569, 12078, 7976, 8462, 5816, 7933, 11427, 7424, 7371, 9025, 9578, 12029, 2781, 9437, 4604, 6339, 6451, 11303, 10830, 6578, 11977, 5795, 3951, 3067, 5149, 10199, 8648, 707, 2978, 6999, 6954, 7199, 8596, 3721, 9781, 5462, 5764, 10947, 5941, 5887, 6181, 484, 6923, 1906, 11470, 4459, 5763, 9587, 11980, 9875, 10412, 3392, 4745, 1475, 2893, 2000, 4131, 2087, 11850, 5121, 8986, 5694, 1770, 10845, 2400, 7415, 7420, 1931, 8603, 952, 4375, 2124, 725, 2880, 8898, 8904, 4775, 5408, 6058, 5250, 91, 870, 3456, 5762, 8227, 5730, 1574, 2354, 6300, 2567, 1044, 6605, 11830, 2499, 6876, 11720, 367, 7560, 7996, 11084, 7926, 1907, 541, 10709, 1775, 5356, 9072, 12053, 10843, 11969, 7204, 3107, 10393, 2130, 8885, 3513, 9548, 8096, 11905, 6187, 8644, 7556, 2556, 10662, 11589, 6542, 12173, 1997, 51, 7915, 11525, 5525, 5421, 11449, 477, 9692, 7312, 2519, 9498, 1541, 6630, 8963, 11281, 5488, 4257, 1401, 565, 6482, 4307, 7956, 5840, 3706, 1670, 10024, 4139, 678, 405, 10084, 12005, 7008, 6905, 2004, 9571, 2509, 8187, 486, 9643, 2117, 3494, 8286, 12236, 1654, 553, 2451, 3041, 6656, 7456, 1735, 112, 4852, 11816, 8037, 5399, 6107, 10445, 11405, 2082, 5050, 10738, 4348, 2271, 4021, 12244, 245, 1397, 7414, 6060, 7970, 302, 5183, 7283, 12235, 294, 6592, 6439, 7272, 9564, 5278, 1304, 3824, 2393, 10184, 537, 5269, 1353, 9019, 1418, 11396, 2131, 10245, 9763, 5560, 3865, 8997, 8365, 9075, 3844, 5015, 5, 6800, 6672, 4638, 3423, 10038, 10890, 2155, 6018, 6, 8160, 633, 650, 11481, 7130, 779, 2586, 2306, 2465, 9792, 8133, 780, 3946, 8556, 10766, 5561, 5225, 2958, 4377, 4844, 936, 7193, 436, 3088, 9131, 6270, 10923, 10168, 3355, 3581, 3716, 2981, 11079, 1126, 7524, 8192, 7286, 4026, 6755, 6917, 6035, 10837, 3809, 6571, 2457, 11201, 7289, 8106, 927, 7242, 5631, 2113, 10343, 7864, 3610, 6289, 12185, 6028, 1317, 9215, 9909, 7496, 6979, 4332, 5089, 2333, 2318, 6496, 11058, 9433, 11453, 5917, 10114, 3649, 10173, 10155, 10253, 8354, 6404, 8828, 12016, 9679, 1921, 7292, 12186, 7388, 7567, 5227, 5678, 4588, 9157, 4763, 1377, 4792, 3950, 1707, 11188, 1898, 590, 3615, 800, 6568, 10666, 4740, 6964, 8510, 9651, 708, 4338, 960, 2966, 2968, 5688, 5899, 10212, 1750, 8223, 290, 1152, 6017, 10935, 1910, 4621, 4881, 2100, 4952, 348, 6298, 12136, 833, 2292, 8003, 8315, 2520, 10858, 7791, 2642, 4732, 8373, 7666, 4688, 9978, 3024, 8114, 11807, 8086, 10594, 5132, 11657, 710, 7058, 1171, 7279, 6795};
 
