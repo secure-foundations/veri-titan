@@ -318,10 +318,10 @@ module bv32_falcon_lemmas {
       }
     }
 
-    lemma lemma_mq_add_correct(d: uint32, b: uint32, c: uint32, r: uint32, x: int, y: int)
+    lemma lemma_mq_add_correct(d: uint32, b: uint32, c: uint32, r: uint32, x: uint32, y: uint32)
         requires 0 <= x < 12289;
         requires 0 <= y < 12289;
-        requires d == uint32_add(to_uint32(x), uint32_add(to_uint32(y), to_uint32((-12289))));
+        requires d == uint32_add(x, uint32_add(y, to_uint32((-12289))));
         requires b == to_uint32(int32_rs(to_int32(d), 31));
         requires c == uint32_and(b, to_uint32(12289));
         requires r == uint32_add(c, d);
@@ -353,9 +353,9 @@ module bv32_falcon_lemmas {
     lemma lemma_mq_sub_correct(d: uint32, b: uint32, c: uint32, r: uint32, x: int, y: int)
         requires 0 <= x < 12289;
         requires 0 <= y < 12289;
-        requires d == uint32_sub(to_uint32(x), to_uint32(y));
+        requires d == uint32_sub(x, y);
         requires b == to_uint32(int32_rs(to_int32(d), 31));
-        requires c == uint32_and(b, to_uint32(12289));
+        requires c == uint32_and(b, 12289);
         requires r == uint32_add(c, d);
         ensures r == (x - y) % 12289;
     {
