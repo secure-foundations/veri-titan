@@ -78,198 +78,235 @@ procedure save_s0__r5()
     assert top_frame(target.frames) == top_frame(mem.frames);
 }
 
-procedure s_loop(ghost iter_a: b16_iter,
-    ghost t: pow2_t,
-    ghost d: pow2_t,
-    ghost j: nat,
-    ghost bi: nat,
-    ghost view: loop_view)
-
-    returns (ghost iter_a': b16_iter)
-
-    {:frame false}
-
+procedure restore_s0__r5()
     requires
-        a0 == 12289;
-        a5 == t.full;
+        stack_depth(mem) >= 2;
+        seq_len(top_frame(mem.frames).content) == 6;
 
-        t1 == 0xffffcfff;
-        t2 == j;
-        t3 == 2 * (j * (2 * d.full)) + 2 * d.full;
-        t6 == 2 * d.full;
-
-        s2 == 2 * bi + 2 * (j * (2 * d.full));// s
-
-    requires
-        fvar_iter_inv(heap, iter_a, s4, 0);
-        s_loop_inv(iter_a.buff, d, j, bi, view);
-        bi < d.full;
-        s5 == mqmul(rev_mixed_powers_mont_x_value(2 * j, d), R);
+    reads
+        flat;
+    modifies
+        mem; sp;
+    modifies
+        s0; s1; s2; s3; s4; s5;
 
     ensures
-        a0 == old(a0);
-        a5 == old(a5);
-
-        s1 == old(s1);
-        s2 == old(s2);
-        s3 == old(s3);
-        s4 == old(s4);
-        s5 == old(s5);
-
-        t1 == old(t1);
-        t2 == old(t2); // j 
-        t3 == old(t3);
-        t6 == old(t6);
-
+        sp == old(sp) + 24;
+        flat == old(flat);
+        mem == stack_pop_frame(old(mem), flat);
     ensures
-        iter_a'.base_ptr == iter_a.base_ptr;
-        fvar_iter_inv(heap, iter_a', s4, 0);
-        mem == old(mem).(heap := heap);
-        heap == old(heap)[iter_a.base_ptr := heap[iter_a.base_ptr]];
-
-    ensures
-        s_loop_inv(iter_a'.buff, d, j, bi+1, view);
+        let frame := top_frame(old(mem.frames)).content;
+        s0 == frame[5];
+        s1 == frame[4];
+        s2 == frame[3];
+        s3 == frame[2];
+        s4 == frame[1];
+        s5 == frame[0];
 {
-    add(t4, s4, s2);
-    add(t5, t4, t6);
+    lw_stack(s0, 20);
+    lw_stack(s1, 16);
+    lw_stack(s2, 12);
+    lw_stack(s3, 8);
+    lw_stack(s4, 4);
+    lw_stack(s5, 0);
+    pop_frame(24);
+}
 
-    let s := s_loop_index_lemma(iter_a.buff, d, j, bi, s4, s2, t4, t5, t6, view);
+// procedure s_loop(ghost iter_a: b16_iter,
+//     ghost t: pow2_t,
+//     ghost d: pow2_t,
+//     ghost j: nat,
+//     ghost bi: nat,
+//     ghost view: loop_view)
 
-    lhu(a1, t5, 0, iter_a.(index := s + d.full)); // a[s + d]
+//     returns (ghost iter_a': b16_iter)
 
-    assert a1 == iter_a.buff[s + d.full];
+//     {:frame false}
 
-    mq_montymul();
+//     requires
+//         a0 == 12289;
+//         a5 == t.full;
 
-    assert a1 == montmul(iter_a.buff[s + d.full], s5);
+//         t1 == 0xffffcfff;
+//         t2 == j;
+//         t3 == 2 * (j * (2 * d.full)) + 2 * d.full;
+//         t6 == 2 * d.full;
 
-    lhu(a2, t4, 0, iter_a.(index := s)); // a[s]
+//         s2 == 2 * bi + 2 * (j * (2 * d.full));// s
 
-    assert a2 == iter_a.buff[s];
+//     requires
+//         fvar_iter_inv(heap, iter_a, s4, 0);
+//         s_loop_inv(iter_a.buff, d, j, bi, view);
+//         bi < d.full;
+//         s5 == mqmul(rev_mixed_powers_mont_x_value(2 * j, d), R);
 
-    mq_sub();
-    let o := a3;
-    iter_a' := sh_next(a3, t5, 0, false, iter_a.(index := s + d.full));
-    // assert iter_a'.buff[s + d.full] == o;
+//     ensures
+//         a0 == old(a0);
+//         a5 == old(a5);
+
+//         s1 == old(s1);
+//         s2 == old(s2);
+//         s3 == old(s3);
+//         s4 == old(s4);
+//         s5 == old(s5);
+
+//         t1 == old(t1);
+//         t2 == old(t2); // j 
+//         t3 == old(t3);
+//         t6 == old(t6);
+//         ra == old(ra);
+
+//     ensures
+//         iter_a'.base_ptr == iter_a.base_ptr;
+//         fvar_iter_inv(heap, iter_a', s4, 0);
+//         mem == old(mem).(heap := heap);
+//         heap == old(heap)[iter_a.base_ptr := heap[iter_a.base_ptr]];
+
+//     ensures
+//         s_loop_inv(iter_a'.buff, d, j, bi+1, view);
+// {
+//     add(t4, s4, s2);
+//     add(t5, t4, t6);
+
+//     let s := s_loop_index_lemma(iter_a.buff, d, j, bi, s4, s2, t4, t5, t6, view);
+
+//     lhu(a1, t5, 0, iter_a.(index := s + d.full)); // a[s + d]
+
+//     assert a1 == iter_a.buff[s + d.full];
+
+//     mq_montymul();
+
+//     assert a1 == montmul(iter_a.buff[s + d.full], s5);
+
+//     lhu(a2, t4, 0, iter_a.(index := s)); // a[s]
+
+//     assert a2 == iter_a.buff[s];
+
+//     mq_sub();
+//     let o := a3;
+//     iter_a' := sh_next(a3, t5, 0, false, iter_a.(index := s + d.full));
+//     // assert iter_a'.buff[s + d.full] == o;
     
-    mq_add(); // a2 + a1
-    let e := a3;
-    iter_a' := sh_next(a3, t4, 0, false, iter_a'.(index := s));
+//     mq_add(); // a2 + a1
+//     let e := a3;
+//     iter_a' := sh_next(a3, t4, 0, false, iter_a'.(index := s));
 
-    // assert s_loop_update(iter_a.buff, iter_a'.buff, d, j, bi, s, e, o, view);
-    s_loop_inv_peri_lemma(iter_a.buff, iter_a'.buff, d, j, bi, s, e, o, view);
+//     // assert s_loop_update(iter_a.buff, iter_a'.buff, d, j, bi, s, e, o, view);
+//     s_loop_inv_peri_lemma(iter_a.buff, iter_a'.buff, d, j, bi, s, e, o, view);
 
-    iter_a' := iter_a'.(index := 0);
-}
+//     iter_a' := iter_a'.(index := 0);
+// }
 
-procedure j_loop(ghost iter_a: b16_iter,
-    ghost iter_p: b16_iter,
-    ghost t: pow2_t,
-    ghost d: pow2_t,
-    ghost j: nat,
-    ghost u: nat,
-    ghost view: loop_view)
+// procedure j_loop(ghost iter_a: b16_iter,
+//     ghost iter_p: b16_iter,
+//     ghost t: pow2_t,
+//     ghost d: pow2_t,
+//     ghost j: nat,
+//     ghost u: nat,
+//     ghost view: loop_view)
 
-    returns (ghost iter_a': b16_iter)
+//     returns (ghost iter_a': b16_iter)
 
-    {:frame false}
+//     {:frame false}
 
-    requires
-        a0 == 12289; // Q
-        a5 == t.full;
-        t1 == 0xffffcfff; // -Q
-        t2 == j;
-        t3 == 2 * u;
-        t6 == 2 * d.full;
+//     requires
+//         a0 == 12289; // Q
+//         a5 == t.full;
+//         t1 == 0xffffcfff; // -Q
+//         t2 == j;
+//         t3 == 2 * u;
+//         t6 == 2 * d.full;
 
-    requires
-        fvar_iter_inv(heap, iter_p, s3, 0);
-        fvar_iter_inv(heap, iter_a, s4, 0);
-        iter_a.base_ptr != iter_p.base_ptr;
+//     requires
+//         fvar_iter_inv(heap, iter_p, s3, 0);
+//         fvar_iter_inv(heap, iter_a, s4, 0);
+//         iter_a.base_ptr != iter_p.base_ptr;
 
-        iter_p.buff == rev_mixed_powers_mont_table();
+//         iter_p.buff == rev_mixed_powers_mont_table();
 
-    requires
-        N == pow2_t_cons(512, 9);
-        j_loop_inv(iter_a.buff, d, j, u, view);
-        t2 < lsize(view).full;
-        t == lsize(view);
+//     requires
+//         N == pow2_t_cons(512, 9);
+//         j_loop_inv(iter_a.buff, d, j, u, view);
+//         t2 < lsize(view).full;
+//         t == lsize(view);
 
-    ensures
-        a0 == old(a0);
-        a5 == old(a5);
+//     ensures
+//         a0 == old(a0);
+//         a5 == old(a5);
 
-        s1 == old(s1);
-        s3 == old(s3);
-        s4 == old(s4);
+//         s1 == old(s1);
+//         s3 == old(s3);
+//         s4 == old(s4);
 
-        t1 == old(t1);
-        t2 == old(t2); // j 
-        t3 == 2 * (u + 2 * d.full);
-        t6 == old(t6);
+//         t1 == old(t1);
+//         t2 == old(t2); // j 
+//         t3 == 2 * (u + 2 * d.full);
+//         t6 == old(t6);
+//         ra == old(ra);
 
-        iter_a'.base_ptr == iter_a.base_ptr;
-        fvar_iter_inv(heap, iter_a', s4, 0);
-        mem == old(mem).(heap := heap);
-        heap == old(heap)[iter_a.base_ptr := heap[iter_a.base_ptr]];
+//         iter_a'.base_ptr == iter_a.base_ptr;
+//         fvar_iter_inv(heap, iter_a', s4, 0);
+//         mem == old(mem).(heap := heap);
+//         heap == old(heap)[iter_a.base_ptr := heap[iter_a.base_ptr]];
 
-    ensures
-        ensures j_loop_inv(iter_a'.buff, d, j+1, u + 2 * d.full, view);
-{
-    iter_a' := iter_a;
+//     ensures
+//         ensures j_loop_inv(iter_a'.buff, d, j+1, u + 2 * d.full, view);
+// {
+//     iter_a' := iter_a;
 
-    add(s5, a5, t2);
-    slli(s5, s5, 1);
+//     add(s5, a5, t2);
+//     slli(s5, s5, 1);
 
-    mv(s2, t3); // s2 = 2 * s
-    add(t3, t3, t6);
+//     mv(s2, t3); // s2 = 2 * s
+//     add(t3, t3, t6);
 
-    s_loop_inv_pre_lemma(iter_a'.buff, d, t2, t, u, s2, t3, t6, s5, view);
-    add(s5, s5, s3);
+//     s_loop_inv_pre_lemma(iter_a'.buff, d, t2, t, u, s2, t3, t6, s5, view);
+//     add(s5, s5, s3);
 
-    let _ := lhu_next(s5, s5, 0, false, iter_p.(index := t.full + j));
-    // assert s5 == mqmul(rev_mixed_powers_mont_x_value(2 * j, d), R); // w 
+//     let _ := lhu_next(s5, s5, 0, false, iter_p.(index := t.full + j));
+//     // assert s5 == mqmul(rev_mixed_powers_mont_x_value(2 * j, d), R); // w 
 
-    ghost var bi:nat := 0;
-    assert t3 == 2 * u + 2 * d.full;
+//     ghost var bi:nat := 0;
+//     assert t3 == 2 * u + 2 * d.full;
 
-    while (s2 < t3)
-        invariant
-            a0 == 12289;
-            a5 == t.full;
+//     while (s2 < t3)
+//         invariant
+//             a0 == 12289;
+//             a5 == t.full;
 
-            s1 == old(s1);
-            s2 == 2 * bi + 2 * u; // s
-            s3 == old(s3);
-            s4 == old(s4);
+//             s1 == old(s1);
+//             s2 == 2 * bi + 2 * u; // s
+//             s3 == old(s3);
+//             s4 == old(s4);
 
-            t1 == 0xffffcfff;
-            t3 == 2 * u + 2 * d.full;
-            t2 == old(t2); // j 
-            t6 == 2 * d.full;
+//             t1 == 0xffffcfff;
+//             t3 == 2 * u + 2 * d.full;
+//             t2 == old(t2); // j 
+//             t6 == 2 * d.full;
+//             ra == old(ra);
 
-        invariant
-            fvar_iter_inv(heap, iter_a', s4, 0);
-            mem == old(mem).(heap := heap);
-            heap == old(heap)[iter_a.base_ptr := heap[iter_a.base_ptr]];
+//         invariant
+//             fvar_iter_inv(heap, iter_a', s4, 0);
+//             mem == old(mem).(heap := heap);
+//             heap == old(heap)[iter_a.base_ptr := heap[iter_a.base_ptr]];
         
-        invariant
-            s_loop_inv(iter_a'.buff, d, j, bi, view);
-            s5 == mqmul(rev_mixed_powers_mont_x_value(2 * j, d), R);
+//         invariant
+//             s_loop_inv(iter_a'.buff, d, j, bi, view);
+//             s5 == mqmul(rev_mixed_powers_mont_x_value(2 * j, d), R);
 
-        decreases
-            t3 - s2;
-    {
-        iter_a' := s_loop(iter_a', t, d, j, bi, view);
-        bi := bi + 1;
-        addi(s2, s2, 2);
-    }
+//         decreases
+//             t3 - s2;
+//     {
+//         iter_a' := s_loop(iter_a', t, d, j, bi, view);
+//         bi := bi + 1;
+//         addi(s2, s2, 2);
+//     }
 
-    let ot3 := t3;
-    add(t3, t3, t6);
+//     let ot3 := t3;
+//     add(t3, t3, t6);
 
-    s_loop_inv_post_lemma(iter_a'.buff, d, j, u, bi, ot3, t3, t6, view);
-}
+//     s_loop_inv_post_lemma(iter_a'.buff, d, j, u, bi, ot3, t3, t6, view);
+// }
 
 procedure t_loop(ghost iter_a: b16_iter,
     ghost iter_p: b16_iter,
@@ -278,89 +315,95 @@ procedure t_loop(ghost iter_a: b16_iter,
     ghost view: loop_view)
     returns (ghost iter_a': b16_iter, ghost view': loop_view)
 
-    {:frame false}
-
     requires
         fvar_iter_inv(heap, iter_p, s3, 0);
         fvar_iter_inv(heap, iter_a, s4, 0);
         iter_a.base_ptr != iter_p.base_ptr;
 
-    requires
-        N == pow2_t_cons(512, 9);
-        a0 == 12289; // Q
-        a5 == t.full;
-        t1 == 0xffffcfff; // -Q
-        t6 == 2 * d.full;
+    // requires
+    //     N == pow2_t_cons(512, 9);
+    //     a0 == 12289; // Q
+    //     a5 == t.full;
+    //     t1 == 0xffffcfff; // -Q
+    //     t6 == 2 * d.full;
 
-        t_loop_inv(iter_a.buff, d, view);
-        t == lsize(view);
-        iter_p.buff == rev_mixed_powers_mont_table();
+    //     t_loop_inv(iter_a.buff, d, view);
+    //     t == lsize(view);
+    //     iter_p.buff == rev_mixed_powers_mont_table();
+    reads
+        s3; s4;
+
+    modifies
+        mem; heap;
 
     ensures
-        a0 == old(a0);
-        a5 == old(a5);
+    //     a0 == old(a0);
+    //     a5 == old(a5);
 
-        s1 == old(s1);
+    //     s1 == old(s1);
         s3 == old(s3);
         s4 == old(s4);
 
-        t1 == old(t1);
-        t6 == old(t6);
+    //     t1 == old(t1);
+    //     t6 == old(t6);
+    //     ra == old(ra);
 
         mem == old(mem).(heap := heap);
         fvar_iter_inv(heap, iter_a', s4, 0);
         heap == old(heap)[iter_a.base_ptr := heap[iter_a.base_ptr]];
     
-    ensures
-        view.hsize.exp < N.exp ==> t_loop_inv(iter_a'.buff, pow2_half(d), view');
-        view.hsize.exp == N.exp ==> view' == view;
-        view.hsize.exp == N.exp ==> t_loop_end(iter_a'.buff, view');
+    // ensures
+    //     view.hsize.exp < N.exp ==> t_loop_inv(iter_a'.buff, pow2_half(d), view');
+    //     view.hsize.exp == N.exp ==> view' == view;
+        // view.hsize.exp == N.exp ==> t_loop_end(iter_a'.buff, view');
 {
-    li(t2, 0);
-    li(t3, 0);
+    assume false;
+    // li(t2, 0);
+    // li(t3, 0);
 
-    ghost var j :nat := 0;
-    ghost var u :nat := 0;
+    // ghost var j :nat := 0;
+    // ghost var u :nat := 0;
 
-    iter_a' := iter_a;
+    // iter_a' := iter_a;
 
-    j_loop_inv_pre_lemma(iter_a'.buff, d, view);
+    // j_loop_inv_pre_lemma(iter_a'.buff, d, view);
 
-    while (t2 < a5)
-        invariant
-            a0 == 12289;
-            a5 == t.full;
+    // while (t2 < a5)
+    //     invariant
+    //         a0 == 12289;
+    //         a5 == t.full;
 
-            s1 == old(s1);
-            s3 == old(s3);
-            s4 == old(s4);
+    //         s1 == old(s1);
+    //         s3 == old(s3);
+    //         s4 == old(s4);
 
-            t1 == 0xffffcfff;
-            t2 == j;
-            t3 == 2 * u;
-            t6 == 2 * d.full;
+    //         t1 == 0xffffcfff;
+    //         t2 == j;
+    //         t3 == 2 * u;
+    //         t6 == 2 * d.full;
+    //         ra == old(ra);
 
-        invariant
-            iter_a.base_ptr != iter_p.base_ptr;
-            fvar_iter_inv(heap, iter_p, s3, 0);
-            iter_a'.base_ptr == iter_a.base_ptr;
-            fvar_iter_inv(heap, iter_a', s4, 0);
-            heap == old(heap)[iter_a.base_ptr := heap[iter_a.base_ptr]];
-            mem == old(mem).(heap := heap);
+    //     invariant
+    //         iter_a.base_ptr != iter_p.base_ptr;
+    //         fvar_iter_inv(heap, iter_p, s3, 0);
+    //         iter_a'.base_ptr == iter_a.base_ptr;
+    //         fvar_iter_inv(heap, iter_a', s4, 0);
+    //         heap == old(heap)[iter_a.base_ptr := heap[iter_a.base_ptr]];
+    //         mem == old(mem).(heap := heap);
 
-        invariant
-            j_loop_inv(iter_a'.buff, d, j, u, view);
+    //     invariant
+    //         j_loop_inv(iter_a'.buff, d, j, u, view);
 
-        decreases
-            a5 - t2;
-    {
-        iter_a' := j_loop(iter_a', iter_p, t, d, j, u, view);
-        addi(t2, t2, 1);
-        j := j + 1;
-        u := u + 2 * d.full;
-    }
+    //     decreases
+    //         a5 - t2;
+    // {
+    //     iter_a' := j_loop(iter_a', iter_p, t, d, j, u, view);
+    //     addi(t2, t2, 1);
+    //     j := j + 1;
+    //     u := u + 2 * d.full;
+    // }
 
-    view' := j_loop_inv_post_lemma(iter_a'.buff, d, j, u, view);
+    // view' := j_loop_inv_post_lemma(iter_a'.buff, d, j, u, view);
 }
 
 procedure mulntt_ct_std2rev(
@@ -388,6 +431,9 @@ returns (ghost iter_a': b16_iter, ghost view': loop_view)
         N == pow2_t_cons(512, 9);
         t_loop_inv(iter_a.buff, pow2(8), view);
         iter_p.buff == rev_mixed_powers_mont_table();
+
+    // ensures
+    //     t_loop_end(iter_a'.buff, view');
 {
     save_s0__r5();
 
@@ -424,28 +470,37 @@ returns (ghost iter_a': b16_iter, ghost view': loop_view)
                 [iter_a'.base_ptr := heap[iter_a'.base_ptr]];
 
         invariant
-            t1 == 0xffffcfff;
-            a0 == 12289;
+            // t1 == 0xffffcfff;
+            // a0 == 12289;
             s1 == d.exp;
             t6 == 2 * d.full;
-            a5 == t.full;
+            // a5 == t.full;
+            // ra == old(ra);
 
-            1 <= d.exp <= N.exp;
+            0 <= d.exp <= N.exp;
+            s1 == 0 ==> d.exp == 0;
 
             iter_p.buff == rev_mixed_powers_mont_table();
-            t_loop_inv(iter_a'.buff, pow2_half(d), view');
-            t == lsize(view');
+            s1 != 0 ==> t_loop_inv(iter_a'.buff, pow2_half(d), view');
+            // t == lsize(view');
+            t.exp + d.exp == N.exp;
 
         decreases s1;
     {
+        assert s1 != 0;
         half(t6);
         d := pow2_half(d);
 
         iter_a', view' := t_loop(iter_a', iter_p, t, d, view');
 
+        // assume t_loop_inv(iter_a'.buff, d, view');
+
         t := p2_double(a5, t);
         addi(s1, s1, (-1));
     }
+
+    // restore_s0__r5();
+    assert false;
 }
 
 #verbatim

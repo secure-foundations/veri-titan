@@ -7,12 +7,12 @@ abstract module ntt_impl {
     import opened DivMod
     import opened Mul
 
-    import opened pows_of_2
-    import opened nth_root
+	import opened pows_of_2
     import opened ntt_index
-
+	import opened mq_polys
+	import opened poly_view
+    import opened nth_root
     import opened ntt_model
-    import opened ntt_polys
 
     method j_loop(a: n_sized, p: n_sized, t: pow2_t, d: pow2_t, j: nat, u: nat, ghost view: loop_view)
     returns (a': n_sized)
@@ -61,23 +61,22 @@ abstract module ntt_impl {
         view.s_loop_inv_post_lemma(a', d, j, d.full);
     }
 
-    method t_loop(a: n_sized, p: n_sized, t: pow2_t, d: pow2_t, ghost view: loop_view)
-        returns (a': n_sized, ghost view': loop_view)
-
-        requires view.t_loop_inv(a, d);
+    method t_loop(a: n_sized, p: n_sized, t: pow2_t, d: pow2_t)
+        returns (a': n_sized)
+        requires 0 <= d.exp < N.exp;
+        requires t_loop_inv(a, pow2_double(d));
         requires p == rev_mixed_powers_mont_table();
-        requires t == view.lsize();
         requires t.exp < N.exp;
+        requires t == block_size(pow2_double(d));
 
-        ensures view.hsize.exp < N.exp ==> view'.t_loop_inv(a', pow2_half(d));
-        ensures view.hsize.exp == N.exp ==> view' == view;
-        ensures view.hsize.exp == N.exp ==> view'.t_loop_end(a');
+        ensures t_loop_inv(a', d);
     {
+        ghost var view := build_loop_view(d);
+        view.j_loop_inv_pre_lemma(a, d);
+
         var j := 0;
         var u: nat := 0;
         a' := a;
-
-        view.j_loop_inv_pre_lemma(a', d);
 
         while (j < t.full)
             invariant t == view.lsize();
@@ -99,44 +98,35 @@ abstract module ntt_impl {
             u := u + 2 * d.full;
         }
 
-        view' := view.j_loop_inv_post_lemma(a', d, j);
+        view.j_loop_inv_post_lemma(a', d, j);
     }
 
-    method mulntt_ct(a: n_sized, p: n_sized, ghost view: loop_view)
-        returns (a': n_sized, ghost view': loop_view)
+    method mulntt_ct(a: n_sized, p: n_sized)
+        returns (a': n_sized)
         requires N == pow2_t_cons(512, 9);
-        requires view.t_loop_inv(a, pow2(N.exp-1));
+        requires a == A();
         requires p == rev_mixed_powers_mont_table();
-        ensures view'.t_loop_end(a');
     {
         var d := pow2(9);
-        var t := pow2(0);
-        a' := a;
-        view' := view;
 
-        assert view'.lsize() == pow2(0) by {
-            view'.size_count_lemma();
+        assert d == N by {
+            Nth_root_lemma();
         }
 
-        pow2_basics(t);
+        var t := pow2(0);
 
-        Nth_root_lemma();
+        t_loop_inv_pre_lemma();
 
-        while (t.full < 512)
-            invariant 1 <= d.exp <= N.exp;
-            invariant view'.t_loop_inv(a', pow2_half(d));
-            invariant t.full >= N.full ==> view'.hsize.exp == N.exp;
-            invariant t == view'.lsize();
+        a' := a;
+
+        while (t.exp < 9)
+            invariant 0 <= d.exp <= N.exp;
+            invariant t == block_size(d);
+            invariant t_loop_inv(a', d);
         {
             d := pow2_half(d);
-            a', view' := t_loop(a', p, t, d, view');
+            a' := t_loop(a', p, t, d);
             t := pow2_double(t);
-
-            if t.full >= N.full {
-                assume view'.hsize.exp == N.exp;
-            }
         }
-
-        assert view'.hsize.exp == N.exp;
     }
 }

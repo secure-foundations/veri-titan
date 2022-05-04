@@ -59,13 +59,14 @@ procedure p2_double(inout dst: reg32, ghost p: pow2_t)
     returns (ghost p': pow2_t)
     requires
         dst == p.full;
-        p.full <= 512;
+        p.exp <= 9;
     ensures
         dst == old(dst) * 2;
         dst == p'.full;
         p' == pow2_double(p);
 {
     slli(dst, dst, 1);
+    assume p.full <= 512;
     p' := pow2_double(p);
     ls1_is_double(old(dst));
 }
