@@ -118,7 +118,7 @@ procedure mq_montymul()
     assume false;
 }
 
-procedure mq_add()
+procedure ntt_inline_mq_add()
     requires
         a0 == 12289;
         t1 == 0xffffcfff;
@@ -162,7 +162,7 @@ procedure mq_add()
     lemma_mq_add_correct(d, b, c, a3, x, y);
 }
 
-procedure mq_sub()
+procedure ntt_inline_mq_sub()
     requires
         a0 == 12289;
         a1 < 12289;
