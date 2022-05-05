@@ -1,6 +1,6 @@
 include "../../arch/riscv/machine.s.dfy"
 include "../../arch/riscv/vale.i.dfy"
-include "ntt_model.dfy"
+include "ct_std2rev_model.dfy"
 include "../bv32_ops.dfy"
 
 include "../DivModNeg.dfy"
@@ -24,7 +24,7 @@ module bv32_falcon_lemmas {
 	import opened mq_polys
 	import opened poly_view
     import opened nth_root
-    import opened ntt_model
+    import opened forward_ntt
 
     predicate fvar_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int)
     {
@@ -259,17 +259,19 @@ module bv32_falcon_lemmas {
         s := view. higher_points_view_index_lemma(buff_as_nsized(a), d, j, bi);
     }
 
-    predicate rv_t_loop_inv(a: seq<uint16>, d: pow2_t)
+    predicate rv_t_loop_inv(a: seq<uint16>, d: pow2_t, coeffs: seq<uint16>)
         requires 0 <= d.exp <= N.exp;
     {
         && buff_is_nsized(a)
-        && t_loop_inv(buff_as_nsized(a), d)
+        && buff_is_nsized(coeffs)
+        && t_loop_inv(buff_as_nsized(a), d, buff_as_nsized(coeffs))
     }
 
-    predicate rv_ntt_eval_all(a: seq<uint16>)
+    predicate rv_ntt_eval_all(a: seq<uint16>, coeffs: seq<uint16>)
     {
         && buff_is_nsized(a)
-        && ntt_eval_all(buff_as_nsized(a))
+        && buff_is_nsized(coeffs)
+        && ntt_eval_all(buff_as_nsized(a), buff_as_nsized(coeffs))
     }
 
     predicate j_loop_inv(a: seq<uint16>, d: pow2_t, j: nat, u: nat, view: loop_view)
@@ -281,7 +283,7 @@ module bv32_falcon_lemmas {
 
     lemma j_loop_inv_pre_lemma(a: seq<uint16>, d: pow2_t, view: loop_view)
         requires 0 <= d.exp < N.exp;
-        requires rv_t_loop_inv(a, pow2_double(d));
+        requires rv_t_loop_inv(a, pow2_double(d), view.coefficients);
         requires view.loop_view_wf();
         requires view.hsize == block_size(d);
         ensures j_loop_inv(a, d, 0, 0, view);
@@ -290,13 +292,12 @@ module bv32_falcon_lemmas {
     }
 
     lemma j_loop_inv_post_lemma(a: seq<uint16>, d: pow2_t, j: nat, u: nat, view: loop_view)
-    
         requires j_loop_inv(a, d, j, u, view);
         requires j == lsize(view).full;
         requires 0 <= view.hsize.exp <= N.exp;
         requires view.hsize == block_size(d);
 
-        ensures t_loop_inv(a, d);
+        ensures t_loop_inv(a, d, view.coefficients);
     {
         view.j_loop_inv_post_lemma(a, d, j);
     }

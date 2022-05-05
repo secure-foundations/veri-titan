@@ -21,11 +21,13 @@ import opened ntt_index
 import opened mq_polys
 import opened poly_view
 import opened nth_root
-import opened ntt_model
+import opened forward_ntt
 
 import opened mq_arith
 
 #endverbatim
+
+function buff_as_nsized(s: seq(uint16)): seq(uint16) extern;
 
 function rev_mixed_powers_mont_table(): seq(uint16) extern;
 function rev_mixed_powers_mont_table_lemma(t: pow2_t, d: pow2_t, j: nat): void extern;
@@ -33,7 +35,7 @@ function rev_mixed_powers_mont_x_value(i: nat, d: pow2_t): (r: uint16) extern;
 
 type loop_view: Type(0) extern;
 function operator(.hsize) (p :loop_view): pow2_t extern;
-function build_loop_view(d: pow2_t): loop_view extern;
+function build_loop_view(a: seq(uint16), d: pow2_t): loop_view extern;
 function lsize(v: loop_view): pow2_t extern;
 
 function fvar_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int): bool extern;
@@ -52,12 +54,10 @@ function s_loop_index_lemma(a: seq(uint16), d: pow2_t, j: nat, bi: nat, s4: nat,
 function s_loop_update(a: seq(uint16), a': seq(uint16), d: pow2_t, j: nat, bi: nat, s: nat, e: uint32, o: uint32, view: loop_view): bool extern;
 function s_loop_inv_peri_lemma(a: seq(uint16), a': seq(uint16), d: pow2_t, j: nat, bi: nat, s: nat, e: uint32, o: uint32, view: loop_view): void extern;
 
-function rv_ntt_eval_all(a: seq(uint16)): bool extern;
-function rv_t_loop_inv(a: seq(uint16), d: pow2_t): bool extern;
-function t_loop_inv_pre_lemma(): void extern;
-function t_loop_inv_post_lemma(a: seq(uint16), one: pow2_t): void extern;
-
-function A(): seq(uint16) extern;
+function rv_ntt_eval_all(a: seq(uint16), coeffs: seq(uint16)): bool extern;
+function rv_t_loop_inv(a: seq(uint16), d: pow2_t, c: seq(uint16)): bool extern;
+function t_loop_inv_pre_lemma(c: seq(uint16)): void extern;
+function t_loop_inv_post_lemma(a: seq(uint16), one: pow2_t, c: seq(uint16)): void extern;
 
 procedure save_s0__r5()
     requires
@@ -319,7 +319,8 @@ procedure j_loop(ghost iter_a: b16_iter,
 procedure t_loop(ghost iter_a: b16_iter,
     ghost iter_p: b16_iter,
     ghost t: pow2_t,
-    ghost d: pow2_t)
+    ghost d: pow2_t,
+    ghost coeffs: seq(uint16))
     returns (ghost iter_a': b16_iter)
 
     {:frame false}
@@ -338,7 +339,7 @@ procedure t_loop(ghost iter_a: b16_iter,
 
     requires
         0 <= d.exp < N.exp;
-        rv_t_loop_inv(iter_a.buff, pow2_double(d));
+        rv_t_loop_inv(iter_a.buff, pow2_double(d), coeffs);
         iter_p.buff == rev_mixed_powers_mont_table();
         t == block_size(pow2_double(d));
 
@@ -365,12 +366,12 @@ procedure t_loop(ghost iter_a: b16_iter,
         heap == old(heap)[iter_a.base_ptr := heap[iter_a.base_ptr]];
     
     ensures
-        rv_t_loop_inv(iter_a'.buff, d);
+        rv_t_loop_inv(iter_a'.buff, d, coeffs);
 {
     li(t2, 0);
     li(t3, 0);
 
-    ghost var view := build_loop_view(d);
+    ghost var view := build_loop_view(buff_as_nsized(coeffs), d);
 
     ghost var j :nat := 0;
     ghost var u :nat := 0;
@@ -439,7 +440,6 @@ returns (ghost iter_a': b16_iter)
 
     requires
         N == pow2_t_cons(512, 9);
-        iter_a.buff == A();
         iter_p.buff == rev_mixed_powers_mont_table();
 
     ensures
@@ -459,7 +459,7 @@ returns (ghost iter_a': b16_iter)
             [iter_a'.base_ptr := heap[iter_a'.base_ptr]];
         
     ensures
-        rv_ntt_eval_all(iter_a'.buff);
+        rv_ntt_eval_all(iter_a'.buff, iter_a.buff);
 {
     save_s0__r5();
 
@@ -482,7 +482,7 @@ returns (ghost iter_a': b16_iter)
     ghost var t := pow2(0);
     assume t.full == 1;
 
-    t_loop_inv_pre_lemma();
+    t_loop_inv_pre_lemma(buff_as_nsized(iter_a.buff));
 
     while (s1 > x0)
         invariant
@@ -509,7 +509,7 @@ returns (ghost iter_a': b16_iter)
             t == block_size(d);
 
         invariant
-            rv_t_loop_inv(iter_a'.buff, d);
+            rv_t_loop_inv(iter_a'.buff, d, iter_a.buff);
             // iter_p.buff == rev_mixed_powers_mont_table();
         decreases s1;
     {
@@ -517,14 +517,14 @@ returns (ghost iter_a': b16_iter)
         half(t6);
         d := pow2_half(d);
 
-        iter_a' := t_loop(iter_a', iter_p, t, d);
+        iter_a' := t_loop(iter_a', iter_p, t, d, iter_a.buff);
 
         t := p2_double(a5, t);
         addi(s1, s1, (-1));
     }
 
     restore_s0__r5();
-    t_loop_inv_post_lemma(iter_a'.buff, d);
+    t_loop_inv_post_lemma(iter_a'.buff, d, buff_as_nsized(iter_a.buff));
 }
 
 #verbatim
