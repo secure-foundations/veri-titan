@@ -271,7 +271,7 @@ module nth_root {
 
 	// d is the block count
 	// i is the offset in the block
-	function rev_mixed_powers_mont_x_value(i: nat, d: pow2_t): (r: elem)
+	function rev_mixed_powers_mont_x_value_inner(i: nat, d: pow2_t): (r: elem)
 		requires d.exp <= N.exp;
 		requires i < block_size(d).full;
 		ensures r > 0;
@@ -309,9 +309,17 @@ module nth_root {
 		r
 	}
 
+	function rev_mixed_powers_mont_x_value(i: nat, d: pow2_t): (r: elem)
+	{
+		if rev_mixed_powers_mont_x_value_inner.requires(i, d) then 
+			rev_mixed_powers_mont_x_value_inner(i, d)
+		else
+			0
+	}
+
 	function method {:axiom} rev_mixed_powers_mont_table(): (t: seq<elem>)
 		ensures |t| == N.full;
-	
+
 	lemma {:axiom} rev_mixed_powers_mont_table_axiom(t: pow2_t, d: pow2_t, j: nat)
 		requires t.exp < N.exp;
 		requires j < t.full;
@@ -336,7 +344,7 @@ module nth_root {
 
 	// d is the block count
 	// i is the offset in the block
-	function rev_omega_inv_powers_x_value(i: nat, d: pow2_t): (r: elem)
+	function rev_omega_inv_powers_x_value_inner(i: nat, d: pow2_t): (r: elem)
 		requires d.exp <= N.exp;
 		requires i < block_size(d).full;
 		ensures r > 0;
@@ -379,6 +387,15 @@ module nth_root {
 			}
 		}
 		r
+	}
+
+	function rev_omega_inv_powers_x_value(i: nat, d: pow2_t): (r: elem)
+		ensures rev_omega_inv_powers_x_value_inner.requires(i, d) ==> r > 0
+	{
+		if rev_omega_inv_powers_x_value_inner.requires(i, d) then 
+			rev_omega_inv_powers_x_value_inner(i, d)
+		else
+			0
 	}
 
 	function method {:axiom} rev_omega_inv_powers_mont_table(): (t: seq<elem>)

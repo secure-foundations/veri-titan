@@ -1,4 +1,4 @@
-include "ntt_model.dfy"
+include "ct_std2rev_model.dfy"
 
 abstract module ntt_impl {
     import opened Seq
@@ -12,7 +12,7 @@ abstract module ntt_impl {
 	import opened mq_polys
 	import opened poly_view
     import opened nth_root
-    import opened ntt_model
+    import opened forward_ntt
 
     method j_loop(a: n_sized, p: n_sized, t: pow2_t, d: pow2_t, j: nat, u: nat, ghost view: loop_view)
     returns (a': n_sized)
@@ -61,16 +61,15 @@ abstract module ntt_impl {
         view.s_loop_inv_post_lemma(a', d, j, d.full);
     }
 
-    method t_loop(a: n_sized, p: n_sized, t: pow2_t, d: pow2_t)
+    method t_loop(a: n_sized, p: n_sized, t: pow2_t, d: pow2_t, ghost coeffs: n_sized)
         returns (a': n_sized)
         requires 0 <= d.exp < N.exp;
-        requires t_loop_inv(a, pow2_double(d));
+        requires t_loop_inv(a, pow2_double(d), coeffs);
         requires p == rev_mixed_powers_mont_table();
         requires t == block_size(pow2_double(d));
-
-        ensures t_loop_inv(a', d);
+        ensures t_loop_inv(a', d, coeffs);
     {
-        ghost var view := build_loop_view(d);
+        ghost var view := build_loop_view(coeffs, d);
         view.j_loop_inv_pre_lemma(a, d);
 
         var j := 0;
@@ -103,9 +102,8 @@ abstract module ntt_impl {
     method mulntt_ct(a: n_sized, p: n_sized)
         returns (a': n_sized)
         requires N == pow2_t_cons(512, 9);
-        requires a == A();
         requires p == rev_mixed_powers_mont_table();
-        ensures points_eval_inv(a', A(), x_value, pow2(0));
+        ensures points_eval_inv(a', a, x_value, pow2(0));
     {
         var d := pow2(9);
 
@@ -115,20 +113,21 @@ abstract module ntt_impl {
 
         var t := pow2(0);
 
-        t_loop_inv_pre_lemma();
+        ghost var coeffs := a;
+        t_loop_inv_pre_lemma(a);
 
         a' := a;
 
         while (t.exp < 9)
             invariant 0 <= d.exp <= N.exp;
             invariant t == block_size(d);
-            invariant t_loop_inv(a', d);
+            invariant t_loop_inv(a', d, coeffs);
         {
             d := pow2_half(d);
-            a' := t_loop(a', p, t, d);
+            a' := t_loop(a', p, t, d, coeffs);
             t := pow2_double(t);
         }
     
-        t_loop_inv_post_lemma(a', d);
+        t_loop_inv_post_lemma(a', d, coeffs);
     }
 }
