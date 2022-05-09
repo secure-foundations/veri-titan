@@ -515,6 +515,7 @@ module ntt_index {
             ensures r.len == len;
             ensures r.rev_view_wf();
             ensures r.ti == 0;
+            ensures r.b == a;
         {    
             var finished := init_finished(len);
             var unfinished := init_unfinished(len);
@@ -804,6 +805,7 @@ module ntt_index {
         ensures len == r.len;
         ensures r.shuffle_inv(a);
         ensures r.ti == i;
+        ensures i * 2 != |init_unfinished(len)| ==> |r.unfinished| != 0;
     {
         var r := if i == 0 then 
             rev_view.init_rev_view(a, len)
@@ -819,289 +821,50 @@ module ntt_index {
         r
     }
 
-    // method bit_rev<T>(a: seq<T>, len: pow2_t, table: seq<(nat, nat)>)
-    //     returns (b: seq<T>)
+    predicate table_wf<T>(table: seq<(nat, nat)>, a: seq<T>, len: pow2_t)
+        requires |a| == len.full >= 4;
+    {
+        && 2 * |table| == |init_unfinished(len)|
+        && (forall i | 0 <= i < |table| :: (
+            && table[i].0 == build_view(a, i, len).get_split_index())
+            && table[i].1 == bit_rev_int(table[i].0, len))
+    }
 
-    //     requires |a| == len.full >= 4;
-    // {
-    //     b := a;
-    //     var ti := 0;
+    method bit_rev<T>(a: seq<T>, len: pow2_t, table: seq<(nat, nat)>)
+        returns (b: seq<T>)
+        requires |a| == len.full >= 4;
+        requires table_wf(table, a, len);
+        ensures |b| == len.full;
+        ensures is_bit_rev_shuffle(a, b, len);
+    {
+        b := a;
+        var ti := 0;
 
-    //     ghost var view := rev_view.init_rev_view(len);
-    //     view.shuffle_inv_pre_lemma(a, len);
+        ghost var view := rev_view.init_rev_view(a, len);
+        view.shuffle_inv_pre_lemma(a, len);
 
-    //     while ti < |table|
-    //         invariant |a| == |b| == view.len.full;
-    //         invariant view.shuffle_inv(a);
-    //     {
-    //         // var sbj := get_split_index();
-    //         var prev_b := b;
+        while ti < |table|
+            invariant ti * 2 <= |init_unfinished(len)|;
+            invariant view == build_view(a, ti, len);
+            invariant view.b == b;
+        {
+            var prev_b := b;
 
-    //         var i := table[ti].0;
-    //         var j := table[ti].1;
+            var i := table[ti].0;
+            var j := table[ti].1;
 
-    //         assume i == view.get_split_index();
-    //         assume j == bit_rev_int(i, view.len);
+            var temp := b[i];
+            b := b[i := b[j]];
+            b := b[j := temp];
 
-    //         var temp := b[i];
-    //         b := b[i := b[j]];
-    //         b := b[j := temp];
-
-    //         var next_view := view.next_rev_view(a, prev_b);
-    //         view.shuffle_inv_peri_lemma(a, prev_b, next_view);
-    //         assert b == view.next_rev_buffer(a, prev_b);
+            var next_view := view.next_rev_view(a);
+            assert b == view.next_rev_buffer();
+            view.shuffle_inv_peri_lemma(a, next_view);
     
-    //         view := next_view;
-    //     }
-    //     //     invariant view.
-    //     //         shuffle_inv(a, b, buffer_prefix_index(ti));
-    //     //     decreases |table| - ti;
-    //     // {
+            view := next_view;
+            ti := ti + 1;
+        }
 
-    //     //     // shuffle_inv_peri_lemma(a, prev_b, b, ti, i, j, view);
-    //     //     // ti := ti + 1;
-    //     //     assume false;
-    //     // }
-    // }
-
-    // datatype rev_table = rev_table(
-    //     table: seq<(nat, nat)>,
-    //     len: pow2_t)
-    // {
-    //     predicate table_entry_wf(ti: nat)
-    //         requires ti < |table|;
-    //     {
-    //         && ti <= table[ti].0
-    //         && table[ti].0 < len.full
-    //         && table[ti].1 < len.full
-    //         && table[ti].0 == bit_rev_int(table[ti].1, len)
-    //         && table[ti].1 == bit_rev_int(table[ti].0, len)
-    //     }
-
-    //     predicate {:opaque} rev_table_wf()
-    //         ensures rev_table_wf() ==> len.full >= 4
-    //         ensures rev_table_wf() ==> |table| >= 2
-    //     {
-    //         && (forall ti | 0 <= ti < |table| :: table_entry_wf(ti))
-    //         // table is sorted in terms of the key (src) index
-    //         && (forall ti, tj | 0 <= ti < tj < |table| :: table[ti].0 < table[tj].0)
-    //         && len.full >= 4
-    //         && |table| >= 2
-    //     }
-
-    //     lemma table_entry_wf_lemma(ti: nat)
-    //         requires 0 <= ti < |table|
-    //         requires rev_table_wf();
-    //         ensures table_entry_wf(ti);
-    //     {
-    //         reveal rev_table_wf();
-    //     }
-
-    //     // bi is a buffer index (NOT a table index)
-    //     predicate in_table(bi: nat)
-    //         requires bi < len.full;
-    //     {
-    //         exists ti: nat :: (
-    //             ti < |table| && table[ti].0 == bi)
-    //     }
-
-    //     // given a (bi) buffer index, return the (ti) table index 
-    //     function get_table_index(bi: nat): (ti: nat)
-    //         requires rev_table_wf();
-    //         requires bi < len.full;
-    //         requires in_table(bi);
-    //         ensures ti < |table|;
-    //         ensures table_entry_wf(ti);
-    //     {
-    //         var ti: nat :| (ti < |table| && table[ti].0 == bi);
-    //         table_entry_wf_lemma(ti);
-    //         ti
-    //     }
-
-    //     function get_buffer_index(ti: nat): (bi: nat)
-    //         requires rev_table_wf();
-    //         requires ti < |table|;
-    //         ensures table_entry_wf(ti);
-    //     {
-    //         table_entry_wf_lemma(ti);
-    //         table[ti].0
-    //     }
-
-    //     function buffer_prefix_index(ti: nat): nat 
-    //         requires rev_table_wf();
-    //         requires ti <= |table|;
-    //     {
-    //         if ti == |table| then len.full else get_buffer_index(ti)
-    //     }
-
-    //     predicate prefix_prev_bi_properties(ti: nat, bi: nat)
-    //         requires rev_table_wf();
-    //         requires ti < |table|;
-    //         requires bi < buffer_prefix_index(ti);
-    //     {
-    //         var split_index := buffer_prefix_index(ti);
-    //         var rbi := bit_rev_int(bi, len);
-    //         && (!in_table(bi) ==> (
-    //             || (bi == rbi)
-    //             || (in_table(rbi) && 0 <= rbi < split_index)))
-    //         && (in_table(bi) ==> 
-    //             && (bi != rbi)
-    //             && (!in_table(rbi)))
-    //     }
-
-    //     predicate bit_rev_table_prefix_inv(ti: nat)
-    //         requires ti < |table|;
-    //         requires rev_table_wf();
-    //     {
-    //         var split_index := buffer_prefix_index(ti);
-    //         forall bi | (0 <= bi < split_index) ::
-    //             prefix_prev_bi_properties(ti, bi)
-    //     }
-
-    //     predicate {:opaque} bit_rev_table_inv()
-    //         ensures bit_rev_table_inv() ==> rev_table_wf()
-    //     {
-    //         && rev_table_wf()
-    //         && (forall ti | 0 <= ti < |table| :: 
-    //             bit_rev_table_prefix_inv(ti))
-    //     }
-
-    //     // lemma shuffle_inv_peri_lemma<T>(
-    //     //     a: seq<T>, c: seq<T>,
-    //     //     ti: nat, i: nat, j: nat,
-    //     //     view: rev_view)
-    //     //     requires |a| == |b| == |c| == len.full;
-    //     //     requires ti < |table|;
-    //     //     requires bit_rev_table_inv();
-    //     //     requires buffer_prefix_index(ti) < len.full;
-    //     //     requires view.len == len;
-    //     //     requires i == table[ti].0 < len.full;
-    //     //     requires j == table[ti].1 < len.full;
-    //     //     requires view.shuffle_inv(a, b, buffer_prefix_index(ti));
-    //     //     requires c == b[i := b[j]][j := b[i]];
-    //     // {
-
-    //     // }
-
-
-   
-    // }
+        view.shuffle_inv_post_lemma(a);
+    }
 }
-
-        // lemma buffer_prefix_index_lemma<T>(a: seq<T>, bi: nat)
-        //     requires bit_rev_table_inv();
-        //     requires finished == inital_finished_set();
-        //     requires bi < len.full;
-        //     requires |a| == len.full;
-        // {
-        //     var split_index := buffer_prefix_index(0);
-        //     var ti := 0;
-
-        //     // reveal inital_finished_set();
-
-        //     reveal shuffle_inv();
-        //     assert bit_rev_table_prefix_inv(ti) by {
-        //         reveal bit_rev_table_inv();
-        //     }
-  
-        //     if 0 <= bi < len.full && finished_set_membership(a, a, bi, ti) {
-        //         // assert prev_bi_properties(ti, bi);
-
-        //     //   var rbi := bit_rev_int(bi, len);
-        //     //     assert  && (!in_table(bi) ==> (
-        //     //         || (bi == rbi)
-        //     //         || (in_table(rbi) && 0 <= rbi < split_index)))
-        //     //     && (in_table(bi) ==> 
-        //     //         && (bi != rbi)
-        //     //         && (!in_table(rbi)));
-
-        //     }
-        // }
-
-        // lemma inital_finished_set_lemma<T>(a: seq<T>)
-        //     requires bit_rev_table_inv();
-        //     requires |a| == len.full;
-        //     requires finished == inital_finished_set();
-        //     // ensures shuffle_inv(a, a, 0);
-        // {
-        //     reveal inital_finished_set();
-        //     reveal shuffle_inv();
-
-        //     var ti := 0;
-        //     assume bit_rev_int(0, len) == 0;
-
-        //     forall bi | 0 <= bi < len.full && bi in finished
-        //         ensures finished_set_membership(a, a, bi, ti);
-        //     {
-        //         var rbi := bit_rev_int(bi, len);
-        //         var split_index := 0;
-        //         assert rbi == bi;
-        //     }
-        
-        //     assert bit_rev_table_prefix_inv(ti) by {
-        //         reveal bit_rev_table_inv();
-        //     }
-
-        //     forall bi | 0 <= bi < len.full && finished_set_membership(a, a, bi, ti)
-        //         ensures bi in finished;
-        //     {
-        //         var rbi := bit_rev_int(bi, len);
-        //         var split_index := buffer_prefix_index(ti);
-        //         assert a[bi] == a[rbi];
-        //         assert a[rbi] == a[bi];
-
-        //         if 0 <= bi < split_index {
-        //             assume false;
-        //         } else {
-        //             assert bi == bit_rev_int(bi, len); 
-        //         }
-
-        //         // assert bi == bit_rev_int(bi, len)            
-        //     }
-
-        // }
-
-        // lemma shuffle_inv_lemma<T>(
-        //     a: seq<T>, c: seq<T>,
-        //     finished: set<nat>, 
-        //     ti: nat, i: nat, j: nat)
-        //     requires bit_rev_table_inv();
-        //     requires |a| == |b| == |c| == len.full;
-        //     requires ti < |table|;
-        //     requires i < len.full;
-        //     requires i == table[ti].0;
-        //     requires j < len.full;
-        //     requires j == table[ti].1;
-        //     requires shuffle_inv(a, b, finished);
-        //     requires c == b[i := b[j]][j := b[i]];
-        // {
-        //     var new_finished := finished + {i, j};
-        //     reveal shuffle_inv();
-        //     table_entry_wf_lemma(ti);
-
-        //     forall bi | bi in new_finished
-        //         ensures 0 <= bi < len.full
-        //     {
-        //         if bi != i && bi != j {
-        //             assert bi in finished;
-        //         }
-        //     }
-            
-        //     forall bi | 0 <= bi < len.full && bi in new_finished
-        //         ensures c[bi] == a[bit_rev_int(bi, len)]
-        //         // ensures c[bit_rev_int(bi, len)] == a[bi]
-        //     {
-        //         if bi == i {
-        //             assert c[i] == b[j];
-        //             assert j !in finished;
-        //             assume false;
-        //         } else if bi == j {
-        //             assume false;
-        //         } else {
-        //             assert c[bi] == b[bi];
-        //         }
-        //     }
-        //     // && (forall bi | 0 <= bi < len.full && bi !in finished :: (
-        //     //     && b[bi] == a[bi]))
-        // }
-
