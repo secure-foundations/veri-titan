@@ -39,7 +39,32 @@ module ntt_index {
         var one := FromNatWithLen(1, len.exp);
         var ors := Reverse(one);
 
-        assume ors != one;
+        if ors == one {
+            BitSelModEquivalence(one, 0);
+            LemmaPow0(2);
+            assert one[0] == 1;
+            assert ors[len.exp - 1] == 1;
+            BitSelModEquivalence(ors, len.exp - 1);
+            var temp := Pow(2, len.exp - 1);
+            assert temp > 1 by {
+                LemmaPowStrictlyIncreases(2, 0, len.exp - 1);
+            }
+            calc == {
+                ors[len.exp - 1];
+                (1 / temp) % 2;
+                {
+                    LemmaDivDecreases(1, temp);
+                    assert (1 / temp) >= 0 by {
+                        LemmaDivBasicsAuto();
+                    }
+                    assert (1 / temp) == 0;
+                }
+                0 % 2;
+                0;
+            }
+            assert false;
+        }
+
         LemmaSeqNeq(ors, one);
     }
 
