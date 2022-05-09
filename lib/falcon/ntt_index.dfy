@@ -261,7 +261,7 @@ module ntt_index {
         requires |a| == |b| == len.full;
     {
         forall i | 0 <= i < len.full ::
-            a[i] ==  b[bit_rev_int(i, len)]
+            a[i] == b[bit_rev_int(i, len)]
     }
 
     lemma bit_rev_symmetric(i: nat, bound: pow2_t)
@@ -373,19 +373,26 @@ module ntt_index {
         }
     }
 
-    datatype rev_view = rev_view(
+    datatype rev_view<T> = rev_view(
+        // a: seq<T>,
+        b: seq<T>,
         finished: set<nat>,
         unfinished: set<nat>,
         len: pow2_t)
+
+        // table: seq<(nat, nat)>,
+        // ti: nat)
     {
         predicate {:opaque} rev_view_wf()
             ensures rev_view_wf() ==> len.full >= 4
+            ensures rev_view_wf() ==> |b| == len.full;
         {
             && (forall bi | (bi in finished || bi in unfinished) ::
                 0 <= bi < len.full)
             && (finished !! unfinished)
             && (finished + unfinished == set bi | 0 <= bi < len.full :: bi)
             && len.full >= 4
+            && |b| == len.full
         }
 
         lemma buff_index_state_lemma(bi: nat)
@@ -410,9 +417,9 @@ module ntt_index {
             reveal rev_view_wf();
         }
     
-        predicate index_is_shuffled<T>(a: seq<T>, b: seq<T>, bi: nat)
+        predicate index_is_shuffled(a: seq<T>, bi: nat)
+            requires |a| == len.full;
             requires bi < len.full;
-            requires |a| == |b| == len.full;
             requires rev_view_wf();
         {
             var rbi := bit_rev_int(bi, len);
@@ -432,18 +439,24 @@ module ntt_index {
             bi
         }
 
-        predicate {:opaque} finished_shuffle_inv<T>(a: seq<T>, b: seq<T>)
-            requires |a| == |b| == len.full;
+        function get_split_index_wrap(): nat
+            requires rev_view_wf();
+        {
+            if |unfinished| != 0 then get_split_index() else len.full
+        }
+
+        predicate {:opaque} finished_shuffle_inv(a: seq<T>)
+            requires |a| == len.full;
             requires rev_view_wf()
         {
             && reveal rev_view_wf();
             && (forall bi | bi in finished ::(
                 && bit_rev_int(bi, len) in finished
-                && index_is_shuffled(a, b, bi)))
+                && index_is_shuffled(a, bi)))
         }
 
-        predicate {:opaque} unfinished_shuffle_inv<T>(a: seq<T>, b: seq<T>)
-            requires |a| == |b| == len.full;
+        predicate {:opaque} unfinished_shuffle_inv(a: seq<T>)
+            requires |a| == len.full;
             requires rev_view_wf()
         {
             && reveal rev_view_wf();
@@ -455,24 +468,29 @@ module ntt_index {
         predicate {:opaque} shuffle_prefix_inv()
             requires rev_view_wf();
         {
-            var split_index :=
-                if |unfinished| != 0 then get_split_index() else len.full;
+            var split_index := get_split_index_wrap();
             && (forall bi | 0 <= bi < split_index :: bi in finished)
         }
 
-        predicate shuffle_inv<T>(a: seq<T>, b: seq<T>)
-            requires |a| == |b| == len.full;
-            ensures shuffle_inv(a, b) ==> rev_view_wf();
+        // // predicate {:opaque} table_prefix_inv()
+        // // {
+        // //     && ti == |table| - 1
+        // //     && table[ti] == 
+        // // }
+
+        predicate shuffle_inv(a: seq<T>)
+            requires |a| == len.full;
+            ensures shuffle_inv(a) ==> rev_view_wf();
         {
             && rev_view_wf()
-            && finished_shuffle_inv(a, b)
-            && unfinished_shuffle_inv(a, b)
+            && finished_shuffle_inv(a)
+            && unfinished_shuffle_inv(a)
             && shuffle_prefix_inv()
         }
 
-        lemma split_index_unfinished_lemma<T>(a: seq<T>, b: seq<T>)
-            requires |a| == |b| == len.full;
-            requires shuffle_inv(a, b);
+        lemma split_index_unfinished_lemma(a: seq<T>)
+            requires |a| == len.full;
+            requires shuffle_inv(a);
             requires |unfinished| != 0;
             ensures get_split_index() in unfinished;
             ensures get_split_index() !in finished;
@@ -498,21 +516,22 @@ module ntt_index {
             set bi: nat | (0 <= bi < len.full && bi != bit_rev_int(bi, len)) :: bi
         }
 
-        static function {:opaque} init_rev_view<T>(a: seq<T>, len: pow2_t): (r: rev_view)
+        static function {:opaque} init_rev_view(a: seq<T>, len: pow2_t): (r: rev_view<T>)
             requires |a| == len.full >= 4;
             ensures r.len == len;
             ensures r.rev_view_wf();
         {    
-            var finished := rev_view.init_finished(len);
-            var unfinished := rev_view.init_unfinished(len);
-            var r := rev_view(finished, unfinished, len);
+            var finished := rev_view<T>.init_finished(len);
+            var unfinished := rev_view<T>.init_unfinished(len);
+            var r := rev_view(a, finished, unfinished, len);
             reveal r.rev_view_wf();
+            assert r.rev_view_wf();
             r
         }
 
-        lemma init_unfinished_lemma<T>(a: seq<T>, len: pow2_t)
+        lemma init_unfinished_lemma(a: seq<T>, len: pow2_t)
             requires |a| == len.full >= 4;
-            requires this == init_rev_view(a, len)
+            requires this == init_rev_view(a, len);
             ensures 0 in finished;
             ensures 1 in unfinished;
             ensures |unfinished| != 0;
@@ -530,24 +549,24 @@ module ntt_index {
             assert minimum(unfinished) == 1;
         }
 
-        lemma init_rev_view_inv_lemma<T>(a: seq<T>, len: pow2_t)
+        lemma shuffle_inv_pre_lemma(a: seq<T>, len: pow2_t)
             requires |a| == len.full >= 4;
             requires this == init_rev_view(a, len);
-            ensures this.shuffle_inv(a, a);
+            ensures this.shuffle_inv( a);
         {
             bit_rev_int_basics_lemma(len);
 
-            assert finished_shuffle_inv(a, a) by {
+            assert finished_shuffle_inv(a) by {
                 reveal finished_shuffle_inv();
                 forall bi | bi in finished
                     ensures bit_rev_int(bi, len) in finished;
-                    ensures  index_is_shuffled(a, a, bi);
+                    ensures index_is_shuffled(a, bi);
                 {
                     reveal init_rev_view();
                 }
             }
 
-            assert unfinished_shuffle_inv(a, a) by {
+            assert unfinished_shuffle_inv(a) by {
                 reveal unfinished_shuffle_inv();
                 forall bi | bi in unfinished
                     ensures bit_rev_int(bi, len) in unfinished;
@@ -580,24 +599,9 @@ module ntt_index {
             }
         }
 
-        function next_rev_view<T>(a: seq<T>, b: seq<T>): (r: rev_view)
-            requires |a| == |b| == len.full;
-            requires shuffle_inv(a, b);
-            ensures r.rev_view_wf();
-        {
-            if |unfinished| != 0 then 
-                var bi := get_split_index();
-                var r := rev_view(finished + {bi, bit_rev_int(bi, len)},
-                    unfinished - {bi, bit_rev_int(bi, len)}, len);
-                reveal r.rev_view_wf();
-                r
-            else
-                this
-        }
-
-        function next_rev_buffer<T>(a: seq<T>, b: seq<T>): (c: seq<T>)
-            requires |a| == |b| == len.full;
-            requires shuffle_inv(a, b);
+        function next_rev_buffer(): (c: seq<T>)
+            requires |b| == len.full;
+            requires rev_view_wf();
         {
             if |unfinished| != 0 then 
                 var sbj := get_split_index();
@@ -606,20 +610,41 @@ module ntt_index {
             else
                 b
         }
-        
-        lemma next_rev_view_lemma<T>(a: seq<T>, b: seq<T>, next: rev_view)
-            requires |a| == |b| == len.full;
-            requires shuffle_inv(a, b);
+
+        function next_rev_view(a: seq<T>): (r: rev_view<T>)
+            requires |a| == len.full;
+            requires shuffle_inv(a);
+            ensures r.rev_view_wf();
+        {
+            if |unfinished| != 0 then 
+                var bi := get_split_index();
+                var rbi := bit_rev_int(bi, len);
+                var r := rev_view(
+                    next_rev_buffer(),
+                    finished + {bi, rbi},
+                    unfinished - {bi, rbi},
+                    len);
+                reveal r.rev_view_wf();
+                assert r.rev_view_wf();
+                r
+            else
+                this
+        }
+
+        lemma shuffle_inv_peri_lemma(a: seq<T>, next: rev_view<T>)
+            requires |a| == len.full;
+            requires shuffle_inv(a);
             requires |unfinished| != 0;
-            requires next == next_rev_view(a, b);
+            requires next == next_rev_view(a);
+            ensures next.shuffle_inv(a);
         {
             var sbj := get_split_index();
             var rsbj := bit_rev_int(sbj, len);
             var c := b[sbj := b[rsbj]][rsbj := b[sbj]];
 
-            split_index_unfinished_lemma(a, b);
+            split_index_unfinished_lemma(a);
 
-            assert next.finished_shuffle_inv(a, c) by {
+            assert next.finished_shuffle_inv(a) by {
                 forall bi | bi in next.finished
                     ensures bit_rev_int(bi, len) in next.finished;
                 {
@@ -639,7 +664,7 @@ module ntt_index {
                 }
 
                 forall bi | bi in next.finished
-                    ensures next.index_is_shuffled(a, c, bi)
+                    ensures next.index_is_shuffled(a, bi)
                 {
                     next.rev_entry_wf_lemma(bi);
                     var rbi := bit_rev_int(bi, len);
@@ -648,7 +673,7 @@ module ntt_index {
                         bit_rev_unique(bi, sbj, len);
                         bit_rev_symmetric(sbj, len);
                         bit_rev_unique(bi, rsbj, len);
-                        assert index_is_shuffled(a, b, bi);
+                        assert index_is_shuffled(a, bi);
                         assert b[bi] == c[bi];
                         assert b[rbi] == c[rbi];
                     } else if bi == sbj {
@@ -657,7 +682,7 @@ module ntt_index {
                             assert rsbj in unfinished;
                             reveal unfinished_shuffle_inv();
                         }
-                        assert index_is_shuffled(a, c, sbj) by {
+                        assert next.index_is_shuffled(a, sbj) by {
                             assert a[sbj] == c[rsbj];
                             assert a[rsbj] == c[sbj];
                         }
@@ -669,7 +694,7 @@ module ntt_index {
                             reveal unfinished_shuffle_inv();
                         }
                         bit_rev_symmetric(sbj, len);
-                        assert index_is_shuffled(a, c, bi) by {
+                        assert next.index_is_shuffled(a, bi) by {
                             assert a[sbj] == c[rsbj];
                             assert a[rsbj] == c[sbj];
                         }
@@ -678,7 +703,7 @@ module ntt_index {
                 reveal next.finished_shuffle_inv();
             }
 
-            assert next.unfinished_shuffle_inv(a, c) by {
+            assert next.unfinished_shuffle_inv(a) by {
                 forall bi | bi in next.unfinished
                     ensures bit_rev_int(bi, len) in next.unfinished
                 {
@@ -711,171 +736,235 @@ module ntt_index {
                 reveal next.unfinished_shuffle_inv();
             }
 
-            // assert next.shuffle_prefix_inv() by {
-            //     var nsbj := next.get_split_index();
-            //     forall bi | 0 <= bi < nsbj
-            //         ensures bi in next.finished
-            //     {
-            //         assume false;
-            //     }
-            // }
+            assert next.shuffle_prefix_inv() by {
+                var nsbj := next.get_split_index_wrap();
+                forall bi | 0 <= bi < nsbj
+                    ensures bi in next.finished
+                {
+                    if bi < sbj {
+                        reveal shuffle_prefix_inv();
+                        assert bi in finished;
+                    } else if bi == sbj || bi == rsbj {
+                        assert bi in next.finished;
+                    } else {
+                        assert bi < nsbj;
+                        if bi !in finished {
+                            buff_index_state_lemma(bi);
+                            assert bi in unfinished;
+                            assert bi in next.unfinished;
+                            assert is_set_min(nsbj, next.unfinished);
+                            reveal is_set_min();
+                            assert false;
+                        }
+                    }
+                }
+
+                reveal next.shuffle_prefix_inv();
+            }
+        }
+
+        lemma shuffle_inv_post_lemma(a: seq<T>)
+            requires |a| == len.full;
+            requires shuffle_inv(a);
+            // requires get_split_index_wrap() == len.full;
+            requires |unfinished| == 0;
+            ensures is_bit_rev_shuffle(a, b, len);
+        {
+            assert finished == set bi: nat | (0 <= bi < len.full) :: bi by {
+                reveal rev_view_wf();
+            }
+
+            assert is_bit_rev_shuffle(a, b, len) by {
+                reveal is_bit_rev_shuffle();
+                reveal finished_shuffle_inv();
+            }
         }
     }
 
-    datatype rev_table = rev_table(
-        table: seq<(nat, nat)>,
-        len: pow2_t)
-    {
-        predicate table_entry_wf(ti: nat)
-            requires ti < |table|;
-        {
-            && ti <= table[ti].0
-            && table[ti].0 < len.full
-            && table[ti].1 < len.full
-            && table[ti].0 == bit_rev_int(table[ti].1, len)
-            && table[ti].1 == bit_rev_int(table[ti].0, len)
-        }
-
-        predicate {:opaque} rev_table_wf()
-            ensures rev_table_wf() ==> len.full >= 4
-            ensures rev_table_wf() ==> |table| >= 2
-        {
-            && (forall ti | 0 <= ti < |table| :: table_entry_wf(ti))
-            // table is sorted in terms of the key (src) index
-            && (forall ti, tj | 0 <= ti < tj < |table| :: table[ti].0 < table[tj].0)
-            && len.full >= 4
-            && |table| >= 2
-        }
-
-        lemma table_entry_wf_lemma(ti: nat)
-            requires 0 <= ti < |table|
-            requires rev_table_wf();
-            ensures table_entry_wf(ti);
-        {
-            reveal rev_table_wf();
-        }
-
-        // bi is a buffer index (NOT a table index)
-        predicate in_table(bi: nat)
-            requires bi < len.full;
-        {
-            exists ti: nat :: (
-                ti < |table| && table[ti].0 == bi)
-        }
-
-        // given a (bi) buffer index, return the (ti) table index 
-        function get_table_index(bi: nat): (ti: nat)
-            requires rev_table_wf();
-            requires bi < len.full;
-            requires in_table(bi);
-            ensures ti < |table|;
-            ensures table_entry_wf(ti);
-        {
-            var ti: nat :| (ti < |table| && table[ti].0 == bi);
-            table_entry_wf_lemma(ti);
-            ti
-        }
-
-        function get_buffer_index(ti: nat): (bi: nat)
-            requires rev_table_wf();
-            requires ti < |table|;
-            ensures table_entry_wf(ti);
-        {
-            table_entry_wf_lemma(ti);
-            table[ti].0
-        }
-
-        function buffer_prefix_index(ti: nat): nat 
-            requires rev_table_wf();
-            requires ti <= |table|;
-        {
-            if ti == |table| then len.full else get_buffer_index(ti)
-        }
-
-        predicate prefix_prev_bi_properties(ti: nat, bi: nat)
-            requires rev_table_wf();
-            requires ti < |table|;
-            requires bi < buffer_prefix_index(ti);
-        {
-            var split_index := buffer_prefix_index(ti);
-            var rbi := bit_rev_int(bi, len);
-            && (!in_table(bi) ==> (
-                || (bi == rbi)
-                || (in_table(rbi) && 0 <= rbi < split_index)))
-            && (in_table(bi) ==> 
-                && (bi != rbi)
-                && (!in_table(rbi)))
-        }
-
-        predicate bit_rev_table_prefix_inv(ti: nat)
-            requires ti < |table|;
-            requires rev_table_wf();
-        {
-            var split_index := buffer_prefix_index(ti);
-            forall bi | (0 <= bi < split_index) ::
-                prefix_prev_bi_properties(ti, bi)
-        }
-
-        predicate {:opaque} bit_rev_table_inv()
-            ensures bit_rev_table_inv() ==> rev_table_wf()
-        {
-            && rev_table_wf()
-            && (forall ti | 0 <= ti < |table| :: 
-                bit_rev_table_prefix_inv(ti))
-        }
-
-        // lemma shuffle_inv_peri_lemma<T>(
-        //     a: seq<T>, b: seq<T>, c: seq<T>,
-        //     ti: nat, i: nat, j: nat,
-        //     view: rev_view)
-        //     requires |a| == |b| == |c| == len.full;
-        //     requires ti < |table|;
-        //     requires bit_rev_table_inv();
-        //     requires buffer_prefix_index(ti) < len.full;
-        //     requires view.len == len;
-        //     requires i == table[ti].0 < len.full;
-        //     requires j == table[ti].1 < len.full;
-        //     requires view.shuffle_inv(a, b, buffer_prefix_index(ti));
-        //     requires c == b[i := b[j]][j := b[i]];
-        // {
-
-        // }
+    // function build_view(a: seq<T>, i: nat, len: pow2_t): rev_view
+    //     requires len.full >= 4;
+    // {
+    //     if i == 0 then 
+    //         init_rev_view(len)
+    //     else
+    //         build_view(i - 1).next_rev_view()
+    // }
 
 
-        // method bit_rev<T>(a: seq<T>) returns (b: seq<T>)
-        //     requires |a| == len.full;
-        //     requires bit_rev_table_inv();
-        // {
-        //     b := a;
-        //     var ti := 0;
+    // predicate table_wf(, len: pow2_t)
+    // {
+    //     forall i in |table| :: 
 
-        //     ghost var view := rev_view.init_rev_view(a, len);
 
-        //     assume buffer_prefix_index(0) == 1;
+    // }
 
-        //     while ti < |table|
-        //         invariant |b| == len.full;
-        //         invariant view.
-        //             shuffle_inv(a, b, buffer_prefix_index(ti));
-        //         decreases |table| - ti;
-        //     {
-        //         var prev_b := b;
+    // method bit_rev<T>(a: seq<T>, len: pow2_t, table: seq<(nat, nat)>)
+    //     returns (b: seq<T>)
 
-        //         var i := table[ti].0;
-        //         var j := table[ti].1;
+    //     requires |a| == len.full >= 4;
+    // {
+    //     b := a;
+    //     var ti := 0;
 
-        //         table_entry_wf_lemma(ti);
+    //     ghost var view := rev_view.init_rev_view(len);
+    //     view.shuffle_inv_pre_lemma(a, len);
 
-        //         var temp := b[i];
-        //         b := b[i := b[j]];
-        //         b := b[j := temp];
+    //     while ti < |table|
+    //         invariant |a| == |b| == view.len.full;
+    //         invariant view.shuffle_inv(a);
+    //     {
+    //         // var sbj := get_split_index();
+    //         var prev_b := b;
 
-        //         shuffle_inv_peri_lemma(a, prev_b, b, ti, i, j, view);
-        //         ti := ti + 1;
-        //         assume false;
-        //     }
-        // }
-    }
+    //         var i := table[ti].0;
+    //         var j := table[ti].1;
+
+    //         assume i == view.get_split_index();
+    //         assume j == bit_rev_int(i, view.len);
+
+    //         var temp := b[i];
+    //         b := b[i := b[j]];
+    //         b := b[j := temp];
+
+    //         var next_view := view.next_rev_view(a, prev_b);
+    //         view.shuffle_inv_peri_lemma(a, prev_b, next_view);
+    //         assert b == view.next_rev_buffer(a, prev_b);
+    
+    //         view := next_view;
+    //     }
+    //     //     invariant view.
+    //     //         shuffle_inv(a, b, buffer_prefix_index(ti));
+    //     //     decreases |table| - ti;
+    //     // {
+
+    //     //     // shuffle_inv_peri_lemma(a, prev_b, b, ti, i, j, view);
+    //     //     // ti := ti + 1;
+    //     //     assume false;
+    //     // }
+    // }
+
+    // datatype rev_table = rev_table(
+    //     table: seq<(nat, nat)>,
+    //     len: pow2_t)
+    // {
+    //     predicate table_entry_wf(ti: nat)
+    //         requires ti < |table|;
+    //     {
+    //         && ti <= table[ti].0
+    //         && table[ti].0 < len.full
+    //         && table[ti].1 < len.full
+    //         && table[ti].0 == bit_rev_int(table[ti].1, len)
+    //         && table[ti].1 == bit_rev_int(table[ti].0, len)
+    //     }
+
+    //     predicate {:opaque} rev_table_wf()
+    //         ensures rev_table_wf() ==> len.full >= 4
+    //         ensures rev_table_wf() ==> |table| >= 2
+    //     {
+    //         && (forall ti | 0 <= ti < |table| :: table_entry_wf(ti))
+    //         // table is sorted in terms of the key (src) index
+    //         && (forall ti, tj | 0 <= ti < tj < |table| :: table[ti].0 < table[tj].0)
+    //         && len.full >= 4
+    //         && |table| >= 2
+    //     }
+
+    //     lemma table_entry_wf_lemma(ti: nat)
+    //         requires 0 <= ti < |table|
+    //         requires rev_table_wf();
+    //         ensures table_entry_wf(ti);
+    //     {
+    //         reveal rev_table_wf();
+    //     }
+
+    //     // bi is a buffer index (NOT a table index)
+    //     predicate in_table(bi: nat)
+    //         requires bi < len.full;
+    //     {
+    //         exists ti: nat :: (
+    //             ti < |table| && table[ti].0 == bi)
+    //     }
+
+    //     // given a (bi) buffer index, return the (ti) table index 
+    //     function get_table_index(bi: nat): (ti: nat)
+    //         requires rev_table_wf();
+    //         requires bi < len.full;
+    //         requires in_table(bi);
+    //         ensures ti < |table|;
+    //         ensures table_entry_wf(ti);
+    //     {
+    //         var ti: nat :| (ti < |table| && table[ti].0 == bi);
+    //         table_entry_wf_lemma(ti);
+    //         ti
+    //     }
+
+    //     function get_buffer_index(ti: nat): (bi: nat)
+    //         requires rev_table_wf();
+    //         requires ti < |table|;
+    //         ensures table_entry_wf(ti);
+    //     {
+    //         table_entry_wf_lemma(ti);
+    //         table[ti].0
+    //     }
+
+    //     function buffer_prefix_index(ti: nat): nat 
+    //         requires rev_table_wf();
+    //         requires ti <= |table|;
+    //     {
+    //         if ti == |table| then len.full else get_buffer_index(ti)
+    //     }
+
+    //     predicate prefix_prev_bi_properties(ti: nat, bi: nat)
+    //         requires rev_table_wf();
+    //         requires ti < |table|;
+    //         requires bi < buffer_prefix_index(ti);
+    //     {
+    //         var split_index := buffer_prefix_index(ti);
+    //         var rbi := bit_rev_int(bi, len);
+    //         && (!in_table(bi) ==> (
+    //             || (bi == rbi)
+    //             || (in_table(rbi) && 0 <= rbi < split_index)))
+    //         && (in_table(bi) ==> 
+    //             && (bi != rbi)
+    //             && (!in_table(rbi)))
+    //     }
+
+    //     predicate bit_rev_table_prefix_inv(ti: nat)
+    //         requires ti < |table|;
+    //         requires rev_table_wf();
+    //     {
+    //         var split_index := buffer_prefix_index(ti);
+    //         forall bi | (0 <= bi < split_index) ::
+    //             prefix_prev_bi_properties(ti, bi)
+    //     }
+
+    //     predicate {:opaque} bit_rev_table_inv()
+    //         ensures bit_rev_table_inv() ==> rev_table_wf()
+    //     {
+    //         && rev_table_wf()
+    //         && (forall ti | 0 <= ti < |table| :: 
+    //             bit_rev_table_prefix_inv(ti))
+    //     }
+
+    //     // lemma shuffle_inv_peri_lemma<T>(
+    //     //     a: seq<T>, c: seq<T>,
+    //     //     ti: nat, i: nat, j: nat,
+    //     //     view: rev_view)
+    //     //     requires |a| == |b| == |c| == len.full;
+    //     //     requires ti < |table|;
+    //     //     requires bit_rev_table_inv();
+    //     //     requires buffer_prefix_index(ti) < len.full;
+    //     //     requires view.len == len;
+    //     //     requires i == table[ti].0 < len.full;
+    //     //     requires j == table[ti].1 < len.full;
+    //     //     requires view.shuffle_inv(a, b, buffer_prefix_index(ti));
+    //     //     requires c == b[i := b[j]][j := b[i]];
+    //     // {
+
+    //     // }
+
+
+   
+    // }
 }
 
         // lemma buffer_prefix_index_lemma<T>(a: seq<T>, bi: nat)
@@ -952,7 +1041,7 @@ module ntt_index {
         // }
 
         // lemma shuffle_inv_lemma<T>(
-        //     a: seq<T>, b: seq<T>, c: seq<T>,
+        //     a: seq<T>, c: seq<T>,
         //     finished: set<nat>, 
         //     ti: nat, i: nat, j: nat)
         //     requires bit_rev_table_inv();
