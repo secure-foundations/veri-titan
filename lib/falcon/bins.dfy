@@ -70,4 +70,12 @@ module bins refines LittleEndianNat {
         ensures s[b..] == s'[b..];
     {
     }
+
+    lemma LemmaSetSubtractTwoCardinality<T>(s: set<T>, a: T, b: T)
+        requires a in s;
+        requires b in s;
+        requires a != b;
+        ensures |s - {a, b}| == |s| - 2;
+    {
+    }
 }

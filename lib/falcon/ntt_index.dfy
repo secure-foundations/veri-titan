@@ -29,8 +29,16 @@ module ntt_index {
         ensures bit_rev_int(0, len) == 0;
         ensures bit_rev_int(1, len) != 1;
     {
-        assume len.exp >= 2;
         reveal Pow2();
+
+        if len.exp < 2 {
+            assert len.exp == 0 || len.exp == 1;
+            // not the best proof
+            reveal Pow();
+            assert false;
+        }
+
+
         var zero := FromNatWithLen(0, len.exp);
         LemmaSeqZero(zero);
         var zrs := Reverse(zero);
@@ -85,9 +93,19 @@ module ntt_index {
         
         var rsi := Reverse(si);
         var rsj := Reverse(sj);
+        var len := bound.exp;
 
         if rsi == rsj {
-            assume si == sj;
+            forall k | 0 <= k < len
+                ensures si[k] == sj[k];
+            {
+                calc {
+                    si[k];
+                    rsi[len - k - 1];
+                    rsj[len - k - 1];
+                    sj[k];
+                }
+            }
         }
 
         LemmaSeqNeq(rsi, rsj);
@@ -498,6 +516,7 @@ module ntt_index {
             && reveal rev_view_wf();
             && (forall bi | bi in unfinished :: (
                 && bit_rev_int(bi, len) in unfinished
+                && bi != bit_rev_int(bi, len)
                 && a[bi] == b[bi]))
         }
 
@@ -796,12 +815,11 @@ module ntt_index {
             assert 2 * next.ti == |init_unfinished(len)| - |next.unfinished| by {
                 assert sbj in unfinished;
                 assert rsbj in unfinished;
-        
-                assert sbj !in next.unfinished;
-                assert rsbj !in next.unfinished;
-
-                // TODO: set cardinality
-                assume |next.unfinished| == |unfinished| - 2;
+                assert sbj != rsbj by {
+                    reveal unfinished_shuffle_inv();
+                }
+                LemmaSetSubtractTwoCardinality(unfinished, sbj, rsbj);
+                assert |next.unfinished| == |unfinished| - 2;
             }
         }
 
