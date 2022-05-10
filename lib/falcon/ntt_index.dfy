@@ -564,10 +564,11 @@ module ntt_index {
             var finished := init_finished(len);
             var unfinished := init_unfinished(len);
             var r := rev_view(a, finished, unfinished, len, 0);
-            reveal init_unfinished();
-            reveal r.rev_view_wf();
             assert 2 * r.ti == 0;
-            assert r.rev_view_wf();
+            assert r.rev_view_wf() by {
+                reveal init_unfinished();
+                reveal r.rev_view_wf();
+            }
             r
         }
 
@@ -672,8 +673,9 @@ module ntt_index {
                     finished + {bi, rbi},
                     unfinished - {bi, rbi},
                     len, ti + 1);
-                reveal r.rev_view_wf();
-                assert r.rev_view_wf();
+                assert r.rev_view_wf() by {
+                    reveal r.rev_view_wf();
+                }
                 r
             else
                 this
@@ -864,7 +866,7 @@ module ntt_index {
         r
     }
 
-    predicate table_wf<T>(table: seq<(nat, nat)>, a: seq<T>, len: pow2_t)
+    predicate {:opaque} table_wf<T>(table: seq<(nat, nat)>, a: seq<T>, len: pow2_t)
         requires |a| == len.full >= 4;
     {
         && 2 * |table| == |init_unfinished(len)|
@@ -882,6 +884,8 @@ module ntt_index {
     {
         b := a;
         var ti := 0;
+
+        reveal table_wf();
 
         ghost var view := rev_view.init_rev_view(a, len);
         view.shuffle_inv_pre_lemma(a, len);

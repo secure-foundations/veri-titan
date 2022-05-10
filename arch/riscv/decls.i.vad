@@ -25,6 +25,10 @@ function operator(?[]) #[a:Type(0), b:Type(0)](m:map(a, b), rsa:a):bool extern;
 function operator([]) #[a: Type(0), b: Type(0)](m: map(a, b), rsa: a): b extern;
 function operator([ := ]) #[a: Type(0), b: Type(0)](m: map(a, b), rsa: a, v: b): map(a, b) extern;
 
+type set(a: Type(0)): Type(0) {: primitive} extern;
+function operator(?[]) #[a:Type(0)](m:set(a), i:a):bool extern;
+function set_len #[a: Type(0)] (s: set(a)): nat extern;
+
 type nat:     Type(0) := int_range(0, _);
 type uint1:   Type(0) := int_range(0, 1);
 type uint2:   Type(0) := int_range(0, 3);
@@ -156,6 +160,16 @@ function rsa_params_inv(rsa: rsa_params): bool extern;
 function mvar_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int, value: int): bool extern;
 
 var symbols: map(string, uint32) {:state symbols()};
+
+type pow2_t: Type(0) extern;
+function pow2(exp: int): pow2_t extern;
+function operator(.full) (p :pow2_t): nat extern;
+function operator(.exp) (p :pow2_t): nat extern;
+function pow2_half(p: pow2_t): pow2_t extern;
+function pow2_double(p: pow2_t): pow2_t extern;
+
+const N: pow2_t extern;
+const R: nat extern;
 
 type string: Type(0) extern;
 

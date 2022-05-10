@@ -604,6 +604,157 @@ module bv32_falcon_lemmas {
         view.j_loop_inv_post_lemma(a, d, j);
     }
 
+    function bit_rev_view_init(a: seq<uint16>): (view: rev_view<uint16>)
+        requires N == pow2_t_cons(512, 9);
+        requires |a| == N.full;
+        ensures view.len == N;
+        ensures view.shuffle_inv(a);
+    {
+        var view := rev_view.init_rev_view(a, N);
+        view.shuffle_inv_pre_lemma(a, N);
+        view
+    }
+
+    function {:opaque} ftable_cast(ftable: seq<uint16>): (r: seq<(nat, nat)>)
+        requires N == pow2_t_cons(512, 9);
+        requires |ftable| == |init_unfinished(N)|;
+        ensures |r| == |init_unfinished(N)| / 2;
+    {
+        var size := |init_unfinished(N)| / 2;
+        seq(size, i requires 0 <= i < size => (ftable[2 * i], ftable[2 * i + 1]))
+    }
+
+    // lemma ftable_index_lemma(a: seq<uint16>, ftable: seq<uint16>, table: seq<(nat, nat)>, ti: nat)
+    //     requires N == pow2_t_cons(512, 9);
+    //     requires |ftable| == |init_unfinished(N)|;
+    //     requires ftable_cast(ftable) == table;
+    //     requires 0 <= 2 * ti + 1 < |ftable|;
+    //     requires |a| == N.full;
+    //     requires table_wf(table, a, N);
+    //     ensures ti < |table|;
+    //     ensures ftable[2 * ti] == build_view(a, ti, N).get_split_index();
+    //     ensures ftable[2 * ti + 1] == bit_rev_int(ftable[2 * ti], N);
+    // {
+
+    // }
+
+    predicate bit_rev_ftable_wf(ftable: seq<uint16>, a: seq<uint16>)
+        requires |a| == N.full;
+        requires N == pow2_t_cons(512, 9);
+    {
+        && |ftable| == |init_unfinished(N)|
+        && table_wf(ftable_cast(ftable), a, N)
+    }
+
+    predicate bit_rev_shuffle_inv(a: seq<uint16>, view: rev_view<uint16>)
+        requires |a| == view.len.full;
+    {
+       view.shuffle_inv(a)
+    }
+
+    lemma bit_rev_index_lemma(
+        a: seq<uint16>,
+        ftable: seq<uint16>,
+        sbi: uint32,
+        rsbi: uint32,
+        ti: nat,
+        a0: uint32,
+        t0: uint32,
+        t1: uint32)
+
+        requires N == pow2_t_cons(512, 9);
+        requires |a| == N.full;
+        requires bit_rev_ftable_wf(ftable, a);
+
+        requires 0 <= 2 * ti + 1 < |ftable|;
+        requires sbi == ftable[2 * ti];
+        requires rsbi == ftable[2 * ti+1];
+    
+        requires flat.ptr_admissible_32(heap_b32_index_ptr(a0, N.full / 2 - 1));
+
+        requires t0 == uint32_add(a0, uint32_ls(sbi, 1));
+        requires t1 == uint32_add(a0, uint32_ls(rsbi, 1));
+
+        ensures t0 == a0 + 2 * sbi;
+        ensures t1 == a0 + 2 * rsbi;
+
+        ensures sbi == build_view(a, ti, N).get_split_index();
+        ensures rsbi == bit_rev_int(ftable[2 * ti], N);
+    {
+        var table := ftable_cast(ftable);
+        assert ti < |table|;
+
+        assert table[ti].0 == ftable[2 * ti]
+            && table[ti].1 == ftable[2 * ti + 1] by {
+            reveal ftable_cast();
+        }
+
+        assert table[ti].0 == build_view(a, ti, N).get_split_index()
+            && table[ti].1 == bit_rev_int(table[ti].0, N) by {
+            reveal table_wf();
+        }
+
+        // ftable_index_lemma(a, ftable, table, ti);
+        assert sbi == build_view(a, ti, N).get_split_index();
+        assert rsbi == bit_rev_int(ftable[2 * ti], N);
+
+        ls1_is_double(sbi);
+        ls1_is_double(rsbi);
+    }
+
+    lemma bit_rev_view_inv_peri_lemma(
+        a: seq<uint16>,
+        next_b: seq<uint16>,
+        view: rev_view<uint16>,
+        table: seq<uint16>)
+        returns (next_view: rev_view<uint16>)
+        
+        requires N == pow2_t_cons(512, 9);
+        requires buff_is_nsized(view.b);
+        requires |a| == N.full;
+        requires bit_rev_ftable_wf(table, a);
+        requires view.len == N;
+        requires view.shuffle_inv(a);
+        requires next_b == view.next_rev_buffer();
+
+        requires 2 * view.ti < |init_unfinished(N)|;
+        ensures next_view == view.next_rev_view(a);
+        ensures next_view.shuffle_inv(a);
+        ensures next_view.b == next_b;
+        ensures buff_is_nsized(next_view.b);
+    {
+        next_view := view.next_rev_view(a);
+        view.shuffle_inv_peri_lemma(a, next_view);
+        reveal buff_is_nsized();
+    }
+
+    lemma bit_rev_view_inv_post_lemma(a: seq<uint16>, view: rev_view<uint16>)
+        requires N == pow2_t_cons(512, 9);
+        requires |a| == N.full;
+        requires view.len == N;
+        requires view.shuffle_inv(a);
+        requires 2 * view.ti == |init_unfinished(N)|; 
+        ensures is_bit_rev_shuffle(a, view.b, N);
+    {
+        view.shuffle_inv_post_lemma(a);
+    }
+
+    // function rev_init_unfinished(): set<nat>
+    //     requires N == pow2_t_cons(512, 9);
+    // {
+    //     init_unfinished(N)
+    // }
+
+    // function build_rev_view(a: seq<uint16>, i: nat): rev_view<uint16>
+    //     requires N == pow2_t_cons(512, 9);
+    //     requires |a| == N.full;
+    //     requires i * 2 <= |rev_init_unfinished()|
+    // {
+    //     build_view(a, i, N)
+    // }
+
+
+
     lemma lemma_rs_by_31(x: int32)
       ensures x >= 0 ==> int32_rs(x, 31) == 0;
       ensures x < 0 ==> int32_rs(x, 31) == -1;

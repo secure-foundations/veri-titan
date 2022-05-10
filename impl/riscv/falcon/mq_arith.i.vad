@@ -19,16 +19,6 @@ import opened nth_root
 
 #endverbatim
 
-type pow2_t: Type(0) extern;
-function pow2(exp: int): pow2_t extern;
-function operator(.full) (p :pow2_t): nat extern;
-function operator(.exp) (p :pow2_t): nat extern;
-function pow2_half(p: pow2_t): pow2_t extern;
-function pow2_double(p: pow2_t): pow2_t extern;
-
-const N: pow2_t extern;
-const R: nat extern;
-
 function rs1_is_half(a: uint32): void extern;
 
 procedure p2_half(inout dst: reg32, ghost p: pow2_t)
@@ -70,6 +60,14 @@ procedure p2_double(inout dst: reg32, ghost p: pow2_t)
     p' := pow2_double(p);
     ls1_is_double(old(dst));
 }
+
+// procedure double(inout dst: reg32)
+//     requires dst < BASE_31;
+//     ensures dst == old(dst) * 2;
+// {
+//     slli(dst, dst, 1);
+//     ls1_is_double(old(dst));
+// }
 
 function montmul(a: nat, b: nat): uint32 extern;
 function mqmul(a: nat, b: nat): uint32 extern;
