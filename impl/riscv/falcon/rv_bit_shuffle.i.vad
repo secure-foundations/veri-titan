@@ -1,12 +1,12 @@
 include "../../../arch/riscv/decls.i.vad"
-include "rv_reg_save.i.vad"
+// include "rv_reg_save.i.vad"
 
 #verbatim
 
 include "../../../arch/riscv/decls.i.dfy"
 include "../../../../lib/falcon/bv32_falcon_lemmas.i.dfy"
 
-include "rv_reg_save.i.dfy"
+// include "rv_reg_save.i.dfy"
 
 module rv_bit_shuffle {
 
@@ -26,7 +26,7 @@ import opened mq_polys
 import opened poly_view
 import opened nth_root
 
-import opened rv_reg_save
+// import opened rv_reg_save
 
 #endverbatim
 
@@ -42,26 +42,15 @@ function operator(.b) (m: rev_view): seq(uint16) extern;
 
 function b16_iter_inv(iter: b16_iter, heap: heap_t, address: int): bool extern;
 
-function bit_rev_view_init(a: seq(uint16)): rev_view extern;
-function bit_rev_view_inv_peri_lemma(a: seq(uint16), next_b: seq(uint16), view: rev_view, table: seq(uint16)): rev_view extern;
-
-function bit_rev_index_lemma(a: seq(uint16),
-    ftable: seq(uint16),
-    sbi: uint32,
-    rsbi: uint32,
-    ti: nat,
-    a0: uint32,
-    t0: uint32,
-    t1: uint32): void extern;
-
-function bit_rev_view_inv_post_lemma(a: seq(uint16), view: rev_view): void  extern;
-
-function bit_rev_ftable_wf(table: seq(uint16), a: seq(uint16)): bool extern;
-
 function init_unfinished(len: pow2_t): set(nat) extern;
-function bit_rev_shuffle_inv(a: seq(uint16), view: rev_view): bool extern;
 function build_view(a: seq(uint16), i: nat, len: pow2_t): rev_view extern;
 function is_bit_rev_shuffle(a: seq(uint16), b: seq(uint16), len: pow2_t): bool extern;
+function bit_rev_view_init(a: seq(uint16)): rev_view extern;
+function bit_rev_view_inv_peri_lemma(a: seq(uint16), next_b: seq(uint16), view: rev_view, table: seq(uint16)): rev_view extern;
+function bit_rev_index_lemma(a: seq(uint16),ftable: seq(uint16), sbi: uint32,rsbi: uint32, ti: nat, a0: uint32, t0: uint32, t1: uint32): void extern;
+function bit_rev_view_inv_post_lemma(a: seq(uint16), view: rev_view): void  extern;
+function bit_rev_ftable_wf(table: seq(uint16), a: seq(uint16)): bool extern;
+function bit_rev_shuffle_inv(a: seq(uint16), view: rev_view): bool extern;
 
 procedure bit_rev(
     ghost iter_a: b16_iter,

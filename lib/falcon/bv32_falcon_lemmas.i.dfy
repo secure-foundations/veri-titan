@@ -739,21 +739,81 @@ module bv32_falcon_lemmas {
         view.shuffle_inv_post_lemma(a);
     }
 
-    // function rev_init_unfinished(): set<nat>
-    //     requires N == pow2_t_cons(512, 9);
-    // {
-    //     init_unfinished(N)
-    // }
+    predicate mq_ntt_poly_mul_inv(a: seq<uint16>, init_a: seq<uint16>, b: seq<uint16>, i: nat)
+        requires N == pow2_t_cons(512, 9);
+    {
+        && buff_is_nsized(init_a)
+        && buff_is_nsized(b)
+        && i <= |init_a| == |a| == |b| == N.full
+        && init_a[i..] == a[i..]
+        && reveal buff_is_nsized();
+        && (forall j: nat | 0 <= j < i :: a[j] == mqmul(init_a[j], b[j]))
+    }
+    
+    lemma mq_ntt_poly_mul_inv_peri_lemma(
+        a: seq<uint16>, 
+        init_a: seq<uint16>,
+        ai: uint32,
+        b: seq<uint16>,
+        i: nat)
+        requires N == pow2_t_cons(512, 9);
+        requires i < N.full;
+        requires mq_ntt_poly_mul_inv(a, init_a, b, i);
+        requires init_a[i] < Q;
+        requires b[i] < Q;
+        requires ai == montmul(montmul(init_a[i], 10952), b[i]);
+        ensures  mq_ntt_poly_mul_inv(a[i := ai], init_a, b, i+1);
+    {
+        var next_a := a[i := ai];
+        forall j: nat | 0 <= j < i+1
+            ensures next_a[j] == mqmul(init_a[j], b[j])
+        {
+            if j != i {
+                assert next_a[j] == a[j];
+            } else {
+                assert next_a[j] == ai;
+                assume false;
+            }
+        }
+    }
 
-    // function build_rev_view(a: seq<uint16>, i: nat): rev_view<uint16>
-    //     requires N == pow2_t_cons(512, 9);
-    //     requires |a| == N.full;
-    //     requires i * 2 <= |rev_init_unfinished()|
-    // {
-    //     build_view(a, i, N)
-    // }
+    predicate mq_poly_scale_inv(a: seq<uint16>, init_a: seq<uint16>, b: seq<uint16>, i: nat)
+        requires N == pow2_t_cons(512, 9);
+    {
+        && buff_is_nsized(init_a)
+        && buff_is_nsized(b)
+        && reveal buff_is_nsized();
+        && i <= |init_a| == |a| == |b| == N.full
+        && init_a[i..] == a[i..]
+        && (forall j: nat | 0 <= j < i :: a[j] == montmul(init_a[j], b[j]))
+    }
 
-
+    lemma mq_poly_scale_peri_lemma(
+        a: seq<uint16>, 
+        init_a: seq<uint16>,
+        ai: uint32,
+        b: seq<uint16>,
+        i: nat)
+        requires N == pow2_t_cons(512, 9);
+        requires i < N.full;
+        requires mq_poly_scale_inv(a, init_a, b, i);
+        requires init_a[i] < Q;
+        requires b[i] < Q;
+        requires ai == montmul(init_a[i], b[i]);
+        ensures  mq_poly_scale_inv(a[i := ai], init_a, b, i+1);
+    {
+        var next_a := a[i := ai];
+        forall j: nat | 0 <= j < i+1
+            ensures next_a[j] == montmul(init_a[j], b[j])
+        {
+            if j != i {
+                assert next_a[j] == a[j];
+            } else {
+                assert next_a[j] == ai;
+                assume false;
+            }
+        }
+    }
 
     lemma lemma_rs_by_31(x: int32)
       ensures x >= 0 ==> int32_rs(x, 31) == 0;

@@ -98,8 +98,20 @@ ghost procedure lemma_mq_rshift1_correct(
     ghost r: uint32,
     ghost x: nat) extern;
 
+procedure poly_mul_inline_montymul()
+    requires
+        t0 < 12289;
+        t1 < 12289;
+    modifies
+        t0; t1; a2; a4; a5;
+    ensures
+        t0 < 12289;
+        t0 == montmul(old(t0), old(t1));
+{
+    assume false;
+}
 
-procedure mq_montymul()
+procedure ntt_inline_mq_montymul()
     requires
         a0 == 12289;
         a1 < 12289;

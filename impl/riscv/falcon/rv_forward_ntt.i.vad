@@ -125,7 +125,7 @@ procedure forward_s_loop(ghost iter_a: b16_iter,
 
     assert a1 == iter_a.buff[s + d.full];
 
-    mq_montymul();
+    ntt_inline_mq_montymul();
 
     assert a1 == montmul(iter_a.buff[s + d.full], s5);
 
