@@ -6,8 +6,6 @@ include "../../../arch/riscv/decls.i.vad"
 include "../../../arch/riscv/decls.i.dfy"
 include "../../../../lib/falcon/bv32_falcon_lemmas.i.dfy"
 
-// include "rv_reg_save.i.dfy"
-
 module rv_bit_shuffle {
 
 import opened integers
@@ -22,9 +20,8 @@ import opened bv32_falcon_lemmas
 
 import opened pows_of_2
 import opened ntt_index
-import opened mq_polys
-import opened poly_view
 import opened nth_root
+import opened poly_view
 
 // import opened rv_reg_save
 
@@ -49,7 +46,7 @@ function bit_rev_view_init(a: seq(uint16)): rev_view extern;
 function bit_rev_view_inv_peri_lemma(a: seq(uint16), next_b: seq(uint16), view: rev_view, table: seq(uint16)): rev_view extern;
 function bit_rev_index_lemma(a: seq(uint16),ftable: seq(uint16), sbi: uint32,rsbi: uint32, ti: nat, a0: uint32, t0: uint32, t1: uint32): void extern;
 function bit_rev_view_inv_post_lemma(a: seq(uint16), view: rev_view): void  extern;
-function bit_rev_ftable_wf(table: seq(uint16), a: seq(uint16)): bool extern;
+function bit_rev_ftable_wf(table: seq(uint16)): bool extern;
 function bit_rev_shuffle_inv(a: seq(uint16), view: rev_view): bool extern;
 
 procedure bit_rev(
@@ -70,7 +67,7 @@ returns (ghost next_iter_a: b16_iter)
             load_symbol(mem, "bit_rev_table_512"));
         iter_t.index == 0;
 
-        bit_rev_ftable_wf(iter_t.buff, iter_a.buff);
+        bit_rev_ftable_wf(iter_t.buff);
 
         iter_a.base_ptr != iter_t.base_ptr;
 

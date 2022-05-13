@@ -7,7 +7,7 @@ include "rv_reg_save.i.vad"
 include "mq_arith.i.dfy"
 include "rv_reg_save.i.dfy"
 
-module rv_forward_ntt {
+module rv_forward_ntt_std2rev {
 
 import opened integers
 import opened rv_machine
@@ -361,7 +361,7 @@ procedure forward_t_loop(ghost iter_a: b16_iter,
     forward_j_loop_inv_post_lemma(iter_a'.buff, d, j, u, view);
 }
 
-procedure forward_ntt(
+procedure forward_ntt_std2rev(
     ghost iter_a: b16_iter,
     ghost iter_p: b16_iter)
 

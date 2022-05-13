@@ -7,7 +7,7 @@ include "rv_reg_save.i.vad"
 include "mq_arith.i.dfy"
 include "rv_reg_save.i.dfy"
 
-module rv_inverse_ntt {
+module rv_inverse_ntt_std2rev {
 
 import opened integers
 import opened rv_machine
@@ -361,7 +361,7 @@ procedure inverse_t_loop(ghost iter_a: b16_iter,
     inverse_j_loop_inv_post_lemma(iter_a'.buff, d, j, u, view);
 }
 
-procedure inverse_ntt(
+procedure inverse_ntt_std2rev(
     ghost iter_a: b16_iter,
     ghost iter_p: b16_iter)
 

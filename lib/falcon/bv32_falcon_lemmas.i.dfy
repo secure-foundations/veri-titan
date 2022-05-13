@@ -34,7 +34,7 @@ module bv32_falcon_lemmas {
         requires a < BASE_31;
         ensures uint32_ls(a, 1) == a * 2;
 
-    predicate {:opaque} buff_is_nsized(a: seq<uint16>)
+    predicate {:opaque} buff_is_nsized(a: seq<nat>)
     {
         && (|a| == N.full)
         && (forall i | 0 <= i < N.full :: a[i] < Q)
@@ -604,7 +604,7 @@ module bv32_falcon_lemmas {
         view.j_loop_inv_post_lemma(a, d, j);
     }
 
-    function bit_rev_view_init(a: seq<uint16>): (view: rev_view<uint16>)
+    function bit_rev_view_init(a: seq<uint16>): (view: rev_view)
         requires N == pow2_t_cons(512, 9);
         requires |a| == N.full;
         ensures view.len == N;
@@ -638,15 +638,14 @@ module bv32_falcon_lemmas {
 
     // }
 
-    predicate bit_rev_ftable_wf(ftable: seq<uint16>, a: seq<uint16>)
-        requires |a| == N.full;
+    predicate bit_rev_ftable_wf(ftable: seq<uint16>)
         requires N == pow2_t_cons(512, 9);
     {
         && |ftable| == |init_unfinished(N)|
-        && table_wf(ftable_cast(ftable), a, N)
+        && table_wf(ftable_cast(ftable), N)
     }
 
-    predicate bit_rev_shuffle_inv(a: seq<uint16>, view: rev_view<uint16>)
+    predicate bit_rev_shuffle_inv(a: seq<uint16>, view: rev_view)
         requires |a| == view.len.full;
     {
        view.shuffle_inv(a)
@@ -664,7 +663,7 @@ module bv32_falcon_lemmas {
 
         requires N == pow2_t_cons(512, 9);
         requires |a| == N.full;
-        requires bit_rev_ftable_wf(ftable, a);
+        requires bit_rev_ftable_wf(ftable);
 
         requires 0 <= 2 * ti + 1 < |ftable|;
         requires sbi == ftable[2 * ti];
@@ -705,14 +704,14 @@ module bv32_falcon_lemmas {
     lemma bit_rev_view_inv_peri_lemma(
         a: seq<uint16>,
         next_b: seq<uint16>,
-        view: rev_view<uint16>,
+        view: rev_view,
         table: seq<uint16>)
-        returns (next_view: rev_view<uint16>)
+        returns (next_view: rev_view)
         
         requires N == pow2_t_cons(512, 9);
         requires buff_is_nsized(view.b);
         requires |a| == N.full;
-        requires bit_rev_ftable_wf(table, a);
+        requires bit_rev_ftable_wf(table);
         requires view.len == N;
         requires view.shuffle_inv(a);
         requires next_b == view.next_rev_buffer();
@@ -728,7 +727,7 @@ module bv32_falcon_lemmas {
         reveal buff_is_nsized();
     }
 
-    lemma bit_rev_view_inv_post_lemma(a: seq<uint16>, view: rev_view<uint16>)
+    lemma bit_rev_view_inv_post_lemma(a: seq<uint16>, view: rev_view)
         requires N == pow2_t_cons(512, 9);
         requires |a| == N.full;
         requires view.len == N;
@@ -772,7 +771,7 @@ module bv32_falcon_lemmas {
                 assert next_a[j] == a[j];
             } else {
                 assert next_a[j] == ai;
-                assume false;
+                assume ai == mqmul(init_a[j], b[j]);
             }
         }
     }
@@ -810,10 +809,28 @@ module bv32_falcon_lemmas {
                 assert next_a[j] == a[j];
             } else {
                 assert next_a[j] == ai;
-                assume false;
             }
         }
     }
+
+    lemma inverse_ntt_rev2std_lemma(
+        a0: seq<uint16>,
+        a1: seq<uint16>,
+        a2: seq<uint16>,
+        a3: seq<uint16>,
+        a4: seq<uint16>)
+
+        requires N == pow2_t_cons(512, 9);
+        requires buff_is_nsized(a0);
+        requires buff_is_nsized(a1);
+        requires buff_is_nsized(a2);
+        requires buff_is_nsized(a3);
+        requires buff_is_nsized(a4);
+        requires is_bit_rev_shuffle(a0, a1, N);
+    {
+        
+    }
+
 
     lemma lemma_rs_by_31(x: int32)
       ensures x >= 0 ==> int32_rs(x, 31) == 0;
