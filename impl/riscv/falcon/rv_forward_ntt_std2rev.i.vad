@@ -376,9 +376,9 @@ returns (ghost iter_a': b16_iter)
 
     requires
         fvar_iter_inv(heap, iter_a, a0, 0);
-        symbols?["ntt512_mixed_powers_rev"];
+        symbols?["rev_ntt512_mixed_powers_table"];
         fvar_iter_inv(heap, iter_p,
-            load_symbol(mem, "ntt512_mixed_powers_rev"), 0);
+            load_symbol(mem, "rev_ntt512_mixed_powers_table"), 0);
         iter_a.base_ptr != iter_p.base_ptr;
 
     requires
@@ -409,7 +409,7 @@ returns (ghost iter_a': b16_iter)
     let mem0 := mem;
     iter_a' := iter_a;
 
-    lw_symbol(s3, "ntt512_mixed_powers_rev");
+    lw_symbol(s3, "rev_ntt512_mixed_powers_table");
 
     mv(s4, a0);
 

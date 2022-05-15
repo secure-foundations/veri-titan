@@ -35,6 +35,7 @@ module bv32_falcon_lemmas {
         ensures uint32_ls(a, 1) == a * 2;
 
     predicate {:opaque} buff_is_nsized(a: seq<nat>)
+        ensures |a| == N.full;
     {
         && (|a| == N.full)
         && (forall i | 0 <= i < N.full :: a[i] < Q)
@@ -828,7 +829,50 @@ module bv32_falcon_lemmas {
         requires buff_is_nsized(a4);
         requires is_bit_rev_shuffle(a0, a1, N);
     {
-        
+
+    }
+
+    lemma mq_ntt_mul_lemma(
+        a0: seq<uint16>,
+        a1: seq<uint16>,
+        b0: seq<uint16>,
+        b1: seq<uint16>,
+        c0: seq<uint16>,
+        c1: seq<uint16>)
+
+        requires N == pow2_t_cons(512, 9);
+        requires buff_is_nsized(a0);
+        requires buff_is_nsized(a1);
+        requires buff_is_nsized(b0);
+        requires buff_is_nsized(b1);
+        requires buff_is_nsized(c0);
+        requires buff_is_nsized(c1);
+
+        requires forward_ntt_eval_all(a1, a0);
+        requires forward_ntt_eval_all(b1, b0);
+        requires mq_ntt_poly_mul_inv(c0, a1, b1, N.full);
+        requires is_bit_rev_shuffle(c0, c1, N);
+    {
+        var x_value := rev_mixed_powers_mont_x_value;
+        // assert points_eval_inv(a1, a0, x_value, pow2(0));
+
+        forall i | 0 <= i < N.full
+            ensures var x := mqpow(PSI, 2 * bit_rev_int(i, N) + 1);
+                mqmul(poly_eval(a0, x), poly_eval(b0, x)) == c0[i];
+        {
+            reveal points_eval_suffix_inv();
+            assert 2 * bit_rev_int(i, N) * 1 == 2 * bit_rev_int(i, N);
+        }
+
+        reveal is_bit_rev_shuffle();
+
+        forall i | 0 <= i < N.full
+            ensures var x := mqpow(PSI, 2 * i + 1);
+                mqmul(poly_eval(a0, x), poly_eval(b0, x)) == c1[i];
+        {
+            bit_rev_symmetric(i, N);
+            assert c1[i] == c0[bit_rev_int(i, N)];
+        }
     }
 
 

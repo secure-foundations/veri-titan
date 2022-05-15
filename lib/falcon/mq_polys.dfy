@@ -3,6 +3,7 @@ include "ntt_index.dfy"
 module mq_polys {
     import opened Seq
 	import opened Power
+    import Math
 
     import opened pows_of_2
     import opened ntt_index
@@ -64,18 +65,52 @@ module mq_polys {
         r
     }
 
-    function {:opaque} poly_eval(a: seq<elem>, x: elem): elem
+    function a_i_times_x_to_the_i(a: seq<elem>, x: elem): seq<elem>
     {
-        if |a| == 0 then 0
-        else mqadd(First(a), mqmul(poly_eval(DropFirst(a), x), x))
+        seq(|a|, i requires 0 <= i < |a| => mqmul(a[i], mqpow(x, i)))
+        //Map(i => mqmul(a[i], mqpow(x, i)), a)
     }
 
-    lemma poly_eval_base_lemma(a: seq<elem>, x: elem)
-        requires |a| == 1;
-        ensures poly_eval(a, x) == a[0];
+    // function a_i_times_x_to_the_i_plus_k(a: seq<elem>, x: elem, k: nat): seq<elem>
+    // {
+    //     seq(|a|, i requires 0 <= i < |a| => mqmul(a[i], mqpow(x, i + k)))
+    // }
+
+    function mqsum(s: seq<elem>) : elem
     {
-        reveal poly_eval();
+        //FoldRight((e1, e2) => mqadd(e1, e2), s, 0)
+        if |s| == 0 then 0
+        else mqadd(s[0], mqsum(s[1..]))
     }
+
+    lemma mqsum_adds(s1: seq<elem>, s2: seq<elem>) 
+        ensures mqsum(s1 + s2) == mqadd(mqsum(s1), mqsum(s2))
+    {
+        assume false;
+        // if |s1| == 0 {
+        //     assert mqsum(s1) == 0;
+        //     assert s1 + s2 == s2;
+        // } else {
+        //     calc {
+        //         mqsum(s1 + s2);
+        //             { assert (s1 + s2)[1..] == s1[1..] + s2; }
+        //         mqadd(s1[0], mqsum(s1[1..] + s2));
+        //             { mqsum_adds(s1[1..], s2); }
+        //         mqadd(s1[0], mqadd(mqsum(s1[1..]), mqsum(s2)));
+        //             { mqadd_associates(s1[0], mqsum(s1[1..]), mqsum(s2)); }
+        //         mqadd(mqadd(s1[0], mqsum(s1[1..])), mqsum(s2));
+        //         mqadd(mqsum(s1), mqsum(s2));
+        //     }
+        // }
+    }
+    
+    function {:opaque} poly_eval(a: seq<elem>, x: elem): elem
+    {
+        mqsum(a_i_times_x_to_the_i(a, x))
+    }
+
+    lemma {:axiom} poly_eval_base_lemma(a: seq<elem>, x: elem)
+        requires |a| == 1;
 
     lemma {:axiom} poly_eval_split_lemma(a: seq<elem>, 
         a_e: seq<elem>, a_o: seq<elem>, len: pow2_t, x: elem)
@@ -88,22 +123,39 @@ module mq_polys {
             mqadd(poly_eval(a_e, sqr), mqmul(x, poly_eval(a_o, sqr)));
         decreases |a|;
 
+    function {:axiom} index_pairs(len1: nat, len2: nat, deg: nat): (r: seq<(nat, nat)>)
+        requires deg < len1 + len2 - 1;
+        ensures forall j: nat, k: nat :: (
+            (j < len1 && k < len2 && j + k == deg)
+                <==>
+            (exists i: nat | i < |r| :: r[i] == (j, k)));
+ 
+    function poly_mul_coef(a: seq<elem>, b: seq<elem>, deg: nat): elem
+        requires deg < |a| + |b| - 1;
+    {
+        var pairs := index_pairs(|a|, |b|, deg);
+        var terms := seq(|pairs|, i requires 0 <= i < |pairs| =>
+            mqmul(a[pairs[i].0], b[pairs[i].1]));
+        mqsum(terms)
+    }
 
-    // predicate {:opaque} poly_eval_all_points(a: seq<elem>, y: seq<elem>, len: pow2_t)
-    //     requires 0 <= len.exp <= L;
-    //     ensures poly_eval_all_points(a, y, len) ==> |y| == |a| == len.full;
-    // {
-    //     && |y| == |a| == len.full
-    //     && (forall i: nat | i < len.full ::
-    //         y[i] == poly_eval(a, omega_nk(len, i)))
-    // }
+    function poly_mul(a: seq<elem>, b: seq<elem>): (c: seq<elem>)
+        requires |a| >= 1;
+        requires |b| >= 1;
+        ensures |c| == |a| + |b| - 1;
+    {
+        var len := |a| + |b| - 1;
+        seq(len, i requires 0 <= i < len => poly_mul_coef(a, b, i))
+    }
 
-    // lemma poly_eval_all_points_lemma(a: seq<elem>, y: seq<elem>, len: pow2_t, i: nat)
-    //     requires 0 <= len.exp <= L;
-    //     requires poly_eval_all_points(a, y, len);
-    //     requires i < len.full;
-    //     ensures  y[i] == poly_eval(a, omega_nk(len, i));
-    // {
-    //     reveal poly_eval_all_points();
-    // }
+    function poly_add(a: seq<elem>, b: seq<elem>): (c: seq<elem>)
+        requires |a| == |b|;
+    {
+        var len := |a|;
+        seq(len, i requires 0 <= i < len => modmul(a[i], b[i]))
+    }
+
+    lemma {:opaque} poly_divmod_fundamental(a: seq<elem>, b: seq<elem>)
+        returns (q: seq<elem>, r: seq<elem>)
+        ensures a == poly_mul(q 
 }
