@@ -189,7 +189,7 @@ def setup_tools():
         print("[INFO] dafny binary already exists")
     else:
         os.system("cd tools && git clone git@github.com:secure-foundations/dafny.git")
-        os.system("cd tools/dafny && git checkout groebner-extension && make exe && make z3-ubuntu")
+        os.system(f"cd tools/dafny && git checkout groebner-extension && make exe && make {z3_target}")
 
     if os.path.exists(VALE_PATH):
         print("[INFO] vale binary already exists")
