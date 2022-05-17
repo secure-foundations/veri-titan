@@ -64,7 +64,10 @@ procedure montmul_0(ghost vars: mvars)
         a_view == SeqZero(NUM_WORDS);
         mvars_inv(vars, heap, x20, x19, x16, x17, NA, NA);
 {
+    comment("/* Load Montgomery constant: w3 <= m0' */");
     let _ := bn_lid_safe(x9, false, 0, x17, false, vars.m0d_it);
+
+    comment("/* Initialize result buffer with zeroes. */");
     bn_mov(w2, w31);
 
     a_view := wdrs[4..4+NUM_WORDS];
@@ -134,6 +137,30 @@ procedure montmul(ghost vars: mvars)
         mvars_inv(vars, heap, NA, x19, x16, x17, NA, NA);
         montmul_inv(a_view, vars.x_it.buff, NUM_WORDS, vars.y_it.buff, vars.rsa);
 {
+    /* TODO: Can this header comment appear above the procedure? Better yet, can
+       we print the requires/ensures clause in a comment automatically? */
+    comment("/**");
+    comment(" * Variable-time 3072-bit Montgomery Modular Multiplication");
+    comment(" *");
+    comment(" * Returns: C = montmul(A,B) = A*B*R^(-1) mod M");
+    comment(" *");
+    comment(" * This implements the limb-by-limb interleadved Montgomory Modular");
+    comment(" * Multiplication Algorithm. This is only a wrapper around the main loop body.");
+    comment(" * For algorithmic implementation details see the mont_loop subroutine.");
+    comment(" *");
+    comment(" * Flags: Flags have no meaning beyond the scope of this subroutine.");
+    comment(" *");
+    comment(" * @param[in]  x16: dptr_M, dmem pointer to first limb of modulus M");
+    comment(" * @param[in]  x17: dptr_m0d, dmem pointer to Montgomery Constant m0'");
+    comment(" * @param[in]  x19: dptr_a, dmem pointer to first limb of operand A");
+    comment(" * @param[in]  x20: dptr_b, dmem pointer to first limb of operand B");
+    comment(" * @param[in]  w31: all-zero");
+    comment(" * @param[in]  x9: pointer to temp reg, must be set to 3");
+    comment(" * @param[in]  x10: pointer to temp reg, must be set to 4");
+    comment(" * @param[in]  x11: pointer to temp reg, must be set to 2");
+    comment(" * @param[out] [w15:w4]: result C");
+    comment(" */");
+
     a_view := montmul_0(vars);
 
     ghost var x_it := vars.x_it;
@@ -141,6 +168,8 @@ procedure montmul(ghost vars: mvars)
     assert montmul_inv(a_view, x_it.buff, x_it.index, vars.y_it.buff, vars.rsa) by {
         montmul_inv_pre_lemma(a_view, x_it.buff, vars.y_it.buff, vars.rsa);
     }
+
+    comment("/* Iterate over limbs of input operand. */");
 
     while (LoopImm(12))
         invariant
@@ -169,17 +198,22 @@ procedure montmul(ghost vars: mvars)
 
         decreases loop_ctr;
     {
+        comment("/* Load limb of operand. */");
         x_it := bn_lid_safe(x11, false, 0, x20, true, x_it);
+
+        comment("/* Save some register values. */");
         addi(x6, x16, 0);
         addi(x7, x19, 0);
 
+        comment("/* Main loop body of Montgomery multiplication algorithm. */");
         a_view := mont_loop(x_it, w2, vars, a_view);
 
+        comment("/* Restore registers. */");
         addi(x16, x6, 0);
         addi(x19, x7, 0);
     }
 
-    /* restore pointers */
+    comment("/* Restore pointers. */");
     li(x8, 4);
     li(x10, 4);
 }
