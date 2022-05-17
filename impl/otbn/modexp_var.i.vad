@@ -190,15 +190,18 @@ procedure modexp_var_0(ghost init_vars: mvars)
         modexp_var_inv(to_nat(out_iter.buff), 0, vars.rsa);
         mvars_init(init_vars, heap, old(x16), old(x17), old(x26), x23, x24);
 {
+    comment("/* Prepare all-zero register. */");
     xor_clear_lemma(w31);
-
     bn_xor(w31, w31, w31, SFT_DFT, 0);
 
+    comment("/* Prepare pointers to temporary registers. */");
     li(x8, 4);
     li(x9, 3);
     li(x10, 4);
     li(x11, 2);
 
+    comment("/* Convert input to Montgomery domain.");
+    comment("     [w15:w4] <= (dmem[x23]*dmem[x26]*R^-1) mod M = (A * R) mod M */");
     addi(x19, x23, 0);
     addi(x20, x26, 0);
     addi(x21, x24, 0);
@@ -210,6 +213,8 @@ procedure modexp_var_0(ghost init_vars: mvars)
 
     let a_view := montmul(vars);
 
+    comment("/* Store Montgomery-form input in dmem.");
+    comment("     dmem[x24] <= [w15:w4] = (A * R) mod M */");
     out_iter := b256_iter_cons(x21, 0, heap[x21].b256);
     out_iter := write_to_dmem(out_iter);
 
@@ -347,10 +352,37 @@ procedure modexp_var_3072_f4(
         let rsa := init_vars.rsa in 
         to_nat(out_iter.buff) == mod(Pow(rsa.SIG, rsa.E), rsa.M);
 {
+    comment("/**");
+    comment(" * Variable time 3072-bit modular exponentiation with exponent 65537");
+    comment(" *");
+    comment(" * Returns: C = modexp(A,65537) = mod M");
+    comment(" *");
+    comment(" * This implements the square and multiply algorithm for the");
+    comment(" * F4 exponent (65537).");
+    comment(" *");
+    comment(" * The squared Montgomery modulus RR and the Montgomery constant m0' have to");
+    comment(" * be provided at the appropriate locations in dmem. DMEM locations are");
+    comment(" * expected to be disjoint.");
+    comment(" *");
+    comment(" * Flags: Flags have no meaning beyond the scope of this subroutine.");
+    comment(" *");
+    comment(" * The base bignum A is expected in the input buffer, the result C is written");
+    comment(" * to the output buffer.");
+    comment(" *");
+    comment(" * @param[in]  dmem[x17] pointer to m0' in dmem");
+    comment(" * @param[in]  dmem[x26] pointer to RR in dmem");
+    comment(" * @param[in]  dmem[x16] pointer to first limb of modulus M in dmem");
+    comment(" * @param[in]  dmem[x23] pointer to buffer with base bignum");
+    comment(" * @param[in]  dmem[x24] pointer to output buffer");
+    comment(" */");
+
     ghost var vars := init_vars;
     vars, out_iter := modexp_var_0(init_vars);
 
     ghost var i : nat := 0;
+
+    comment("/* 16 consecutive Montgomery squares on the outbut buffer, i.e. after loop:");
+    comment("     dmem[out_buf] <= dmem[out_buf]^65536*R mod M */");
 
     while (LoopImm(16))
         invariant
@@ -360,7 +392,7 @@ procedure modexp_var_3072_f4(
 
             x23 == sig_ptr;
             x24 == out_ptr;
-    
+
             w31 == 0;
 
             vars.rsa == init_vars.rsa;
@@ -380,6 +412,8 @@ procedure modexp_var_3072_f4(
         decreases
             loop_ctr;
     {
+        comment("/* dmem[out_buf]  <= montmul(dmem[out_buf], dmem[out_buf]) */");
+
         addi(x19, x24, 0);
         addi(x20, x24, 0);
         addi(x21, x24, 0);
@@ -388,15 +422,17 @@ procedure modexp_var_3072_f4(
         let a_view := montmul(vars);
 
         out_iter := write_to_dmem(out_iter);
-        
+
         vars := vars.(x_it := out_iter).(y_it := out_iter);
 
         modexp_var_inv_peri_lemma(prev_a_view, a_view, i, vars.rsa);
-    
+
         i := i + 1;
         nop();
     }
 
+    comment("/* Final multiplication and conversion of result from Montgomery domain.");
+    comment("     out_buf  <= montmul(*x28, *x20) = montmul(dmem[in_buf], dmem[out_buf]) */");
     addi(x19, x23, 0);
     addi(x20, x24, 0);
     addi(x21, x24, 0);
@@ -408,12 +444,18 @@ procedure modexp_var_3072_f4(
 
     modexp_var_inv_post_lemma(prev_a_view, a_view, vars.sig_it.buff, vars.rsa);
 
+    comment("/* Final conditional subtraction of modulus if mod >= dmem[out_buf]. */");
+
+    comment("/* Speculatively subtract modulus and store in separate registers.");
+    comment("     [w28:w17] <= (dmem[out_buf] - M) mod 2^3072 */");
     ghost var raw_view := wdrs[4..4+NUM_WORDS];
     let adjusted_view := sub_mod(raw_view, vars.m_it);
-    
+
     let carry := fgroups.fg0.cf;
     modexp_var_correct_lemma(to_nat(raw_view), to_nat(adjusted_view), carry, vars.rsa);
 
+    comment("/* Check the borrow flag and select the post-subtraction version iff the");
+    comment("   subtraction underflowed. */");
     read_fg0();
     li(x8, 4);
 
@@ -421,6 +463,7 @@ procedure modexp_var_3072_f4(
         li(x8, 16);
     }
 
+    comment("/* Store result in dmem: dmem[out_buf] <= A^65537 mod M */");
     addi(x21, x24, 0);
 
     out_iter := b256_iter_cons(x21, 0, heap[x21].b256);
