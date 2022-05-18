@@ -282,6 +282,7 @@ procedure mont_loop_1(
             y_it.buff, m_it.buff, prev_view, curr_view, j);
 
     ensures
+        x5 == old(x5);
         x6 == old(x6);
         x7 == old(x7);
         x8 == 4 + j + 1;
@@ -401,6 +402,7 @@ procedure mont_loop(
         montmul_inv(prev_view, x_it.buff, x_it.index-1, vars.y_it.buff, vars.rsa);
 
     ensures
+        x5 == old(x5);
         x6 == old(x6);
         x7 == old(x7);
         x9 == old(x9);
@@ -491,6 +493,7 @@ procedure mont_loop(
     comment("   re-used */");
     while (LoopImm(11))
         invariant
+            x5 == old(x5);
             x6 == old(x6);
             x7 == old(x7);
             x8 == 4 + j;
