@@ -83,17 +83,21 @@ procedure write_to_dmem(ghost iter: iter_t)
     requires
         (x8 == 4) || (x8 == 16);
 
+        // Magic number below is 2^32 - 12
+        0 <= x5 < 4294967284;
+
         iter_safe(iter, heap, x21);
         seq_len(iter.buff) == NUM_WORDS;
         iter.index == 0;
     
     modifies
-        x8; x21; flat; heap;
+        x5; x8; x21; flat; heap;
 
     reads
         wdrs;
 
     ensures
+        x5 == old(x5) + 12;
         iter_inv(next_iter, heap, iter.base_ptr);
         next_iter.base_ptr == iter.base_ptr;
         seq_len(next_iter.buff) == NUM_WORDS;
@@ -102,9 +106,11 @@ procedure write_to_dmem(ghost iter: iter_t)
 {
     ghost var start := x8;
     next_iter := iter;
+    ghost var orig_counter := x5;
 
     while (LoopImm(12))
         invariant
+            x5 == orig_counter + (12 - loop_ctr);
             x8 == start + next_iter.index;
 
             iter_inv(next_iter, heap, x21);
@@ -143,6 +149,8 @@ procedure write_to_dmem(ghost iter: iter_t)
             ==
             wdrs[start..start+next_iter.index];
         }
+
+        addi(x5, x5, 1);
     }
     next_iter := next_iter.(index := 0);
 }
@@ -171,6 +179,7 @@ procedure modexp_var_0(ghost init_vars: mvars)
             x24 /* out_ptr */);
 
     ensures
+        x5 == 12;
         x9 == 3;
         x10 == 4;
         x11 == 2;
@@ -199,6 +208,10 @@ procedure modexp_var_0(ghost init_vars: mvars)
     li(x9, 3);
     li(x10, 4);
     li(x11, 2);
+
+    comment("/* Initialize a counter to double-check that the loop completes (a");
+    comment("    protection against fault injection). */");
+    li(x5, 0);
 
     comment("/* Convert input to Montgomery domain.");
     comment("     [w15:w4] <= (dmem[x23]*dmem[x26]*R^-1) mod M = (A * R) mod M */");
@@ -377,20 +390,17 @@ procedure modexp_var_3072_f4(
     comment(" */");
 
     ghost var vars := init_vars;
+
     vars, out_iter := modexp_var_0(init_vars);
 
     ghost var i : nat := 0;
-
-    comment("/* Initialize a counter to double-check that the loop completes (a");
-    comment("    protection against fault injection). */");
-    li(x5, 0);
 
     comment("/* 16 consecutive Montgomery squares on the outbut buffer, i.e. after loop:");
     comment("     dmem[out_buf] <= dmem[out_buf]^65536*R mod M */");
 
     while (LoopImm(16))
         invariant
-            x5 == i;
+            x5 == 12 + (13 * i);
             x9 == 3;
             x10 == 4;
             x11 == 2;
@@ -437,14 +447,6 @@ procedure modexp_var_3072_f4(
 
         i := i + 1;
     }
-    comment("/* If the counter value doesn't match expectations, cause a deliberate");
-    comment("   error (WDR reference > 31) to end the program. */");
-    li(x2, 16);
-    if (x2 != x5) {
-      li(x2, 255);
-      ghost var iter := b256_iter_cons(x21, 0, heap[x21].b256);
-      let next_iter := bn_sid_safe(x0, false, 0, x2, false, iter);
-    }
 
     comment("/* Final multiplication and conversion of result from Montgomery domain.");
     comment("     out_buf  <= montmul(*x28, *x20) = montmul(dmem[in_buf], dmem[out_buf]) */");
@@ -483,6 +485,15 @@ procedure modexp_var_3072_f4(
 
     out_iter := b256_iter_cons(x21, 0, heap[x21].b256);
     out_iter := write_to_dmem(out_iter);
+
+    comment("/* If the counter value doesn't match expectations, cause a deliberate");
+    comment("   error (WDR reference > 31) to end the program. */");
+    li(x2, 232);
+    if (x2 != x5) {
+      li(x2, 255);
+      ghost var iter := b256_iter_cons(x21, 0, heap[x21].b256);
+      let next_iter := bn_sid_safe(x0, false, 0, x2, false, iter);
+    }
 }
 
 #verbatim

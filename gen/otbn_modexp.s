@@ -37,6 +37,10 @@ modexp_var_3072_f4:
   li x10, 4
   li x11, 2
 
+  /* Initialize a counter to double-check that the loop completes (a
+      protection against fault injection). */
+  li x5, 0
+
   /* Convert input to Montgomery domain.
        [w15:w4] <= (dmem[x23]*dmem[x26]*R^-1) mod M = (A * R) mod M */
   addi x19, x23, 0
@@ -46,37 +50,27 @@ modexp_var_3072_f4:
 
   /* Store Montgomery-form input in dmem.
        dmem[x24] <= [w15:w4] = (A * R) mod M */
-  loopi 12, 2
+  loopi 12, 3
     bn.sid x8, 0(x21++)
     addi x8, x8, 1
-
-  /* Initialize a counter to double-check that the loop completes (a
-      protection against fault injection). */
-  li x5, 0
+    addi x5, x5, 1
 
   /* 16 consecutive Montgomery squares on the outbut buffer, i.e. after loop:
        dmem[out_buf] <= dmem[out_buf]^65536*R mod M */
-  loopi 16, 8
+  loopi 16, 9
 
     /* dmem[out_buf]  <= montmul(dmem[out_buf], dmem[out_buf]) */
     addi x19, x24, 0
     addi x20, x24, 0
     addi x21, x24, 0
     jal x1, montmul
-    loopi 12, 2
+    loopi 12, 3
       bn.sid x8, 0(x21++)
       addi x8, x8, 1
+      addi x5, x5, 1
 
     /* Update counter. */
     addi x5, x5, 1
-
-  /* If the counter value doesn't match expectations, cause a deliberate
-     error (WDR reference > 31) to end the program. */
-  li x2, 16
-  beq x2, x5, label_0
-  li x2, 255
-  bn.sid x0, 0(x2)
-  label_0:
 
   /* Final multiplication and conversion of result from Montgomery domain.
        out_buf  <= montmul(*x28, *x20) = montmul(dmem[in_buf], dmem[out_buf]) */
@@ -102,15 +96,24 @@ modexp_var_3072_f4:
   csrrs x2, 1984, x0
   andi x2, x2, 1
   li x8, 4
-  bne x2, x0, label_1
+  bne x2, x0, label_0
   li x8, 16
-  label_1:
+  label_0:
 
   /* Store result in dmem: dmem[out_buf] <= A^65537 mod M */
   addi x21, x24, 0
-  loopi 12, 2
+  loopi 12, 3
     bn.sid x8, 0(x21++)
     addi x8, x8, 1
+    addi x5, x5, 1
+
+  /* If the counter value doesn't match expectations, cause a deliberate
+     error (WDR reference > 31) to end the program. */
+  li x2, 232
+  beq x2, x5, label_1
+  li x2, 255
+  bn.sid x0, 0(x2)
+  label_1:
   ret
 
 .globl montmul
