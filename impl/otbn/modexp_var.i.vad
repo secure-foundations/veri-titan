@@ -155,6 +155,19 @@ procedure write_to_dmem(ghost iter: iter_t)
     next_iter := next_iter.(index := 0);
 }
 
+/* Causes a deliberate error in order to stop execution (e.g. if a possible
+   attack is detected). */
+procedure throw_error()
+
+    {:frame false}
+
+    requires false;
+{
+      li(x2, 255);
+      ghost var iter := b256_iter_cons(x21, 0, heap[x21].b256);
+      let next_iter := bn_sid_safe(x0, false, 0, x2, false, iter);
+}
+
 function mvars_init(
     vars: mvars,
     heap: heap_t,
@@ -490,9 +503,7 @@ procedure modexp_var_3072_f4(
     comment("   error (WDR reference > 31) to end the program. */");
     li(x2, 232);
     if (x2 != x5) {
-      li(x2, 255);
-      ghost var iter := b256_iter_cons(x21, 0, heap[x21].b256);
-      let next_iter := bn_sid_safe(x0, false, 0, x2, false, iter);
+      throw_error();
     }
 }
 
