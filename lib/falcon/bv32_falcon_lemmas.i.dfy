@@ -992,7 +992,8 @@ module bv32_falcon_lemmas {
       ensures poly_sub_loop_inv(f_new, f_orig, g, i+1);
     {
       assert |f_new| == |f_old|;
-      assert (forall j | 0 <= j < |f_new| :: j != i ==> f_new[j] == f_old[j] && j == i ==> f_new[j] == mqsub(f_orig[j], g[j]));
+      assert (forall j | 0 <= j < |f_new| :: j != i
+        ==> f_new[j] == f_old[j] && j == i ==> f_new[j] == mqsub(f_orig[j], g[j]));
 }
 
-
+}
