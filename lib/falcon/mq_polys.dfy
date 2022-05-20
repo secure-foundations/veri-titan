@@ -1,4 +1,5 @@
 include "ntt_index.dfy"
+include "ntt_params.dfy"
 
 module mq_polys {
     import opened Seq
@@ -7,10 +8,7 @@ module mq_polys {
 
     import opened pows_of_2
     import opened ntt_index
-
-	const Q: nat := 12289
-
-	type elem = i :nat | i < Q
+    import opened ntt_params
 
 	function method mqpow(a: elem, b: nat): elem
 	{
@@ -111,6 +109,7 @@ module mq_polys {
 
     lemma {:axiom} poly_eval_base_lemma(a: seq<elem>, x: elem)
         requires |a| == 1;
+        ensures poly_eval(a, x) == a[0];
 
     lemma {:axiom} poly_eval_split_lemma(a: seq<elem>, 
         a_e: seq<elem>, a_o: seq<elem>, len: pow2_t, x: elem)
@@ -186,5 +185,14 @@ module mq_polys {
         requires |m| > 0;
     {
         poly_mod(a, m) == poly_mod(b, m)
+    }
+
+    function forwad_ntt_product(a: seq<elem>, b: seq<elem>): seq<elem>
+        requires |a| == |b| == N.full;
+    {
+        seq(N.full, i requires 0 <= i < N.full => 
+                (var x := mqpow(PSI, 2 * i + 1);
+                mqmul(poly_eval(a, x), poly_eval(b, x)))
+        )
     }
 }

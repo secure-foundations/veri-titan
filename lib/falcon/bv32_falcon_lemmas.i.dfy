@@ -21,6 +21,7 @@ module bv32_falcon_lemmas {
 
 	import opened pows_of_2
     import opened ntt_index
+    import opened ntt_params
 	import opened mq_polys
 	import opened poly_view
     import opened nth_root
@@ -35,7 +36,7 @@ module bv32_falcon_lemmas {
         ensures uint32_ls(a, 1) == a * 2;
 
     predicate {:opaque} buff_is_nsized(a: seq<nat>)
-        ensures |a| == N.full;
+        ensures buff_is_nsized(a) ==> |a| == N.full;
     {
         && (|a| == N.full)
         && (forall i | 0 <= i < N.full :: a[i] < Q)
