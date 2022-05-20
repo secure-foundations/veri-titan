@@ -140,22 +140,51 @@ module mq_polys {
     }
 
     function poly_mul(a: seq<elem>, b: seq<elem>): (c: seq<elem>)
-        requires |a| >= 1;
-        requires |b| >= 1;
-        ensures |c| == |a| + |b| - 1;
     {
-        var len := |a| + |b| - 1;
-        seq(len, i requires 0 <= i < len => poly_mul_coef(a, b, i))
+        if |a| == 0 || |b| == 0 then
+            []
+        else
+            var len := |a| + |b| - 1;
+            seq(len, i requires 0 <= i < len => poly_mul_coef(a, b, i))
+    }
+
+    function poly_zero_ext(a: seq<elem>, len: nat): (a': seq<elem>)
+        requires |a| <= len; 
+        ensures |a'| == len;
+    {
+        var ext := len - |a|;
+        a + seq(ext, n requires 0 <= n < ext => 0)
     }
 
     function poly_add(a: seq<elem>, b: seq<elem>): (c: seq<elem>)
-        requires |a| == |b|;
     {
-        var len := |a|;
-        seq(len, i requires 0 <= i < len => modmul(a[i], b[i]))
+        var len := Math.Max(|a|, |b|);
+        var a := poly_zero_ext(a, len);
+        var b := poly_zero_ext(b, len);
+        seq(len, i requires 0 <= i < len => mqadd(a[i], b[i]))
     }
 
-    lemma {:opaque} poly_divmod_fundamental(a: seq<elem>, b: seq<elem>)
-        returns (q: seq<elem>, r: seq<elem>)
-        ensures a == poly_mul(q 
+    predicate valid_poly_divmod(a: seq<elem>, b: seq<elem>, q: seq<elem>, r: seq<elem>)
+    {
+        && |r| < |b|
+        && a == poly_add(poly_mul(q, b), r)
+    }
+
+    lemma {:axiom} poly_divmod_fundamental(a: seq<elem>, b: seq<elem>)
+        requires |b| > 0;
+        ensures exists q: seq<elem>, r: seq<elem> :: valid_poly_divmod(a, b, q, r)
+
+    function poly_mod(a: seq<elem>, m: seq<elem>): (r: seq<elem>)
+        requires |m| > 0;
+    {
+        poly_divmod_fundamental(a, m);
+        var q: seq<elem>, r: seq<elem> :| valid_poly_divmod(a, m, q, r);
+        r
+    }
+
+    predicate poly_mod_equiv(a: seq<elem>, b: seq<elem>, m: seq<elem>)
+        requires |m| > 0;
+    {
+        poly_mod(a, m) == poly_mod(b, m)
+    }
 }
