@@ -17,7 +17,9 @@ module nth_root {
 	ghost const OMEGA: elem;
 	ghost const OMEGA_INV: elem;
 	ghost const R: elem;
+	ghost const R2: elem;
 	ghost const R_INV: elem;
+	ghost const N_INV: elem;
 
 	function method {:axiom} montmul(a: elem, b: elem): (c: elem)
 		ensures c == (a * b * R_INV) % Q
@@ -33,6 +35,9 @@ module nth_root {
 		ensures (OMEGA * OMEGA_INV) % Q == 1
 
 		ensures (R_INV * R) % Q == 1
+		ensures IsModEquivalent(R2, R * R, Q); 
+
+		ensures (N_INV * N.full) % Q == 1;
 
 	lemma primitive_root_non_zero_lemma(i: nat)
 		requires i < N.full * 2;
@@ -271,7 +276,7 @@ module nth_root {
 
 	// d is the block count
 	// i is the offset in the block
-	function rev_mixed_powers_mont_x_value(i: nat, d: pow2_t): (r: elem)
+	function rev_mixed_powers_mont_x_value_inner(i: nat, d: pow2_t): (r: elem)
 		requires d.exp <= N.exp;
 		requires i < block_size(d).full;
 		ensures r > 0;
@@ -309,9 +314,17 @@ module nth_root {
 		r
 	}
 
+	function rev_mixed_powers_mont_x_value(i: nat, d: pow2_t): (r: elem)
+	{
+		if rev_mixed_powers_mont_x_value_inner.requires(i, d) then 
+			rev_mixed_powers_mont_x_value_inner(i, d)
+		else
+			0
+	}
+
 	function method {:axiom} rev_mixed_powers_mont_table(): (t: seq<elem>)
 		ensures |t| == N.full;
-	
+
 	lemma {:axiom} rev_mixed_powers_mont_table_axiom(t: pow2_t, d: pow2_t, j: nat)
 		requires t.exp < N.exp;
 		requires j < t.full;
@@ -336,7 +349,7 @@ module nth_root {
 
 	// d is the block count
 	// i is the offset in the block
-	function rev_omega_inv_powers_x_value(i: nat, d: pow2_t): (r: elem)
+	function rev_omega_inv_powers_x_value_inner(i: nat, d: pow2_t): (r: elem)
 		requires d.exp <= N.exp;
 		requires i < block_size(d).full;
 		ensures r > 0;
@@ -381,6 +394,15 @@ module nth_root {
 		r
 	}
 
+	function rev_omega_inv_powers_x_value(i: nat, d: pow2_t): (r: elem)
+		ensures rev_omega_inv_powers_x_value_inner.requires(i, d) ==> r > 0
+	{
+		if rev_omega_inv_powers_x_value_inner.requires(i, d) then 
+			rev_omega_inv_powers_x_value_inner(i, d)
+		else
+			0
+	}
+
 	function method {:axiom} rev_omega_inv_powers_mont_table(): (t: seq<elem>)
 		ensures |t| == N.full;
 
@@ -405,4 +427,12 @@ module nth_root {
 		var _ := twiddle_factors_index_bound_lemma(t, j);
 		rev_omega_inv_powers_mont_table_axiom(t, d, j);
 	}
+
+	function method {:axiom} inverse_ntt_scaling_table(): (t: seq<elem>)
+		ensures |t| == N.full;
+
+	lemma {:axiom} inverse_ntt_scaling_table_axiom(i: nat)
+		requires i < N.full;
+		ensures inverse_ntt_scaling_table()[i] == mqmul(mqmul(mqpow(PSI_INV, i), N_INV), R);
+
 }

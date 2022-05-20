@@ -386,7 +386,12 @@ class Printer {
                 printCode(wbody);
                 depth := depth - 1;
             }
-            case Comment(com) => print(com);
+            case Comment(com) =>
+            {
+                // Insert a newline if this is the beginning of the comment.
+                if (2 <= |com| && com[..2] == "/*") { print("\n"); }
+                printIndent(); print(com); print("\n");
+            }
     }
 
     method printTopLevelProc(code: code)

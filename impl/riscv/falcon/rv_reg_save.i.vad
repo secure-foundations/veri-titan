@@ -1,0 +1,82 @@
+include "../../../arch/riscv/decls.i.vad"
+
+#verbatim
+include "../../../arch/riscv/decls.i.dfy"
+
+module rv_reg_save {
+
+import opened integers
+import opened rv_machine
+import opened rv_decls
+import opened rv_vale
+import opened mem
+import opened stack
+
+import opened bv32_ops
+
+#endverbatim
+
+procedure save_s0__r5()
+    requires
+        in_stack_addr_range(sp);
+        in_stack_addr_range(sp - 24);
+
+    modifies
+        mem; flat; sp;
+    reads
+        s0; s1; s2; s3; s4; s5;
+    ensures
+        sp == old(sp) - 24;
+        mem == stack_push_batch(old(mem), old(flat),
+            seq(s5, s4, s3, s2, s1, s0));
+        stack_depth(mem) == stack_depth(old(mem)) + 1;
+{
+    push_frame((-24));
+    sw_stack(s0, 20);
+    sw_stack(s1, 16);
+    sw_stack(s2, 12);
+    sw_stack(s3, 8);
+    sw_stack(s4, 4);
+    sw_stack(s5, 0);
+
+    let target := stack_push_batch(old(mem), old(flat), seq(s5, s4, s3, s2, s1, s0));
+    assert top_frame(target.frames) == top_frame(mem.frames);
+}
+
+procedure restore_s0__r5()
+    requires
+        stack_depth(mem) >= 2;
+        seq_len(top_frame(mem.frames).content) == 6;
+
+    reads
+        flat;
+    modifies
+        mem; sp;
+    modifies
+        s0; s1; s2; s3; s4; s5;
+
+    ensures
+        sp == old(sp) + 24;
+        flat == old(flat);
+        mem == stack_pop_frame(old(mem), flat);
+    ensures
+        let frame := top_frame(old(mem.frames)).content;
+        s0 == frame[5];
+        s1 == frame[4];
+        s2 == frame[3];
+        s3 == frame[2];
+        s4 == frame[1];
+        s5 == frame[0];
+{
+    lw_stack(s0, 20);
+    lw_stack(s1, 16);
+    lw_stack(s2, 12);
+    lw_stack(s3, 8);
+    lw_stack(s4, 4);
+    lw_stack(s5, 0);
+    pop_frame(24);
+}
+
+#verbatim
+}
+#endverbatim

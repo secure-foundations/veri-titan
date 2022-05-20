@@ -190,42 +190,42 @@ procedure mont_loop_0(
         next_y_it == b256_iter_load_next(y_it, true);
         iter_safe(next_y_it, heap, x19);
 {
-   /* save pointer to modulus */
+    comment("/* Save pointer to modulus. */");
     addi(x22, x16, 0);
 
-    /* pointers to temp. wregs */
+    comment("/* Pointers to temporary registers. */");
     li(x12, 30);
     li(x13, 24);
 
-    /* buffer read pointer */
+    comment("/* Buffer read pointer. */");
     li(x8, 4);
 
-    /* buffer write pointer */
+    comment("/* Buffer write pointer. */");
     li(x10, 4);
     
-    /* load 1st limb of input y (operand a): w30 = y[0] */
+    comment("/* Load 1st limb of input y (operand a): w30 = y[0] */");
     next_y_it := bn_lid_safe(x12, false, 0, x19, true, y_it);
     // assert wdrs[30] == y_it.buff[0];
 
-    /* [w26, w27] = w30*w2 = y[0]*xi */
+    comment("/* [w26, w27] = w30*w2 = y[0]*xi */");
     mul256_w30xw2();
     // assert to_nat(seq(w27, w26)) == y_it.buff[0] * w2;
 
-    /* w24 = w4 = A[0] */ 
+    comment("/* w24 = w4 = A[0] */");
     bn_movr(x13, false, x8, true);
 
-    /* add A[0]: [w29, w30] = [w26, w27] + w24 = y[0]*xi + A[0] */
+    comment("/* add A[0]: [w29, w30] = [w26, w27] + w24 = y[0]*xi + A[0] */");
     p1 := mul_add_512(w30, w27, w24, w29, w26, w31, y_it.buff[0], w2);
 
     dw_view_lemma(p1);
 
-    /* w25 = w3 = m0d */
+    comment("/* w25 = w3 = m0d */");
     bn_mov(w25, w3);
 
-    /* [_, ui] = [w26, w27] = w30*w25 = (y[0]*xi + A[0])*m0d*/
+    comment("/* [_, ui] = [w26, w27] = w30*w25 = (y[0]*xi + A[0])*m0d*/");
     mul256_w30xw25();
 
-    /* [_, ui] = [w28, w25] = [w26, w27]  */
+    comment("/* [_, ui] = [w28, w25] = [w26, w27]  */");
     bn_mov(w25, w27);
 
     mont_loop_cong_lemma(p1, curr_view[0], y_it.buff[0], xi, w25, w26, m0d);
@@ -282,6 +282,7 @@ procedure mont_loop_1(
             y_it.buff, m_it.buff, prev_view, curr_view, j);
 
     ensures
+        x5 == old(x5);
         x6 == old(x6);
         x7 == old(x7);
         x8 == 4 + j + 1;
@@ -322,19 +323,29 @@ procedure mont_loop_1(
             next_y_it.buff, next_m_it.buff, prev_view, next_view, j+1);
 {
     ghost var j := y_it.index;
-    /* load limb of y (operand a) and mult. with xi: [w26, w27] <- y[j]*xi */
+    comment("/* Load limb of y (operand a): w30 <= y[j] */");
     next_y_it := bn_lid_safe(x12, false, 0, x19, true, y_it);
 
+    comment("/* Load limb of buffer: w24 <= A[j] */");
     bn_movr(x13, false, x8, true);
 
+    comment("/* Multiply y[j]*xi, add A[j], and add carry from previous iteration:");
+    comment("     [w26, w27] <= w30*w2 + w24 + w29 = y[j]*x_i + A[j] + c_xy */");
     next_p1 := mula512_w30xw2(y_it.buff[j], xi);
 
-    /* load limb m[j] of modulus and multiply with ui:
-       [w26, w27] = w30*w25 = m[j]*ui */
+    comment("/* Step 2:  Second multiplication computes the product of a limb m[j] of");
+    comment("   the modulus with u_i. The 2nd carry word from the previous loop cycle");
+    comment("   c_m and the lower word a_tmp of the result of Step 1 are added. */");
+
+    comment("/* Load limb m[j] of modulus: w30 <= m[j] */");
     next_m_it := bn_lid_safe(x12, false, 0, x16, true, m_it);
 
+    comment("/* Multiply with ui and add result from first step:");
+    comment("     [w28, w24] <= w30*w25 + w24 + w28 = m[j]*ui + a_tmp + c_m */");
     next_p2 := mula512_w30xw25(m_it.buff[j], ui);
 
+    comment("/* store at w[4+j] = A[j-1]");
+    comment("   This includes the reduction by 2^WLEN = 2^b in step 2.2 of HAC 14.36 */");
     bn_movr(x10, true, x13, false);
     next_view := curr_view[j-1 := w24];
 
@@ -358,6 +369,7 @@ procedure read_fg1()
     ensures
         x2 == bool_to_uint1(fgroups.fg1.cf);
 {
+    comment("/* Read carry flag 1 into a register: x2 <= FG1.C */");
     csrrs(x2, 0x7c1, x0);
     andi(x2, x2, 1);
     read_carry_flag_lemma(fgroups.fg1);
@@ -390,6 +402,7 @@ procedure mont_loop(
         montmul_inv(prev_view, x_it.buff, x_it.index-1, vars.y_it.buff, vars.rsa);
 
     ensures
+        x5 == old(x5);
         x6 == old(x6);
         x7 == old(x7);
         x9 == old(x9);
@@ -410,6 +423,38 @@ procedure mont_loop(
         flat == old(flat);
         heap == old(heap);
 {
+    comment("/**");
+    comment("* Main loop body for variable-time 3072-bit Montgomery Modular Multiplication");
+    comment("*");
+    comment("* Returns: C <= (C + A*b_i + M*m0'*(C[0] + A[0]*b_i))/(2^WLEN) mod R");
+    comment("*");
+    comment("* This implements the main loop body for the Montgomery Modular Multiplication");
+    comment("* as well as the conditional subtraction. See e.g. Handbook of Applied");
+    comment("* Cryptography (HAC) 14.36 (steps 2.1 and 2.2) and step 3.");
+    comment("* This subroutine has to be called for every iteration of the loop in step 2");
+    comment("* of HAC 14.36, i.e. once per limb of operand B (x in HAC notation). The limb");
+    comment("* is supplied via w2. In the comments below, the index i refers to the");
+    comment("* i_th call to this subroutine within one full Montgomery Multiplication run.");
+    comment("* Step 3 of HAC 14.36 is replaced by the approach to perform the conditional");
+    comment("* subtraction when the intermediate result is larger than R instead of m. See");
+    comment("* e.g. https://eprint.iacr.org/2017/1057 section 2.4.2 for a justification.");
+    comment("* This does not omit the conditional subtraction.");
+    comment("* Variable names of HAC are mapped as follows to the ones used in the");
+    comment("* this library: x=B, y=A, A=C, b=2^WLEN, m=M, R=R, m' = m0', n=N.");
+    comment("*");
+    comment("* Flags: The states of both FG0 and FG1 depend on intermediate values and are");
+    comment("*        not usable after return.");
+    comment("*");
+    comment("* @param[in]  x16: dmem pointer to first limb of modulus M");
+    comment("* @param[in]  x19: dmem pointer to first limb operand A");
+    comment("* @param[in]  w2:  current limb of operand B, b_i");
+    comment("* @param[in]  w3:  Montgomery constant m0'");
+    comment("* @param[in]  w31: all-zero");
+    comment("* @param[in]  [w15:w4] intermediate result A");
+    comment("* @param[out] [w15:w4] intermediate result A");
+    comment("*");
+    comment("*/");
+
     ghost var curr_view := prev_view;
     ghost var p1: uint512_view_t;
     ghost var p2 : uint512_view_t;
@@ -419,17 +464,17 @@ procedure mont_loop(
     y_it, p1 := mont_loop_0(curr_view, vars.y_it, xi, vars.rsa.M0D);
     ghost var ui := w25;
 
-    /* w24 = w30 =  y[0]*xi + A[0] mod b */
+    comment("/* w24 <= w30 =  y[0]*xi + A[0] mod b */");
     bn_mov(w24, w30);
 
-    /* load first limb of modulus: w30 = m[0] */
+    comment("/* Load first limb of modulus: w30 <= m[0]. */");
     m_it := bn_lid_safe(x12, false, 0, x16, true, vars.m_it);
 
-    /* [w26, w27] = w30*w25 = m[0]*ui*/
+    comment("/* [w26, w27] = w30*w25 = m[0]*ui */");
     mul256_w30xw25();
     // assert to_nat(seq(w27, w26)) == m_it.buff[0] * ui;
 
-    /* [w28, w27] = [w26, w27] + w24 = m[0]*ui + (y[0]*xi + A[0] mod b) */
+    comment("/* [w28, w27] <= [w26, w27] + w24 = m[0]*ui + (y[0]*xi + A[0] mod b) */");
     p2 := mul_add_512(w27, w27, w24, w28, w26, w31, w30, w25);
 
     LemmaMulIsCommutativeAuto();
@@ -437,8 +482,18 @@ procedure mont_loop(
 
     ghost var j: nat := 1;
 
+    comment("/* This loop implements step 2.2 of HAC 14.36 with a word-by-word approach.");
+    comment("   The loop body is subdivided into two steps. Each step performs one");
+    comment("   multiplication and subsequently adds two WLEN sized words to the");
+    comment("   2WLEN-sized result, such that there are no overflows at the end of each");
+    comment("   step-");
+    comment("   Two carry words are required between the cycles. Those are c_xy and c_m.");
+    comment("   Assume that the variable j runs from 1 to N-1 in the explanations below.");
+    comment("   A cycle 0 is omitted, since the results from the computations above are");
+    comment("   re-used */");
     while (LoopImm(11))
         invariant
+            x5 == old(x5);
             x6 == old(x6);
             x7 == old(x7);
             x8 == 4 + j;
@@ -491,9 +546,8 @@ procedure mont_loop(
         j := j + 1;
     }
 
-    /* Most significant limb of A is sum of the carry words of last loop cycle
-        A[N-1] = w24 <- w29 + w28 = c_xy + c_m */
-
+    comment("/* Most significant limb of A is sum of the carry words of last loop cycle.");
+    comment("   A[N-1] = w24 <- w29 + w28 = c_xy + c_m */");
     // bn.addc   w24, w29, w28, FG1
     bn_add(w24, w29, w28, SFT_DFT, 1);
     bn_movr(x10, true, x13, false);
@@ -505,16 +559,17 @@ procedure mont_loop(
     mont_loop_inv_post_lemma(xi, ui, p1, p2,
         y_it.buff, m_it.buff, prev_view, curr_view, bout);
 
-    // clear flag group 0
+    comment("/* Clear flag group 0. */");
     bn_add(w31, w31, w31, SFT_DFT, 0);
 
-    /* This replaces Step 3 of HAC 14.36 and performs conditional 
-     subtraction of the modulus from the output buffer  */
+    comment("/* The below replaces Step 3 of HAC 14.36 and performs conditional");
+    comment("   subtraction of the modulus from the output buffer.  */");
 
     read_fg1();
 
     next_view := curr_view;
 
+    comment("/* Subtract modulus if the carry was 1; otherwise skip. */");
     if (x2 != x0) {
         m_it := b256_iter_cons(x22, 0, heap[x22].b256);
         next_view := sub_to_reg(curr_view, m_it);
@@ -523,7 +578,7 @@ procedure mont_loop(
     mont_loop_cond_sub_lemma(xi, ui, y_it.buff, to_nat(m_it.buff),
         to_nat(prev_view), curr_view, next_view, bout, bool_to_uint1(fgroups.fg0.cf));
     
-    /* restore pointer */
+    comment("/* Restore pointers. */");
     li(x8, 4);
     li(x10, 4);
 

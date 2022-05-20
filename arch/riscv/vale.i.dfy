@@ -36,6 +36,11 @@ module rv_vale {
         xs + [x]
     }
 
+    function set_len<T>(s: set<T>): nat
+    {
+        |s|
+    }
+
     function mod(a: int, n: nat): int
         requires n != 0;
     {

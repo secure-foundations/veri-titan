@@ -2,7 +2,11 @@ dfy_model/.depend
 .vscode
 otbn_impl/cg.dot
 otbn_impl/cg.png
-gen/
+gen/arch
+gen/impl
+gen/lib
+gen/*.o
+gen/*.elf
 docs/*.pdf
 docs/*.aux
 docs/*.fdb_latexmk
@@ -17,6 +21,4 @@ output.s
 *.runtimeconfig.json
 tools/
 std_lib/
-!gen/riscv_modexp.s
-!gen/otbn_modexp.s
 *.pyc

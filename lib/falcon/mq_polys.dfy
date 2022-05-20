@@ -88,6 +88,7 @@ module mq_polys {
             mqadd(poly_eval(a_e, sqr), mqmul(x, poly_eval(a_o, sqr)));
         decreases |a|;
 
+
     // predicate {:opaque} poly_eval_all_points(a: seq<elem>, y: seq<elem>, len: pow2_t)
     //     requires 0 <= len.exp <= L;
     //     ensures poly_eval_all_points(a, y, len) ==> |y| == |a| == len.full;

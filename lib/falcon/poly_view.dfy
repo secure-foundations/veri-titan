@@ -12,12 +12,10 @@ module poly_view {
 
 	ghost const N: pow2_t;
 
-	type x_fun = (nat, pow2_t) --> elem
+	type x_fun = (nat, pow2_t) -> elem
 
 	type n_sized = s: seq<elem>
         | |s| == N.full witness *
-
-	function method A(): n_sized
 
 	function block_count(m: pow2_t): pow2_t
 		requires 0 <= m.exp <= N.exp;
@@ -201,46 +199,51 @@ module poly_view {
 
 	// construct polys level view 
 	// each block is a poly, has bsize coefficients
-	function {:opaque} level_polys(bsize: pow2_t): (lps: seq<seq<elem>>)
+	function {:opaque} level_polys(coefficients: n_sized, bsize: pow2_t): (lps: seq<seq<elem>>)
 		requires 0 <= bsize.exp <= N.exp;
 		ensures unifromly_sized(lps, bsize);
 		decreases N.exp - bsize.exp;
 	{
 		if bsize.exp == N.exp then
-			assert unifromly_sized([A()], N) by {
+			assert unifromly_sized([coefficients], N) by {
 				reveal unifromly_sized();
 			}
-			[A()]
+			[coefficients]
 		else
 			var double_size := pow2_double(bsize);
-			var higher := level_polys(double_size);
+			var higher := level_polys(coefficients, double_size);
 			build_lower_level_polys(higher, double_size)
 	}
 
-	function base_level_polys(): (lps: seq<seq<elem>>)
+	function base_level_polys(coefficients: n_sized): (lps: seq<seq<elem>>)
 		ensures 0 <= pow2(0).exp <= N.exp;
 		ensures unifromly_sized(lps, pow2(0));
 	{
 		var size := pow2(0);
 		assert 0 <= size.exp <= N.exp; // ??
-		var lps := level_polys(size);
+		var lps := level_polys(coefficients, size);
 		assert block_count(size).full == N.full;
 		lps
 	}
 
 	// this is provable (and sort of already proved), but complicated
-	lemma {:axiom} base_level_polys_lemma(i: nat)
+	lemma {:axiom} base_level_polys_lemma(coefficients: n_sized, i: nat)
 		requires i < N.full;
-		ensures |base_level_polys()[bit_rev_int(i, N)]| == 1;
-		ensures base_level_polys()[bit_rev_int(i, N)][0] == A()[i];
+		ensures |base_level_polys(coefficients)[bit_rev_int(i, N)]| == 1;
+		ensures base_level_polys(coefficients)[bit_rev_int(i, N)][0] == coefficients[i];
 		// ensures |base_level_polys()[i]| == 1;
 		// ensures base_level_polys()[i][0] == A()[bit_rev_int(i, N)];
 
-	lemma level_polys_index_correspondence_lemma(higher: seq<seq<elem>>, hsize: pow2_t, i: nat, lower: seq<seq<elem>>)
+	lemma level_polys_index_correspondence_lemma(coefficients: n_sized,
+		higher: seq<seq<elem>>,
+		hsize: pow2_t,
+		i: nat,
+		lower: seq<seq<elem>>)
+
 		requires 1 <= hsize.exp <= N.exp;
 		requires i < |higher|;
-		requires higher == level_polys(hsize);
-		requires lower == level_polys(pow2_half(hsize));
+		requires higher == level_polys(coefficients, hsize);
+		requires lower == level_polys(coefficients, pow2_half(hsize));
 		ensures 2 * i + 1 < |lower|;
 		ensures |higher[i]| == hsize.full;
 		ensures even_indexed_items(higher[i], hsize) == lower[2 * i];
@@ -259,8 +262,7 @@ module poly_view {
 		&& count.exp <= N.exp
 		&& l <= |points| == |poly| == block_size(count).full
 		&& (forall i | 0 <= i < l :: 
-			(&& x_value.requires(i, count)
-			&& poly_eval(poly, x_value(i, count)) == points[i]))
+			(poly_eval(poly, x_value(i, count)) == points[i]))
 	}
 
 	lemma points_eval_prefix_inv_vacuous_lemma(points: seq<elem>, poly: seq<elem>, x_value: x_fun, count: pow2_t)
@@ -281,8 +283,7 @@ module poly_view {
 		&& count.exp <= N.exp
 		&& l <= |points| == |poly| == block_size(count).full
 		&& (forall i | l <= i < block_size(count).full ::
-			(&& x_value.requires(i, count)
-			&& poly_eval(poly, x_value(i, count)) == points[i]))
+			(poly_eval(poly, x_value(i, count)) == points[i]))
 	}
 
 	predicate points_eval_inv(points: seq<elem>, poly: seq<elem>, x_value: x_fun, count: pow2_t)

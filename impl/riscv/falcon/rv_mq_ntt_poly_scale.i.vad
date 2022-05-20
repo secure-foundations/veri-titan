@@ -1,0 +1,128 @@
+include "../../../arch/riscv/decls.i.vad"
+include "mq_arith.i.vad"
+
+#verbatim
+
+include "../../../arch/riscv/decls.i.dfy"
+include "../../../../lib/falcon/bv32_falcon_lemmas.i.dfy"
+
+include "mq_arith.i.dfy"
+
+module rv_mq_ntt_poly_scale {
+
+import opened integers
+import opened rv_machine
+import opened rv_decls
+import opened rv_vale
+import opened mem
+import opened stack
+
+import opened bv32_ops
+import opened bv32_falcon_lemmas
+
+import opened pows_of_2
+import opened ntt_index
+import opened mq_polys
+import opened poly_view
+import opened nth_root
+
+import opened mq_arith
+
+#endverbatim
+
+function fvar_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int): bool extern;
+
+function pow2_t_cons(n: nat, exp: nat): pow2_t extern;
+
+function mq_poly_scale_inv(init_a: seq(uint16), a: seq(uint16), b: seq(uint16), i: nat): bool extern;
+function mq_poly_scale_peri_lemma(init_a: seq(uint16), a: seq(uint16), ai: uint32, b: seq(uint16), i: nat): void extern;
+
+procedure mq_ntt_poly_scale(
+    ghost iter_a: b16_iter,
+    ghost iter_t: b16_iter)
+
+returns (ghost next_iter_a: b16_iter)
+
+    requires
+        N == pow2_t_cons(512, 9);
+
+    requires
+        iter_a.base_ptr != iter_t.base_ptr;
+        fvar_iter_inv(heap, iter_a, a0, 0);
+
+        symbols?["scaling_factors"];
+        fvar_iter_inv(heap, iter_t,
+            load_symbol(mem, "scaling_factors"), 0);
+
+    modifies
+        t0; t1; t2; a0; a1; a2; a3; a4; a5;
+        heap; mem;
+
+    ensures
+        a0 == old(a0);
+
+    ensures
+        next_iter_a.base_ptr == iter_a.base_ptr;
+        fvar_iter_inv(heap, next_iter_a, a0, 0);
+
+        mem == old(mem).(heap := heap);
+        heap == old(heap)[iter_a.base_ptr := heap[iter_a.base_ptr]];
+
+        mq_poly_scale_inv(next_iter_a.buff, iter_a.buff, iter_t.buff, N.full);
+    {
+        let init_a := iter_a.buff;
+        next_iter_a := iter_a;
+        ghost var next_iter_t := iter_t;
+
+        addi(a3, a0, 1024);
+        lw_symbol(a1, "scaling_factors");
+
+        ghost var i :nat := 0;
+
+        reveal buff_is_nsized;
+
+        while (a0 < a3)
+            invariant
+                a3 == iter_a.base_ptr + 512 * 2;
+
+            invariant
+                iter_a.base_ptr != iter_t.base_ptr;
+
+                next_iter_a.base_ptr == iter_a.base_ptr;
+                fvar_iter_inv(heap, next_iter_a, a0, i);
+                next_iter_a.buff[i..] == init_a[i..];
+
+                next_iter_t.base_ptr == iter_t.base_ptr;
+                fvar_iter_inv(heap, next_iter_t, a1, i);
+
+            invariant 
+                mq_poly_scale_inv(next_iter_a.buff, init_a, iter_t.buff, i);
+
+            invariant
+                mem == old(mem).(heap := heap);
+                heap == old(heap)
+                    [iter_a.base_ptr := heap[iter_a.base_ptr]];
+        
+            decreases
+                a3 - a0;
+        {
+            next_iter_a := lhu_next(t0, a0, 0, false, next_iter_a);
+            next_iter_t := lhu_next(t1, a1, 0, true, next_iter_t);
+            poly_mul_inline_montymul();
+
+            mq_poly_scale_peri_lemma(next_iter_a.buff, init_a, t0, iter_t.buff, i);
+
+            next_iter_a := sh_next(t0, a0, 0, true, next_iter_a);
+
+            addi(a0, a0, 2);
+            addi(a1, a1, 2);
+            i := i + 1;
+        }
+
+        next_iter_a := next_iter_a.(index := 0);
+        addi(a0, a3, (-1024));
+    }
+
+#verbatim
+}
+#endverbatim
