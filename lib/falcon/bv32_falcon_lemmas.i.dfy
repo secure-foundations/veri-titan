@@ -19,10 +19,10 @@ module bv32_falcon_lemmas {
     import opened mem
     import flat
 
-	import opened pows_of_2
+    import opened pows_of_2
     import opened ntt_index
-	import opened mq_polys
-	import opened poly_view
+    import opened mq_polys
+    import opened poly_view
     import opened nth_root
     import opened ntt_model
 
@@ -439,4 +439,27 @@ module bv32_falcon_lemmas {
          assert IsModEquivalent(2 * r, x + Q, Q);
        }
      }
+
+    predicate poly_sub_loop_inv(f_new: seq<uint16>, f: seq<uint16>, g: seq<uint16>, i: nat)
+    {
+        reveal buff_is_nsized();
+        && buff_is_nsized(f_new)
+        && buff_is_nsized(f)
+        && buff_is_nsized(g)
+        && 0 <= i <= N.full
+        && f_new[i..] == f[i..]
+        && (forall j :: 0 <= j < i ==> f_new[j] == mqsub(f[j], g[j]))
+    }
+
+    lemma poly_sub_loop_correct(f_new: seq<uint16>, f_old: seq<uint16>, f_orig:seq<uint16>, g: seq<uint16>, i: nat)
+      requires i < N.full;
+      requires poly_sub_loop_inv(f_old, f_orig, g, i)
+      requires f_new == f_old[i := mqsub(f_orig[i], g[i])];
+      ensures poly_sub_loop_inv(f_new, f_orig, g, i+1);
+    {
+      assert |f_new| == |f_old|;
+      assert (forall j | 0 <= j < |f_new| :: j != i ==> f_new[j] == f_old[j] && j == i ==> f_new[j] == mqsub(f_orig[j], g[j]));
+    }
 }
+
+
