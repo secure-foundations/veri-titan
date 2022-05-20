@@ -8,7 +8,7 @@ module mq_polys {
 
     import opened pows_of_2
     import opened ntt_index
-    import opened ntt_params
+    import opened ntt_512_params
 
 	function method mqpow(a: elem, b: nat): elem
 	{

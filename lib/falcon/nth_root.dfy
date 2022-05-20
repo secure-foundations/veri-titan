@@ -8,7 +8,7 @@ module nth_root {
 	import opened Mul
 
 	import opened pows_of_2
-	import opened ntt_params
+	import opened ntt_512_params
 	import opened mq_polys
     import opened ntt_index
 	import opened poly_view

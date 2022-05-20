@@ -9,7 +9,7 @@ module poly_view {
 	import opened pows_of_2
     import opened ntt_index
 	import opened mq_polys
-    import opened ntt_params
+    import opened ntt_512_params
 
 	type x_fun = (nat, pow2_t) -> elem
 

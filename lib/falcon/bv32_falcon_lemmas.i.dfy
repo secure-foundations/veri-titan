@@ -21,7 +21,7 @@ module bv32_falcon_lemmas {
 
 	import opened pows_of_2
     import opened ntt_index
-    import opened ntt_params
+    import opened ntt_512_params
 	import opened mq_polys
 	import opened poly_view
     import opened nth_root
