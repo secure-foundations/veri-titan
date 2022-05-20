@@ -114,7 +114,6 @@ module bv32_falcon_lemmas {
         s5: uint32,
         view: forward_ntt.loop_view)
 
-        requires N == pow2_t_cons(512, 9);
         requires forward_j_loop_inv(a, d, j, u, view);
         requires t == view.lsize();
         requires j < view.lsize().full;
@@ -161,7 +160,6 @@ module bv32_falcon_lemmas {
         t6: uint32,
         view: forward_ntt.loop_view)
     
-        requires N == pow2_t_cons(512, 9);
         requires bi == d.full;
         requires t6 == 2 * d.full;
         requires u == j * (2 * d.full);
@@ -388,7 +386,7 @@ module bv32_falcon_lemmas {
         s5: uint32,
         view: inverse_ntt.loop_view)
 
-        requires N == pow2_t_cons(512, 9);
+
         requires inverse_j_loop_inv(a, d, j, u, view);
         requires t == view.lsize();
         requires j < view.lsize().full;
@@ -435,7 +433,7 @@ module bv32_falcon_lemmas {
         t6: uint32,
         view: inverse_ntt.loop_view)
     
-        requires N == pow2_t_cons(512, 9);
+
         requires bi == d.full;
         requires t6 == 2 * d.full;
         requires u == j * (2 * d.full);
@@ -607,7 +605,7 @@ module bv32_falcon_lemmas {
     }
 
     function bit_rev_view_init(a: seq<uint16>): (view: rev_view)
-        requires N == pow2_t_cons(512, 9);
+
         requires |a| == N.full;
         ensures view.len == N;
         ensures view.shuffle_inv(a);
@@ -618,7 +616,7 @@ module bv32_falcon_lemmas {
     }
 
     function {:opaque} ftable_cast(ftable: seq<uint16>): (r: seq<(nat, nat)>)
-        requires N == pow2_t_cons(512, 9);
+
         requires |ftable| == |init_unfinished(N)|;
         ensures |r| == |init_unfinished(N)| / 2;
     {
@@ -641,7 +639,7 @@ module bv32_falcon_lemmas {
     // }
 
     predicate bit_rev_ftable_wf(ftable: seq<uint16>)
-        requires N == pow2_t_cons(512, 9);
+
     {
         && |ftable| == |init_unfinished(N)|
         && table_wf(ftable_cast(ftable), N)
@@ -663,7 +661,7 @@ module bv32_falcon_lemmas {
         t0: uint32,
         t1: uint32)
 
-        requires N == pow2_t_cons(512, 9);
+
         requires |a| == N.full;
         requires bit_rev_ftable_wf(ftable);
 
@@ -710,7 +708,7 @@ module bv32_falcon_lemmas {
         table: seq<uint16>)
         returns (next_view: rev_view)
         
-        requires N == pow2_t_cons(512, 9);
+
         requires buff_is_nsized(view.b);
         requires |a| == N.full;
         requires bit_rev_ftable_wf(table);
@@ -730,7 +728,7 @@ module bv32_falcon_lemmas {
     }
 
     lemma bit_rev_view_inv_post_lemma(a: seq<uint16>, view: rev_view)
-        requires N == pow2_t_cons(512, 9);
+
         requires |a| == N.full;
         requires view.len == N;
         requires view.shuffle_inv(a);
@@ -741,7 +739,7 @@ module bv32_falcon_lemmas {
     }
 
     predicate mq_ntt_poly_mul_inv(a: seq<uint16>, init_a: seq<uint16>, b: seq<uint16>, i: nat)
-        requires N == pow2_t_cons(512, 9);
+
     {
         && buff_is_nsized(init_a)
         && buff_is_nsized(b)
@@ -757,7 +755,7 @@ module bv32_falcon_lemmas {
         ai: uint32,
         b: seq<uint16>,
         i: nat)
-        requires N == pow2_t_cons(512, 9);
+
         requires i < N.full;
         requires mq_ntt_poly_mul_inv(a, init_a, b, i);
         requires init_a[i] < Q;
@@ -779,7 +777,7 @@ module bv32_falcon_lemmas {
     }
 
     predicate mq_poly_scale_inv(a: seq<uint16>, init_a: seq<uint16>, b: seq<uint16>, i: nat)
-        requires N == pow2_t_cons(512, 9);
+
     {
         && buff_is_nsized(init_a)
         && buff_is_nsized(b)
@@ -795,7 +793,7 @@ module bv32_falcon_lemmas {
         ai: uint32,
         b: seq<uint16>,
         i: nat)
-        requires N == pow2_t_cons(512, 9);
+
         requires i < N.full;
         requires mq_poly_scale_inv(a, init_a, b, i);
         requires init_a[i] < Q;
@@ -822,7 +820,7 @@ module bv32_falcon_lemmas {
         a3: seq<uint16>,
         a4: seq<uint16>)
 
-        requires N == pow2_t_cons(512, 9);
+
         requires buff_is_nsized(a0);
         requires buff_is_nsized(a1);
         requires buff_is_nsized(a2);
@@ -841,7 +839,7 @@ module bv32_falcon_lemmas {
         c0: seq<uint16>,
         c1: seq<uint16>)
 
-        requires N == pow2_t_cons(512, 9);
+
         requires buff_is_nsized(a0);
         requires buff_is_nsized(a1);
         requires buff_is_nsized(b0);

@@ -41,7 +41,7 @@ module ntt_512_params refines ntt_params {
 	function pow2_9(): pow2_t
 	{
 		Lemma2To64();
-		pow2(9)
+		pow2_t_cons(512, 9)
 	}
 
     const Q := 12289

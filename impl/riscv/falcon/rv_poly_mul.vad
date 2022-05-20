@@ -31,6 +31,7 @@ import opened ntt_index
 import opened mq_polys
 import opened poly_view
 import opened nth_root
+import opened ntt_512_params
 
 import opened rv_inverse_ntt_std2rev
 import opened rv_forward_ntt_std2rev
@@ -125,7 +126,6 @@ returns (ghost next_iter_a: b16_iter,
     {:frame false}
 
     requires
-        N == pow2_t_cons(512, 9);
         set_len(init_unfinished(N)) == 480;
 
     requires
