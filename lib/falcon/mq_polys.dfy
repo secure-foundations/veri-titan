@@ -187,12 +187,28 @@ module mq_polys {
         poly_mod(a, m) == poly_mod(b, m)
     }
 
-    function forwad_ntt_product(a: seq<elem>, b: seq<elem>): seq<elem>
-        requires |a| == |b| == N.full;
+    function forward_product(a: n_sized, b: n_sized): n_sized
     {
         seq(N.full, i requires 0 <= i < N.full => 
-                (var x := mqpow(PSI, 2 * i + 1);
-                mqmul(poly_eval(a, x), poly_eval(b, x)))
-        )
+            (var x := mqpow(PSI, 2 * i + 1);
+            mqmul(poly_eval(a, x), poly_eval(b, x))))
     }
+
+    function negatively_wrapped_convolution(a: n_sized, b: n_sized, p: n_sized): n_sized
+        requires p == forward_product(a, b);
+    {
+        seq(N.full, i requires 0 <= i < N.full => 
+            (var x := mqpow(OMEGA_INV, i);
+            (poly_eval(p, x) * mqpow(PSI_INV, i) * N_INV) % Q))
+    }
+
+    function n_ideal(): seq<elem>
+    {
+        [1] + seq(N.full - 1, i requires 0 <= i < N.full - 1 => 0) + [1]
+    }
+
+    lemma {:axiom} negatively_wrapped_convolution_lemma(a: n_sized, b: n_sized, p: n_sized, c: n_sized)
+        requires p == forward_product(a, b);
+        requires c == negatively_wrapped_convolution(a, b, p);
+        ensures poly_mod_equiv(c, poly_mul(a, b), n_ideal());
 }

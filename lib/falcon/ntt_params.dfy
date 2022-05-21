@@ -18,6 +18,9 @@ abstract module ntt_params {
 
 	type elem = i :nat | i < Q witness *
 
+	type n_sized = s: seq<elem>
+        | |s| == N.full witness *
+
 	lemma Nth_root_lemma()
 		ensures Q >= 1;
 		ensures N.exp >= 2;

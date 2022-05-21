@@ -13,9 +13,6 @@ module poly_view {
 
 	type x_fun = (nat, pow2_t) -> elem
 
-	type n_sized = s: seq<elem>
-        | |s| == N.full witness *
-
 	function block_count(m: pow2_t): pow2_t
 		requires 0 <= m.exp <= N.exp;
 	{
