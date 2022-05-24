@@ -81,35 +81,49 @@ module mq_polys {
         else mqadd(s[0], mqsum(s[1..]))
     }
 
-    lemma mqsum_adds(s1: seq<elem>, s2: seq<elem>) 
-        ensures mqsum(s1 + s2) == mqadd(mqsum(s1), mqsum(s2))
-    {
-        assume false;
-        // if |s1| == 0 {
-        //     assert mqsum(s1) == 0;
-        //     assert s1 + s2 == s2;
-        // } else {
-        //     calc {
-        //         mqsum(s1 + s2);
-        //             { assert (s1 + s2)[1..] == s1[1..] + s2; }
-        //         mqadd(s1[0], mqsum(s1[1..] + s2));
-        //             { mqsum_adds(s1[1..], s2); }
-        //         mqadd(s1[0], mqadd(mqsum(s1[1..]), mqsum(s2)));
-        //             { mqadd_associates(s1[0], mqsum(s1[1..]), mqsum(s2)); }
-        //         mqadd(mqadd(s1[0], mqsum(s1[1..])), mqsum(s2));
-        //         mqadd(mqsum(s1), mqsum(s2));
-        //     }
-        // }
-    }
+    // lemma mqsum_adds(s1: seq<elem>, s2: seq<elem>) 
+    //     ensures mqsum(s1 + s2) == mqadd(mqsum(s1), mqsum(s2))
+    // {
+    //     if |s1| == 0 {
+    //         assert mqsum(s1) == 0;
+    //         assert s1 + s2 == s2;
+    //     } else {
+    //         calc {
+    //             mqsum(s1 + s2);
+    //                 { assert (s1 + s2)[1..] == s1[1..] + s2; }
+    //             mqadd(s1[0], mqsum(s1[1..] + s2));
+    //                 { mqsum_adds(s1[1..], s2); }
+    //             mqadd(s1[0], mqadd(mqsum(s1[1..]), mqsum(s2)));
+    //                 { mqadd_associates(s1[0], mqsum(s1[1..]), mqsum(s2)); }
+    //             mqadd(mqadd(s1[0], mqsum(s1[1..])), mqsum(s2));
+    //             mqadd(mqsum(s1), mqsum(s2));
+    //         }
+    //     }
+    // }
     
     function {:opaque} poly_eval(a: seq<elem>, x: elem): elem
     {
         mqsum(a_i_times_x_to_the_i(a, x))
     }
 
-    lemma {:axiom} poly_eval_base_lemma(a: seq<elem>, x: elem)
+    lemma poly_eval_base_lemma(a: seq<elem>, x: elem)
         requires |a| == 1;
         ensures poly_eval(a, x) == a[0];
+    {
+        reveal poly_eval();
+        calc == {
+            poly_eval(a, x);
+            mqsum(a_i_times_x_to_the_i(a, x));
+            mqadd(a_i_times_x_to_the_i(a, x)[0], 0);
+            a_i_times_x_to_the_i(a, x)[0];
+            mqmul(a[0], mqpow(x, 0));
+            {
+                LemmaPow0Auto();
+            }
+            mqmul(a[0], 1);
+            a[0];
+        }
+    }
 
     lemma {:axiom} poly_eval_split_lemma(a: seq<elem>, 
         a_e: seq<elem>, a_o: seq<elem>, len: pow2_t, x: elem)
