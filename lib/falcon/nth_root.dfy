@@ -1,4 +1,4 @@
-include "mq_polys.dfy"
+// include "mq_polys.dfy"
 include "poly_view.dfy"
 
 module nth_root {
@@ -8,36 +8,13 @@ module nth_root {
 	import opened Mul
 
 	import opened pows_of_2
-    import opened ntt_index
+	import opened ntt_512_params
 	import opened mq_polys
+    import opened ntt_index
 	import opened poly_view
-
-	ghost const PSI: elem;
-	ghost const PSI_INV: elem;
-	ghost const OMEGA: elem;
-	ghost const OMEGA_INV: elem;
-	ghost const R: elem;
-	ghost const R2: elem;
-	ghost const R_INV: elem;
-	ghost const N_INV: elem;
 
 	function method {:axiom} montmul(a: elem, b: elem): (c: elem)
 		ensures c == (a * b * R_INV) % Q
-
-	lemma {:axiom} Nth_root_lemma()
-		ensures N.exp >= 2;
-		ensures Pow(PSI, 2 * N.full) % Q == 1
-		ensures Pow(PSI, N.full) % Q == Q - 1
-		ensures (PSI * PSI_INV) % Q == 1
-
-		ensures Pow(OMEGA, N.full) % Q == 1
-		ensures Pow(OMEGA_INV, pow2_half(N).full) % Q == Q - 1
-		ensures (OMEGA * OMEGA_INV) % Q == 1
-
-		ensures (R_INV * R) % Q == 1
-		ensures IsModEquivalent(R2, R * R, Q); 
-
-		ensures (N_INV * N.full) % Q == 1;
 
 	lemma primitive_root_non_zero_lemma(i: nat)
 		requires i < N.full * 2;

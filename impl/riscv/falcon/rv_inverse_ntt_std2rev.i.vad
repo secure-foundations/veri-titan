@@ -25,6 +25,7 @@ import opened mq_polys
 import opened poly_view
 import opened nth_root
 import opened inverse_ntt
+import opened ntt_512_params
 
 import opened rv_reg_save
 import opened mq_arith
@@ -176,7 +177,6 @@ procedure inverse_j_loop(ghost iter_a: b16_iter,
         iter_p.buff == rev_omega_inv_powers_mont_table();
 
     requires
-        N == pow2_t_cons(512, 9);
         inverse_j_loop_inv(iter_a.buff, d, j, u, view);
         j < inverse_lsize(view).full;
         t == inverse_lsize(view);
@@ -274,7 +274,6 @@ procedure inverse_t_loop(ghost iter_a: b16_iter,
         iter_a.base_ptr != iter_p.base_ptr;
 
     requires
-        N == pow2_t_cons(512, 9);
         a0 == 12289; // Q
         a5 == t.full;
         t1 == 0xffffcfff; // -Q
@@ -382,7 +381,6 @@ returns (ghost iter_a': b16_iter)
         iter_a.base_ptr != iter_p.base_ptr;
 
     requires
-        N == pow2_t_cons(512, 9);
         iter_p.buff == rev_omega_inv_powers_mont_table();
 
     ensures

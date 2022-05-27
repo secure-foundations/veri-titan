@@ -9,13 +9,9 @@ module poly_view {
 	import opened pows_of_2
     import opened ntt_index
 	import opened mq_polys
-
-	ghost const N: pow2_t;
+    import opened ntt_512_params
 
 	type x_fun = (nat, pow2_t) -> elem
-
-	type n_sized = s: seq<elem>
-        | |s| == N.full witness *
 
 	function block_count(m: pow2_t): pow2_t
 		requires 0 <= m.exp <= N.exp;
