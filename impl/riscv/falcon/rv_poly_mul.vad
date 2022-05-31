@@ -1,5 +1,6 @@
 include "../../../arch/riscv/decls.i.vad"
 include "rv_inverse_ntt_std2rev.i.vad"
+include "rv_forward_ntt_std2rev.i.vad"
 include "rv_bit_shuffle.i.vad"
 include "rv_mq_ntt_poly_scale.i.vad"
 include "rv_mq_ntt_poly_mul.i.vad"
@@ -8,6 +9,7 @@ include "rv_mq_ntt_poly_mul.i.vad"
 
 include "mq_arith.i.dfy"
 include "rv_inverse_ntt_std2rev.i.dfy"
+include "rv_forward_ntt_std2rev.i.dfy"
 include "rv_bit_shuffle.i.dfy"
 include "rv_mq_ntt_poly_scale.i.dfy"
 include "rv_mq_ntt_poly_mul.i.dfy"
@@ -29,9 +31,10 @@ import opened ntt_index
 import opened mq_polys
 import opened poly_view
 import opened nth_root
-import opened inverse_ntt
+import opened ntt_512_params
 
 import opened rv_inverse_ntt_std2rev
+import opened rv_forward_ntt_std2rev
 import opened rv_bit_shuffle
 import opened rv_mq_ntt_poly_scale
 import opened rv_mq_ntt_poly_mul
@@ -42,22 +45,28 @@ function buff_as_nsized(s: seq(uint16)): seq(uint16) extern;
 
 function rev_omega_inv_powers_mont_table(): seq(uint16) extern;
 function inverse_ntt_scaling_table(): seq(uint16) extern;
-
 function inverse_ntt_rev2std_lemma(a0: seq(uint16), a1: seq(uint16), a2: seq(uint16), a3: seq(uint16), a4: seq(uint16)): void extern;
+function mq_ntt_mul_lemma(a0: seq(uint16), a1: seq(uint16), b0: seq(uint16), b1: seq(uint16),
+        p0: seq(uint16),
+        p1: seq(uint16),
+        p2: seq(uint16),
+        p3: seq(uint16),
+        p4: seq(uint16)): void extern;
 
+function poly_mod_equiv(a: seq(uint16), b: seq(uint16), m: seq(uint16)): bool extern;
 
-procedure rv_inverse_ntt_rev2std(
+procedure poly_mul(
     ghost iter_a: b16_iter,
+    ghost iter_b: b16_iter,
     ghost iter_t1: b16_iter,
     ghost iter_t2: b16_iter,
-    ghost iter_p: b16_iter)
+    ghost iter_p1: b16_iter,
+    ghost iter_p2: b16_iter)
 
 returns (ghost next_iter_a: b16_iter)
-
     {:frame false}
-    
+
     requires
-        N == pow2_t_cons(512, 9);
         set_len(init_unfinished(N)) == 480;
 
     requires
@@ -68,6 +77,9 @@ returns (ghost next_iter_a: b16_iter)
         fvar_iter_inv(heap, iter_a, a0, 0);
 
     requires
+        fvar_iter_inv(heap, iter_b, a1, 0);
+
+    requires
         symbols?["bit_rev_table_512"];
         b16_iter_inv(iter_t1, heap,
             load_symbol(mem, "bit_rev_table_512"));
@@ -76,41 +88,75 @@ returns (ghost next_iter_a: b16_iter)
         bit_rev_ftable_wf(iter_t1.buff);
 
     requires
-        symbols?["rev_omega_inv_powers_mont_table"];
-        fvar_iter_inv(heap, iter_p,
-            load_symbol(mem, "rev_omega_inv_powers_mont_table"), 0);
-        iter_p.buff == rev_omega_inv_powers_mont_table();
-
-    requires
         symbols?["scaling_factors"];
         fvar_iter_inv(heap, iter_t2,
             load_symbol(mem, "scaling_factors"), 0);
         iter_t2.buff == inverse_ntt_scaling_table();
 
     requires
+        symbols?["rev_omega_inv_powers_mont_table"];
+        fvar_iter_inv(heap, iter_p1,
+            load_symbol(mem, "rev_omega_inv_powers_mont_table"), 0);
+        iter_p1.buff == rev_omega_inv_powers_mont_table();
+
+    requires
+        symbols?["rev_ntt512_mixed_powers_table"];
+        fvar_iter_inv(heap, iter_p2,
+            load_symbol(mem, "rev_ntt512_mixed_powers_table"), 0);
+        iter_p2.buff == rev_mixed_powers_mont_table();
+
+    requires
         iter_a.base_ptr != iter_t1.base_ptr;
         iter_a.base_ptr != iter_t2.base_ptr;
-        iter_a.base_ptr != iter_p.base_ptr;
+        iter_a.base_ptr != iter_p1.base_ptr;
+        iter_a.base_ptr != iter_p2.base_ptr;
+        iter_a.base_ptr != iter_b.base_ptr;
 
+        iter_b.base_ptr != iter_t1.base_ptr;
+        iter_b.base_ptr != iter_t2.base_ptr;
+        iter_b.base_ptr != iter_p1.base_ptr;
+        iter_b.base_ptr != iter_p2.base_ptr;
+
+    // ensures
+    //     poly_mod_equiv(next_iter_a.buff, poly_mul(iter_a.buff, iter_b.buff), n_ideal());
 {
-    let buff0 := iter_a.buff;
-    next_iter_a := bit_rev(iter_a, iter_t1);
-    let buff1 := next_iter_a.buff;
-    
     mv(s0, a0);
-    next_iter_a := inverse_ntt_std2rev(next_iter_a, iter_p);
-    let buff2 := next_iter_a.buff;
+    mv(s1, a1);
+
+    let buff_a0 := iter_a.buff;
+    let buff_b0 := iter_b.buff;
+
+    next_iter_a := forward_ntt_std2rev(iter_a, iter_p2);
+    let buff_a1 := next_iter_a.buff;
+
+    mv(a0, s1);
+    let next_iter_b := forward_ntt_std2rev(iter_b, iter_p2);
+    let buff_b1 := next_iter_b.buff;
 
     mv(a0, s0);
+    mv(a1, s1);
+    next_iter_a := mq_ntt_poly_mul(next_iter_a, next_iter_b);
+    let buff_p0 := next_iter_a.buff;
 
     next_iter_a := bit_rev(next_iter_a, iter_t1);
-    let buff3 := next_iter_a.buff;
+    let buff_p1 := next_iter_a.buff;
+
+    mv(s0, a0);
+    next_iter_a := inverse_ntt_std2rev(next_iter_a, iter_p1);
+    let buff_p2 := next_iter_a.buff;
+
+    mv(a0, s0);
+    next_iter_a := bit_rev(next_iter_a, iter_t1);
+    let buff_p3 := next_iter_a.buff;
 
     next_iter_a := mq_ntt_poly_scale(next_iter_a, iter_t2);
-    // let buff4 := next_iter_a.buff;
+    let buff_p4 := next_iter_a.buff;
 
-    inverse_ntt_rev2std_lemma(buff0, buff1, buff2, buff3, next_iter_a.buff);
+    mq_ntt_mul_lemma(buff_a0, buff_a1, buff_b0, buff_b1,
+        buff_p0, buff_p1, buff_p2, buff_p3, buff_p4);
 }
+
+
 
 #verbatim
 }

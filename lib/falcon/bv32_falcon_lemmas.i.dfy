@@ -3,6 +3,7 @@ include "../../arch/riscv/vale.i.dfy"
 include "ct_std2rev_model.dfy"
 include "../bv32_ops.dfy"
 
+include "mq_arith_lemmas.dfy"
 include "../DivModNeg.dfy"
 
 module bv32_falcon_lemmas {
@@ -21,6 +22,7 @@ module bv32_falcon_lemmas {
 
     import opened pows_of_2
     import opened ntt_index
+    import opened ntt_512_params
     import opened mq_polys
     import opened poly_view
     import opened nth_root
@@ -35,6 +37,7 @@ module bv32_falcon_lemmas {
         ensures uint32_ls(a, 1) == a * 2;
 
     predicate {:opaque} buff_is_nsized(a: seq<nat>)
+        ensures buff_is_nsized(a) ==> |a| == N.full;
     {
         && (|a| == N.full)
         && (forall i | 0 <= i < N.full :: a[i] < Q)
@@ -112,7 +115,6 @@ module bv32_falcon_lemmas {
         s5: uint32,
         view: forward_ntt.loop_view)
 
-        requires N == pow2_t_cons(512, 9);
         requires forward_j_loop_inv(a, d, j, u, view);
         requires t == view.lsize();
         requires j < view.lsize().full;
@@ -159,7 +161,6 @@ module bv32_falcon_lemmas {
         t6: uint32,
         view: forward_ntt.loop_view)
     
-        requires N == pow2_t_cons(512, 9);
         requires bi == d.full;
         requires t6 == 2 * d.full;
         requires u == j * (2 * d.full);
@@ -386,7 +387,7 @@ module bv32_falcon_lemmas {
         s5: uint32,
         view: inverse_ntt.loop_view)
 
-        requires N == pow2_t_cons(512, 9);
+
         requires inverse_j_loop_inv(a, d, j, u, view);
         requires t == view.lsize();
         requires j < view.lsize().full;
@@ -433,7 +434,7 @@ module bv32_falcon_lemmas {
         t6: uint32,
         view: inverse_ntt.loop_view)
     
-        requires N == pow2_t_cons(512, 9);
+
         requires bi == d.full;
         requires t6 == 2 * d.full;
         requires u == j * (2 * d.full);
@@ -605,7 +606,7 @@ module bv32_falcon_lemmas {
     }
 
     function bit_rev_view_init(a: seq<uint16>): (view: rev_view)
-        requires N == pow2_t_cons(512, 9);
+
         requires |a| == N.full;
         ensures view.len == N;
         ensures view.shuffle_inv(a);
@@ -616,7 +617,7 @@ module bv32_falcon_lemmas {
     }
 
     function {:opaque} ftable_cast(ftable: seq<uint16>): (r: seq<(nat, nat)>)
-        requires N == pow2_t_cons(512, 9);
+
         requires |ftable| == |init_unfinished(N)|;
         ensures |r| == |init_unfinished(N)| / 2;
     {
@@ -639,7 +640,7 @@ module bv32_falcon_lemmas {
     // }
 
     predicate bit_rev_ftable_wf(ftable: seq<uint16>)
-        requires N == pow2_t_cons(512, 9);
+
     {
         && |ftable| == |init_unfinished(N)|
         && table_wf(ftable_cast(ftable), N)
@@ -661,7 +662,7 @@ module bv32_falcon_lemmas {
         t0: uint32,
         t1: uint32)
 
-        requires N == pow2_t_cons(512, 9);
+
         requires |a| == N.full;
         requires bit_rev_ftable_wf(ftable);
 
@@ -708,7 +709,7 @@ module bv32_falcon_lemmas {
         table: seq<uint16>)
         returns (next_view: rev_view)
         
-        requires N == pow2_t_cons(512, 9);
+
         requires buff_is_nsized(view.b);
         requires |a| == N.full;
         requires bit_rev_ftable_wf(table);
@@ -728,7 +729,7 @@ module bv32_falcon_lemmas {
     }
 
     lemma bit_rev_view_inv_post_lemma(a: seq<uint16>, view: rev_view)
-        requires N == pow2_t_cons(512, 9);
+
         requires |a| == N.full;
         requires view.len == N;
         requires view.shuffle_inv(a);
@@ -739,7 +740,6 @@ module bv32_falcon_lemmas {
     }
 
     predicate mq_ntt_poly_mul_inv(a: seq<uint16>, init_a: seq<uint16>, b: seq<uint16>, i: nat)
-        requires N == pow2_t_cons(512, 9);
     {
         && buff_is_nsized(init_a)
         && buff_is_nsized(b)
@@ -755,7 +755,7 @@ module bv32_falcon_lemmas {
         ai: uint32,
         b: seq<uint16>,
         i: nat)
-        requires N == pow2_t_cons(512, 9);
+
         requires i < N.full;
         requires mq_ntt_poly_mul_inv(a, init_a, b, i);
         requires init_a[i] < Q;
@@ -777,7 +777,7 @@ module bv32_falcon_lemmas {
     }
 
     predicate mq_poly_scale_inv(a: seq<uint16>, init_a: seq<uint16>, b: seq<uint16>, i: nat)
-        requires N == pow2_t_cons(512, 9);
+
     {
         && buff_is_nsized(init_a)
         && buff_is_nsized(b)
@@ -793,7 +793,7 @@ module bv32_falcon_lemmas {
         ai: uint32,
         b: seq<uint16>,
         i: nat)
-        requires N == pow2_t_cons(512, 9);
+
         requires i < N.full;
         requires mq_poly_scale_inv(a, init_a, b, i);
         requires init_a[i] < Q;
@@ -813,162 +813,87 @@ module bv32_falcon_lemmas {
         }
     }
 
-    lemma inverse_ntt_rev2std_lemma(
+    lemma mq_ntt_mul_lemma(
         a0: seq<uint16>,
         a1: seq<uint16>,
-        a2: seq<uint16>,
-        a3: seq<uint16>,
-        a4: seq<uint16>)
+        b0: seq<uint16>,
+        b1: seq<uint16>,
+        p0: seq<uint16>,
+        p1: seq<uint16>,
+        p2: seq<uint16>,
+        p3: seq<uint16>,
+        p4: seq<uint16>)
 
-        requires N == pow2_t_cons(512, 9);
         requires buff_is_nsized(a0);
         requires buff_is_nsized(a1);
-        requires buff_is_nsized(a2);
-        requires buff_is_nsized(a3);
-        requires buff_is_nsized(a4);
-        requires is_bit_rev_shuffle(a0, a1, N);
+        requires buff_is_nsized(b0);
+        requires buff_is_nsized(b1);
+        requires buff_is_nsized(p0);
+        requires buff_is_nsized(p1);
+        requires buff_is_nsized(p2);
+        requires buff_is_nsized(p3);
+        requires buff_is_nsized(p4);
+
+        requires forward_ntt_eval_all(a1, a0);
+        requires forward_ntt_eval_all(b1, b0);
+        requires mq_ntt_poly_mul_inv(p0, a1, b1, N.full);
+        requires is_bit_rev_shuffle(p0, p1, N);
+        requires is_bit_rev_shuffle(p0, p1, N);
+
+        requires inverse_ntt_eval_all(p2, p1);
+        requires is_bit_rev_shuffle(p2, p3, N);
+
+        requires mq_poly_scale_inv(p4, p3, inverse_ntt_scaling_table(), N.full);
+
+        ensures poly_mod_equiv(p4, poly_mul(a0, b0), n_ideal());
     {
-        
-    }
-
-
-    lemma lemma_rs_by_31(x: int32)
-      ensures x >= 0 ==> int32_rs(x, 31) == 0;
-      ensures x < 0 ==> int32_rs(x, 31) == -1;
-    {
-      assert integers.BASE_31 == Power2.Pow2(31) by { Power2.Lemma2To64(); }
-
-      if x >= 0 {
-        assert x / Power2.Pow2(31) == 0 by {
-          DivMod.LemmaBasicDivAuto();
+        forall i | 0 <= i < N.full
+            ensures var x := mqpow(PSI, 2 * bit_rev_int(i, N) + 1);
+                mqmul(poly_eval(a0, x), poly_eval(b0, x)) == p0[i];
+        {
+            reveal points_eval_suffix_inv();
+            assert 2 * bit_rev_int(i, N) * 1 == 2 * bit_rev_int(i, N);
         }
-      } else {
-        assert x / Power2.Pow2(31) == -1 by {
-          DivModNeg.LemmaDivBounded(x, integers.BASE_31);
+
+        forall i | 0 <= i < N.full
+            ensures var x := mqpow(PSI, 2 * i + 1);
+                mqmul(poly_eval(a0, x), poly_eval(b0, x)) == p1[i];
+        {
+            reveal is_bit_rev_shuffle();
+            bit_rev_symmetric(i, N);
+            assert p1[i] == p0[bit_rev_int(i, N)];
         }
-      }
-    }
 
-    lemma lemma_mq_add_correct(d: uint32, b: uint32, c: uint32, r: uint32, x: uint32, y: uint32)
-        requires 0 <= x < 12289;
-        requires 0 <= y < 12289;
-        requires d == uint32_add(x, uint32_add(y, to_uint32((-12289))));
-        requires b == to_uint32(int32_rs(to_int32(d), 31));
-        requires c == uint32_and(b, to_uint32(12289));
-        requires r == uint32_add(c, d);
-        ensures r == (x + y) % 12289;
-    {
-      var Q : int := 12289;
-
-      // d == x + y - Q
-      assert IsModEquivalent(d, x + y - Q, BASE_32);
-
-      // -Q <= d < Q
-      assert 0 <= x + y < 2*Q;
-      assert (-Q) <= x + y - Q < Q;
-      assert (-Q) <= to_int32(d) < Q;
-
-      if to_int32(d) >= 0 {
-        assert int32_rs(to_int32(d), 31) == 0 by { lemma_rs_by_31(to_int32(d)); }
-        assert uint32_and(0, Q) == 0 by { reveal_and(); }
-        assert IsModEquivalent(r, x + y, Q);
-      }
-      else {
-        assert int32_rs(to_int32(d), 31) == -1 by { lemma_rs_by_31(to_int32(d)); }
-        assert uint32_and(b, Q) == Q by { reveal_and(); }
-        assert IsModEquivalent(r, x + y, Q);
-      }
-
-    } 
-
-    lemma lemma_mq_sub_correct(d: uint32, b: uint32, c: uint32, r: uint32, x: int, y: int)
-        requires 0 <= x < 12289;
-        requires 0 <= y < 12289;
-        requires d == uint32_sub(x, y);
-        requires b == to_uint32(int32_rs(to_int32(d), 31));
-        requires c == uint32_and(b, 12289);
-        requires r == uint32_add(c, d);
-        ensures r == (x - y) % 12289;
-    {
-      var Q : int := 12289;
-      
-      assert IsModEquivalent(d, x - y, BASE_32);
-      assert -Q <= to_int32(d) < 2 * Q;
-      
-      if to_int32(d) >= 0 {
-        assert int32_rs(to_int32(d), 31) == 0 by { lemma_rs_by_31(to_int32(d)); }
-        assert uint32_and(b, Q) == 0 by { reveal_and(); }
-        assert IsModEquivalent(r, x - y, Q);
-      }
-      else {
-        assert int32_rs(to_int32(d), 31) == -1 by { lemma_rs_by_31(to_int32(d)); }
-        assert uint32_and(b, Q) == Q by { reveal_and(); }
-        assert IsModEquivalent(r, x - y, Q);
-      }
-    }
-
-    lemma lemma_positive_rs(x: uint32, shift: nat)
-      requires x >= 0;
-      requires x < BASE_31;
-      ensures to_uint32(int32_rs(x, shift)) == int32_rs(x, shift)
-    {
-      assert to_int32(x) == x;
-      assert int32_rs(to_int32(x), shift) >= 0 by { DivMod.LemmaDivBasicsAuto(); }
-    }
-
-    lemma lemma_mq_rshift1_correct(par: uint32, b: uint32, c: uint32, d: uint32, r: uint32, x: int)
-        requires 0 <= x < 12289;
-        requires par == uint32_and(x, 1);
-        requires b == uint32_sub(0, par);
-        requires c == uint32_and(b, 12289);
-        requires d == uint32_add(x, c);
-        requires r == to_uint32(int32_rs(to_int32(d), 1));
-
-        //ensures r == (x / 2) % 12289;
-        ensures IsModEquivalent(2 * r, x, 12289);
-        ensures r < 12289;
-    {
-        var Q : int := 12289;
-        assert par == 0 || par == 1 by { reveal_and(); }
- 
-        if par == 0 {
-            assert b == 0;
-            assert c == 0 by { reveal_and(); }
-            assert x % 2 == 0 by { reveal_and(); }
-            assert d == x;
-            
-            assert 0 <= to_int32(d) < Q;
-            assert r == int32_rs(to_int32(d), 1) by { lemma_positive_rs(x, 1); }
-    
-            assert r == d / Power2.Pow2(1);
-            assert r == d / 2 by { Power2.Lemma2To64(); }
-    
-            assert IsModEquivalent(r, x / 2, Q);
-            
-        } else {
-            assert b == 0xffff_ffff;
-            assert c == Q by { reveal_and(); }
-            assert d == uint32_add(x, Q);
-            assert d == x + Q;
-
-            assert 0 <= to_int32(d) <= x + Q;
-            assert r == int32_rs(to_int32(d), 1) by { lemma_positive_rs(x + Q, 1); }
-    
-            assert IsModEquivalent(d, x, Q);
-    
-            assert r == d / Power2.Pow2(1);
-            assert r == d / 2 by { Power2.Lemma2To64(); }
-    
-            assert r == (x + Q) / 2;
-            
-            //  assert x % 2 == 1 by { reveal_and(); }
-            assume x % 2 == 1;
-            assert Q % 2 == 1;
-            assert (x + Q) % 2 == 0 by { DivMod.LemmaModAdds(x, Q, 2); }
-    
-            assert r == (x + Q) / 2;
-            assert IsModEquivalent(2 * r, x + Q, Q);
+        forall i | 0 <= i < N.full
+            ensures var x := mqpow(OMEGA_INV, bit_rev_int(i, N));
+                poly_eval(p1, x) == p2[i];
+        {
+            reveal points_eval_suffix_inv();
+            assert bit_rev_int(i, N) * 1 == bit_rev_int(i, N);
         }
+
+        forall i | 0 <= i < N.full
+            ensures var x := mqpow(OMEGA_INV, i);
+                poly_eval(p1, x) == p3[i];
+        {
+            reveal is_bit_rev_shuffle();
+            bit_rev_symmetric(i, N);
+            assert p3[i] == p2[bit_rev_int(i, N)];
+        }
+
+        forall i | 0 <= i < N.full
+            ensures
+                var x := mqpow(OMEGA_INV, i);
+                p4[i] == (poly_eval(p1, x) * mqpow(PSI_INV, i) * N_INV) % Q;
+        {
+            inverse_ntt_scaling_table_axiom(i);
+            assert p4[i] == montmul(p3[i], mqmul(mqmul(mqpow(PSI_INV, i), N_INV), R));
+            assume p4[i] == (p3[i] * mqpow(PSI_INV, i) * N_INV) % Q;
+        }
+
+        assert p4 == negatively_wrapped_convolution(a0, b0, p1);
+
+        negatively_wrapped_convolution_lemma(a0, b0, p1, p4);
     }
 
     predicate poly_sub_loop_inv(f_new: seq<uint16>, f: seq<uint16>, g: seq<uint16>, i: nat)

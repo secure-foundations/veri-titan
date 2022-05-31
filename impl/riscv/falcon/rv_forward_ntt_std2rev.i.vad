@@ -25,6 +25,7 @@ import opened mq_polys
 import opened poly_view
 import opened nth_root
 import opened forward_ntt
+import opened ntt_512_params
 
 import opened rv_reg_save
 import opened mq_arith
@@ -176,7 +177,6 @@ procedure forward_j_loop(ghost iter_a: b16_iter,
         iter_p.buff == rev_mixed_powers_mont_table();
 
     requires
-        N == pow2_t_cons(512, 9);
         forward_j_loop_inv(iter_a.buff, d, j, u, view);
         j < forward_lsize(view).full;
         t == forward_lsize(view);
@@ -274,7 +274,6 @@ procedure forward_t_loop(ghost iter_a: b16_iter,
         iter_a.base_ptr != iter_p.base_ptr;
 
     requires
-        N == pow2_t_cons(512, 9);
         a0 == 12289; // Q
         a5 == t.full;
         t1 == 0xffffcfff; // -Q
@@ -376,13 +375,12 @@ returns (ghost iter_a': b16_iter)
 
     requires
         fvar_iter_inv(heap, iter_a, a0, 0);
-        symbols?["ntt512_mixed_powers_rev"];
+        symbols?["rev_ntt512_mixed_powers_table"];
         fvar_iter_inv(heap, iter_p,
-            load_symbol(mem, "ntt512_mixed_powers_rev"), 0);
+            load_symbol(mem, "rev_ntt512_mixed_powers_table"), 0);
         iter_a.base_ptr != iter_p.base_ptr;
 
     requires
-        N == pow2_t_cons(512, 9);
         iter_p.buff == rev_mixed_powers_mont_table();
 
     ensures
@@ -409,7 +407,7 @@ returns (ghost iter_a': b16_iter)
     let mem0 := mem;
     iter_a' := iter_a;
 
-    lw_symbol(s3, "ntt512_mixed_powers_rev");
+    lw_symbol(s3, "rev_ntt512_mixed_powers_table");
 
     mv(s4, a0);
 

@@ -25,6 +25,7 @@ import opened ntt_index
 import opened mq_polys
 import opened poly_view
 import opened nth_root
+import opened ntt_512_params
 
 import opened mq_arith
 
@@ -41,9 +42,6 @@ procedure mq_ntt_poly_mul(
     ghost iter_b: b16_iter)
 
 returns (ghost next_iter_a: b16_iter)
-
-    requires
-        N == pow2_t_cons(512, 9);
 
     requires
         iter_a.base_ptr != iter_b.base_ptr;

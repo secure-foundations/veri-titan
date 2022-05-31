@@ -25,6 +25,7 @@ import opened ntt_index
 import opened mq_polys
 import opened poly_view
 import opened nth_root
+import opened ntt_512_params
 
 import opened mq_arith
 
@@ -42,9 +43,6 @@ procedure mq_ntt_poly_scale(
     ghost iter_t: b16_iter)
 
 returns (ghost next_iter_a: b16_iter)
-
-    requires
-        N == pow2_t_cons(512, 9);
 
     requires
         iter_a.base_ptr != iter_t.base_ptr;

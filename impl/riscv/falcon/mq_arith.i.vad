@@ -16,6 +16,7 @@ import opened bv32_falcon_lemmas
 import opened pows_of_2
 import opened mq_polys
 import opened nth_root
+import opened mq_arith_lemmas
 
 #endverbatim
 

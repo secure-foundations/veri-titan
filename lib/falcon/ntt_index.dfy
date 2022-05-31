@@ -1,4 +1,4 @@
-include "bins.dfy"
+include "bin_seqs.dfy"
 include "pows_of_2.dfy"
 
 module ntt_index {
@@ -9,7 +9,7 @@ module ntt_index {
     import opened Mul
 
     import opened pows_of_2
-    import opened bins
+    import opened bin_seqs
 
     function method bit_rev_int(i: nat, bound: pow2_t): (ri: nat)
         requires i < bound.full;
