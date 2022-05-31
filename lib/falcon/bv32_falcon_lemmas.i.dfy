@@ -931,9 +931,6 @@ module bv32_falcon_lemmas {
         var Q : int := 12289;
         assert par == 0 || par == 1 by { reveal_and(); }
  
-         assert r == (x + Q) / 2;
-         assert IsModEquivalent(2 * r, x + Q, Q);
-
         if par == 0 {
             assert b == 0;
             assert c == 0 by { reveal_and(); }
@@ -985,6 +982,21 @@ module bv32_falcon_lemmas {
         && (forall j :: 0 <= j < i ==> f_new[j] == mqsub(f[j], g[j]))
     }
 
+    
+  lemma mul_upper_bound_Qsquared(x: nat, y: nat)
+    requires x <= 12289;
+    requires y <= 12289;
+    requires 0 <= x
+    requires 0 <= y
+    ensures mul(x, y) == x * y;
+    ensures x * y <= 151019521;
+  {
+    reveal dw_lh();
+    Mul.LemmaMulNonnegative(x, y);
+    Mul.LemmaMulUpperBound(x, 12289, y, 12289);
+    DivMod.LemmaSmallMod(x * y, BASE_32);
+  }
+
     lemma poly_sub_loop_correct(f_new: seq<uint16>, f_old: seq<uint16>, f_orig:seq<uint16>, g: seq<uint16>, i: nat)
       requires i < N.full;
       requires poly_sub_loop_inv(f_old, f_orig, g, i)
@@ -994,6 +1006,146 @@ module bv32_falcon_lemmas {
       assert |f_new| == |f_old|;
       assert (forall j | 0 <= j < |f_new| :: j != i
         ==> f_new[j] == f_old[j] && j == i ==> f_new[j] == mqsub(f_orig[j], g[j]));
-}
+    }
 
+    lemma lemma_shiftmul3(a: nat, b: nat, ab: nat, ab3: nat)
+        requires a < Q;
+        requires b < Q;
+        requires ab == uint32_mul(a, b)
+        requires ab3 == uint32_add(uint32_ls(ab, 1), ab);
+        ensures ab3 == 3 * a * b;
+        ensures ab3 == 3 * ab;
+        ensures ab == a * b;
+        ensures ab < Q * Q;
+    {
+
+      reveal dw_lh();
+      Mul.LemmaMulNonnegative(a, b);
+      Mul.LemmaMulUpperBound(a, Q-1, b, Q-1);
+      DivMod.LemmaSmallMod(a * b, BASE_32);
+
+      assert a * b == ab;
+      assert ab3 == 3 * ab by { ls1_is_double(ab); }
+      assert ab3 == 3 * a * b by { Mul.LemmaMulIsAssociativeAuto(); }
+    }
+
+    lemma lemma_Q0Ixy_correct(x: nat, y: nat, xy: uint32, xy3: uint32, Q0Ixy: nat)
+      requires x < Q;
+      requires y < Q;
+      requires xy < Q * Q;
+      requires xy as nat == x * y;
+      requires xy3 as nat == 3 * x * y;
+      requires Q0Ixy == uint32_sub(uint32_ls(xy3, 12), xy);
+      ensures IsModEquivalent(Q0Ixy, 12287 * x * y, BASE_32);
+    {
+      var sh := uint32_ls(xy3, 12);
+      assert sh == (xy3 * Power2.Pow2(12)) % BASE_32 by { ls_is_mul_mod_base(xy3, 12); }
+
+      var sh_int := sh as int;
+      var xy_int := xy as int;
+      
+      gbassert IsModEquivalent(Q0Ixy, 12287 * x * y, BASE_32) by {
+        assert xy3 == 3 * x * y;
+        assert xy_int == x * y;
+        assert IsModEquivalent(sh_int, xy3 * 4096, BASE_32) by { Power2.Lemma2To64(); }
+        assert IsModEquivalent(Q0Ixy, sh_int - xy_int, BASE_32);
+      }
+    }
+
+    lemma lemma_shiftadd3(x: uint32, v: uint32, v3: nat)
+        requires v == uint32_rs(uint32_ls(x, 16), 16);
+        requires v3 == uint32_add(uint32_ls(v, 1), v);
+        ensures v < BASE_16;
+        ensures v3 == 3 * v;
+        ensures IsModEquivalent(v, x, BASE_16);
+    {
+      // 1. v < BASE_16
+      var lsx := uint32_ls(x, 16);
+      assert lsx == (x * Power2.Pow2(16)) % BASE_32 by { ls_is_mul_mod_base(x, 16); }
+      
+      assert v == (lsx / Power2.Pow2(16)) % BASE_32 by { rs_is_div_mod_base(lsx, 16); }
+      assert v < BASE_32;
+      //assert v == (lsx / Power2.Pow2(16)) by { DivMod.LemmaSmallMod(v, 32); }
+
+      // 2. v == x % BASE_16
+      // assert v == (x / Power2.Pow2(16)) by {
+      //   Power2.Lemma2To64();
+      //   DivMod.LemmaDivBasicsAuto();
+      // }
+
+      // // 3. v3 == 3 * v
+      // reveal dw_lh();
+      // Mul.LemmaMulNonnegative(v, 3);
+      // Mul.LemmaMulUpperBound(v, BASE_16, 3, BASE_16);
+      // DivMod.LemmaSmallMod(v * 3, BASE_32);
+      // assert v3 == 3 * v by { ls1_is_double(v); }
+
+      assume false;
+    }
+
+    lemma lemma_12289(v: uint32, v3: uint32, w: uint32)
+      requires v < BASE_16;
+      requires v3 == 3 * v;
+      requires w == uint32_add(uint32_ls(v3, 12), v);
+      ensures w == Q * v;
+      ensures w < BASE_30; // Should be able to show w < BASE_29
+    {
+      var lsv3 := uint32_ls(v3, 12);
+      assert lsv3 == (v3 * Power2.Pow2(12)) % BASE_32 by { ls_is_mul_mod_base(v3, 12); }
+      assert lsv3 == (3 * v * Power2.Pow2(12)) % BASE_32 by { Mul.LemmaMulIsAssociativeAuto(); }
+
+      var lsv3_int := lsv3 as int;
+      
+      gbassert IsModEquivalent(w, 12289 * v, BASE_32) by {
+        assert IsModEquivalent(lsv3_int, 3 * v * 4096, BASE_32) by { Power2.Lemma2To64(); }
+        assert IsModEquivalent(w, lsv3_int + v, BASE_32);
+      }
+    }
+
+    lemma lemma_zw_shift(w: uint32, xy: uint32, z:uint32)
+      requires w < BASE_29;
+      requires xy < Q * Q;
+      requires z == uint32_rs(uint32_add(w, xy), 16);
+      ensures z == uint32_rs(w + xy, 16);
+      ensures z < 2 * Q; 
+    {
+      var wxy := uint32_add(w, xy);
+      assert wxy == w + xy;
+
+      assert z == uint32_rs(wxy, 16);
+      assert z == (wxy / Power2.Pow2(16)) % BASE_32 by { rs_is_div_mod_base(wxy, 16); }
+      assert wxy < BASE_30;
+      assert z == wxy / Power2.Pow2(16) by { DivMod.LemmaSmallMod(z, BASE_32); }
+      gbassert IsModEquivalent(z, z % BASE_14, BASE_32);
+    }
+    
+     lemma lemma_cond_add_Q(z: uint32, d: uint32, b: uint32, c: uint32, r: uint32)
+         requires z < 2 * Q;
+         requires d == uint32_sub(z, Q);
+         requires b == to_uint32(int32_rs(to_int32(d), 31));
+         requires c == uint32_and(b, Q);
+         requires r == uint32_add(c, d);
+         ensures r == if z < Q then z else (z - Q);
+     {
+       assume false;
+     }
+ 
+     lemma lemma_montymul_correct(x: nat, y: nat, xy: uint32, v: nat, w: uint32, z: uint32, r: uint32)
+       requires x < Q;
+       requires y < Q;
+       requires xy == x * y;
+       requires v == (12287 * x * y) % BASE_16;
+       requires w == Q * v;
+       requires z == uint32_rs(uint32_add(w, (x * y)), 16);
+       requires r == if z < Q then z else (z - Q);
+       ensures IsModEquivalent(r * 4091, x * y, Q);
+     {
+      assume false;
+       // gbassert IsModEquivalent(r * 4091, x * y, Q) by {
+       //   assert IsModEquivalent(v, 12287 * x * y, BASE_16);
+       //   assert w == Q * v;
+       //   assert z == (w + (x * y)) % BASE_16;
+       //   assert IsModEquivalent(r, z, Q);
+       // }
+     }
 }

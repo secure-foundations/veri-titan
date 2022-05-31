@@ -1,0 +1,111 @@
+include "../../../arch/riscv/decls.i.vad"
+include "mq_arith.i.vad"
+
+#verbatim
+include "mq_arith.i.dfy"
+
+module mq_montymul {
+
+import opened integers
+import opened DivMod
+
+import opened rv_machine
+import opened rv_decls
+import opened rv_vale
+import opened mem
+import opened stack
+
+import opened bv32_ops
+import opened bv32_falcon_lemmas
+import opened pows_of_2
+import opened mq_polys
+import opened nth_root
+
+import opened mq_arith
+#endverbatim
+    
+function ls1_is_double(a: uint32): void extern;
+function mul_upper_bound_Qsquared(x: int, y: int) : void extern;
+function lemma_shiftmul3(a: nat, b: nat, ab: nat, ab3: nat) : void extern;
+function lemma_Q0Ixy_correct(x: nat, y: nat, xy: nat, xy3: nat, Q0Ixy: nat) : void extern;
+function lemma_shiftadd3(x: uint32, v: uint32, v3: nat) : void extern;
+function lemma_12289(v: uint32, v3: uint32, w: uint32) : void extern;
+function lemma_zw_shift(w: uint32, xy: uint32, z:uint32) : void extern;
+function lemma_cond_add_Q(z: uint32, d: uint32, b: uint32, c: uint32, r: uint32) : void extern;
+function lemma_montymul_correct(x: nat, y: nat, xy: uint32, v: nat, w: uint32, z: uint32, r: uint32) : void extern;
+    
+function IsModEquivalent(x: int, y: int, m: int) : void extern;
+
+
+procedure montymul(ghost x: nat, ghost y: nat) returns (ghost r: uint32)
+    requires
+        a3 < 12289;
+        x == a3;
+        a1 < 12289;
+        y == a1;
+        a0 == 12289;
+    reads
+        a0;
+    modifies
+        a1; a3; a4; a5;
+    ensures
+        IsModEquivalent(r * 4091, x * y, 12289);
+        r == a3;
+  {
+    mul(a3, a3, a1);
+    ghost var xy := a3;
+    
+    slli(a4, a3, 0x1);
+    add(a4, a4, a3);
+    ghost var xy3 := a4;
+    
+    lemma_shiftmul3(x, y, xy, xy3);
+    assert xy3 == 3 * xy;
+
+    slli(a4, a4, 0xc);
+    ghost var xy12288 := a4; // xy3 * 4096 == 12288 * xy
+
+    sub(a4, a4, a3);
+    ghost var Q0Ixy := a4; // Q0I * x * y == 12287 * x * y
+    
+    lemma_Q0Ixy_correct(x, y, xy, xy3, Q0Ixy);
+
+    // clear top 16 bits of a4    
+    slli(a4, a4, 0x10);
+    srli(a4, a4, 0x10);
+    ghost var v := a4;
+
+    slli(a5, a4, 0x1);
+    add(a5, a5, a4);
+    ghost var v3 := a5;
+    lemma_shiftadd3(Q0Ixy, v, v3);
+
+    slli(a5, a5, 0xc);
+    add(a5, a5, a4);
+    ghost var w := a5;
+    lemma_12289(v, v3, w);
+
+    add(a5, a5, a3);
+    assert a5 == w + xy; 
+
+    srli(a5, a5, 0x10);
+    ghost var z := a5;
+    lemma_zw_shift(w, xy, z);
+    
+    sub(a5, a5, a0);
+    ghost var d := a5;
+    srai(a3, a5, 0x1f);
+    ghost var b := a3;
+    and(a3, a3, a0);
+    ghost var c := a3;
+    add(a3, a3, a5);
+    r := a3;
+    lemma_cond_add_Q(z, d, b, c, r);
+
+    lemma_montymul_correct(x, y, xy, v, w, z, r);
+    
+ }
+        
+#verbatim
+}
+#endverbatim

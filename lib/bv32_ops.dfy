@@ -1,6 +1,5 @@
 include "generic_bv_ops.dfy"
 include "DivModNeg.dfy"
-include "../std_lib/src/NonlinearArithmetic/Power2.dfy"
 
 module bv32_seq refines LittleEndianNat
 {
@@ -16,7 +15,6 @@ module bv32_ops refines generic_bv_ops
 {
     import opened BVSEQ = bv32_seq
     import DivModNeg
-    import Power2
 
     // half word base
     function method HW_BASE(): nat
