@@ -560,14 +560,46 @@ module mq_polys {
     Seq.Filter((pair : (nat, nat)) => pair.0 + pair.1 == deg, make_all_pairs(len1, len2))
   }
 
+  predicate exists_match<T>(s:seq, val:T) {
+    exists j :: 0 <= j < |s| && val == s[j]
+  }
+
   lemma FilterProperties<T>(f: (T ~> bool), s: seq<T>, result: seq<T>)
     requires forall i :: 0 <= i < |s| ==> f.requires(s[i])
     requires result == Seq.Filter(f, s)
     ensures |result| <= |s|
     ensures forall i: nat {:trigger result[i]} :: i < |result| && f.requires(result[i]) ==> f(result[i])
-    ensures forall i: nat :: i < |s| && f(s[i]) ==> (exists j :: 0 <= j < |result| && result[j] == s[i])
-    ensures forall i: nat :: i < |result| ==> (exists j :: 0 <= j < |s| && result[i] == s[j])
+    ensures forall i: nat :: i < |s| && f(s[i]) ==> exists_match(result, s[i]) 
+    ensures forall i: nat :: i < |result| ==> exists_match(s, result[i])
   {
+    if |s| == 0 {
+    } else {
+      forall i: nat | i < |s| && f(s[i]) 
+        ensures exists_match(result, s[i]) 
+      {
+        reveal Filter();
+        if i == 0 {
+          assert result[0] == s[i];
+        } else {
+          if f(s[0]) {
+            FilterProperties(f, s[1..], result[1..]);
+          } else {
+            FilterProperties(f, s[1..], result);
+          }
+        }
+      }
+      
+      forall i: nat | i < |result| 
+        ensures exists_match(s, result[i])
+      {
+        reveal Filter();
+        if f(s[0]) {
+          FilterProperties(f, s[1..], result[1..]);
+        } else {
+          FilterProperties(f, s[1..], result);
+        }
+      }
+    }
   }
 
   predicate find_match_in_index_pairs(i:nat, j:nat, r: seq<(nat, nat)>) {
@@ -652,6 +684,7 @@ module mq_polys {
 	{
 		var pairs := index_pairs(|a|, |b|, deg);
 		var terms := seq(|pairs|, i requires 0 <= i < |pairs| =>
+      assert find_match_in_index_pairs(pairs[i].0, pairs[i].1, pairs);
 			mqmul(a[pairs[i].0], b[pairs[i].1]));
 		mqsum(terms)
 	}
