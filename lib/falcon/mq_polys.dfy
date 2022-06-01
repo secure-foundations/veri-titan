@@ -600,17 +600,50 @@ module mq_polys {
       var i, j := find_pair(m, len1, len2, all_pairs);
     }
   }
+
+  function index_pairs_builder_wrapper(len1: nat, len2: nat, deg: nat): (r: seq<(nat, nat)>)
+  {
+    if 0 < len1 && 0 < len2 then
+      index_pairs_builder(len1, len2, deg)
+    else
+      []
+  }
+
+  lemma index_pairs_builder_remove_len_bounds(len1: nat, len2: nat, deg: nat, r: seq<(nat, nat)>)
+    requires r == index_pairs_builder_wrapper(len1, len2, deg)
+		ensures 
+      forall i: nat, j: nat :: (
+        (i < len1 && j < len2 && i + j == deg)
+          <==>
+        find_match_in_index_pairs(i, j, r))
+
+  {
+    if 0 < len1 && 0 < len2 {
+      index_pairs_builder_properties(len1, len2, deg, r);
+    } else if len1 == 0 {
+      forall i: nat, j: nat | i < len1 && j < len2 && i + j == deg
+        ensures find_match_in_index_pairs(i, j, r) 
+      {
+      }
+
+      forall i: nat, j: nat | find_match_in_index_pairs(i, j, r) 
+        ensures  i < len1 && j < len2 && i + j == deg
+      {
+        assert false;
+      }
+    } else if len2 == 0 {
+    }
+  }
     
 	function {:opaque} index_pairs(len1: nat, len2: nat, deg: nat): (r: seq<(nat, nat)>)
-    requires 0 < len1 && 0 < len2
 		requires deg < len1 + len2 - 1;
 		ensures forall j: nat, k: nat :: (
 			(j < len1 && k < len2 && j + k == deg)
 				<==>
 			find_match_in_index_pairs(j, k, r));
   {
-    var r := index_pairs_builder(len1, len2, deg);
-    index_pairs_builder_properties(len1, len2, deg, r);
+    var r := index_pairs_builder_wrapper(len1, len2, deg);
+    index_pairs_builder_remove_len_bounds(len1, len2, deg, r);
     r
   }
  
