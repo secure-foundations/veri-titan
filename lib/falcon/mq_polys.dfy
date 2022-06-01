@@ -410,97 +410,148 @@ module mq_polys {
 		poly_eval_offset_zero_lemma(a_o, sqr);
 	}
 
-  function make_fixed_pairs(val:nat, len2: nat) : (r: seq<(nat, nat)>)
-    ensures |r| == len2 + 1
-    ensures forall i :: 0 <= i < |r| ==> r[i] == (val, len2 - i)
+  function make_fixed_pairs(val:nat, index:nat, len2: nat) : (r: seq<(nat, nat)>)
+    requires index < len2
+    ensures |r| == index + 1
+    ensures forall i :: 0 <= i < |r| ==> r[i] == (val, i)
   {
-    if len2 == 0 then 
+    if index == 0 then 
       [(val, 0)]
     else
-      [(val, len2)] + make_fixed_pairs(val, len2 - 1)
+      make_fixed_pairs(val, index - 1, len2) + [(val, index)]
+  }
+
+  function make_all_pairs_helper(index:nat, len1: nat, len2: nat) : (r: seq<(nat, nat)>)
+    requires index < len1
+    requires 0 < len2
+    ensures |r| == (index + 1) * len2
+  {
+    if index == 0 then 
+      make_fixed_pairs(index, len2 - 1, len2)
+    else
+      var head := make_all_pairs_helper(index - 1, len1, len2); 
+      var tail := make_fixed_pairs(index, len2 - 1, len2);
+      calc {
+        |head + tail|;
+        |head| + |tail|;
+        index * len2 + len2;
+        index * len2 + 1 * len2;
+          { Mul.LemmaMulIsDistributiveAddOtherWayAuto(); }
+        (index + 1) * len2; 
+      }
+      head + tail
+  }
+
+  lemma make_all_pairs_helper_result(index:nat, len1: nat, len2: nat, r: seq<(nat, nat)>)
+    requires index < len1
+    requires 0 < len2
+    requires r == make_all_pairs_helper(index, len1, len2)
+    ensures |r| == (index + 1) * len2 
+    ensures forall i, j :: 0 <= i <= index && 0 <= j < len2 ==>
+            0 <= (i*len2 + j) < |r| && r[i*len2 + j] == (i, j)
+  {
+    forall i, j | 0 <= i <= index && 0 <= j < len2 
+      ensures 0 <= i*len2 + j < |r|
+      ensures r[i*len2 + j] == (i, j)
+    {
+      // Lower-bound on index
+      assert 0 <= i * len2 + j by { Mul.LemmaMulNonnegative(i, len2); }
+      
+      // Upper-bound on index
+      calc {
+        i * len2;
+     <= { Mul.LemmaMulUpperBound(i, index, len2, len2); }
+        index * len2;
+      }
+
+      calc {
+        index * len2 + j;
+      < index * len2 + len2;
+        index * len2 + 1 * len2;
+          { Mul.LemmaMulIsDistributiveAddOtherWayAuto(); }
+        (index + 1) * len2;
+        |r|;
+      }
+
+      if index == 0 {
+      } else {
+        var head := make_all_pairs_helper(index - 1, len1, len2); 
+        var tail := make_fixed_pairs(index, len2 - 1, len2);
+        make_all_pairs_helper_result(index - 1, len1, len2, head);
+        //var k := i * len2 + j;
+        if i < index {
+          assert i*len2 + j < |head|;
+          calc {
+            r[i*len2 + j];
+            head[i*len2 + j];
+            (i, j);
+          }
+        } else { // i == index
+          calc {
+            r[i*len2 + j];
+            tail[i*len2 + j - index*len2];
+            tail[j];
+            (i, j);
+          }
+        }
+      }
+    }
   }
 
   function make_all_pairs(len1: nat, len2: nat) : (r: seq<(nat, nat)>)
-    ensures |r| == (len1 + 1) * (len2 + 1)
+    requires 0 < len1
+    requires 0 < len2
+    ensures |r| == len1 * len2
+    ensures forall i, j :: 0 <= i < len1 && 0 <= j < len2 ==>
+            0 <= (i*len2 + j) < |r| && r[i*len2 + j] == (i, j)
   {
-    if len1 == 0 then 
-      make_fixed_pairs(len1, len2)
-    else
-      make_fixed_pairs(len1, len2) + make_all_pairs(len1 - 1, len2)
+    var r := make_all_pairs_helper(len1 - 1, len1, len2);
+    make_all_pairs_helper_result(len1 - 1, len1, len2, r);
+    r
   }
 
-  lemma make_all_pairs_result(len1: nat, len2: nat, r: seq<(nat, nat)>)
-    requires r == make_all_pairs(len1, len2)
-    ensures |r| == (len1 + 1) * (len2 + 1)
-    ensures forall i, j :: 0 <= i <= len1 && 0 <= j <= len2 ==>
-            0 <= ((len1 - i)*len2 + j) < |r| && r[(len1 - i)*len2 + j] == (i, j)
-  {
-    forall i, j | 0 <= i <= len1 && 0 <= j <= len2 
-      ensures 0 <= (len1 - i)*len2 + j < |r|
-      ensures r[(len1 - i)*len2 + j] == (i, j)
-    {
-      assert 0 <= (len1 - i) * len2 + j by { Mul.LemmaMulNonnegative((len1 - i), len2); }
-      assert i * len2 + j < |r| by { Mul.LemmaMulUpperBound(len1 - i, len1, len2, len2); }
-      if len1 == 0 {
-      } else {
-        var start := make_fixed_pairs(len1, len2);
-        var rest := make_all_pairs(len1 - 1, len2);
-        assert r == start + rest;
-        if i == len1 {
-        } else {
-        }
-      }
-    }
-  }
-
-  ghost method find_pair(k:nat, len1: nat, len2: nat, r: seq<(nat, nat)>) returns (i: int, j: nat)
+  ghost method find_pair(k:nat, len1: nat, len2: nat, r: seq<(nat, nat)>) returns (i: nat, j: nat)
     requires k < |r|
+    requires 0 < len1 && 0 < len2
     requires r == make_all_pairs(len1, len2)
-    ensures 0 <= i <= len1 && j <= len2
-    ensures k == (len1 - i)*len2 + j
+    ensures i < len1 && j < len2
+    ensures k == i*len2 + j
     ensures r[k] == (i, j)
   {
-    i := len1;
+    i := 0;
     var k_candidate := 0;
-    while i >= 0
-      invariant -1 <= i <= len1
-      invariant forall y, x :: i < y <= len1 && 0 <= x <= len2  ==> k != (len1 - y)*len2 + x
-      invariant k_candidate == (len1 - i)*len2
+    while i < len1
+      invariant 0 <= i <= len1 
+      invariant forall x, y :: 0 <= x < i && y < len2  ==> k != x*len2 + y
+      invariant k_candidate == i*len2
       invariant forall z :: 0 <= z < k_candidate ==> z != k
     {
       j := 0;
-      while j <= len2 
-        invariant 0 <= j <= len2 + 1
-        invariant forall x :: 0 <= x < j ==> k != (len1 - i)*len2 + x
-        invariant j <= len2 ==> k_candidate == (len1 - i)*len2 + j
-        invariant j > len2 ==> k_candidate == (len1 - i)*len2 + len2
+      while j < len2 
+        invariant 0 <= j <= len2
+        invariant forall y :: 0 <= y < j ==> k != i*len2 + y
+        invariant k_candidate == i*len2 + j
         invariant forall z :: 0 <= z < k_candidate ==> z != k
       {
-        if k == (len1 - i)*len2 + j {
-          make_all_pairs_result(len1, len2, r);
+        if k == i*len2 + j {
           return;
         }
         j := j + 1;
-        if j <= len2 {
-          k_candidate := k_candidate + 1;
-        }
+        k_candidate := k_candidate + 1;
       }
 
-      var i_new := i - 1;
+      var i_new := i + 1;
       calc {
         k_candidate;
-        (len1 - i)*len2 + len2;
-        (len1 - i)*len2 + 1*len2;
-          { Mul.LemmaMulIsDistributiveAddOtherWay(len2, len1 - i, 1); }
-        ((len1 - i) + 1) * len2;
-        (len1 - i + 1) * len2;
-        (len1 - (i - 1)) * len2;
-        (len1 - i_new) * len2;
+        i*len2 + len2;
+        i*len2 + 1*len2;
+          { Mul.LemmaMulIsDistributiveAddOtherWay(len2, i, 1); }
+        (i + 1) * len2;
+        i_new * len2;
       }
 
-      i := i - 1;
+      i := i + 1;
     }
-    assume false;
   }
 
 	function index_pairs_builder(len1: nat, len2: nat, deg: nat): (r: seq<(nat, nat)>)
