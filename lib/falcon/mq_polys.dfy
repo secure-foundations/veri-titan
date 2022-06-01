@@ -553,52 +553,64 @@ module mq_polys {
       i := i + 1;
     }
   }
-
+  
 	function index_pairs_builder(len1: nat, len2: nat, deg: nat): (r: seq<(nat, nat)>)
-		requires deg < len1 + len2 - 1
+    requires 0 < len1 && 0 < len2
   {
-    var len := Math.Min(len1 * len2, deg + 1); 
-    seq(len, z requires 0 <= z < len => 
-          (z % len1, deg - (z % len1)))
+    Seq.Filter((pair : (nat, nat)) => pair.0 + pair.1 == deg, make_all_pairs(len1, len2))
   }
 
-  predicate find_match_in_index_pairs(j:nat, k:nat, r: seq<(nat, nat)>) {
-			exists i: nat | i < |r| :: r[i] == (j, k)
+  lemma FilterProperties<T>(f: (T ~> bool), s: seq<T>, result: seq<T>)
+    requires forall i :: 0 <= i < |s| ==> f.requires(s[i])
+    requires result == Seq.Filter(f, s)
+    ensures |result| <= |s|
+    ensures forall i: nat {:trigger result[i]} :: i < |result| && f.requires(result[i]) ==> f(result[i])
+    ensures forall i: nat :: i < |s| && f(s[i]) ==> (exists j :: 0 <= j < |result| && result[j] == s[i])
+    ensures forall i: nat :: i < |result| ==> (exists j :: 0 <= j < |s| && result[i] == s[j])
+  {
   }
 
-  lemma index_pairs_builder_is_index_pairs(len1: nat, len2: nat, deg: nat, r: seq<(nat, nat)>)
-		requires deg < len1 + len2 - 1
+  predicate find_match_in_index_pairs(i:nat, j:nat, r: seq<(nat, nat)>) {
+			exists k: nat | k < |r| :: r[k] == (i, j)
+  }
+
+  lemma index_pairs_builder_properties(len1: nat, len2: nat, deg: nat, r: seq<(nat, nat)>)
+    requires 0 < len1 && 0 < len2
     requires r == index_pairs_builder(len1, len2, deg)
-		ensures forall j: nat, k: nat :: (
-			(j < len1 && k < len2 && j + k == deg)
-			<==>
-			 find_match_in_index_pairs(j, k, r))
+		ensures forall i: nat, j: nat :: (
+			(i < len1 && j < len2 && i + j == deg)
+				<==>
+			find_match_in_index_pairs(i, j, r))
   {
-    Mul.LemmaMulNonnegative(len1, len2);
-    var len:nat := if len1 * len2 < deg + 1 then len1 * len2 else deg + 1;
-
-    forall j: nat, k: nat | j < len1 && k < len2 && j + k == deg
-      ensures find_match_in_index_pairs(j, k, r)
+    var all_pairs := make_all_pairs(len1, len2);
+    forall i: nat, j: nat | i < len1 && j < len2 && i + j == deg
+      ensures find_match_in_index_pairs(i, j, r) 
     {
-    assume false;
+      FilterProperties((pair : (nat, nat)) => pair.0 + pair.1 == deg, all_pairs, r);
+      assert all_pairs[i *len2 + j] == (i, j);
+      assert (exists k :: 0 <= k < |r| && r[k] == all_pairs[i*len2+j]);
     }
-
-    forall j: nat, k: nat | find_match_in_index_pairs(j, k, r)
-      ensures j < len1 && k < len2 && j + k == deg
+    forall i: nat, j: nat | find_match_in_index_pairs(i, j, r) 
+      ensures  i < len1 && j < len2 && i + j == deg
     {
-    assume false;
+			var k:nat :| 0 <= k < |r| && r[k] == (i, j);
+      FilterProperties((pair : (nat, nat)) => pair.0 + pair.1 == deg, all_pairs, r);
+      assert (exists m :: 0 <= m < |all_pairs| && r[k] == all_pairs[m]);
+      var m :| 0 <= m < |all_pairs| && r[k] == all_pairs[m];
+      var i, j := find_pair(m, len1, len2, all_pairs);
     }
   }
-
+    
 	function {:opaque} index_pairs(len1: nat, len2: nat, deg: nat): (r: seq<(nat, nat)>)
+    requires 0 < len1 && 0 < len2
 		requires deg < len1 + len2 - 1;
 		ensures forall j: nat, k: nat :: (
 			(j < len1 && k < len2 && j + k == deg)
 				<==>
-			(exists i: nat | i < |r| :: r[i] == (j, k)));
+			find_match_in_index_pairs(j, k, r));
   {
     var r := index_pairs_builder(len1, len2, deg);
-    index_pairs_builder_is_index_pairs(len1, len2, deg, r);
+    index_pairs_builder_properties(len1, len2, deg, r);
     r
   }
  
