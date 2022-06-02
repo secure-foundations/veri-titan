@@ -738,10 +738,16 @@ module mq_polys {
 		poly_mod(a, m) == poly_mod(b, m)
 	}
 
+  /* NOTES
+  tilde_a = NTT(a)  tilde_a[i] = poly_eval(a, omega^i)
+  tilde_a = NTT(hat_a)  tilde_a[i] = poly_eval(hat_a, omega^i) == poly_eval(a, omega^i * psi)
+                                        j-th entry is hat_a[j] * omega^i^j          a[j] * (omega^i * psi)^j
+                                                                                 == a[j] * psi^j * omega^ij
+  */
 	function forward_product(a: n_sized, b: n_sized): n_sized
 	{
 		seq(N.full, i requires 0 <= i < N.full => 
-			(var x := mqpow(PSI, 2 * i + 1);
+			(var x := mqpow(PSI, 2 * i + 1);  // x == (omega ^ i) * psi
 			mqmul(poly_eval(a, x), poly_eval(b, x))))
 	}
 
