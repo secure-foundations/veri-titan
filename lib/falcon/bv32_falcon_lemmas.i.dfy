@@ -26,6 +26,7 @@ module bv32_falcon_lemmas {
     import opened mq_polys
     import opened poly_view
     import opened nth_root
+    import opened mq_arith_lemmas
     import forward_ntt
     import inverse_ntt
 
@@ -978,34 +979,29 @@ module bv32_falcon_lemmas {
     }
 
     lemma lemma_shiftadd3(x: uint32, v: uint32, v3: nat)
-        requires v == uint32_rs(uint32_ls(x, 16), 16);
-        requires v3 == uint32_add(uint32_ls(v, 1), v);
-        ensures v < BASE_16;
+        requires v == uint32_rs(uint32_ls(x, 16), 16); // < BASE_16 - 1
+        requires v3 == uint32_add(uint32_ls(v, 1), v); // < 3 * (BASE_16 - 1)
+        ensures v < BASE_16; 
         ensures v3 == 3 * v;
-        ensures IsModEquivalent(v, x, BASE_16);
+        //ensures IsModEquivalent(v, x, BASE_16);
     {
-      // 1. v < BASE_16
       var lsx := uint32_ls(x, 16);
       assert lsx == (x * Power2.Pow2(16)) % BASE_32 by { ls_is_mul_mod_base(x, 16); }
       
       assert v == (lsx / Power2.Pow2(16)) % BASE_32 by { rs_is_div_mod_base(lsx, 16); }
       assert v < BASE_32;
-      //assert v == (lsx / Power2.Pow2(16)) by { DivMod.LemmaSmallMod(v, 32); }
+      assert v == (lsx / Power2.Pow2(16)) by {
+        DivMod.LemmaDivNonincreasing(lsx, Power2.Pow2(16));
+        DivMod.LemmaDivPosIsPos(lsx, Power2.Pow2(16));
+        DivMod.LemmaSmallMod((lsx / Power2.Pow2(16)), BASE_32);
+      }
 
-      // 2. v == x % BASE_16
-      // assert v == (x / Power2.Pow2(16)) by {
-      //   Power2.Lemma2To64();
-      //   DivMod.LemmaDivBasicsAuto();
-      // }
+      assert v < BASE_16 by {
+        Power2.Lemma2To64();
+        DivMod.LemmaDivIsOrdered(lsx, BASE_32, BASE_16);
+      }
 
-      // // 3. v3 == 3 * v
-      // reveal dw_lh();
-      // Mul.LemmaMulNonnegative(v, 3);
-      // Mul.LemmaMulUpperBound(v, BASE_16, 3, BASE_16);
-      // DivMod.LemmaSmallMod(v * 3, BASE_32);
-      // assert v3 == 3 * v by { ls1_is_double(v); }
-
-      assume false;
+      assert v3 == v * 3 by { ls1_is_double(v); }
     }
 
     lemma lemma_12289(v: uint32, v3: uint32, w: uint32)
@@ -1013,7 +1009,7 @@ module bv32_falcon_lemmas {
       requires v3 == 3 * v;
       requires w == uint32_add(uint32_ls(v3, 12), v);
       ensures w == Q * v;
-      ensures w < BASE_30; // Should be able to show w < BASE_29
+      ensures w <= Q * (BASE_16 - 1);
     {
       var lsv3 := uint32_ls(v3, 12);
       assert lsv3 == (v3 * Power2.Pow2(12)) % BASE_32 by { ls_is_mul_mod_base(v3, 12); }
@@ -1028,8 +1024,8 @@ module bv32_falcon_lemmas {
     }
 
     lemma lemma_zw_shift(w: uint32, xy: uint32, z:uint32)
-      requires w < BASE_29;
-      requires xy < Q * Q;
+      requires w <= Q * (BASE_16 - 1);
+      requires xy <= (Q-1) * (Q-1);
       requires z == uint32_rs(uint32_add(w, xy), 16);
       ensures z == uint32_rs(w + xy, 16);
       ensures z < 2 * Q; 
@@ -1039,20 +1035,49 @@ module bv32_falcon_lemmas {
 
       assert z == uint32_rs(wxy, 16);
       assert z == (wxy / Power2.Pow2(16)) % BASE_32 by { rs_is_div_mod_base(wxy, 16); }
-      assert wxy < BASE_30;
-      assert z == wxy / Power2.Pow2(16) by { DivMod.LemmaSmallMod(z, BASE_32); }
-      gbassert IsModEquivalent(z, z % BASE_14, BASE_32);
+      
+      assert wxy <= Q * (BASE_16 - 1) + (Q-1) * (Q-1);
+      assert z == (wxy / Power2.Pow2(16)) by {
+        DivMod.LemmaDivNonincreasing(wxy, Power2.Pow2(16));
+        DivMod.LemmaDivPosIsPos(wxy, Power2.Pow2(16));
+        DivMod.LemmaSmallMod((wxy / Power2.Pow2(16)), BASE_32);
+      }
+      
+      assert z <= (Q * (BASE_16 - 1) + (Q-1) * (Q-1)) / Power2.Pow2(16) by {
+        DivMod.LemmaDivIsOrdered(wxy, Q * (BASE_16 - 1) + (Q-1) * (Q-1), Power2.Pow2(16));
+      }
+
+      assert z <= 14592 by { Power2.Lemma2To64(); }
+      assert 14592 < 2 * Q;
     }
     
+     lemma lemma_and_with_constants(x: uint32)
+      ensures uint32_and(0, x) == 0;
+      ensures uint32_and(0xffff_ffff, x) == x;
+     {
+      reveal_and();
+     }
+
      lemma lemma_cond_add_Q(z: uint32, d: uint32, b: uint32, c: uint32, r: uint32)
          requires z < 2 * Q;
          requires d == uint32_sub(z, Q);
          requires b == to_uint32(int32_rs(to_int32(d), 31));
          requires c == uint32_and(b, Q);
          requires r == uint32_add(c, d);
-         ensures r == if z < Q then z else (z - Q);
+         ensures r < Q;
+         ensures r == z % Q;
      {
-       assume false;
+
+      if to_int32(d) >= 0 {
+        assert int32_rs(to_int32(d), 31) == 0 by { lemma_rs_by_31(to_int32(d)); }
+        assert uint32_and(0, Q) == 0 by { lemma_and_with_constants(Q); }
+        assert IsModEquivalent(r, z, Q);
+      }
+      else {
+        assert int32_rs(to_int32(d), 31) == -1 by { lemma_rs_by_31(to_int32(d)); }
+        assert uint32_and(b, Q) == Q by { lemma_and_with_constants(Q); }
+        assert IsModEquivalent(r, z, Q);
+      }
      }
  
      lemma lemma_montymul_correct(x: nat, y: nat, xy: uint32, v: nat, w: uint32, z: uint32, r: uint32)
@@ -1061,16 +1086,17 @@ module bv32_falcon_lemmas {
        requires xy == x * y;
        requires v == (12287 * x * y) % BASE_16;
        requires w == Q * v;
-       requires z == uint32_rs(uint32_add(w, (x * y)), 16);
-       requires r == if z < Q then z else (z - Q);
+       requires z == uint32_rs(w + xy, 16);
+       requires z < 2 * Q;
+       requires r == z % Q;
        ensures IsModEquivalent(r * 4091, x * y, Q);
      {
-      assume false;
-       // gbassert IsModEquivalent(r * 4091, x * y, Q) by {
-       //   assert IsModEquivalent(v, 12287 * x * y, BASE_16);
-       //   assert w == Q * v;
-       //   assert z == (w + (x * y)) % BASE_16;
-       //   assert IsModEquivalent(r, z, Q);
-       // }
+       gbassert IsModEquivalent(r * 4091, x * y, Q) by {
+         assert IsModEquivalent(v, 12287 * x * y, BASE_16);
+         assert w == Q * v;
+         assert xy == x * y;
+         assert IsModEquivalent((w + xy), z, BASE_16);
+         assert IsModEquivalent(r, z, Q);
+       }
      }
 }
