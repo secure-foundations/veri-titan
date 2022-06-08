@@ -1080,7 +1080,7 @@ module bv32_falcon_lemmas {
       }
      }
  
-     lemma lemma_montymul_correct(x: nat, y: nat, xy: uint32, v: nat, w: uint32, z: uint32, r: uint32)
+     lemma lemma_montymul_correct(x: nat, y: nat, xy: uint32, v: nat, w: uint32, z: uint32, rr: uint32)
        requires x < Q;
        requires y < Q;
        requires xy == x * y;
@@ -1088,15 +1088,16 @@ module bv32_falcon_lemmas {
        requires w == Q * v;
        requires z == uint32_rs(w + xy, 16);
        requires z < 2 * Q;
-       requires r == z % Q;
-       ensures IsModEquivalent(r * 4091, x * y, Q);
+       requires rr == z % Q;
+       ensures IsModEquivalent(rr * 4091, x * y, Q); // WTS: rr == x*y/4091 mod Q
      {
-       gbassert IsModEquivalent(r * 4091, x * y, Q) by {
+       gbassert IsModEquivalent(rr * 4091, x * y, Q) by {
          assert IsModEquivalent(v, 12287 * x * y, BASE_16);
          assert w == Q * v;
          assert xy == x * y;
+         assert IsModEquivalent(w, Q * xy, BASE_16);
          assert IsModEquivalent((w + xy), z, BASE_16);
-         assert IsModEquivalent(r, z, Q);
+         assert IsModEquivalent(rr, z, Q);
        }
      }
 }
