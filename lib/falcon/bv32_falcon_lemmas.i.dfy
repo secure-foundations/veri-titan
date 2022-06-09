@@ -1086,17 +1086,42 @@ module bv32_falcon_lemmas {
        requires xy == x * y;
        requires v == (12287 * x * y) % BASE_16;
        requires w == Q * v;
+       requires w as nat + xy as nat < BASE_32;
        requires z == uint32_rs(w + xy, 16);
        requires z < 2 * Q;
        requires rr == z % Q;
        ensures IsModEquivalent(rr * 4091, x * y, Q); // WTS: rr == x*y/4091 mod Q
      {
-       gbassert IsModEquivalent(rr * 4091, x * y, Q) by {
+      gbassert IsModEquivalent(w + xy, 0, BASE_16) by {
          assert IsModEquivalent(v, 12287 * x * y, BASE_16);
+         assert Q == 12289;
+         assert BASE_16 == 65536;
          assert w == Q * v;
          assert xy == x * y;
-         assert IsModEquivalent(w, Q * xy, BASE_16);
-         assert IsModEquivalent((w + xy), z, BASE_16);
+        }
+
+        DivMod.LemmaFundamentalDivMod(w + xy, BASE_16);
+        assert (w + xy) == BASE_16 * (w + xy) / BASE_16 + (w + xy) % BASE_16;
+
+        calc {
+          w + xy;
+          { DivMod.LemmaFundamentalDivMod(w + xy, BASE_16); }
+          BASE_16 * (w + xy) / BASE_16 + (w + xy) % BASE_16;
+          BASE_16 * (w + xy) / BASE_16;
+          BASE_16 * ((w + xy) / BASE_16);
+          
+          z * BASE_16;
+        }
+
+       gbassert IsModEquivalent(rr * 4091, x * y, Q) by {
+         assert IsModEquivalent(v, 12287 * x * y, BASE_16);
+         assert Q == 12289;
+         assert BASE_16 == 65536;
+         assert IsModEquivalent(4091, BASE_16, Q);
+         assert w == Q * v;
+         assert xy == x * y;
+         assert z * BASE_16 == (w + xy);
+         assert IsModEquivalent(w + xy, 0, BASE_16);
          assert IsModEquivalent(rr, z, Q);
        }
      }
