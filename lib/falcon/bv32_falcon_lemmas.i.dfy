@@ -1092,26 +1092,18 @@ module bv32_falcon_lemmas {
        requires rr == z % Q;
        ensures IsModEquivalent(rr * 4091, x * y, Q); // WTS: rr == x*y/4091 mod Q
      {
-      gbassert IsModEquivalent(w + xy, 0, BASE_16) by {
-         assert IsModEquivalent(v, 12287 * x * y, BASE_16);
-         assert Q == 12289;
-         assert BASE_16 == 65536;
-         assert w == Q * v;
-         assert xy == x * y;
+        gbassert IsModEquivalent(w + xy, 0, BASE_16) by {
+            assert IsModEquivalent(v, 12287 * x * y, BASE_16);
+            assert Q == 12289;
+            assert BASE_16 == 65536;
+            assert w == Q * v;
+            assert xy == x * y;
         }
 
         DivMod.LemmaFundamentalDivMod(w + xy, BASE_16);
-        assert (w + xy) == BASE_16 * (w + xy) / BASE_16 + (w + xy) % BASE_16;
-
-        calc {
-          w + xy;
-          { DivMod.LemmaFundamentalDivMod(w + xy, BASE_16); }
-          BASE_16 * (w + xy) / BASE_16 + (w + xy) % BASE_16;
-          BASE_16 * (w + xy) / BASE_16;
-          BASE_16 * ((w + xy) / BASE_16);
-          
-          z * BASE_16;
-        }
+        rs_is_div_mod_base(w + xy, 16);
+        Power2.Lemma2To64();
+        assert z * BASE_16 == w + xy;
 
        gbassert IsModEquivalent(rr * 4091, x * y, Q) by {
          assert IsModEquivalent(v, 12287 * x * y, BASE_16);
