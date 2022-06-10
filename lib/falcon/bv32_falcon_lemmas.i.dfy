@@ -77,7 +77,7 @@ module bv32_falcon_lemmas {
     {
         && buff_is_nsized(a)
         && buff_is_nsized(p)
-        && var a_hat := sacled_NTT_coeff(buff_as_nsized(a));
+        && var a_hat := scaled_coeff(buff_as_nsized(a));
         && (forall i | 0 <= i < N.full ::
             poly_eval(a_hat, mqpow(OMEGA, bit_rev_int(i, N))) == p[i])
     }
@@ -809,7 +809,7 @@ module bv32_falcon_lemmas {
         requires forward_ntt_eval_all(p, a);
         ensures forward_ntt_eval_all_alt(p, a)
     {
-       var a_hat: seq<elem> := sacled_NTT_coeff(a);
+       var a_hat: seq<elem> := scaled_coeff(a);
 
         forall i | 0 <= i < N.full
             ensures poly_eval(a_hat, mqpow(PSI, 2 * bit_rev_int(i, N))) == p[i];
@@ -940,8 +940,8 @@ module bv32_falcon_lemmas {
         forward_ntt_lemma(a1, a0);
         forward_ntt_lemma(b1, b0);
 
-        var a_hat := sacled_NTT_coeff(buff_as_nsized(a0));
-        var b_hat := sacled_NTT_coeff(buff_as_nsized(b0));
+        var a_hat := scaled_coeff(buff_as_nsized(a0));
+        var b_hat := scaled_coeff(buff_as_nsized(b0));
 
         forall i | 0 <= i < N.full
             ensures var x := mqpow(OMEGA, bit_rev_int(i, N));
@@ -958,7 +958,7 @@ module bv32_falcon_lemmas {
             assert p1[i] == p0[bit_rev_int(i, N)];
         }
 
-        assert p1 == pairwise_mq_product(NTT(sacled_NTT_coeff(a0)), NTT(sacled_NTT_coeff(b0)));
+        assert p1 == circle_product(NTT(scaled_coeff(a0)), NTT(scaled_coeff(b0)));
 
         forall i | 0 <= i < N.full
             ensures var x := mqpow(OMEGA_INV, bit_rev_int(i, N));
@@ -979,20 +979,21 @@ module bv32_falcon_lemmas {
 
         forall i | 0 <= i < N.full
             ensures var x := mqpow(OMEGA_INV, i);
-                p4[i] == (poly_eval(p1, x) * mqpow(PSI_INV, i) * N_INV) % Q;
+                p4[i] == ((p3[i] * N_INV) % Q * mqpow(PSI_INV, i)) % Q;
         {
             inverse_ntt_scaling_table_axiom(i);
-
             var t0 := (mqpow(PSI_INV, i) * N_INV) % Q;
             var t1 := (t0 * R) % Q;
+            var t2 := (p3[i] * N_INV) % Q;
             assert p4[i] == (p3[i] * t1 * R_INV) % Q;
 
-            gbassert IsModEquivalent(p4[i], p3[i] * mqpow(PSI_INV, i) * N_INV, Q) by {
+            gbassert IsModEquivalent(p4[i], t2 * mqpow(PSI_INV, i), Q) by {
                 assert IsModEquivalent(R * R_INV, 1, Q) by {
                     Nth_root_lemma();
                 }
                 assert IsModEquivalent(t0, mqpow(PSI_INV, i) * N_INV, Q);
                 assert IsModEquivalent(t1, t0 * R, Q);
+                assert IsModEquivalent(t2, p3[i] * N_INV, Q);
                 assert IsModEquivalent(p4[i], p3[i] * t1 * R_INV, Q);
             }
         }

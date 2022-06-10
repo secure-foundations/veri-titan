@@ -747,14 +747,14 @@ module mq_polys {
 		&& a == poly_add(poly_mul(q, b), r)
 	}
 
-	lemma {:axiom} poly_divmod_fundamental(a: seq<elem>, b: seq<elem>)
+	lemma {:axiom} poly_fundamental_divmod_lemma(a: seq<elem>, b: seq<elem>)
 		requires b != zero_poly(|b|);
 		ensures exists q: seq<elem>, r: seq<elem> :: valid_poly_divmod(a, b, q, r)
 
 	function poly_mod(a: seq<elem>, m: seq<elem>): (r: seq<elem>)
 		requires m != zero_poly(|m|);
 	{
-		poly_divmod_fundamental(a, m);
+		poly_fundamental_divmod_lemma(a, m);
 		var q: seq<elem>, r: seq<elem> :| valid_poly_divmod(a, m, q, r);
 		r
 	}
@@ -765,31 +765,35 @@ module mq_polys {
 		poly_mod(a, m) == poly_mod(b, m)
 	}
 
-	function pairwise_mq_product(a: n_sized, b: n_sized): n_sized
+	function circle_product(a: n_sized, b: n_sized): n_sized
 	{
 		seq(N.full, i requires 0 <= i < N.full => mqmul(a[i], b[i]))
 	}
 
 	function NTT(a: n_sized): n_sized
 	{
-		seq(N.full, i requires 0 <= i < N.full => poly_eval(a, mqpow(OMEGA, i)))
+		seq(N.full, i requires 0 <= i < N.full =>
+			poly_eval(a, mqpow(OMEGA, i)))
 	}
 
 	function INTT(a: n_sized): n_sized
 	{
-		seq(N.full, i requires 0 <= i < N.full => poly_eval(a, mqpow(OMEGA_INV, i)))
+		seq(N.full, i requires 0 <= i < N.full =>
+			mqmul(poly_eval(a, mqpow(OMEGA_INV, i)), N_INV))
 	}
 
-	function sacled_NTT_coeff(a: n_sized): n_sized
+	function scaled_coeff(a: n_sized): n_sized
 	{
-		seq(N.full, i requires 0 <= i < N.full => mqmul(a[i], mqpow(PSI, i)))
+		seq(N.full, i requires 0 <= i < N.full =>
+			mqmul(a[i], mqpow(PSI, i)))
 	}
 
 	function negatively_wrapped_convolution(a: n_sized, b: n_sized): n_sized
 	{
-		var inverse :seq<elem> := INTT(pairwise_mq_product(NTT(sacled_NTT_coeff(a)), NTT(sacled_NTT_coeff(b))));
-		seq(N.full, i requires 0 <= i < N.full => (
-			inverse[i] * mqpow(PSI_INV, i) * N_INV) % Q)
+		var inverse :seq<elem> :=
+			INTT(circle_product(NTT(scaled_coeff(a)), NTT(scaled_coeff(b))));
+		seq(N.full, i requires 0 <= i < N.full =>
+			mqmul(inverse[i], mqpow(PSI_INV, i)))
 	}
 
 	function n_ideal(): (r: seq<elem>)
