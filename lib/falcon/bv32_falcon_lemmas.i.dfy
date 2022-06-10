@@ -73,6 +73,15 @@ module bv32_falcon_lemmas {
         && forward_ntt.ntt_eval_all(buff_as_nsized(a), buff_as_nsized(coeffs))
     }
 
+    predicate forward_ntt_eval_all_alt(p: seq<uint16>, a: seq<uint16>)
+    {
+        && buff_is_nsized(a)
+        && buff_is_nsized(p)
+        && var a_hat := sacled_NTT_coeff(buff_as_nsized(a));
+        && (forall i | 0 <= i < N.full ::
+            poly_eval(a_hat, mqpow(OMEGA, bit_rev_int(i, N))) == p[i])
+    }
+
     predicate forward_t_loop_inv(a: seq<uint16>, d: pow2_t, coeffs: seq<uint16>)
         requires 0 <= d.exp <= N.exp;
     {
@@ -606,7 +615,6 @@ module bv32_falcon_lemmas {
     }
 
     function bit_rev_view_init(a: seq<uint16>): (view: rev_view)
-
         requires |a| == N.full;
         ensures view.len == N;
         ensures view.shuffle_inv(a);
@@ -617,7 +625,6 @@ module bv32_falcon_lemmas {
     }
 
     function {:opaque} ftable_cast(ftable: seq<uint16>): (r: seq<(nat, nat)>)
-
         requires |ftable| == |init_unfinished(N)|;
         ensures |r| == |init_unfinished(N)| / 2;
     {
@@ -625,22 +632,7 @@ module bv32_falcon_lemmas {
         seq(size, i requires 0 <= i < size => (ftable[2 * i], ftable[2 * i + 1]))
     }
 
-    // lemma ftable_index_lemma(a: seq<uint16>, ftable: seq<uint16>, table: seq<(nat, nat)>, ti: nat)
-    //     requires N == pow2_t_cons(512, 9);
-    //     requires |ftable| == |init_unfinished(N)|;
-    //     requires ftable_cast(ftable) == table;
-    //     requires 0 <= 2 * ti + 1 < |ftable|;
-    //     requires |a| == N.full;
-    //     requires table_wf(table, a, N);
-    //     ensures ti < |table|;
-    //     ensures ftable[2 * ti] == build_view(a, ti, N).get_split_index();
-    //     ensures ftable[2 * ti + 1] == bit_rev_int(ftable[2 * ti], N);
-    // {
-
-    // }
-
     predicate bit_rev_ftable_wf(ftable: seq<uint16>)
-
     {
         && |ftable| == |init_unfinished(N)|
         && table_wf(ftable_cast(ftable), N)
@@ -661,7 +653,6 @@ module bv32_falcon_lemmas {
         a0: uint32,
         t0: uint32,
         t1: uint32)
-
 
         requires |a| == N.full;
         requires bit_rev_ftable_wf(ftable);
@@ -777,7 +768,6 @@ module bv32_falcon_lemmas {
     }
 
     predicate mq_poly_scale_inv(a: seq<uint16>, init_a: seq<uint16>, b: seq<uint16>, i: nat)
-
     {
         && buff_is_nsized(init_a)
         && buff_is_nsized(b)
@@ -813,6 +803,91 @@ module bv32_falcon_lemmas {
         }
     }
 
+    lemma forward_ntt_lemma(
+        p: seq<uint16>,
+        a: seq<uint16>)
+
+        requires forward_ntt_eval_all(p, a);
+        ensures forward_ntt_eval_all_alt(p, a)
+    {
+       var a_hat: seq<elem> := sacled_NTT_coeff(a);
+
+        forall i | 0 <= i < N.full
+            ensures poly_eval(a_hat, mqpow(PSI, 2 * bit_rev_int(i, N))) == p[i];
+        {
+            var index := 2 * bit_rev_int(i, N);
+            var x := mqpow(PSI, index);
+            var x_hat := mqpow(PSI, index + 1);
+
+            var left := poly_terms(a, x_hat);
+            var right := poly_terms(a_hat, x);
+
+            assert poly_eval(a, x_hat) == p[i] by {
+                reveal points_eval_suffix_inv();
+                assert index * 1 == index;
+            }
+
+            assert left == right by {
+                forall j | 0 <= j < N.full 
+                    ensures left[j] == right[j];
+                {
+                    var x_j := mqpow(x, j);
+
+                    LemmaMulStrictlyPositive(index, j);
+
+                    assert x_j == mqpow(PSI, index * j) by {
+                        mqpow_muls(PSI, index, j);
+                    }
+
+                    calc == {
+                        left[j];
+                        mqmul(a[j], mqpow(x_hat, j));
+                        mqmul(a[j], mqpow(mqpow(PSI, index + 1), j));
+                        {
+                            mqpow_muls(PSI, index + 1, j);
+                        }
+                        mqmul(a[j], mqpow(PSI, (index + 1) * j));
+                        {
+                            LemmaMulIsDistributiveAddOtherWayAuto();
+                        }
+                        mqmul(a[j], mqpow(PSI, index * j + j));
+                        {
+                            mqpow_adds(PSI, index * j, j);
+                        }
+                        mqmul(a[j], mqmul(x_j, mqpow(PSI, j)));
+                        {
+                            mqmul_commutes(x_j, mqpow(PSI, j));
+                        }
+                        mqmul(a[j], mqmul(mqpow(PSI, j), x_j));
+                        {
+                            mqmul_associates(a[j], mqpow(PSI, j), x_j);
+                        }
+                        mqmul(mqmul(a[j], mqpow(PSI, j)), x_j);
+                        mqmul(a_hat[j], mqpow(x, j));
+                        right[j];
+                    }
+                }
+            }
+
+            assert poly_eval(a_hat, x) == p[i] by {
+                reveal poly_eval();
+                calc == {
+                    poly_eval(a, x_hat);
+                    mqsum(left);
+                    mqsum(right);
+                    poly_eval(a_hat, x);
+                }
+            }
+        }
+
+        forall i | 0 <= i < N.full
+            ensures poly_eval(a_hat, mqpow(OMEGA, bit_rev_int(i, N))) == p[i];
+        {
+            assume mqpow(PSI, 2 * bit_rev_int(i, N)) ==
+                mqpow(OMEGA, bit_rev_int(i, N));
+        }
+    }
+    
     lemma mq_ntt_mul_lemma(
         a0: seq<uint16>,
         a1: seq<uint16>,
@@ -824,10 +899,6 @@ module bv32_falcon_lemmas {
         p3: seq<uint16>,
         p4: seq<uint16>)
 
-        requires buff_is_nsized(a0);
-        requires buff_is_nsized(a1);
-        requires buff_is_nsized(b0);
-        requires buff_is_nsized(b1);
         requires buff_is_nsized(p0);
         requires buff_is_nsized(p1);
         requires buff_is_nsized(p2);
@@ -847,22 +918,28 @@ module bv32_falcon_lemmas {
 
         ensures poly_mod_equiv(p4, poly_mul(a0, b0), n_ideal());
     {
+        forward_ntt_lemma(a1, a0);
+        forward_ntt_lemma(b1, b0);
+
+        var a_hat := sacled_NTT_coeff(buff_as_nsized(a0));
+        var b_hat := sacled_NTT_coeff(buff_as_nsized(b0));
+
         forall i | 0 <= i < N.full
-            ensures var x := mqpow(PSI, 2 * bit_rev_int(i, N) + 1);
-                mqmul(poly_eval(a0, x), poly_eval(b0, x)) == p0[i];
+            ensures var x := mqpow(OMEGA, bit_rev_int(i, N));
+                mqmul(poly_eval(a_hat, x), poly_eval(b_hat, x)) == p0[i];
         {
-            reveal points_eval_suffix_inv();
-            assert 2 * bit_rev_int(i, N) * 1 == 2 * bit_rev_int(i, N);
         }
 
         forall i | 0 <= i < N.full
-            ensures var x := mqpow(PSI, 2 * i + 1);
-                mqmul(poly_eval(a0, x), poly_eval(b0, x)) == p1[i];
+            ensures var x := mqpow(OMEGA, i);
+                mqmul(poly_eval(a_hat, x), poly_eval(b_hat, x)) == p1[i];
         {
             reveal is_bit_rev_shuffle();
             bit_rev_symmetric(i, N);
             assert p1[i] == p0[bit_rev_int(i, N)];
         }
+
+        assert p1 == pair_wise_mq_product(NTT(sacled_NTT_coeff(a0)), NTT(sacled_NTT_coeff(b0)));
 
         forall i | 0 <= i < N.full
             ensures var x := mqpow(OMEGA_INV, bit_rev_int(i, N));
@@ -882,8 +959,7 @@ module bv32_falcon_lemmas {
         }
 
         forall i | 0 <= i < N.full
-            ensures
-                var x := mqpow(OMEGA_INV, i);
+            ensures var x := mqpow(OMEGA_INV, i);
                 p4[i] == (poly_eval(p1, x) * mqpow(PSI_INV, i) * N_INV) % Q;
         {
             inverse_ntt_scaling_table_axiom(i);
@@ -891,8 +967,8 @@ module bv32_falcon_lemmas {
             assume p4[i] == (p3[i] * mqpow(PSI_INV, i) * N_INV) % Q;
         }
 
-        assert p4 == negatively_wrapped_convolution(a0, b0, p1);
+        assert p4 == negatively_wrapped_convolution(a0, b0);
 
-        negatively_wrapped_convolution_lemma(a0, b0, p1, p4);
+        negatively_wrapped_convolution_lemma(a0, b0, p4);
     }
 }

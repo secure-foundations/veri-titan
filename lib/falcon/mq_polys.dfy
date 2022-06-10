@@ -82,39 +82,6 @@ module mq_polys {
 		assert mqsum(s) == mqadd(s[0], mqsum(s[1..]));
 	}
 
-	lemma mqmul_distributes(x: elem, y: elem, z: elem)
-		ensures mqmul(x, mqadd(y, z)) == mqadd(mqmul(x, y), mqmul(x, z))
-	{
-		calc {
-		mqmul(x, mqadd(y, z));
-		(x * ((y + z) % Q)) % Q;
-			{ LemmaMulModNoopGeneral(x, y+z, Q); }
-		(x * (y + z)) % Q;
-			{ LemmaMulIsDistributiveAdd(x, y, z); }
-		(x * y + x * z) % Q;
-			{ LemmaAddModNoop(x*y, x*z, Q); }
-		(((x * y) % Q) + ((x * z) % Q)) % Q;
-		(mqmul(x, y) + mqmul(x, z)) % Q;
-		mqadd(mqmul(x, y), mqmul(x, z));
-		}
-	}
-
-	lemma mqmul_associates(x: elem, y: elem, z: elem)
-		ensures mqmul(x, mqmul(y, z)) == mqmul(mqmul(x, y), z)
-	{
-		calc {
-			mqmul(x, mqmul(y, z));
-			(x * ((y * z) % Q)) % Q;
-				{ LemmaMulModNoopGeneral(x, y*z, Q); }
-			(x * (y * z)) % Q;
-				{ LemmaMulIsAssociative(x, y, z); }
-			((x * y) * z) % Q;
-				{ LemmaMulModNoopGeneral(x*y, z, Q); }
-			(((x * y) % Q) * z) % Q;
-			mqmul(mqmul(x, y), z);
-		}
-	}
-
 	lemma mqadd_associates(x: elem, y: elem, z: elem)
 		ensures mqadd(x, mqadd(y, z)) == mqadd(mqadd(x, y), z)
 	{
@@ -170,6 +137,58 @@ module mq_polys {
 		}
 	}
 
+	lemma mqmul_commutes(a: elem, b: elem)
+		ensures mqmul(a, b) == mqmul(b, a);
+	{
+		assume false;
+	}
+
+	lemma mqmul_distributes(x: elem, y: elem, z: elem)
+		ensures mqmul(x, mqadd(y, z)) == mqadd(mqmul(x, y), mqmul(x, z))
+	{
+		calc {
+		mqmul(x, mqadd(y, z));
+		(x * ((y + z) % Q)) % Q;
+			{ LemmaMulModNoopGeneral(x, y+z, Q); }
+		(x * (y + z)) % Q;
+			{ LemmaMulIsDistributiveAdd(x, y, z); }
+		(x * y + x * z) % Q;
+			{ LemmaAddModNoop(x*y, x*z, Q); }
+		(((x * y) % Q) + ((x * z) % Q)) % Q;
+		(mqmul(x, y) + mqmul(x, z)) % Q;
+		mqadd(mqmul(x, y), mqmul(x, z));
+		}
+	}
+
+	lemma mqmul_associates(x: elem, y: elem, z: elem)
+		ensures mqmul(x, mqmul(y, z)) == mqmul(mqmul(x, y), z)
+	{
+		calc {
+			mqmul(x, mqmul(y, z));
+			(x * ((y * z) % Q)) % Q;
+				{ LemmaMulModNoopGeneral(x, y*z, Q); }
+			(x * (y * z)) % Q;
+				{ LemmaMulIsAssociative(x, y, z); }
+			((x * y) * z) % Q;
+				{ LemmaMulModNoopGeneral(x*y, z, Q); }
+			(((x * y) % Q) * z) % Q;
+			mqmul(mqmul(x, y), z);
+		}
+	}
+
+	lemma mqpow_muls(x: elem, b: nat, c: nat)
+		ensures b * c >= 0;
+		ensures mqpow(mqpow(x, b), c) == mqpow(x, b * c);
+	{
+		assume false;
+	}
+
+	lemma mqpow_adds(x: elem, b: nat, c: nat)
+		ensures mqmul(mqpow(x, b), mqpow(x, c)) == mqpow(x, b + c);
+	{
+		assume false;
+	}
+
 	lemma mqpow_group(x:elem, offset:nat)
 		ensures mqpow(mqmul(x, x), offset) == mqpow(x, 2*offset)
 		ensures mqmul(x, mqpow(x, 2*offset)) == mqpow(x, 1+2*offset)
@@ -198,20 +217,20 @@ module mq_polys {
 		}
 	}
 
-	function a_i_times_x_to_the_i(a: seq<elem>, x: elem): seq<elem>
+	function poly_terms(a: seq<elem>, x: elem): seq<elem>
 	{
 		seq(|a|, i requires 0 <= i < |a| => mqmul(a[i], mqpow(x, i)))
 		//Map(i => mqmul(a[i], mqpow(x, i)), a)
 	}
 
-	function a_i_times_x_to_the_i_plus_k(a: seq<elem>, x: elem, k: nat): seq<elem>
+	function poly_offset_terms(a: seq<elem>, x: elem, k: nat): seq<elem>
 	{
 		seq(|a|, i requires 0 <= i < |a| => mqmul(a[i], mqpow(x, i + k)))
 	}
 
 	function {:opaque} poly_eval(a: seq<elem>, x: elem): elem
 	{
-		mqsum(a_i_times_x_to_the_i(a, x))
+		mqsum(poly_terms(a, x))
 	}
 
 	lemma poly_eval_base_lemma(a: seq<elem>, x: elem)
@@ -221,9 +240,9 @@ module mq_polys {
 		reveal poly_eval();
 		calc == {
 			poly_eval(a, x);
-			mqsum(a_i_times_x_to_the_i(a, x));
-			mqadd(a_i_times_x_to_the_i(a, x)[0], 0);
-			a_i_times_x_to_the_i(a, x)[0];
+			mqsum(poly_terms(a, x));
+			mqadd(poly_terms(a, x)[0], 0);
+			poly_terms(a, x)[0];
 			mqmul(a[0], mqpow(x, 0));
 			{
 				LemmaPow0Auto();
@@ -235,7 +254,7 @@ module mq_polys {
 
 	function {:opaque} poly_eval_offset(a: seq<elem>, x: elem, offset: nat): elem
 	{
-		mqsum(a_i_times_x_to_the_i_plus_k(a, x, offset))
+		mqsum(poly_offset_terms(a, x, offset))
 	}
 
 	lemma poly_eval_offset_zero_lemma(a: seq<elem>, x: elem)
@@ -273,9 +292,9 @@ module mq_polys {
 			calc == {
 				poly_eval_offset(a, x, 2*offset);
 					{ reveal poly_eval_offset(); }
-				mqsum(a_i_times_x_to_the_i_plus_k(a, x, 2*offset));
+				mqsum(poly_offset_terms(a, x, 2*offset));
 					{
-					assert a_i_times_x_to_the_i_plus_k(a, x, 2*offset) ==
+					assert poly_offset_terms(a, x, 2*offset) ==
 							[mqmul(a[0], mqpow(x, 2*offset)), 
 							 mqmul(a[1], mqpow(x, 1 + 2*offset))];
 					}
@@ -303,9 +322,9 @@ module mq_polys {
 						mqmul(x, mqsum([mqmul(a_o[0], mqpow(sqr, offset))]))); 
 					{ 
 					reveal poly_eval_offset(); 
-					assert a_i_times_x_to_the_i_plus_k(a_e, sqr, offset) ==
+					assert poly_offset_terms(a_e, sqr, offset) ==
 							 [mqmul(a_e[0], mqpow(sqr, offset))];
-					assert a_i_times_x_to_the_i_plus_k(a_o, sqr, offset) ==
+					assert poly_offset_terms(a_o, sqr, offset) ==
 							 [mqmul(a_o[0], mqpow(sqr, offset))];
 					}
 				mqadd(poly_eval_offset(a_e, sqr, offset), mqmul(x, poly_eval_offset(a_o, sqr, offset)));
@@ -313,9 +332,9 @@ module mq_polys {
 			return;
 		}
 
-		var apowers := a_i_times_x_to_the_i_plus_k(a, x, 2*offset);
-		var epowers := a_i_times_x_to_the_i_plus_k(a_e, sqr, offset);
-		var opowers := a_i_times_x_to_the_i_plus_k(a_o, sqr, offset);
+		var apowers := poly_offset_terms(a, x, 2*offset);
+		var epowers := poly_offset_terms(a_e, sqr, offset);
+		var opowers := poly_offset_terms(a_o, sqr, offset);
 
 		calc {
 			Pow2(0);
@@ -328,13 +347,13 @@ module mq_polys {
 		var half := pow2_half(len);
 		var quarter := pow2_half(half);
 
-		assert apowers[half.full..]	 == a_i_times_x_to_the_i_plus_k(a[half.full..], x, half.full + 2*offset);
-		assert epowers[quarter.full..] == a_i_times_x_to_the_i_plus_k(a_e[quarter.full..], sqr, quarter.full + offset);
-		assert opowers[quarter.full..] == a_i_times_x_to_the_i_plus_k(a_o[quarter.full..], sqr, quarter.full + offset);
+		assert apowers[half.full..]	 == poly_offset_terms(a[half.full..], x, half.full + 2*offset);
+		assert epowers[quarter.full..] == poly_offset_terms(a_e[quarter.full..], sqr, quarter.full + offset);
+		assert opowers[quarter.full..] == poly_offset_terms(a_o[quarter.full..], sqr, quarter.full + offset);
 
-		assert apowers[..half.full]	 == a_i_times_x_to_the_i_plus_k(a[..half.full], x, 2*offset);
-		assert epowers[..quarter.full] == a_i_times_x_to_the_i_plus_k(a_e[..quarter.full], sqr, offset);
-		assert opowers[..quarter.full] == a_i_times_x_to_the_i_plus_k(a_o[..quarter.full], sqr, offset);
+		assert apowers[..half.full]	 == poly_offset_terms(a[..half.full], x, 2*offset);
+		assert epowers[..quarter.full] == poly_offset_terms(a_e[..quarter.full], sqr, offset);
+		assert opowers[..quarter.full] == poly_offset_terms(a_o[..quarter.full], sqr, offset);
 
 		assert (quarter.full + offset) * 2 == half.full + 2*offset;
 
@@ -410,281 +429,281 @@ module mq_polys {
 		poly_eval_offset_zero_lemma(a_o, sqr);
 	}
 
-  function make_fixed_pairs(val:nat, index:nat, len2: nat) : (r: seq<(nat, nat)>)
-    requires index < len2
-    ensures |r| == index + 1
-    ensures forall i :: 0 <= i < |r| ==> r[i] == (val, i)
-  {
-    if index == 0 then 
-      [(val, 0)]
-    else
-      make_fixed_pairs(val, index - 1, len2) + [(val, index)]
-  }
+	function {:fuel 1} make_fixed_pairs(val:nat, index:nat, len2: nat) : (r: seq<(nat, nat)>)
+		requires index < len2
+		ensures |r| == index + 1
+		ensures forall i :: 0 <= i < |r| ==> r[i] == (val, i)
+	{
+		if index == 0 then 
+			[(val, 0)]
+		else
+			make_fixed_pairs(val, index - 1, len2) + [(val, index)]
+	}
 
-  function make_all_pairs_helper(index:nat, len1: nat, len2: nat) : (r: seq<(nat, nat)>)
-    requires index < len1
-    requires 0 < len2
-    ensures |r| == (index + 1) * len2
-  {
-    if index == 0 then 
-      make_fixed_pairs(index, len2 - 1, len2)
-    else
-      var head := make_all_pairs_helper(index - 1, len1, len2); 
-      var tail := make_fixed_pairs(index, len2 - 1, len2);
-      calc {
-        |head + tail|;
-        |head| + |tail|;
-        index * len2 + len2;
-        index * len2 + 1 * len2;
-          { Mul.LemmaMulIsDistributiveAddOtherWayAuto(); }
-        (index + 1) * len2; 
-      }
-      head + tail
-  }
+	function make_all_pairs_helper(index:nat, len1: nat, len2: nat) : (r: seq<(nat, nat)>)
+		requires index < len1
+		requires 0 < len2
+		ensures |r| == (index + 1) * len2
+	{
+		if index == 0 then 
+			make_fixed_pairs(index, len2 - 1, len2)
+		else
+			var head := make_all_pairs_helper(index - 1, len1, len2); 
+			var tail := make_fixed_pairs(index, len2 - 1, len2);
+			calc {
+				|head + tail|;
+				|head| + |tail|;
+				index * len2 + len2;
+				index * len2 + 1 * len2;
+					{ Mul.LemmaMulIsDistributiveAddOtherWayAuto(); }
+				(index + 1) * len2; 
+			}
+			head + tail
+	}
 
-  lemma make_all_pairs_helper_result(index:nat, len1: nat, len2: nat, r: seq<(nat, nat)>)
-    requires index < len1
-    requires 0 < len2
-    requires r == make_all_pairs_helper(index, len1, len2)
-    ensures |r| == (index + 1) * len2 
-    ensures forall i, j :: 0 <= i <= index && 0 <= j < len2 ==>
-            0 <= (i*len2 + j) < |r| && r[i*len2 + j] == (i, j)
-  {
-    forall i, j | 0 <= i <= index && 0 <= j < len2 
-      ensures 0 <= i*len2 + j < |r|
-      ensures r[i*len2 + j] == (i, j)
-    {
-      // Lower-bound on index
-      assert 0 <= i * len2 + j by { Mul.LemmaMulNonnegative(i, len2); }
-      
-      // Upper-bound on index
-      calc {
-        i * len2;
-     <= { Mul.LemmaMulUpperBound(i, index, len2, len2); }
-        index * len2;
-      }
+	lemma make_all_pairs_helper_result(index:nat, len1: nat, len2: nat, r: seq<(nat, nat)>)
+		requires index < len1
+		requires 0 < len2
+		requires r == make_all_pairs_helper(index, len1, len2)
+		ensures |r| == (index + 1) * len2 
+		ensures forall i, j :: 0 <= i <= index && 0 <= j < len2 ==>
+						0 <= (i*len2 + j) < |r| && r[i*len2 + j] == (i, j)
+	{
+		forall i, j | 0 <= i <= index && 0 <= j < len2 
+			ensures 0 <= i*len2 + j < |r|
+			ensures r[i*len2 + j] == (i, j)
+		{
+			// Lower-bound on index
+			assert 0 <= i * len2 + j by { Mul.LemmaMulNonnegative(i, len2); }
+			
+			// Upper-bound on index
+			calc {
+				i * len2;
+		 	<= { Mul.LemmaMulUpperBound(i, index, len2, len2); }
+				index * len2;
+			}
 
-      calc {
-        index * len2 + j;
-      < index * len2 + len2;
-        index * len2 + 1 * len2;
-          { Mul.LemmaMulIsDistributiveAddOtherWayAuto(); }
-        (index + 1) * len2;
-        |r|;
-      }
+			calc {
+				index * len2 + j;
+			< index * len2 + len2;
+				index * len2 + 1 * len2;
+					{ Mul.LemmaMulIsDistributiveAddOtherWayAuto(); }
+				(index + 1) * len2;
+				|r|;
+			}
 
-      if index == 0 {
-      } else {
-        var head := make_all_pairs_helper(index - 1, len1, len2); 
-        var tail := make_fixed_pairs(index, len2 - 1, len2);
-        make_all_pairs_helper_result(index - 1, len1, len2, head);
-        //var k := i * len2 + j;
-        if i < index {
-          assert i*len2 + j < |head|;
-          calc {
-            r[i*len2 + j];
-            head[i*len2 + j];
-            (i, j);
-          }
-        } else { // i == index
-          calc {
-            r[i*len2 + j];
-            tail[i*len2 + j - index*len2];
-            tail[j];
-            (i, j);
-          }
-        }
-      }
-    }
-  }
+			if index == 0 {
+			} else {
+				var head := make_all_pairs_helper(index - 1, len1, len2); 
+				var tail := make_fixed_pairs(index, len2 - 1, len2);
+				make_all_pairs_helper_result(index - 1, len1, len2, head);
+				//var k := i * len2 + j;
+				if i < index {
+					assert i*len2 + j < |head|;
+					calc {
+						r[i*len2 + j];
+						head[i*len2 + j];
+						(i, j);
+					}
+				} else { // i == index
+					calc {
+						r[i*len2 + j];
+						tail[i*len2 + j - index*len2];
+						tail[j];
+						(i, j);
+					}
+				}
+			}
+		}
+	}
 
-  function make_all_pairs(len1: nat, len2: nat) : (r: seq<(nat, nat)>)
-    requires 0 < len1
-    requires 0 < len2
-    ensures |r| == len1 * len2
-    ensures forall i, j :: 0 <= i < len1 && 0 <= j < len2 ==>
-            0 <= (i*len2 + j) < |r| && r[i*len2 + j] == (i, j)
-  {
-    var r := make_all_pairs_helper(len1 - 1, len1, len2);
-    make_all_pairs_helper_result(len1 - 1, len1, len2, r);
-    r
-  }
+	function make_all_pairs(len1: nat, len2: nat) : (r: seq<(nat, nat)>)
+		requires 0 < len1
+		requires 0 < len2
+		ensures |r| == len1 * len2
+		ensures forall i, j :: 0 <= i < len1 && 0 <= j < len2 ==>
+						0 <= (i*len2 + j) < |r| && r[i*len2 + j] == (i, j)
+	{
+		var r := make_all_pairs_helper(len1 - 1, len1, len2);
+		make_all_pairs_helper_result(len1 - 1, len1, len2, r);
+		r
+	}
 
-  ghost method find_pair(k:nat, len1: nat, len2: nat, r: seq<(nat, nat)>) returns (i: nat, j: nat)
-    requires k < |r|
-    requires 0 < len1 && 0 < len2
-    requires r == make_all_pairs(len1, len2)
-    ensures i < len1 && j < len2
-    ensures k == i*len2 + j
-    ensures r[k] == (i, j)
-  {
-    i := 0;
-    var k_candidate := 0;
-    while i < len1
-      invariant 0 <= i <= len1 
-      invariant forall x, y :: 0 <= x < i && y < len2  ==> k != x*len2 + y
-      invariant k_candidate == i*len2
-      invariant forall z :: 0 <= z < k_candidate ==> z != k
-    {
-      j := 0;
-      while j < len2 
-        invariant 0 <= j <= len2
-        invariant forall y :: 0 <= y < j ==> k != i*len2 + y
-        invariant k_candidate == i*len2 + j
-        invariant forall z :: 0 <= z < k_candidate ==> z != k
-      {
-        if k == i*len2 + j {
-          return;
-        }
-        j := j + 1;
-        k_candidate := k_candidate + 1;
-      }
+	ghost method find_pair(k:nat, len1: nat, len2: nat, r: seq<(nat, nat)>) returns (i: nat, j: nat)
+		requires k < |r|
+		requires 0 < len1 && 0 < len2
+		requires r == make_all_pairs(len1, len2)
+		ensures i < len1 && j < len2
+		ensures k == i*len2 + j
+		ensures r[k] == (i, j)
+	{
+		i := 0;
+		var k_candidate := 0;
+		while i < len1
+			invariant 0 <= i <= len1 
+			invariant forall x, y :: 0 <= x < i && y < len2	==> k != x*len2 + y
+			invariant k_candidate == i*len2
+			invariant forall z :: 0 <= z < k_candidate ==> z != k
+		{
+			j := 0;
+			while j < len2 
+				invariant 0 <= j <= len2
+				invariant forall y :: 0 <= y < j ==> k != i*len2 + y
+				invariant k_candidate == i*len2 + j
+				invariant forall z :: 0 <= z < k_candidate ==> z != k
+			{
+				if k == i*len2 + j {
+					return;
+				}
+				j := j + 1;
+				k_candidate := k_candidate + 1;
+			}
 
-      var i_new := i + 1;
-      calc {
-        k_candidate;
-        i*len2 + len2;
-        i*len2 + 1*len2;
-          { Mul.LemmaMulIsDistributiveAddOtherWay(len2, i, 1); }
-        (i + 1) * len2;
-        i_new * len2;
-      }
+			var i_new := i + 1;
+			calc {
+				k_candidate;
+				i*len2 + len2;
+				i*len2 + 1*len2;
+					{ Mul.LemmaMulIsDistributiveAddOtherWay(len2, i, 1); }
+				(i + 1) * len2;
+				i_new * len2;
+			}
 
-      i := i + 1;
-    }
-  }
-  
+			i := i + 1;
+		}
+	}
+	
 	function index_pairs_builder(len1: nat, len2: nat, deg: nat): (r: seq<(nat, nat)>)
-    requires 0 < len1 && 0 < len2
-  {
-    Seq.Filter((pair : (nat, nat)) => pair.0 + pair.1 == deg, make_all_pairs(len1, len2))
-  }
+		requires 0 < len1 && 0 < len2
+	{
+		Seq.Filter((pair : (nat, nat)) => pair.0 + pair.1 == deg, make_all_pairs(len1, len2))
+	}
 
-  predicate exists_match<T>(s:seq, val:T) {
-    exists j :: 0 <= j < |s| && val == s[j]
-  }
+	predicate exists_match<T>(s:seq, val:T) {
+		exists j :: 0 <= j < |s| && val == s[j]
+	}
 
-  lemma FilterProperties<T>(f: (T ~> bool), s: seq<T>, result: seq<T>)
-    requires forall i :: 0 <= i < |s| ==> f.requires(s[i])
-    requires result == Seq.Filter(f, s)
-    ensures |result| <= |s|
-    ensures forall i: nat {:trigger result[i]} :: i < |result| && f.requires(result[i]) ==> f(result[i])
-    ensures forall i: nat :: i < |s| && f(s[i]) ==> exists_match(result, s[i]) 
-    ensures forall i: nat :: i < |result| ==> exists_match(s, result[i])
-  {
-    if |s| == 0 {
-    } else {
-      forall i: nat | i < |s| && f(s[i]) 
-        ensures exists_match(result, s[i]) 
-      {
-        reveal Filter();
-        if i == 0 {
-          assert result[0] == s[i];
-        } else {
-          if f(s[0]) {
-            FilterProperties(f, s[1..], result[1..]);
-          } else {
-            FilterProperties(f, s[1..], result);
-          }
-        }
-      }
-      
-      forall i: nat | i < |result| 
-        ensures exists_match(s, result[i])
-      {
-        reveal Filter();
-        if f(s[0]) {
-          FilterProperties(f, s[1..], result[1..]);
-        } else {
-          FilterProperties(f, s[1..], result);
-        }
-      }
-    }
-  }
+	lemma FilterProperties<T>(f: (T ~> bool), s: seq<T>, result: seq<T>)
+		requires forall i :: 0 <= i < |s| ==> f.requires(s[i])
+		requires result == Seq.Filter(f, s)
+		ensures |result| <= |s|
+		ensures forall i: nat {:trigger result[i]} :: i < |result| && f.requires(result[i]) ==> f(result[i])
+		ensures forall i: nat :: i < |s| && f(s[i]) ==> exists_match(result, s[i]) 
+		ensures forall i: nat :: i < |result| ==> exists_match(s, result[i])
+	{
+		if |s| == 0 {
+		} else {
+			forall i: nat | i < |s| && f(s[i]) 
+				ensures exists_match(result, s[i]) 
+			{
+				reveal Filter();
+				if i == 0 {
+					assert result[0] == s[i];
+				} else {
+					if f(s[0]) {
+						FilterProperties(f, s[1..], result[1..]);
+					} else {
+						FilterProperties(f, s[1..], result);
+					}
+				}
+			}
+			
+			forall i: nat | i < |result| 
+				ensures exists_match(s, result[i])
+			{
+				reveal Filter();
+				if f(s[0]) {
+					FilterProperties(f, s[1..], result[1..]);
+				} else {
+					FilterProperties(f, s[1..], result);
+				}
+			}
+		}
+	}
 
-  predicate find_match_in_index_pairs(i:nat, j:nat, r: seq<(nat, nat)>) {
-			exists k: nat | k < |r| :: r[k] == (i, j)
-  }
+	predicate find_match_in_index_pairs(i:nat, j:nat, r: seq<(nat, nat)>) {
+		exists k: nat | k < |r| :: r[k] == (i, j)
+	}
 
-  lemma index_pairs_builder_properties(len1: nat, len2: nat, deg: nat, r: seq<(nat, nat)>)
-    requires 0 < len1 && 0 < len2
-    requires r == index_pairs_builder(len1, len2, deg)
+	lemma index_pairs_builder_properties(len1: nat, len2: nat, deg: nat, r: seq<(nat, nat)>)
+		requires 0 < len1 && 0 < len2
+		requires r == index_pairs_builder(len1, len2, deg)
 		ensures forall i: nat, j: nat :: (
 			(i < len1 && j < len2 && i + j == deg)
 				<==>
 			find_match_in_index_pairs(i, j, r))
-  {
-    var all_pairs := make_all_pairs(len1, len2);
-    forall i: nat, j: nat | i < len1 && j < len2 && i + j == deg
-      ensures find_match_in_index_pairs(i, j, r) 
-    {
-      FilterProperties((pair : (nat, nat)) => pair.0 + pair.1 == deg, all_pairs, r);
-      assert all_pairs[i *len2 + j] == (i, j);
-      assert (exists k :: 0 <= k < |r| && r[k] == all_pairs[i*len2+j]);
-    }
-    forall i: nat, j: nat | find_match_in_index_pairs(i, j, r) 
-      ensures  i < len1 && j < len2 && i + j == deg
-    {
+	{
+		var all_pairs := make_all_pairs(len1, len2);
+		forall i: nat, j: nat | i < len1 && j < len2 && i + j == deg
+			ensures find_match_in_index_pairs(i, j, r) 
+		{
+			FilterProperties((pair : (nat, nat)) => pair.0 + pair.1 == deg, all_pairs, r);
+			assert all_pairs[i *len2 + j] == (i, j);
+			assert (exists k :: 0 <= k < |r| && r[k] == all_pairs[i*len2+j]);
+		}
+		forall i: nat, j: nat | find_match_in_index_pairs(i, j, r) 
+			ensures	i < len1 && j < len2 && i + j == deg
+		{
 			var k:nat :| 0 <= k < |r| && r[k] == (i, j);
-      FilterProperties((pair : (nat, nat)) => pair.0 + pair.1 == deg, all_pairs, r);
-      assert (exists m :: 0 <= m < |all_pairs| && r[k] == all_pairs[m]);
-      var m :| 0 <= m < |all_pairs| && r[k] == all_pairs[m];
-      var i, j := find_pair(m, len1, len2, all_pairs);
-    }
-  }
+			FilterProperties((pair : (nat, nat)) => pair.0 + pair.1 == deg, all_pairs, r);
+			assert (exists m :: 0 <= m < |all_pairs| && r[k] == all_pairs[m]);
+			var m :| 0 <= m < |all_pairs| && r[k] == all_pairs[m];
+			var i, j := find_pair(m, len1, len2, all_pairs);
+		}
+	}
 
-  function index_pairs_builder_wrapper(len1: nat, len2: nat, deg: nat): (r: seq<(nat, nat)>)
-  {
-    if 0 < len1 && 0 < len2 then
-      index_pairs_builder(len1, len2, deg)
-    else
-      []
-  }
+	function index_pairs_builder_wrapper(len1: nat, len2: nat, deg: nat): (r: seq<(nat, nat)>)
+	{
+		if 0 < len1 && 0 < len2 then
+			index_pairs_builder(len1, len2, deg)
+		else
+			[]
+	}
 
-  lemma index_pairs_builder_remove_len_bounds(len1: nat, len2: nat, deg: nat, r: seq<(nat, nat)>)
-    requires r == index_pairs_builder_wrapper(len1, len2, deg)
+	lemma index_pairs_builder_remove_len_bounds(len1: nat, len2: nat, deg: nat, r: seq<(nat, nat)>)
+		requires r == index_pairs_builder_wrapper(len1, len2, deg)
 		ensures 
-      forall i: nat, j: nat :: (
-        (i < len1 && j < len2 && i + j == deg)
-          <==>
-        find_match_in_index_pairs(i, j, r))
+			forall i: nat, j: nat :: (
+				(i < len1 && j < len2 && i + j == deg)
+					<==>
+				find_match_in_index_pairs(i, j, r))
 
-  {
-    if 0 < len1 && 0 < len2 {
-      index_pairs_builder_properties(len1, len2, deg, r);
-    } else if len1 == 0 {
-      forall i: nat, j: nat | i < len1 && j < len2 && i + j == deg
-        ensures find_match_in_index_pairs(i, j, r) 
-      {
-      }
+	{
+		if 0 < len1 && 0 < len2 {
+			index_pairs_builder_properties(len1, len2, deg, r);
+		} else if len1 == 0 {
+			forall i: nat, j: nat | i < len1 && j < len2 && i + j == deg
+				ensures find_match_in_index_pairs(i, j, r) 
+			{
+			}
 
-      forall i: nat, j: nat | find_match_in_index_pairs(i, j, r) 
-        ensures  i < len1 && j < len2 && i + j == deg
-      {
-        assert false;
-      }
-    } else if len2 == 0 {
-    }
-  }
-    
+			forall i: nat, j: nat | find_match_in_index_pairs(i, j, r) 
+				ensures	i < len1 && j < len2 && i + j == deg
+			{
+				assert false;
+			}
+		} else if len2 == 0 {
+		}
+	}
+		
 	function {:opaque} index_pairs(len1: nat, len2: nat, deg: nat): (r: seq<(nat, nat)>)
 		requires deg < len1 + len2 - 1;
 		ensures forall j: nat, k: nat :: (
 			(j < len1 && k < len2 && j + k == deg)
 				<==>
 			find_match_in_index_pairs(j, k, r));
-  {
-    var r := index_pairs_builder_wrapper(len1, len2, deg);
-    index_pairs_builder_remove_len_bounds(len1, len2, deg, r);
-    r
-  }
+	{
+		var r := index_pairs_builder_wrapper(len1, len2, deg);
+		index_pairs_builder_remove_len_bounds(len1, len2, deg, r);
+		r
+	}
  
 	function poly_mul_coef(a: seq<elem>, b: seq<elem>, deg: nat): elem
 		requires deg < |a| + |b| - 1;
 	{
 		var pairs := index_pairs(|a|, |b|, deg);
 		var terms := seq(|pairs|, i requires 0 <= i < |pairs| =>
-      assert find_match_in_index_pairs(pairs[i].0, pairs[i].1, pairs);
+			assert find_match_in_index_pairs(pairs[i].0, pairs[i].1, pairs);
 			mqmul(a[pairs[i].0], b[pairs[i].1]));
 		mqsum(terms)
 	}
@@ -706,6 +725,11 @@ module mq_polys {
 		a + seq(ext, n requires 0 <= n < ext => 0)
 	}
 
+	function zero_poly(n: nat): (a': seq<elem>)
+	{
+		seq(n, i requires 0 <= i < n => 0)
+	}
+
 	function poly_add(a: seq<elem>, b: seq<elem>): (c: seq<elem>)
 	{
 		var len := Math.Max(|a|, |b|);
@@ -721,11 +745,11 @@ module mq_polys {
 	}
 
 	lemma {:axiom} poly_divmod_fundamental(a: seq<elem>, b: seq<elem>)
-		requires |b| > 0;
+		requires b != zero_poly(|b|);
 		ensures exists q: seq<elem>, r: seq<elem> :: valid_poly_divmod(a, b, q, r)
 
 	function poly_mod(a: seq<elem>, m: seq<elem>): (r: seq<elem>)
-		requires |m| > 0;
+		requires m != zero_poly(|m|);
 	{
 		poly_divmod_fundamental(a, m);
 		var q: seq<elem>, r: seq<elem> :| valid_poly_divmod(a, m, q, r);
@@ -733,39 +757,47 @@ module mq_polys {
 	}
 
 	predicate poly_mod_equiv(a: seq<elem>, b: seq<elem>, m: seq<elem>)
-		requires |m| > 0;
+		requires m != zero_poly(|m|);
 	{
 		poly_mod(a, m) == poly_mod(b, m)
 	}
 
-  /* NOTES
-  tilde_a = NTT(a)  tilde_a[i] = poly_eval(a, omega^i)
-  tilde_a = NTT(hat_a)  tilde_a[i] = poly_eval(hat_a, omega^i) == poly_eval(a, omega^i * psi)
-                                        j-th entry is hat_a[j] * omega^i^j          a[j] * (omega^i * psi)^j
-                                                                                 == a[j] * psi^j * omega^ij
-  */
-	function forward_product(a: n_sized, b: n_sized): n_sized
+	function pair_wise_mq_product(a: n_sized, b: n_sized): n_sized
 	{
-		seq(N.full, i requires 0 <= i < N.full => 
-			(var x := mqpow(PSI, 2 * i + 1);  // x == (omega ^ i) * psi
-			mqmul(poly_eval(a, x), poly_eval(b, x))))
+		seq(N.full, i requires 0 <= i < N.full => mqmul(a[i], b[i]))
 	}
 
-	function negatively_wrapped_convolution(a: n_sized, b: n_sized, p: n_sized): n_sized
-		requires p == forward_product(a, b);
+	function NTT(a: n_sized): n_sized
 	{
-		seq(N.full, i requires 0 <= i < N.full => 
-			(var x := mqpow(OMEGA_INV, i);
-			(poly_eval(p, x) * mqpow(PSI_INV, i) * N_INV) % Q))
+		seq(N.full, i requires 0 <= i < N.full => poly_eval(a, mqpow(OMEGA, i)))
 	}
 
-	function n_ideal(): seq<elem>
+	function INTT(a: n_sized): n_sized
 	{
-		[1] + seq(N.full - 1, i requires 0 <= i < N.full - 1 => 0) + [1]
+		seq(N.full, i requires 0 <= i < N.full => poly_eval(a, mqpow(OMEGA_INV, i)))
 	}
 
-	lemma {:axiom} negatively_wrapped_convolution_lemma(a: n_sized, b: n_sized, p: n_sized, c: n_sized)
-		requires p == forward_product(a, b);
-		requires c == negatively_wrapped_convolution(a, b, p);
-		ensures poly_mod_equiv(c, poly_mul(a, b), n_ideal());
+	function sacled_NTT_coeff(a: n_sized): n_sized
+	{
+		seq(N.full, i requires 0 <= i < N.full => mqmul(a[i], mqpow(PSI, i)))
+	}
+
+	function negatively_wrapped_convolution(a: n_sized, b: n_sized): n_sized
+	{
+		var product := pair_wise_mq_product(NTT(sacled_NTT_coeff(a)), NTT(sacled_NTT_coeff(b)));
+		var inverse :seq<elem> := INTT(product);
+		seq(N.full, i requires 0 <= i < N.full => (inverse[i] * mqpow(PSI_INV, i) * N_INV) % Q)
+	}
+
+	function n_ideal(): (r: seq<elem>)
+		ensures r != zero_poly(|r|);
+	{
+		var r := [1] + seq(N.full - 1, i requires 0 <= i < N.full - 1 => 0) + [1];
+		assert r[0] != 0;
+		r
+	}
+
+	lemma {:axiom} negatively_wrapped_convolution_lemma(a: n_sized, b: n_sized, p: n_sized)
+		requires p == negatively_wrapped_convolution(a, b);
+		ensures poly_mod_equiv(p, poly_mul(a, b), n_ideal());
 }
