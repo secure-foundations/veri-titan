@@ -762,7 +762,7 @@ module mq_polys {
 		poly_mod(a, m) == poly_mod(b, m)
 	}
 
-	function pair_wise_mq_product(a: n_sized, b: n_sized): n_sized
+	function pairwise_mq_product(a: n_sized, b: n_sized): n_sized
 	{
 		seq(N.full, i requires 0 <= i < N.full => mqmul(a[i], b[i]))
 	}
@@ -784,9 +784,9 @@ module mq_polys {
 
 	function negatively_wrapped_convolution(a: n_sized, b: n_sized): n_sized
 	{
-		var product := pair_wise_mq_product(NTT(sacled_NTT_coeff(a)), NTT(sacled_NTT_coeff(b)));
-		var inverse :seq<elem> := INTT(product);
-		seq(N.full, i requires 0 <= i < N.full => (inverse[i] * mqpow(PSI_INV, i) * N_INV) % Q)
+		var inverse :seq<elem> := INTT(pairwise_mq_product(NTT(sacled_NTT_coeff(a)), NTT(sacled_NTT_coeff(b))));
+		seq(N.full, i requires 0 <= i < N.full => (
+			inverse[i] * mqpow(PSI_INV, i) * N_INV) % Q)
 	}
 
 	function n_ideal(): (r: seq<elem>)

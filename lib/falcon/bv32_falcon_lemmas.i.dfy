@@ -442,7 +442,6 @@ module bv32_falcon_lemmas {
         t3: uint32,
         t6: uint32,
         view: inverse_ntt.loop_view)
-    
 
         requires bi == d.full;
         requires t6 == 2 * d.full;
@@ -883,8 +882,28 @@ module bv32_falcon_lemmas {
         forall i | 0 <= i < N.full
             ensures poly_eval(a_hat, mqpow(OMEGA, bit_rev_int(i, N))) == p[i];
         {
-            assume mqpow(PSI, 2 * bit_rev_int(i, N)) ==
-                mqpow(OMEGA, bit_rev_int(i, N));
+            var index := bit_rev_int(i, N);
+            calc == {
+                mqpow(PSI, 2 * index);
+                Pow(PSI, 2 * index) % Q;
+                {
+                    LemmaPowMultiplies(PSI, 2, index);
+                }
+                Pow(Pow(PSI, 2), index) % Q;
+                {
+                    LemmaPowModNoop(Pow(PSI, 2), index, Q);
+                }
+                Pow(Pow(PSI, 2) % Q, index) % Q;
+                {
+                    Nth_root_lemma();
+                }
+                Pow(OMEGA % Q, index) % Q;
+                {
+                    LemmaPowModNoop(OMEGA, index, Q);
+                }
+                Pow(OMEGA, index) % Q;
+                mqpow(OMEGA, index);
+            }
         }
     }
     
@@ -939,7 +958,7 @@ module bv32_falcon_lemmas {
             assert p1[i] == p0[bit_rev_int(i, N)];
         }
 
-        assert p1 == pair_wise_mq_product(NTT(sacled_NTT_coeff(a0)), NTT(sacled_NTT_coeff(b0)));
+        assert p1 == pairwise_mq_product(NTT(sacled_NTT_coeff(a0)), NTT(sacled_NTT_coeff(b0)));
 
         forall i | 0 <= i < N.full
             ensures var x := mqpow(OMEGA_INV, bit_rev_int(i, N));

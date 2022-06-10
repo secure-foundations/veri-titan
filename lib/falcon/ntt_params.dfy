@@ -24,6 +24,8 @@ abstract module ntt_params {
 	lemma Nth_root_lemma()
 		ensures Q >= 1;
 		ensures N.exp >= 2;
+
+		ensures IsModEquivalent(Pow(PSI, 2), OMEGA, Q);
 		ensures Pow(PSI, 2 * N.full) % Q == 1
 		ensures Pow(PSI, N.full) % Q == Q - 1
 		ensures (PSI * PSI_INV) % Q == 1
