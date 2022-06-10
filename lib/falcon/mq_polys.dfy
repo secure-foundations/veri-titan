@@ -33,6 +33,9 @@ module mq_polys {
 		(a - b) % Q
 	}
 
+	function method {:axiom} montmul(a: elem, b: elem): (c: elem)
+		ensures c == (a * b * R_INV) % Q
+
 	function method {:opaque} even_indexed_items<T>(a: seq<T>, len: pow2_t): (r: seq<T>)
 		requires |a| == len.full;
 		ensures |r| == len.full / 2;

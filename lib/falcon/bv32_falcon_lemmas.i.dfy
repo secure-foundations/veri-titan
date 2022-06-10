@@ -982,8 +982,19 @@ module bv32_falcon_lemmas {
                 p4[i] == (poly_eval(p1, x) * mqpow(PSI_INV, i) * N_INV) % Q;
         {
             inverse_ntt_scaling_table_axiom(i);
-            assert p4[i] == montmul(p3[i], mqmul(mqmul(mqpow(PSI_INV, i), N_INV), R));
-            assume p4[i] == (p3[i] * mqpow(PSI_INV, i) * N_INV) % Q;
+
+            var t0 := (mqpow(PSI_INV, i) * N_INV) % Q;
+            var t1 := (t0 * R) % Q;
+            assert p4[i] == (p3[i] * t1 * R_INV) % Q;
+
+            gbassert IsModEquivalent(p4[i], p3[i] * mqpow(PSI_INV, i) * N_INV, Q) by {
+                assert IsModEquivalent(R * R_INV, 1, Q) by {
+                    Nth_root_lemma();
+                }
+                assert IsModEquivalent(t0, mqpow(PSI_INV, i) * N_INV, Q);
+                assert IsModEquivalent(t1, t0 * R, Q);
+                assert IsModEquivalent(p4[i], p3[i] * t1 * R_INV, Q);
+            }
         }
 
         assert p4 == negatively_wrapped_convolution(a0, b0);

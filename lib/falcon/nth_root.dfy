@@ -13,9 +13,6 @@ module nth_root {
     import opened ntt_index
 	import opened poly_view
 
-	function method {:axiom} montmul(a: elem, b: elem): (c: elem)
-		ensures c == (a * b * R_INV) % Q
-
 	lemma primitive_root_non_zero_lemma(i: nat)
 		requires i < N.full * 2;
 		ensures mqpow(PSI, i) != 0;
