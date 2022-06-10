@@ -59,6 +59,8 @@ module ntt_512_params refines ntt_params {
 		assume Pow(PSI, N.full) % Q == Q - 1;
 		assume (PSI * PSI_INV) % Q == 1;
 
+		assume IsModEquivalent(Pow(PSI, 2), OMEGA, Q);
+
 		assume Pow(OMEGA, N.full) % Q == 1;
 		assume Pow(OMEGA_INV, pow2_half(N).full) % Q == Q - 1;
 		assume (OMEGA * OMEGA_INV) % Q == 1;
