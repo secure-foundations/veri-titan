@@ -96,6 +96,9 @@ method printIns32(ins:ins32)
 
         case BN_NOP =>
             print("nop\n");
+
+        case UNIMP =>
+            print ("unimp\n");
         
 
 }

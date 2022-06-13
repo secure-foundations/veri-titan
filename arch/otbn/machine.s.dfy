@@ -100,6 +100,7 @@ module ot_machine {
         | CSRRS(grd: reg32_t, csr: uint12, grs1: reg32_t)
         | ECALL
         | NOP
+        | UNIMP
 
     datatype ins256 =
         | BN_ADD(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
@@ -790,6 +791,7 @@ predicate method while_overlap(c:code)
                 case LI(xrd, imm32) => eval_LI(xrd, imm32)
                 case ECALL => this
                 case NOP => this
+                case UNIMP => this
         }
 
         function method eval_ins256(wins: ins256): state
