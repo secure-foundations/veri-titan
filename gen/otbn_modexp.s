@@ -111,8 +111,7 @@ modexp_var_3072_f4:
      error (WDR reference > 31) to end the program. */
   li x2, 232
   beq x2, x5, label_1
-  li x2, 255
-  bn.sid x0, 0(x2)
+  unimp
   label_1:
   ret
 

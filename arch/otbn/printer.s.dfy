@@ -94,11 +94,11 @@ method printIns32(ins:ins32)
         case ECALL => 
             print ("ecall ");
 
+        case UNIMP =>
+            print("unimp\n");
+
         case BN_NOP =>
             print("nop\n");
-
-        case UNIMP =>
-            print ("unimp\n");
         
 
 }
