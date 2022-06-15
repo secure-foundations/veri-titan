@@ -62,14 +62,6 @@ procedure p2_double(inout dst: reg32, ghost p: pow2_t)
     ls1_is_double(old(dst));
 }
 
-// procedure double(inout dst: reg32)
-//     requires dst < BASE_31;
-//     ensures dst == old(dst) * 2;
-// {
-//     slli(dst, dst, 1);
-//     ls1_is_double(old(dst));
-// }
-
 function montmul(a: nat, b: nat): uint32 extern;
 function mqmul(a: nat, b: nat): uint32 extern;
 function mqsub(a: nat, b: nat): uint32 extern;

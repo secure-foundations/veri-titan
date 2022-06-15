@@ -84,6 +84,7 @@ procedure montymul(ghost x: nat, ghost y: nat) returns (ghost r: uint32)
     add(a5, a5, a4);
     ghost var w := a5;
     lemma_12289(v, v3, w);
+    assert w == 12289 * v;
 
     add(a5, a5, a3);
     assert a5 == w + xy; 

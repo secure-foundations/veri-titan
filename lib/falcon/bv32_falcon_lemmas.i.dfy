@@ -942,7 +942,7 @@ module bv32_falcon_lemmas {
         ensures ab3 == 3 * a * b;
         ensures ab3 == 3 * ab;
         ensures ab == a * b;
-        ensures ab < Q * Q;
+        ensures ab <= (Q-1) * (Q-1);
     {
 
       reveal dw_lh();
@@ -963,6 +963,7 @@ module bv32_falcon_lemmas {
       requires xy3 as nat == 3 * x * y;
       requires Q0Ixy == uint32_sub(uint32_ls(xy3, 12), xy);
       ensures IsModEquivalent(Q0Ixy, 12287 * x * y, BASE_32);
+      ensures IsModEquivalent(12287 * x * y, 12287 * xy, BASE_32);
     {
       var sh := uint32_ls(xy3, 12);
       assert sh == (xy3 * Power2.Pow2(12)) % BASE_32 by { ls_is_mul_mod_base(xy3, 12); }
@@ -976,17 +977,22 @@ module bv32_falcon_lemmas {
         assert IsModEquivalent(sh_int, xy3 * 4096, BASE_32) by { Power2.Lemma2To64(); }
         assert IsModEquivalent(Q0Ixy, sh_int - xy_int, BASE_32);
       }
+
+      gbassert IsModEquivalent(12287 * x * y, 12287 * xy_int, BASE_32) by {
+        assert xy_int == x * y;
+      }
     }
 
-    lemma lemma_shiftadd3(x: uint32, v: uint32, v3: nat)
-        requires v == uint32_rs(uint32_ls(x, 16), 16); // < BASE_16 - 1
-        requires v3 == uint32_add(uint32_ls(v, 1), v); // < 3 * (BASE_16 - 1)
+    lemma lemma_shiftadd3(Q0Ixy:uint32, v: uint32, v3: nat)
+        requires v == uint32_rs(uint32_ls(Q0Ixy, 16), 16);
+        requires v3 == uint32_add(uint32_ls(v, 1), v);
+        ensures v == (Q0Ixy) % BASE_16;
+        //ensures IsModEquivalent(v, Q0Ixy, BASE_16);
         ensures v < BASE_16; 
         ensures v3 == 3 * v;
-        //ensures IsModEquivalent(v, x, BASE_16);
     {
-      var lsx := uint32_ls(x, 16);
-      assert lsx == (x * Power2.Pow2(16)) % BASE_32 by { ls_is_mul_mod_base(x, 16); }
+      var lsx := uint32_ls(Q0Ixy, 16);
+      assert lsx == (Q0Ixy * Power2.Pow2(16)) % BASE_32 by { ls_is_mul_mod_base(Q0Ixy, 16); }
       
       assert v == (lsx / Power2.Pow2(16)) % BASE_32 by { rs_is_div_mod_base(lsx, 16); }
       assert v < BASE_32;
@@ -995,13 +1001,15 @@ module bv32_falcon_lemmas {
         DivMod.LemmaDivPosIsPos(lsx, Power2.Pow2(16));
         DivMod.LemmaSmallMod((lsx / Power2.Pow2(16)), BASE_32);
       }
-
+      var rslsx := uint32_rs(lsx, 16);
+ 
       assert v < BASE_16 by {
         Power2.Lemma2To64();
         DivMod.LemmaDivIsOrdered(lsx, BASE_32, BASE_16);
       }
 
       assert v3 == v * 3 by { ls1_is_double(v); }
+      assume v == (Q0Ixy) % BASE_16;
     }
 
     lemma lemma_12289(v: uint32, v3: uint32, w: uint32)
@@ -1085,12 +1093,14 @@ module bv32_falcon_lemmas {
        requires y < Q;
        requires xy == x * y;
        requires v == (12287 * x * y) % BASE_16;
+       //requires IsModEquivalent(v, 12287 * x * y, BASE_16);
+       requires v < BASE_16;
        requires w == Q * v;
        requires w as nat + xy as nat < BASE_32;
        requires z == uint32_rs(w + xy, 16);
        requires z < 2 * Q;
        requires rr == z % Q;
-       ensures IsModEquivalent(rr * 4091, x * y, Q); // WTS: rr == x*y/4091 mod Q
+       ensures IsModEquivalent(rr * 4091, x * y, Q);
      {
         gbassert IsModEquivalent(w + xy, 0, BASE_16) by {
             assert IsModEquivalent(v, 12287 * x * y, BASE_16);
