@@ -32,7 +32,7 @@ function lemma_shiftadd3(x: uint32, v: uint32, v3: nat) : void extern;
 function lemma_12289(v: uint32, v3: uint32, w: uint32) : void extern;
 function lemma_zw_shift(w: uint32, xy: uint32, z:uint32) : void extern;
 function lemma_cond_add_Q(z: uint32, d: uint32, b: uint32, c: uint32, r: uint32) : void extern;
-function lemma_montymul_correct(x: nat, y: nat, xy: uint32, v: nat, w: uint32, z: uint32, r: uint32) : void extern;
+function lemma_montymul_correct(x: nat, y: nat, xy: uint32, Q0Ixy: nat, v: nat, w: uint32, z: uint32, r: uint32) : void extern;
     
 function IsModEquivalent(x: int, y: int, m: int) : void extern;
 
@@ -103,7 +103,7 @@ procedure montymul(ghost x: nat, ghost y: nat) returns (ghost r: uint32)
     r := a3;
     lemma_cond_add_Q(z, d, b, c, r);
 
-    lemma_montymul_correct(x, y, xy, v, w, z, r);
+    lemma_montymul_correct(x, y, xy, Q0Ixy, v, w, z, r);
     
  }
         
