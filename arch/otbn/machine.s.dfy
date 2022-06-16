@@ -791,7 +791,7 @@ predicate method while_overlap(c:code)
                 case LI(xrd, imm32) => eval_LI(xrd, imm32)
                 case ECALL => this
                 case NOP => this
-                case UNIMP => this
+                case UNIMP => this.(ok:=false)
         }
 
         function method eval_ins256(wins: ins256): state
