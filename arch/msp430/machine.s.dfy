@@ -37,6 +37,10 @@ module msp_machine {
         flags_cons(msb(value), if value == 0 then 1 else 0, carry)
     }
 
+    function method get_cf(f:flags_t) : uint1 {
+      f.cf
+    }
+
     function method msp_add(x: uint16, y: uint16): (uint16, flags_t)
     {
         var (z, c) := addc(x, y, 0);

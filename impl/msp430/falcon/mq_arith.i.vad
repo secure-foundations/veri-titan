@@ -18,7 +18,8 @@ import opened integers
 
 #endverbatim
 
-
+function mq_sub(a: nat, b: nat): uint32 extern;
+function mq_add(a: nat, b: nat): uint32 extern;
 
 function mul_add_lemma(xs: seq(uint16), ys: seq(uint16),
     carry: nat, a: uint16, b: uint16): uint32_view_t extern;
@@ -42,7 +43,7 @@ procedure mq_add()
       flags; r; tmp;
     
     ensures
-      r == mqadd(old(x), old(y));
+      r == mq_add(old(x), old(y));
 {
     assert to_int32(negQ) == (-Q);
 
@@ -54,8 +55,8 @@ procedure mq_add()
     mov_w(tmp, r);     // r <- tmp
     rla_w(r);          // carry <- MSB of r
     let carry := flags.cf;
-    clr(r);            // r <- 0
-    subc(r, r);        // r <- 0 - carry;  r == if carry then 0xFFFF else 0
+    clr_w(r);          // r <- 0
+    subc_w(r, r);      // r <- 0 - carry;  r == if carry then 0xFFFF else 0
 
     and_w(Q, r);       // r <- Q & mask
     add_w(tmp, r);     // r <- (Q & mask) + y - Q + x
@@ -79,7 +80,7 @@ procedure mq_sub()
       flags; r; tmp;
     
     ensures
-      r == mqsub(old(x), old(y));
+      r == mq_sub(old(x), old(y));
 {
     assert to_int32(negQ) == (-Q);
     
