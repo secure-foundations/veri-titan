@@ -122,6 +122,8 @@ procedure mq_sub()
 
 function IsModEquivalent(x: int, y: int, m: int) : void extern;
 
+function lemma_cond_add_Q(flags: flags_t, mask: uint16, r: uint16, input: int) : void extern;
+function lemma_montymul_correct(x: nat, y: nat, xy: uint32, Q0Ixy: nat, v: nat, w: uint32, z: uint32, r: uint32) : void extern;
 
 procedure montymul()
     lets 
@@ -171,6 +173,7 @@ procedure montymul()
 
     // Now we ignore the lower-half (b/c the C code uses a >> 16)
     sub_w(Q, y);       // y -= Q
+    let f := flags;
 
     // If we went negative, create a mask of 0xFFFF.  Else, use 0.
     clr_w(r);          // r <- 0
@@ -178,9 +181,11 @@ procedure montymul()
     let mask := r;
     
     and_w(Q, r);       // r <- Q & mask
+    let applied_mask := r;
+    assert applied_mask == uint16_and(12289, mask);
     add_w(y, r);       // r <- (Q & mask) + y
 
-//    lemma_cond_add_Q(z, d, b, c, r);
+    lemma_cond_add_Q(f, mask, r, y);
 //    lemma_montymul_correct(x, y, xy, Q0Ixy, v, w, z, r);
  }
 

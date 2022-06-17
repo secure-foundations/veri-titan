@@ -76,69 +76,85 @@ module mq_arith_lemmas {
       }
     }
 
+    lemma lemma_cond_add_Q(flags: flags_t, mask: uint16, r: uint16, input: uint16)
+        requires mask == msp_sub(0, if get_cf(flags) == 1 then 1 else 0).0;
+        requires var (s, _) := msp_subc(0, 0, flags);
+                 mask == s;
+        requires r == msp_add(input, uint16_and(12289, mask)).0;
+        ensures r == input + if get_cf(flags) == 1 then Q else 0;
+    {
+      assume false;
+    }
+
+
+//    lemma lemma_cond_add_Q(
+//        z: uint16, d: uint16, b: uint16, c: uint16, r: uint16)
+//         requires z < 2 * Q;
+//         requires d == msp_sub(z, Q);
+//         requires b == to_msp(int32_rs(to_int32(d), 31));
+//         requires c == msp_and(b, Q);
+//         requires r == msp_add(c, d);
+//         ensures r < Q;
+//         ensures r == z % Q;
+//     {
+//
+//      if to_int32(d) >= 0 {
+//        assert int32_rs(to_int32(d), 31) == 0 by { lemma_rs_by_31(to_int32(d)); }
+//        assert uint16_and(0, Q) == 0 by { lemma_and_with_constants(Q); }
+//        assert IsModEquivalent(r, z, Q);
+//      }
+//      else {
+//        assert int32_rs(to_int32(d), 31) == -1 by { lemma_rs_by_31(to_int32(d)); }
+//        assert uint16_and(b, Q) == Q by { lemma_and_with_constants(Q); }
+//        assert IsModEquivalent(r, z, Q);
+//      }
+//     }
 /*
-    lemma lemma_positive_rs(x: uint32, shift: nat)
-      requires x >= 0;
-      requires x < BASE_31;
-      ensures to_uint32(int32_rs(x, shift)) == int32_rs(x, shift)
-    {
-      assert to_int32(x) == x;
-      assert int32_rs(to_int32(x), shift) >= 0 by { DivMod.LemmaDivBasicsAuto(); }
-    }
-
-    lemma lemma_mq_rshift1_correct(par: uint32, b: uint32, c: uint32, d: uint32, r: uint32, x: int)
-        requires 0 <= x < 12289;
-        requires par == uint32_and(x, 1);
-        requires b == uint32_sub(0, par);
-        requires c == uint32_and(b, 12289);
-        requires d == uint32_add(x, c);
-        requires r == to_uint32(int32_rs(to_int32(d), 1));
-
-        //ensures r == (x / 2) % 12289;
-        ensures IsModEquivalent(2 * r, x, 12289);
-        ensures r < 12289;
-    {
-        var Q : int := 12289;
-        assert par == 0 || par == 1 by { reveal_and(); }
- 
-        if par == 0 {
-            assert b == 0;
-            assert c == 0 by { reveal_and(); }
-            assert x % 2 == 0 by { reveal_and(); }
-            assert d == x;
-            
-            assert 0 <= to_int32(d) < Q;
-            assert r == int32_rs(to_int32(d), 1) by { lemma_positive_rs(x, 1); }
-    
-            assert r == d / Power2.Pow2(1);
-            assert r == d / 2 by { Power2.Lemma2To64(); }
-    
-            assert IsModEquivalent(r, x / 2, Q);
-            
-        } else {
-            assert b == 0xffff_ffff;
-            assert c == Q by { reveal_and(); }
-            assert d == uint32_add(x, Q);
-            assert d == x + Q;
-
-            assert 0 <= to_int32(d) <= x + Q;
-            assert r == int32_rs(to_int32(d), 1) by { lemma_positive_rs(x + Q, 1); }
-    
-            assert IsModEquivalent(d, x, Q);
-    
-            assert r == d / Power2.Pow2(1);
-            assert r == d / 2 by { Power2.Lemma2To64(); }
-    
-            assert r == (x + Q) / 2;
-            
-            //  assert x % 2 == 1 by { reveal_and(); }
-            assume x % 2 == 1;
-            assert Q % 2 == 1;
-            assert (x + Q) % 2 == 0 by { DivMod.LemmaModAdds(x, Q, 2); }
-    
-            assert r == (x + Q) / 2;
-            assert IsModEquivalent(2 * r, x + Q, Q);
+     lemma lemma_montymul_correct(x: nat, y: nat, xy: uint16, Q0Ixy:nat, v: nat, w: uint16, z: uint16, rr: uint16)
+       requires x < Q;
+       requires y < Q;
+       requires xy == x * y;
+       requires IsModEquivalent(Q0Ixy, 12287 * x * y, BASE_32);
+       requires IsModEquivalent(v, Q0Ixy, BASE_16);
+       requires v < BASE_16;
+       requires w == Q * v;
+       requires w as nat + xy as nat < BASE_32;
+       requires z == uint32_rs(w + xy, 16);
+       requires z < 2 * Q;
+       requires rr == z % Q;
+       ensures IsModEquivalent(rr * 4091, x * y, Q);
+     {
+        gbassert IsModEquivalent(v, 12287 * x * y, BASE_16) by {
+          assert IsModEquivalent(Q0Ixy, 12287 * x * y, BASE_32);
+          assert IsModEquivalent(v, Q0Ixy, BASE_16);
+          assert BASE_16 == 65536;
+          assert BASE_32 == 0x1_0000_0000;
         }
-    }
+
+        gbassert IsModEquivalent(w + xy, 0, BASE_16) by {
+            assert IsModEquivalent(v, 12287 * x * y, BASE_16);
+            assert Q == 12289;
+            assert BASE_16 == 65536;
+            assert w == Q * v;
+            assert xy == x * y;
+        }
+
+        DivMod.LemmaFundamentalDivMod(w + xy, BASE_16);
+        rs_is_div_mod_base(w + xy, 16);
+        Power2.Lemma2To64();
+        assert z * BASE_16 == w + xy;
+
+       gbassert IsModEquivalent(rr * 4091, x * y, Q) by {
+         assert IsModEquivalent(v, 12287 * x * y, BASE_16);
+         assert Q == 12289;
+         assert BASE_16 == 65536;
+         assert IsModEquivalent(4091, BASE_16, Q);
+         assert w == Q * v;
+         assert xy == x * y;
+         assert z * BASE_16 == (w + xy);
+         assert IsModEquivalent(w + xy, 0, BASE_16);
+         assert IsModEquivalent(rr, z, Q);
+       }
+     }
 */
 }
