@@ -4,6 +4,8 @@ include "../../../arch/msp430/decls.i.vad"
 
 include "../../../arch/msp430/decls.i.dfy"
 include "../../../../lib/bv16_mm_lemmas.i.dfy"
+include "../../../../lib/falcon/mq_polys.dfy"
+include "../../../../lib/falcon/msp430/mq_arith_lemmas.dfy"
 
 module mul {
 
@@ -15,14 +17,18 @@ import opened stack
 import opened bv16_mm_lemmas
 import opened bv16_ops
 import opened integers
+import opened mq_polys
+import opened mq_arith_lemmas
 
 #endverbatim
 
-function mq_sub(a: nat, b: nat): uint32 extern;
-function mq_add(a: nat, b: nat): uint32 extern;
+function mqsub(a: nat, b: nat): uint32 extern;
+function mqadd(a: nat, b: nat): uint32 extern;
 
-function mul_add_lemma(xs: seq(uint16), ys: seq(uint16),
-    carry: nat, a: uint16, b: uint16): uint32_view_t extern;
+function lemma_mq_add_correct(sum: uint16, mask: uint16, r: uint16, x: uint16, y: uint16) : void extern;
+function lemma_mq_sub_correct(diff: uint16, flags: flags_t, mask: uint16, r: uint16, x: uint16, y: uint16) : void extern;
+
+
 
 procedure mq_add() 
     lets 
@@ -38,18 +44,22 @@ procedure mq_add()
       negQ == 0xcfff;
       x < 12289;
       y < 12289;
+    
+    reads
+      Q; negQ; x; y;
 
     modifies
       flags; r; tmp;
     
     ensures
-      r == mq_add(old(x), old(y));
+      r == mqadd(old(x), old(y));
 {
-    assert to_int32(negQ) == (-Q);
+    //assert to_int32(negQ) == (-Q);
 
     mov_w(y, tmp);    // tmp <- y
     add_w(negQ, tmp); // tmp <- y - Q
     add_w(x, tmp);    // tmp <- y - Q + x
+    let sum := tmp;
 
     // If we're still negative, create a mask of 0xFFFF.  Else, use 0.
     mov_w(tmp, r);     // r <- tmp
@@ -57,9 +67,12 @@ procedure mq_add()
     let carry := flags.cf;
     clr_w(r);          // r <- 0
     subc_w(r, r);      // r <- 0 - carry;  r == if carry then 0xFFFF else 0
+    let mask := r;
 
     and_w(Q, r);       // r <- Q & mask
     add_w(tmp, r);     // r <- (Q & mask) + y - Q + x
+
+    lemma_mq_add_correct(sum, mask, r, x, y);
 }
 
 
@@ -76,27 +89,34 @@ procedure mq_sub()
       x < 12289;
       y < 12289;
 
+    reads
+      Q; x; y;
+
     modifies
       flags; r; tmp;
     
     ensures
-      r == mq_sub(old(x), old(y));
+      r == mqsub(old(x), old(y));
 {
-    assert to_int32(negQ) == (-Q);
+    //assert to_int32(negQ) == (-Q);
     
-    clr(r);               // r <- 0
-    add_w_imm(0xFFFF, r); // r <- 0xFFFF
+    mov_w_imm(0-1, r); // r <- 0xFFFF
 
     mov_w(x, tmp);    // tmp <- x
-    sub_w(tmp, y);    // tmp <- x - y
+    sub_w(y, tmp);    // tmp <- x - y
+    let diff := tmp;
+    let diff_flags := flags;
     
     let carry := flags.cf;  // carry == 0 if we went negative, else carry == 1
 
     // If we went negative, create a mask of 0xFFFF.  Else, use 0.
     adc_w(r);         // r <- 0xFFFF + carry;  r == if carry then 0 else 0xFFFF
+    let mask := r;
     
     and_w(Q, r);       // r <- Q & mask
     add_w(tmp, r);     // r <- (Q & mask) + x - y 
+
+    lemma_mq_sub_correct(diff, flags, mask, r, x, y);
 }
 
 

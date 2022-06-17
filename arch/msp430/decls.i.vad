@@ -308,7 +308,7 @@ procedure mov_w(in rs: reg, inout rd: reg)
     assume false;
 }
 
-procedure mov_w_imm(inline i: uint8, inout rd: reg)
+procedure mov_w_imm(inline i: int16, inout rd: reg)
     {:instruction Ins(MSP_MOV_W(Imm(i), Reg(rd)))}
     ensures
         rd == i;
@@ -454,14 +454,14 @@ procedure addc_w(in rs: reg, inout rd: reg)
     assume false;
 }
 
-function msp_and(x: uint16, y: uint16): uint16 extern;
+function uint16_and(x: uint16, y: uint16): uint16 extern;
 
 procedure and_w(in rs: reg, inout rd: reg)
     {:instruction Ins(MSP_AND_W(Reg(rs), Reg(rd)))}
     modifies
         flags;
     ensures 
-        rd == msp_and(old(rs), old(rd));
+        rd == uint16_and(old(rs), old(rd));
 {
     assume false;
 }
@@ -501,7 +501,7 @@ procedure rla_w(inout rd: reg)
     modifies 
         flags;
     ensures 
-        get_cf(flags) == (if old(rd) >= 0x8FFFFFFF then 1 else 0);
+        get_cf(flags) == (if old(rd) >= 0x8000 then 1 else 0);
 {
     assume false;
 }
