@@ -12,7 +12,6 @@ module mq_arith_lemmas {
     import opened Power2
     import opened DivMod
     import opened Mul
-    //import opened DivModNeg
     import opened integers
     import opened bv16_ops
     import opened msp_machine
@@ -31,26 +30,23 @@ module mq_arith_lemmas {
         ensures r == mqadd(x, y);
     {
       assert Q == 12289;
-      assume false;
 
-//      // d == x + y - Q
-//      assert IsModEquivalent(d, x + y - Q, BASE_32);
-//
-//      // -Q <= d < Q
-//      assert 0 <= x + y < 2*Q;
-//      assert (-(Q as int)) <= x + y - Q < Q;
-//      assert (-(Q as int)) <= to_int32(d) < Q;
-//
-//      if to_int32(d) >= 0 {
-//        assert int32_rs(to_int32(d), 31) == 0 by { lemma_rs_by_31(to_int32(d)); }
-//        assert msp_and(0, Q) == 0 by { reveal_and(); }
-//        assert IsModEquivalent(r, x + y, Q);
-//      }
-//      else {
-//        assert int32_rs(to_int32(d), 31) == -1 by { lemma_rs_by_31(to_int32(d)); }
-//        assert msp_and(b, Q) == Q by { reveal_and(); }
-//        assert IsModEquivalent(r, x + y, Q);
-//      }
+      // d == x + y - Q
+      assert IsModEquivalent(sum, x + y - Q, BASE_16);
+
+      // -Q <= d < Q
+      assert 0 <= x + y < 2*Q;
+      assert (-(Q as int)) <= x + y - Q < Q;
+
+      if sum >= 0x8000 {
+        assert mask == 0xFFFF;
+        assert uint16_and(Q, 0xFFFF) == Q by { reveal_and(); }
+        assert IsModEquivalent(r, x + y, Q);
+      } else {
+        assert mask == 0;
+        assert uint16_and(Q, 0) == 0 by { reveal_and(); }
+        assert IsModEquivalent(r, x + y, Q);
+      }
 
     } 
 
@@ -59,29 +55,25 @@ module mq_arith_lemmas {
         requires 0 <= y < 12289;
         requires var (d, f) := msp_sub(x, y);
                  diff == d && flags == f;
-        requires var (s, _) := msp_addc(0, 0xFFFF, flags);
+        requires mask == msp_sub(0, if x - y >= 0 then 0 else 1).0;
+        requires var (s, _) := msp_subc(0, 0xFFFF, flags);
                  mask == s;
         requires r == msp_add(diff, uint16_and(12289, mask)).0;
         ensures r == mqsub(x, y);
     {
-      /*
       var Q : int := 12289;
       
-      assert IsModEquivalent(d, x - y, BASE_32);
-      assert -Q <= to_int32(d) < 2 * Q;
+      assert IsModEquivalent(diff, x - y, BASE_16);
       
-      if to_int32(d) >= 0 {
-        assert int32_rs(to_int32(d), 31) == 0 by { lemma_rs_by_31(to_int32(d)); }
-        assert msp_and(b, Q) == 0 by { reveal_and(); }
+      if get_cf(flags) == 0 {
+        assert mask == 0xFFFF;
+        assert uint16_and(Q, 0xFFFF) == Q by { reveal_and(); }
+        assert IsModEquivalent(r, x - y, Q);
+      } else {
+        assert mask == 0;
+        assert uint16_and(Q, 0) == 0 by { reveal_and(); }
         assert IsModEquivalent(r, x - y, Q);
       }
-      else {
-        assert int32_rs(to_int32(d), 31) == -1 by { lemma_rs_by_31(to_int32(d)); }
-        assert msp_and(b, Q) == Q by { reveal_and(); }
-        assert IsModEquivalent(r, x - y, Q);
-      }
-      */
-      assume false;
     }
 
 /*
