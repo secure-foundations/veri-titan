@@ -169,7 +169,10 @@ procedure montymul()
     mov_w(Q, y);                // y <- Q
     // sum.full == old(r13) * old(r12) + old(r14);
     let sum := mula16();  // x, y <- Q * Q0Ixy + lh(x*y)
+    let partial_lh := x;
+    let partial_uh := y;
     add_w(tmp, y);              // y += xy_uh, so x, y == Q * Q0Ixy + x*y
+    let partial_uh_xy_uh := y;
 
     // Now we ignore the lower-half (b/c the C code uses a >> 16)
     sub_w(Q, y);       // y -= Q
@@ -186,6 +189,7 @@ procedure montymul()
     add_w(y, r);       // r <- (Q & mask) + y
 
     lemma_cond_add_Q(f, mask, r, y);
+    lemma_montymul_correct(old(x), old(y), xy_lh, xy_uh, Q0Ixy, sum, partial_lh, partial_uh, partial_uh_xy_uh, r, f);
 //    lemma_montymul_correct(x, y, xy, Q0Ixy, v, w, z, r);
  }
 

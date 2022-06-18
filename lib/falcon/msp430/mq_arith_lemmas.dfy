@@ -109,13 +109,21 @@ module mq_arith_lemmas {
 //        assert IsModEquivalent(r, z, Q);
 //      }
 //     }
-/*
-     lemma lemma_montymul_correct(x: nat, y: nat, xy: uint16, Q0Ixy:nat, v: nat, w: uint16, z: uint16, rr: uint16)
+
+     lemma lemma_montymul_correct(x: nat, y: nat, xy_lh: uint16, xy_uh: uint16, Q0Ixy:nat, sum: uint32_view_t, partial_lh: uint16, partial_uh: uint16, z:uint16, m: uint16, flags: flags_t)
        requires x < Q;
        requires y < Q;
-       requires xy == x * y;
-       requires IsModEquivalent(Q0Ixy, 12287 * x * y, BASE_32);
-       requires IsModEquivalent(v, Q0Ixy, BASE_16);
+       requires to_nat([xy_lh, xy_uh]) == x * y;
+       requires Q0Ixy == mul(xy_lh, * 12287);
+       requires valid_uint32_view(sum, partial_lh, partial_uh);
+       requires sum.full == Q * Q0Ixy + xy_lh;
+       requires partial_uh_xy_uh == msp_add(partial_uh, xy_uh);
+       requires m == msp_sub(y, Q).0;
+       requires flags == msp_sub(y, Q).1;
+
+
+       //requires IsModEquivalent(Q0Ixy, 12287 * x * y, BASE_32);
+       //requires IsModEquivalent(v, Q0Ixy, BASE_16);
        requires v < BASE_16;
        requires w == Q * v;
        requires w as nat + xy as nat < BASE_32;
@@ -123,6 +131,7 @@ module mq_arith_lemmas {
        requires z < 2 * Q;
        requires rr == z % Q;
        ensures IsModEquivalent(rr * 4091, x * y, Q);
+/*
      {
         gbassert IsModEquivalent(v, 12287 * x * y, BASE_16) by {
           assert IsModEquivalent(Q0Ixy, 12287 * x * y, BASE_32);
