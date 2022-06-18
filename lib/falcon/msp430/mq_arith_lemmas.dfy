@@ -1,6 +1,7 @@
 include "../../../arch/msp430/machine.s.dfy"
 include "../../../arch/msp430/vale.i.dfy"
 include "../../bv16_ops.dfy"
+include "../../bv16_mm_lemmas.i.dfy"
 include "../mq_polys.dfy"
 
 //include "../DivModNeg.dfy"
@@ -18,6 +19,7 @@ module mq_arith_lemmas {
     import opened msp_vale
     import opened mq_polys
     import opened ntt_512_params
+    import opened bv16_mm_lemmas
     //import opened mem
     //import flat
 
@@ -80,10 +82,17 @@ module mq_arith_lemmas {
         requires mask == msp_sub(0, if get_cf(flags) == 1 then 1 else 0).0;
         requires var (s, _) := msp_subc(0, 0, flags);
                  mask == s;
+        //requires input < BASE_16 - Q;
         requires r == msp_add(input, uint16_and(12289, mask)).0;
-        ensures r == input + if get_cf(flags) == 1 then Q else 0;
+        ensures IsModEquivalent(r, input + if get_cf(flags) == 1 then Q else 0, BASE_16);
     {
-      assume false;
+      if get_cf(flags) == 1 {
+        assert mask == 0xFFFF;
+        assert uint16_and(Q, 0xFFFF) == Q by { reveal_and(); }
+      } else {
+        assert mask == 0;
+        assert uint16_and(Q, 0) == 0 by { reveal_and(); }
+      }
     }
 
 
@@ -110,27 +119,19 @@ module mq_arith_lemmas {
 //      }
 //     }
 
-     lemma lemma_montymul_correct(x: nat, y: nat, xy_lh: uint16, xy_uh: uint16, Q0Ixy:nat, sum: uint32_view_t, partial_lh: uint16, partial_uh: uint16, z:uint16, m: uint16, flags: flags_t)
+     lemma lemma_montymul_correct(x: nat, y: nat, xy_lh: uint16, xy_uh: uint16, Q0Ixy:nat, sum: uint32_view_t, partial_lh: uint16, partial_uh: uint16, partial_uh_xy_uh:uint16, m: uint16, flags: flags_t, r:uint16)
        requires x < Q;
        requires y < Q;
        requires to_nat([xy_lh, xy_uh]) == x * y;
-       requires Q0Ixy == mul(xy_lh, * 12287);
+       requires Q0Ixy == mul(xy_lh, 12287);
        requires valid_uint32_view(sum, partial_lh, partial_uh);
        requires sum.full == Q * Q0Ixy + xy_lh;
-       requires partial_uh_xy_uh == msp_add(partial_uh, xy_uh);
-       requires m == msp_sub(y, Q).0;
-       requires flags == msp_sub(y, Q).1;
-
-
-       //requires IsModEquivalent(Q0Ixy, 12287 * x * y, BASE_32);
-       //requires IsModEquivalent(v, Q0Ixy, BASE_16);
-       requires v < BASE_16;
-       requires w == Q * v;
-       requires w as nat + xy as nat < BASE_32;
-       requires z == uint32_rs(w + xy, 16);
-       requires z < 2 * Q;
-       requires rr == z % Q;
-       ensures IsModEquivalent(rr * 4091, x * y, Q);
+       requires partial_uh_xy_uh == msp_add(partial_uh, xy_uh).0;
+       requires m == msp_sub(partial_uh_xy_uh, Q).0;
+       requires flags == msp_sub(partial_uh_xy_uh, Q).1;
+       requires //r == m + if get_cf(flags) == 1 then Q else 0;
+        IsModEquivalent(r, m + if get_cf(flags) == 1 then Q else 0, BASE_16);
+       ensures IsModEquivalent(r * 4091, x * y, Q);
 /*
      {
         gbassert IsModEquivalent(v, 12287 * x * y, BASE_16) by {
