@@ -15,6 +15,7 @@ module mq_arith_lemmas {
     import opened Mul
     import opened integers
     import opened bv16_ops
+    import opened bv16_seq
     import opened msp_machine
     import opened msp_vale
     import opened mq_polys
@@ -96,30 +97,7 @@ module mq_arith_lemmas {
     }
 
 
-//    lemma lemma_cond_add_Q(
-//        z: uint16, d: uint16, b: uint16, c: uint16, r: uint16)
-//         requires z < 2 * Q;
-//         requires d == msp_sub(z, Q);
-//         requires b == to_msp(int32_rs(to_int32(d), 31));
-//         requires c == msp_and(b, Q);
-//         requires r == msp_add(c, d);
-//         ensures r < Q;
-//         ensures r == z % Q;
-//     {
-//
-//      if to_int32(d) >= 0 {
-//        assert int32_rs(to_int32(d), 31) == 0 by { lemma_rs_by_31(to_int32(d)); }
-//        assert uint16_and(0, Q) == 0 by { lemma_and_with_constants(Q); }
-//        assert IsModEquivalent(r, z, Q);
-//      }
-//      else {
-//        assert int32_rs(to_int32(d), 31) == -1 by { lemma_rs_by_31(to_int32(d)); }
-//        assert uint16_and(b, Q) == Q by { lemma_and_with_constants(Q); }
-//        assert IsModEquivalent(r, z, Q);
-//      }
-//     }
-
-     lemma lemma_montymul_correct(x: nat, y: nat, xy_lh: uint16, xy_uh: uint16, Q0Ixy:nat, sum: uint32_view_t, partial_lh: uint16, partial_uh: uint16, partial_uh_xy_uh:uint16, m: uint16, flags: flags_t, r:uint16)
+    lemma lemma_montymul_correct(x: nat, y: nat, xy_lh: uint16, xy_uh: uint16, Q0Ixy:nat, sum: uint32_view_t, partial_lh: uint16, partial_uh: uint16, partial_uh_xy_uh:uint16, m: uint16, flags: flags_t, rr:uint16)
        requires x < Q;
        requires y < Q;
        requires to_nat([xy_lh, xy_uh]) == x * y;
@@ -129,17 +107,74 @@ module mq_arith_lemmas {
        requires partial_uh_xy_uh == msp_add(partial_uh, xy_uh).0;
        requires m == msp_sub(partial_uh_xy_uh, Q).0;
        requires flags == msp_sub(partial_uh_xy_uh, Q).1;
-       requires //r == m + if get_cf(flags) == 1 then Q else 0;
-        IsModEquivalent(r, m + if get_cf(flags) == 1 then Q else 0, BASE_16);
-       ensures IsModEquivalent(r * 4091, x * y, Q);
-/*
-     {
-        gbassert IsModEquivalent(v, 12287 * x * y, BASE_16) by {
-          assert IsModEquivalent(Q0Ixy, 12287 * x * y, BASE_32);
-          assert IsModEquivalent(v, Q0Ixy, BASE_16);
-          assert BASE_16 == 65536;
-          assert BASE_32 == 0x1_0000_0000;
+       requires IsModEquivalent(rr, m + if get_cf(flags) == 1 then Q else 0, BASE_16);
+       ensures IsModEquivalent(rr * 4091, x * y, Q);
+    {
+        var v := (12287 * x * y) % BASE_16;
+        assert x * y == xy_lh + xy_uh * BASE_16 by { bv16_seq.LemmaSeqLen2([xy_lh, xy_uh]); }
+        assert xy_lh == (x * y) % BASE_16 by { LemmaModMultiplesVanish(xy_uh, xy_lh, BASE_16); }
+        calc {
+          Q0Ixy;
+            { reveal dw_lh(); }
+          (xy_lh * 12287) % BASE_16;
+          (((x * y) % BASE_16) * 12287) % BASE_16;
+            { LemmaMulModNoopGeneral(x*y, 12287, BASE_16); }
+          ((x * y) * 12287) % BASE_16;
+            { LemmaMulIsCommutativeAuto(); LemmaMulIsAssociativeAuto(); }
+          v;
         }
+        assert v == Q0Ixy;
+        var w := Q * v;
+        var xy := x * y;
+        var z := partial_uh_xy_uh;
+
+        // Establish a bound on xy_uh and partial_uh,
+        // so we can show that their sum doesn't overflow
+
+        // Bound xy_uh
+        assert x * y <= (Q-1) * (Q-1) by { LemmaMulUpperBound(x, Q-1, y, Q-1); }
+        assert x * y == BASE_16 * ((x * y)/BASE_16) + (x * y) % BASE_16 by { LemmaFundamentalDivMod(x*y, BASE_16); }
+        assert x * y == BASE_16 * ((x * y)/BASE_16) + xy_lh;
+        assert xy_uh * BASE_16 == BASE_16 * ((x * y)/BASE_16);
+        assert xy_uh == (x * y) / BASE_16;
+        assert (x * y) / BASE_16 <= ((Q-1) * (Q-1))/BASE_16 by { LemmaDivIsOrdered(x*y, (Q-1)*(Q-1), BASE_16); }
+        assert xy_uh <= 2304;
+
+        // Bound partial_uh
+        calc {
+          Q * Q0Ixy + xy_lh;
+          sum.full;
+            { dw_view_lemma(sum); }
+          partial_lh + partial_uh * BASE_16; 
+        }
+        assert Q0Ixy < BASE_16;
+        assert Q*Q0Ixy <= Q*(BASE_16-1) by { LemmaMulUpperBound(Q, Q, Q0Ixy, BASE_16-1); }
+        assert Q*Q0Ixy + xy_lh <= Q*(BASE_16-1) + BASE_16; 
+        assert (Q*Q0Ixy + xy_lh)/BASE_16 <= (Q*(BASE_16-1) + BASE_16) / BASE_16 by { LemmaDivIsOrdered(Q*Q0Ixy + xy_lh, Q*(BASE_16-1) + BASE_16, BASE_16); }
+        assert (partial_lh + partial_uh * BASE_16)/BASE_16 <= (Q*(BASE_16-1) + BASE_16) / BASE_16;
+        assert (partial_lh + partial_uh * BASE_16)/BASE_16 <= 12290;
+        assert partial_uh <= 12290 by { LemmaDivMultiplesVanishFancy(partial_uh, partial_lh, BASE_16); }
+
+        // Bringing the two bounds together:
+        assert partial_uh + xy_uh < BASE_16;
+        assert partial_uh_xy_uh == partial_uh + xy_uh;
+
+        // Connect a 32-bit spec to our 16-bit calculations
+        calc {
+          Q * Q0Ixy + xy;
+          Q * Q0Ixy + xy_lh + xy_uh * BASE_16;
+          sum.full + xy_uh * BASE_16;
+          calc {
+            sum.full;
+              { dw_view_lemma(sum); }
+            partial_lh + partial_uh * BASE_16; 
+          }
+          partial_lh + partial_uh * BASE_16 + xy_uh * BASE_16;
+            { LemmaMulIsDistributiveAuto(); }
+          partial_lh + (partial_uh + xy_uh) * BASE_16; 
+          partial_uh_xy_uh * BASE_16 + partial_lh;
+        }
+        assert partial_uh_xy_uh * BASE_16 + partial_lh == Q * Q0Ixy + xy;
 
         gbassert IsModEquivalent(w + xy, 0, BASE_16) by {
             assert IsModEquivalent(v, 12287 * x * y, BASE_16);
@@ -150,21 +185,22 @@ module mq_arith_lemmas {
         }
 
         DivMod.LemmaFundamentalDivMod(w + xy, BASE_16);
-        rs_is_div_mod_base(w + xy, 16);
+        assert w + xy == BASE_16 * (w+xy) / BASE_16 + (w+xy) % BASE_16;
+        assert w + xy == BASE_16 * (w+xy) / BASE_16; 
         Power2.Lemma2To64();
         assert z * BASE_16 == w + xy;
 
-       gbassert IsModEquivalent(rr * 4091, x * y, Q) by {
-         assert IsModEquivalent(v, 12287 * x * y, BASE_16);
-         assert Q == 12289;
-         assert BASE_16 == 65536;
-         assert IsModEquivalent(4091, BASE_16, Q);
-         assert w == Q * v;
-         assert xy == x * y;
-         assert z * BASE_16 == (w + xy);
-         assert IsModEquivalent(w + xy, 0, BASE_16);
-         assert IsModEquivalent(rr, z, Q);
-       }
+        gbassert IsModEquivalent(rr * 4091, x * y, Q) by {
+          assert IsModEquivalent(v, 12287 * x * y, BASE_16);
+          assert Q == 12289;
+          assert BASE_16 == 65536;
+          assert IsModEquivalent(4091, BASE_16, Q);
+          assert w == Q * v;
+          assert xy == x * y;
+          assert z * BASE_16 == (w + xy);
+          assert IsModEquivalent(w + xy, 0, BASE_16);
+          assert IsModEquivalent(rr, z, Q);
+        }
+
      }
-*/
 }
