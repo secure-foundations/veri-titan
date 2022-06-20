@@ -125,6 +125,7 @@ function operator(.index) (iter :iter_t): int extern;
 function operator(.index := ) (iter: iter_t, i :int): iter_t extern;
 function operator(.buff) (iter :iter_t): seq(uint16) extern;
 function operator(.buff := ) (iter :iter_t, buff: seq(uint16)): iter_t extern;
+function cur_ptr(iter :iter_t): nat extern;
 
 type flags_t: Type(0) extern;
 var flags: flags_t {:state flags()};
