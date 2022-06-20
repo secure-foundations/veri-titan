@@ -21,8 +21,8 @@ module mq_arith_lemmas {
     import opened mq_polys
     import opened ntt_512_params
     import opened bv16_mm_lemmas
-    //import opened mem
-    //import flat
+    import opened mem
+    import flat
 
     lemma lemma_mq_add_correct(sum: uint16, mask: uint16, r: uint16, x: uint16, y: uint16)
         requires 0 <= x < 12289;
@@ -202,5 +202,50 @@ module mq_arith_lemmas {
           assert IsModEquivalent(rr, z, Q);
         }
 
-     }
+    }
+
+    predicate {:opaque} buff_is_nsized(a: seq<nat>)
+        ensures buff_is_nsized(a) ==> |a| == N.full;
+    {
+        && (|a| == N.full)
+        && (forall i | 0 <= i < N.full :: a[i] < Q)
+    }
+
+    predicate fvar_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int)
+    {
+        && b16_iter_inv(heap, iter) //, if address >= 0 then address else iter.cur_ptr())
+        && (index >= 0 ==> iter.index == index)
+        && |iter.buff| == N.full
+        && buff_is_nsized(iter.buff)
+    }
+
+    function {:opaque} buff_as_nsized(a: seq<uint16>): (a': n_sized)
+        requires buff_is_nsized(a);
+        ensures a == a';
+    {
+        reveal buff_is_nsized();
+        a
+    }
+
+    predicate poly_sub_loop_inv(f_new: seq<uint16>, f: seq<uint16>, g: seq<uint16>, i: nat)
+    {
+        reveal buff_is_nsized();
+        && buff_is_nsized(f_new)
+        && buff_is_nsized(f)
+        && buff_is_nsized(g)
+        && 0 <= i <= N.full
+        && f_new[i..] == f[i..]
+        && (forall j :: 0 <= j < i ==> f_new[j] == mqsub(f[j], g[j]))
+    }
+    
+    lemma poly_sub_loop_correct(f_new: seq<uint16>, f_old: seq<uint16>, f_orig:seq<uint16>, g: seq<uint16>, i: nat)
+      requires i < N.full;
+      requires poly_sub_loop_inv(f_old, f_orig, g, i)
+      requires f_new == f_old[i := mqsub(f_orig[i], g[i])];
+      ensures poly_sub_loop_inv(f_new, f_orig, g, i+1);
+    {
+      assert |f_new| == |f_old|;
+      assert (forall j | 0 <= j < |f_new| :: j != i
+        ==> f_new[j] == f_old[j] && j == i ==> f_new[j] == mqsub(f_orig[j], g[j]));
+    }
 }

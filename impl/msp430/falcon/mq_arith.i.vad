@@ -84,7 +84,7 @@ procedure mq_sub()
       x    @= r11;
       y    @= r12;
       r    @= r13;
-      tmp @= r14;
+      tmp  @= r14;
     
     requires
       Q == 12289;
