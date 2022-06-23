@@ -139,7 +139,6 @@ procedure montymul()
         y < 12289;
         r15 == 0;
         in_stack_addr_range(sp - 2);
-        in_stack_addr_range(sp - 4);
     reads
         Q;
     modifies
