@@ -4,6 +4,7 @@ include "../../../arch/otbn/decls.i.vad"
 
 include "../../../arch/otbn/decls.i.dfy"
 include "../../../../lib/bv256_ntt_lemmas.i.dfy"
+include "../../../../lib/falcon/otbn_lemmas.i.dfy"
 
 module mq_arith {
 
@@ -15,6 +16,7 @@ import opened ot_vale
 import opened integers
 import opened bv256_ops
 import opened bv256_ntt_lemmas
+import opened otbn_lemmas
 
 #endverbatim
     
