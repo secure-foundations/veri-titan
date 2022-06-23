@@ -417,6 +417,16 @@ procedure nop()
     this := this.(mem := old(this).mem);
 }
 
+procedure unimp()
+    {:instruction Ins32(UNIMP)}
+    requires
+        false;
+{
+    reveal eval_code_opaque;
+    reveal valid_state_opaque;
+    this := this.(mem := old(this).mem);
+}
+
 procedure bn_add(inout dst: reg256, in src1: reg256, in src2: reg256, inline shift: shift_t, inline which_group: uint1)
     {:instruction Ins256(BN_ADD(dst, src1, src2, shift, which_group))}
     modifies
