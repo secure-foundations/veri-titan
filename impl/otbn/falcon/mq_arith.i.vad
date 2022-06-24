@@ -14,15 +14,18 @@ import opened ot_decls
 import opened ot_vale
 
 import opened integers
-import opened bv256_ops
+//import opened bv256_ops
 import opened bv256_ntt_lemmas
 import opened otbn_lemmas
+import opened DivMod
 
 #endverbatim
     
 function mod(a: int, n: int): int extern;
 ghost procedure addm_correct_lemma(ghost x: uint256, ghost y: uint256, ghost mod: uint256) extern;
 ghost procedure subm_correct_lemma(ghost x: uint256, ghost y: uint256, ghost mod: uint256) extern;
+ghost procedure xor_clear_lemma(ghost x: uint256) extern;
+function SFT(left: bool, bytes: uint5) : shift_t extern;
     
 procedure mq_add(inout dst: reg256, in src1: reg256, in src2: reg256)
     requires
@@ -57,6 +60,52 @@ procedure mq_sub(inout dst: reg256, in src1: reg256, in src2: reg256)
     bn_subm(dst, src1, src2);
     subm_correct_lemma(x, y, wmod);
 }
+
+procedure bn_clear(inout dst: reg256)
+  modifies fgroups;
+  ensures dst == 0;
+{
+  xor_clear_lemma(dst);
+  bn_xor(dst, dst, dst, SFT_DFT, 0);
+}
+
+procedure montymul()
+    lets 
+      Q    @= w1;
+      x    @= w2;
+      y    @= w3;
+      r    @= w4;
+      tmp1 @= w5;
+      tmp2 @= w6;
+      Q0I  @= w7;
+    
+    requires
+        Q == 12289;
+        Q0I == 12287;
+        x < 12289;
+        y < 12289;
+    reads
+        Q; Q0I;
+    modifies
+        x; y; r; tmp1; tmp2; wacc;
+        fgroups;
+    ensures
+        //IsModEquivalent(r * 4091, old(x * y), 12289);
+  {
+    bn_clear(tmp1);  // tmp1 <- 0
+    bn_clear(tmp2);  // tmp2 <- 0
+    bn_mulqacc_so_zero(tmp1, true,    x, 0,    y, 0, 0, 0);  // tmp1 <- x * y
+    bn_mulqacc_so_zero(tmp2, true,    Q, 0,  Q0I, 0, 0, 0);  // tmp2 <- Q * Q0I
+    bn_mulqacc_so_zero(tmp2, true, tmp1, 0, tmp2, 0, 0, 0);  // tmp2 <- x * y * Q * Q0I
+    bn_add(tmp2, tmp2, tmp1, SFT(false, 2), 0);              // tmp2 <- (x * y * Q * Q0I + x*y) >> 16
+    bn_clear(tmp1);                    // tmp <- 0
+    bn_sub(r, r, Q, SFT_DFT, 0);       // r -= Q
+    bn_sel(tmp2, tmp1, Q, 0, 0);       // tmp2 <- if carry then 0 else Q
+    bn_sub(r, r, tmp2, SFT_DFT, 0);    // r -= tmp2
+
+    //lemma_montymul_correct(old(x), old(y), xy_lh, xy_uh, Q0Ixy, sum, partial_lh, partial_uh, partial_uh_xy_uh, m, f, r);
+ }
+
 
 #verbatim
 }
