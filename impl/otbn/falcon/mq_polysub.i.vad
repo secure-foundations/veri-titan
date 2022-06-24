@@ -1,0 +1,230 @@
+include "../../../arch/otbn/decls.i.vad"
+include "mq_arith.i.vad"
+
+#verbatim
+
+include "mq_arith.i.dfy"
+include "../../../arch/otbn/decls.i.dfy"
+include "../../../../lib/bv256_ntt_lemmas.i.dfy"
+include "../../../../lib/falcon/otbn_lemmas.i.dfy"
+
+module mq_polysub {
+
+import opened ot_machine
+import opened ot_abstraction
+import opened ot_decls
+import opened ot_vale
+
+import opened integers
+//import opened bv256_ops
+import opened bv256_ntt_lemmas
+import opened otbn_lemmas
+import opened DivMod
+//import opened ntt_index
+//import opened mq_polys
+import opened mq_arith
+import opened ntt_512_params
+
+#endverbatim
+    
+    
+//procedure mq_sub(inout dst: reg256, in src1: reg256, in src2: reg256)
+//    requires
+//        src1 < wmod;
+//        src2 < wmod;
+//        wmod == NTT_PRIME;
+//    reads
+//        wmod;
+//    ensures
+//      dst == mod(old(src1) - old(src2), old(wmod));
+//{
+//    ghost var x := src1;
+//    ghost var y := src2;
+//
+//    bn_subm(dst, src1, src2);
+//    subm_correct_lemma(x, y, wmod);
+//}
+
+type pow2_t: Type(0) extern;
+function operator(.full) (p :pow2_t): nat extern;
+function operator(.exp) (p :pow2_t): nat extern;
+const N: pow2_t extern; 
+
+function fvar_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int): bool extern;
+function poly_sub_loop_inv(f_new: seq(uint256), f: seq(uint256), g: seq(uint256), i: nat): bool extern;
+function poly_sub_loop_correct(f_new: seq(uint256), f_old: seq(uint256), f_orig:seq(uint256), g: seq(uint256), i: nat) : void extern;
+//function b16_iter_inv(heap: heap_t, iter: iter_t) : bool extern;
+
+
+procedure poly_sub_loop_body(ghost f_orig: seq(uint256), ghost iter_f: iter_t,
+    ghost iter_g: iter_t,
+    ghost i: nat,
+    ghost wdr_view: seq(uint256))
+
+    returns (ghost iter_f': iter_t, ghost iter_g': iter_t)
+    lets 
+        Q       @= wmod;
+        x       @= w0;
+        y       @= w1;
+        ptr_f   @= x5; 
+        ptr_g   @= x6; 
+        x_index @= x7; 
+        y_index @= x8; 
+ 
+    requires
+        Q == 12289;
+        x_index == 0;
+        y_index == 1;
+
+        0 <= i < N.full;    
+
+        iter_safe(iter_f, heap, ptr_f);
+        iter_safe(iter_g, heap, ptr_g);
+        fvar_iter_inv(heap, iter_f, ptr_f, i);
+        fvar_iter_inv(heap, iter_g, ptr_g, i);
+
+        iter_f.base_ptr != iter_g.base_ptr;
+        poly_sub_loop_inv(iter_f.buff, f_orig, iter_g.buff, i);
+
+        valid_wdr_view(wdrs, wdr_view, 2, 30);
+    
+    reads
+        Q;
+    modifies
+        x; y; ptr_f; ptr_g; x_index; y_index;
+        fgroups; heap; flat;
+        wdrs;
+    ensures
+        iter_f'.base_ptr == iter_f.base_ptr;
+        iter_g'.base_ptr == iter_g.base_ptr;
+
+        cur_ptr(iter_f') == ptr_f;
+        cur_ptr(iter_g') == ptr_g;
+        
+        x_index == old(x_index);
+        y_index == old(y_index);
+
+        iter_g'.buff == iter_g.buff;
+
+        fvar_iter_inv(heap, iter_f', ptr_f, i+1);
+        fvar_iter_inv(heap, iter_g', ptr_g, i+1);
+        
+        valid_wdr_view(wdrs, wdr_view, 2, 30);
+
+        //flat == old(flat).(heap := heap);
+        heap == old(heap)[iter_f.base_ptr := heap[iter_f.base_ptr]];
+    
+        poly_sub_loop_inv(iter_f'.buff, f_orig, iter_g.buff, i+1);
+
+{
+    let _ := bn_lid_safe(x_index, false, 0, ptr_f, false, iter_f);
+    assert x == iter_f.buff[i];
+    iter_g' := bn_lid_safe(y_index, false, 0, ptr_g, true, iter_g);
+
+    mq_sub(x, x, y);
+
+    iter_f' := bn_sid_safe(x_index, false, 0, ptr_f, true, iter_f);
+
+    poly_sub_loop_correct(iter_f'.buff, iter_f.buff, f_orig, iter_g.buff, i);
+}
+
+/* f' == f - g */
+procedure poly_sub(
+    ghost iter_f: iter_t,
+    ghost iter_g: iter_t,
+    ghost wdr_view: seq(uint256))
+    returns (ghost iter_f': iter_t, ghost iter_g': iter_t)
+
+    lets 
+        Q       @= wmod;
+        x       @= w0;
+        y       @= w1;
+        ptr_f   @= x5; 
+        ptr_g   @= x6; 
+        x_index @= x7; 
+        y_index @= x8; 
+
+    requires
+//        in_stack_addr_range(sp);
+//        in_stack_addr_range(sp - 16);
+        Q == 12289;
+        N.full == 512;
+    
+    requires
+        seq_len(iter_g.buff) == 512;
+        
+        iter_safe(iter_f, heap, ptr_f);
+        iter_safe(iter_g, heap, ptr_g);
+        fvar_iter_inv(heap, iter_f, ptr_f, 0);
+        fvar_iter_inv(heap, iter_g, ptr_g, 0);
+
+        iter_f.base_ptr != iter_g.base_ptr;
+    
+         valid_wdr_view(wdrs, wdr_view, 2, 30);
+    reads
+        Q;
+
+    modifies
+        x; y; ptr_f; ptr_g; x_index; y_index;
+        wdrs; fgroups; heap; flat;
+
+    ensures
+        //mem == old(mem).(heap := heap);
+        iter_f'.base_ptr == iter_f.base_ptr;
+
+        fvar_iter_inv(heap, iter_f.(buff := iter_f'.buff), ptr_f, 0);
+        valid_wdr_view(wdrs, wdr_view, 2, 30);
+        heap == old(heap)
+            [iter_f'.base_ptr := heap[iter_f'.base_ptr]];
+    
+    ensures
+        seq_len(iter_f'.buff) == 512;
+        poly_sub_loop_inv(iter_f'.buff, iter_f.buff, iter_g.buff, N.full);
+{
+    //ghost var old_mem := mem;
+    
+    li(x_index, 0);
+    li(y_index, 1);
+    iter_f':= iter_f;
+    iter_g':= iter_g;
+    ghost var i:nat := 0;
+    
+    while (LoopImm(512)) // 512 iterations
+        invariant
+            loop_ctr + i == 512;
+            iter_g.buff == iter_g'.buff;
+
+            x_index == 0;
+            y_index == 1;
+
+            i < 512 ==> iter_safe(iter_f', heap, ptr_f);
+            i < 512 ==> iter_safe(iter_g', heap, ptr_g);
+            fvar_iter_inv(heap, iter_f', ptr_f, i);
+            fvar_iter_inv(heap, iter_g', ptr_g, i);
+
+            valid_wdr_view(wdrs, wdr_view, 2, 30);
+
+            poly_sub_loop_inv(iter_f'.buff, iter_f.buff, iter_g.buff, i);
+
+            iter_f'.base_ptr == iter_f.base_ptr;
+
+            //mem == old_mem.(heap := heap);
+            heap == old(heap)[iter_f.base_ptr := heap[iter_f'.base_ptr]];
+        invariant
+            Q == 12289;
+            0 <= i <= N.full;
+            //(ptr_f - old(ptr_f)) == 2*i;
+
+            iter_f'.base_ptr != iter_g'.base_ptr;
+    
+    decreases (N.full - i);
+    {
+        iter_f', iter_g' := poly_sub_loop_body(iter_f.buff, iter_f', iter_g', i, wdr_view);
+        i := i + 1;
+    }
+    assert i == 512;
+}
+
+#verbatim
+}
+#endverbatim

@@ -665,6 +665,8 @@ function bn_lid_correct(s: state,
     offset: int10, grs: reg32_t, grs_inc: bool,
     iter: iter_t) : iter_t extern;
 
+function cur_ptr(iter :iter_t): nat extern;
+
 procedure bn_lid_safe(
     inout grd: reg32, inline grd_inc: bool,
     inline offset: int10,

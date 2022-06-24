@@ -179,4 +179,55 @@ module otbn_lemmas {
         assert IsModEquivalent(diff2, shifted, Q);
       }
     }
+
+    predicate {:opaque} buff_is_nsized(a: seq<nat>)
+        ensures buff_is_nsized(a) ==> |a| == N.full;
+    {
+        && (|a| == N.full)
+        && (forall i | 0 <= i < N.full :: a[i] < Q)
+    }
+
+    predicate fvar_iter_inv(heap: heap_t, iter: b256_iter, address: int, index: int)
+    {
+        && b256_iter_inv(heap, iter) //, if address >= 0 then address else iter.cur_ptr())
+        && (index >= 0 ==> iter.index == index)
+        && |iter.buff| == N.full
+        && buff_is_nsized(iter.buff)
+    }
+
+    function {:opaque} buff_as_nsized(a: seq<uint256>): (a': n_sized)
+        requires buff_is_nsized(a);
+        ensures a == a';
+    {
+        reveal buff_is_nsized();
+        a
+    }
+    
+    function mqsub(f: uint256, g: uint256) : uint256
+    {
+      (f - g) % Q
+    }
+
+    predicate poly_sub_loop_inv(f_new: seq<uint256>, f: seq<uint256>, g: seq<uint256>, i: nat)
+    {
+        reveal buff_is_nsized();
+        && buff_is_nsized(f_new)
+        && buff_is_nsized(f)
+        && buff_is_nsized(g)
+        && 0 <= i <= N.full
+        && f_new[i..] == f[i..]
+        && (forall j :: 0 <= j < i ==> f_new[j] == mqsub(f[j], g[j]))
+    }
+
+    lemma poly_sub_loop_correct(f_new: seq<uint256>, f_old: seq<uint256>, f_orig:seq<uint256>, g: seq<uint256>, i: nat)
+      requires i < N.full;
+      requires poly_sub_loop_inv(f_old, f_orig, g, i)
+      requires f_new == f_old[i := mqsub(f_orig[i], g[i])];
+      ensures poly_sub_loop_inv(f_new, f_orig, g, i+1);
+    {
+      assert |f_new| == |f_old|;
+      assert (forall j | 0 <= j < |f_new| :: j != i
+        ==> f_new[j] == f_old[j] && j == i ==> f_new[j] == mqsub(f_orig[j], g[j]));
+    }
+
 }

@@ -239,11 +239,11 @@ procedure poly_sub(
         invariant
             Q == 12289;
             0 <= i <= N.full;
-            (ptr_f - old(ptr_f)) == 2*i;  // TODO
+            (ptr_f - old(ptr_f)) == 2*i;
 
             iter_f'.base_ptr != iter_g'.base_ptr;
     
-            end_f == 1024 + iter_f.base_ptr; // TODO
+            end_f == 1024 + iter_f.base_ptr;
     decreases (N.full - i);
     {
         iter_f', iter_g' := poly_sub_loop_body(iter_f.buff, iter_f', iter_g', i);
