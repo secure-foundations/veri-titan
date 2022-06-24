@@ -26,6 +26,9 @@ ghost procedure addm_correct_lemma(ghost x: uint256, ghost y: uint256, ghost mod
 ghost procedure subm_correct_lemma(ghost x: uint256, ghost y: uint256, ghost mod: uint256) extern;
 ghost procedure xor_clear_lemma(ghost x: uint256) extern;
 function SFT(left: bool, bytes: uint5) : shift_t extern;
+function lemma_small_mulqacc(x: uint256, y: uint256, r: uint256, old_wacc: uint256, old_flags: flags_t): void extern;
+function lemma_elem_prod_bound(x: uint256, y: uint256, r: uint256): void extern;
+function lemma_montymul_correct(x: uint256, y: uint256, prod: uint256, sum: uint256, diff1: uint256, flags: flags_t, diff2: uint256): void extern;
     
 procedure mq_add(inout dst: reg256, in src1: reg256, in src2: reg256)
     requires
@@ -94,16 +97,41 @@ procedure montymul()
   {
     bn_clear(tmp1);  // tmp1 <- 0
     bn_clear(tmp2);  // tmp2 <- 0
-    bn_mulqacc_so_zero(tmp1, true,    x, 0,    y, 0, 0, 0);  // tmp1 <- x * y
-    bn_mulqacc_so_zero(tmp2, true,    Q, 0,  Q0I, 0, 0, 0);  // tmp2 <- Q * Q0I
-    bn_mulqacc_so_zero(tmp2, true, tmp1, 0, tmp2, 0, 0, 0);  // tmp2 <- x * y * Q * Q0I
-    bn_add(tmp2, tmp2, tmp1, SFT(false, 2), 0);              // tmp2 <- (x * y * Q * Q0I + x*y) >> 16
+
+    ghost var old_wacc := wacc;
+    ghost var old_flags := get_fgroup(fgroups, 0);
+    bn_mulqacc_so_zero(tmp1, true, x, 0, y, 0, 0, 0);  // tmp1 <- x * y
+    lemma_small_mulqacc(x, y, tmp1, old_wacc, old_flags);
+    assert tmp1 == x * y;
+    lemma_elem_prod_bound(x, y, tmp1);
+
+    old_wacc := wacc;
+    old_flags := get_fgroup(fgroups, 0);
+    bn_mulqacc_so_zero(tmp2, true, Q, 0, Q0I, 0, 0, 0);  // tmp2 <- Q * Q0I
+    lemma_small_mulqacc(Q, Q0I, tmp2, old_wacc, old_flags);
+    assert tmp2 == Q * Q0I;
+
+    old_wacc := wacc;
+    old_flags := get_fgroup(fgroups, 0);
+    let QQ0I := tmp2;
+    bn_clear(x);  // x <- 0   Use x as a temporary
+    assume tmp1 < BASE_64;
+    assert tmp2 == Q * Q0I;
+    bn_mulqacc_so_zero(x, true, tmp1, 0, tmp2, 0, 0, 0);  // x <- x * y * Q * Q0I
+    lemma_small_mulqacc(tmp1, QQ0I, x, old_wacc, old_flags);
+    assert x == (old(x) * y) * (Q * Q0I);
+    let prod := x;
+
+    bn_add(r, x, tmp1, SFT(false, 2), 0);                // r <- (x * y * Q * Q0I + x*y) >> 16
+    let sum := r;
     bn_clear(tmp1);                    // tmp <- 0
     bn_sub(r, r, Q, SFT_DFT, 0);       // r -= Q
+    let diff := r;
+    let flags := get_fgroup(fgroups, 0);
     bn_sel(tmp2, tmp1, Q, 0, 0);       // tmp2 <- if carry then 0 else Q
     bn_sub(r, r, tmp2, SFT_DFT, 0);    // r -= tmp2
 
-    //lemma_montymul_correct(old(x), old(y), xy_lh, xy_uh, Q0Ixy, sum, partial_lh, partial_uh, partial_uh_xy_uh, m, f, r);
+    lemma_montymul_correct(old(x), old(y), prod, sum, diff, flags, r);
  }
 
 

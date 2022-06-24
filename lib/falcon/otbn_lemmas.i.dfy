@@ -76,4 +76,24 @@ module otbn_lemmas {
       }
     }
 
+    lemma lemma_elem_prod_bound(x: uint256, y: uint256, r: uint256)
+      requires x < 12289 && y < 12289
+      requires r == x * y
+      ensures r <= 150994944
+
+
+    lemma lemma_small_mulqacc(x: uint256, y: uint256, r: uint256, old_wacc: uint256, old_flags: flags_t)
+      requires x < BASE_64 && y < BASE_64
+      requires var product := otbn_mulqacc(true, x, 0, y, 0, 0, old_wacc);
+               r == otbn_mulqacc_so(product, 0, true, old_flags).new_dst
+      ensures r == x * y
+
+    lemma lemma_montymul_correct(x: uint256, y: uint256, prod: uint256, sum: uint256, diff1: uint256, flags: flags_t, diff2: uint256)
+      requires 0 <= x * y < BASE_64
+      requires prod == (x * y) * (Q * (Q-2))
+      requires sum == otbn_addc(prod, x*y, SFT(false, 2), false).0;
+      requires diff1 == otbn_subb(sum, Q, SFT_DFT, false).0;
+      requires flags == otbn_subb(sum, Q, SFT_DFT, false).1;
+      requires diff2 == otbn_subb(diff1, if flags.get_single_flag(0) then 0 else Q, SFT_DFT, false).0;
+      ensures IsModEquivalent(diff2 * 4091, x * y, 12289);
 }
