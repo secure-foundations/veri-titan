@@ -61,7 +61,7 @@ module bv32_ops refines generic_bv_ops
 
     function method {:opaque} msb(x: uint): uint1
     {
-        if ((x as bv256 >> 32) & 1 == 1) then 1 else 0
+        if ((x as bv32 >> 32) & 1 == 1) then 1 else 0
     }
 
     function uint32_lt(x: uint, y: uint): uint
@@ -80,6 +80,8 @@ module bv32_ops refines generic_bv_ops
     // {
     //     x * y
     // }
+
+    function method uint16_sign_ext(x: integers.uint16): uint
 
     function method uint32_mul(x: uint, y: uint): uint
     {

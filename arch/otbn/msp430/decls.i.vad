@@ -1,0 +1,479 @@
+include{: verbatim} "../../arch/msp430/vale.i.dfy"
+
+#verbatim
+module msp_decls {
+
+import opened integers
+import opened bv16_ops
+import opened msp_machine
+import opened msp_vale
+import opened mem
+import opened stack
+
+#endverbatim
+
+type seq(a: Type(0)): Type(0) {: primitive} extern;
+function operator([]) #[a: Type(0)](s: seq(a), i: int): a extern; 
+function operator([ := ]) #[a: Type(0)](s: seq(a), i: int, v: a): seq(a) extern;
+function operator([ .. ]) #[a: Type(0)](s: seq(a), begin: int, end: int): seq(a) extern;
+function seq_len #[a: Type(0)] (s: seq(a)): nat extern;
+function seq_concat #[a: Type(0)](x: seq(a), y: seq(a)): seq(a) extern;
+function seq_append #[a: Type(0)](xs: seq(a), x: a): seq(a) extern;
+
+type map(a: Type(0), b: Type(0)): Type(0) extern;
+function operator(?[]) #[a:Type(0), b:Type(0)](m:map(a, b), k:a):bool extern;
+function operator([]) #[a: Type(0), b: Type(0)](m: map(a, b), k: a): b extern;
+function operator([ := ]) #[a: Type(0), b: Type(0)](m: map(a, b), k: a, v: b): map(a, b) extern;
+
+type set(a: Type(0)): Type(0) extern;
+function operator(?[]) #[a:Type(0)](m:set(a), k:a):bool extern;
+
+function fst #[a: Type(0), b: Type(0)](m: tuple(a, b)): a extern;
+function snd #[a: Type(0), b: Type(0)](m: tuple(a, b)): b extern;
+
+type nat:     Type(0) := int_range(0, _);
+type uint1:   Type(0) := int_range(0, 1);
+type uint2:   Type(0) := int_range(0, 3);
+type uint5:   Type(0) := int_range(0, 31);
+type uint8:   Type(0) := int_range(0, 255);
+type int16:   Type(0) := int_range((-32768), 32767);
+type uint16:  Type(0) := int_range(0, 65535);
+type uint32:  Type(0) := int_range(0, 0xffffffff);
+
+type string: Type(0) extern;
+
+function power(b: int, e: nat) : nat extern;
+function cong(a: int, b: int, n: int) : bool extern;
+function cong_BASE(a: int, b: int): bool extern;
+
+const BASE_16:  nat extern;
+const BASE_32:  nat extern;
+const NUM_WORDS:nat extern;
+    
+const NA: int extern;
+
+type state: Type(0) {: primitive} extern;
+function operator(.ms) (s: state): state extern; // small hack
+function operator(.ok) (s: state): bool extern;
+function operator(.ok :=) (s: state, b: bool): state extern;
+
+type reg_t: Type(0) extern;
+
+type operand_t: Type(0) extern;
+function Reg(r: reg_t): operand_t extern;
+function Idx(r: reg_t, index: uint16): operand_t extern;
+function RegIndir(r: reg_t, inc: bool): operand_t extern;
+function Imm(i: uint16): operand_t extern;
+
+function mem_base_ptr_valid(wmem: mem_t, ptr: int, size: nat): bool extern;
+
+function bool_to_uint1(i:bool) : uint1 extern;
+function A_as_carry(i:int) : uint1 extern;
+
+var ok: bool {:state ok()};
+
+var symbols: map(string, uint16) {:state symbols()};
+
+type flat_t: Type(0) extern;
+var flat: flat_t {:state flat()};
+
+type heap_t: Type(0) := map(int, entry_t);
+var heap: heap_t {:state heap()};
+function heap_b16_write(heap: heap_t, iter: iter_t, value: uint16): heap_t extern;
+
+type entry_t: Type(0) extern;
+function B16(b: seq(uint16)): entry_t extern;
+function operator(.b16) (e :entry_t): seq(uint16) extern;
+
+type frames_t: Type(0) extern;
+var frames: frames_t {:state frames()};
+function operator(.fs) (m: frames_t): seq(frame_t) extern;
+function operator(.sp) (m: frames_t): int extern;
+
+type regs_t: Type(0) := seq(uint16);
+var regs: regs_t {:state regs()};
+// function operator([]) (s: regs_t, i: int): uint16 extern; 
+// function operator([ := ]) (s: regs_t, i: int, v: uint16): regs_t extern;
+// function operator([ .. ]) (s: regs_t, begin: int, end: int): seq(uint16) extern;
+
+type frame_t: Type(0) extern;
+function operator(.fp) (f: frame_t): uint16 extern;
+function operator(.content) (f: frame_t): seq(uint16) extern;
+
+type mem_t: Type(0) extern;
+var mem: mem_t {:state mem()};
+function operator(.frames) (m: mem_t): frames_t extern;
+function operator(.frames := ) (m: mem_t, f: frames_t): mem_t extern;
+
+function operator(.heap) (m: mem_t): heap_t extern;
+function operator(.heap := ) (m: mem_t, h: heap_t): mem_t extern;
+
+function read_top_frame(fs: mem_t): seq(uint16) extern;
+
+function in_stack_addr_range(addr: int): bool extern;
+
+type iter_t: Type(0) extern;
+function iter_inv(iter: iter_t, h: heap_t, ptr: int): bool extern;
+function iter_safe(iter: iter_t, h: heap_t, ptr: int): bool extern;
+
+function iter_cons(base_ptr: int, index: nat, buff: seq(uint16)): iter_t extern;
+function b16_iter_load_next(iter: iter_t, inc: bool): iter_t extern;
+function b16_iter_load_prev(iter: iter_t): iter_t extern;
+function b16_iter_store_next(iter: iter_t, value: uint16, inc: bool): iter_t extern;
+function operator(.base_ptr) (iter :iter_t): int extern;
+function operator(.index) (iter :iter_t): int extern;
+function operator(.index := ) (iter: iter_t, i :int): iter_t extern;
+function operator(.buff) (iter :iter_t): seq(uint16) extern;
+function operator(.buff := ) (iter :iter_t, buff: seq(uint16)): iter_t extern;
+
+type flags_t: Type(0) extern;
+var flags: flags_t {:state flags()};
+function operator(.cf) (flags :flags_t): uint1 extern;
+
+function to_nat(s: seq(uint16)): nat extern;
+
+type uint32_view_t: Type(0) extern;
+function uint32_cons(lh: uint16, uh: uint16, full: uint32) : uint32_view_t extern;
+function valid_uint43_view(view: uint32_view_t, lh: uint16, uh: uint16) : bool extern;
+function operator(.lh) (value : uint32_view_t): uint16 extern;
+function operator(.uh) (value : uint32_view_t): uint16 extern;
+function operator(.full) (value : uint32_view_t): uint32 extern;
+
+type rsa_params: Type(0) extern;
+function operator(.E0) (rsa: rsa_params): nat extern;
+function operator(.E) (rsa: rsa_params): nat extern;
+function operator(.M) (rsa: rsa_params): nat extern;
+function operator(.SIG) (rsa: rsa_params): nat extern;
+function operator(.M0D) (rsa: rsa_params): uint16 extern;
+function operator(.B256_INV) (rsa: rsa_params): nat extern;
+function operator(.R) (rsa: rsa_params): nat extern;
+function operator(.RR) (rsa: rsa_params): nat extern;
+function operator(.R_INV) (rsa: rsa_params): nat extern;
+function rsa_params_inv(rsa: rsa_params): bool extern;
+
+function R(index: int): reg_t extern;
+var sp: uint16 {:state reg_t(SP)};
+var r3: uint16 {:state reg_t(R(3))};
+var r4: uint16 {:state reg_t(R(4))};
+var r5: uint16 {:state reg_t(R(5))};
+var r6: uint16 {:state reg_t(R(6))};
+var r7: uint16 {:state reg_t(R(7))};
+var r8: uint16 {:state reg_t(R(8))};
+var r9: uint16 {:state reg_t(R(9))};
+var r10: uint16 {:state reg_t(R(10))};
+var r11: uint16 {:state reg_t(R(11))};
+var r12: uint16 {:state reg_t(R(12))};
+var r13: uint16 {:state reg_t(R(13))};
+var r14: uint16 {:state reg_t(R(14))};
+var r15: uint16 {:state reg_t(R(15))};
+
+operand_type reg: uint16 @ reg_t :=
+    | inout r3  | inout r4  | inout r5  | inout r6
+    | inout r7  | inout r8  | inout r9  | inout r10
+    | inout r11 | inout r12 | inout r13 | inout r14
+    | inout r15;
+
+function mod(a: int, n: nat): int extern;
+
+function stack_push_frame(mem: mem_t, flat: flat_t, num_bytes: int): mem_t extern;
+
+function stack_push_batch(mem: mem_t, flat: flat_t, content: seq(uint16)): mem_t extern;
+
+function top_frame(frames: frames_t): frame_t extern;
+
+function write_frame(mem: mem_t, flat: flat_t, index: nat, value: uint16): tuple(mem_t, flat_t) extern;
+
+function read_frame(mem: mem_t, flat: flat_t, index: nat): uint16 extern;
+
+function frame_index_valid(mem: mem_t, index: nat): bool extern;
+
+function stack_pop_frame(mem: mem_t, flat: flat_t): (new_mem: mem_t) extern;
+
+function stack_depth(mem: mem_t): nat extern;
+
+function STACK_START(): nat extern;
+
+function valid_push_pop_m(rs: reg_t, n: uint8): bool extern;
+function pushm_w_seq(state: state, r: reg_t, n: uint8): seq(uint16) extern;
+
+procedure pushm_w(inline n: uint8, in rs: reg)
+    {:instruction Ins(MSP_PUSHM_W(Imm(n), Reg(rs)))}
+    requires
+        in_stack_addr_range(sp - 2 * n);
+        valid_push_pop_m(@rs, n);
+    
+    modifies
+        mem; flat; sp;
+
+    ensures
+        sp == old(sp) - 2 * n;
+        mem == stack_push_batch(old(mem), old(flat),
+            pushm_w_seq(old(this.ms), @rs, n));
+{
+    assume false;
+}
+
+function popm_w_seq(old_regs: regs_t, r: reg_t, n: uint16, s: seq(uint16)): regs_t extern;
+
+procedure popm_w(inline n: uint8, in rs: reg)
+    {:instruction Ins(MSP_POPM_W(Imm(n), Reg(rs)))}
+    requires
+        valid_push_pop_m(@rs, n);
+        seq_len(read_top_frame(mem)) == n;
+        stack_depth(mem) >= 2;
+
+    modifies
+        mem; sp; regs;
+    reads
+        flat;
+    ensures
+        sp == old(sp) + n * 2;
+        flat == old(flat);
+        regs == popm_w_seq(old(regs), @rs, n, read_top_frame(old(mem)));
+        mem == stack_pop_frame(old(mem), flat);
+{
+    assume false;
+}
+
+procedure push_frame(inline num_bytes: int16)
+    {:instruction Ins(MSP_SUB_W(Imm(num_bytes), Reg(SP)))}
+    requires
+        num_bytes > 0;
+        mod(num_bytes, 2) == 0;
+        in_stack_addr_range(sp - num_bytes);
+    modifies
+        mem; sp;
+    reads
+        flat;
+    ensures
+        sp == old(sp) - num_bytes;
+        flat == old(flat); // need this for the next one
+        mem == stack_push_frame(old(mem), flat, num_bytes);
+{
+    assume false;
+}
+
+procedure pop_frame(inline num_bytes: int16)
+    {:instruction Ins(MSP_ADD_W(Imm(num_bytes), Reg(SP)))}
+    requires
+        mod(num_bytes, 2) == 0;
+        seq_len(read_top_frame(mem)) == num_bytes / 2;
+        stack_depth(mem) >= 2;
+    modifies
+        mem; sp;
+    reads
+        flat;
+    ensures
+        sp == old(sp) + num_bytes;
+        flat == old(flat);
+        mem == stack_pop_frame(old(mem), flat);
+{
+    assume false;
+}
+
+procedure lw_stack(inline offset: uint16, inout rd: reg)
+    {:instruction Ins(MSP_MOV_W(Idx(SP, offset), Reg(rd)))}
+    requires
+        mod(offset, 2) == 0;
+        frame_index_valid(mem, offset / 2);
+    reads
+        mem; flat;
+    ensures
+        mem == old(mem);
+        rd == read_frame(mem, flat, offset / 2);
+{
+    assume false;
+}
+
+procedure sw_stack(inline offset: uint16, in rs: reg)
+    {:instruction Ins(MSP_MOV_W(Reg(rs), Idx(SP, offset)))}
+    requires
+        mod(offset, 2) == 0;
+        frame_index_valid(mem, offset / 2);
+    modifies
+        mem; flat;
+    ensures
+        let rst := write_frame(old(mem), old(flat), offset / 2, rs);
+        mem == fst(rst);
+        flat == snd(rst);
+{
+    assume false;
+}
+
+procedure mov_w(in rs: reg, inout rd: reg)
+    {:instruction Ins(MSP_MOV_W(Reg(rs), Reg(rd)))}
+    ensures
+        rd == old(rs);
+{
+    assume false;
+}
+
+procedure mov_w_imm(inline i: uint8, inout rd: reg)
+    {:instruction Ins(MSP_MOV_W(Imm(i), Reg(rd)))}
+    ensures
+        rd == i;
+{
+    assume false;
+}
+
+procedure lw(inout rs: reg, inline inc: bool, inout rd: reg, ghost iter: iter_t)
+    {:instruction Ins(MSP_MOV_W(RegIndir(rs, inc), Reg(rd)))}
+    requires
+        @rs != @rd;
+        iter_safe(iter, heap, rs);
+    reads
+        heap;
+    ensures
+        rs == (if inc then old(rs) + 2 else old(rs));
+        rd == iter.buff[iter.index];
+{
+    assume false;
+}
+
+function load_symbol(mem: mem_t, name: string): uint16 extern;
+
+procedure lw_symbol(inline name: string, inout rd: reg)
+    {:instruction Ins(MSP_MOV_W(Abs(name), Reg(rd)))}
+    requires
+        symbols?[name];
+    reads
+        mem;
+    ensures
+        mem == old(mem);
+        rd == load_symbol(mem, name);
+{
+    assume false;
+}
+
+procedure lw_iter(inout rs: reg, inline inc: bool, inout rd: reg, ghost iter: iter_t)
+    returns (ghost next_iter: iter_t)
+    requires
+        @rs != @rd;
+        iter_safe(iter, heap, rs);
+    reads
+        heap;
+    ensures
+        rs == (if inc then old(rs) + 2 else old(rs));
+        rd == iter.buff[iter.index];
+        next_iter == b16_iter_load_next(iter, inc);
+        iter_inv(next_iter, heap, rs);
+{
+    lw(rs, inc, rd, iter);
+    next_iter := b16_iter_load_next(iter, inc);
+}
+
+procedure sw(inout rs1: reg, inline inc: bool, in rs2: reg, ghost iter: iter_t)
+    {:instruction Ins(MSP_MOV_W(Reg(rs1), RegIndir(rs2, inc)))}
+    requires
+        @rs1 != @rs2;
+        iter_safe(iter, heap, rs1);
+    modifies
+        heap;
+    ensures
+        rs1 == (if inc then old(rs1) + 2 else old(rs1));
+        heap == heap_b16_write(old(heap), iter, old(rs2));
+{
+    assume false;
+}
+
+procedure sw_iter(inout rs1: reg, inline inc: bool, in rs2: reg, ghost iter: iter_t)
+    returns (ghost next_iter: iter_t)
+    requires
+        @rs1 != @rs2;
+        iter_safe(iter, heap, rs1);
+    modifies
+        heap;
+    ensures
+        rs1 == (if inc then old(rs1) + 2 else old(rs1));
+        next_iter == b16_iter_store_next(iter, rs2, inc);
+        iter_inv(next_iter, heap, rs1);
+        heap == heap_b16_write(old(heap), iter, rs2);
+{
+    sw(rs1, inc, rs2, iter);
+    next_iter := b16_iter_store_next(iter, rs2, inc);
+}
+
+function to_uint16(x: int16): uint16 extern;
+
+function msp_add(x: uint16, y: uint16): tuple(uint16, flags_t) extern;
+function msp_addc(x: uint16, y: uint16, flags: flags_t): tuple(uint16, flags_t) extern;
+
+procedure add_w(in rs: reg, inout rd: reg)
+    {:instruction Ins(MSP_ADD_W(Reg(rs), Reg(rd)))}
+    modifies
+        flags;
+    ensures 
+        let rst := msp_add(old(rs), old(rd));
+        rd == fst(rst);
+        flags == snd(rst);
+{
+    assume false;
+}
+    
+procedure add_w_imm(inline imm: int16, inout rd: reg)
+    {:instruction Ins(MSP_ADD_W(Imm(imm), Reg(rd)))}
+    modifies
+        flags;
+    ensures
+        let rst := msp_add(to_uint16(imm), old(rd));
+        rd == fst(rst);
+        flags == snd(rst);
+{
+    assume false;
+}
+
+procedure addc_w(in rs: reg, inout rd: reg)
+    {:instruction Ins(MSP_ADDC_W(Reg(rs), Reg(rd)))}
+    modifies
+        flags;
+    ensures 
+        let rst := msp_addc(old(rs), old(rd), old(flags));
+        rd == fst(rst);
+        flags == snd(rst);
+{
+    assume false;
+}
+
+function msp_sub(x: uint16, y: uint16): tuple(uint16, flags_t) extern;
+function msp_subc(x: uint16, y: uint16, flags: flags_t): tuple(uint16, flags_t) extern;
+
+procedure sub_w(in rs: reg, inout rd: reg)
+    {:instruction Ins(MSP_SUB_W(Reg(rs), Reg(rd)))}
+    requires
+        @rs != @rd;
+    modifies
+        flags;
+    ensures 
+        let rst := msp_add(old(rd), old(rs));
+        rd == fst(rst);
+        flags == snd(rst);
+{
+    assume false;
+}
+
+procedure subc_w(in rs: reg, inout rd: reg)
+    {:instruction Ins(MSP_SUBC_W(Reg(rs), Reg(rd)))}
+    modifies
+        flags;
+    ensures 
+        let rst := msp_subc(old(rd), old(rs), old(flags));
+        rd == fst(rst);
+        flags == snd(rst);
+{
+    assume false;
+}
+
+// procedure subc_sanity()
+//     modifies
+//         flags; r9;
+// {
+//     let old_a := r10;
+//     let old_b := r9;
+//     subc_w(r10, r9);
+//     assert r9 == fst(msp_subc(old(r9), old(r10), old(flags)));
+// }
+
+
+#verbatim
+} // end module bignum_decls
+#endverbatim

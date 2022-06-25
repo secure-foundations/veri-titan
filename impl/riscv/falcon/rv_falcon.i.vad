@@ -1,0 +1,85 @@
+include "../../../arch/riscv/decls.i.vad"
+include "rv_poly_mul.i.vad"
+include "rv_normalize.i.vad"
+
+#verbatim
+
+include "rv_poly_mul.i.dfy"
+include "rv_normalize.i.dfy"
+
+module rv_falcon {
+
+import opened integers
+import opened rv_machine
+import opened rv_decls
+import opened rv_vale
+import opened mem
+import opened stack
+
+import opened bv32_ops
+import opened bv32_falcon_lemmas
+
+import opened pows_of_2
+import opened ntt_index
+import opened nth_root
+import opened poly_view
+
+import opened rv_normalize
+import opened rv_poly_mul
+// import opened rv_reg_save
+
+#endverbatim
+
+procedure rv_falcon(
+    ghost iter_c0: b16_iter,
+    ghost iter_s2: b16_iter,
+    ghost iter_h: b16_iter,
+    ghost iter_tmp: b16_iter,
+    ghost iter_t1: b16_iter,
+    ghost iter_t2: b16_iter,
+    ghost iter_p1: b16_iter,
+    ghost iter_p2: b16_iter)
+
+{:frame false}
+
+    requires
+        fvar_iter_inv(heap, iter_c0, a0, 0);
+        normlized_iter_inv(heap, iter_s2, a1, 0);
+
+        // writable
+        fvar_iter_inv(heap, iter_h, a2, 0);
+        // writable
+        fvar_iter_inv(heap, iter_tmp, a3, 0);
+
+    requires
+        symbols?["bit_rev_table_512"];
+        b16_iter_inv(iter_t1, heap,
+            load_symbol(mem, "bit_rev_table_512"));
+        iter_t1.index == 0;
+
+        bit_rev_ftable_wf(iter_t1.buff);
+
+    requires
+        symbols?["scaling_factors"];
+        fvar_iter_inv(heap, iter_t2,
+            load_symbol(mem, "scaling_factors"), 0);
+        iter_t2.buff == inverse_ntt_scaling_table();
+
+    requires
+        symbols?["rev_omega_inv_powers_mont_table"];
+        fvar_iter_inv(heap, iter_p1,
+            load_symbol(mem, "rev_omega_inv_powers_mont_table"), 0);
+        iter_p1.buff == rev_omega_inv_powers_mont_table();
+
+    requires
+        symbols?["rev_ntt512_mixed_powers_table"];
+        fvar_iter_inv(heap, iter_p2,
+            load_symbol(mem, "rev_ntt512_mixed_powers_table"), 0);
+        iter_p2.buff == rev_mixed_powers_mont_table();
+{
+    assume false;
+}
+
+#verbatim
+}
+#endverbatim
