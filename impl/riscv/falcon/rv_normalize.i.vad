@@ -30,8 +30,13 @@ import opened poly_view
 #endverbatim
 
 function fvar_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int): bool extern;
-function normlized_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int): bool extern;
+function normalized_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int): bool extern;
 function cond_sub_q_lemma(a: uint16, b: uint16, c: uint16, d: uint16): void extern;
+
+function denormalization_inv(nv: seq(uint16), dnv: seq(uint16), i: nat): bool extern;
+function denormalization_pre_lemma(nv: seq(uint16), dnv: seq(uint16)): void extern;
+function denormalization_peri_lemma(buff: seq(uint16), dnv: seq(uint16), i: nat, a1: uint32, b: uint32, c: uint32, d: uint32): void extern;
+
 
 procedure denormalize(
     ghost iter_s2: b16_iter,
@@ -42,7 +47,7 @@ procedure denormalize(
     requires
         requires s1 == 12289;
 
-        normlized_iter_inv(heap, iter_s2, a1, 0);
+        normalized_iter_inv(heap, iter_s2, a1, 0);
         // writable
         fvar_iter_inv(heap, iter_tmp, a3, 0);
 
@@ -54,34 +59,37 @@ procedure denormalize(
 
     ghost var u :nat := 0;
 
+    denormalization_pre_lemma(next_iter_s2.buff, iter_tmp.buff);
+
     while (a1 < t1)
         invariant s1 == 12289;
         invariant t1 == iter_s2.base_ptr + 1024;
 
         invariant next_iter_s2.base_ptr == iter_s2.base_ptr;
         invariant next_iter_s2.buff == iter_s2.buff;
-        invariant normlized_iter_inv(heap, next_iter_s2, a1, u);
+        invariant normalized_iter_inv(heap, next_iter_s2, a1, u);
 
-        // invariant next_iter_tmp.base_ptr == iter_tmp.base_ptr;
-        // invariant fvar_iter_inv(heap, next_iter_tmp, a3, u);
+        invariant next_iter_tmp.base_ptr == iter_tmp.base_ptr;
+        invariant fvar_iter_inv(heap, next_iter_tmp, a3, u);
+
+        invariant denormalization_inv(next_iter_s2.buff, next_iter_tmp.buff, u);
 
         decreases t1 - a1;
     {
         next_iter_s2 := lh_next(t2, a1, 0, true, next_iter_s2);
+        let ai := t2;
         srai(t3, t2, 31);
+        let shift := t3;
         and(t3, t3, s1);
         add(t2, t2, t3);
 
-    // cond_sub_q_lemma(a: uint16, b: uint16, c: uint16, d: uint16): void extern;
-
-        // next_iter_tmp := sh_next(t2, a3, 0, true, next_iter_tmp);
+        denormalization_peri_lemma(next_iter_s2.buff, next_iter_tmp.buff, u, ai, shift, t3, t2);
+        next_iter_tmp := sh_next(t2, a3, 0, true, next_iter_tmp);
 
         addi(a3, a3, 2);
         addi(a1, a1, 2);
         u := u + 1;
     }
-
-
 }
 
 #verbatim
