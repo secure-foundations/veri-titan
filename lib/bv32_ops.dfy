@@ -1,6 +1,7 @@
 include "generic_bv_ops.dfy"
 include "DivModNeg.dfy"
 include "../std_lib/src/NonlinearArithmetic/Power2.dfy"
+include "bv16_ops.dfy"
 
 module bv32_seq refines LittleEndianNat
 {
@@ -17,6 +18,7 @@ module bv32_ops refines generic_bv_ops
     import opened BVSEQ = bv32_seq
     import DivModNeg
     import Power2
+    import bv16_ops
 
     // half word base
     function method HW_BASE(): nat
@@ -82,6 +84,10 @@ module bv32_ops refines generic_bv_ops
     // }
 
     function method uint16_sign_ext(x: integers.uint16): uint
+    {
+        var s := bv16_ops.to_int16(x);
+        if s < 0 then x + 0xffff0000 else x
+    }
 
     function method uint32_mul(x: uint, y: uint): uint
     {

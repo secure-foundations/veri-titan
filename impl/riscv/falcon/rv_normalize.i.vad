@@ -31,6 +31,7 @@ import opened poly_view
 
 function fvar_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int): bool extern;
 function normlized_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int): bool extern;
+function cond_sub_q_lemma(a: uint16, b: uint16, c: uint16, d: uint16): void extern;
 
 procedure denormalize(
     ghost iter_s2: b16_iter,
@@ -39,7 +40,7 @@ procedure denormalize(
 {:frame false}
 
     requires
-        requires s1 == Q;
+        requires s1 == 12289;
 
         normlized_iter_inv(heap, iter_s2, a1, 0);
         // writable
@@ -54,7 +55,7 @@ procedure denormalize(
     ghost var u :nat := 0;
 
     while (a1 < t1)
-        invariant s1 == Q;
+        invariant s1 == 12289;
         invariant t1 == iter_s2.base_ptr + 1024;
 
         invariant next_iter_s2.base_ptr == iter_s2.base_ptr;
@@ -70,6 +71,8 @@ procedure denormalize(
         srai(t3, t2, 31);
         and(t3, t3, s1);
         add(t2, t2, t3);
+
+    // cond_sub_q_lemma(a: uint16, b: uint16, c: uint16, d: uint16): void extern;
 
         // next_iter_tmp := sh_next(t2, a3, 0, true, next_iter_tmp);
 
