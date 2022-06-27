@@ -42,20 +42,39 @@ procedure denormalize(
     ghost iter_s2: b16_iter,
     ghost iter_tmp: b16_iter)
 
-{:frame false}
+returns (ghost next_iter_tmp: b16_iter)
 
     requires
         requires s1 == 12289;
 
         normalized_iter_inv(heap, iter_s2, a1, 0);
         // writable
-        fvar_iter_inv(heap, iter_tmp, a3, 0);
+        fvar_iter_inv(heap, iter_tmp, a2, 0);
 
         iter_s2.base_ptr != iter_tmp.base_ptr;
+
+    modifies
+        mem; heap;
+        t1; t2; t3; a1; a2;
+
+    reads
+        s1;
+
+    ensures
+        mem == old(mem).(heap := heap);
+        normalized_iter_inv(heap, iter_s2, iter_s2.base_ptr, 0);
+        next_iter_tmp.base_ptr == iter_tmp.base_ptr;
+        fvar_iter_inv(heap, next_iter_tmp, next_iter_tmp.base_ptr, 0);
+
+        heap == old(heap)
+            [next_iter_tmp.base_ptr := heap[next_iter_tmp.base_ptr]];
+
+    ensures
+        denormalization_inv(iter_s2.buff, next_iter_tmp.buff, 512);
 {
     addi(t1, a1, 1024);
     ghost var next_iter_s2 := iter_s2;
-    ghost var next_iter_tmp := iter_tmp;
+    next_iter_tmp := iter_tmp;
 
     ghost var u :nat := 0;
 
@@ -70,10 +89,13 @@ procedure denormalize(
         invariant normalized_iter_inv(heap, next_iter_s2, a1, u);
 
         invariant next_iter_tmp.base_ptr == iter_tmp.base_ptr;
-        invariant fvar_iter_inv(heap, next_iter_tmp, a3, u);
+        invariant fvar_iter_inv(heap, next_iter_tmp, a2, u);
 
         invariant denormalization_inv(next_iter_s2.buff, next_iter_tmp.buff, u);
 
+        invariant mem == old(mem).(heap := heap);
+        invariant heap == old(heap)
+                [next_iter_tmp.base_ptr := heap[next_iter_tmp.base_ptr]];
         decreases t1 - a1;
     {
         next_iter_s2 := lh_next(t2, a1, 0, true, next_iter_s2);
@@ -84,12 +106,14 @@ procedure denormalize(
         add(t2, t2, t3);
 
         denormalization_peri_lemma(next_iter_s2.buff, next_iter_tmp.buff, u, ai, shift, t3, t2);
-        next_iter_tmp := sh_next(t2, a3, 0, true, next_iter_tmp);
+        next_iter_tmp := sh_next(t2, a2, 0, true, next_iter_tmp);
 
-        addi(a3, a3, 2);
+        addi(a2, a2, 2);
         addi(a1, a1, 2);
         u := u + 1;
     }
+
+    next_iter_tmp := next_iter_tmp.(index := 0);
 }
 
 #verbatim
