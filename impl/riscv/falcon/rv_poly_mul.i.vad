@@ -55,7 +55,7 @@ function mq_ntt_mul_lemma(a0: seq(uint16), a1: seq(uint16), b0: seq(uint16), b1:
 
 function poly_mod_equiv(a: seq(uint16), b: seq(uint16), m: seq(uint16)): bool extern;
 
-procedure poly_mul(
+procedure ntt_poly_mul(
     ghost iter_a: b16_iter,
     ghost iter_b: b16_iter,
     ghost iter_t1: b16_iter,
@@ -63,7 +63,10 @@ procedure poly_mul(
     ghost iter_p1: b16_iter,
     ghost iter_p2: b16_iter)
 
-returns (ghost next_iter_a: b16_iter)
+returns (
+    ghost next_iter_b: b16_iter,
+    ghost next_iter_a: b16_iter)
+
     {:frame false}
 
     requires
@@ -117,8 +120,21 @@ returns (ghost next_iter_a: b16_iter)
         iter_b.base_ptr != iter_p1.base_ptr;
         iter_b.base_ptr != iter_p2.base_ptr;
 
+    ensures
+        fvar_iter_inv(heap, next_iter_a, next_iter_a.base_ptr, 0);
+        fvar_iter_inv(heap, next_iter_b, next_iter_b.base_ptr, 0);
+
+    ensures
+        mem == old(mem).(heap := heap);
+        next_iter_a.base_ptr == iter_a.base_ptr;
+        next_iter_b.base_ptr == iter_b.base_ptr;
+
+        heap == old(heap)
+            [next_iter_a.base_ptr := heap[next_iter_a.base_ptr]]
+            [next_iter_b.base_ptr := heap[next_iter_b.base_ptr]];
+        
     // ensures
-    //     poly_mod_equiv(next_iter_a.buff, poly_mul(iter_a.buff, iter_b.buff), n_ideal());
+        // poly_mod_equiv(p4, poly_mul(a0, b0), n_ideal());
 {
     mv(s0, a0);
     mv(s1, a1);
@@ -130,7 +146,7 @@ returns (ghost next_iter_a: b16_iter)
     let buff_a1 := next_iter_a.buff;
 
     mv(a0, s1);
-    let next_iter_b := forward_ntt_std2rev(iter_b, iter_p2);
+    next_iter_b := forward_ntt_std2rev(iter_b, iter_p2);
     let buff_b1 := next_iter_b.buff;
 
     mv(a0, s0);
@@ -154,6 +170,9 @@ returns (ghost next_iter_a: b16_iter)
 
     mq_ntt_mul_lemma(buff_a0, buff_a1, buff_b0, buff_b1,
         buff_p0, buff_p1, buff_p2, buff_p3, buff_p4);
+
+    next_iter_a := next_iter_a.(index := 0);
+    next_iter_b := next_iter_b.(index := 0);
 }
 
 

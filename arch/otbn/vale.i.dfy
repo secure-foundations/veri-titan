@@ -249,6 +249,11 @@ module ot_vale {
         && b256_iter_inv(heap, iter)
     }
 
+    function cur_ptr(iter: iter_t) : nat
+    {
+        iter.cur_ptr()
+    }
+
     predicate is_xword_pointee(heap: heap_t, ptr: nat, value: uint32)
     {
         && heap_w32_ptr_valid(heap, ptr)

@@ -394,8 +394,8 @@ procedure lhu(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: b16_
     assume false;
 }
 
-function lh(x: uint32): uint32 extern;
-function uh(x: uint32): uint32 extern;
+// function lh(x: uint32): uint32 extern;
+// function uh(x: uint32): uint32 extern;
 
 procedure lhu_next(inout dst: reg32, in src1: reg32, in src2: imm32, ghost inc: bool, ghost iter: b16_iter)
     returns (ghost next_iter: b16_iter)
@@ -414,6 +414,41 @@ procedure lhu_next(inout dst: reg32, in src1: reg32, in src2: imm32, ghost inc: 
     next_iter := b16_iter_load_next(iter, inc);
     lhu(dst, src1, src2, iter);
 }
+
+function uint16_sign_ext(i: uint16): uint32 extern;
+
+procedure lh(inout dst: reg32, in src1: reg32, in src2: imm32, ghost iter: b16_iter)
+    {:instruction Ins32(RV_LH(dst, src1, src2))}
+    requires
+        src2 < 4096; // 12-bit
+        b16_iter_safe(iter, heap, src1 + src2);
+    reads
+        heap;
+    ensures
+        heap == old(heap);
+        dst == uint16_sign_ext(iter.buff[iter.index]);
+{
+    assume false;
+}
+
+procedure lh_next(inout dst: reg32, in src1: reg32, in src2: imm32, ghost inc: bool, ghost iter: b16_iter)
+    returns (ghost next_iter: b16_iter)
+
+    requires
+        src2 < 4096; // 12-bit
+        b16_iter_safe(iter, heap, src1 + src2);
+    reads
+        heap;
+    ensures
+        dst == uint16_sign_ext(iter.buff[iter.index]);
+        next_iter == b16_iter_load_next(iter, inc);
+        b16_iter_inv(next_iter, heap,
+            if inc then old(src1) + old(src2) + 2 else old(src1) + old(src2));
+{
+    next_iter := b16_iter_load_next(iter, inc);
+    lh(dst, src1, src2, iter);
+}
+
 
 function heap_b16_write(heap: heap_t, b16_it: b16_iter, value: uint32): (heap': heap_t) extern;
 

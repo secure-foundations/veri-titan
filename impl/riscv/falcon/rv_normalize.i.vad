@@ -1,0 +1,123 @@
+include "../../../arch/riscv/decls.i.vad"
+// include "rv_reg_save.i.vad"
+
+#verbatim
+
+include "../../../arch/riscv/decls.i.dfy"
+include "../../../../lib/falcon/bv32_falcon_lemmas.i.dfy"
+include "../../../../lib/falcon/normalization_lemmas.i.dfy"
+
+module rv_normlization {
+
+import opened integers
+import opened rv_machine
+import opened rv_decls
+import opened rv_vale
+import opened mem
+import opened stack
+
+import opened bv32_ops
+import opened bv32_falcon_lemmas
+import opened normalization_lemmas
+
+import opened ntt_index
+import opened nth_root
+import opened poly_view
+
+
+// import opened rv_reg_save
+
+#endverbatim
+
+function fvar_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int): bool extern;
+function normalized_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int): bool extern;
+function cond_sub_q_lemma(a: uint16, b: uint16, c: uint16, d: uint16): void extern;
+
+function denormalization_inv(nv: seq(uint16), dnv: seq(uint16), i: nat): bool extern;
+function denormalization_pre_lemma(nv: seq(uint16), dnv: seq(uint16)): void extern;
+function denormalization_peri_lemma(buff: seq(uint16), dnv: seq(uint16), i: nat, a1: uint32, b: uint32, c: uint32, d: uint32): void extern;
+
+
+procedure denormalize(
+    ghost iter_s2: b16_iter,
+    ghost iter_tmp: b16_iter)
+
+returns (ghost next_iter_tmp: b16_iter)
+
+    requires
+        requires s1 == 12289;
+
+        normalized_iter_inv(heap, iter_s2, a1, 0);
+        // writable
+        fvar_iter_inv(heap, iter_tmp, a3, 0);
+
+        iter_s2.base_ptr != iter_tmp.base_ptr;
+
+    modifies
+        mem; heap;
+        t1; t2; t3; a1; a3;
+
+    reads
+        s1;
+
+    ensures
+        a3 == old(a3);
+        mem == old(mem).(heap := heap);
+        normalized_iter_inv(heap, iter_s2, iter_s2.base_ptr, 0);
+        next_iter_tmp.base_ptr == iter_tmp.base_ptr;
+        fvar_iter_inv(heap, next_iter_tmp, a3, 0);
+
+        heap == old(heap)
+            [next_iter_tmp.base_ptr := heap[next_iter_tmp.base_ptr]];
+
+    ensures
+        denormalization_inv(iter_s2.buff, next_iter_tmp.buff, 512);
+{
+    addi(t1, a1, 1024);
+    ghost var next_iter_s2 := iter_s2;
+    next_iter_tmp := iter_tmp;
+
+    ghost var u :nat := 0;
+
+    denormalization_pre_lemma(next_iter_s2.buff, iter_tmp.buff);
+
+    while (a1 < t1)
+        invariant s1 == 12289;
+        invariant t1 == iter_s2.base_ptr + 1024;
+
+        invariant next_iter_s2.base_ptr == iter_s2.base_ptr;
+        invariant next_iter_s2.buff == iter_s2.buff;
+        invariant normalized_iter_inv(heap, next_iter_s2, a1, u);
+
+        invariant next_iter_tmp.base_ptr == iter_tmp.base_ptr;
+        invariant fvar_iter_inv(heap, next_iter_tmp, a3, u);
+
+        invariant denormalization_inv(next_iter_s2.buff, next_iter_tmp.buff, u);
+
+        invariant mem == old(mem).(heap := heap);
+        invariant heap == old(heap)
+                [next_iter_tmp.base_ptr := heap[next_iter_tmp.base_ptr]];
+        decreases t1 - a1;
+    {
+        next_iter_s2 := lh_next(t2, a1, 0, true, next_iter_s2);
+        let ai := t2;
+        srai(t3, t2, 31);
+        let shift := t3;
+        and(t3, t3, s1);
+        add(t2, t2, t3);
+
+        denormalization_peri_lemma(next_iter_s2.buff, next_iter_tmp.buff, u, ai, shift, t3, t2);
+        next_iter_tmp := sh_next(t2, a3, 0, true, next_iter_tmp);
+
+        addi(a3, a3, 2);
+        addi(a1, a1, 2);
+        u := u + 1;
+    }
+
+    addi(a3, a3, (-1024));
+    next_iter_tmp := next_iter_tmp.(index := 0);
+}
+
+#verbatim
+}
+#endverbatim

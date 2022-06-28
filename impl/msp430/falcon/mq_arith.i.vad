@@ -1,0 +1,198 @@
+include "../../../arch/msp430/decls.i.vad"
+include "../mul.i.vad"
+
+#verbatim
+
+include "../../../arch/msp430/decls.i.dfy"
+include "../../../../lib/bv16_mm_lemmas.i.dfy"
+include "../../../../lib/falcon/mq_polys.dfy"
+include "../../../../lib/falcon/msp430/mq_arith_lemmas.dfy"
+include "../mul.i.dfy"
+
+module mq_arith_impl {
+
+import opened msp_machine
+import opened msp_decls
+import opened msp_vale
+import opened mem
+import opened mul
+import opened stack
+import opened bv16_mm_lemmas
+import opened bv16_ops
+import opened integers
+import opened mq_polys
+import opened mq_arith_lemmas
+import opened DivMod
+
+#endverbatim
+
+function mqsub(a: nat, b: nat): uint32 extern;
+function mqadd(a: nat, b: nat): uint32 extern;
+
+function lemma_mq_add_correct(sum: uint16, mask: uint16, r: uint16, x: uint16, y: uint16) : void extern;
+function lemma_mq_sub_correct(diff: uint16, flags: flags_t, mask: uint16, r: uint16, x: uint16, y: uint16) : void extern;
+
+
+
+procedure mq_add() 
+    lets 
+      Q    @= r9;
+      negQ @= r10;
+      x    @= r11;
+      y    @= r12;
+      r    @= r13;
+      tmp @= r14;
+    
+    requires
+      Q == 12289;
+      negQ == 0xcfff;
+      x < 12289;
+      y < 12289;
+    
+    reads
+      Q; negQ; x; y;
+
+    modifies
+      flags; r; tmp;
+    
+    ensures
+      r == mqadd(old(x), old(y));
+{
+    mov_w(y, tmp);    // tmp <- y
+    add_w(negQ, tmp); // tmp <- y - Q
+    add_w(x, tmp);    // tmp <- y - Q + x
+    let sum := tmp;
+
+    // If we're still negative, create a mask of 0xFFFF.  Else, use 0.
+    mov_w(tmp, r);     // r <- tmp
+    rla_w(r);          // carry <- MSB of r
+    let carry := flags.cf;
+    clr_w(r);          // r <- 0
+    subc_w(r, r);      // r <- 0 - carry;  r == if carry then 0xFFFF else 0
+    let mask := r;
+
+    and_w(Q, r);       // r <- Q & mask
+    add_w(tmp, r);     // r <- (Q & mask) + y - Q + x
+
+    lemma_mq_add_correct(sum, mask, r, x, y);
+}
+
+
+procedure mq_sub() 
+    lets 
+      Q    @= r9;
+      x    @= r11;
+      y    @= r12;
+      r    @= r13;
+      tmp  @= r14;
+    
+    requires
+      Q == 12289;
+      x < 12289;
+      y < 12289;
+
+    reads
+      Q; x; y;
+
+    modifies
+      flags; r; tmp;
+    
+    ensures
+      r == mqsub(old(x), old(y));
+{
+    mov_w_imm(0-1, r); // r <- 0xFFFF
+
+    mov_w(x, tmp);    // tmp <- x
+    sub_w(y, tmp);    // tmp <- x - y
+    let diff := tmp;
+    let diff_flags := flags;
+    
+    let carry := flags.cf;  // carry == 1 if we went negative, else carry == 0
+
+    // If we went negative, create a mask of 0xFFFF.  Else, use 0.
+    clr_w(r);          // r <- 0
+    subc_w(r, r);      // r <- 0 - carry;  r == if carry then 0xFFFF else 0
+    let mask := r;
+    
+    and_w(Q, r);       // r <- Q & mask
+    add_w(tmp, r);     // r <- (Q & mask) + x - y 
+
+    lemma_mq_sub_correct(diff, flags, mask, r, x, y);
+}
+
+function IsModEquivalent(x: int, y: int, m: int) : void extern;
+
+function lemma_cond_add_Q(flags: flags_t, mask: uint16, r: uint16, input: int) : void extern;
+function lemma_montymul_correct(x: nat, y: nat, xy_lh: uint16, xy_uh: uint16, Q0Ixy:nat, sum: uint32_view_t, partial_lh: uint16, partial_uh: uint16, partial_uh_xy_uh:uint16, m: uint16, flags: flags_t, r:uint16) : void extern;
+
+procedure montymul()
+    lets 
+      Q    @= r9;
+      x    @= r12;
+      y    @= r13;
+      r    @= r11;
+      tmp  @= r10;
+    
+    requires
+        Q == 12289;
+        x < 12289;
+        y < 12289;
+        r15 == 0;
+        in_stack_addr_range(sp - 2);
+    reads
+        Q;
+    modifies
+        mem; flat; flags;
+        regs;
+        sp; x; y; r; tmp; r14; r15;
+    ensures
+        sp == old(sp);
+        mem == old(mem);
+
+        IsModEquivalent(r * 4091, old(x * y), 12289);
+  {
+    mov_w(y, r14);
+    clr_w(y);
+    // to_nat(seq(r12, r13)) == old(r12) * old(r14);
+    builtin__mspabi_mpyl();     // x, y <- lh(x*y), uh(x*y)
+    ghost var xy_lh := x;
+    ghost var xy_uh := y;
+    mov_w(y, tmp);              // tmp <- xy_uh
+    mov_w(x, r14);              // r14 <- xy_lh
+    
+    mov_w_imm(12287, y);        // Need to use y's register for multiplication
+    builtin__mspabi_mpyi();     // x <- lh(x*y) * (Q-2)
+    ghost var Q0Ixy := x;
+
+  
+    mov_w(Q, y);                // y <- Q
+    // sum.full == old(r13) * old(r12) + old(r14);
+    let sum := mula16();  // x, y <- Q * Q0Ixy + lh(x*y)
+    let partial_lh := x;
+    let partial_uh := y;
+    add_w(tmp, y);              // y += xy_uh, so x, y == Q * Q0Ixy + x*y
+    let partial_uh_xy_uh := y;
+
+    // Now we ignore the lower-half (b/c the C code uses a >> 16)
+    assert Q == 12289;
+    sub_w(Q, y);       // y -= Q
+    let f := flags;
+    let m := y;
+
+    // If we went negative, create a mask of 0xFFFF.  Else, use 0.
+    clr_w(r);          // r <- 0
+    subc_w(r, r);      // r <- 0 - carry;  r == if carry then 0xFFFF else 0
+    let mask := r;
+    
+    and_w(Q, r);       // r <- Q & mask
+    let applied_mask := r;
+    add_w(y, r);       // r <- (Q & mask) + y
+
+    lemma_cond_add_Q(f, mask, r, y);
+    lemma_montymul_correct(old(x), old(y), xy_lh, xy_uh, Q0Ixy, sum, partial_lh, partial_uh, partial_uh_xy_uh, m, f, r);
+ }
+
+
+#verbatim
+}
+#endverbatim

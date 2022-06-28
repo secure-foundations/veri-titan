@@ -37,10 +37,6 @@ module msp_machine {
         flags_cons(msb(value), if value == 0 then 1 else 0, carry)
     }
 
-    function method get_cf(f:flags_t) : uint1 {
-      f.cf
-    }
-
     function method msp_add(x: uint16, y: uint16): (uint16, flags_t)
     {
         var (z, c) := addc(x, y, 0);
@@ -131,16 +127,12 @@ module msp_machine {
 
     datatype ins_t = 
         | MSP_ADD_W(src: operand_t, dst: operand_t)
-        | MSP_ADC_W(dst: operand_t)
         | MSP_ADDC_W(src: operand_t, dst: operand_t)
-        | MSP_AND_W(src: operand_t, dst: operand_t)
-        | MSP_CLR_W(dst: operand_t)
         | MSP_SUB_W(src: operand_t, dst: operand_t)
         | MSP_SUBC_W(src: operand_t, dst: operand_t)
         | MSP_MOV_W(src: operand_t, dst: operand_t)
         | MSP_MOV_B(src: operand_t, dst: operand_t)
         // | MSP_CMP_W(src: operand_t, dst: operand_t)
-        | MSP_RLA_W(dst: operand_t)
         | MSP_RRAX_W(dst: operand_t)
         | MSP_PUSHM_W(dst: operand_t, n: operand_t)
         | MSP_POPM_W(dst: operand_t, n: operand_t)

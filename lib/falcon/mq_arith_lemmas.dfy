@@ -67,8 +67,18 @@ module mq_arith_lemmas {
         assert uint32_and(b, Q) == Q by { reveal_and(); }
         assert IsModEquivalent(r, x + y, Q);
       }
-
     } 
+
+    lemma lemma_uint32_and_Q(x: uint32)
+      ensures x == 0 ==> uint32_and(x, Q) == 0;
+      ensures to_int32(x) == -1 ==> uint32_and(x, Q) == Q;
+    {
+      reveal_and();
+      if to_int32(x) == - 1{
+        assert x == 4294967295;
+        assert uint32_and(4294967295, Q) == Q;
+      }
+    }
 
     lemma lemma_mq_sub_correct(d: uint32, b: uint32, c: uint32, r: uint32, x: int, y: int)
         requires 0 <= x < 12289;
@@ -86,12 +96,12 @@ module mq_arith_lemmas {
       
       if to_int32(d) >= 0 {
         assert int32_rs(to_int32(d), 31) == 0 by { lemma_rs_by_31(to_int32(d)); }
-        assert uint32_and(b, Q) == 0 by { reveal_and(); }
+        lemma_uint32_and_Q(b);
         assert IsModEquivalent(r, x - y, Q);
       }
       else {
         assert int32_rs(to_int32(d), 31) == -1 by { lemma_rs_by_31(to_int32(d)); }
-        assert uint32_and(b, Q) == Q by { reveal_and(); }
+        lemma_uint32_and_Q(b);
         assert IsModEquivalent(r, x - y, Q);
       }
     }

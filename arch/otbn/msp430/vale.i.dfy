@@ -151,11 +151,6 @@ module msp_vale {
 
     type iter_t = b16_iter
 
-    function cur_ptr(iter: iter_t) : nat 
-    {
-      iter.cur_ptr()
-    }
-
     predicate iter_inv(iter: iter_t, heap: heap_t, address: int)
     {
         && iter.cur_ptr() == address
