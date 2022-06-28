@@ -62,14 +62,6 @@ procedure p2_double(inout dst: reg32, ghost p: pow2_t)
     ls1_is_double(old(dst));
 }
 
-// procedure double(inout dst: reg32)
-//     requires dst < BASE_31;
-//     ensures dst == old(dst) * 2;
-// {
-//     slli(dst, dst, 1);
-//     ls1_is_double(old(dst));
-// }
-
 function montmul(a: nat, b: nat): uint32 extern;
 function mqmul(a: nat, b: nat): uint32 extern;
 function mqsub(a: nat, b: nat): uint32 extern;
@@ -200,47 +192,9 @@ procedure ntt_inline_mq_sub()
 
     add(a3, a4, a3);
     let r := a3;
-    
     lemma_mq_sub_correct(d, b, c, r, x, y);
 }
     
-procedure mq_rshift1() returns (ghost r: uint32)
-    {:noInline}
-    requires
-        a0 < 12289;
-    modifies
-        a0; a4; a5;
-    ensures
-        //r == (old(a0) / 2) % 12289;
-        r < 12289;
-        (2 * r) % 12289 == old(a0) % 12289;
-{
-    ghost var Q: int := 12289;
-    ghost var x: nat := a0;
-
-    andi(a5, a0, 1);
-    ghost var par := a5; // 1 if x is odd
-    
-    // lui(a4, 0x3);
-    // addi(a4, a4, 1);
-    li(a4, 0x3001); // 12289
-    
-    neg(a5, a5); // 0 or 0xffff_ffff
-    ghost var b := a5;
-
-    and(a5, a5, a4);
-    ghost var c := uint32_and(b, to_uint32(Q));
-    assert c == a5;
-
-    add(a0, a5, a0);
-    ghost var d := uint32_add(to_uint32(x), c); // x + (Q or 0)
-     
-    srai(a0, a0, 0x1);
-    r := a0;
-
-    lemma_mq_rshift1_correct(par, b, c, d, r, x);
-}
-
 #verbatim
 }
 #endverbatim

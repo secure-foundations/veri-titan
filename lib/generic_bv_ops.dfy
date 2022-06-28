@@ -1,4 +1,5 @@
 include "../std_lib/src/Collections/Sequences/LittleEndianNat.dfy"
+include "../std_lib/src/NonlinearArithmetic/Power2.dfy"
 include "../std_lib/src/BoundedInts.dfy"
 
 module integers
@@ -10,7 +11,10 @@ module integers
     const BASE_4   : int := BoundedInts.TWO_TO_THE_4
     const BASE_5   : int := BoundedInts.TWO_TO_THE_5
     const BASE_8   : int := BoundedInts.TWO_TO_THE_8
+    const BASE_14  : int := 0x4000
     const BASE_16  : int := BoundedInts.TWO_TO_THE_16
+    const BASE_29  : int := 0x20000000
+    const BASE_30  : int := 0x40000000
     const BASE_31  : int := 0x80000000
     const BASE_32  : int := BoundedInts.TWO_TO_THE_32
     const BASE_63  : int := 0x80000000_00000000
@@ -47,6 +51,7 @@ abstract module generic_bv_ops
     import opened BVSEQ: LittleEndianNat
     import Mul
     import DivMod
+    import Power2
 
     import integers
 
@@ -93,8 +98,16 @@ abstract module generic_bv_ops
     function method rs(x: uint, amount: uint): uint
         requires valid_shift(amount)
 
+    lemma {:axiom} rs_is_div_mod_base(x: uint, amount: uint)
+      requires valid_shift(amount);
+      ensures rs(x, amount) == (x / Power2.Pow2(amount)) % BASE();
+
     function method ls(x: uint, amount: uint): uint
         requires valid_shift(amount)
+
+    lemma {:axiom} ls_is_mul_mod_base(x: uint, amount: uint)
+      requires valid_shift(amount);
+      ensures ls(x, amount) == (x * Power2.Pow2(amount)) % BASE();
 
     function method {:opaque} lsb(x: uint): uint1
     {
@@ -322,4 +335,5 @@ abstract module generic_bv_ops
             (u * u) + (2 * u) + 1;
         }
     }
+
 }

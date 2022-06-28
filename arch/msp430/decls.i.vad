@@ -125,6 +125,7 @@ function operator(.index) (iter :iter_t): int extern;
 function operator(.index := ) (iter: iter_t, i :int): iter_t extern;
 function operator(.buff) (iter :iter_t): seq(uint16) extern;
 function operator(.buff := ) (iter :iter_t, buff: seq(uint16)): iter_t extern;
+function cur_ptr(iter :iter_t): nat extern;
 
 type flags_t: Type(0) extern;
 var flags: flags_t {:state flags()};
@@ -308,7 +309,7 @@ procedure mov_w(in rs: reg, inout rd: reg)
     assume false;
 }
 
-procedure mov_w_imm(inline i: uint8, inout rd: reg)
+procedure mov_w_imm(inline i: int16, inout rd: reg)
     {:instruction Ins(MSP_MOV_W(Imm(i), Reg(rd)))}
     ensures
         rd == i;
@@ -398,6 +399,14 @@ function to_uint16(x: int16): uint16 extern;
 function msp_add(x: uint16, y: uint16): tuple(uint16, flags_t) extern;
 function msp_addc(x: uint16, y: uint16, flags: flags_t): tuple(uint16, flags_t) extern;
 
+procedure clr_w(out rd: reg)
+    {:instruction Ins(MSP_CLR_W(Reg(rd)))}
+    ensures 
+        rd == 0;
+{
+    assume false;
+}
+
 procedure add_w(in rs: reg, inout rd: reg)
     {:instruction Ins(MSP_ADD_W(Reg(rs), Reg(rd)))}
     modifies
@@ -411,11 +420,23 @@ procedure add_w(in rs: reg, inout rd: reg)
 }
     
 procedure add_w_imm(inline imm: int16, inout rd: reg)
-    {:instruction Ins(MSP_ADD_W(Imm(imm), Reg(rd)))}
+    {:instrucrla_wtion Ins(MSP_ADD_W(Imm(imm), Reg(rd)))}
     modifies
         flags;
     ensures
         let rst := msp_add(to_uint16(imm), old(rd));
+        rd == fst(rst);
+        flags == snd(rst);
+{
+    assume false;
+}
+
+procedure adc_w(inout rd: reg)
+    {:instruction Ins(MSP_ADC_W(Reg(rd)))}
+    modifies
+        flags;
+    ensures 
+        let rst := msp_addc(0, old(rd), old(flags));
         rd == fst(rst);
         flags == snd(rst);
 {
@@ -434,6 +455,18 @@ procedure addc_w(in rs: reg, inout rd: reg)
     assume false;
 }
 
+function uint16_and(x: uint16, y: uint16): uint16 extern;
+
+procedure and_w(in rs: reg, inout rd: reg)
+    {:instruction Ins(MSP_AND_W(Reg(rs), Reg(rd)))}
+    modifies
+        flags;
+    ensures 
+        rd == uint16_and(old(rs), old(rd));
+{
+    assume false;
+}
+
 function msp_sub(x: uint16, y: uint16): tuple(uint16, flags_t) extern;
 function msp_subc(x: uint16, y: uint16, flags: flags_t): tuple(uint16, flags_t) extern;
 
@@ -444,7 +477,7 @@ procedure sub_w(in rs: reg, inout rd: reg)
     modifies
         flags;
     ensures 
-        let rst := msp_add(old(rd), old(rs));
+        let rst := msp_sub(old(rd), old(rs));
         rd == fst(rst);
         flags == snd(rst);
 {
@@ -462,6 +495,18 @@ procedure subc_w(in rs: reg, inout rd: reg)
 {
     assume false;
 }
+
+function get_cf(f: flags_t): uint1 extern;
+procedure rla_w(inout rd: reg)
+    {:instruction Ins(MSP_RLA_W(Reg(rd)))}
+    modifies 
+        flags;
+    ensures 
+        get_cf(flags) == (if old(rd) >= 0x8000 then 1 else 0);
+{
+    assume false;
+}
+
 
 // procedure subc_sanity()
 //     modifies

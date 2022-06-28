@@ -17,7 +17,6 @@ module bv32_ops refines generic_bv_ops
 {
     import opened BVSEQ = bv32_seq
     import DivModNeg
-    import Power2
     import bv16_ops
 
     // half word base

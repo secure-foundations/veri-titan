@@ -583,6 +583,30 @@ procedure bn_mulqacc_safe(
     bn_mulqacc(src1, qwsel1, src2, qwsel2, shift);
 }
 
+procedure bn_mulqacc_so_zero( 
+    inout dst: reg256,
+    inline lower: bool,
+    in src1: reg256, inline qwsel1: uint2,
+    in src2: reg256, inline qwsel2: uint2,
+    inline shift: uint2, inline fg: uint1)
+    {:instruction Ins256(BN_MULQACC_SO(true, dst, lower, src1, qwsel1, src2, qwsel2, shift, fg))}
+    modifies
+        wacc; fgroups;
+    ensures
+        let product := otbn_mulqacc(true, old(src1), qwsel1, old(src2), qwsel2, shift, old(wacc));
+        let result := otbn_mulqacc_so(product, old(dst), lower, old(get_fgroup(fgroups, fg)));
+        // the upper half stay in wacc
+        wacc == result.new_acc
+        // the lower half gets written back into dst
+        && dst == result.new_dst
+        // update flags
+        && fgroups == update_fgroups(old(fgroups), fg, result.new_flags);
+{
+    reveal eval_code_opaque;
+    reveal valid_state_opaque;
+    this := this.(mem := old(this).mem);
+}
+
 procedure bn_mulqacc_so( 
     inout dst: reg256,
     inline lower: bool,
@@ -640,6 +664,8 @@ function bn_lid_correct(s: state,
     grd: reg32_t, grd_inc: bool,
     offset: int10, grs: reg32_t, grs_inc: bool,
     iter: iter_t) : iter_t extern;
+
+function cur_ptr(iter :iter_t): nat extern;
 
 procedure bn_lid_safe(
     inout grd: reg32, inline grd_inc: bool,

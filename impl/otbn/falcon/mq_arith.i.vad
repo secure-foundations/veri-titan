@@ -4,6 +4,7 @@ include "../../../arch/otbn/decls.i.vad"
 
 include "../../../arch/otbn/decls.i.dfy"
 include "../../../../lib/bv256_ntt_lemmas.i.dfy"
+include "../../../../lib/falcon/otbn_lemmas.i.dfy"
 
 module mq_arith {
 
@@ -13,54 +14,124 @@ import opened ot_decls
 import opened ot_vale
 
 import opened integers
-import opened bv256_ops
+//import opened bv256_ops
 import opened bv256_ntt_lemmas
+import opened otbn_lemmas
+import opened DivMod
 
 #endverbatim
     
 function mod(a: int, n: int): int extern;
 ghost procedure addm_correct_lemma(ghost x: uint256, ghost y: uint256, ghost mod: uint256) extern;
 ghost procedure subm_correct_lemma(ghost x: uint256, ghost y: uint256, ghost mod: uint256) extern;
+ghost procedure xor_clear_lemma(ghost x: uint256) extern;
+function SFT(left: bool, bytes: uint5) : shift_t extern;
+function lemma_small_mulqacc(x: uint256, y: uint256, r: uint256, old_wacc: uint256, old_flags: flags_t): void extern;
+function lemma_elem_prod_bound(x: uint256, y: uint256, r: uint256): void extern;
+function lemma_montymul_correct(x: uint256, y: uint256, prod: uint256, sum: uint256, shifted: uint256, diff1: uint256, flags: flags_t, diff2: uint256): void extern;
     
-procedure mq_add()
-    {:noInline}
+procedure mq_add(inout dst: reg256, in src1: reg256, in src2: reg256)
     requires
-        w0 < wmod;
-        w1 < wmod;
+        src1 < wmod;
+        src2 < wmod;
         wmod == NTT_PRIME;
     reads
         wmod;
-    modifies
-        w0; w1;
     ensures
-      w0 == mod(old(w0) + old(w1), old(wmod));
+      dst == mod(old(src1) + old(src2), old(wmod));
 {
-    ghost var x := w0;
-    ghost var y := w1;
+    ghost var x := src1;
+    ghost var y := src2;
 
-    bn_addm(w0, w0, w1);
+    bn_addm(dst, src1, src2);
     addm_correct_lemma(x, y, wmod);
 }
     
-procedure mq_sub()
-    {:noInline}
+procedure mq_sub(inout dst: reg256, in src1: reg256, in src2: reg256)
     requires
-        w0 < wmod;
-        w1 < wmod;
+        src1 < wmod;
+        src2 < wmod;
         wmod == NTT_PRIME;
     reads
         wmod;
-    modifies
-        w0; w1;
     ensures
-      w0 == mod(old(w0) - old(w1), old(wmod));
+      dst == mod(old(src1) - old(src2), old(wmod));
 {
-    ghost var x := w0;
-    ghost var y := w1;
+    ghost var x := src1;
+    ghost var y := src2;
 
-    bn_subm(w0, w0, w1);
+    bn_subm(dst, src1, src2);
     subm_correct_lemma(x, y, wmod);
 }
+
+procedure bn_clear(inout dst: reg256)
+  modifies fgroups;
+  ensures dst == 0;
+{
+  xor_clear_lemma(dst);
+  bn_xor(dst, dst, dst, SFT_DFT, 0);
+}
+
+procedure montymul()
+    lets 
+      Q    @= w1;
+      x    @= w2;
+      y    @= w3;
+      r    @= w4;
+      Q0I  @= w5;
+    
+    requires
+        Q == 12289;
+        Q0I == 12287;
+        x < 12289;
+        y < 12289;
+    reads
+        Q; Q0I;
+    modifies
+        x; y; r; wacc;
+        fgroups;
+    ensures
+        IsModEquivalent(r * 4091, old(x * y), 12289);
+  {
+    bn_clear(r);  // r <- 0
+
+    ghost var old_wacc := wacc;
+    ghost var old_flags := get_fgroup(fgroups, 0);
+    bn_mulqacc_so_zero(r, true, x, 0, y, 0, 0, 0);   // r <- x * y
+    lemma_small_mulqacc(x, y, r, old_wacc, old_flags);
+    assert r == x * y;
+    lemma_elem_prod_bound(x, y, r);
+
+    old_wacc := wacc;
+    old_flags := get_fgroup(fgroups, 0);
+    bn_clear(y);  // y <- 0   Use y as a temporary
+    bn_mulqacc_so_zero(y, true, Q, 0, Q0I, 0, 0, 0); // y <- Q * Q0I
+    lemma_small_mulqacc(Q, Q0I, y, old_wacc, old_flags);
+    assert y == Q * Q0I;
+
+    old_wacc := wacc;
+    old_flags := get_fgroup(fgroups, 0);
+    let QQ0I := y;
+    bn_clear(x);  // x <- 0   Use x as a temporary
+    bn_mulqacc_so_zero(x, true, r, 0, y, 0, 0, 0);   // x <- x * y * Q * Q0I
+    lemma_small_mulqacc(r, QQ0I, x, old_wacc, old_flags);
+    assert x == (old(x) * old(y)) * (Q * Q0I);
+    let prod := x;
+
+    bn_add(r, x, r, SFT_DFT, 0);       // r <- x * y * Q * Q0I + x*y
+    let sum := r;
+    bn_clear(y);                       // y <- 0
+    bn_add(r, y, r, SFT(false, 2), 0); // r <- (x * y * Q * Q0I + x*y) >> 16
+    let shifted := r;
+    bn_sub(r, r, Q, SFT_DFT, 0);       // r -= Q
+    let diff := r;
+    let flags := get_fgroup(fgroups, 0);
+    bn_sel(y, Q, y, 0, 0);             // y <- if carry then Q else 0
+    bn_add(r, r, y, SFT_DFT, 0);       // r += y 
+
+    lemma_montymul_correct(old(x), old(y), prod, sum, shifted, diff, flags, r);
+ }
+
 
 #verbatim
 }

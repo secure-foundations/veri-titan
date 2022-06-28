@@ -406,16 +406,16 @@ mq_montymul(uint32_t x, uint32_t y) {
      * will be lower than 2*q, so a conditional subtraction works.
      */
 
-    z = x * y;
-    w = ((z * Q0I) & 0xFFFF) * Q;
+    xy = x * y;
+    w = ((xy * Q0I) & 0xFFFF) * Q;
 
     /*
-     * When adding z and w, the result will have its low 16 bits
+     * When adding xy and w, the result will have its low 16 bits
      * equal to 0. Since x, y and z are lower than q, the sum will
      * be no more than (2^15 - 1) * q + (q - 1)^2, which will
      * fit on 29 bits.
      */
-    z = (z + w) >> 16;
+    z = (w + xy) >> 16;
 
     /*
      * After the shift, analysis shows that the value will be less
