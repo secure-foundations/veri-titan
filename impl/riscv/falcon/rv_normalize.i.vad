@@ -7,7 +7,7 @@ include "../../../arch/riscv/decls.i.dfy"
 include "../../../../lib/falcon/bv32_falcon_lemmas.i.dfy"
 include "../../../../lib/falcon/normalization_lemmas.i.dfy"
 
-module rv_denormlize {
+module rv_normlization {
 
 import opened integers
 import opened rv_machine
@@ -49,22 +49,23 @@ returns (ghost next_iter_tmp: b16_iter)
 
         normalized_iter_inv(heap, iter_s2, a1, 0);
         // writable
-        fvar_iter_inv(heap, iter_tmp, a2, 0);
+        fvar_iter_inv(heap, iter_tmp, a3, 0);
 
         iter_s2.base_ptr != iter_tmp.base_ptr;
 
     modifies
         mem; heap;
-        t1; t2; t3; a1; a2;
+        t1; t2; t3; a1; a3;
 
     reads
         s1;
 
     ensures
+        a3 == old(a3);
         mem == old(mem).(heap := heap);
         normalized_iter_inv(heap, iter_s2, iter_s2.base_ptr, 0);
         next_iter_tmp.base_ptr == iter_tmp.base_ptr;
-        fvar_iter_inv(heap, next_iter_tmp, next_iter_tmp.base_ptr, 0);
+        fvar_iter_inv(heap, next_iter_tmp, a3, 0);
 
         heap == old(heap)
             [next_iter_tmp.base_ptr := heap[next_iter_tmp.base_ptr]];
@@ -89,7 +90,7 @@ returns (ghost next_iter_tmp: b16_iter)
         invariant normalized_iter_inv(heap, next_iter_s2, a1, u);
 
         invariant next_iter_tmp.base_ptr == iter_tmp.base_ptr;
-        invariant fvar_iter_inv(heap, next_iter_tmp, a2, u);
+        invariant fvar_iter_inv(heap, next_iter_tmp, a3, u);
 
         invariant denormalization_inv(next_iter_s2.buff, next_iter_tmp.buff, u);
 
@@ -106,13 +107,14 @@ returns (ghost next_iter_tmp: b16_iter)
         add(t2, t2, t3);
 
         denormalization_peri_lemma(next_iter_s2.buff, next_iter_tmp.buff, u, ai, shift, t3, t2);
-        next_iter_tmp := sh_next(t2, a2, 0, true, next_iter_tmp);
+        next_iter_tmp := sh_next(t2, a3, 0, true, next_iter_tmp);
 
-        addi(a2, a2, 2);
+        addi(a3, a3, 2);
         addi(a1, a1, 2);
         u := u + 1;
     }
 
+    addi(a3, a3, (-1024));
     next_iter_tmp := next_iter_tmp.(index := 0);
 }
 

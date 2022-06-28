@@ -24,8 +24,13 @@ import opened ntt_index
 import opened nth_root
 import opened poly_view
 
-import opened rv_normalize
+import opened rv_normlization
 import opened rv_poly_mul
+
+import opened normalization_lemmas
+
+import opened ntt_512_params
+
 // import opened rv_reg_save
 
 #endverbatim
@@ -40,11 +45,20 @@ procedure rv_falcon(
     ghost iter_p1: b16_iter,
     ghost iter_p2: b16_iter)
 
+returns (ghost next_iter_tmp: b16_iter)
+
 {:frame false}
 
     requires
+        set_len(init_unfinished(N)) == 480;
+
+    requires
+        in_stack_addr_range(sp);
+        in_stack_addr_range(sp - 24);
+
+    requires
         fvar_iter_inv(heap, iter_c0, a0, 0);
-        normlized_iter_inv(heap, iter_s2, a1, 0);
+        normalized_iter_inv(heap, iter_s2, a1, 0);
 
         // writable
         fvar_iter_inv(heap, iter_h, a2, 0);
@@ -76,8 +90,33 @@ procedure rv_falcon(
         fvar_iter_inv(heap, iter_p2,
             load_symbol(mem, "rev_ntt512_mixed_powers_table"), 0);
         iter_p2.buff == rev_mixed_powers_mont_table();
+
+    requires
+        iter_h.base_ptr != iter_c0.base_ptr;
+        iter_h.base_ptr != iter_s2.base_ptr;
+        iter_h.base_ptr != iter_tmp.base_ptr;
+        iter_h.base_ptr != iter_t1.base_ptr;
+        iter_h.base_ptr != iter_t2.base_ptr;
+        iter_h.base_ptr != iter_p1.base_ptr;
+        iter_h.base_ptr != iter_p2.base_ptr;
+
+        iter_tmp.base_ptr != iter_c0.base_ptr;
+        iter_tmp.base_ptr != iter_s2.base_ptr;
+        iter_tmp.base_ptr != iter_t1.base_ptr;
+        iter_tmp.base_ptr != iter_t2.base_ptr;
+        iter_tmp.base_ptr != iter_p1.base_ptr;
+        iter_tmp.base_ptr != iter_p2.base_ptr;
+
 {
-    assume false;
+    li(s1, 12289);
+
+    next_iter_tmp := denormalize(iter_s2, iter_tmp);
+
+    ghost var next_iter_h := iter_h;
+
+    mv(a0, a3);
+    mv(a1, a2);
+    next_iter_tmp, next_iter_h := ntt_poly_mul(next_iter_tmp, iter_h, iter_t1, iter_t2, iter_p1, iter_p2);
 }
 
 #verbatim
