@@ -71,11 +71,11 @@ We assume the following packages are installed by the user:
 
 `ninja` (1.10.+)
 
-[`dotnet`](https://dotnet.microsoft.com/download)
+[`dotnet`](https://dotnet.microsoft.com/en-us/download/dotnet/5.0) (5.0)
 
 [`nuget`](https://www.nuget.org/downloads)
 
-[`python`](https://www.python.org/) >= 3.0
+[`python`](https://www.python.org/) (3.+)
 
 We assume some otbn tools are available:
 
