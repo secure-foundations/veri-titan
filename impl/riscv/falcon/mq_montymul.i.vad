@@ -51,7 +51,7 @@ procedure montymul(ghost x: nat, ghost y: nat) returns (ghost r: uint32)
     ensures
         IsModEquivalent(r * 4091, x * y, 12289);
         r == a3;
-  {
+{
     mul(a3, a3, a1);
     ghost var xy := a3;
     
@@ -104,9 +104,149 @@ procedure montymul(ghost x: nat, ghost y: nat) returns (ghost r: uint32)
     lemma_cond_add_Q(z, d, b, c, r);
 
     lemma_montymul_correct(x, y, xy, Q0Ixy, v, w, z, r);
+}
+
+procedure poly_mul_inline_montymul() 
+    requires
+        t0 < 12289;
+        t1 < 12289;
+    modifies
+        t1; t0; a4; a5;
+    ensures
+        IsModEquivalent(t0 * 4091, old(t0) * old(t1), 12289);
+        t0 < 12289;
+        t0 == montmul(old(t0), old(t1));
+{
+    let x := t0;
+    let y := t1;
+
+    mul(t0, t0, t1);
+    ghost var xy := t0;
     
- }
-        
+    slli(a4, t0, 0x1);
+    add(a4, a4, t0);
+    ghost var xy3 := a4;
+    
+    lemma_shiftmul3(x, y, xy, xy3);
+    assert xy3 == 3 * xy;
+
+    slli(a4, a4, 0xc);
+    ghost var xy12288 := a4; // xy3 * 4096 == 12288 * xy
+
+    sub(a4, a4, t0);
+    ghost var Q0Ixy := a4; // Q0I * x * y == 12287 * x * y
+    
+    lemma_Q0Ixy_correct(x, y, xy, xy3, Q0Ixy);
+
+    // clear top 16 bits of a4    
+    slli(a4, a4, 0x10);
+    srli(a4, a4, 0x10);
+    ghost var v := a4;
+
+    slli(a5, a4, 0x1);
+    add(a5, a5, a4);
+    ghost var v3 := a5;
+    lemma_shiftadd3(Q0Ixy, v, v3);
+
+    slli(a5, a5, 0xc);
+    add(a5, a5, a4);
+    ghost var w := a5;
+    lemma_12289(v, v3, w);
+    assert w == 12289 * v;
+
+    add(a5, a5, t0);
+    assert a5 == w + xy; 
+
+    srli(a5, a5, 0x10);
+    ghost var z := a5;
+    lemma_zw_shift(w, xy, z);
+    li(a4, 12289);
+    
+    sub(a5, a5, a4);
+    ghost var d := a5;
+    srai(t0, a5, 0x1f);
+    ghost var b := t0;
+    and(t0, t0, a4);
+    ghost var c := t0;
+    add(t0, t0, a5);
+    let r := t0;
+    lemma_cond_add_Q(z, d, b, c, r);
+
+    lemma_montymul_correct(x, y, xy, Q0Ixy, v, w, z, r);
+}
+
+procedure ntt_inline_mq_montymul()
+    requires
+        a1 < 12289;
+        s5 < 12289;
+    reads
+        s5;
+    modifies
+        a1; a4; a3;
+    ensures
+        IsModEquivalent(a1 * 4091, old(a1) * s5, 12289);
+        a1 < 12289;
+        a1 == montmul(old(a1), old(s5));
+{
+    let x := a1;
+    let y := s5;
+
+    mul(a1, a1, s5);
+    ghost var xy := a1;
+    
+    slli(a4, a1, 0x1);
+    add(a4, a4, a1);
+    ghost var xy3 := a4;
+    
+    lemma_shiftmul3(x, y, xy, xy3);
+    assert xy3 == 3 * xy;
+
+    slli(a4, a4, 0xc);
+    ghost var xy12288 := a4; // xy3 * 4096 == 12288 * xy
+
+    sub(a4, a4, a1);
+    ghost var Q0Ixy := a4; // Q0I * x * y == 12287 * x * y
+    
+    lemma_Q0Ixy_correct(x, y, xy, xy3, Q0Ixy);
+
+    // clear top 16 bits of a4    
+    slli(a4, a4, 0x10);
+    srli(a4, a4, 0x10);
+    ghost var v := a4;
+
+    slli(a3, a4, 0x1);
+    add(a3, a3, a4);
+    ghost var v3 := a3;
+    lemma_shiftadd3(Q0Ixy, v, v3);
+
+    slli(a3, a3, 0xc);
+    add(a3, a3, a4);
+    ghost var w := a3;
+    lemma_12289(v, v3, w);
+    assert w == 12289 * v;
+
+    add(a3, a3, a1);
+    assert a3 == w + xy; 
+
+    srli(a3, a3, 0x10);
+    ghost var z := a3;
+    lemma_zw_shift(w, xy, z);
+    
+    li(a4, 12289);
+
+    sub(a3, a3, a4);
+    ghost var d := a3;
+    srai(a1, a3, 0x1f);
+    ghost var b := a1;
+    and(a1, a1, a4);
+    ghost var c := a1;
+    add(a1, a1, a3);
+    let r := a1;
+    lemma_cond_add_Q(z, d, b, c, r);
+
+    lemma_montymul_correct(x, y, xy, Q0Ixy, v, w, z, r);
+}
+
 #verbatim
 }
 #endverbatim
