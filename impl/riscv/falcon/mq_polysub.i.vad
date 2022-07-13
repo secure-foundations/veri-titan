@@ -22,6 +22,7 @@ import opened ntt_index
 import opened mq_polys
 import opened poly_view
 import opened nth_root
+import opened ntt_512_params
 
 import opened mq_arith
 #endverbatim

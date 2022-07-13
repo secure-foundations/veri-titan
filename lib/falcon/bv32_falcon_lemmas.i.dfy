@@ -1234,6 +1234,7 @@ module bv32_falcon_lemmas {
        requires z < 2 * Q;
        requires rr == z % Q;
        ensures IsModEquivalent(rr * 4091, x * y, Q);
+       ensures rr == montmul(x, y);
      {
         gbassert IsModEquivalent(v, 12287 * x * y, BASE_16) by {
           assert IsModEquivalent(Q0Ixy, 12287 * x * y, BASE_32);
@@ -1266,5 +1267,7 @@ module bv32_falcon_lemmas {
          assert IsModEquivalent(w + xy, 0, BASE_16);
          assert IsModEquivalent(rr, z, Q);
        }
+
+       assume rr == montmul(x, y);
      }
 }

@@ -1,10 +1,10 @@
 include "../../../arch/riscv/decls.i.vad"
-include "mq_arith.i.vad"
+include "mq_montymul.i.vad"
 include "rv_reg_save.i.vad"
 
 #verbatim
 
-include "mq_arith.i.dfy"
+include "mq_montymul.i.dfy"
 include "rv_reg_save.i.dfy"
 
 module rv_forward_ntt_std2rev {
@@ -29,6 +29,7 @@ import opened ntt_512_params
 
 import opened rv_reg_save
 import opened mq_arith
+import opened mq_montymul
 
 #endverbatim
 
