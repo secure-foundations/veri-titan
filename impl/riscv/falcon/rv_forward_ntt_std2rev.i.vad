@@ -137,12 +137,12 @@ procedure forward_s_loop(ghost iter_a: b16_iter,
 
     ntt_inline_mq_sub();
     let o := a3;
-    iter_a' := sh_next(a3, t5, 0, false, iter_a.(index := s + d.full));
+    iter_a' := sh_bounded_next(a3, t5, 0, false, iter_a.(index := s + d.full));
     // assert iter_a'.buff[s + d.full] == o;
     
     ntt_inline_mq_add(); // a2 + a1
     let e := a3;
-    iter_a' := sh_next(a3, t4, 0, false, iter_a'.(index := s));
+    iter_a' := sh_bounded_next(a3, t4, 0, false, iter_a'.(index := s));
 
     // assert s_loop_update(iter_a.buff, iter_a'.buff, d, j, bi, s, e, o, view);
     forward_s_loop_inv_peri_lemma(iter_a.buff, iter_a'.buff, d, j, bi, s, e, o, view);

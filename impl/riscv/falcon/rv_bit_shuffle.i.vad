@@ -152,8 +152,8 @@ returns (ghost next_iter_a: b16_iter)
             lhu(a3, t0, 0, next_iter_a.(index := sbi));
             lhu(a4, t1, 0, next_iter_a.(index := rsbi));
 
-            next_iter_a := sh_next(a4, t0, 0, false, next_iter_a.(index := sbi));
-            next_iter_a := sh_next(a3, t1, 0, false, next_iter_a.(index := rsbi));
+            next_iter_a := sh_bounded_next(a4, t0, 0, false, next_iter_a.(index := sbi));
+            next_iter_a := sh_bounded_next(a3, t1, 0, false, next_iter_a.(index := rsbi));
 
             next_iter_a := next_iter_a.(index := 0);
 

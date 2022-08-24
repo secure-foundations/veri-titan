@@ -1,11 +1,13 @@
 include "../../../arch/riscv/decls.i.vad"
 include "rv_poly_mul.i.vad"
 include "rv_normalize.i.vad"
+include "mq_polysub.i.vad"
 
 #verbatim
 
 include "rv_poly_mul.i.dfy"
 include "rv_normalize.i.dfy"
+include "mq_polysub.i.dfy"
 
 module rv_falcon {
 
@@ -31,6 +33,7 @@ import opened normalization_lemmas
 
 import opened ntt_512_params
 
+import opened mq_polysub
 // import opened rv_reg_save
 
 #endverbatim
@@ -39,13 +42,13 @@ procedure rv_falcon(
     ghost iter_c0: b16_iter,
     ghost iter_s2: b16_iter,
     ghost iter_h: b16_iter,
-    ghost iter_tmp: b16_iter,
+    ghost iter_tt: b16_iter,
     ghost iter_t1: b16_iter,
     ghost iter_t2: b16_iter,
     ghost iter_p1: b16_iter,
     ghost iter_p2: b16_iter)
 
-returns (ghost next_iter_tmp: b16_iter)
+returns (ghost next_iter_tt: b16_iter)
 
 {:frame false}
 
@@ -63,7 +66,7 @@ returns (ghost next_iter_tmp: b16_iter)
         // writable
         fvar_iter_inv(heap, iter_h, a2, 0);
         // writable
-        fvar_iter_inv(heap, iter_tmp, a3, 0);
+        fvar_iter_inv(heap, iter_tt, a3, 0);
 
     requires
         symbols?["bit_rev_table_512"];
@@ -94,29 +97,44 @@ returns (ghost next_iter_tmp: b16_iter)
     requires
         iter_h.base_ptr != iter_c0.base_ptr;
         iter_h.base_ptr != iter_s2.base_ptr;
-        iter_h.base_ptr != iter_tmp.base_ptr;
+        iter_h.base_ptr != iter_tt.base_ptr;
         iter_h.base_ptr != iter_t1.base_ptr;
         iter_h.base_ptr != iter_t2.base_ptr;
         iter_h.base_ptr != iter_p1.base_ptr;
         iter_h.base_ptr != iter_p2.base_ptr;
 
-        iter_tmp.base_ptr != iter_c0.base_ptr;
-        iter_tmp.base_ptr != iter_s2.base_ptr;
-        iter_tmp.base_ptr != iter_t1.base_ptr;
-        iter_tmp.base_ptr != iter_t2.base_ptr;
-        iter_tmp.base_ptr != iter_p1.base_ptr;
-        iter_tmp.base_ptr != iter_p2.base_ptr;
+        iter_tt.base_ptr != iter_c0.base_ptr;
+        iter_tt.base_ptr != iter_s2.base_ptr;
+        iter_tt.base_ptr != iter_t1.base_ptr;
+        iter_tt.base_ptr != iter_t2.base_ptr;
+        iter_tt.base_ptr != iter_p1.base_ptr;
+        iter_tt.base_ptr != iter_p2.base_ptr;
 
 {
     li(s1, 12289);
 
-    next_iter_tmp := denormalize(iter_s2, iter_tmp);
+    mv(s2, a0);
+    mv(s3, a3);
+
+    next_iter_tt := denormalize(iter_s2, iter_tt);
 
     ghost var next_iter_h := iter_h;
 
     mv(a0, a3);
     mv(a1, a2);
-    next_iter_tmp, next_iter_h := ntt_poly_mul(next_iter_tmp, iter_h, iter_t1, iter_t2, iter_p1, iter_p2);
+    next_iter_tt, next_iter_h := ntt_poly_mul(
+        next_iter_tt, iter_h, iter_t1, iter_t2, iter_p1, iter_p2);
+    
+    // assert fvar_iter_inv(heap, next_iter_tt, s3, 0);
+    li(a0, 12289);
+    mv(s1, s3);
+    mv(s0, s2);
+
+    next_iter_tt, next_iter_h := poly_sub(next_iter_tt, iter_c0);
+
+    assert fvar_iter_inv(heap, next_iter_tt, s3, 0);
+
+    next_iter_tt := normalize(next_iter_tt);
 }
 
 #verbatim

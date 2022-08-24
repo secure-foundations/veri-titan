@@ -1196,31 +1196,60 @@ module bv32_falcon_lemmas {
       ensures uint32_and(0, x) == 0;
       ensures uint32_and(0xffff_ffff, x) == x;
      {
-      reveal_and();
+        reveal_and();
      }
 
-     lemma lemma_cond_add_Q(z: uint32, d: uint32, b: uint32, c: uint32, r: uint32)
-         requires z < 2 * Q;
-         requires d == uint32_sub(z, Q);
-         requires b == to_uint32(int32_rs(to_int32(d), 31));
-         requires c == uint32_and(b, Q);
-         requires r == uint32_add(c, d);
-         ensures r < Q;
-         ensures r == z % Q;
-     {
+    lemma cond_set_Q_lemma(a: uint32, b: uint32)
+        requires b == uint32_and(uint32_rsai(a, 31), Q);
+        ensures b == if to_int32(a) >= 0 then 0 else Q;
+    {
+        if to_int32(a) >= 0 {
+            calc == {
+                b;
+                uint32_and(uint32_rsai(a, 31), Q);
+                uint32_and(to_uint32(int32_rs(to_int32(a), 31)), Q);
+                {
+                    lemma_rs_by_31(to_int32(a));
+                    assert int32_rs(to_int32(a), 31) == 0;          
+                }
+                uint32_and(to_uint32(0), Q);
+                uint32_and(0, Q);
+                {
+                    lemma_and_with_constants(Q);
+                }
+                0;
+            }
+        } else {
+            calc == {
+                b;
+                uint32_and(uint32_rsai(a, 31), Q);
+                uint32_and(to_uint32(int32_rs(to_int32(a), 31)), Q);
+                {
+                    lemma_rs_by_31(to_int32(a));
+                    assert int32_rs(to_int32(a), 31) == -1;
+                }
+                uint32_and(to_uint32(-1), Q);
+                {
+                    lemma_and_with_constants(Q);
+                }
+                Q;
+            }
+        }
+    }
 
-      if to_int32(d) >= 0 {
-        assert int32_rs(to_int32(d), 31) == 0 by { lemma_rs_by_31(to_int32(d)); }
-        assert uint32_and(0, Q) == 0 by { lemma_and_with_constants(Q); }
-        assert IsModEquivalent(r, z, Q);
-      }
-      else {
-        assert int32_rs(to_int32(d), 31) == -1 by { lemma_rs_by_31(to_int32(d)); }
-        assert uint32_and(b, Q) == Q by { lemma_and_with_constants(Q); }
-        assert IsModEquivalent(r, z, Q);
-      }
-     }
- 
+    lemma lemma_cond_add_Q(z: uint32, d: uint32, b: uint32, c: uint32, r: uint32)
+        requires z < 2 * Q;
+        requires d == uint32_sub(z, Q);
+        requires b == uint32_rsai(d, 31);
+        requires c == uint32_and(b, Q);
+        requires r == uint32_add(c, d);
+        ensures r < Q;
+        ensures r == z % Q;
+    {
+        cond_set_Q_lemma(d, c);
+
+    }
+
      lemma lemma_montymul_correct(x: nat, y: nat, xy: uint32, Q0Ixy:nat, v: nat, w: uint32, z: uint32, rr: uint32)
        requires x < Q;
        requires y < Q;

@@ -64,8 +64,8 @@ procedure ntt_poly_mul(
     ghost iter_p2: b16_iter)
 
 returns (
-    ghost next_iter_b: b16_iter,
-    ghost next_iter_a: b16_iter)
+    ghost next_iter_a: b16_iter,
+    ghost next_iter_b: b16_iter)
 
     {:frame false}
 
@@ -132,7 +132,11 @@ returns (
         heap == old(heap)
             [next_iter_a.base_ptr := heap[next_iter_a.base_ptr]]
             [next_iter_b.base_ptr := heap[next_iter_b.base_ptr]];
-        
+    
+    ensures
+        s2 == old(s2);
+        s3 == old(s3);
+        s4 == old(s4);
     // ensures
         // poly_mod_equiv(p4, poly_mul(a0, b0), n_ideal());
 {

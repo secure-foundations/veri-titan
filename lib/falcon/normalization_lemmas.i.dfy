@@ -15,9 +15,6 @@ module normalization_lemmas {
 
     const Q_HLAF :int := Q/2
 
-    // const NORMaLIZED_HIGHER_INCLUSIVE :int := Q_HLAF
-    // const NORMaLIZED_LOWER_INCLUSIVE :int := -Q_HLAF
-
     predicate int_is_normalized(e: int)
     {
         -Q_HLAF <= e <= Q_HLAF
@@ -25,15 +22,25 @@ module normalization_lemmas {
 
     type nelem = e: int | int_is_normalized(e)
 
+    // 0 <= e < Q -> -Q/2 <= e <= Q/2
     function normalize(e: elem): nelem
     {
         if e <= Q_HLAF then e else e as int - Q
     }
 
+    // -Q/2 <= e < Q/2 -> 0 <= e <= Q 
     function denormalize(e: nelem): elem
     {
         if e >= 0 then e else e + Q
     }
+
+    lemma normalize_inverse(e: elem)
+        ensures denormalize(normalize(e)) == e;
+    {}
+
+    lemma denormalize_inverse(e: nelem)
+        ensures normalize(denormalize(e)) == e;
+    {}
 
     predicate uint16_is_normalized(e: uint16)
     {
@@ -74,7 +81,7 @@ module normalization_lemmas {
         requires normalized_values(buff);
         requires i < |buff|;
         requires a1 == uint16_sign_ext(buff[i]);
-        requires b == to_uint32(int32_rs(to_int32(a1), 31));
+        requires b == uint32_rsai(a1, 31);
         requires c == uint32_and(b, Q);
         requires d == uint32_add(a1, c);
         ensures uint16_is_normalized(buff[i]);
@@ -130,22 +137,84 @@ module normalization_lemmas {
         requires denormalization_inv(buff, dnv, i);
         requires i < |buff|;
         requires a1 == uint16_sign_ext(buff[i]);
-        requires b == to_uint32(int32_rs(to_int32(a1), 31));
+        requires b == uint32_rsai(a1, 31);
         requires c == uint32_and(b, Q);
         requires d == uint32_add(a1, c);
         ensures uint16_is_normalized(buff[i]);
         ensures d == denormalize(uint16_as_nelem(buff[i]));
-        ensures buff_is_nsized(dnv[i := d]);
-        ensures denormalization_inv(buff, dnv[i := d], i + 1);
+        ensures buff_is_nsized(dnv[i := lh(d)]);
+        ensures denormalization_inv(buff, dnv[i := lh(d)], i + 1);
     {
         reveal denormalization_inv();
         reveal normalized_values();
-        denormalize_lemma(buff, i, a1, b, c, d);
-        var dnv' := dnv[i := d];
-        forall j | 0 <= j <= i
-            ensures dnv'[j] == denormalize(uint16_as_nelem(buff[j]))
-        {
-        } 
         reveal buff_is_nsized();
+
+        var lh, uh := lh(d), uh(d);
+        half_split_lemma(d);
+        assume uh == 0;
+        denormalize_lemma(buff, i, a1, b, c, d);
+        assert d == lh;
+    }
+    
+    // 0 <= e < Q -> -Q/2 <= e <= Q/2
+    predicate {:opaque} normalization_inv(outputs: seq<uint16>,  inputs: seq<uint16>, i: nat)
+    {
+        && buff_is_nsized(inputs)
+        && |outputs| == N.full
+        && reveal buff_is_nsized();
+        && i <= N.full
+        && inputs[i..] == outputs[i..]
+        && (forall j | 0 <= j < i :: (
+            && uint16_is_normalized(outputs[j])
+            && uint16_as_nelem(outputs[j]) == normalize(inputs[j]))
+        )
+    }
+
+    lemma normalization_pre_lemma(inputs: seq<uint16>)
+        requires buff_is_nsized(inputs);
+        ensures normalization_inv(inputs, inputs, 0);
+    {
+        reveal normalization_inv();
+    }
+
+    lemma normalization_peri_lemma(outputs: seq<uint16>, inputs: seq<uint16>, i: nat, a: uint32, b: uint32, c: uint32, d: uint32, e: uint32)
+        requires normalization_inv(outputs, inputs, i);
+        requires i < |outputs|;
+        requires a == outputs[i];
+        requires b == uint32_sub(Q/2, a);
+        requires c == uint32_rsai(b, 31);
+        requires d == uint32_and(c, Q);
+        requires e == uint32_sub(a, d);
+        ensures normalization_inv(outputs[i := lh(e)], inputs, i + 1);
+    {
+        reveal buff_is_nsized();
+        reveal normalization_inv();
+
+        assert outputs[i] == inputs [i];
+
+        cond_set_Q_lemma(b, d);
+
+        var lh, uh := lh(e), uh(e);
+        half_split_lemma(e);
+
+        if to_int32(b) >= 0 {
+            assert d == 0;
+            assume uh == 0; // the upper bits all clear
+            assert uint16_as_nelem(e) == normalize(a);
+        } else {
+            assert d == Q;
+            assert 0 <= a < Q;
+            assert to_int32(b) == Q_HLAF - a;
+            assert Q_HLAF < a;
+            assert to_int32(e) == a as int - Q;
+            assert -Q_HLAF <= to_int32(e) <= Q_HLAF;
+            if to_int32(e) < 0 {
+                assume uh == 0xffff; // the upper bits all set
+            } else {
+                assume uh == 0; // the upper bits all clear
+            }
+            assert bv16_ops.to_int16(lh) == to_int32(e);
+        }
+        assert uint16_as_nelem(lh) == normalize(a);
     }
 }

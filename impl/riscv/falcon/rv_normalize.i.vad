@@ -24,7 +24,6 @@ import opened ntt_index
 import opened nth_root
 import opened poly_view
 
-
 // import opened rv_reg_save
 
 #endverbatim
@@ -36,7 +35,6 @@ function cond_sub_q_lemma(a: uint16, b: uint16, c: uint16, d: uint16): void exte
 function denormalization_inv(nv: seq(uint16), dnv: seq(uint16), i: nat): bool extern;
 function denormalization_pre_lemma(nv: seq(uint16), dnv: seq(uint16)): void extern;
 function denormalization_peri_lemma(buff: seq(uint16), dnv: seq(uint16), i: nat, a1: uint32, b: uint32, c: uint32, d: uint32): void extern;
-
 
 procedure denormalize(
     ghost iter_s2: b16_iter,
@@ -116,6 +114,78 @@ returns (ghost next_iter_tmp: b16_iter)
 
     addi(a3, a3, (-1024));
     next_iter_tmp := next_iter_tmp.(index := 0);
+}
+
+function normalization_inv(outputs: seq(uint16), inputs: seq(uint16), i: nat): bool extern;
+function normalization_pre_lemma(inputs: seq(uint16)): void extern;
+function normalization_peri_lemma(outputs: seq(uint16), inputs: seq(uint16), i: nat, a: uint32, b: uint32, c: uint32, d: uint32, e: uint32) : void extern;
+
+procedure normalize(
+    ghost iter_tt: b16_iter)
+
+returns (ghost next_iter_tt: b16_iter)
+
+    requires
+        a0 == 12289;
+        fvar_iter_inv(heap, iter_tt, s3, 0);
+
+    modifies
+        mem; heap;
+        t1; t2; t3; a1; s3;
+
+    reads
+        a0;
+
+    ensures
+        mem == old(mem).(heap := heap);
+        next_iter_tt.base_ptr == iter_tt.base_ptr;
+        b16_iter_inv(next_iter_tt, heap, next_iter_tt.base_ptr);
+        heap == old(heap)
+            [next_iter_tt.base_ptr := heap[next_iter_tt.base_ptr]];
+
+    ensures
+        normalization_inv(next_iter_tt.buff, iter_tt.buff, 512);
+{
+    li(t2, 6144);
+    addi(a1, s3, 1024);
+    ghost var i :nat := 0;
+    let inputs := iter_tt.buff;
+    next_iter_tt := iter_tt;
+
+    normalization_pre_lemma(iter_tt.buff);
+
+    while (s3 < a1)
+        invariant a0 == 12289;
+        invariant t2 == 6144;
+        invariant a1 == iter_tt.base_ptr + 1024;
+        invariant iter_tt.base_ptr == next_iter_tt.base_ptr;
+        invariant b16_iter_inv(next_iter_tt, heap, s3);
+        invariant seq_len(next_iter_tt.buff) == 512;
+        invariant next_iter_tt.index == i;
+        invariant normalization_inv(next_iter_tt.buff, inputs, i);
+        invariant mem == old(mem).(heap := heap);
+        invariant heap == old(heap)
+                [next_iter_tt.base_ptr := heap[next_iter_tt.base_ptr]];
+        decreases a1 - s3;
+    {
+        next_iter_tt := lh_next(t1, s3, 0, false, next_iter_tt);
+        assume t1 == inputs[i];
+        let ai := t1;
+        sub(t3, t2, t1);
+        let diff := t3;
+        srai(t3, t3, 31);
+        let shift := t3;
+        and(t3, t3, a0);
+        let mask := t3;
+        sub(t1, t1, t3);
+
+        normalization_peri_lemma(next_iter_tt.buff, inputs, i, ai, diff, shift, mask, t1);
+
+        next_iter_tt := sh_next(t1, s3, 0, true, next_iter_tt);
+        addi(s3, s3, 2);
+        i := i + 1;
+    }
+    next_iter_tt := next_iter_tt.(index := 0);
 }
 
 #verbatim
