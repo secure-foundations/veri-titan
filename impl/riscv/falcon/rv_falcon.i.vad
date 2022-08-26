@@ -115,6 +115,7 @@ returns (ghost next_iter_tt: b16_iter)
 
     mv(s2, a0);
     mv(s3, a3);
+    mv(s4, a1);
 
     next_iter_tt := denormalize(iter_s2, iter_tt);
 
@@ -135,6 +136,9 @@ returns (ghost next_iter_tt: b16_iter)
     assert fvar_iter_inv(heap, next_iter_tt, s3, 0);
 
     next_iter_tt := normalize(next_iter_tt);
+    
+    assert normalized_iter_inv(heap, iter_s2, s4, 0);
+    assert normalized_iter_inv(heap, next_iter_tt, s3, 0);
 }
 
 #verbatim

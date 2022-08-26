@@ -65,6 +65,12 @@ module bv32_ops refines generic_bv_ops
         if ((x as bv32 >> 32) & 1 == 1) then 1 else 0
     }
 
+    lemma msb_bound_lemma(x: uint)
+        ensures msb(x) == 1 <==> x >= 0x80000000
+    {
+        assume false;
+    }
+
     function uint32_lt(x: uint, y: uint): uint
     {
         if x < y then 1 else 0

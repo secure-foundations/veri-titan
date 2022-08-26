@@ -382,7 +382,7 @@ def verify_dafny_proc(proc):
 
     for dfy_file in outputs.splitlines():
         print("verify %s in %s" % (proc, dfy_file))
-        command = f"time -p {DAFNY_PATH} /trace /timeLimit:20 /compile:0 /proc:*%s " % proc + dfy_file
+        command = f"time -p {DAFNY_PATH} /trace /timeLimit:20 /noNLarith /compile:0 /proc:*%s " % proc + dfy_file
         # r = subprocess.check_output(command, shell=True).decode("utf-8")
         process = Popen(command, shell=True, stdout=PIPE)
         output = process.communicate()[0].decode("utf-8")
