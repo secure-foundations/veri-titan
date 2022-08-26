@@ -1200,13 +1200,13 @@ module bv32_falcon_lemmas {
      }
 
     lemma cond_set_Q_lemma(a: uint32, b: uint32)
-        requires b == uint32_and(uint32_rsai(a, 31), Q);
+        requires b == uint32_and(uint32_srai(a, 31), Q);
         ensures b == if to_int32(a) >= 0 then 0 else Q;
     {
         if to_int32(a) >= 0 {
             calc == {
                 b;
-                uint32_and(uint32_rsai(a, 31), Q);
+                uint32_and(uint32_srai(a, 31), Q);
                 uint32_and(to_uint32(int32_rs(to_int32(a), 31)), Q);
                 {
                     lemma_rs_by_31(to_int32(a));
@@ -1222,7 +1222,7 @@ module bv32_falcon_lemmas {
         } else {
             calc == {
                 b;
-                uint32_and(uint32_rsai(a, 31), Q);
+                uint32_and(uint32_srai(a, 31), Q);
                 uint32_and(to_uint32(int32_rs(to_int32(a), 31)), Q);
                 {
                     lemma_rs_by_31(to_int32(a));
@@ -1240,7 +1240,7 @@ module bv32_falcon_lemmas {
     lemma lemma_cond_add_Q(z: uint32, d: uint32, b: uint32, c: uint32, r: uint32)
         requires z < 2 * Q;
         requires d == uint32_sub(z, Q);
-        requires b == uint32_rsai(d, 31);
+        requires b == uint32_srai(d, 31);
         requires c == uint32_and(b, Q);
         requires r == uint32_add(c, d);
         ensures r < Q;

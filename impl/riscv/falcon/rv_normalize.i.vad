@@ -196,18 +196,31 @@ returns (ghost next_iter_tt: b16_iter)
 
 function l2norm_squared_bounded_inv(norm: uint32, s1: seq(uint16), s2: seq(uint16), i: nat, ng: uint32): bool extern;
 function l2norm_squared_bounded_pre_lemma(s1: seq(uint16), s2: seq(uint16)): void extern;
-function l2norm_squared_bounded_peri_lemma(norm0: uint32, s1: seq(uint16), s2: seq(uint16), vv1: uint32, vv2: uint32, i: nat, ng0: uint32): (uint32, uint32) extern;
+function l2norm_squared_bounded_peri_lemma(
+        norm0: uint32, norm1: uint32, norm2: uint32,
+        ng0: uint32, ng1: uint32, ng2: uint32,
+        v1: uint32, v2: uint32,
+        vv1: uint32, vv2: uint32,
+        s1: seq(uint16), s2: seq(uint16), i: nat): void extern;
+function l2norm_squared_bounded_post_lemma(s1: seq(uint16), s2: seq(uint16), norm0: uint32, ng: uint32, norm1: uint32, result: uint32): void extern;
+
+function l2norm_squared_bounded(s1: seq(uint16), s2: seq(uint16)): bool extern;
 
 procedure is_short(
     ghost iter_a: b16_iter,
     ghost iter_b: b16_iter)
-// returns (ghost next_iter_tt: b16_iter)
-{:frame false}
 
     requires normalized_iter_inv(heap, iter_a, s4, 0);
     requires normalized_iter_inv(heap, iter_b, s3, 0);
-    // reads
-    //     mem; 
+
+    reads
+        mem; heap;
+    
+    modifies
+        a0; a1; a2; s1; s3; s4;
+    
+    ensures
+        (a0 == 1) <==> l2norm_squared_bounded(iter_a.buff, iter_b.buff);
 {
     li(a0, 0); // s
     li(a2, 0); // ng
@@ -236,28 +249,40 @@ procedure is_short(
         next_iter_a := lh_next(s1, s4, 0, true, next_iter_a);
         let norm0 := a0;
         let ng0 := a2;
+        // assert s1 == buff_a[i];
+        let v1 := s1;
         mul(s1, s1, s1);
         let vv1 := s1;
         add(a0, a0, s1);
+        let norm1 := a0;
         or(a2, a2, a0);
+        let ng1 := a2;
 
         next_iter_b := lh_next(s1, s3, 0, true, next_iter_b);
+        let v2 := s1;
         mul(s1, s1, s1);
         let vv2 := s1;
         add(a0, a0, s1);
         or(a2, a2, a0);
 
-        // l2norm_squared_bounded_peri_lemma(norm0, buff_a, buff_b,
-            // vv1, vv2, i, ng0);
+        l2norm_squared_bounded_peri_lemma(norm0, norm1, a0,
+            ng0, ng1, a2, v1, v2, vv1, vv2, buff_a, buff_b, i);
 
         addi(s3, s3, 2);
         addi(s4, s4, 2);
         i := i + 1;
     }
+
+    let norm0 := a0;
+    let ng := a2;
+    srai(a2, a2, 31);
+    or(a0, a0, a2);
+    let norm1 := a0;
+    li(a1, 0x29845d6);
+    sltu(a0, a0, a1);
+
+    l2norm_squared_bounded_post_lemma(buff_a, buff_b, norm0, ng, norm1, a0);
 }
-
-
-
 
 
 #verbatim

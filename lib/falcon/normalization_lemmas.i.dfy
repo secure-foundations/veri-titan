@@ -81,7 +81,7 @@ module normalization_lemmas {
         requires normalized_values(buff);
         requires i < |buff|;
         requires a1 == uint16_sign_ext(buff[i]);
-        requires b == uint32_rsai(a1, 31);
+        requires b == uint32_srai(a1, 31);
         requires c == uint32_and(b, Q);
         requires d == uint32_add(a1, c);
         ensures uint16_is_normalized(buff[i]);
@@ -137,7 +137,7 @@ module normalization_lemmas {
         requires denormalization_inv(buff, dnv, i);
         requires i < |buff|;
         requires a1 == uint16_sign_ext(buff[i]);
-        requires b == uint32_rsai(a1, 31);
+        requires b == uint32_srai(a1, 31);
         requires c == uint32_and(b, Q);
         requires d == uint32_add(a1, c);
         ensures uint16_is_normalized(buff[i]);
@@ -182,7 +182,7 @@ module normalization_lemmas {
         requires i < |outputs|;
         requires a == outputs[i];
         requires b == uint32_sub(Q/2, a);
-        requires c == uint32_rsai(b, 31);
+        requires c == uint32_srai(b, 31);
         requires d == uint32_and(c, Q);
         requires e == uint32_sub(a, d);
         ensures normalization_inv(outputs[i := lh(e)], inputs, i + 1);
@@ -246,13 +246,6 @@ module normalization_lemmas {
 
     const NORMSQ_BOUND := integers.BASE_31
 
-    function l2norm_squared_bounded(s1: seq<nelem>, s2: seq<nelem>): uint32
-        requires |s1| == |s2|
-    { 
-        var r := l2norm_squared(s1, s2, |s1|);
-        if r >= NORMSQ_BOUND then NORMSQ_BOUND else r
-    }
-
     predicate l2norm_squared_bounded_inv(norm: uint32, 
         s1: seq<uint16>, s2: seq<uint16>, i: nat, ng: uint32)
     {
@@ -262,7 +255,7 @@ module normalization_lemmas {
         && var ns2 := uint16_buff_as_nelems(s2);
         && i <= N.full
         && ((msb(ng) == 0) ==> (norm == l2norm_squared(ns1, ns2, i)))
-        && ((msb(ng) == 1) ==> l2norm_squared(ns1, ns2, i) >= NORMSQ_BOUND)
+        && ((msb(ng) == 1) ==> (l2norm_squared(ns1, ns2, i) >= NORMSQ_BOUND))
     }
 
     lemma l2norm_squared_bounded_pre_lemma(s1: seq<uint16>, s2: seq<uint16>)
@@ -274,16 +267,25 @@ module normalization_lemmas {
     }
 
     lemma l2norm_squared_bounded_peri_lemma(
-        norm0: uint32,
-        s1: seq<uint16>, s2: seq<uint16>,
+        norm0: uint32, norm1: uint32, norm2: uint32,
+        ng0: uint32, ng1: uint32, ng2: uint32,
+        v1: uint32, v2: uint32,
         vv1: uint32, vv2: uint32,
-        i: nat, ng0: uint32, ng2: uint32)
-        returns (norm2: uint32, ng2: uint32)
+        s1: seq<uint16>, s2: seq<uint16>,
+        i: nat)
 
         requires l2norm_squared_bounded_inv(norm0, s1, s2, i, ng0);
         requires i < N.full
-        requires vv1 == uint32_mul(s1[i], s1[i]);
-        requires vv2 == uint32_mul(s2[i], s2[i]);
+        requires v1 == uint16_sign_ext(s1[i])
+        requires v2 == uint16_sign_ext(s2[i])
+        requires vv1 == uint32_mul(v1, v1);
+        requires vv2 == uint32_mul(v2, v2);
+
+        requires norm1 == uint32_add(norm0, vv1);
+        requires norm2 == uint32_add(norm1, vv2);
+        requires ng1 == uint32_or(ng0, norm1);
+        requires ng2 == uint32_or(ng1, norm2);
+
         ensures l2norm_squared_bounded_inv(norm2, s1, s2, i+1, ng2);
     {
         reveal normalized_values();
@@ -291,15 +293,6 @@ module normalization_lemmas {
         var ivv1, ivv2 := iv1 as int * iv1 as int, iv2 as int * iv2 as int;
         assume vv1 == ivv1;
         assume vv2 == ivv2;
-
-        var ns1 := uint16_buff_as_nelems(s1);
-        var ns2 := uint16_buff_as_nelems(s2);
-
-        var norm1 := uint32_add(norm0, vv1);
-        norm2 := uint32_add(norm1, vv2);
-        var ng1 := uint32_or(ng0, norm1);
-        ng2 := uint32_or(ng1, norm2);
-
 
         msb_bound_lemma(norm0);
         msb_bound_lemma(norm1);
@@ -329,5 +322,27 @@ module normalization_lemmas {
         assume vv2 <= 0x80000000;
 
         return; 
+    }
+
+    predicate l2norm_squared_bounded(s1: seq<uint16>, s2: seq<uint16>)
+        requires normalized_values(s1);
+        requires normalized_values(s2);
+    {
+        l2norm_squared(uint16_buff_as_nelems(s1), uint16_buff_as_nelems(s2), |s1|) < 0x29845d6
+    }
+
+    lemma l2norm_squared_bounded_post_lemma(s1: seq<uint16>, s2: seq<uint16>, norm0: uint32, ng: uint32, norm1: uint32, result: uint32)
+        requires l2norm_squared_bounded_inv(norm0, s1, s2, 512, ng);
+        requires norm1 == uint32_or(norm0, uint32_srai(ng, 31));
+        requires result == uint32_lt(norm1, 0x29845d6);
+        ensures (result == 1) <==> l2norm_squared_bounded(s1, s2)
+    {
+        if (msb(ng) == 0) {
+            assume uint32_srai(ng, 31) == 0;
+            assume norm1 == norm0;
+        } else {
+            assume uint32_srai(ng, 31) == 0xffff_ffff;
+            assume norm1 == 0xffff_ffff;
+        }
     }
 }

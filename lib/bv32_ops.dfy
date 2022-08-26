@@ -163,7 +163,7 @@ module bv32_ops refines generic_bv_ops
         sub(x, y)
     }
 
-    function method uint32_rsai(x: uint, amount: uint): uint
+    function method uint32_srai(x: uint, amount: uint): uint
         requires amount < 32;
     {
         to_uint32(int32_rs(to_int32(x), amount))

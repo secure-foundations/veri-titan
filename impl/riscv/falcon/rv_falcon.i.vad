@@ -139,6 +139,8 @@ returns (ghost next_iter_tt: b16_iter)
     
     assert normalized_iter_inv(heap, iter_s2, s4, 0);
     assert normalized_iter_inv(heap, next_iter_tt, s3, 0);
+
+    is_short(iter_s2, next_iter_tt);
 }
 
 #verbatim

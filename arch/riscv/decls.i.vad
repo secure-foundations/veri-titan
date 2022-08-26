@@ -235,7 +235,7 @@ function uint32_ls(x: uint32, amount: uint32): uint32 extern;
 function uint32_rs(x: uint32, y: uint32): uint32 extern;
 function uint32_mul(x: uint32, y: uint32): uint32 extern;
 function uint32_mulhu(x: uint32, y: uint32): uint32 extern;
-function uint32_rsai(x: uint32, imm: uint32): uint32 extern;
+function uint32_srai(x: uint32, imm: uint32): uint32 extern;
 function int32_rs(x: int32, shift: nat): int32 extern;
 function int32_lt(x: int32, y: int32): uint32 extern;
 
@@ -637,7 +637,7 @@ procedure srai(inout dst: reg32, in src1: reg32, in src2: imm32)
     requires
         0 <= src2 <= 31;
     ensures
-        dst == uint32_rsai(old(src1), old(src2));
+        dst == uint32_srai(old(src1), old(src2));
 {
     assume false;
 }
