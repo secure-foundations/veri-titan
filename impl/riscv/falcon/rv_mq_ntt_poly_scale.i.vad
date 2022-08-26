@@ -111,7 +111,7 @@ returns (ghost next_iter_a: b16_iter)
 
             mq_poly_scale_peri_lemma(next_iter_a.buff, init_a, t0, iter_t.buff, i);
 
-            next_iter_a := sh_next(t0, a0, 0, true, next_iter_a);
+            next_iter_a := sh_bounded_next(t0, a0, 0, true, next_iter_a);
 
             addi(a0, a0, 2);
             addi(a1, a1, 2);

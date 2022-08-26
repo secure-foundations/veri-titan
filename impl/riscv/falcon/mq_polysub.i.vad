@@ -129,7 +129,7 @@ procedure poly_sub_loop(ghost f_orig: seq(uint16), ghost iter_f: b16_iter,
 
     ntt_inline_mq_sub();
 
-    iter_f' := sh_next(a3, s1, 0, true, iter_f);
+    iter_f' := sh_bounded_next(a3, s1, 0, true, iter_f);
 
     addi(s0, s0, 2); // increment g pointer by 16 bytes
     addi(s1, s1, 2); // increment f pointer by 16 bytes
@@ -177,7 +177,7 @@ procedure poly_sub(
         mem == old(mem).(heap := heap);
         iter_f'.base_ptr == iter_f.base_ptr;
     
-        fvar_iter_inv(heap, iter_f.(buff := iter_f'.buff), s1, 0);
+        fvar_iter_inv(heap, iter_f', s1, 0);
         heap == old(heap)
             [iter_f'.base_ptr := heap[iter_f'.base_ptr]];
     
@@ -224,6 +224,8 @@ procedure poly_sub(
         i := i + 1;
     }
     assert i == 512;
+
+    iter_f' := iter_f'.(index := 0);
     
     poly_sub_restore_regs();
 }

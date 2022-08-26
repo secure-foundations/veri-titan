@@ -113,7 +113,7 @@ returns (ghost next_iter_a: b16_iter)
 
             mq_ntt_poly_mul_inv_peri_lemma(next_iter_a.buff, init_a, t0, iter_b.buff, i);
 
-            next_iter_a := sh_next(t0, a0, 0, true, next_iter_a);
+            next_iter_a := sh_bounded_next(t0, a0, 0, true, next_iter_a);
 
             addi(a0, a0, 2);
             addi(a1, a1, 2);
