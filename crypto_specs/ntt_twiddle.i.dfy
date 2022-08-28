@@ -1,21 +1,32 @@
 // include "mq_polys.dfy"
-include "poly_view.dfy"
+include "poly_view.i.dfy"
 
-module nth_root {
+module ntt_twiddle_i(MQ: ntt_param_s) {
 	import opened Power
 	import opened Power2
 	import opened DivMod
 	import opened Mul
 
-	import opened pows_of_2
-	import opened ntt_512_params
-	import opened mq_polys
-    import opened ntt_index
-	import opened poly_view
+	import opened pow2_s
+	import opened ntt_index
+
+	import MQP = mq_poly_i(MQ)
+	import PV = poly_view_i(MQ)
+
+	type elem = MQ.elem
+	type n_elems = MQ.n_elems
+
+	const Q := MQ.Q;
+	const R := MQ.R;
+	const PSI := MQ.PSI;
+	const OMEGA := MQ.OMEGA;
+	const OMEGA_INV := MQ.OMEGA_INV;
+
+	ghost const N := MQ.N; 
 
 	lemma primitive_root_non_zero_lemma(i: nat)
 		requires i < N.full * 2;
-		ensures mqpow(PSI, i) != 0;
+		ensures MQP.mqpow(PSI, i) != 0;
 	{
 		var PSI := PSI;
 		if Pow(PSI, i) % Q == 0 {
@@ -23,7 +34,7 @@ module nth_root {
 			calc == {
 				1;
 				{
-					Nth_root_lemma();
+					MQ.Nth_root_lemma();
 				}
 				Pow(PSI, i + j) % Q;
 				{
@@ -43,7 +54,7 @@ module nth_root {
 	}
 
 	lemma full_rotation_lemma(a: nat)
-		ensures mqpow(PSI, a + 2 * N.full) == mqpow(PSI, a);
+		ensures MQP.mqpow(PSI, a + 2 * N.full) == MQP.mqpow(PSI, a);
 	{
 		var PSI := PSI;
 		var N := N.full;
@@ -58,7 +69,7 @@ module nth_root {
 			}
 			((Pow(PSI, a) % Q) * (Pow(PSI, 2 * N) % Q)) % Q;
 			{
-				Nth_root_lemma();
+				MQ.Nth_root_lemma();
 				assert Pow(PSI, 2 * N) % Q == 1;
 			}
 			(Pow(PSI, a) % Q) % Q;
@@ -70,10 +81,10 @@ module nth_root {
 	}
 
 	lemma inv_full_rotation_lemma(a: nat)
-		ensures mqpow(OMEGA_INV, a + N.full) == mqpow(OMEGA_INV, a);
+		ensures MQP.mqpow(OMEGA_INV, a + N.full) == MQP.mqpow(OMEGA_INV, a);
 	{
 		var N := N.full;
-		Nth_root_lemma();
+		MQ.Nth_root_lemma();
 
 		calc == {
 			1;
@@ -94,7 +105,7 @@ module nth_root {
 			{
 				LemmaMulModNoopGeneral(Pow(OMEGA, N), Pow(OMEGA_INV, N), Q);
 			}
-			((Pow(OMEGA, N) % Q) * (Pow(OMEGA_INV, N)) % Q) % Q;
+			((Pow(OMEGA, N) % Q) * (Pow(OMEGA_INV, N) % Q)) % Q;
 			((Pow(OMEGA_INV, N)) % Q) % Q;
 			{
 				LemmaModBasicsAuto();
@@ -124,83 +135,93 @@ module nth_root {
 	}
 
 	lemma half_rotation_lemma(a: nat)
-		ensures Pow(PSI, a + N.full) % Q == (Q - Pow(PSI, a)) % Q;
+		ensures Pow(PSI, a + N.full) % Q == (Q - Pow(PSI, a) % Q) % Q;
 	{
 		var PSI := PSI;
 		var N := N.full;
+		var t0 := Pow(PSI, a);
 		calc == {
 			Pow(PSI, a + N) % Q;
 			{
 				LemmaPowAdds(PSI, a, N);
 			}
-			(Pow(PSI, a) * Pow(PSI, N)) % Q;
+			(t0 * Pow(PSI, N)) % Q;
 			{
-				LemmaMulModNoopGeneral(Pow(PSI, a), Pow(PSI, N), Q);
+				LemmaMulModNoopGeneral(t0, Pow(PSI, N), Q);
 			}
-			((Pow(PSI, a) % Q) * (Pow(PSI, N) % Q)) % Q;
+			((t0 % Q) * (Pow(PSI, N) % Q)) % Q;
 			{
-				Nth_root_lemma();
+				MQ.Nth_root_lemma();
 				assert Pow(PSI, N) % Q == Q - 1;
 			}
-			((Pow(PSI, a) % Q) * (Q - 1)) % Q;
+			((t0 % Q) * (Q - 1)) % Q;
 			{
-				LemmaMulIsDistributive(Pow(PSI, a) % Q, Q, 1);
+				LemmaMulModNoopGeneral(t0, Q - 1, Q);
 			}
-			((Pow(PSI, a) % Q) * Q - Pow(PSI, a) % Q) % Q;
+			(t0 * (Q - 1)) % Q;
 			{
-				LemmaModMultiplesVanish((Pow(PSI, a) % Q), -Pow(PSI, a) % Q, Q);
+				LemmaMulIsDistributive(t0, Q, -1);
 			}
-			(- Pow(PSI, a) % Q) % Q;
+			(t0 * Q - t0) % Q;
 			{
-				LemmaModBasicsAuto();
+				LemmaModMultiplesVanish(t0, -t0, Q);
 			}
-			(- Pow(PSI, a)) % Q;
+			(- t0) % Q;
 			{
-				LemmaModMultiplesVanish(1, - Pow(PSI, a), Q);
+				LemmaModMultiplesVanish(1, -t0, Q);
 			}
-			(Q - Pow(PSI, a)) % Q;
+			(Q - t0) % Q;
+			{
+				LemmaSubModNoop(Q, t0, Q);
+			}
+			(Q - Pow(PSI, a) % Q) % Q;
 		}
 	}
 
 	lemma inv_half_rotation_lemma(a: nat)
 		ensures (N.full / 2) * 2 == N.full;
-		ensures Pow(OMEGA_INV, a + N.full / 2) % Q == (Q - Pow(OMEGA_INV, a)) % Q;
+		ensures Pow(OMEGA_INV, a + N.full / 2) % Q == (Q - Pow(OMEGA_INV, a) % Q) % Q;
 	{
-		Nth_root_lemma();
+		MQ.Nth_root_lemma();
 		pow2_basics(N);
 		var HN := N.full / 2;
+		var t0 := Pow(OMEGA_INV, a);
 
 		calc == {
 			Pow(OMEGA_INV, a + HN) % Q;
 			{
 				LemmaPowAdds(OMEGA_INV, a, HN);
 			}
-			(Pow(OMEGA_INV, a) * Pow(OMEGA_INV, HN)) % Q;
+			(t0 * Pow(OMEGA_INV, HN)) % Q;
 			{
-				LemmaMulModNoopGeneral(Pow(OMEGA_INV, a), Pow(OMEGA_INV, HN), Q);
+				LemmaMulModNoopGeneral(t0, Pow(OMEGA_INV, HN), Q);
 			}
-			((Pow(OMEGA_INV, a) % Q) * (Pow(OMEGA_INV, HN) % Q)) % Q;
+			((t0 % Q) * (Pow(OMEGA_INV, HN) % Q)) % Q;
 			{
-				Nth_root_lemma();
+				MQ.Nth_root_lemma();
 				assert Pow(OMEGA_INV, HN) % Q == Q - 1;
 			}
-			((Pow(OMEGA_INV, a) % Q) * (Q - 1)) % Q;
+			((t0 % Q) * (Q - 1)) % Q;
 			{
-				LemmaMulIsDistributive(Pow(OMEGA_INV, a) % Q, Q, 1);
+				LemmaMulModNoopGeneral(t0, Q - 1, Q);
 			}
-			((Pow(OMEGA_INV, a) % Q) * Q - Pow(OMEGA_INV, a) % Q) % Q;
+			(t0 * (Q - 1)) % Q;
 			{
-				LemmaModMultiplesVanish((Pow(OMEGA_INV, a) % Q), -Pow(OMEGA_INV, a) % Q, Q);
+				LemmaMulIsDistributiveAuto();
 			}
-			(- Pow(OMEGA_INV, a) % Q) % Q;
+			(t0 * Q - t0) % Q;
 			{
-				LemmaModBasicsAuto();
+				LemmaModMultiplesVanish(t0, -t0, Q);
 			}
-			(- Pow(OMEGA_INV, a)) % Q;
+			(- t0) % Q;
 			{
-				LemmaModMultiplesVanish(1, - Pow(OMEGA_INV, a), Q);
+				LemmaModMultiplesVanish(1, -t0, Q);
 			}
-			(Q - Pow(OMEGA_INV, a)) % Q;
+			(Q - t0) % Q;
+			{
+				LemmaSubModNoop(Q, t0, Q);
+			}
+			(Q - t0 % Q) % Q;
 		}
 	}
 
@@ -209,8 +230,8 @@ module nth_root {
 		requires t.exp < N.exp;
 		requires j < t.full;
 		ensures t.full + j < N.full;
-		ensures d == pow2_half(block_count(t));
-		ensures 2 * j < block_size(d).full;
+		ensures d == pow2_half(PV.block_count(t));
+		ensures 2 * j < PV.block_size(d).full;
 	{
 		assert t.full <= N.full / 2 by {
 			reveal Pow2();
@@ -230,34 +251,34 @@ module nth_root {
 			N.full;
 		}
 
-		d := block_count(t);
-		assert block_size(d) == t;
+		d := PV.block_count(t);
+		assert PV.block_size(d) == t;
 
 		calc {
 			2 * j;
 			<
 			2 * t.full;
-			2 * block_size(d).full;
-			pow2_double(block_size(d)).full;
+			2 * PV.block_size(d).full;
+			pow2_double(PV.block_size(d)).full;
 			{
-				block_count_half_lemma(d);
+				PV.block_count_half_lemma(d);
 			}
-			block_size(pow2_half(d)).full;
+			PV.block_size(pow2_half(d)).full;
 		}
 
-		d := pow2_half(block_count(t));
+		d := pow2_half(PV.block_count(t));
 	}
 
 	// d is the block count
 	// i is the offset in the block
 	function rev_mixed_powers_mont_x_value_inner(i: nat, d: pow2_t): (r: elem)
 		requires d.exp <= N.exp;
-		requires i < block_size(d).full;
+		requires i < PV.block_size(d).full;
 		ensures r > 0;
 	{
-		var bound := block_size(d);
+		var bound := PV.block_size(d);
 		LemmaMulNonnegative(2 * bit_rev_int(i, bound), d.full);
-		var r := mqpow(PSI, 2 * bit_rev_int(i, bound) * d.full + d.full);
+		var r := MQP.mqpow(PSI, 2 * bit_rev_int(i, bound) * d.full + d.full);
 		// LemmaPowPositive(PSI, 2 * bit_rev_int(i, bound) * d.full + d.full);
 		calc {
 			2 * bit_rev_int(i, bound) * d.full + d.full;
@@ -280,7 +301,7 @@ module nth_root {
 			}
 			2 * (bound.full * d.full) - d.full;
 			// {
-			// 	block_count_product_lemma(bound);
+			// 	PV.block_count_product_lemma(bound);
 			// }
 			2 * N.full - d.full;
 		}
@@ -303,19 +324,19 @@ module nth_root {
 		requires t.exp < N.exp;
 		requires j < t.full;
 		requires t.full + j < N.full;
-		requires d == pow2_half(block_count(t));
-		requires 2 * j < block_size(d).full;
+		requires d == pow2_half(PV.block_count(t));
+		requires 2 * j < PV.block_size(d).full;
 		ensures rev_mixed_powers_mont_table()[t.full + j] ==
-			mqmul(rev_mixed_powers_mont_x_value(2 * j, d), R);
+			MQP.mqmul(rev_mixed_powers_mont_x_value(2 * j, d), R);
 
 	lemma rev_mixed_powers_mont_table_lemma(t: pow2_t, d: pow2_t, j: nat)
 		requires t.exp < N.exp;
 		requires j < t.full;
-		requires d == pow2_half(block_count(t));
+		requires d == pow2_half(PV.block_count(t));
 		ensures t.full + j < N.full;
-		ensures 2 * j < block_size(d).full;
+		ensures 2 * j < PV.block_size(d).full;
 		ensures rev_mixed_powers_mont_table()[t.full + j] ==
-			mqmul(rev_mixed_powers_mont_x_value(2 * j, d), R);
+			MQP.mqmul(rev_mixed_powers_mont_x_value(2 * j, d), R);
 	{
 		var _ := twiddle_factors_index_bound_lemma(t, j);
 		rev_mixed_powers_mont_table_axiom(t, d, j);
@@ -325,12 +346,12 @@ module nth_root {
 	// i is the offset in the block
 	function rev_omega_inv_powers_x_value_inner(i: nat, d: pow2_t): (r: elem)
 		requires d.exp <= N.exp;
-		requires i < block_size(d).full;
+		requires i < PV.block_size(d).full;
 		ensures r > 0;
 	{
-		var bound := block_size(d);
+		var bound := PV.block_size(d);
 		LemmaMulNonnegative(bit_rev_int(i, bound), d.full);
-		var r := mqpow(OMEGA_INV, bit_rev_int(i, bound) * d.full);
+		var r := MQP.mqpow(OMEGA_INV, bit_rev_int(i, bound) * d.full);
 		assert r > 0 by {
 			if r == 0 {
 				var exp := bit_rev_int(i, bound) * d.full;
@@ -342,7 +363,7 @@ module nth_root {
 					}
 					Pow(1, exp) % Q;
 					{
-						Nth_root_lemma();
+						MQ.Nth_root_lemma();
 					}
 					Pow((OMEGA_INV * OMEGA) % Q, exp) % Q;
 					{
@@ -384,19 +405,19 @@ module nth_root {
 		requires t.exp < N.exp;
 		requires j < t.full;
 		requires t.full + j < N.full;
-		requires d == pow2_half(block_count(t));
-		requires 2 * j < block_size(d).full;
+		requires d == pow2_half(PV.block_count(t));
+		requires 2 * j < PV.block_size(d).full;
 		ensures rev_omega_inv_powers_mont_table()[t.full + j] ==
-			mqmul(rev_omega_inv_powers_x_value(2 * j, d), R);
+			MQP.mqmul(rev_omega_inv_powers_x_value(2 * j, d), R);
 
 	lemma rev_omega_inv_powers_mont_table_lemma(t: pow2_t, d: pow2_t, j: nat)
 		requires t.exp < N.exp;
 		requires j < t.full;
-		requires d == pow2_half(block_count(t));
+		requires d == pow2_half(PV.block_count(t));
 		ensures t.full + j < N.full;
-		ensures 2 * j < block_size(d).full;
+		ensures 2 * j < PV.block_size(d).full;
 		ensures rev_omega_inv_powers_mont_table()[t.full + j] ==
-			mqmul(rev_omega_inv_powers_x_value(2 * j, d), R);
+			MQP.mqmul(rev_omega_inv_powers_x_value(2 * j, d), R);
 	{
 		var _ := twiddle_factors_index_bound_lemma(t, j);
 		rev_omega_inv_powers_mont_table_axiom(t, d, j);
@@ -407,6 +428,6 @@ module nth_root {
 
 	lemma {:axiom} inverse_ntt_scaling_table_axiom(i: nat)
 		requires i < N.full;
-		ensures inverse_ntt_scaling_table()[i] == mqmul(mqmul(mqpow(PSI_INV, i), N_INV), R);
+		ensures inverse_ntt_scaling_table()[i] == MQP.mqmul(MQP.mqmul(MQP.mqpow(MQ.PSI_INV, i), MQ.N_INV), R);
 
 }

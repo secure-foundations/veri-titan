@@ -1,6 +1,6 @@
-include "../../std_lib/src/Collections/Sequences/LittleEndianNat.dfy"
+include "../std_lib/src/Collections/Sequences/LittleEndianNat.dfy"
 
-module bin_seqs refines LittleEndianNat {
+module bin_seq_i refines LittleEndianNat {
     function method BASE(): nat
     {
         2

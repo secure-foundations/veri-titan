@@ -1,17 +1,23 @@
-include "mq_polys.dfy"
+include "mq_poly.i.dfy"
 
-module poly_view {
+module poly_view_i(MQ: ntt_param_s) {
 	import opened Power
 	import opened Power2
 	import opened DivMod
 	import opened Mul
 
-	import opened pows_of_2
+	import opened pow2_s
     import opened ntt_index
-	import opened mq_polys
-    import opened ntt_512_params
+
+	import MQP = mq_poly_i(MQ)
 
 	type x_fun = (nat, pow2_t) -> elem
+
+	type elem = MQ.elem
+	type n_elems = MQ.n_elems
+
+	const Q := MQ.Q;
+	ghost const N := MQ.N; 
 
 	function block_count(m: pow2_t): pow2_t
 		requires 0 <= m.exp <= N.exp;
@@ -135,7 +141,7 @@ module poly_view {
 		seq(size, j requires 0 <= j < size => a[point_view_index(i, j, bsize)])
 	}
 
-	// interpret an n_sized buffer as a level view
+	// interpret an n_elems buffer as a level view
 	// contains blocks of points, each block has bsize
 	function level_points_view(a: seq<elem>, bsize: pow2_t): (vs: seq<seq<elem>>)
 		requires |a| == N.full;
@@ -162,8 +168,8 @@ module poly_view {
 		var new_size := pow2_half(bsize);
 		var new_count := |higher| * 2;
 		seq(new_count, n requires 0 <= n < new_count => 
-			if n % 2 == 0 then even_indexed_items(higher[n/2], bsize)
-			else odd_indexed_items(higher[n/2], bsize))
+			if n % 2 == 0 then MQP.even_indexed_items(higher[n/2], bsize)
+			else MQP.odd_indexed_items(higher[n/2], bsize))
 	}
 
 	function method {:opaque} build_higher_level_polys(lower: seq<seq<elem>>, bsize: pow2_t): (higher: seq<seq<elem>>)
@@ -178,7 +184,7 @@ module poly_view {
 		block_count_half_lemma(new_size);
 		var new_count := |lower| / 2;
 		seq(new_count, n requires 0 <= n < new_count => 
-			merge_even_odd_indexed_items(lower[n*2], lower[n*2+1], bsize))
+			MQP.merge_even_odd_indexed_items(lower[n*2], lower[n*2+1], bsize))
 	}
 
 	lemma build_polys_inverse_lemma(lower: seq<seq<elem>>, bsize: pow2_t)
@@ -195,7 +201,7 @@ module poly_view {
 
 	// construct polys level view 
 	// each block is a poly, has bsize coefficients
-	function {:opaque} level_polys(coefficients: n_sized, bsize: pow2_t): (lps: seq<seq<elem>>)
+	function {:opaque} level_polys(coefficients: n_elems, bsize: pow2_t): (lps: seq<seq<elem>>)
 		requires 0 <= bsize.exp <= N.exp;
 		ensures unifromly_sized(lps, bsize);
 		decreases N.exp - bsize.exp;
@@ -211,7 +217,7 @@ module poly_view {
 			build_lower_level_polys(higher, double_size)
 	}
 
-	function base_level_polys(coefficients: n_sized): (lps: seq<seq<elem>>)
+	function base_level_polys(coefficients: n_elems): (lps: seq<seq<elem>>)
 		ensures 0 <= pow2(0).exp <= N.exp;
 		ensures unifromly_sized(lps, pow2(0));
 	{
@@ -223,14 +229,14 @@ module poly_view {
 	}
 
 	// this is provable (and sort of already proved), but complicated
-	lemma {:axiom} base_level_polys_lemma(coefficients: n_sized, i: nat)
+	lemma {:axiom} base_level_polys_lemma(coefficients: n_elems, i: nat)
 		requires i < N.full;
 		ensures |base_level_polys(coefficients)[bit_rev_int(i, N)]| == 1;
 		ensures base_level_polys(coefficients)[bit_rev_int(i, N)][0] == coefficients[i];
 		// ensures |base_level_polys()[i]| == 1;
 		// ensures base_level_polys()[i][0] == A()[bit_rev_int(i, N)];
 
-	lemma level_polys_index_correspondence_lemma(coefficients: n_sized,
+	lemma level_polys_index_correspondence_lemma(coefficients: n_elems,
 		higher: seq<seq<elem>>,
 		hsize: pow2_t,
 		i: nat,
@@ -242,8 +248,8 @@ module poly_view {
 		requires lower == level_polys(coefficients, pow2_half(hsize));
 		ensures 2 * i + 1 < |lower|;
 		ensures |higher[i]| == hsize.full;
-		ensures even_indexed_items(higher[i], hsize) == lower[2 * i];
-		ensures odd_indexed_items(higher[i], hsize) == lower[2 * i + 1];
+		ensures MQP.even_indexed_items(higher[i], hsize) == lower[2 * i];
+		ensures MQP.odd_indexed_items(higher[i], hsize) == lower[2 * i + 1];
 	{
 		reveal unifromly_sized();
 		reveal build_lower_level_polys();
@@ -258,7 +264,7 @@ module poly_view {
 		&& count.exp <= N.exp
 		&& l <= |points| == |poly| == block_size(count).full
 		&& (forall i | 0 <= i < l :: 
-			(poly_eval(poly, x_value(i, count)) == points[i]))
+			(MQP.poly_eval(poly, x_value(i, count)) == points[i]))
 	}
 
 	lemma points_eval_prefix_inv_vacuous_lemma(points: seq<elem>, poly: seq<elem>, x_value: x_fun, count: pow2_t)
@@ -267,7 +273,7 @@ module poly_view {
 		ensures points_eval_prefix_inv(points, poly, x_value, 0, count);
 	{
 		forall i | 0 <= i < 0 
-			ensures poly_eval(poly, x_value(i, count)) == points[i];
+			ensures MQP.poly_eval(poly, x_value(i, count)) == points[i];
 		{
 		}
 		reveal points_eval_prefix_inv();
@@ -279,7 +285,7 @@ module poly_view {
 		&& count.exp <= N.exp
 		&& l <= |points| == |poly| == block_size(count).full
 		&& (forall i | l <= i < block_size(count).full ::
-			(poly_eval(poly, x_value(i, count)) == points[i]))
+			(MQP.poly_eval(poly, x_value(i, count)) == points[i]))
 	}
 
 	predicate points_eval_inv(points: seq<elem>, poly: seq<elem>, x_value: x_fun, count: pow2_t)
