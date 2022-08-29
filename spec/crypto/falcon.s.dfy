@@ -1,8 +1,8 @@
 include "mq_poly.s.dfy"
+include "mq_poly.i.dfy"
 include "mq_norm.s.dfy"
 
-abstract module falcon_s(CMQ: ntt_param_s) {
-    import MQP = mq_poly_s(CMQ)
+abstract module falcon_s(CMQ: ntt_param_s, MQP: mq_poly_s(CMQ)) {
     import MQN = mq_norm_s(CMQ)
 
 	type elem = CMQ.elem
@@ -25,7 +25,8 @@ abstract module falcon_s(CMQ: ntt_param_s) {
     }
 }
 
-module falcon_512_i refines falcon_s(ntt512_param_i)
+module falcon_512_i refines
+    falcon_s(ntt512_param_i, mq_poly_i(ntt512_param_i))
 {
     function bound(): nat {
         0x29845d6

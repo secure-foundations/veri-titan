@@ -56,7 +56,7 @@ DLL_SOURCES = {
 }
 
 NINJA_PATH = "build.ninja"
-CODE_DIRS = ["arch", "impl", "lib"]
+CODE_DIRS = ["specs", "impl", "glue"]
 GEN_DIR = "gen"
 
 NL_FILES = {"lib/sub_mod_nl_lemmas.i.dfy"}
@@ -418,6 +418,25 @@ def generate_dll(dfy_path, dll_path):
     # os.system(f"mv {dll_name} {dll_path}")
     # os.system(f"mv {json_name} {json_path}")
 
+def replace_string_file(file_path, src, dst):
+    with open(file_path) as f:
+        filedata = f.read()
+        # Replace the target string
+        filedata = filedata.replace(src, dst)
+        # Write the file out again
+        f.write(filedata)
+  
+def replace_string(src, dst):
+    target_dirs = set(CODE_DIRS)
+
+    for root, _, files in os.walk("."):
+        tpl = "." if root == "." else root.split("/")[1]
+        if tpl not in target_dirs:
+            continue
+        for file in files:
+            file_path = os.path.relpath(os.path.join(root, file))
+            print(file_path)
+
 ## command line interface
 
 def main():
@@ -442,6 +461,8 @@ def main():
         os.system("rm " + NINJA_PATH)
     elif option == "setup":
         setup_tools()
+    elif option == "replace":
+        replace_string(sys.argv[2], sys.argv[3])
 
 if __name__ == "__main__":
     main()
