@@ -32,7 +32,7 @@ abstract module ntt_param_s {
 	const R_INV: elem;
 	const N_INV: elem;
 
-	ghost const N: pow2_t;
+	const N: pow2_t;
 
 	type n_elems = s: seq<elem>
         | |s| == N.full witness *
@@ -58,7 +58,7 @@ abstract module ntt_param_s {
 module ntt512_param_i refines ntt_param_s {
 	import opened Power2
 
-	function pow2_9(): pow2_t
+	function method pow2_9(): pow2_t
 	{
 		Lemma2To64();
 		pow2_t_cons(512, 9)
@@ -66,7 +66,7 @@ module ntt512_param_i refines ntt_param_s {
 
     const Q := 12289
 
-	ghost const N := pow2_9();
+	const N := pow2_9();
 
 // 	lemma Nth_root_lemma()
 // 	{

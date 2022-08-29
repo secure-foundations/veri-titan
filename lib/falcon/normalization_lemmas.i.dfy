@@ -227,9 +227,6 @@ module normalization_lemmas {
         reveal normalized_values();
     }
 
-    lemma square_positive_lemma(a: int)
-        ensures a * a >= 0;
-
     function l2norm_squared(s1: seq<nelem>, s2: seq<nelem>, i: nat): nat
         requires |s1| == |s2|
         requires i <= |s1|

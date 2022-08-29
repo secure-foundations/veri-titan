@@ -77,6 +77,14 @@ abstract module mq_poly_s(MQNTT: ntt_param_s) {
 		seq(len, i requires 0 <= i < len => mqadd(a[i], b[i]))
 	}
 
+	function poly_sub(a: seq<elem>, b: seq<elem>): (c: seq<elem>)
+	{
+		var len := Math.Max(|a|, |b|);
+		var a := poly_zero_ext(a, len);
+		var b := poly_zero_ext(b, len);
+		seq(len, i requires 0 <= i < len => mqsub(a[i], b[i]))
+	}
+
 	predicate exists_in_index_pairs(i:nat, j:nat, r: seq<(nat, nat)>)
 	{
 		exists k: nat | k < |r| :: r[k] == (i, j)
