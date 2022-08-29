@@ -1,4 +1,4 @@
-include "generic_bv_ops.dfy"
+include "bv_op.s.dfy"
 
 module bv256_seq refines LittleEndianNat
 {
@@ -10,7 +10,7 @@ module bv256_seq refines LittleEndianNat
     }
 }
 
-module bv256_ops refines generic_bv_ops
+module bv256_op_s refines bv_op_s
 {
     import opened BVSEQ = bv256_seq 
 

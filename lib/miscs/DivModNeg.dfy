@@ -1,5 +1,5 @@
-include "../std_lib/src/NonlinearArithmetic/DivMod.dfy"
-include "../std_lib/src/NonlinearArithmetic/Internals/DivInternals.dfy"
+include "../../std_lib/src/NonlinearArithmetic/DivMod.dfy"
+include "../../std_lib/src/NonlinearArithmetic/Internals/DivInternals.dfy"
 
 module DivModNeg {
   

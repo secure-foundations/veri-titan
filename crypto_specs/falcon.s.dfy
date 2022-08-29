@@ -25,7 +25,6 @@ abstract module falcon_s(CMQ: ntt_param_s) {
     }
 }
 
-
 module falcon_512_i refines falcon_s(ntt512_param_i)
 {
     function bound(): nat {

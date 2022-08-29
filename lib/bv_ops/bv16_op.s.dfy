@@ -1,5 +1,5 @@
-include "generic_bv_ops.dfy"
-include "DivModNeg.dfy"
+include "bv_op.s.dfy"
+include "../miscs/DivModNeg.dfy"
 
 module bv16_seq refines LittleEndianNat
 {
@@ -11,7 +11,7 @@ module bv16_seq refines LittleEndianNat
     }
 }
 
-module bv16_ops refines generic_bv_ops
+module bv16_op_s refines bv_op_s
 {
     import opened BVSEQ = bv16_seq
     import DivModNeg
@@ -71,13 +71,6 @@ module bv16_ops refines generic_bv_ops
     {
       if x <= y then 1 else 0
     }
-
-    // function method uint16_full_mul(x: uint, y: uint): (r: nat)
-    //     ensures r == x * y
-    //     ensures r < DW_BASE()
-    // {
-    //     x * y
-    // }
 
     function method uint16_mul(x: uint, y: uint): uint
     {

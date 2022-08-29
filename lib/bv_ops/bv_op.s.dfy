@@ -1,6 +1,6 @@
-include "../std_lib/src/Collections/Sequences/LittleEndianNat.dfy"
-include "../std_lib/src/NonlinearArithmetic/Power2.dfy"
-include "../std_lib/src/BoundedInts.dfy"
+include "../../std_lib/src/Collections/Sequences/LittleEndianNat.dfy"
+include "../../std_lib/src/NonlinearArithmetic/Power2.dfy"
+include "../../std_lib/src/BoundedInts.dfy"
 
 module integers
 {
@@ -46,7 +46,7 @@ module integers
     type int64   = i :int | -BASE_63 <= i <= (BASE_63 - 1)
 }
 
-abstract module generic_bv_ops
+abstract module bv_op_s
 {
     import opened BVSEQ: LittleEndianNat
     import Mul
