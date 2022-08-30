@@ -1,7 +1,7 @@
-include "generic_bv_ops.dfy"
+include "../spec/bvop/bv_op.s.dfy"
 
 abstract module generic_mm_lemmas {
-    import opened GBV: generic_bv_ops
+    import opened GBV: bv_op_s
 
     import opened Mul
     import opened Power
@@ -292,7 +292,6 @@ abstract module generic_mm_lemmas {
     }
 
 /* end section on multi word subtraction */
-
 /* begin section on mont loop */
 
     lemma mont_loop_cong_lemma(

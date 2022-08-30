@@ -1,7 +1,7 @@
-include "../arch/msp430/machine.s.dfy"
-include "generic_mm_lemmas.dfy"
-include "bv16_op_s.dfy"
-include "../arch/msp430/vale.i.dfy"
+include "../../../spec/arch/msp430/machine.s.dfy"
+include "../../../spec/bvop/bv16_op.s.dfy"
+include "../../../spec/arch/msp430/vale.i.dfy"
+include "../../generic_mm_lemmas.dfy"
 
 module bv16_mm_lemmas refines generic_mm_lemmas {
     import opened GBV = bv16_op_s

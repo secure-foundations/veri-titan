@@ -3,10 +3,10 @@ include "../arch/riscv/vale.i.dfy"
 
 include "bv32_op_s.dfy"
 
-include "generic_ntt_lemmas.dfy"
+// include "generic_ntt_lemmas.dfy"
 include "DivModNeg.dfy"
 
-module bv32_ntt_lemmas refines generic_ntt_lemmas {
+module bv32_ntt_lemmas {
     import opened GBV = bv32_op_s
 
     import opened rv_machine

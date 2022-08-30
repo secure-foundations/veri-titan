@@ -1,13 +1,11 @@
-include "../arch/riscv/machine.s.dfy"
-include "generic_mm_lemmas.dfy"
-include "bv32_op_s.dfy"
-include "sub_mod_nl_lemmas.i.dfy"
-include "../arch/riscv/vale.i.dfy"
+include "../../../spec/arch/riscv/machine.s.dfy"
+include "../../../spec/bvop/bv32_op.s.dfy"
+include "../../../spec/arch/riscv/vale.i.dfy"
+include "../../generic_mm_lemmas.dfy"
 
 module bv32_mm_lemmas refines generic_mm_lemmas {
     import opened GBV = bv32_op_s
     import opened rv_machine
-    import opened sub_mod_nl_lemmas
     import opened mem
     import opened rv_vale
 
@@ -16,6 +14,10 @@ module bv32_mm_lemmas refines generic_mm_lemmas {
     const NA : int := -1;
 
     const NUM_WORDS := 96;
+
+    lemma div_negative_one(a: nat)
+        requires a > 1
+        ensures -1 / a == -1
 
     predicate valid_uint64_view(
         num: uint64_view_t,

@@ -1,6 +1,7 @@
-include "../arch/otbn/vale.i.dfy"
-include "bv256_op_s.dfy"
-include "generic_mm_lemmas.dfy"
+include "../../../spec/arch/otbn/machine.s.dfy"
+include "../../../spec/bvop/bv256_op.s.dfy"
+include "../../../spec/arch/otbn/vale.i.dfy"
+include "../../generic_mm_lemmas.dfy"
 
 module bv256_mm_lemmas refines generic_mm_lemmas {
     import opened GBV = bv256_op_s
