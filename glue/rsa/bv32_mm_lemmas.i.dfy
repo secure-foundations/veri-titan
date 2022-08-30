@@ -1,11 +1,11 @@
 include "../arch/riscv/machine.s.dfy"
 include "generic_mm_lemmas.dfy"
-include "bv32_ops.dfy"
+include "bv32_op_s.dfy"
 include "sub_mod_nl_lemmas.i.dfy"
 include "../arch/riscv/vale.i.dfy"
 
 module bv32_mm_lemmas refines generic_mm_lemmas {
-    import opened GBV = bv32_ops
+    import opened GBV = bv32_op_s
     import opened rv_machine
     import opened sub_mod_nl_lemmas
     import opened mem

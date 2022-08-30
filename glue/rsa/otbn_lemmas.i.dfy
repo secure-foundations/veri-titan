@@ -8,7 +8,7 @@ module otbn_lemmas {
     import opened DivMod
     import opened Mul
     import opened integers
-    import opened bv32_ops
+    import opened bv32_op_s
     import opened ot_machine
     import opened ot_vale
     import opened mem
@@ -86,11 +86,11 @@ module otbn_lemmas {
 
     lemma lemma_small(x:uint256)
       requires x < BASE_64
-      ensures bv256_ops.lh(x) % BASE_64 == x
+      ensures bv256_op_s.lh(x) % BASE_64 == x
     {
       calc{
-        bv256_ops.lh(x) % BASE_64;
-          { reveal bv256_ops.lh(); }
+        bv256_op_s.lh(x) % BASE_64;
+          { reveal bv256_op_s.lh(); }
         (x % BASE_256) % BASE_64;
           { LemmaSmallMod(x, BASE_256); }
         x % BASE_64;
@@ -116,23 +116,23 @@ module otbn_lemmas {
           { reveal otbn_qmul(); }
         otbn_qsel(x, 0) as uint128 * otbn_qsel(y, 0) as uint128;
           { reveal otbn_qsel(); }
-        ((bv256_ops.lh(x) % BASE_64) as uint128) * ((bv256_ops.lh(y) % BASE_64) as uint128);
+        ((bv256_op_s.lh(x) % BASE_64) as uint128) * ((bv256_op_s.lh(y) % BASE_64) as uint128);
           { lemma_small(x); lemma_small(y); }
         x as uint128 * y as uint128;
         x * y;
       }
       
       calc {
-        bv256_ops.lh(product);
-          { reveal bv256_ops.lh(); LemmaSmallMod(x, BASE_256); }
+        bv256_op_s.lh(product);
+          { reveal bv256_op_s.lh(); LemmaSmallMod(x, BASE_256); }
         x * y;
       }
       
       calc {
         otbn_hwb(0, x * y, true);
           { reveal otbn_hwb(); }
-        x * y + bv256_ops.uh(0) * BASE_128;
-          { reveal bv256_ops.uh(); }
+        x * y + bv256_op_s.uh(0) * BASE_128;
+          { reveal bv256_op_s.uh(); }
         x * y;
       }
     }
@@ -153,8 +153,8 @@ module otbn_lemmas {
       assert 0 <= sum < BASE_256;
       calc {
         shifted;
-        bv256_ops.rs(sum, 16);
-          { bv256_ops.rs_is_div_mod_base(sum, 16); }
+        bv256_op_s.rs(sum, 16);
+          { bv256_op_s.rs_is_div_mod_base(sum, 16); }
         (sum / Power2.Pow2(16)) % BASE_256;
           { Lemma2To64(); }
         (sum / BASE_16) % BASE_256;
@@ -229,5 +229,4 @@ module otbn_lemmas {
       assert (forall j | 0 <= j < |f_new| :: j != i
         ==> f_new[j] == f_old[j] && j == i ==> f_new[j] == mqsub(f_orig[j], g[j]));
     }
-
 }

@@ -17,7 +17,7 @@ import opened mem
 import opened bv32_mm_lemmas
 import opened sub_mod_nl_lemmas
 
-import opened bv32_ops
+import opened bv32_op_s
 
 import opened Power
 

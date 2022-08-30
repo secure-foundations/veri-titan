@@ -1,6 +1,7 @@
 include "../../std_lib/src/Collections/Sequences/LittleEndianNat.dfy"
 include "../../std_lib/src/NonlinearArithmetic/Power2.dfy"
 include "../../std_lib/src/BoundedInts.dfy"
+include "../../misc/DivModNeg.dfy"
 
 module integers
 {

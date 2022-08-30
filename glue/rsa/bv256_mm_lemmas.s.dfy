@@ -1,10 +1,10 @@
 include "../arch/otbn/vale.i.dfy"
-include "bv256_ops.dfy"
+include "bv256_op_s.dfy"
 include "generic_mm_lemmas.dfy"
 
 module bv256_mm_lemmas refines generic_mm_lemmas {
-    import opened GBV = bv256_ops
-    import bv32_ops
+    import opened GBV = bv256_op_s
+    import bv32_op_s
     import opened ot_machine
     import opened ot_vale
     import opened ot_abstraction
@@ -227,10 +227,10 @@ module bv256_mm_lemmas refines generic_mm_lemmas {
     }
 
     lemma and_lsb_lemma(x: uint32)
-        ensures x % 2 == 1 ==> bv32_ops.and(x, 1) == 1
-        ensures x % 2 == 0 ==> bv32_ops.and(x, 1) == 0
+        ensures x % 2 == 1 ==> bv32_op_s.and(x, 1) == 1
+        ensures x % 2 == 0 ==> bv32_op_s.and(x, 1) == 0
     {
-        reveal bv32_ops.and();
+        reveal bv32_op_s.and();
     }
 
     lemma read_carry_flag_lemma(flags: flags_t)

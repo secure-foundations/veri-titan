@@ -1,11 +1,11 @@
+include "../../bvop/bv32_op.s.dfy"
 include "stack.i.dfy"
-include "../../lib/bv32_ops.dfy"
 
 module mem {
   import opened integers
   import opened flat
   import opened stack
-  import bv32_ops
+  import bv32_op_s
 
   import DivMod
 
@@ -120,14 +120,14 @@ module mem {
     ensures |r| == |buff| / 2;
   {
     var len := |buff| / 2;
-    seq(len, i requires 0 <= i < len => bv32_ops.half_combine(buff[2 * i], buff[2 * i + 1]))
+    seq(len, i requires 0 <= i < len => bv32_op_s.half_combine(buff[2 * i], buff[2 * i + 1]))
   }
 
   function {:opaque} b32_as_b16(buff: seq<uint32>): (r: seq<uint16>)
     ensures |r| == 2 * |buff|;
   {
     var len := |buff| * 2;
-    seq(len, i requires 0 <= i < len => if i % 2 == 0 then bv32_ops.lh(buff[i/2]) else bv32_ops.uh(buff[i/2]))
+    seq(len, i requires 0 <= i < len => if i % 2 == 0 then bv32_op_s.lh(buff[i/2]) else bv32_op_s.uh(buff[i/2]))
   }
 
   lemma casting_b16_inverse(b16: seq<uint16>)
@@ -209,9 +209,9 @@ module mem {
     reveal b32_as_b16();
     var b32_it := b16_iter_as_b32_iter(b16_it);
     var old_full := b32_it.buff[b32_it.index];
-    var new_lo := if b16_it.index % 2 == 0 then value else bv32_ops.lh(old_full);
-    var new_hi := if b16_it.index % 2 == 0 then bv32_ops.uh(old_full) else value;
-    var new_v := bv32_ops.half_combine(new_lo, new_hi);
+    var new_lo := if b16_it.index % 2 == 0 then value else bv32_op_s.lh(old_full);
+    var new_hi := if b16_it.index % 2 == 0 then bv32_op_s.uh(old_full) else value;
+    var new_v := bv32_op_s.half_combine(new_lo, new_hi);
     heap_b32_write(heap, b32_it, new_v)
   }
 

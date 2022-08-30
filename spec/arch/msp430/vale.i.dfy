@@ -1,4 +1,4 @@
-include "../../std_lib/src/NonlinearArithmetic/Mul.dfy"
+include "../../../std_lib/src/NonlinearArithmetic/Mul.dfy"
 include "machine.s.dfy"
 include "mem.i.dfy"
 

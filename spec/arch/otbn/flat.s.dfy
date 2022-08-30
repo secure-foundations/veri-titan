@@ -1,4 +1,4 @@
-include "../../lib/generic_bv_ops.dfy"
+include "../../bvop/bv_op.s.dfy"
 
 module flat {
   import opened integers

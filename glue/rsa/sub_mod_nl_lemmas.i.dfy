@@ -1,12 +1,12 @@
 include "../arch/riscv/machine.s.dfy"
 include "DivModNeg.dfy"
-include "bv32_ops.dfy"
+include "bv32_op_s.dfy"
 
 module sub_mod_nl_lemmas {
 
     import opened integers
-    import opened bv32_ops
-    import opened bv32_ops.BVSEQ
+    import opened bv32_op_s
+    import opened bv32_op_s.BVSEQ
 
     import opened DivModNeg
 

@@ -1,6 +1,6 @@
 include "../../arch/riscv/machine.s.dfy"
 include "../../arch/riscv/vale.i.dfy"
-include "../bv32_ops.dfy"
+include "../bv32_op_s.dfy"
 
 include "../DivModNeg.dfy"
 include "ntt_params.dfy"
@@ -13,7 +13,7 @@ module mq_arith_lemmas {
     import opened Mul
     import opened DivModNeg
     import opened integers
-    import opened bv32_ops
+    import opened bv32_op_s
     import opened rv_machine
     import opened rv_vale
     import opened mem

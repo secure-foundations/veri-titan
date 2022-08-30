@@ -1,6 +1,6 @@
 include "../../../arch/msp430/machine.s.dfy"
 include "../../../arch/msp430/vale.i.dfy"
-include "../../bv16_ops.dfy"
+include "../../bv16_op_s.dfy"
 include "../../bv16_mm_lemmas.i.dfy"
 include "../mq_polys.dfy"
 
@@ -14,7 +14,7 @@ module mq_arith_lemmas {
     import opened DivMod
     import opened Mul
     import opened integers
-    import opened bv16_ops
+    import opened bv16_op_s
     import opened bv16_seq
     import opened msp_machine
     import opened msp_vale

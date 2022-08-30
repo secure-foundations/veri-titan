@@ -16,7 +16,7 @@ import opened ot_decls
 import opened ot_vale
 
 import opened integers
-//import opened bv256_ops
+//import opened bv256_op_s
 import opened bv256_ntt_lemmas
 import opened otbn_lemmas
 import opened DivMod

@@ -1,6 +1,6 @@
 include "machine.s.dfy"
-include "../../std_lib/src/NonlinearArithmetic/Mul.dfy"
-include "../../arch/riscv/mem.i.dfy"
+include "../../../std_lib/src/NonlinearArithmetic/Mul.dfy"
+include "mem.i.dfy"
 
 module rv_vale {
     import opened integers

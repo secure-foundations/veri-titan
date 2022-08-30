@@ -15,7 +15,7 @@ import opened rv_vale
 import opened mem
 import opened stack
 
-import opened bv32_ops
+import opened bv32_op_s
 import opened bv32_falcon_lemmas
 
 import opened pows_of_2

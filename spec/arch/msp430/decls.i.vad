@@ -1,10 +1,11 @@
+include "../common.i.vad"
 include{: verbatim} "../../arch/msp430/vale.i.dfy"
 
 #verbatim
 module msp_decls {
 
 import opened integers
-import opened bv16_ops
+import opened bv16_op_s
 import opened msp_machine
 import opened msp_vale
 import opened mem
@@ -12,18 +13,10 @@ import opened stack
 
 #endverbatim
 
-
-
-type string: Type(0) extern;
-
 function power(b: int, e: nat) : nat extern;
 function cong(a: int, b: int, n: int) : bool extern;
 function cong_BASE(a: int, b: int): bool extern;
 
-const BASE_16:  nat extern;
-const BASE_32:  nat extern;
-const NUM_WORDS:nat extern;
-    
 const NA: int extern;
 
 type state: Type(0) {: primitive} extern;

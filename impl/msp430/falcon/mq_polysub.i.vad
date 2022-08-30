@@ -14,7 +14,7 @@ import opened msp_vale
 import opened mem
 import opened stack
 
-import opened bv16_ops
+import opened bv16_op_s
 import opened mq_arith_lemmas
 
 import opened pows_of_2

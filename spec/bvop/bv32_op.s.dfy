@@ -1,5 +1,4 @@
 include "bv_op.s.dfy"
-include "../miscs/DivModNeg.dfy"
 include "bv16_op.s.dfy"
 
 module bv32_seq refines LittleEndianNat

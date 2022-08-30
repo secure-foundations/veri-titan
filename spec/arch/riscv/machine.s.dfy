@@ -1,9 +1,9 @@
-include "../../lib/bv32_ops.dfy"
+include "../../bvop/bv32_op.s.dfy"
 include "flat.s.dfy"
 
 module rv_machine {
     import opened integers
-    import opened bv32_ops
+    import opened bv32_op_s
     import opened flat
 
     const DMEM_LIMIT: int := 0x80000

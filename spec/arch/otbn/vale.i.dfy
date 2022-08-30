@@ -1,11 +1,11 @@
-include "../../std_lib/src/NonlinearArithmetic/Mul.dfy"
+include "../../../std_lib/src/NonlinearArithmetic/Mul.dfy"
 include "abstraction.i.dfy"
 include "mem.i.dfy"
 
 module ot_vale {
     // import opened bv_ops
 
-    import bv32_ops
+    import bv32_op_s
     import bv256_seq
 
     import opened integers
@@ -54,9 +54,9 @@ module ot_vale {
     }
 
     lemma xor_clear_lemma(x: uint256)
-        ensures bv256_ops.xor(x, x) == 0;
+        ensures bv256_op_s.xor(x, x) == 0;
     {
-        bv256_ops.xor_clear_lemma(x, x);
+        bv256_op_s.xor_clear_lemma(x, x);
     }
 
     // need this for mul
@@ -69,22 +69,22 @@ module ot_vale {
 
     function method bool_to_uint1(b: bool): uint1
     {
-        bv256_ops.bool_to_uint1(b)
+        bv256_op_s.bool_to_uint1(b)
     }
 
-    function method uint32_addi(x: uint32, y: bv32_ops.sint): uint32
+    function method uint32_addi(x: uint32, y: bv32_op_s.sint): uint32
     {
-        bv32_ops.addi(x, y)
+        bv32_op_s.addi(x, y)
     }
 
     function method uint32_add(x: uint32, y: uint32): uint32
     {
-        bv32_ops.add(x, y)
+        bv32_op_s.add(x, y)
     }
 
-    function method uint32_andi(x: uint32, y: bv32_ops.sint): uint32
+    function method uint32_andi(x: uint32, y: bv32_op_s.sint): uint32
     {
-        bv32_ops.andi(x, y)
+        bv32_op_s.andi(x, y)
     }
 
     // otbn state realted
@@ -265,7 +265,7 @@ module ot_vale {
         returns (new_mem: mem_t)
 
         requires valid_state_opaque(gs)
-        requires write_ptr == bv32_ops.addi(gs.ms.read_reg32(grs1), offset);
+        requires write_ptr == bv32_op_s.addi(gs.ms.read_reg32(grs1), offset);
         requires heap_w32_ptr_valid(gs.mem.heap, write_ptr);
 
         ensures

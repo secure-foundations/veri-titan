@@ -1,6 +1,6 @@
 include "bv32_falcon_lemmas.i.dfy"
 include "mq_arith_lemmas.dfy"
-include "../bv16_ops.dfy"
+include "../bv16_op_s.dfy"
 
 module normalization_lemmas {
     import opened bv32_falcon_lemmas
@@ -8,10 +8,10 @@ module normalization_lemmas {
     import opened rv_machine
     import opened integers
     import opened ntt_512_params
-    import opened bv32_ops
+    import opened bv32_op_s
     import opened mq_arith_lemmas
 
-    import bv16_ops
+    import bv16_op_s
 
     const Q_HLAF :int := Q/2
 
@@ -44,7 +44,7 @@ module normalization_lemmas {
 
     predicate uint16_is_normalized(e: uint16)
     {
-        int_is_normalized(bv16_ops.to_int16(e))
+        int_is_normalized(bv16_op_s.to_int16(e))
     }
 
     // bascially convert to int16, but with requires
@@ -53,7 +53,7 @@ module normalization_lemmas {
     function uint16_as_nelem(e: uint16): nelem
         requires uint16_is_normalized(e)
     {
-        bv16_ops.to_int16(e)
+        bv16_op_s.to_int16(e)
     }
 
     predicate {:opaque} normalized_values(a: seq<uint16>)
@@ -213,7 +213,7 @@ module normalization_lemmas {
             } else {
                 assume uh == 0; // the upper bits all clear
             }
-            assert bv16_ops.to_int16(lh) == to_int32(e);
+            assert bv16_op_s.to_int16(lh) == to_int32(e);
         }
         assert uint16_as_nelem(lh) == normalize(a);
     }

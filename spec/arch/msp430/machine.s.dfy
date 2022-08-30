@@ -1,10 +1,9 @@
-include "../../lib/bv16_ops.dfy"
+include "../../bvop/bv16_op.s.dfy"
 include "flat.s.dfy"
-// include "../../lib/bv20_ops.dfy"
 
 module msp_machine {
     import opened integers
-    import opened bv16_ops
+    import opened bv16_op_s
     import opened flat
 
     /* registers definitions */

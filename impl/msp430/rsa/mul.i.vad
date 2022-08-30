@@ -13,7 +13,7 @@ import opened msp_vale
 import opened mem
 import opened stack
 import opened bv16_mm_lemmas
-import opened bv16_ops
+import opened bv16_op_s
 import opened integers
 
 #endverbatim

@@ -18,7 +18,7 @@ import opened mem
 import opened mul
 import opened stack
 import opened bv16_mm_lemmas
-import opened bv16_ops
+import opened bv16_op_s
 import opened integers
 import opened mq_polys
 import opened mq_arith_lemmas

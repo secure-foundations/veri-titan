@@ -1,10 +1,10 @@
 include "../arch/msp430/machine.s.dfy"
 include "generic_mm_lemmas.dfy"
-include "bv16_ops.dfy"
+include "bv16_op_s.dfy"
 include "../arch/msp430/vale.i.dfy"
 
 module bv16_mm_lemmas refines generic_mm_lemmas {
-    import opened GBV = bv16_ops
+    import opened GBV = bv16_op_s
     import opened msp_machine
     // import opened sub_mod_nl_lemmas
     import opened mem

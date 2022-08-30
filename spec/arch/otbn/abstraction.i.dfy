@@ -2,7 +2,7 @@ include "machine.s.dfy"
 
 module ot_abstraction {
     import opened integers
-    import opened bv256_ops
+    import opened bv256_op_s
     import opened ot_machine
     import opened flat
 
@@ -34,7 +34,7 @@ module ot_abstraction {
         assert 0 <= num_bytes <= 24;
         var shift := SFT(true, num_bytes);
         var num_bits := num_bytes * 8;
-        var result := bv256_ops.ls(x, num_bits);
+        var result := bv256_op_s.ls(x, num_bits);
         ls_is_mul(x, num_bytes, result);
         assert otbn_qshift_safe(x, q) == otbn_shift(x, shift);
     }
