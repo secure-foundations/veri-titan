@@ -1,10 +1,9 @@
-include "../../arch/riscv/decls.i.vad"
+include "../../../spec/arch/riscv/decls.i.vad"
 
 #verbatim
-include "../../arch/riscv/decls.i.dfy"
-include "../../../lib/bv32_mm_lemmas.i.dfy"
 
-// include "../../../impl/riscv/sub_mod_lemmas.i.dfy"
+include "../../../spec/arch/riscv/decls.i.dfy"
+include "../../../../glue/riscv/rsa/bv32_mm_lemmas.i.dfy"
 
 module sub_mod {
 
@@ -15,7 +14,6 @@ import opened rv_vale
 import opened mem
 
 import opened bv32_mm_lemmas
-import opened sub_mod_nl_lemmas
 
 import opened bv32_op_s
 

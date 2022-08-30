@@ -1,9 +1,7 @@
-include "../../arch/riscv/decls.i.vad"
 include "mont_mul_add.i.vad"
 
 #verbatim
-include "../../impl/riscv/mont_mul_add.i.dfy"
-include "../../../lib/bv32_mm_lemmas.i.dfy"
+include "mont_mul_add.i.dfy"
 
 module mont_mul {
 

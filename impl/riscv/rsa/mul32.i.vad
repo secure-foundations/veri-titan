@@ -1,8 +1,9 @@
-include "../../arch/riscv/decls.i.vad"
+include "../../../spec/arch/riscv/decls.i.vad"
 
 #verbatim
-include "../../arch/riscv/decls.i.dfy"
-include "../../../lib/bv32_mm_lemmas.i.dfy"
+
+include "../../../spec/arch/riscv/decls.i.dfy"
+include "../../../../glue/riscv/rsa/bv32_mm_lemmas.i.dfy"
 
 module mul32 {
 

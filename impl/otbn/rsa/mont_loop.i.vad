@@ -1,16 +1,11 @@
-include "../../arch/otbn/decls.i.vad"
 include "mul256.i.vad"
 include "addc512.i.vad"
 include "cond_sub_to_reg.i.vad"
 
 #verbatim
-include "../../arch/otbn/decls.i.dfy"
-
 include "mul256.i.dfy"
 include "addc512.i.dfy"
 include "cond_sub_to_reg.i.dfy"
-
-include "../../../lib/bv256_mm_lemmas.s.dfy"
 
 module mont_loop {
 

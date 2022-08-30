@@ -1,13 +1,8 @@
-include "../../arch/otbn/decls.i.vad"
 include "montmul.i.vad"
 
 #verbatim
 
-include "../../arch/otbn/decls.i.dfy"
-
 include "montmul.i.dfy"
-
-include "../../../lib/bv256_mm_lemmas.s.dfy"
 
 module modexp_var {
 

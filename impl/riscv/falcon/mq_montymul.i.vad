@@ -1,4 +1,3 @@
-include "../../../arch/riscv/decls.i.vad"
 include "mq_arith.i.vad"
 
 #verbatim

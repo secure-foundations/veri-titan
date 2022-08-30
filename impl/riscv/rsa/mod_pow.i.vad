@@ -1,14 +1,11 @@
-include "../../arch/riscv/decls.i.vad"
 include "mont_mul.i.vad"
 include "ge_mod.i.vad"
 include "sub_mod.i.vad"
 
 #verbatim
-include "../../impl/riscv/ge_mod.i.dfy"
-include "../../impl/riscv/sub_mod.i.dfy"
-include "../../impl/riscv/mont_mul.i.dfy"
-
-include "../../../lib/bv32_mm_lemmas.i.dfy"
+include "ge_mod.i.dfy"
+include "sub_mod.i.dfy"
+include "mont_mul.i.dfy"
 
 module mod_pow {
 

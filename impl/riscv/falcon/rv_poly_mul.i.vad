@@ -1,4 +1,3 @@
-include "../../../arch/riscv/decls.i.vad"
 include "rv_inverse_ntt_std2rev.i.vad"
 include "rv_forward_ntt_std2rev.i.vad"
 include "rv_bit_shuffle.i.vad"

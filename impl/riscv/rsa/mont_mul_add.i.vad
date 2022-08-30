@@ -1,11 +1,9 @@
-include "../../arch/riscv/decls.i.vad"
 include "mul32.i.vad"
 include "sub_mod.i.vad"
 
 #verbatim
-include "../../impl/riscv/mul32.i.dfy"
-include "../../impl/riscv/sub_mod.i.dfy"
-include "../../../lib/bv32_mm_lemmas.i.dfy"
+include "mul32.i.dfy"
+include "sub_mod.i.dfy"
 
 module mont_mul_add {
 
@@ -463,6 +461,7 @@ procedure mont_mul_add(
     ghost vars: mma_vars,
     ghost rsa: rsa_params)
     returns (ghost next_iter_c : iter_t)
+    {:timeLimit 40}
     {:noInline}
 
     requires sp == STACK_START() - 60;

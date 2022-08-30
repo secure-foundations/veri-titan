@@ -1,9 +1,9 @@
-include "../../arch/msp430/decls.i.vad"
+include "../../../spec/arch/msp430/decls.i.vad"
 
 #verbatim
 
-include "../../arch/msp430/decls.i.dfy"
-include "../../../lib/bv16_mm_lemmas.i.dfy"
+include "../../../spec/arch/msp430/decls.i.dfy"
+include "../../../../glue/msp430/rsa/bv16_mm_lemmas.i.dfy"
 
 module sub_mod {
 

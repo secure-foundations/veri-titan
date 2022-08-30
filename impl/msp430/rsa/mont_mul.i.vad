@@ -2,8 +2,6 @@ include "mont_mul_add.i.vad"
 
 #verbatim
 
-include "../../arch/msp430/decls.i.dfy"
-include "../../../lib/bv16_mm_lemmas.i.dfy"
 include "mont_mul_add.i.dfy"
 
 module mont_mul {

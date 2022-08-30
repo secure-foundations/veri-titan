@@ -1,10 +1,6 @@
-include "../../../arch/riscv/decls.i.vad"
 include "mq_montymul.i.vad"
 
 #verbatim
-
-include "../../../arch/riscv/decls.i.dfy"
-include "../../../../lib/falcon/bv32_falcon_lemmas.i.dfy"
 
 include "mq_montymul.i.dfy"
 

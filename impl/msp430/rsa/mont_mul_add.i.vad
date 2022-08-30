@@ -3,8 +3,6 @@ include "sub_mod.i.vad"
 
 #verbatim
 
-include "../../arch/msp430/decls.i.dfy"
-include "../../../lib/bv16_mm_lemmas.i.dfy"
 include "mul.i.dfy"
 include "sub_mod.i.dfy"
 

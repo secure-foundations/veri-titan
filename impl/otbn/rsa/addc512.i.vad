@@ -1,12 +1,8 @@
-include "../../arch/otbn/decls.i.vad"
 include "mul256.i.vad"
 
 #verbatim
 
 include "mul256.i.dfy"
-
-include "../../arch/otbn/decls.i.dfy"
-include "../../../lib/bv256_mm_lemmas.s.dfy"
 
 module addc512 {
 

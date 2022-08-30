@@ -1,4 +1,3 @@
-include "../../../arch/riscv/decls.i.vad"
 include "mq_montymul.i.vad"
 include "rv_reg_save.i.vad"
 

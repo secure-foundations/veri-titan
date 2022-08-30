@@ -50,13 +50,13 @@ OTBN_TEST_ASM_PATH = "impl/otbn/run_modexp.s"
 OUTPUT_ELF_PATH = "gen/run_modexp.elf"
 
 DLL_SOURCES = {
-     "arch/otbn/modexp_printer.s.dfy": OTBN_ASM_PATH,
-    "arch/otbn/simulator.i.dfy": "gen/arch/otbn/sim.out", 
-    "arch/riscv/printer.s.dfy": RISCV_ASM_PATH,
+    "spec/arch/otbn/modexp_printer.s.dfy": OTBN_ASM_PATH,
+    "spec/arch/otbn/simulator.i.dfy": "gen/arch/otbn/sim.out", 
+    "spec/arch/riscv/printer.s.dfy": RISCV_ASM_PATH,
 }
 
 NINJA_PATH = "build.ninja"
-CODE_DIRS = ["spec", "impl", "glue"]
+CODE_DIRS = ["spec", "impl", "glue", "misc"]
 GEN_DIR = "gen"
 
 NL_FILES = {"lib/sub_mod_nl_lemmas.i.dfy"}
@@ -458,7 +458,7 @@ def main():
     elif option == "dll-gen":
         generate_dll(sys.argv[2], sys.argv[3])
     elif option == "clean":
-        os.system(f"rm -r gen/arch gen/impl gen/lib")
+        os.system(f"rm -r gen/spec gen/impl gen/glue")
         os.system("rm " + NINJA_PATH)
     elif option == "setup":
         setup_tools()

@@ -1,4 +1,3 @@
-include "../../../arch/riscv/decls.i.vad"
 include "rv_poly_mul.i.vad"
 include "rv_normalize.i.vad"
 include "mq_polysub.i.vad"

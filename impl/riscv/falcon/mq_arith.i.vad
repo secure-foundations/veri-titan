@@ -1,8 +1,8 @@
-include "../../../arch/riscv/decls.i.vad"
+include "../../../spec/arch/riscv/decls.i.vad"
 
 #verbatim
-include "../../../arch/riscv/decls.i.dfy"
-include "../../../../lib/falcon/bv32_falcon_lemmas.i.dfy"
+include "../../../spec/arch/riscv/decls.i.dfy"
+// include "../../../../lib/falcon/bv32_falcon_lemmas.i.dfy"
 
 module mq_arith {
 
@@ -12,7 +12,7 @@ import opened rv_decls
 import opened rv_vale
 
 import opened bv32_op_s
-import opened bv32_falcon_lemmas
+// import opened bv32_falcon_lemmas
 import opened pows_of_2
 import opened mq_polys
 import opened nth_root
