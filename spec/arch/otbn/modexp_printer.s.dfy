@@ -1,6 +1,6 @@
 include "vale.i.dfy"
 include "printer.s.dfy"
-include "../../../gen/impl/otbn/modexp_var.i.dfy"
+include "../../../gen/impl/otbn/rsa/modexp_var.i.dfy"
 
 module modexp_printer {
   

@@ -15,7 +15,7 @@ module bv32_mm_lemmas refines generic_mm_lemmas {
 
     const NUM_WORDS := 96;
 
-    lemma div_negative_one(a: nat)
+    lemma {:axiom } div_negative_one(a: nat)
         requires a > 1
         ensures -1 / a == -1
 

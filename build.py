@@ -46,7 +46,7 @@ rule otbn-ld
 
 OTBN_ASM_PATH = "gen/otbn_modexp.s"
 RISCV_ASM_PATH = "gen/riscv_modexp.s"
-OTBN_TEST_ASM_PATH = "impl/otbn/run_modexp.s"
+OTBN_TEST_ASM_PATH = "ref/run_modexp.s"
 OUTPUT_ELF_PATH = "gen/run_modexp.elf"
 
 DLL_SOURCES = {
