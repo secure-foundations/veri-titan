@@ -1461,35 +1461,12 @@ module mq_intt_i(CMQ: ntt_param_s, CMQP: mq_poly_i(CMQ), CPV: poly_view_i(CMQ))
         var lcount := view.lcount();
     
         view.lower_points_view_value_lemma(a, hcount, j, bi, s);
-        var e := a[s];
+        var e := a[s] as int;
         var o := a[s+hcount.full];
         var p := CMQP.montmul(o, w);
-
-        gbassert IsModEquivalent(p, o * x_value(2*j, hcount), Q) by {
-            assert IsModEquivalent(p, o * w * R_INV, Q) by {
-                LemmaSmallMod(p, Q);
-            }
-            assert IsModEquivalent(R_INV * R, 1, Q) by {
-                CMQ.Nth_root_lemma();
-            }
-            assert IsModEquivalent(w, x_value(2*j, hcount) * R, Q) by {
-                LemmaSmallMod(w, Q);
-            }
-        }
-
-        assert p == (o * x_value(2 * j, hcount)) % Q by {
-            LemmaSmallMod(p, Q);
-        }
-
-        var diff :=  CMQP.mqsub(e, p);
-
-        var e_poly := view.get_even_poly(bi);
-        var o_poly := view.get_odd_poly(bi);
-        var f_poly := view.get_full_poly(bi);
-
         var x_e := x_value(2*j, hcount);
         var x_o := x_value(2*j+1, hcount);
-    
+
         x_value_odd_square_lemma(view, j, x_o);
 
         view.level_polys_bitrev_index_correspondence_lemma(a, hcount, j, bi);
@@ -1529,40 +1506,27 @@ module mq_intt_i(CMQ: ntt_param_s, CMQP: mq_poly_i(CMQ), CPV: poly_view_i(CMQ))
             Q - x_e;
         }
 
+        gbassert IsModEquivalent(e - p, e + x_o * o, Q) by {
+        // gbassert IsModEquivalent(p, o * x_e, Q) by {
+            assert IsModEquivalent(p, o * w * R_INV, Q) by {
+                LemmaSmallMod(p, Q);
+            }
+            assert IsModEquivalent(R_INV * R, 1, Q) by {
+                CMQ.Nth_root_lemma();
+            }
+            assert IsModEquivalent(w, x_e * R, Q) by {
+                LemmaSmallMod(w, Q);
+            }
+            assert x_o == Q - x_e;
+        }
+        var e_poly := view.get_even_poly(bi);
+        var o_poly := view.get_odd_poly(bi);
+        var f_poly := view.get_full_poly(bi);
+    
         calc == {
-            diff;
-            CMQP.mqsub(e, CMQP.mqmul(o, x_e));
-            {
-                LemmaMulNonnegative(o, x_e);
-            }
-            (e as int - ((o * x_e) % Q)) % Q;
-            {
-                LemmaSubModNoopRight(e, o * x_e, Q);
-            }
-            (e as int - (o * x_e)) % Q;
-            (e as int - ((o * (Q - x_o)))) % Q;
-            {
-                LemmaMulIsCommutative(o, Q - x_o);
-            }
-            (e as int - (((Q - x_o) * o))) % Q;
-            {
-                LemmaMulIsDistributive(o, Q, x_o);
-            }
-            (e as int + x_o * o - Q * o) % Q;
-            {
-                LemmaMulProperties();
-            }
-            (e as int + x_o * o + Q * (-o)) % Q;
-            {
-                LemmaModMultiplesVanish(-o, e as int + x_o * o, Q);
-            }
-            (e as int + x_o * o) % Q;
+            (e + x_o * o) % Q;
             {
                 LemmaAddModNoop(e, x_o * o, Q);
-            }
-            ((e % Q) + (x_o * o) % Q) % Q;
-            {
-                LemmaSmallMod(e, Q);
             }
             (e + (x_o * o) % Q) % Q;
             (e + CMQP.mqmul(x_o, o)) % Q;
@@ -1572,6 +1536,7 @@ module mq_intt_i(CMQ: ntt_param_s, CMQP: mq_poly_i(CMQ), CPV: poly_view_i(CMQ))
                 CMQP.poly_eval_split_lemma(f_poly, e_poly, o_poly, hsize, x_o);
             }
             CMQP.poly_eval(f_poly, x_o);
+            CMQP.poly_eval(view.get_full_poly(bi), x_value(2*j+1, hcount));
         }
     }
 }

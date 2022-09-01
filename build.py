@@ -458,7 +458,7 @@ def main():
     elif option == "dll-gen":
         generate_dll(sys.argv[2], sys.argv[3])
     elif option == "clean":
-        os.system(f"rm -r gen/spec gen/impl gen/glue")
+        os.system(f"rm -r gen/spec gen/impl gen/glue gen/misc")
         os.system("rm " + NINJA_PATH)
     elif option == "setup":
         setup_tools()

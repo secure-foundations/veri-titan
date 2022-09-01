@@ -1,4 +1,5 @@
 include "mq_poly.i.dfy"
+include "ntt_index.i.dfy"
 
 module poly_view_i(MQ: ntt_param_s) {
         import opened Power
@@ -7,7 +8,7 @@ module poly_view_i(MQ: ntt_param_s) {
         import opened Mul
 
         import opened pow2_s
-    import opened ntt_index
+        import opened ntt_index
 
         import MQP = mq_poly_i(MQ)
 
@@ -50,6 +51,8 @@ module poly_view_i(MQ: ntt_param_s) {
                         }
                         (right.full * 2) * half;
                 }
+                LemmaMulIsCommutative(left.full, half);
+                LemmaMulIsCommutative(right.full * 2, half);
                 LemmaMulEqualityConverse(half, left.full, right.full * 2);
         }
 
