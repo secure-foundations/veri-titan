@@ -32,7 +32,7 @@ import opened mq_montymul
 
 #endverbatim
 
-function buff_as_nsized(s: seq(uint16)): seq(uint16) extern;
+function buff_as_n_elems(s: seq(uint16)): seq(uint16) extern;
 
 function rev_omega_inv_powers_mont_table(): seq(uint16) extern;
 function rev_omega_inv_powers_mont_table_lemma(t: pow2_t, d: pow2_t, j: nat): void extern;
@@ -313,7 +313,7 @@ procedure inverse_t_loop(ghost iter_a: b16_iter,
     li(t2, 0);
     li(t3, 0);
 
-    ghost var view := build_loop_view(buff_as_nsized(coeffs), d);
+    ghost var view := build_loop_view(buff_as_n_elems(coeffs), d);
 
     ghost var j :nat := 0;
     ghost var u :nat := 0;

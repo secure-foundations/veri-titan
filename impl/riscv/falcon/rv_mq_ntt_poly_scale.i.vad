@@ -74,7 +74,7 @@ returns (ghost next_iter_a: b16_iter)
 
         ghost var i :nat := 0;
 
-        reveal buff_is_nsized;
+        reveal buff_is_n_elems;
 
         while (a0 < a3)
             invariant

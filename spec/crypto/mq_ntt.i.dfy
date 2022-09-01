@@ -1,6 +1,6 @@
 include "ntt_twiddle.i.dfy"
 
-abstract module mq_ntt_i(MQ: ntt_param_s) {
+abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ)) {
     import opened Seq
 	import opened Power
 	import opened Power2
@@ -9,10 +9,6 @@ abstract module mq_ntt_i(MQ: ntt_param_s) {
 
 	import opened pow2_s
 	import opened ntt_index
-
-	import MQP = mq_poly_i(MQ)
-	import PV = poly_view_i(MQ)
-	import TWD = ntt_twiddle_i(MQ)
 
 	type elem = MQ.elem
 	type n_elems = MQ.n_elems
@@ -765,13 +761,88 @@ abstract module mq_ntt_i(MQ: ntt_param_s) {
             == MQP.mqsub(a[s], MQP.montmul(a[s+hcount.full], w));
 }
 
-module mq_fntt_i(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
+module mq_fntt_i(CMQ: ntt_param_s, CMQP: mq_poly_i(CMQ), CPV: poly_view_i(CMQ))
+    refines mq_ntt_i(CMQ, CMQP, CPV)
+{
+	import TWD = ntt_twiddle_i(CMQ)
 
-    // function rev_mixed_powers_mont_x_value(i: nat, d: pow2_t): (r: elem)
+	// d is the block count
+	// i is the offset in the block
+	function rev_mixed_powers_mont_x_value_inner(i: nat, d: pow2_t): (r: elem)
+		requires d.exp <= N.exp;
+		requires i < PV.block_size(d).full;
+		ensures r > 0;
+	{
+		var bound := PV.block_size(d);
+		LemmaMulNonnegative(2 * bit_rev_int(i, bound), d.full);
+		var r := CMQP.mqpow(PSI, 2 * bit_rev_int(i, bound) * d.full + d.full);
+		// LemmaPowPositive(PSI, 2 * bit_rev_int(i, bound) * d.full + d.full);
+		calc {
+			2 * bit_rev_int(i, bound) * d.full + d.full;
+			{
+				LemmaMulProperties();
+			}
+			(bit_rev_int(i, bound) * (2 * d.full)) + d.full;
+			<=
+			{
+				LemmaMulInequality(bit_rev_int(i, bound), bound.full - 1, 2 * d.full);
+			}
+			(bound.full - 1) * (2 * d.full) + d.full;
+			{
+				LemmaMulIsDistributive(2 * d.full, bound.full, - 1);
+			}
+			bound.full * (2 * d.full) - (2 * d.full) + d.full;
+			bound.full * (2 * d.full) - d.full;
+			{
+				LemmaMulProperties();
+			}
+			2 * (bound.full * d.full) - d.full;
+			// {
+			// 	PV.block_count_product_lemma(bound);
+			// }
+			2 * N.full - d.full;
+		}
+		TWD.primitive_root_non_zero_lemma(2 * bit_rev_int(i, bound) * d.full + d.full);
+		r
+	}
+
+	function rev_mixed_powers_mont_x_value(i: nat, d: pow2_t): (r: elem)
+	{
+		if rev_mixed_powers_mont_x_value_inner.requires(i, d) then 
+			rev_mixed_powers_mont_x_value_inner(i, d)
+		else
+			0
+	}
+
+	function method {:axiom} rev_mixed_powers_mont_table(): (t: seq<elem>)
+		ensures |t| == N.full;
+
+	lemma {:axiom} rev_mixed_powers_mont_table_axiom(t: pow2_t, d: pow2_t, j: nat)
+		requires t.exp < N.exp;
+		requires j < t.full;
+		requires t.full + j < N.full;
+		requires d == pow2_half(PV.block_count(t));
+		requires 2 * j < PV.block_size(d).full;
+		ensures rev_mixed_powers_mont_table()[t.full + j] ==
+			CMQP.mqmul(rev_mixed_powers_mont_x_value(2 * j, d), R);
+
+	lemma rev_mixed_powers_mont_table_lemma(t: pow2_t, d: pow2_t, j: nat)
+		requires t.exp < N.exp;
+		requires j < t.full;
+		requires d == pow2_half(PV.block_count(t));
+		ensures t.full + j < N.full;
+		ensures 2 * j < PV.block_size(d).full;
+		ensures rev_mixed_powers_mont_table()[t.full + j] ==
+			CMQP.mqmul(rev_mixed_powers_mont_x_value(2 * j, d), R);
+	{
+		var _ := TWD.twiddle_factors_index_bound_lemma(t, j);
+		rev_mixed_powers_mont_table_axiom(t, d, j);
+	}
+
 
 	function x_value(i: nat, d: pow2_t): (r: elem)
     {
-        TWD.rev_mixed_powers_mont_x_value(i, d)
+        rev_mixed_powers_mont_x_value(i, d)
     }
 
     lemma x_value_even_square_lemma(view: loop_view, j: nat, x: elem)
@@ -820,7 +891,7 @@ module mq_fntt_i(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
         var temp := Pow(PSI, exp);
 
         calc == {
-            MQP.mqmul(x, x);
+            CMQP.mqmul(x, x);
             ((temp % Q) * (temp % Q)) % Q;
             {
                 LemmaMulModNoopGeneral(temp, temp, Q);
@@ -903,7 +974,7 @@ module mq_fntt_i(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
         }
 
         calc == {
-            MQP.mqmul(x, x);
+            CMQP.mqmul(x, x);
             ((temp % Q) * (temp % Q)) % Q;
             {
                 LemmaMulModNoopGeneral(temp, temp, Q);
@@ -936,7 +1007,7 @@ module mq_fntt_i(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
         view.lower_points_view_value_lemma(a, hcount, j, bi, s);
         var e := a[s];
         var o := a[s+hcount.full];
-        var p := MQP.montmul(o, w);
+        var p := CMQP.montmul(o, w);
 
         gbassert IsModEquivalent(p, o * x_value(2 * j, hcount), Q) by {
             assert IsModEquivalent(p, o * w * R_INV, Q) by {
@@ -954,8 +1025,8 @@ module mq_fntt_i(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
             LemmaSmallMod(p, Q);
         }
 
-        var sum := MQP.mqadd(e, p);
-        var diff := MQP.mqsub(e, p);
+        var sum := CMQP.mqadd(e, p);
+        var diff := CMQP.mqsub(e, p);
 
         var e_poly := view.get_even_poly(bi);
         var o_poly := view.get_odd_poly(bi);
@@ -966,12 +1037,12 @@ module mq_fntt_i(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
         var x := x_value(2*j, hcount);
         var sqr := x_value(j, view.lcount());
 
-        assert e == MQP.poly_eval(e_poly, sqr);
-        assert o == MQP.poly_eval(o_poly, sqr);
+        assert e == CMQP.poly_eval(e_poly, sqr);
+        assert o == CMQP.poly_eval(o_poly, sqr);
 
         x_value_even_square_lemma(view, j, x);
 
-        MQP.poly_eval_split_lemma(f_poly, e_poly, o_poly, view.hsize, x);
+        CMQP.poly_eval_split_lemma(f_poly, e_poly, o_poly, view.hsize, x);
     }
 
     lemma ct_butterfly_odd_lemma(view: loop_view, a: n_elems, hcount: pow2_t, j: nat, bi: nat, s: nat, w: elem)
@@ -988,7 +1059,7 @@ module mq_fntt_i(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
         view.lower_points_view_value_lemma(a, hcount, j, bi, s);
         var e := a[s];
         var o := a[s+hcount.full];
-        var p := MQP.montmul(o, w);
+        var p := CMQP.montmul(o, w);
 
         var hsize := view.hsize;
         var lsize := view.lsize();
@@ -1010,7 +1081,7 @@ module mq_fntt_i(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
             LemmaSmallMod(p, Q);
         }
 
-        var diff := MQP.mqsub(e, p);
+        var diff := CMQP.mqsub(e, p);
 
         var e_poly := view.get_even_poly(bi);
         var o_poly := view.get_odd_poly(bi);
@@ -1031,31 +1102,31 @@ module mq_fntt_i(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
             {
                 LemmaMulNonnegative(2 * bit_rev_int(2*j+1, hsize), hcount.full);
             }
-            MQP.mqpow(CMQ.PSI, 2 * bit_rev_int(2*j+1, hsize) * hcount.full + hcount.full);
+            CMQP.mqpow(CMQ.PSI, 2 * bit_rev_int(2*j+1, hsize) * hcount.full + hcount.full);
             {
                 bit_rev_int_lemma3(j, lsize);
                 assert bit_rev_int(2*j+1, hsize) == rj + lsize.full;
             }
-            MQP.mqpow(PSI, 2 * (rj + lsize.full) * hcount.full + hcount.full);
+            CMQP.mqpow(PSI, 2 * (rj + lsize.full) * hcount.full + hcount.full);
             {
                 gbassert 2 * (rj + lsize.full) * hcount.full == 2 * (rj * hcount.full) + N.full by {
                     assert 2 * lsize.full * hcount.full == N.full;
                 }
             }
-            MQP.mqpow(PSI, 2 * (rj * hcount.full) + N.full + hcount.full);
+            CMQP.mqpow(PSI, 2 * (rj * hcount.full) + N.full + hcount.full);
             {
                 LemmaMulNonnegative(rj, hcount.full);
                 TWD.half_rotation_lemma(2 * (rj * hcount.full) + hcount.full);
             }
-            (Q - MQP.mqpow(PSI, 2 * (rj * hcount.full) + hcount.full)) % Q;
+            (Q - CMQP.mqpow(PSI, 2 * (rj * hcount.full) + hcount.full)) % Q;
             {
                 LemmaMulIsAssociative(2, rj, hcount.full);
             }
-            (Q - MQP.mqpow(PSI, 2 * rj * hcount.full + hcount.full)) % Q;
+            (Q - CMQP.mqpow(PSI, 2 * rj * hcount.full + hcount.full)) % Q;
             {
                 bit_rev_int_lemma2(j, lsize);
             }
-            (Q - MQP.mqpow(PSI, 2 * bit_rev_int(2*j, hsize) * hcount.full + hcount.full)) % Q;
+            (Q - CMQP.mqpow(PSI, 2 * bit_rev_int(2*j, hsize) * hcount.full + hcount.full)) % Q;
             (Q - x_e) % Q;
             {
                 LemmaSmallMod(Q- x_e, Q);
@@ -1065,7 +1136,7 @@ module mq_fntt_i(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
 
         calc == {
             diff;
-            MQP.mqsub(e, MQP.mqmul(o, x_e));
+            CMQP.mqsub(e, CMQP.mqmul(o, x_e));
             {
                 LemmaMulNonnegative(o, x_e);
             }
@@ -1100,30 +1171,114 @@ module mq_fntt_i(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
                 LemmaSmallMod(e, Q);
             }
             (e + (x_o * o) % Q) % Q;
-            (e + MQP.mqmul(x_o, o)) % Q;
-            MQP.mqadd(e, MQP.mqmul(x_o, o));
-            MQP.mqadd(MQP.poly_eval(e_poly, sqr), MQP.mqmul(x_o, MQP.poly_eval(o_poly, sqr)));
+            (e + CMQP.mqmul(x_o, o)) % Q;
+            CMQP.mqadd(e, CMQP.mqmul(x_o, o));
+            CMQP.mqadd(CMQP.poly_eval(e_poly, sqr), CMQP.mqmul(x_o, CMQP.poly_eval(o_poly, sqr)));
             {
-                MQP.poly_eval_split_lemma(f_poly, e_poly, o_poly, view.hsize, x_o);
+                CMQP.poly_eval_split_lemma(f_poly, e_poly, o_poly, view.hsize, x_o);
             }
-            MQP.poly_eval(f_poly, x_o);
+            CMQP.poly_eval(f_poly, x_o);
         }
     }
 }
 
-module mq_intt(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
+module mq_intt_i(CMQ: ntt_param_s, CMQP: mq_poly_i(CMQ), CPV: poly_view_i(CMQ))
+    refines mq_ntt_i(CMQ, CMQP, CPV)
+{
+	import TWD = ntt_twiddle_i(CMQ)
     // ghost const x_value := rev_omega_inv_powers_x_value;
+
+    // d is the block count
+	// i is the offset in the block
+	function rev_omega_inv_powers_x_value_inner(i: nat, d: pow2_t): (r: elem)
+		requires d.exp <= N.exp;
+		requires i < PV.block_size(d).full;
+		ensures r > 0;
+	{
+		var bound := PV.block_size(d);
+		LemmaMulNonnegative(bit_rev_int(i, bound), d.full);
+		var r := MQP.mqpow(OMEGA_INV, bit_rev_int(i, bound) * d.full);
+		assert r > 0 by {
+			if r == 0 {
+				var exp := bit_rev_int(i, bound) * d.full;
+
+				calc == {
+					1;
+					{
+						Lemma1Pow(exp);
+					}
+					Pow(1, exp) % Q;
+					{
+						MQ.Nth_root_lemma();
+					}
+					Pow((OMEGA_INV * OMEGA) % Q, exp) % Q;
+					{
+						LemmaPowModNoop(OMEGA_INV * OMEGA, exp, Q);
+					}
+					Pow(OMEGA_INV * OMEGA, exp) % Q;
+					{
+						LemmaPowDistributes(OMEGA_INV, OMEGA, exp);
+					}
+					(Pow(OMEGA_INV, exp) * Pow(OMEGA, exp)) % Q;
+					{
+						LemmaMulModNoop(Pow(OMEGA_INV, exp), Pow(OMEGA, exp), Q);
+					}
+					((Pow(OMEGA_INV, exp) % Q) * (Pow(OMEGA, exp) % Q)) % Q;
+					{
+						assert Pow(OMEGA_INV, exp) % Q == 0;
+					}
+					0;
+				}
+				assert false;
+			}
+		}
+		r
+	}
+
+	function rev_omega_inv_powers_x_value(i: nat, d: pow2_t): (r: elem)
+		ensures rev_omega_inv_powers_x_value_inner.requires(i, d) ==> r > 0
+	{
+		if rev_omega_inv_powers_x_value_inner.requires(i, d) then 
+			rev_omega_inv_powers_x_value_inner(i, d)
+		else
+			0
+	}
+
+	function method {:axiom} rev_omega_inv_powers_mont_table(): (t: seq<elem>)
+		ensures |t| == N.full;
+
+	lemma {:axiom} rev_omega_inv_powers_mont_table_axiom(t: pow2_t, d: pow2_t, j: nat)
+		requires t.exp < N.exp;
+		requires j < t.full;
+		requires t.full + j < N.full;
+		requires d == pow2_half(PV.block_count(t));
+		requires 2 * j < PV.block_size(d).full;
+		ensures rev_omega_inv_powers_mont_table()[t.full + j] ==
+			MQP.mqmul(rev_omega_inv_powers_x_value(2 * j, d), R);
+
+	lemma rev_omega_inv_powers_mont_table_lemma(t: pow2_t, d: pow2_t, j: nat)
+		requires t.exp < N.exp;
+		requires j < t.full;
+		requires d == pow2_half(PV.block_count(t));
+		ensures t.full + j < N.full;
+		ensures 2 * j < PV.block_size(d).full;
+		ensures rev_omega_inv_powers_mont_table()[t.full + j] ==
+			MQP.mqmul(rev_omega_inv_powers_x_value(2 * j, d), R);
+	{
+		var _ := TWD.twiddle_factors_index_bound_lemma(t, j);
+		rev_omega_inv_powers_mont_table_axiom(t, d, j);
+	}
 
 	function x_value(i: nat, d: pow2_t): (r: elem)
     {
-        TWD.rev_omega_inv_powers_x_value(i, d)
+        rev_omega_inv_powers_x_value(i, d)
     }
 
     lemma x_value_even_square_lemma(view: loop_view, j: nat, x: elem)
         // requires loop_view_wf();
         // requires 2 * j < view.hsize.full;
         // requires x == x_value(2 * j, view.hcount());
-        // ensures MQP.mqmul(x, x) == x_value(j, view.lcount());
+        // ensures CMQP.mqmul(x, x) == x_value(j, view.lcount());
     {
         view.size_count_lemma();
 
@@ -1136,7 +1291,7 @@ module mq_intt(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
         LemmaMulIsAssociative(2, bit_rev_int(2 * j, hsize), hc.full);
         var exp := bit_rev_int(2 * j , hsize) * hc.full;
 
-        assert x == MQP.mqpow(OMEGA_INV, exp);
+        assert x == CMQP.mqpow(OMEGA_INV, exp);
 
         calc == {
             2 * exp;
@@ -1155,7 +1310,7 @@ module mq_intt(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
         var temp := Pow(OMEGA_INV, exp);
 
         calc == {
-            MQP.mqmul(x, x);
+            CMQP.mqmul(x, x);
             ((temp % Q) * (temp % Q)) % Q;
             {
                 LemmaMulModNoopGeneral(temp, temp, Q);
@@ -1174,7 +1329,7 @@ module mq_intt(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
         // requires loop_view_wf();
         // requires 2 * j < hsize.full;
         // requires x == x_value(2 * j + 1, hcount());
-        // ensures MQP.mqmul(x, x) == x_value(j, lcount());
+        // ensures CMQP.mqmul(x, x) == x_value(j, lcount());
     {
         view.size_count_lemma();
 
@@ -1186,7 +1341,7 @@ module mq_intt(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
         LemmaMulNonnegative(bit_rev_int(2 * j + 1, hsize), hc.full);
         LemmaMulIsAssociative(2, bit_rev_int(2 * j + 1, hsize), hc.full);
         var exp := bit_rev_int(2 * j + 1, hsize) * hc.full;   
-        assert x == MQP.mqpow(OMEGA_INV, exp);
+        assert x == CMQP.mqpow(OMEGA_INV, exp);
         var temp := Pow(OMEGA_INV, exp);
 
         calc == {
@@ -1217,7 +1372,7 @@ module mq_intt(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
         }
 
         calc == {
-            MQP.mqmul(x, x);
+            CMQP.mqmul(x, x);
             ((temp % Q) * (temp % Q)) % Q;
             {
                 LemmaMulModNoopGeneral(temp, temp, Q);
@@ -1240,16 +1395,16 @@ module mq_intt(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
         // requires s_loop_inv(a, hcount, j, bi);
         // requires s == bi + (2*j) * hcount.full;
         // requires bi < hcount.full
-        // requires w == MQP.mqmul(x_value(2 * j, hcount), R);
+        // requires w == CMQP.mqmul(x_value(2 * j, hcount), R);
         // ensures s + hcount.full < N.full;
         // ensures bi + hcount.full < lcount().full;
-        // ensures MQP.poly_eval(get_full_poly(bi), x_value(2*j, hcount)) == MQP.mqadd(a[s], montmul(a[s+hcount.full], w));
+        // ensures CMQP.poly_eval(get_full_poly(bi), x_value(2*j, hcount)) == CMQP.mqadd(a[s], montmul(a[s+hcount.full], w));
     {
         view.size_count_lemma();
         view.lower_points_view_value_lemma(a, hcount, j, bi, s);
         var e := a[s];
         var o := a[s+hcount.full];
-        var p := MQP.montmul(o, w);
+        var p := CMQP.montmul(o, w);
 
         gbassert IsModEquivalent(p, o * x_value(2 * j, hcount), Q) by {
             assert IsModEquivalent(p, o * w * R_INV, Q) by {
@@ -1267,8 +1422,8 @@ module mq_intt(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
             LemmaSmallMod(p, Q);
         }
 
-        var sum := MQP.mqadd(e, p);
-        var diff := MQP.mqsub(e, p);
+        var sum := CMQP.mqadd(e, p);
+        var diff := CMQP.mqsub(e, p);
 
         var e_poly := view.get_even_poly(bi);
         var o_poly := view.get_odd_poly(bi);
@@ -1279,22 +1434,22 @@ module mq_intt(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
         var x := x_value(2*j, hcount);
         var sqr := x_value(j, view.lcount());
 
-        assert e == MQP.poly_eval(e_poly, sqr);
-        assert o == MQP.poly_eval(o_poly, sqr);
+        assert e == CMQP.poly_eval(e_poly, sqr);
+        assert o == CMQP.poly_eval(o_poly, sqr);
 
         x_value_even_square_lemma(view, j, x);
 
-        MQP.poly_eval_split_lemma(f_poly, e_poly, o_poly, view.hsize, x);
+        CMQP.poly_eval_split_lemma(f_poly, e_poly, o_poly, view.hsize, x);
     }
 
     lemma ct_butterfly_odd_lemma(view: loop_view, a: n_elems, hcount: pow2_t, j: nat, bi: nat, s: nat, w: elem)
         // requires s_loop_inv(a, hcount, j, bi);
         // requires bi < hcount.full
         // requires s == bi + (2*j) * hcount.full;
-        // requires w == MQP.mqmul(x_value(2 * j, hcount), R);
+        // requires w == CMQP.mqmul(x_value(2 * j, hcount), R);
         // ensures s + hcount.full < N.full;
         // ensures bi + hcount.full < lcount().full;
-        // ensures MQP.poly_eval(get_full_poly(bi), x_value(2*j+1, hcount))
+        // ensures CMQP.poly_eval(get_full_poly(bi), x_value(2*j+1, hcount))
         //     == mqsub(a[s], montmul(a[s+hcount.full], w));
     {
         view.size_count_lemma();
@@ -1307,7 +1462,7 @@ module mq_intt(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
         view.lower_points_view_value_lemma(a, hcount, j, bi, s);
         var e := a[s];
         var o := a[s+hcount.full];
-        var p := MQP.montmul(o, w);
+        var p := CMQP.montmul(o, w);
 
         gbassert IsModEquivalent(p, o * x_value(2*j, hcount), Q) by {
             assert IsModEquivalent(p, o * w * R_INV, Q) by {
@@ -1325,7 +1480,7 @@ module mq_intt(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
             LemmaSmallMod(p, Q);
         }
 
-        var diff :=  MQP.mqsub(e, p);
+        var diff :=  CMQP.mqsub(e, p);
 
         var e_poly := view.get_even_poly(bi);
         var o_poly := view.get_odd_poly(bi);
@@ -1345,20 +1500,20 @@ module mq_intt(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
             {
                 LemmaMulNonnegative(bit_rev_int(2*j+1, hsize), hcount.full);
             }
-            MQP.mqpow(OMEGA_INV, bit_rev_int(2*j+1, hsize) * hcount.full);
+            CMQP.mqpow(OMEGA_INV, bit_rev_int(2*j+1, hsize) * hcount.full);
             {
                 bit_rev_int_lemma3(j, lsize);
                 assert bit_rev_int(2*j+1, hsize) == bit_rev_int(j, lsize) + lsize.full;
             }
-            MQP.mqpow(OMEGA_INV, (bit_rev_int(j, lsize) + lsize.full) * hcount.full);
+            CMQP.mqpow(OMEGA_INV, (bit_rev_int(j, lsize) + lsize.full) * hcount.full);
             {
                 LemmaMulIsDistributive(hcount.full, bit_rev_int(j, lsize), lsize.full);
             }
-            MQP.mqpow(OMEGA_INV, bit_rev_int(j, lsize) * hcount.full + lsize.full * hcount.full);
+            CMQP.mqpow(OMEGA_INV, bit_rev_int(j, lsize) * hcount.full + lsize.full * hcount.full);
             {
                 bit_rev_int_lemma2(j, lsize);
             }
-            MQP.mqpow(OMEGA_INV, bit_rev_int(2 * j, hsize) * hcount.full + lsize.full * hcount.full);
+            CMQP.mqpow(OMEGA_INV, bit_rev_int(2 * j, hsize) * hcount.full + lsize.full * hcount.full);
             {
                 LemmaMulNonnegative(bit_rev_int(2 * j, hsize), hcount.full);
                 TWD.inv_half_rotation_lemma(bit_rev_int(2 * j, hsize) * hcount.full);
@@ -1375,7 +1530,7 @@ module mq_intt(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
 
         calc == {
             diff;
-            MQP.mqsub(e, MQP.mqmul(o, x_e));
+            CMQP.mqsub(e, CMQP.mqmul(o, x_e));
             {
                 LemmaMulNonnegative(o, x_e);
             }
@@ -1409,13 +1564,13 @@ module mq_intt(CMQ: ntt_param_s) refines mq_ntt_i(CMQ) {
                 LemmaSmallMod(e, Q);
             }
             (e + (x_o * o) % Q) % Q;
-            (e + MQP.mqmul(x_o, o)) % Q;
-            MQP.mqadd(e, MQP.mqmul(x_o, o));
-            MQP.mqadd(MQP.poly_eval(e_poly, sqr), MQP.mqmul(x_o, MQP.poly_eval(o_poly, sqr)));
+            (e + CMQP.mqmul(x_o, o)) % Q;
+            CMQP.mqadd(e, CMQP.mqmul(x_o, o));
+            CMQP.mqadd(CMQP.poly_eval(e_poly, sqr), CMQP.mqmul(x_o, CMQP.poly_eval(o_poly, sqr)));
             {
-                MQP.poly_eval_split_lemma(f_poly, e_poly, o_poly, hsize, x_o);
+                CMQP.poly_eval_split_lemma(f_poly, e_poly, o_poly, hsize, x_o);
             }
-            MQP.poly_eval(f_poly, x_o);
+            CMQP.poly_eval(f_poly, x_o);
         }
     }
 }

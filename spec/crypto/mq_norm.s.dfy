@@ -27,7 +27,7 @@ module mq_norm_s(MQ: ntt_param_s) {
         if e >= 0 then e else e + MQ.Q
     }
 
-    function denormalize_nelems(s: seq<nelem>): seq<MQ.elem>
+    function denormalize_n_elems(s: seq<nelem>): seq<MQ.elem>
     {
         seq(|s|, i requires 0 <= i < |s| => denormalize(s[i]))
     }

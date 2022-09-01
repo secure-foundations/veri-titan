@@ -204,8 +204,8 @@ module mq_arith_lemmas {
 
     }
 
-    predicate {:opaque} buff_is_nsized(a: seq<nat>)
-        ensures buff_is_nsized(a) ==> |a| == N.full;
+    predicate {:opaque} buff_is_n_elems(a: seq<nat>)
+        ensures buff_is_n_elems(a) ==> |a| == N.full;
     {
         && (|a| == N.full)
         && (forall i | 0 <= i < N.full :: a[i] < Q)
@@ -216,23 +216,23 @@ module mq_arith_lemmas {
         && b16_iter_inv(heap, iter) //, if address >= 0 then address else iter.cur_ptr())
         && (index >= 0 ==> iter.index == index)
         && |iter.buff| == N.full
-        && buff_is_nsized(iter.buff)
+        && buff_is_n_elems(iter.buff)
     }
 
-    function {:opaque} buff_as_nsized(a: seq<uint16>): (a': n_sized)
-        requires buff_is_nsized(a);
+    function {:opaque} buff_as_n_elems(a: seq<uint16>): (a': n_elems)
+        requires buff_is_n_elems(a);
         ensures a == a';
     {
-        reveal buff_is_nsized();
+        reveal buff_is_n_elems();
         a
     }
 
     predicate poly_sub_loop_inv(f_new: seq<uint16>, f: seq<uint16>, g: seq<uint16>, i: nat)
     {
-        reveal buff_is_nsized();
-        && buff_is_nsized(f_new)
-        && buff_is_nsized(f)
-        && buff_is_nsized(g)
+        reveal buff_is_n_elems();
+        && buff_is_n_elems(f_new)
+        && buff_is_n_elems(f)
+        && buff_is_n_elems(g)
         && 0 <= i <= N.full
         && f_new[i..] == f[i..]
         && (forall j :: 0 <= j < i ==> f_new[j] == mqsub(f[j], g[j]))

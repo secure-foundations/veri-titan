@@ -1,9 +1,9 @@
-include "../../arch/riscv/machine.s.dfy"
-include "../../arch/riscv/vale.i.dfy"
-include "../bv32_op_s.dfy"
+include "../../../spec/arch/riscv/machine.s.dfy"
+include "../../../spec/bvop/bv32_op.s.dfy"
+include "../../../spec/arch/riscv/vale.i.dfy"
 
-include "../DivModNeg.dfy"
-include "ntt_params.dfy"
+include "../../../misc/DivModNeg.dfy"
+include "../../../spec/crypto/falcon.s.dfy"
 
 module mq_arith_lemmas {
     import opened Seq
@@ -19,23 +19,23 @@ module mq_arith_lemmas {
     import opened mem
     import flat
 
-    import opened ntt_512_params
+    import opened falcon_512_i
 
     lemma lemma_rs_by_31(x: int32)
       ensures x >= 0 ==> int32_rs(x, 31) == 0;
       ensures x < 0 ==> int32_rs(x, 31) == -1;
     {
-      assert integers.BASE_31 == Power2.Pow2(31) by { Power2.Lemma2To64(); }
+        assert integers.BASE_31 == Power2.Pow2(31) by { Power2.Lemma2To64(); }
 
-      if x >= 0 {
-        assert x / Power2.Pow2(31) == 0 by {
-          DivMod.LemmaBasicDivAuto();
+        if x >= 0 {
+            assert x / Power2.Pow2(31) == 0 by {
+                DivMod.LemmaBasicDivAuto();
+            }
+        } else {
+            assert x / Power2.Pow2(31) == -1 by {
+                DivModNeg.LemmaDivBounded(x, integers.BASE_31);
+            }
         }
-      } else {
-        assert x / Power2.Pow2(31) == -1 by {
-          DivModNeg.LemmaDivBounded(x, integers.BASE_31);
-        }
-      }
     }
 
     lemma lemma_mq_add_correct(d: uint32, b: uint32, c: uint32, r: uint32, x: uint32, y: uint32)
@@ -47,37 +47,36 @@ module mq_arith_lemmas {
         requires r == uint32_add(c, d);
         ensures r == (x + y) % 12289;
     {
-      assert Q == 12289;
+        assert Q == 12289;
 
-      // d == x + y - Q
-      assert IsModEquivalent(d, x + y - Q, BASE_32);
+        // d == x + y - Q
+        assert IsModEquivalent(d, x + y - Q, BASE_32);
 
-      // -Q <= d < Q
-      assert 0 <= x + y < 2*Q;
-      assert (-(Q as int)) <= x + y - Q < Q;
-      assert (-(Q as int)) <= to_int32(d) < Q;
+        // -Q <= d < Q
+        assert 0 <= x + y < 2*Q;
+        assert (-(Q as int)) <= x + y - Q < Q;
+        assert (-(Q as int)) <= to_int32(d) < Q;
 
-      if to_int32(d) >= 0 {
-        assert int32_rs(to_int32(d), 31) == 0 by { lemma_rs_by_31(to_int32(d)); }
-        assert uint32_and(0, Q) == 0 by { reveal_and(); }
-        assert IsModEquivalent(r, x + y, Q);
-      }
-      else {
-        assert int32_rs(to_int32(d), 31) == -1 by { lemma_rs_by_31(to_int32(d)); }
-        assert uint32_and(b, Q) == Q by { reveal_and(); }
-        assert IsModEquivalent(r, x + y, Q);
-      }
+        if to_int32(d) >= 0 {
+            assert int32_rs(to_int32(d), 31) == 0 by { lemma_rs_by_31(to_int32(d)); }
+            assert uint32_and(0, Q) == 0 by { reveal_and(); }
+            assert IsModEquivalent(r, x + y, Q);
+        } else {
+            assert int32_rs(to_int32(d), 31) == -1 by { lemma_rs_by_31(to_int32(d)); }
+            assert uint32_and(b, Q) == Q by { reveal_and(); }
+            assert IsModEquivalent(r, x + y, Q);
+        }
     } 
 
     lemma lemma_uint32_and_Q(x: uint32)
       ensures x == 0 ==> uint32_and(x, Q) == 0;
       ensures to_int32(x) == -1 ==> uint32_and(x, Q) == Q;
     {
-      reveal_and();
-      if to_int32(x) == - 1{
-        assert x == 4294967295;
-        assert uint32_and(4294967295, Q) == Q;
-      }
+        reveal_and();
+        if to_int32(x) == - 1{
+            assert x == 4294967295;
+            assert uint32_and(4294967295, Q) == Q;
+        }
     }
 
     lemma lemma_mq_sub_correct(d: uint32, b: uint32, c: uint32, r: uint32, x: int, y: int)
@@ -89,21 +88,20 @@ module mq_arith_lemmas {
         requires r == uint32_add(c, d);
         ensures r == (x - y) % 12289;
     {
-      var Q : int := 12289;
-      
-      assert IsModEquivalent(d, x - y, BASE_32);
-      assert -Q <= to_int32(d) < 2 * Q;
-      
-      if to_int32(d) >= 0 {
-        assert int32_rs(to_int32(d), 31) == 0 by { lemma_rs_by_31(to_int32(d)); }
-        lemma_uint32_and_Q(b);
-        assert IsModEquivalent(r, x - y, Q);
-      }
-      else {
-        assert int32_rs(to_int32(d), 31) == -1 by { lemma_rs_by_31(to_int32(d)); }
-        lemma_uint32_and_Q(b);
-        assert IsModEquivalent(r, x - y, Q);
-      }
+        var Q : int := 12289;
+        
+        assert IsModEquivalent(d, x - y, BASE_32);
+        assert -Q <= to_int32(d) < 2 * Q;
+        
+        if to_int32(d) >= 0 {
+            assert int32_rs(to_int32(d), 31) == 0 by { lemma_rs_by_31(to_int32(d)); }
+            lemma_uint32_and_Q(b);
+            assert IsModEquivalent(r, x - y, Q);
+        } else {
+            assert int32_rs(to_int32(d), 31) == -1 by { lemma_rs_by_31(to_int32(d)); }
+            lemma_uint32_and_Q(b);
+            assert IsModEquivalent(r, x - y, Q);
+        }
     }
 
     lemma lemma_positive_rs(x: uint32, shift: nat)
@@ -111,8 +109,8 @@ module mq_arith_lemmas {
       requires x < BASE_31;
       ensures to_uint32(int32_rs(x, shift)) == int32_rs(x, shift)
     {
-      assert to_int32(x) == x;
-      assert int32_rs(to_int32(x), shift) >= 0 by { DivMod.LemmaDivBasicsAuto(); }
+        assert to_int32(x) == x;
+        assert int32_rs(to_int32(x), shift) >= 0 by { DivMod.LemmaDivBasicsAuto(); }
     }
 
     lemma lemma_mq_rshift1_correct(par: uint32, b: uint32, c: uint32, d: uint32, r: uint32, x: int)

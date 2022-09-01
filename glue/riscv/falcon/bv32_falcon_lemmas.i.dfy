@@ -1,10 +1,5 @@
-include "../../arch/riscv/machine.s.dfy"
-include "../../arch/riscv/vale.i.dfy"
-include "ct_std2rev_model.dfy"
-include "../bv32_op_s.dfy"
-
 include "mq_arith_lemmas.dfy"
-include "../DivModNeg.dfy"
+include "../../../spec/crypto/falcon512.i.dfy"
 
 module bv32_falcon_lemmas {
     import opened Seq
@@ -14,21 +9,28 @@ module bv32_falcon_lemmas {
     import opened Mul
     import opened DivModNeg
     import opened integers
-    import opened bv32_op_s
     import opened rv_machine
     import opened rv_vale
     import opened mem
     import flat
+    import opened bv32_op_s
 
-    import opened pows_of_2
+    import opened pow2_s
     import opened ntt_index
-    import opened ntt_512_params
-    import opened mq_polys
-    import opened poly_view
-    import opened nth_root
     import opened mq_arith_lemmas
-    import forward_ntt
-    import inverse_ntt
+    
+    import opened falcon_512_i
+
+    import FNTT = falcon_512_i.FNTT
+    import INTT = falcon_512_i.INTT
+    import MQP = falcon_512_i.CMQP
+
+	const Q := falcon_512_i.Q;
+	const N := falcon_512_i.N; 
+    const OMEGA := falcon_512_i.CMQ.OMEGA;
+
+    const R := CMQ.R;
+    const PSI := CMQ.PSI;
 
     lemma {:axiom} rs1_is_half(a: uint32)
         ensures uint32_rs(a, 1) == a / 2;
@@ -37,8 +39,8 @@ module bv32_falcon_lemmas {
         requires a < BASE_31;
         ensures uint32_ls(a, 1) == a * 2;
 
-    predicate {:opaque} buff_is_nsized(a: seq<nat>)
-        ensures buff_is_nsized(a) ==> |a| == N.full;
+    predicate {:opaque} buff_is_n_elems(a: seq<nat>)
+        ensures buff_is_n_elems(a) ==> |a| == N.full;
     {
         && (|a| == N.full)
         && (forall i | 0 <= i < N.full :: a[i] < Q)
@@ -49,18 +51,18 @@ module bv32_falcon_lemmas {
         && b16_iter_inv(iter, heap, if address >= 0 then address else iter.cur_ptr())
         && (index >= 0 ==> iter.index == index)
         && |iter.buff| == N.full
-        && buff_is_nsized(iter.buff)
+        && buff_is_n_elems(iter.buff)
     }
 
-    function {:opaque} buff_as_nsized(a: seq<uint16>): (a': n_sized)
-        requires buff_is_nsized(a);
+    function {:opaque} buff_as_n_elems(a: seq<uint16>): (a': n_elems)
+        requires buff_is_n_elems(a);
         ensures a == a';
     {
-        reveal buff_is_nsized();
+        reveal buff_is_n_elems();
         a
     }
 
-    function forward_lsize(view: forward_ntt.loop_view): (r: pow2_t)
+    function forward_lsize(view: FNTT.loop_view): (r: pow2_t)
         requires view.loop_view_wf();
         ensures r.full <= N.full
     {
@@ -69,34 +71,47 @@ module bv32_falcon_lemmas {
 
     predicate forward_ntt_eval_all(a: seq<uint16>, coeffs: seq<uint16>)
     {
-        && buff_is_nsized(a)
-        && buff_is_nsized(coeffs)
-        && forward_ntt.ntt_eval_all(buff_as_nsized(a), buff_as_nsized(coeffs))
+        && buff_is_n_elems(a)
+        && buff_is_n_elems(coeffs)
+        && FNTT.ntt_eval_all(buff_as_n_elems(a), buff_as_n_elems(coeffs))
     }
 
     predicate forward_ntt_eval_all_alt(p: seq<uint16>, a: seq<uint16>)
     {
-        && buff_is_nsized(a)
-        && buff_is_nsized(p)
-        && var a_hat := scaled_coeff(buff_as_nsized(a));
+        && buff_is_n_elems(a)
+        && buff_is_n_elems(p)
+        && var a_hat := MQP.scaled_coeff(buff_as_n_elems(a));
         && (forall i | 0 <= i < N.full ::
-            poly_eval(a_hat, mqpow(OMEGA, bit_rev_int(i, N))) == p[i])
+            MQP.poly_eval(a_hat, MQP.mqpow(OMEGA, bit_rev_int(i, N))) == p[i])
     }
 
     predicate forward_t_loop_inv(a: seq<uint16>, d: pow2_t, coeffs: seq<uint16>)
         requires 0 <= d.exp <= N.exp;
     {
-        && buff_is_nsized(a)
-        && buff_is_nsized(coeffs)
-        && forward_ntt.t_loop_inv(buff_as_nsized(a), d, buff_as_nsized(coeffs))
+        && buff_is_n_elems(a)
+        && buff_is_n_elems(coeffs)
+        && FNTT.t_loop_inv(buff_as_n_elems(a), d, buff_as_n_elems(coeffs))
+    }
+
+    predicate forward_s_loop_inv(a: seq<uint16>, d: pow2_t, j: nat, bi: nat, view: FNTT.loop_view)
+    {
+        && buff_is_n_elems(a)
+        && view.s_loop_inv(buff_as_n_elems(a), d, j, bi)
+    }
+
+    predicate forward_j_loop_inv(a: seq<uint16>, d: pow2_t, j: nat, u: nat, view: FNTT.loop_view)
+    {
+        && buff_is_n_elems(a)
+        && u == j * (2 * d.full)
+        && view.j_loop_inv(buff_as_n_elems(a), d, j)
     }
 
     lemma forward_t_loop_inv_pre_lemma(coeffs: seq<uint16>)
-        requires buff_is_nsized(coeffs);
+        requires buff_is_n_elems(coeffs);
         ensures N.exp <= N.exp; // ??
         ensures forward_t_loop_inv(coeffs, N, coeffs);
     {
-        forward_ntt.t_loop_inv_pre_lemma(buff_as_nsized(coeffs));
+        FNTT.t_loop_inv_pre_lemma(buff_as_n_elems(coeffs));
     }
 
     lemma forward_t_loop_inv_post_lemma(a: seq<uint16>, one: pow2_t, coeffs: seq<uint16>)
@@ -104,13 +119,7 @@ module bv32_falcon_lemmas {
         requires forward_t_loop_inv(a, one, coeffs);
         ensures forward_ntt_eval_all(a, coeffs);
     {
-        forward_ntt.t_loop_inv_post_lemma(a, one, coeffs);
-    }
-
-    predicate forward_s_loop_inv(a: seq<uint16>, d: pow2_t, j: nat, bi: nat, view: forward_ntt.loop_view)
-    {
-        && buff_is_nsized(a)
-        && view.s_loop_inv(buff_as_nsized(a), d, j, bi)
+        FNTT.t_loop_inv_post_lemma(a, one, coeffs);
     }
 
     lemma forward_s_loop_inv_pre_lemma(
@@ -123,7 +132,7 @@ module bv32_falcon_lemmas {
         t3: uint32,
         t6: uint32,
         s5: uint32,
-        view: forward_ntt.loop_view)
+        view: FNTT.loop_view)
 
         requires forward_j_loop_inv(a, d, j, u, view);
         requires t == view.lsize();
@@ -138,14 +147,15 @@ module bv32_falcon_lemmas {
         ensures s5 == (t.full + j) * 2; 
         ensures t.full + j < N.full;
         ensures t3 == 2 * u + 2 * d.full;
-        ensures rev_mixed_powers_mont_table()[t.full + j] == 
-            mqmul(rev_mixed_powers_mont_x_value(2 * j, d), R);
+        ensures |FNTT.rev_mixed_powers_mont_table()| == N.full;
+        ensures FNTT.rev_mixed_powers_mont_table()[t.full + j] == 
+            MQP.mqmul(FNTT.rev_mixed_powers_mont_x_value(2 * j, d), R);
     {
-        view.s_loop_inv_pre_lemma(buff_as_nsized(a), d, j);
-        rev_mixed_powers_mont_table_lemma(t, d, j);
+        view.s_loop_inv_pre_lemma(buff_as_n_elems(a), d, j);
+        FNTT.rev_mixed_powers_mont_table_lemma(t, d, j);
         assert uint32_add(t.full, j) == t.full + j;
         ls1_is_double(t.full + j);
-        rev_mixed_powers_mont_table_lemma(t, d, j);
+        FNTT.rev_mixed_powers_mont_table_lemma(t, d, j);
 
         assert u == j * (2 * d.full);
         assert d == view.hcount();
@@ -158,6 +168,9 @@ module bv32_falcon_lemmas {
             }
             512 * (2 * d.full) + d.full;
         }
+        assert FNTT.N == N;
+        assert FNTT.Q == Q;
+        assert FNTT.R == R;
     }
 
     lemma forward_s_loop_inv_post_lemma(
@@ -169,7 +182,7 @@ module bv32_falcon_lemmas {
         ot3: uint32,
         t3: uint32,
         t6: uint32,
-        view: forward_ntt.loop_view)
+        view: FNTT.loop_view)
     
         requires bi == d.full;
         requires t6 == 2 * d.full;
@@ -180,7 +193,7 @@ module bv32_falcon_lemmas {
         ensures t3 == 2 * (u + 2 * d.full);
         ensures forward_j_loop_inv(a, d, j + 1, u + 2 * d.full, view);
     {
-        view.s_loop_inv_post_lemma(buff_as_nsized(a), d, j, bi);
+        view.s_loop_inv_post_lemma(buff_as_n_elems(a), d, j, bi);
 
         assert u + 2 * d.full == (j + 1) * (2 * d.full) by {
             LemmaMulProperties();
@@ -223,7 +236,7 @@ module bv32_falcon_lemmas {
         t4: uint32,
         t5: uint32,
         t6: uint32,
-        view: forward_ntt.loop_view)
+        view: FNTT.loop_view)
         returns (s: nat)
 
         requires forward_s_loop_inv(a, d, j, bi, view);
@@ -238,12 +251,12 @@ module bv32_falcon_lemmas {
         ensures t4 == s4 + 2 * s;
         ensures t5 == s4 + 2 * (s + d.full);
         ensures s + d.full < N.full;
-        ensures a[s] == level_points_view(a, view.hsize)[bi][2*j];
-        ensures s == point_view_index(bi, 2*j, view.hsize);
-        ensures a[s+d.full] == level_points_view(a, view.hsize)[bi][2*j+1];
-        ensures s+d.full == point_view_index(bi, 2*j+1, view.hsize);
+        ensures a[s] == CPV.level_points_view(a, view.hsize)[bi][2*j];
+        ensures s == CPV.point_view_index(bi, 2*j, view.hsize);
+        ensures a[s+d.full] == CPV.level_points_view(a, view.hsize)[bi][2*j+1];
+        ensures s+d.full == CPV.point_view_index(bi, 2*j+1, view.hsize);
     {
-        s := view.higher_points_view_index_lemma(buff_as_nsized(a), d, j, bi);
+        s := view.higher_points_view_index_lemma(buff_as_n_elems(a), d, j, bi);
         assert 2 * (bi + (2*j) * d.full) == 2 * bi + 2 * (j * (2 * d.full)) by {
             LemmaMulProperties();
         }
@@ -258,7 +271,7 @@ module bv32_falcon_lemmas {
         s: nat,
         e: uint32,
         o: uint32,
-        view: forward_ntt.loop_view)
+        view: FNTT.loop_view)
 
         requires forward_s_loop_inv(a, d, j, bi, view);
         requires bi < d.full
@@ -270,10 +283,10 @@ module bv32_falcon_lemmas {
         && a'[s + d.full] == o
         && a'[s] == e
         && a' == a[s + d.full := o][s := e]
-        && assert buff_is_nsized(a') by {
-            reveal buff_is_nsized();
+        && assert buff_is_n_elems(a') by {
+            reveal buff_is_n_elems();
         }
-        && view.s_loop_update(buff_as_nsized(a), buff_as_nsized(a'), d, j, bi)
+        && view.s_loop_update(buff_as_n_elems(a), buff_as_n_elems(a'), d, j, bi)
     }
 
     lemma forward_s_loop_inv_peri_lemma(a: seq<uint16>,
@@ -284,7 +297,7 @@ module bv32_falcon_lemmas {
         s: nat,
         e: uint32,
         o: uint32,
-        view: forward_ntt.loop_view)
+        view: FNTT.loop_view)
 
         requires forward_s_loop_inv(a, d, j, bi, view);
         requires bi < d.full
@@ -292,12 +305,12 @@ module bv32_falcon_lemmas {
         ensures forward_s_loop_inv(a', d, j, bi+1, view);
     {
         view.s_loop_inv_peri_lemma(a, a', d, j, bi);
-        assert buff_is_nsized(a') by {
-            reveal buff_is_nsized();
+        assert buff_is_n_elems(a') by {
+            reveal buff_is_n_elems();
         }
     }
 
-    lemma forward_higher_points_view_index_lemma(a: seq<uint16>, d: pow2_t, j: nat, bi: nat, view: forward_ntt.loop_view)
+    lemma forward_higher_points_view_index_lemma(a: seq<uint16>, d: pow2_t, j: nat, bi: nat, view: FNTT.loop_view)
         returns (s: nat)
     
         requires forward_s_loop_inv(a, d, j, bi, view);
@@ -305,43 +318,36 @@ module bv32_falcon_lemmas {
         ensures s == bi + (2*j) * d.full;
         ensures s + d.full < N.full;
         ensures a[s] ==
-            level_points_view(buff_as_nsized(a), view.hsize)[bi][2*j];
-        ensures s == point_view_index(bi, 2*j, view.hsize);
+            CPV.level_points_view(buff_as_n_elems(a), view.hsize)[bi][2*j];
+        ensures s == CPV.point_view_index(bi, 2*j, view.hsize);
         ensures a[s+d.full] ==
-            level_points_view(buff_as_nsized(a), view.hsize)[bi][2*j+1];
-        ensures s+d.full == point_view_index(bi, 2*j+1, view.hsize);
+            CPV.level_points_view(buff_as_n_elems(a), view.hsize)[bi][2*j+1];
+        ensures s+d.full == CPV.point_view_index(bi, 2*j+1, view.hsize);
     {
-        s := view.higher_points_view_index_lemma(buff_as_nsized(a), d, j, bi);
+        s := view.higher_points_view_index_lemma(buff_as_n_elems(a), d, j, bi);
     }
 
-    predicate forward_j_loop_inv(a: seq<uint16>, d: pow2_t, j: nat, u: nat, view: forward_ntt.loop_view)
-    {
-        && buff_is_nsized(a)
-        && u == j * (2 * d.full)
-        && view.j_loop_inv(buff_as_nsized(a), d, j)
-    }
-
-    lemma forward_j_loop_inv_pre_lemma(a: seq<uint16>, d: pow2_t, view: forward_ntt.loop_view)
+    lemma forward_j_loop_inv_pre_lemma(a: seq<uint16>, d: pow2_t, view: FNTT.loop_view)
         requires 0 <= d.exp < N.exp;
         requires forward_t_loop_inv(a, pow2_double(d), view.coefficients);
         requires view.loop_view_wf();
-        requires view.hsize == block_size(d);
+        requires view.hsize == CPV.block_size(d);
         ensures forward_j_loop_inv(a, d, 0, 0, view);
     {
-        view.j_loop_inv_pre_lemma(buff_as_nsized(a), d);
+        view.j_loop_inv_pre_lemma(buff_as_n_elems(a), d);
     }
 
-    lemma forward_j_loop_inv_post_lemma(a: seq<uint16>, d: pow2_t, j: nat, u: nat, view: forward_ntt.loop_view)
+    lemma forward_j_loop_inv_post_lemma(a: seq<uint16>, d: pow2_t, j: nat, u: nat, view: FNTT.loop_view)
         requires forward_j_loop_inv(a, d, j, u, view);
         requires j == view.lsize().full;
         requires 0 <= view.hsize.exp <= N.exp;
-        requires view.hsize == block_size(d);
-        ensures forward_ntt.t_loop_inv(a, d, view.coefficients);
+        requires view.hsize == CPV.block_size(d);
+        ensures FNTT.t_loop_inv(a, d, view.coefficients);
     {
         view.j_loop_inv_post_lemma(a, d, j);
     }
 
-    function inverse_lsize(view: inverse_ntt.loop_view): (r: pow2_t)
+    function inverse_lsize(view: INTT.loop_view): (r: pow2_t)
         requires view.loop_view_wf();
         ensures r.full <= N.full
     {
@@ -350,25 +356,38 @@ module bv32_falcon_lemmas {
 
     predicate inverse_ntt_eval_all(a: seq<uint16>, coeffs: seq<uint16>)
     {
-        && buff_is_nsized(a)
-        && buff_is_nsized(coeffs)
-        && inverse_ntt.ntt_eval_all(buff_as_nsized(a), buff_as_nsized(coeffs))
+        && buff_is_n_elems(a)
+        && buff_is_n_elems(coeffs)
+        && INTT.ntt_eval_all(buff_as_n_elems(a), buff_as_n_elems(coeffs))
     }
 
     predicate inverse_t_loop_inv(a: seq<uint16>, d: pow2_t, coeffs: seq<uint16>)
         requires 0 <= d.exp <= N.exp;
     {
-        && buff_is_nsized(a)
-        && buff_is_nsized(coeffs)
-        && inverse_ntt.t_loop_inv(buff_as_nsized(a), d, buff_as_nsized(coeffs))
+        && buff_is_n_elems(a)
+        && buff_is_n_elems(coeffs)
+        && INTT.t_loop_inv(buff_as_n_elems(a), d, buff_as_n_elems(coeffs))
+    }
+
+    predicate inverse_s_loop_inv(a: seq<uint16>, d: pow2_t, j: nat, bi: nat, view: INTT.loop_view)
+    {
+        && buff_is_n_elems(a)
+        && view.s_loop_inv(buff_as_n_elems(a), d, j, bi)
+    }
+
+    predicate inverse_j_loop_inv(a: seq<uint16>, d: pow2_t, j: nat, u: nat, view: INTT.loop_view)
+    {
+        && buff_is_n_elems(a)
+        && u == j * (2 * d.full)
+        && view.j_loop_inv(buff_as_n_elems(a), d, j)
     }
 
     lemma inverse_t_loop_inv_pre_lemma(coeffs: seq<uint16>)
-        requires buff_is_nsized(coeffs);
+        requires buff_is_n_elems(coeffs);
         ensures N.exp <= N.exp; // ??
         ensures inverse_t_loop_inv(coeffs, N, coeffs);
     {
-        inverse_ntt.t_loop_inv_pre_lemma(buff_as_nsized(coeffs));
+        INTT.t_loop_inv_pre_lemma(buff_as_n_elems(coeffs));
     }
 
     lemma inverse_t_loop_inv_post_lemma(a: seq<uint16>, one: pow2_t, coeffs: seq<uint16>)
@@ -376,13 +395,7 @@ module bv32_falcon_lemmas {
         requires inverse_t_loop_inv(a, one, coeffs);
         ensures inverse_ntt_eval_all(a, coeffs);
     {
-        inverse_ntt.t_loop_inv_post_lemma(a, one, coeffs);
-    }
-
-    predicate inverse_s_loop_inv(a: seq<uint16>, d: pow2_t, j: nat, bi: nat, view: inverse_ntt.loop_view)
-    {
-        && buff_is_nsized(a)
-        && view.s_loop_inv(buff_as_nsized(a), d, j, bi)
+        INTT.t_loop_inv_post_lemma(a, one, coeffs);
     }
 
     lemma inverse_s_loop_inv_pre_lemma(
@@ -395,7 +408,7 @@ module bv32_falcon_lemmas {
         t3: uint32,
         t6: uint32,
         s5: uint32,
-        view: inverse_ntt.loop_view)
+        view: INTT.loop_view)
 
 
         requires inverse_j_loop_inv(a, d, j, u, view);
@@ -411,11 +424,11 @@ module bv32_falcon_lemmas {
         ensures s5 == (t.full + j) * 2; 
         ensures t.full + j < N.full;
         ensures t3 == 2 * u + 2 * d.full;
-        ensures rev_omega_inv_powers_mont_table()[t.full + j] == 
-            mqmul(rev_omega_inv_powers_x_value(2 * j, d), R);
+        ensures INTT.rev_omega_inv_powers_mont_table()[t.full + j] == 
+            MQP.mqmul(INTT.rev_omega_inv_powers_x_value(2 * j, d), R);
     {
-        view.s_loop_inv_pre_lemma(buff_as_nsized(a), d, j);
-        rev_omega_inv_powers_mont_table_lemma(t, d, j);
+        view.s_loop_inv_pre_lemma(buff_as_n_elems(a), d, j);
+        INTT.rev_omega_inv_powers_mont_table_lemma(t, d, j);
         assert uint32_add(t.full, j) == t.full + j;
         ls1_is_double(t.full + j);
         // rev_omega_inv_powers_mont_table_lemma(t, d, j);
@@ -442,7 +455,7 @@ module bv32_falcon_lemmas {
         ot3: uint32,
         t3: uint32,
         t6: uint32,
-        view: inverse_ntt.loop_view)
+        view: INTT.loop_view)
 
         requires bi == d.full;
         requires t6 == 2 * d.full;
@@ -453,7 +466,7 @@ module bv32_falcon_lemmas {
         ensures t3 == 2 * (u + 2 * d.full);
         ensures inverse_j_loop_inv(a, d, j + 1, u + 2 * d.full, view);
     {
-        view.s_loop_inv_post_lemma(buff_as_nsized(a), d, j, bi);
+        view.s_loop_inv_post_lemma(buff_as_n_elems(a), d, j, bi);
 
         assert u + 2 * d.full == (j + 1) * (2 * d.full) by {
             LemmaMulProperties();
@@ -496,7 +509,7 @@ module bv32_falcon_lemmas {
         t4: uint32,
         t5: uint32,
         t6: uint32,
-        view: inverse_ntt.loop_view)
+        view: INTT.loop_view)
         returns (s: nat)
 
         requires inverse_s_loop_inv(a, d, j, bi, view);
@@ -511,12 +524,12 @@ module bv32_falcon_lemmas {
         ensures t4 == s4 + 2 * s;
         ensures t5 == s4 + 2 * (s + d.full);
         ensures s + d.full < N.full;
-        ensures a[s] == level_points_view(a, view.hsize)[bi][2*j];
-        ensures s == point_view_index(bi, 2*j, view.hsize);
-        ensures a[s+d.full] == level_points_view(a, view.hsize)[bi][2*j+1];
-        ensures s+d.full == point_view_index(bi, 2*j+1, view.hsize);
+        ensures a[s] == CPV.level_points_view(a, view.hsize)[bi][2*j];
+        ensures s == CPV.point_view_index(bi, 2*j, view.hsize);
+        ensures a[s+d.full] == CPV.level_points_view(a, view.hsize)[bi][2*j+1];
+        ensures s+d.full == CPV.point_view_index(bi, 2*j+1, view.hsize);
     {
-        s := view.higher_points_view_index_lemma(buff_as_nsized(a), d, j, bi);
+        s := view.higher_points_view_index_lemma(buff_as_n_elems(a), d, j, bi);
         assert 2 * (bi + (2*j) * d.full) == 2 * bi + 2 * (j * (2 * d.full)) by {
             LemmaMulProperties();
         }
@@ -531,7 +544,7 @@ module bv32_falcon_lemmas {
         s: nat,
         e: uint32,
         o: uint32,
-        view: inverse_ntt.loop_view)
+        view: INTT.loop_view)
 
         requires inverse_s_loop_inv(a, d, j, bi, view);
         requires bi < d.full
@@ -543,10 +556,10 @@ module bv32_falcon_lemmas {
         && a'[s + d.full] == o
         && a'[s] == e
         && a' == a[s + d.full := o][s := e]
-        && assert buff_is_nsized(a') by {
-            reveal buff_is_nsized();
+        && assert buff_is_n_elems(a') by {
+            reveal buff_is_n_elems();
         }
-        && view.s_loop_update(buff_as_nsized(a), buff_as_nsized(a'), d, j, bi)
+        && view.s_loop_update(buff_as_n_elems(a), buff_as_n_elems(a'), d, j, bi)
     }
 
     lemma inverse_s_loop_inv_peri_lemma(a: seq<uint16>,
@@ -557,7 +570,7 @@ module bv32_falcon_lemmas {
         s: nat,
         e: uint32,
         o: uint32,
-        view: inverse_ntt.loop_view)
+        view: INTT.loop_view)
 
         requires inverse_s_loop_inv(a, d, j, bi, view);
         requires bi < d.full
@@ -565,12 +578,12 @@ module bv32_falcon_lemmas {
         ensures inverse_s_loop_inv(a', d, j, bi+1, view);
     {
         view.s_loop_inv_peri_lemma(a, a', d, j, bi);
-        assert buff_is_nsized(a') by {
-            reveal buff_is_nsized();
+        assert buff_is_n_elems(a') by {
+            reveal buff_is_n_elems();
         }
     }
 
-    lemma inverse_higher_points_view_index_lemma(a: seq<uint16>, d: pow2_t, j: nat, bi: nat, view: inverse_ntt.loop_view)
+    lemma inverse_higher_points_view_index_lemma(a: seq<uint16>, d: pow2_t, j: nat, bi: nat, view: INTT.loop_view)
         returns (s: nat)
     
         requires inverse_s_loop_inv(a, d, j, bi, view);
@@ -578,38 +591,31 @@ module bv32_falcon_lemmas {
         ensures s == bi + (2*j) * d.full;
         ensures s + d.full < N.full;
         ensures a[s] ==
-            level_points_view(buff_as_nsized(a), view.hsize)[bi][2*j];
-        ensures s == point_view_index(bi, 2*j, view.hsize);
+            CPV.level_points_view(buff_as_n_elems(a), view.hsize)[bi][2*j];
+        ensures s == CPV.point_view_index(bi, 2*j, view.hsize);
         ensures a[s+d.full] ==
-            level_points_view(buff_as_nsized(a), view.hsize)[bi][2*j+1];
-        ensures s+d.full == point_view_index(bi, 2*j+1, view.hsize);
+            CPV.level_points_view(buff_as_n_elems(a), view.hsize)[bi][2*j+1];
+        ensures s+d.full == CPV.point_view_index(bi, 2*j+1, view.hsize);
     {
-        s := view.higher_points_view_index_lemma(buff_as_nsized(a), d, j, bi);
+        s := view.higher_points_view_index_lemma(buff_as_n_elems(a), d, j, bi);
     }
 
-    predicate inverse_j_loop_inv(a: seq<uint16>, d: pow2_t, j: nat, u: nat, view: inverse_ntt.loop_view)
-    {
-        && buff_is_nsized(a)
-        && u == j * (2 * d.full)
-        && view.j_loop_inv(buff_as_nsized(a), d, j)
-    }
-
-    lemma inverse_j_loop_inv_pre_lemma(a: seq<uint16>, d: pow2_t, view: inverse_ntt.loop_view)
+    lemma inverse_j_loop_inv_pre_lemma(a: seq<uint16>, d: pow2_t, view: INTT.loop_view)
         requires 0 <= d.exp < N.exp;
         requires inverse_t_loop_inv(a, pow2_double(d), view.coefficients);
         requires view.loop_view_wf();
-        requires view.hsize == block_size(d);
+        requires view.hsize == CPV.block_size(d);
         ensures inverse_j_loop_inv(a, d, 0, 0, view);
     {
-        view.j_loop_inv_pre_lemma(buff_as_nsized(a), d);
+        view.j_loop_inv_pre_lemma(buff_as_n_elems(a), d);
     }
 
-    lemma inverse_j_loop_inv_post_lemma(a: seq<uint16>, d: pow2_t, j: nat, u: nat, view: inverse_ntt.loop_view)
+    lemma inverse_j_loop_inv_post_lemma(a: seq<uint16>, d: pow2_t, j: nat, u: nat, view: INTT.loop_view)
         requires inverse_j_loop_inv(a, d, j, u, view);
         requires j == view.lsize().full;
         requires 0 <= view.hsize.exp <= N.exp;
-        requires view.hsize == block_size(d);
-        ensures inverse_ntt.t_loop_inv(a, d, view.coefficients);
+        requires view.hsize == CPV.block_size(d);
+        ensures INTT.t_loop_inv(a, d, view.coefficients);
     {
         view.j_loop_inv_post_lemma(a, d, j);
     }
@@ -632,10 +638,11 @@ module bv32_falcon_lemmas {
         seq(size, i requires 0 <= i < size => (ftable[2 * i], ftable[2 * i + 1]))
     }
 
-    predicate bit_rev_ftable_wf(ftable: seq<uint16>)
+    predicate bit_rev_ftable_wf(ftable: seq<uint16>, a: seq<uint16>)
     {
+        && |a| == N.full
         && |ftable| == |init_unfinished(N)|
-        && table_wf(ftable_cast(ftable), N)
+        && table_wf(ftable_cast(ftable), a, N)
     }
 
     predicate bit_rev_shuffle_inv(a: seq<uint16>, view: rev_view)
@@ -655,7 +662,7 @@ module bv32_falcon_lemmas {
         t1: uint32)
 
         requires |a| == N.full;
-        requires bit_rev_ftable_wf(ftable);
+        requires bit_rev_ftable_wf(ftable, a);
 
         requires 0 <= 2 * ti + 1 < |ftable|;
         requires sbi == ftable[2 * ti];
@@ -699,11 +706,10 @@ module bv32_falcon_lemmas {
         view: rev_view,
         table: seq<uint16>)
         returns (next_view: rev_view)
-        
 
-        requires buff_is_nsized(view.b);
+        requires buff_is_n_elems(view.b);
         requires |a| == N.full;
-        requires bit_rev_ftable_wf(table);
+        requires bit_rev_ftable_wf(table, a);
         requires view.len == N;
         requires view.shuffle_inv(a);
         requires next_b == view.next_rev_buffer();
@@ -712,11 +718,11 @@ module bv32_falcon_lemmas {
         ensures next_view == view.next_rev_view(a);
         ensures next_view.shuffle_inv(a);
         ensures next_view.b == next_b;
-        ensures buff_is_nsized(next_view.b);
+        ensures buff_is_n_elems(next_view.b);
     {
         next_view := view.next_rev_view(a);
         view.shuffle_inv_peri_lemma(a, next_view);
-        reveal buff_is_nsized();
+        reveal buff_is_n_elems();
     }
 
     lemma bit_rev_view_inv_post_lemma(a: seq<uint16>, view: rev_view)
@@ -732,14 +738,14 @@ module bv32_falcon_lemmas {
 
     predicate mq_ntt_poly_mul_inv(a: seq<uint16>, init_a: seq<uint16>, b: seq<uint16>, i: nat)
     {
-        && buff_is_nsized(init_a)
-        && buff_is_nsized(b)
+        && buff_is_n_elems(init_a)
+        && buff_is_n_elems(b)
         && i <= |init_a| == |a| == |b| == N.full
         && init_a[i..] == a[i..]
-        && reveal buff_is_nsized();
-        && (forall j: nat | 0 <= j < i :: a[j] == mqmul(init_a[j], b[j]))
+        && reveal buff_is_n_elems();
+        && (forall j: nat | 0 <= j < i :: a[j] == MQP.mqmul(init_a[j], b[j]))
     }
-    
+
     lemma mq_ntt_poly_mul_inv_peri_lemma(
         a: seq<uint16>, 
         init_a: seq<uint16>,
@@ -751,30 +757,30 @@ module bv32_falcon_lemmas {
         requires mq_ntt_poly_mul_inv(a, init_a, b, i);
         requires init_a[i] < Q;
         requires b[i] < Q;
-        requires ai == montmul(montmul(init_a[i], 10952), b[i]);
+        requires ai == MQP.montmul(MQP.montmul(init_a[i], 10952), b[i]);
         ensures  mq_ntt_poly_mul_inv(a[i := ai], init_a, b, i+1);
     {
         var next_a := a[i := ai];
         forall j: nat | 0 <= j < i+1
-            ensures next_a[j] == mqmul(init_a[j], b[j])
+            ensures next_a[j] == MQP.mqmul(init_a[j], b[j])
         {
             if j != i {
                 assert next_a[j] == a[j];
             } else {
                 assert next_a[j] == ai;
-                assume ai == mqmul(init_a[j], b[j]);
+                assume ai == MQP.mqmul(init_a[j], b[j]);
             }
         }
     }
 
     predicate mq_poly_scale_inv(a: seq<uint16>, init_a: seq<uint16>, b: seq<uint16>, i: nat)
     {
-        && buff_is_nsized(init_a)
-        && buff_is_nsized(b)
-        && reveal buff_is_nsized();
+        && buff_is_n_elems(init_a)
+        && buff_is_n_elems(b)
+        && reveal buff_is_n_elems();
         && i <= |init_a| == |a| == |b| == N.full
         && init_a[i..] == a[i..]
-        && (forall j: nat | 0 <= j < i :: a[j] == montmul(init_a[j], b[j]))
+        && (forall j: nat | 0 <= j < i :: a[j] == MQP.montmul(init_a[j], b[j]))
     }
 
     lemma mq_poly_scale_peri_lemma(
@@ -788,12 +794,12 @@ module bv32_falcon_lemmas {
         requires mq_poly_scale_inv(a, init_a, b, i);
         requires init_a[i] < Q;
         requires b[i] < Q;
-        requires ai == montmul(init_a[i], b[i]);
+        requires ai == MQP.montmul(init_a[i], b[i]);
         ensures  mq_poly_scale_inv(a[i := ai], init_a, b, i+1);
     {
         var next_a := a[i := ai];
         forall j: nat | 0 <= j < i+1
-            ensures next_a[j] == montmul(init_a[j], b[j])
+            ensures next_a[j] == MQP.montmul(init_a[j], b[j])
         {
             if j != i {
                 assert next_a[j] == a[j];
@@ -810,20 +816,20 @@ module bv32_falcon_lemmas {
         requires forward_ntt_eval_all(p, a);
         ensures forward_ntt_eval_all_alt(p, a)
     {
-       var a_hat: seq<elem> := scaled_coeff(a);
+       var a_hat: seq<elem> := MQP.scaled_coeff(a);
 
         forall i | 0 <= i < N.full
-            ensures poly_eval(a_hat, mqpow(PSI, 2 * bit_rev_int(i, N))) == p[i];
+            ensures MQP.poly_eval(a_hat, MQP.mqpow(PSI, 2 * bit_rev_int(i, N))) == p[i];
         {
             var index := 2 * bit_rev_int(i, N);
-            var x := mqpow(PSI, index);
-            var x_hat := mqpow(PSI, index + 1);
+            var x := MQP.mqpow(PSI, index);
+            var x_hat := MQP.mqpow(PSI, index + 1);
 
-            var left := poly_terms(a, x_hat);
-            var right := poly_terms(a_hat, x);
+            var left := MQP.poly_terms(a, x_hat);
+            var right := MQP.poly_terms(a_hat, x);
 
-            assert poly_eval(a, x_hat) == p[i] by {
-                reveal points_eval_suffix_inv();
+            assert MQP.poly_eval(a, x_hat) == p[i] by {
+                reveal CPV.points_eval_suffix_inv();
                 assert index * 1 == index;
             }
 
@@ -831,61 +837,61 @@ module bv32_falcon_lemmas {
                 forall j | 0 <= j < N.full 
                     ensures left[j] == right[j];
                 {
-                    var x_j := mqpow(x, j);
+                    var x_j := MQP.mqpow(x, j);
 
                     LemmaMulStrictlyPositive(index, j);
 
-                    assert x_j == mqpow(PSI, index * j) by {
-                        mqpow_muls(PSI, index, j);
+                    assert x_j == MQP.mqpow(PSI, index * j) by {
+                        MQP.mqpow_muls(PSI, index, j);
                     }
 
                     calc == {
                         left[j];
-                        mqmul(a[j], mqpow(x_hat, j));
-                        mqmul(a[j], mqpow(mqpow(PSI, index + 1), j));
+                        MQP.mqmul(a[j], MQP.mqpow(x_hat, j));
+                        MQP.mqmul(a[j], MQP.mqpow(MQP.mqpow(PSI, index + 1), j));
                         {
-                            mqpow_muls(PSI, index + 1, j);
+                            MQP.mqpow_muls(PSI, index + 1, j);
                         }
-                        mqmul(a[j], mqpow(PSI, (index + 1) * j));
+                        MQP.mqmul(a[j], MQP.mqpow(PSI, (index + 1) * j));
                         {
                             LemmaMulIsDistributiveAddOtherWayAuto();
                         }
-                        mqmul(a[j], mqpow(PSI, index * j + j));
+                        MQP.mqmul(a[j], MQP.mqpow(PSI, index * j + j));
                         {
-                            mqpow_adds(PSI, index * j, j);
+                            MQP.mqpow_adds(PSI, index * j, j);
                         }
-                        mqmul(a[j], mqmul(x_j, mqpow(PSI, j)));
+                        MQP.mqmul(a[j], MQP.mqmul(x_j, MQP.mqpow(PSI, j)));
                         {
-                            mqmul_commutes(x_j, mqpow(PSI, j));
+                            MQP.mqmul_commutes(x_j, MQP.mqpow(PSI, j));
                         }
-                        mqmul(a[j], mqmul(mqpow(PSI, j), x_j));
+                        MQP.mqmul(a[j], MQP.mqmul(MQP.mqpow(PSI, j), x_j));
                         {
-                            mqmul_associates(a[j], mqpow(PSI, j), x_j);
+                            MQP.mqmul_associates(a[j], MQP.mqpow(PSI, j), x_j);
                         }
-                        mqmul(mqmul(a[j], mqpow(PSI, j)), x_j);
-                        mqmul(a_hat[j], mqpow(x, j));
+                        MQP.mqmul(MQP.mqmul(a[j], MQP.mqpow(PSI, j)), x_j);
+                        MQP.mqmul(a_hat[j], MQP.mqpow(x, j));
                         right[j];
                     }
                 }
             }
 
-            assert poly_eval(a_hat, x) == p[i] by {
-                reveal poly_eval();
+            assert MQP.poly_eval(a_hat, x) == p[i] by {
+                reveal MQP.poly_eval();
                 calc == {
-                    poly_eval(a, x_hat);
-                    mqsum(left);
-                    mqsum(right);
-                    poly_eval(a_hat, x);
+                    MQP.poly_eval(a, x_hat);
+                    MQP.mqsum(left);
+                    MQP.mqsum(right);
+                    MQP.poly_eval(a_hat, x);
                 }
             }
         }
 
         forall i | 0 <= i < N.full
-            ensures poly_eval(a_hat, mqpow(OMEGA, bit_rev_int(i, N))) == p[i];
+            ensures MQP.poly_eval(a_hat, MQP.mqpow(OMEGA, bit_rev_int(i, N))) == p[i];
         {
             var index := bit_rev_int(i, N);
             calc == {
-                mqpow(PSI, 2 * index);
+                MQP.mqpow(PSI, 2 * index);
                 Pow(PSI, 2 * index) % Q;
                 {
                     LemmaPowMultiplies(PSI, 2, index);
@@ -896,17 +902,18 @@ module bv32_falcon_lemmas {
                 }
                 Pow(Pow(PSI, 2) % Q, index) % Q;
                 {
-                    Nth_root_lemma();
+                    MQ.Nth_root_lemma();
                 }
                 Pow(OMEGA % Q, index) % Q;
                 {
                     LemmaPowModNoop(OMEGA, index, Q);
                 }
                 Pow(OMEGA, index) % Q;
-                mqpow(OMEGA, index);
+                MQP.mqpow(OMEGA, index);
             }
         }
     }
+/*
     
     lemma mq_ntt_mul_lemma(
         a0: seq<uint16>,
@@ -919,11 +926,11 @@ module bv32_falcon_lemmas {
         p3: seq<uint16>,
         p4: seq<uint16>)
 
-        requires buff_is_nsized(p0);
-        requires buff_is_nsized(p1);
-        requires buff_is_nsized(p2);
-        requires buff_is_nsized(p3);
-        requires buff_is_nsized(p4);
+        requires buff_is_n_elems(p0);
+        requires buff_is_n_elems(p1);
+        requires buff_is_n_elems(p2);
+        requires buff_is_n_elems(p3);
+        requires buff_is_n_elems(p4);
 
         requires forward_ntt_eval_all(a1, a0);
         requires forward_ntt_eval_all(b1, b0);
@@ -941,37 +948,37 @@ module bv32_falcon_lemmas {
         forward_ntt_lemma(a1, a0);
         forward_ntt_lemma(b1, b0);
 
-        var a_hat := scaled_coeff(buff_as_nsized(a0));
-        var b_hat := scaled_coeff(buff_as_nsized(b0));
+        var a_hat := MQP.scaled_coeff(buff_as_n_elems(a0));
+        var b_hat := MQP.scaled_coeff(buff_as_n_elems(b0));
 
         forall i | 0 <= i < N.full
-            ensures var x := mqpow(OMEGA, bit_rev_int(i, N));
-                mqmul(poly_eval(a_hat, x), poly_eval(b_hat, x)) == p0[i];
+            ensures var x := MQP.mqpow(OMEGA, bit_rev_int(i, N));
+                MQP.mqmul(MQP.poly_eval(a_hat, x), MQP.poly_eval(b_hat, x)) == p0[i];
         {
         }
 
         forall i | 0 <= i < N.full
-            ensures var x := mqpow(OMEGA, i);
-                mqmul(poly_eval(a_hat, x), poly_eval(b_hat, x)) == p1[i];
+            ensures var x := MQP.mqpow(OMEGA, i);
+                MQP.mqmul(MQP.poly_eval(a_hat, x), MQP.poly_eval(b_hat, x)) == p1[i];
         {
             reveal is_bit_rev_shuffle();
             bit_rev_symmetric(i, N);
             assert p1[i] == p0[bit_rev_int(i, N)];
         }
 
-        assert p1 == circle_product(NTT(scaled_coeff(a0)), NTT(scaled_coeff(b0)));
+        assert p1 == circle_product(NTT(MQP.scaled_coeff(a0)), NTT(MQP.scaled_coeff(b0)));
 
         forall i | 0 <= i < N.full
-            ensures var x := mqpow(OMEGA_INV, bit_rev_int(i, N));
-                poly_eval(p1, x) == p2[i];
+            ensures var x := MQP.mqpow(OMEGA_INV, bit_rev_int(i, N));
+                MQP.poly_eval(p1, x) == p2[i];
         {
             reveal points_eval_suffix_inv();
             assert bit_rev_int(i, N) * 1 == bit_rev_int(i, N);
         }
 
         forall i | 0 <= i < N.full
-            ensures var x := mqpow(OMEGA_INV, i);
-                poly_eval(p1, x) == p3[i];
+            ensures var x := MQP.mqpow(OMEGA_INV, i);
+                MQP.poly_eval(p1, x) == p3[i];
         {
             reveal is_bit_rev_shuffle();
             bit_rev_symmetric(i, N);
@@ -979,20 +986,20 @@ module bv32_falcon_lemmas {
         }
 
         forall i | 0 <= i < N.full
-            ensures var x := mqpow(OMEGA_INV, i);
-                p4[i] == ((p3[i] * N_INV) % Q * mqpow(PSI_INV, i)) % Q;
+            ensures var x := MQP.mqpow(OMEGA_INV, i);
+                p4[i] == ((p3[i] * N_INV) % Q * MQP.mqpow(PSI_INV, i)) % Q;
         {
             inverse_ntt_scaling_table_axiom(i);
-            var t0 := (mqpow(PSI_INV, i) * N_INV) % Q;
+            var t0 := (MQP.mqpow(PSI_INV, i) * N_INV) % Q;
             var t1 := (t0 * R) % Q;
             var t2 := (p3[i] * N_INV) % Q;
             assert p4[i] == (p3[i] * t1 * R_INV) % Q;
 
-            gbassert IsModEquivalent(p4[i], t2 * mqpow(PSI_INV, i), Q) by {
+            gbassert IsModEquivalent(p4[i], t2 * MQP.mqpow(PSI_INV, i), Q) by {
                 assert IsModEquivalent(R * R_INV, 1, Q) by {
                     Nth_root_lemma();
                 }
-                assert IsModEquivalent(t0, mqpow(PSI_INV, i) * N_INV, Q);
+                assert IsModEquivalent(t0, MQP.mqpow(PSI_INV, i) * N_INV, Q);
                 assert IsModEquivalent(t1, t0 * R, Q);
                 assert IsModEquivalent(t2, p3[i] * N_INV, Q);
                 assert IsModEquivalent(p4[i], p3[i] * t1 * R_INV, Q);
@@ -1006,10 +1013,10 @@ module bv32_falcon_lemmas {
 
     predicate poly_sub_loop_inv(f_new: seq<uint16>, f: seq<uint16>, g: seq<uint16>, i: nat)
     {
-        reveal buff_is_nsized();
-        && buff_is_nsized(f_new)
-        && buff_is_nsized(f)
-        && buff_is_nsized(g)
+        reveal buff_is_n_elems();
+        && buff_is_n_elems(f_new)
+        && buff_is_n_elems(f)
+        && buff_is_n_elems(g)
         && 0 <= i <= N.full
         && f_new[i..] == f[i..]
         && (forall j :: 0 <= j < i ==> f_new[j] == mqsub(f[j], g[j]))
@@ -1263,13 +1270,13 @@ module bv32_falcon_lemmas {
        requires z < 2 * Q;
        requires rr == z % Q;
        ensures IsModEquivalent(rr * 4091, x * y, Q);
-       ensures rr == montmul(x, y);
+       ensures rr == MQP.montmul(x, y);
      {
         gbassert IsModEquivalent(v, 12287 * x * y, BASE_16) by {
-          assert IsModEquivalent(Q0Ixy, 12287 * x * y, BASE_32);
-          assert IsModEquivalent(v, Q0Ixy, BASE_16);
-          assert BASE_16 == 65536;
-          assert BASE_32 == 0x1_0000_0000;
+            assert IsModEquivalent(Q0Ixy, 12287 * x * y, BASE_32);
+            assert IsModEquivalent(v, Q0Ixy, BASE_16);
+            assert BASE_16 == 65536;
+            assert BASE_32 == 0x1_0000_0000;
         }
 
         gbassert IsModEquivalent(w + xy, 0, BASE_16) by {
@@ -1285,18 +1292,19 @@ module bv32_falcon_lemmas {
         Power2.Lemma2To64();
         assert z * BASE_16 == w + xy;
 
-       gbassert IsModEquivalent(rr * 4091, x * y, Q) by {
-         assert IsModEquivalent(v, 12287 * x * y, BASE_16);
-         assert Q == 12289;
-         assert BASE_16 == 65536;
-         assert IsModEquivalent(4091, BASE_16, Q);
-         assert w == Q * v;
-         assert xy == x * y;
-         assert z * BASE_16 == (w + xy);
-         assert IsModEquivalent(w + xy, 0, BASE_16);
-         assert IsModEquivalent(rr, z, Q);
-       }
+        gbassert IsModEquivalent(rr * 4091, x * y, Q) by {
+            assert IsModEquivalent(v, 12287 * x * y, BASE_16);
+            assert Q == 12289;
+            assert BASE_16 == 65536;
+            assert IsModEquivalent(4091, BASE_16, Q);
+            assert w == Q * v;
+            assert xy == x * y;
+            assert z * BASE_16 == (w + xy);
+            assert IsModEquivalent(w + xy, 0, BASE_16);
+            assert IsModEquivalent(rr, z, Q);
+        }
 
-       assume rr == montmul(x, y);
-     }
+        assume rr == MQP.montmul(x, y);
+    }
+    */
 }

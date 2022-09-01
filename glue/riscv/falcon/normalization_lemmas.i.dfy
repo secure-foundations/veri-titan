@@ -63,7 +63,7 @@ module normalization_lemmas {
         && (forall i | 0 <= i < |a| :: uint16_is_normalized(a[i]))
     }
 
-    function uint16_buff_as_nelems(a: seq<uint16>): (na: seq<nelem>)
+    function uint16_buff_as_n_elems(a: seq<uint16>): (na: seq<nelem>)
         requires normalized_values(a);
     {
         reveal normalized_values();
@@ -116,7 +116,7 @@ module normalization_lemmas {
 
     predicate {:opaque} denormalization_inv(nv: seq<uint16>, dnv: seq<uint16>, i: nat)
         requires normalized_values(nv);
-        requires buff_is_nsized(dnv);
+        requires buff_is_n_elems(dnv);
     {
         && reveal normalized_values();
         && i <= N.full
@@ -125,7 +125,7 @@ module normalization_lemmas {
 
     lemma denormalization_pre_lemma(nv: seq<uint16>, dnv: seq<uint16>)
         requires normalized_values(nv);
-        requires buff_is_nsized(dnv);
+        requires buff_is_n_elems(dnv);
         ensures denormalization_inv(nv, dnv, 0);
     {
         reveal denormalization_inv();
@@ -133,7 +133,7 @@ module normalization_lemmas {
 
     lemma denormalization_peri_lemma(buff: seq<uint16>, dnv: seq<uint16>, i: nat, a1: uint32, b: uint32, c: uint32, d: uint32)
         requires normalized_values(buff);
-        requires buff_is_nsized(dnv);
+        requires buff_is_n_elems(dnv);
         requires denormalization_inv(buff, dnv, i);
         requires i < |buff|;
         requires a1 == uint16_sign_ext(buff[i]);
@@ -142,12 +142,12 @@ module normalization_lemmas {
         requires d == uint32_add(a1, c);
         ensures uint16_is_normalized(buff[i]);
         ensures d == denormalize(uint16_as_nelem(buff[i]));
-        ensures buff_is_nsized(dnv[i := lh(d)]);
+        ensures buff_is_n_elems(dnv[i := lh(d)]);
         ensures denormalization_inv(buff, dnv[i := lh(d)], i + 1);
     {
         reveal denormalization_inv();
         reveal normalized_values();
-        reveal buff_is_nsized();
+        reveal buff_is_n_elems();
 
         var lh, uh := lh(d), uh(d);
         half_split_lemma(d);
@@ -159,9 +159,9 @@ module normalization_lemmas {
     // 0 <= e < Q -> -Q/2 <= e <= Q/2
     predicate {:opaque} normalization_inv(outputs: seq<uint16>,  inputs: seq<uint16>, i: nat)
     {
-        && buff_is_nsized(inputs)
+        && buff_is_n_elems(inputs)
         && |outputs| == N.full
-        && reveal buff_is_nsized();
+        && reveal buff_is_n_elems();
         && i <= N.full
         && inputs[i..] == outputs[i..]
         && (forall j | 0 <= j < i :: (
@@ -171,7 +171,7 @@ module normalization_lemmas {
     }
 
     lemma normalization_pre_lemma(inputs: seq<uint16>)
-        requires buff_is_nsized(inputs);
+        requires buff_is_n_elems(inputs);
         ensures normalization_inv(inputs, inputs, 0);
     {
         reveal normalization_inv();
@@ -187,7 +187,7 @@ module normalization_lemmas {
         requires e == uint32_sub(a, d);
         ensures normalization_inv(outputs[i := lh(e)], inputs, i + 1);
     {
-        reveal buff_is_nsized();
+        reveal buff_is_n_elems();
         reveal normalization_inv();
 
         assert outputs[i] == inputs [i];
@@ -219,7 +219,7 @@ module normalization_lemmas {
     }
 
     lemma normalization_post_lemma(outputs: seq<uint16>, inputs: seq<uint16>)
-        requires buff_is_nsized(inputs);
+        requires buff_is_n_elems(inputs);
         requires normalization_inv(outputs, inputs, 512);
         ensures normalized_values(outputs);
     {
@@ -248,8 +248,8 @@ module normalization_lemmas {
     {
         && normalized_values(s1)
         && normalized_values(s2)
-        && var ns1 := uint16_buff_as_nelems(s1);
-        && var ns2 := uint16_buff_as_nelems(s2);
+        && var ns1 := uint16_buff_as_n_elems(s1);
+        && var ns2 := uint16_buff_as_n_elems(s2);
         && i <= N.full
         && ((msb(ng) == 0) ==> (norm == l2norm_squared(ns1, ns2, i)))
         && ((msb(ng) == 1) ==> (l2norm_squared(ns1, ns2, i) >= NORMSQ_BOUND))
@@ -325,7 +325,7 @@ module normalization_lemmas {
         requires normalized_values(s1);
         requires normalized_values(s2);
     {
-        l2norm_squared(uint16_buff_as_nelems(s1), uint16_buff_as_nelems(s2), |s1|) < 0x29845d6
+        l2norm_squared(uint16_buff_as_n_elems(s1), uint16_buff_as_n_elems(s2), |s1|) < 0x29845d6
     }
 
     lemma l2norm_squared_bounded_post_lemma(s1: seq<uint16>, s2: seq<uint16>, norm0: uint32, ng: uint32, norm1: uint32, result: uint32)

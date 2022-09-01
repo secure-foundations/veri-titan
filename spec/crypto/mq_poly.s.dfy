@@ -1,4 +1,3 @@
-include "ntt_index.dfy"
 include "ntt_param.s.dfy"
 
 abstract module mq_poly_s(MQNTT: ntt_param_s) {
