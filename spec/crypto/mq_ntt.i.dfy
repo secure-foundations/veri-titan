@@ -2,24 +2,24 @@ include "ntt_twiddle.i.dfy"
 
 abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ)) {
     import opened Seq
-	import opened Power
-	import opened Power2
-	import opened DivMod
-	import opened Mul
+        import opened Power
+        import opened Power2
+        import opened DivMod
+        import opened Mul
 
-	import opened pow2_s
-	import opened ntt_index
+        import opened pow2_s
+        import opened ntt_index
 
-	type elem = MQ.elem
-	type n_elems = MQ.n_elems
+        type elem = MQ.elem
+        type n_elems = MQ.n_elems
 
-	const Q := MQ.Q;
-	const R := MQ.R;
-	const PSI := MQ.PSI;
-	const OMEGA := MQ.OMEGA;
-	const OMEGA_INV := MQ.OMEGA_INV;
-	const R_INV := MQ.R_INV;
-	ghost const N := MQ.N;
+        const Q := MQ.Q;
+        const R := MQ.R;
+        const PSI := MQ.PSI;
+        const OMEGA := MQ.OMEGA;
+        const OMEGA_INV := MQ.OMEGA_INV;
+        const R_INV := MQ.R_INV;
+        ghost const N := MQ.N;
 
 
     function x_value(i: nat, d: pow2_t): elem
@@ -107,8 +107,8 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
         {
             && 1 <= hsize.exp <= N.exp
             && PV.unifromly_sized(higher, hsize)
-		    && higher == PV.level_polys(coefficients, hsize)
-		    && lower == PV.level_polys(coefficients, pow2_half(hsize))
+                    && higher == PV.level_polys(coefficients, hsize)
+                    && lower == PV.level_polys(coefficients, pow2_half(hsize))
         }
 
         function lsize(): (r: pow2_t)
@@ -765,83 +765,83 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
 module mq_fntt_i(CMQ: ntt_param_s, CMQP: mq_poly_i(CMQ), CPV: poly_view_i(CMQ))
     refines mq_ntt_i(CMQ, CMQP, CPV)
 {
-	import TWD = ntt_twiddle_i(CMQ)
+        import TWD = ntt_twiddle_i(CMQ)
 
-	// d is the block count
-	// i is the offset in the block
-	function rev_mixed_powers_mont_x_value_inner(i: nat, d: pow2_t): (r: elem)
-		requires d.exp <= N.exp;
-		requires i < PV.block_size(d).full;
-		ensures r > 0;
-	{
-		var bound := PV.block_size(d);
-		LemmaMulNonnegative(2 * bit_rev_int(i, bound), d.full);
-		var r := CMQP.mqpow(PSI, 2 * bit_rev_int(i, bound) * d.full + d.full);
-		// LemmaPowPositive(PSI, 2 * bit_rev_int(i, bound) * d.full + d.full);
-		calc {
-			2 * bit_rev_int(i, bound) * d.full + d.full;
-			{
-				LemmaMulProperties();
-			}
-			(bit_rev_int(i, bound) * (2 * d.full)) + d.full;
-			<=
-			{
-				LemmaMulInequality(bit_rev_int(i, bound), bound.full - 1, 2 * d.full);
-			}
-			(bound.full - 1) * (2 * d.full) + d.full;
-			{
-				LemmaMulIsDistributive(2 * d.full, bound.full, - 1);
-			}
-			bound.full * (2 * d.full) - (2 * d.full) + d.full;
-			bound.full * (2 * d.full) - d.full;
-			{
-				LemmaMulProperties();
-			}
-			2 * (bound.full * d.full) - d.full;
-			// {
-			// 	PV.block_count_product_lemma(bound);
-			// }
-			2 * N.full - d.full;
-		}
-		TWD.primitive_root_non_zero_lemma(2 * bit_rev_int(i, bound) * d.full + d.full);
-		r
-	}
+        // d is the block count
+        // i is the offset in the block
+        function rev_mixed_powers_mont_x_value_inner(i: nat, d: pow2_t): (r: elem)
+                requires d.exp <= N.exp;
+                requires i < PV.block_size(d).full;
+                ensures r > 0;
+        {
+                var bound := PV.block_size(d);
+                LemmaMulNonnegative(2 * bit_rev_int(i, bound), d.full);
+                var r := CMQP.mqpow(PSI, 2 * bit_rev_int(i, bound) * d.full + d.full);
+                // LemmaPowPositive(PSI, 2 * bit_rev_int(i, bound) * d.full + d.full);
+                calc {
+                        2 * bit_rev_int(i, bound) * d.full + d.full;
+                        {
+                                LemmaMulProperties();
+                        }
+                        (bit_rev_int(i, bound) * (2 * d.full)) + d.full;
+                        <=
+                        {
+                                LemmaMulInequality(bit_rev_int(i, bound), bound.full - 1, 2 * d.full);
+                        }
+                        (bound.full - 1) * (2 * d.full) + d.full;
+                        {
+                                LemmaMulIsDistributive(2 * d.full, bound.full, - 1);
+                        }
+                        bound.full * (2 * d.full) - (2 * d.full) + d.full;
+                        bound.full * (2 * d.full) - d.full;
+                        {
+                                LemmaMulProperties();
+                        }
+                        2 * (bound.full * d.full) - d.full;
+                        // {
+                        //         PV.block_count_product_lemma(bound);
+                        // }
+                        2 * N.full - d.full;
+                }
+                TWD.primitive_root_non_zero_lemma(2 * bit_rev_int(i, bound) * d.full + d.full);
+                r
+        }
 
-	function rev_mixed_powers_mont_x_value(i: nat, d: pow2_t): (r: elem)
-	{
-		if rev_mixed_powers_mont_x_value_inner.requires(i, d) then 
-			rev_mixed_powers_mont_x_value_inner(i, d)
-		else
-			0
-	}
+        function rev_mixed_powers_mont_x_value(i: nat, d: pow2_t): (r: elem)
+        {
+                if rev_mixed_powers_mont_x_value_inner.requires(i, d) then 
+                        rev_mixed_powers_mont_x_value_inner(i, d)
+                else
+                        0
+        }
 
-	function method {:axiom} rev_mixed_powers_mont_table(): (t: seq<elem>)
-		ensures |t| == N.full;
+        function method {:axiom} rev_mixed_powers_mont_table(): (t: seq<elem>)
+                ensures |t| == N.full;
 
-	lemma {:axiom} rev_mixed_powers_mont_table_axiom(t: pow2_t, d: pow2_t, j: nat)
-		requires t.exp < N.exp;
-		requires j < t.full;
-		requires t.full + j < N.full;
-		requires d == pow2_half(PV.block_count(t));
-		requires 2 * j < PV.block_size(d).full;
-		ensures rev_mixed_powers_mont_table()[t.full + j] ==
-			CMQP.mqmul(rev_mixed_powers_mont_x_value(2 * j, d), R);
+        lemma {:axiom} rev_mixed_powers_mont_table_axiom(t: pow2_t, d: pow2_t, j: nat)
+                requires t.exp < N.exp;
+                requires j < t.full;
+                requires t.full + j < N.full;
+                requires d == pow2_half(PV.block_count(t));
+                requires 2 * j < PV.block_size(d).full;
+                ensures rev_mixed_powers_mont_table()[t.full + j] ==
+                        CMQP.mqmul(rev_mixed_powers_mont_x_value(2 * j, d), R);
 
-	lemma rev_mixed_powers_mont_table_lemma(t: pow2_t, d: pow2_t, j: nat)
-		requires t.exp < N.exp;
-		requires j < t.full;
-		requires d == pow2_half(PV.block_count(t));
-		ensures t.full + j < N.full;
-		ensures 2 * j < PV.block_size(d).full;
-		ensures rev_mixed_powers_mont_table()[t.full + j] ==
-			CMQP.mqmul(rev_mixed_powers_mont_x_value(2 * j, d), R);
-	{
-		var _ := TWD.twiddle_factors_index_bound_lemma(t, j);
-		rev_mixed_powers_mont_table_axiom(t, d, j);
-	}
+        lemma rev_mixed_powers_mont_table_lemma(t: pow2_t, d: pow2_t, j: nat)
+                requires t.exp < N.exp;
+                requires j < t.full;
+                requires d == pow2_half(PV.block_count(t));
+                ensures t.full + j < N.full;
+                ensures 2 * j < PV.block_size(d).full;
+                ensures rev_mixed_powers_mont_table()[t.full + j] ==
+                        CMQP.mqmul(rev_mixed_powers_mont_x_value(2 * j, d), R);
+        {
+                var _ := TWD.twiddle_factors_index_bound_lemma(t, j);
+                rev_mixed_powers_mont_table_axiom(t, d, j);
+        }
 
 
-	function x_value(i: nat, d: pow2_t): (r: elem)
+        function x_value(i: nat, d: pow2_t): (r: elem)
     {
         rev_mixed_powers_mont_x_value(i, d)
     }
@@ -1186,91 +1186,91 @@ module mq_fntt_i(CMQ: ntt_param_s, CMQP: mq_poly_i(CMQ), CPV: poly_view_i(CMQ))
 module mq_intt_i(CMQ: ntt_param_s, CMQP: mq_poly_i(CMQ), CPV: poly_view_i(CMQ))
     refines mq_ntt_i(CMQ, CMQP, CPV)
 {
-	import TWD = ntt_twiddle_i(CMQ)
+        import TWD = ntt_twiddle_i(CMQ)
     // ghost const x_value := rev_omega_inv_powers_x_value;
 
     // d is the block count
-	// i is the offset in the block
-	function rev_omega_inv_powers_x_value_inner(i: nat, d: pow2_t): (r: elem)
-		requires d.exp <= N.exp;
-		requires i < PV.block_size(d).full;
-		ensures r > 0;
-	{
-		var bound := PV.block_size(d);
-		LemmaMulNonnegative(bit_rev_int(i, bound), d.full);
-		var r := MQP.mqpow(OMEGA_INV, bit_rev_int(i, bound) * d.full);
-		assert r > 0 by {
-			if r == 0 {
-				var exp := bit_rev_int(i, bound) * d.full;
+        // i is the offset in the block
+        function rev_omega_inv_powers_x_value_inner(i: nat, d: pow2_t): (r: elem)
+                requires d.exp <= N.exp;
+                requires i < PV.block_size(d).full;
+                ensures r > 0;
+        {
+                var bound := PV.block_size(d);
+                LemmaMulNonnegative(bit_rev_int(i, bound), d.full);
+                var r := MQP.mqpow(OMEGA_INV, bit_rev_int(i, bound) * d.full);
+                assert r > 0 by {
+                        if r == 0 {
+                                var exp := bit_rev_int(i, bound) * d.full;
 
-				calc == {
-					1;
-					{
-						Lemma1Pow(exp);
-					}
-					Pow(1, exp) % Q;
-					{
-						MQ.Nth_root_lemma();
-					}
-					Pow((OMEGA_INV * OMEGA) % Q, exp) % Q;
-					{
-						LemmaPowModNoop(OMEGA_INV * OMEGA, exp, Q);
-					}
-					Pow(OMEGA_INV * OMEGA, exp) % Q;
-					{
-						LemmaPowDistributes(OMEGA_INV, OMEGA, exp);
-					}
-					(Pow(OMEGA_INV, exp) * Pow(OMEGA, exp)) % Q;
-					{
-						LemmaMulModNoop(Pow(OMEGA_INV, exp), Pow(OMEGA, exp), Q);
-					}
-					((Pow(OMEGA_INV, exp) % Q) * (Pow(OMEGA, exp) % Q)) % Q;
-					{
-						assert Pow(OMEGA_INV, exp) % Q == 0;
-					}
-					0;
-				}
-				assert false;
-			}
-		}
-		r
-	}
+                                calc == {
+                                        1;
+                                        {
+                                                Lemma1Pow(exp);
+                                        }
+                                        Pow(1, exp) % Q;
+                                        {
+                                                MQ.Nth_root_lemma();
+                                        }
+                                        Pow((OMEGA_INV * OMEGA) % Q, exp) % Q;
+                                        {
+                                                LemmaPowModNoop(OMEGA_INV * OMEGA, exp, Q);
+                                        }
+                                        Pow(OMEGA_INV * OMEGA, exp) % Q;
+                                        {
+                                                LemmaPowDistributes(OMEGA_INV, OMEGA, exp);
+                                        }
+                                        (Pow(OMEGA_INV, exp) * Pow(OMEGA, exp)) % Q;
+                                        {
+                                                LemmaMulModNoop(Pow(OMEGA_INV, exp), Pow(OMEGA, exp), Q);
+                                        }
+                                        ((Pow(OMEGA_INV, exp) % Q) * (Pow(OMEGA, exp) % Q)) % Q;
+                                        {
+                                                assert Pow(OMEGA_INV, exp) % Q == 0;
+                                        }
+                                        0;
+                                }
+                                assert false;
+                        }
+                }
+                r
+        }
 
-	function rev_omega_inv_powers_x_value(i: nat, d: pow2_t): (r: elem)
-		ensures rev_omega_inv_powers_x_value_inner.requires(i, d) ==> r > 0
-	{
-		if rev_omega_inv_powers_x_value_inner.requires(i, d) then 
-			rev_omega_inv_powers_x_value_inner(i, d)
-		else
-			0
-	}
+        function rev_omega_inv_powers_x_value(i: nat, d: pow2_t): (r: elem)
+                ensures rev_omega_inv_powers_x_value_inner.requires(i, d) ==> r > 0
+        {
+                if rev_omega_inv_powers_x_value_inner.requires(i, d) then 
+                        rev_omega_inv_powers_x_value_inner(i, d)
+                else
+                        0
+        }
 
-	function method {:axiom} rev_omega_inv_powers_mont_table(): (t: seq<elem>)
-		ensures |t| == N.full;
+        function method {:axiom} rev_omega_inv_powers_mont_table(): (t: seq<elem>)
+                ensures |t| == N.full;
 
-	lemma {:axiom} rev_omega_inv_powers_mont_table_axiom(t: pow2_t, d: pow2_t, j: nat)
-		requires t.exp < N.exp;
-		requires j < t.full;
-		requires t.full + j < N.full;
-		requires d == pow2_half(PV.block_count(t));
-		requires 2 * j < PV.block_size(d).full;
-		ensures rev_omega_inv_powers_mont_table()[t.full + j] ==
-			MQP.mqmul(rev_omega_inv_powers_x_value(2 * j, d), R);
+        lemma {:axiom} rev_omega_inv_powers_mont_table_axiom(t: pow2_t, d: pow2_t, j: nat)
+                requires t.exp < N.exp;
+                requires j < t.full;
+                requires t.full + j < N.full;
+                requires d == pow2_half(PV.block_count(t));
+                requires 2 * j < PV.block_size(d).full;
+                ensures rev_omega_inv_powers_mont_table()[t.full + j] ==
+                        MQP.mqmul(rev_omega_inv_powers_x_value(2 * j, d), R);
 
-	lemma rev_omega_inv_powers_mont_table_lemma(t: pow2_t, d: pow2_t, j: nat)
-		requires t.exp < N.exp;
-		requires j < t.full;
-		requires d == pow2_half(PV.block_count(t));
-		ensures t.full + j < N.full;
-		ensures 2 * j < PV.block_size(d).full;
-		ensures rev_omega_inv_powers_mont_table()[t.full + j] ==
-			MQP.mqmul(rev_omega_inv_powers_x_value(2 * j, d), R);
-	{
-		var _ := TWD.twiddle_factors_index_bound_lemma(t, j);
-		rev_omega_inv_powers_mont_table_axiom(t, d, j);
-	}
+        lemma rev_omega_inv_powers_mont_table_lemma(t: pow2_t, d: pow2_t, j: nat)
+                requires t.exp < N.exp;
+                requires j < t.full;
+                requires d == pow2_half(PV.block_count(t));
+                ensures t.full + j < N.full;
+                ensures 2 * j < PV.block_size(d).full;
+                ensures rev_omega_inv_powers_mont_table()[t.full + j] ==
+                        MQP.mqmul(rev_omega_inv_powers_x_value(2 * j, d), R);
+        {
+                var _ := TWD.twiddle_factors_index_bound_lemma(t, j);
+                rev_omega_inv_powers_mont_table_axiom(t, d, j);
+        }
 
-	function x_value(i: nat, d: pow2_t): (r: elem)
+        function x_value(i: nat, d: pow2_t): (r: elem)
     {
         rev_omega_inv_powers_x_value(i, d)
     }

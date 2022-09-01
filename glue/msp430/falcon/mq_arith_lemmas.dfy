@@ -32,25 +32,24 @@ module mq_arith_lemmas {
         requires r == msp_add(sum, uint16_and(12289, mask)).0;
         ensures r == mqadd(x, y);
     {
-      assert Q == 12289;
+        assert Q == 12289;
 
-      // d == x + y - Q
-      assert IsModEquivalent(sum, x + y - Q, BASE_16);
+        // d == x + y - Q
+        assert IsModEquivalent(sum, x + y - Q, BASE_16);
 
-      // -Q <= d < Q
-      assert 0 <= x + y < 2*Q;
-      assert (-(Q as int)) <= x + y - Q < Q;
+        // -Q <= d < Q
+        assert 0 <= x + y < 2*Q;
+        assert (-(Q as int)) <= x + y - Q < Q;
 
-      if sum >= 0x8000 {
-        assert mask == 0xFFFF;
-        assert uint16_and(Q, 0xFFFF) == Q by { reveal_and(); }
-        assert IsModEquivalent(r, x + y, Q);
-      } else {
-        assert mask == 0;
-        assert uint16_and(Q, 0) == 0 by { reveal_and(); }
-        assert IsModEquivalent(r, x + y, Q);
-      }
-
+        if sum >= 0x8000 {
+            assert mask == 0xFFFF;
+            assert uint16_and(Q, 0xFFFF) == Q by { reveal_and(); }
+            assert IsModEquivalent(r, x + y, Q);
+        } else {
+            assert mask == 0;
+            assert uint16_and(Q, 0) == 0 by { reveal_and(); }
+            assert IsModEquivalent(r, x + y, Q);
+        }
     } 
 
     lemma lemma_mq_sub_correct(diff: uint16, flags: flags_t, mask: uint16, r: uint16, x: int, y: int)
@@ -64,19 +63,19 @@ module mq_arith_lemmas {
         requires r == msp_add(diff, uint16_and(12289, mask)).0;
         ensures r == mqsub(x, y);
     {
-      var Q : int := 12289;
-      
-      assert IsModEquivalent(diff, x - y, BASE_16);
-      
-      if get_cf(flags) == 0 {
-        assert mask == 0xFFFF;
-        assert uint16_and(Q, 0xFFFF) == Q by { reveal_and(); }
-        assert IsModEquivalent(r, x - y, Q);
-      } else {
-        assert mask == 0;
-        assert uint16_and(Q, 0) == 0 by { reveal_and(); }
-        assert IsModEquivalent(r, x - y, Q);
-      }
+        var Q : int := 12289;
+        
+        assert IsModEquivalent(diff, x - y, BASE_16);
+        
+        if get_cf(flags) == 0 {
+            assert mask == 0xFFFF;
+            assert uint16_and(Q, 0xFFFF) == Q by { reveal_and(); }
+            assert IsModEquivalent(r, x - y, Q);
+        } else {
+            assert mask == 0;
+            assert uint16_and(Q, 0) == 0 by { reveal_and(); }
+            assert IsModEquivalent(r, x - y, Q);
+        }
     }
 
     lemma lemma_cond_add_Q(flags: flags_t, mask: uint16, r: uint16, input: uint16)
@@ -87,41 +86,40 @@ module mq_arith_lemmas {
         requires r == msp_add(input, uint16_and(12289, mask)).0;
         ensures IsModEquivalent(r, input + if get_cf(flags) == 1 then Q else 0, BASE_16);
     {
-      if get_cf(flags) == 1 {
-        assert mask == 0xFFFF;
-        assert uint16_and(Q, 0xFFFF) == Q by { reveal_and(); }
-      } else {
-        assert mask == 0;
-        assert uint16_and(Q, 0) == 0 by { reveal_and(); }
-      }
+        if get_cf(flags) == 1 {
+            assert mask == 0xFFFF;
+            assert uint16_and(Q, 0xFFFF) == Q by { reveal_and(); }
+        } else {
+            assert mask == 0;
+            assert uint16_and(Q, 0) == 0 by { reveal_and(); }
+        }
     }
 
-
     lemma lemma_montymul_correct(x: nat, y: nat, xy_lh: uint16, xy_uh: uint16, Q0Ixy:nat, sum: uint32_view_t, partial_lh: uint16, partial_uh: uint16, partial_uh_xy_uh:uint16, m: uint16, flags: flags_t, rr:uint16)
-       requires x < Q;
-       requires y < Q;
-       requires to_nat([xy_lh, xy_uh]) == x * y;
-       requires Q0Ixy == mul(xy_lh, 12287);
-       requires valid_uint32_view(sum, partial_lh, partial_uh);
-       requires sum.full == Q * Q0Ixy + xy_lh;
-       requires partial_uh_xy_uh == msp_add(partial_uh, xy_uh).0;
-       requires m == msp_sub(partial_uh_xy_uh, Q).0;
-       requires flags == msp_sub(partial_uh_xy_uh, Q).1;
-       requires IsModEquivalent(rr, m + if get_cf(flags) == 1 then Q else 0, BASE_16);
-       ensures IsModEquivalent(rr * 4091, x * y, Q);
+        requires x < Q;
+        requires y < Q;
+        requires to_nat([xy_lh, xy_uh]) == x * y;
+        requires Q0Ixy == mul(xy_lh, 12287);
+        requires valid_uint32_view(sum, partial_lh, partial_uh);
+        requires sum.full == Q * Q0Ixy + xy_lh;
+        requires partial_uh_xy_uh == msp_add(partial_uh, xy_uh).0;
+        requires m == msp_sub(partial_uh_xy_uh, Q).0;
+        requires flags == msp_sub(partial_uh_xy_uh, Q).1;
+        requires IsModEquivalent(rr, m + if get_cf(flags) == 1 then Q else 0, BASE_16);
+        ensures IsModEquivalent(rr * 4091, x * y, Q);
     {
         var v := (12287 * x * y) % BASE_16;
         assert x * y == xy_lh + xy_uh * BASE_16 by { bv16_seq.LemmaSeqLen2([xy_lh, xy_uh]); }
         assert xy_lh == (x * y) % BASE_16 by { LemmaModMultiplesVanish(xy_uh, xy_lh, BASE_16); }
         calc {
-          Q0Ixy;
-            { reveal dw_lh(); }
-          (xy_lh * 12287) % BASE_16;
-          (((x * y) % BASE_16) * 12287) % BASE_16;
-            { LemmaMulModNoopGeneral(x*y, 12287, BASE_16); }
-          ((x * y) * 12287) % BASE_16;
-            { LemmaMulIsCommutativeAuto(); LemmaMulIsAssociativeAuto(); }
-          v;
+            Q0Ixy;
+                { reveal dw_lh(); }
+            (xy_lh * 12287) % BASE_16;
+            (((x * y) % BASE_16) * 12287) % BASE_16;
+                { LemmaMulModNoopGeneral(x*y, 12287, BASE_16); }
+            ((x * y) * 12287) % BASE_16;
+                { LemmaMulIsCommutativeAuto(); LemmaMulIsAssociativeAuto(); }
+            v;
         }
         assert v == Q0Ixy;
         var w := Q * v;
@@ -142,10 +140,10 @@ module mq_arith_lemmas {
 
         // Bound partial_uh
         calc {
-          Q * Q0Ixy + xy_lh;
-          sum.full;
+            Q * Q0Ixy + xy_lh;
+            sum.full;
             { dw_view_lemma(sum); }
-          partial_lh + partial_uh * BASE_16; 
+            partial_lh + partial_uh * BASE_16; 
         }
         assert Q0Ixy < BASE_16;
         assert Q*Q0Ixy <= Q*(BASE_16-1) by { LemmaMulUpperBound(Q, Q, Q0Ixy, BASE_16-1); }
@@ -161,18 +159,18 @@ module mq_arith_lemmas {
 
         // Connect a 32-bit spec to our 16-bit calculations
         calc {
-          Q * Q0Ixy + xy;
-          Q * Q0Ixy + xy_lh + xy_uh * BASE_16;
-          sum.full + xy_uh * BASE_16;
-          calc {
-            sum.full;
-              { dw_view_lemma(sum); }
-            partial_lh + partial_uh * BASE_16; 
-          }
-          partial_lh + partial_uh * BASE_16 + xy_uh * BASE_16;
+            Q * Q0Ixy + xy;
+            Q * Q0Ixy + xy_lh + xy_uh * BASE_16;
+            sum.full + xy_uh * BASE_16;
+            calc {
+                sum.full;
+                    { dw_view_lemma(sum); }
+                partial_lh + partial_uh * BASE_16; 
+            }
+            partial_lh + partial_uh * BASE_16 + xy_uh * BASE_16;
             { LemmaMulIsDistributiveAuto(); }
-          partial_lh + (partial_uh + xy_uh) * BASE_16; 
-          partial_uh_xy_uh * BASE_16 + partial_lh;
+            partial_lh + (partial_uh + xy_uh) * BASE_16; 
+            partial_uh_xy_uh * BASE_16 + partial_lh;
         }
         assert partial_uh_xy_uh * BASE_16 + partial_lh == Q * Q0Ixy + xy;
 
@@ -191,17 +189,16 @@ module mq_arith_lemmas {
         assert z * BASE_16 == w + xy;
 
         gbassert IsModEquivalent(rr * 4091, x * y, Q) by {
-          assert IsModEquivalent(v, 12287 * x * y, BASE_16);
-          assert Q == 12289;
-          assert BASE_16 == 65536;
-          assert IsModEquivalent(4091, BASE_16, Q);
-          assert w == Q * v;
-          assert xy == x * y;
-          assert z * BASE_16 == (w + xy);
-          assert IsModEquivalent(w + xy, 0, BASE_16);
-          assert IsModEquivalent(rr, z, Q);
+            assert IsModEquivalent(v, 12287 * x * y, BASE_16);
+            assert Q == 12289;
+            assert BASE_16 == 65536;
+            assert IsModEquivalent(4091, BASE_16, Q);
+            assert w == Q * v;
+            assert xy == x * y;
+            assert z * BASE_16 == (w + xy);
+            assert IsModEquivalent(w + xy, 0, BASE_16);
+            assert IsModEquivalent(rr, z, Q);
         }
-
     }
 
     predicate {:opaque} buff_is_n_elems(a: seq<nat>)

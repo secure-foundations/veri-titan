@@ -7,11 +7,11 @@
 //     import opened DivMod
 //     import opened Mul
 
-// 	import opened pows_of_2
+//         import opened pows_of_2
 //     import opened ntt_index
 //     import opened ntt_512_params
-// 	import opened mq_polys
-// 	import opened poly_view
+//         import opened mq_polys
+//         import opened poly_view
 //     import opened nth_root
 //     import opened forward_ntt
 
