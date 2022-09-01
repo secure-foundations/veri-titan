@@ -82,7 +82,7 @@ module bv32_falcon_lemmas {
         && buff_is_n_elems(p)
         && var a_hat := MQP.scaled_coeff(buff_as_n_elems(a));
         && (forall i | 0 <= i < N.full ::
-            MQP.poly_eval(a_hat, MQP.mqpow(OMEGA, bit_rev_int(i, N))) == p[i])
+            MQP.poly_eval(a_hat, MQP.mqpow(MQ.OMEGA, bit_rev_int(i, N))) == p[i])
     }
 
     predicate forward_t_loop_inv(a: seq<uint16>, d: pow2_t, coeffs: seq<uint16>)
@@ -887,7 +887,7 @@ module bv32_falcon_lemmas {
         }
 
         forall i | 0 <= i < N.full
-            ensures MQP.poly_eval(a_hat, MQP.mqpow(OMEGA, bit_rev_int(i, N))) == p[i];
+            ensures MQP.poly_eval(a_hat, MQP.mqpow(MQ.OMEGA, bit_rev_int(i, N))) == p[i];
         {
             var index := bit_rev_int(i, N);
             calc == {
@@ -904,16 +904,15 @@ module bv32_falcon_lemmas {
                 {
                     MQ.Nth_root_lemma();
                 }
-                Pow(OMEGA % Q, index) % Q;
+                Pow(MQ.OMEGA % Q, index) % Q;
                 {
-                    LemmaPowModNoop(OMEGA, index, Q);
+                    LemmaPowModNoop(MQ.OMEGA, index, Q);
                 }
-                Pow(OMEGA, index) % Q;
-                MQP.mqpow(OMEGA, index);
+                Pow(MQ.OMEGA, index) % Q;
+                MQP.mqpow(MQ.OMEGA, index);
             }
         }
     }
-/*
     
     lemma mq_ntt_mul_lemma(
         a0: seq<uint16>,
@@ -941,9 +940,9 @@ module bv32_falcon_lemmas {
         requires inverse_ntt_eval_all(p2, p1);
         requires is_bit_rev_shuffle(p2, p3, N);
 
-        requires mq_poly_scale_inv(p4, p3, inverse_ntt_scaling_table(), N.full);
+        requires mq_poly_scale_inv(p4, p3, MQP.inverse_ntt_scaling_table(), N.full);
 
-        ensures poly_mod_equiv(p4, poly_mul(a0, b0), n_ideal());
+        ensures MQP.poly_mod_equiv(p4, MQP.poly_mul(a0, b0), MQP.n_ideal());
     {
         forward_ntt_lemma(a1, a0);
         forward_ntt_lemma(b1, b0);
@@ -952,13 +951,13 @@ module bv32_falcon_lemmas {
         var b_hat := MQP.scaled_coeff(buff_as_n_elems(b0));
 
         forall i | 0 <= i < N.full
-            ensures var x := MQP.mqpow(OMEGA, bit_rev_int(i, N));
+            ensures var x := MQP.mqpow(MQ.OMEGA, bit_rev_int(i, N));
                 MQP.mqmul(MQP.poly_eval(a_hat, x), MQP.poly_eval(b_hat, x)) == p0[i];
         {
         }
 
         forall i | 0 <= i < N.full
-            ensures var x := MQP.mqpow(OMEGA, i);
+            ensures var x := MQP.mqpow(MQ.OMEGA, i);
                 MQP.mqmul(MQP.poly_eval(a_hat, x), MQP.poly_eval(b_hat, x)) == p1[i];
         {
             reveal is_bit_rev_shuffle();
@@ -966,18 +965,19 @@ module bv32_falcon_lemmas {
             assert p1[i] == p0[bit_rev_int(i, N)];
         }
 
-        assert p1 == circle_product(NTT(MQP.scaled_coeff(a0)), NTT(MQP.scaled_coeff(b0)));
+        assert p1 == MQP.circle_product(MQP.NTT(MQP.scaled_coeff(a0)), 
+            MQP.NTT(MQP.scaled_coeff(b0)));
 
         forall i | 0 <= i < N.full
-            ensures var x := MQP.mqpow(OMEGA_INV, bit_rev_int(i, N));
+            ensures var x := MQP.mqpow(MQ.OMEGA_INV, bit_rev_int(i, N));
                 MQP.poly_eval(p1, x) == p2[i];
         {
-            reveal points_eval_suffix_inv();
+            reveal CPV.points_eval_suffix_inv();
             assert bit_rev_int(i, N) * 1 == bit_rev_int(i, N);
         }
 
         forall i | 0 <= i < N.full
-            ensures var x := MQP.mqpow(OMEGA_INV, i);
+            ensures var x := MQP.mqpow(MQ.OMEGA_INV, i);
                 MQP.poly_eval(p1, x) == p3[i];
         {
             reveal is_bit_rev_shuffle();
@@ -985,32 +985,41 @@ module bv32_falcon_lemmas {
             assert p3[i] == p2[bit_rev_int(i, N)];
         }
 
+        var inverse := MQP.INTT(p1);
+
+        var N_INV := MQ.N_INV;
+        var PSI_INV := MQ.PSI_INV;
+        var R_INV := MQ.R_INV;
+
         forall i | 0 <= i < N.full
-            ensures var x := MQP.mqpow(OMEGA_INV, i);
-                p4[i] == ((p3[i] * N_INV) % Q * MQP.mqpow(PSI_INV, i)) % Q;
+            ensures inverse[i] == (p3[i] * N_INV) % Q
+
+        forall i | 0 <= i < N.full
+            ensures p4[i] == (inverse[i] * MQP.mqpow(PSI_INV, i)) % Q;
         {
-            inverse_ntt_scaling_table_axiom(i);
-            var t0 := (MQP.mqpow(PSI_INV, i) * N_INV) % Q;
+            MQP.inverse_ntt_scaling_table_axiom(i);
+            var t := MQP.mqpow(PSI_INV, i);
+            var t0 := (t * N_INV) % Q;
             var t1 := (t0 * R) % Q;
-            var t2 := (p3[i] * N_INV) % Q;
+            var t2 := inverse[i];
             assert p4[i] == (p3[i] * t1 * R_INV) % Q;
 
-            gbassert IsModEquivalent(p4[i], t2 * MQP.mqpow(PSI_INV, i), Q) by {
+            gbassert IsModEquivalent(p4[i], t2 * t, Q) by {
                 assert IsModEquivalent(R * R_INV, 1, Q) by {
-                    Nth_root_lemma();
+                    MQ.Nth_root_lemma();
                 }
-                assert IsModEquivalent(t0, MQP.mqpow(PSI_INV, i) * N_INV, Q);
+                assert IsModEquivalent(t0, t * N_INV, Q);
                 assert IsModEquivalent(t1, t0 * R, Q);
                 assert IsModEquivalent(t2, p3[i] * N_INV, Q);
                 assert IsModEquivalent(p4[i], p3[i] * t1 * R_INV, Q);
             }
         }
 
-        assert p4 == negatively_wrapped_convolution(a0, b0);
-
-        negatively_wrapped_convolution_lemma(a0, b0, p4);
+        assert p4 == MQP.negatively_wrapped_convolution(a0, b0);
+        MQP.negatively_wrapped_convolution_lemma(a0, b0, p4);
     }
 
+/*
     predicate poly_sub_loop_inv(f_new: seq<uint16>, f: seq<uint16>, g: seq<uint16>, i: nat)
     {
         reveal buff_is_n_elems();
@@ -1022,20 +1031,19 @@ module bv32_falcon_lemmas {
         && (forall j :: 0 <= j < i ==> f_new[j] == mqsub(f[j], g[j]))
     }
 
-    
-  lemma mul_upper_bound_Qsquared(x: nat, y: nat)
-    requires x <= 12289;
-    requires y <= 12289;
-    requires 0 <= x
-    requires 0 <= y
-    ensures mul(x, y) == x * y;
-    ensures x * y <= 151019521;
-  {
-    reveal dw_lh();
-    Mul.LemmaMulNonnegative(x, y);
-    Mul.LemmaMulUpperBound(x, 12289, y, 12289);
-    DivMod.LemmaSmallMod(x * y, BASE_32);
-  }
+    lemma mul_upper_bound_Qsquared(x: nat, y: nat)
+        requires x <= 12289;
+        requires y <= 12289;
+        requires 0 <= x
+        requires 0 <= y
+        ensures mul(x, y) == x * y;
+        ensures x * y <= 151019521;
+    {
+        reveal dw_lh();
+        Mul.LemmaMulNonnegative(x, y);
+        Mul.LemmaMulUpperBound(x, 12289, y, 12289);
+        DivMod.LemmaSmallMod(x * y, BASE_32);
+    }
 
     lemma poly_sub_loop_correct(f_new: seq<uint16>, f_old: seq<uint16>, f_orig:seq<uint16>, g: seq<uint16>, i: nat)
       requires i < N.full;

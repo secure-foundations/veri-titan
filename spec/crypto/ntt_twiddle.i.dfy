@@ -268,12 +268,4 @@ module ntt_twiddle_i(MQ: ntt_param_s) {
 
 		d := pow2_half(PV.block_count(t));
 	}
-
-	function method {:axiom} inverse_ntt_scaling_table(): (t: seq<elem>)
-		ensures |t| == N.full;
-
-	lemma {:axiom} inverse_ntt_scaling_table_axiom(i: nat)
-		requires i < N.full;
-		ensures inverse_ntt_scaling_table()[i] == MQP.mqmul(MQP.mqmul(MQP.mqpow(MQ.PSI_INV, i), MQ.N_INV), R);
-
 }

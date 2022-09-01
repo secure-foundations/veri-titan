@@ -21,6 +21,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
 	const R_INV := MQ.R_INV;
 	ghost const N := MQ.N;
 
+
     function x_value(i: nat, d: pow2_t): elem
 
     predicate {:opaque} t_loop_inv(a: n_elems, count: pow2_t, coefficients: n_elems)

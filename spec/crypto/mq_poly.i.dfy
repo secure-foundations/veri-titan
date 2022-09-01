@@ -658,4 +658,12 @@ module mq_poly_i(CMQ: ntt_param_s)
 		poly_eval_offset_zero_lemma(a_e, sqr);
 		poly_eval_offset_zero_lemma(a_o, sqr);
 	}
+
+	function method {:axiom} inverse_ntt_scaling_table(): (t: seq<elem>)
+		ensures |t| == N.full;
+
+	lemma {:axiom} inverse_ntt_scaling_table_axiom(i: nat)
+		requires i < N.full;
+		ensures inverse_ntt_scaling_table()[i] == 
+			mqmul(mqmul(mqpow(CMQ.PSI_INV, i), CMQ.N_INV), CMQ.R);
 }
