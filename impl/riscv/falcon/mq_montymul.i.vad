@@ -5,22 +5,21 @@ include "mq_arith.i.dfy"
 
 module mq_montymul {
 
-import opened integers
 import opened DivMod
 
+import opened integers
 import opened rv_machine
 import opened rv_decls
 import opened rv_vale
-import opened mem
-import opened stack
 
 import opened bv32_op_s
-import opened bv32_falcon_lemmas
-import opened pows_of_2
-import opened mq_polys
-import opened nth_root
+import opened pow2_s
+
+import opened MQP = falcon_512_i.CMQP
 
 import opened mq_arith
+import opened mq_arith_lemmas
+
 #endverbatim
     
 function ls1_is_double(a: uint32): void extern;

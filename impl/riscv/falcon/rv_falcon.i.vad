@@ -20,22 +20,24 @@ import opened stack
 import opened bv32_op_s
 import opened bv32_falcon_lemmas
 
-import opened pows_of_2
+import opened pow2_s
 import opened ntt_index
-import opened nth_root
-import opened poly_view
 
 import opened rv_normlization
 import opened rv_poly_mul
 
 import opened normalization_lemmas
-
-import opened ntt_512_params
+import opened falcon_512_i
 
 import opened mq_polysub
 // import opened rv_reg_save
 
+const Q := falcon_512_i.Q;
+const N := falcon_512_i.N; 
+
 #endverbatim
+
+function rv_falcon_512_lemma(tt0: seq(uint16), tt1: seq(uint16), tt2: seq(uint16), s1: seq(uint16), s2: seq(uint16), h: seq(uint16), c0: seq(uint16), a0: uint32): void extern;
 
 procedure rv_falcon(
     ghost iter_c0: b16_iter,
@@ -109,6 +111,8 @@ returns (ghost next_iter_tt: b16_iter)
         iter_tt.base_ptr != iter_p1.base_ptr;
         iter_tt.base_ptr != iter_p2.base_ptr;
 
+    // ensures
+        // (a0 == 1) <==> falcon_verify(iter_c0.buff, uint16_buff_as_n_nelems(iter_s2.buff), iter_h.buff);
 {
     li(s1, 12289);
 
@@ -117,6 +121,7 @@ returns (ghost next_iter_tt: b16_iter)
     mv(s4, a1);
 
     next_iter_tt := denormalize(iter_s2, iter_tt);
+    let tt0 := next_iter_tt.buff;
 
     ghost var next_iter_h := iter_h;
 
@@ -124,22 +129,28 @@ returns (ghost next_iter_tt: b16_iter)
     mv(a1, a2);
     next_iter_tt, next_iter_h := ntt_poly_mul(
         next_iter_tt, iter_h, iter_t1, iter_t2, iter_p1, iter_p2);
-    
-    // assert fvar_iter_inv(heap, next_iter_tt, s3, 0);
+    let tt1 := next_iter_tt.buff;
+
     li(a0, 12289);
     mv(s1, s3);
     mv(s0, s2);
 
-    next_iter_tt, next_iter_h := poly_sub(next_iter_tt, iter_c0);
+    assert tt1 == poly_mod_product(tt0, iter_h.buff);
 
-    assert fvar_iter_inv(heap, next_iter_tt, s3, 0);
+    next_iter_tt, next_iter_h := poly_sub(next_iter_tt, iter_c0);
+    let tt2 := next_iter_tt.buff;
+
+    // assert fvar_iter_inv(heap, next_iter_tt, s3, 0);
 
     next_iter_tt := normalize(next_iter_tt);
     
     assert normalized_iter_inv(heap, iter_s2, s4, 0);
     assert normalized_iter_inv(heap, next_iter_tt, s3, 0);
 
-    is_short(iter_s2, next_iter_tt);
+    is_short(next_iter_tt, iter_s2);
+
+    // assert l2norm_squared_result(iter_a.buff, iter_b.buff, a0);
+    rv_falcon_512_lemma(tt0, tt1, tt2, next_iter_tt.buff, iter_s2.buff, iter_h.buff, iter_c0.buff, a0);
 }
 
 #verbatim

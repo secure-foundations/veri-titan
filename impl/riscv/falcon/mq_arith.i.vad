@@ -12,10 +12,10 @@ import opened rv_decls
 import opened rv_vale
 
 import opened bv32_op_s
-import opened pows_of_2
-import opened mq_polys
-import opened nth_root
+import opened pow2_s
 import opened mq_arith_lemmas
+
+import opened MQP = falcon_512_i.CMQP
 
 #endverbatim
 

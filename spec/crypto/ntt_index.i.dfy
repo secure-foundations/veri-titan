@@ -863,7 +863,7 @@ module ntt_index {
             r
     }
 
-    predicate {:opaque} table_wf(table: seq<(nat, nat)>, a: seq<nat>, len: pow2_t)
+    predicate {:opaque} table_wf_inner(table: seq<(nat, nat)>, a: seq<nat>, len: pow2_t)
         requires |a| == len.full >= 4;
     {
         && 2 * |table| == |init_unfinished(len)|
@@ -872,16 +872,23 @@ module ntt_index {
             && table[i].1 == bit_rev_int(table[i].0, len))
     }
 
+    predicate {:opaque} table_wf(table: seq<(nat, nat)>, len: pow2_t)
+    {
+        forall a: seq<nat> | |a| == len.full >= 4 ::
+            table_wf_inner(table, a, len)
+    }
+
     method bit_rev(a: seq<nat>, len: pow2_t, table: seq<(nat, nat)>)
         returns (b: seq<nat>)
         requires |a| == len.full >= 4;
-        requires table_wf(table, a, len);
+        requires table_wf(table, len);
         ensures |b| == len.full;
         ensures is_bit_rev_shuffle(a, b, len);
     {
         b := a;
         var ti := 0;
-        reveal table_wf();
+        assume table_wf_inner(table, a, len);
+        reveal table_wf_inner();
         ghost var view := rev_view.init_rev_view(a, len);
         view.shuffle_inv_pre_lemma(a, len);
 

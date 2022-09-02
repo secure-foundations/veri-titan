@@ -134,12 +134,6 @@ abstract module mq_poly_s(MQNTT: ntt_param_s) {
         r
     }
 
-    predicate poly_mod_equiv(a: seq<elem>, b: seq<elem>, m: seq<elem>)
-        requires m != zero_poly(|m|);
-    {
-        poly_mod(a, m) == poly_mod(b, m)
-    }
-
     function circle_product(a: n_elems, b: n_elems): n_elems
     {
         seq(N.full, i requires 0 <= i < N.full => mqmul(a[i], b[i]))
@@ -181,5 +175,5 @@ abstract module mq_poly_s(MQNTT: ntt_param_s) {
 
     lemma {:axiom} negatively_wrapped_convolution_lemma(a: n_elems, b: n_elems, p: n_elems)
         requires p == negatively_wrapped_convolution(a, b);
-        ensures poly_mod_equiv(p, poly_mul(a, b), n_ideal());
+        ensures p == poly_mod(poly_mul(a, b), n_ideal())
 }

@@ -22,7 +22,7 @@ module bv32_falcon_lemmas {
 
     import FNTT = falcon_512_i.FNTT
     import INTT = falcon_512_i.INTT
-    import MQP = falcon_512_i.CMQP
+    import opened MQP = falcon_512_i.CMQP
 
     const Q := falcon_512_i.Q;
     const N := falcon_512_i.N; 
@@ -36,6 +36,54 @@ module bv32_falcon_lemmas {
     {
         && (|a| == N.full)
         && (forall i | 0 <= i < N.full :: a[i] < Q)
+    }
+
+    function block_size(d: pow2_t): pow2_t
+        requires CPV.block_size.requires(d)
+    {
+        CPV.block_size(d)
+    }
+
+    function build_floop_view(s: n_elems, d: pow2_t): floop_view
+        requires FNTT.build_loop_view.requires(s, d)
+    {
+        FNTT.build_loop_view(s, d)
+    }
+
+    function build_iloop_view(s: n_elems, d: pow2_t): iloop_view
+        requires INTT.build_loop_view.requires(s, d)
+    {
+        INTT.build_loop_view(s, d)
+    }
+
+    function montmul(a: elem, b: elem): elem
+    {
+        MQP.montmul(a, b)
+    }
+
+    function rev_mixed_powers_mont_x_value(i: nat, d: pow2_t): (r: elem)
+    {
+        FNTT.rev_mixed_powers_mont_x_value(i, d)
+    }
+
+    function rev_mixed_powers_mont_table(): n_elems
+    {
+        FNTT.rev_mixed_powers_mont_table()
+    }
+
+    function rev_omega_inv_powers_x_value(i: nat, d: pow2_t): (r: elem)
+    {
+        INTT.rev_omega_inv_powers_x_value(i, d)
+    }
+
+    function rev_omega_inv_powers_mont_table(): n_elems
+    {
+        INTT.rev_omega_inv_powers_mont_table()
+    }
+
+    function inverse_ntt_scaling_table(): n_elems
+    {
+        MQP.inverse_ntt_scaling_table()
     }
 
     predicate fvar_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int)
@@ -53,6 +101,10 @@ module bv32_falcon_lemmas {
         reveal buff_is_n_elems();
         a
     }
+
+    type floop_view = FNTT.loop_view
+
+    type iloop_view = INTT.loop_view
 
     function forward_lsize(view: FNTT.loop_view): (r: pow2_t)
         requires view.loop_view_wf();
@@ -112,6 +164,11 @@ module bv32_falcon_lemmas {
         ensures forward_ntt_eval_all(a, coeffs);
     {
         FNTT.t_loop_inv_post_lemma(a, one, coeffs);
+    }
+
+    function mqmul(a: elem, b: elem): elem
+    {
+        MQP.mqmul(a, b)
     }
 
     lemma forward_s_loop_inv_pre_lemma(
@@ -629,11 +686,10 @@ module bv32_falcon_lemmas {
         seq(size, i requires 0 <= i < size => (ftable[2 * i], ftable[2 * i + 1]))
     }
 
-    predicate bit_rev_ftable_wf(ftable: seq<uint16>, a: seq<uint16>)
+    predicate bit_rev_ftable_wf(ftable: seq<uint16>)
     {
-        && |a| == N.full
         && |ftable| == |init_unfinished(N)|
-        && table_wf(ftable_cast(ftable), a, N)
+        && table_wf(ftable_cast(ftable), N)
     }
 
     predicate bit_rev_shuffle_inv(a: seq<uint16>, view: rev_view)
@@ -653,7 +709,7 @@ module bv32_falcon_lemmas {
         t1: uint32)
 
         requires |a| == N.full;
-        requires bit_rev_ftable_wf(ftable, a);
+        requires bit_rev_ftable_wf(ftable);
 
         requires 0 <= 2 * ti + 1 < |ftable|;
         requires sbi == ftable[2 * ti];
@@ -681,6 +737,7 @@ module bv32_falcon_lemmas {
         assert table[ti].0 == build_view(a, ti, N).get_split_index()
             && table[ti].1 == bit_rev_int(table[ti].0, N) by {
             reveal table_wf();
+            reveal table_wf_inner();
         }
 
         // ftable_index_lemma(a, ftable, table, ti);
@@ -700,7 +757,7 @@ module bv32_falcon_lemmas {
 
         requires buff_is_n_elems(view.b);
         requires |a| == N.full;
-        requires bit_rev_ftable_wf(table, a);
+        requires bit_rev_ftable_wf(table);
         requires view.len == N;
         requires view.shuffle_inv(a);
         requires next_b == view.next_rev_buffer();
@@ -905,6 +962,15 @@ module bv32_falcon_lemmas {
         }
     }
     
+    function poly_mod_product(a: seq<uint16>, b: seq<uint16>): (p: seq<uint16>)
+        requires buff_is_n_elems(a)
+        requires buff_is_n_elems(b)
+    {
+        MQP.poly_mod(
+            MQP.poly_mul(buff_as_n_elems(a), buff_as_n_elems(b)),
+            MQP.n_ideal())
+    }
+
     lemma mq_ntt_mul_lemma(
         a0: seq<uint16>,
         a1: seq<uint16>,
@@ -933,7 +999,8 @@ module bv32_falcon_lemmas {
 
         requires mq_poly_scale_inv(p4, p3, MQP.inverse_ntt_scaling_table(), N.full);
 
-        ensures MQP.poly_mod_equiv(p4, MQP.poly_mul(a0, b0), MQP.n_ideal());
+        ensures p4 == poly_mod_product(a0, b0)
+        // MQP.poly_mod_equiv(p4, MQP.poly_mul(a0, b0), MQP.n_ideal());
     {
         forward_ntt_lemma(a1, a0);
         forward_ntt_lemma(b1, b0);

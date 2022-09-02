@@ -23,14 +23,14 @@ import opened mem
 import opened stack
 
 import opened bv32_op_s
-import opened bv32_falcon_lemmas
+import opened pow2_s
 
-import opened pows_of_2
 import opened ntt_index
-import opened mq_polys
-import opened poly_view
-import opened nth_root
-import opened ntt_512_params
+import opened rv_reg_save
+import opened mq_arith
+import opened mq_montymul
+
+import opened bv32_falcon_lemmas
 
 import opened rv_inverse_ntt_std2rev
 import opened rv_forward_ntt_std2rev
@@ -53,6 +53,8 @@ function mq_ntt_mul_lemma(a0: seq(uint16), a1: seq(uint16), b0: seq(uint16), b1:
         p4: seq(uint16)): void extern;
 
 function poly_mod_equiv(a: seq(uint16), b: seq(uint16), m: seq(uint16)): bool extern;
+
+function poly_mod_product(a0: seq(uint16), b0: seq(uint16)): seq(uint16) extern;
 
 procedure ntt_poly_mul(
     ghost iter_a: b16_iter,
@@ -136,8 +138,9 @@ returns (
         s2 == old(s2);
         s3 == old(s3);
         s4 == old(s4);
-    // ensures
-        // poly_mod_equiv(p4, poly_mul(a0, b0), n_ideal());
+
+    ensures
+        next_iter_a.buff == poly_mod_product(iter_a.buff, iter_b.buff);
 {
     mv(s0, a0);
     mv(s1, a1);

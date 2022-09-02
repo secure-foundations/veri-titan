@@ -1,10 +1,13 @@
 include "mq_montymul.i.vad"
 include "rv_reg_save.i.vad"
+include "mq_arith.i.vad"
 
 #verbatim
 
+include "mq_arith.i.dfy"
 include "mq_montymul.i.dfy"
 include "rv_reg_save.i.dfy"
+include "../../../../glue/riscv/falcon/bv32_falcon_lemmas.i.dfy"
 
 module rv_forward_ntt_std2rev {
 
@@ -16,19 +19,14 @@ import opened mem
 import opened stack
 
 import opened bv32_op_s
-import opened bv32_falcon_lemmas
+import opened pow2_s
 
-import opened pows_of_2
 import opened ntt_index
-import opened mq_polys
-import opened poly_view
-import opened nth_root
-import opened forward_ntt
-import opened ntt_512_params
-
 import opened rv_reg_save
 import opened mq_arith
 import opened mq_montymul
+
+import opened bv32_falcon_lemmas
 
 #endverbatim
 
@@ -38,26 +36,26 @@ function rev_mixed_powers_mont_table(): seq(uint16) extern;
 function rev_mixed_powers_mont_table_lemma(t: pow2_t, d: pow2_t, j: nat): void extern;
 function rev_mixed_powers_mont_x_value(i: nat, d: pow2_t): (r: uint16) extern;
 
-type loop_view: Type(0) extern;
-function operator(.hsize) (p :loop_view): pow2_t extern;
-function build_loop_view(a: seq(uint16), d: pow2_t): loop_view extern;
-function forward_lsize(v: loop_view): pow2_t extern;
+type floop_view: Type(0) extern;
+function operator(.hsize) (p :floop_view): pow2_t extern;
+function build_floop_view(a: seq(uint16), d: pow2_t): floop_view extern;
+function forward_lsize(v: floop_view): pow2_t extern;
 
 function fvar_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int): bool extern;
 
 function block_size(c: pow2_t): pow2_t extern;
 
 function pow2_t_cons(n: nat, exp: nat): pow2_t extern;
-function forward_j_loop_inv(a: seq(uint16), hcount: pow2_t, j: nat, u: nat, view: loop_view): bool extern;
-function forward_j_loop_inv_pre_lemma(a: seq(uint16), hcount: pow2_t, view: loop_view): void extern;
-function forward_j_loop_inv_post_lemma(a: seq(uint16), hcount: pow2_t, j: nat, u: nat, view: loop_view): void extern;
+function forward_j_loop_inv(a: seq(uint16), hcount: pow2_t, j: nat, u: nat, view: floop_view): bool extern;
+function forward_j_loop_inv_pre_lemma(a: seq(uint16), hcount: pow2_t, view: floop_view): void extern;
+function forward_j_loop_inv_post_lemma(a: seq(uint16), hcount: pow2_t, j: nat, u: nat, view: floop_view): void extern;
 
-function forward_s_loop_inv(a: seq(uint16), d: pow2_t, j: nat, bi: nat, view: loop_view): bool extern;
-function forward_s_loop_inv_pre_lemma(a: seq(uint16), d: pow2_t, j: nat, t: pow2_t, u: nat, ot3:nat, t3: nat, t6: nat, s5: nat, view: loop_view): void extern;
-function forward_s_loop_inv_post_lemma(a: seq(uint16), d: pow2_t, j: nat, u: nat, bi: nat, ot3: nat, t3: nat, t6: nat, view: loop_view): void extern;
-function forward_s_loop_index_lemma(a: seq(uint16), d: pow2_t, j: nat, bi: nat, s4: nat, s2: nat, t4: nat, t5: nat, t6: nat, view: loop_view): (s: nat) extern;
-function forward_s_loop_update(a: seq(uint16), a': seq(uint16), d: pow2_t, j: nat, bi: nat, s: nat, e: uint32, o: uint32, view: loop_view): bool extern;
-function forward_s_loop_inv_peri_lemma(a: seq(uint16), a': seq(uint16), d: pow2_t, j: nat, bi: nat, s: nat, e: uint32, o: uint32, view: loop_view): void extern;
+function forward_s_loop_inv(a: seq(uint16), d: pow2_t, j: nat, bi: nat, view: floop_view): bool extern;
+function forward_s_loop_inv_pre_lemma(a: seq(uint16), d: pow2_t, j: nat, t: pow2_t, u: nat, ot3:nat, t3: nat, t6: nat, s5: nat, view: floop_view): void extern;
+function forward_s_loop_inv_post_lemma(a: seq(uint16), d: pow2_t, j: nat, u: nat, bi: nat, ot3: nat, t3: nat, t6: nat, view: floop_view): void extern;
+function forward_s_loop_index_lemma(a: seq(uint16), d: pow2_t, j: nat, bi: nat, s4: nat, s2: nat, t4: nat, t5: nat, t6: nat, view: floop_view): (s: nat) extern;
+function forward_s_loop_update(a: seq(uint16), a': seq(uint16), d: pow2_t, j: nat, bi: nat, s: nat, e: uint32, o: uint32, view: floop_view): bool extern;
+function forward_s_loop_inv_peri_lemma(a: seq(uint16), a': seq(uint16), d: pow2_t, j: nat, bi: nat, s: nat, e: uint32, o: uint32, view: floop_view): void extern;
 
 function forward_ntt_eval_all(a: seq(uint16), coeffs: seq(uint16)): bool extern;
 function forward_t_loop_inv(a: seq(uint16), d: pow2_t, c: seq(uint16)): bool extern;
@@ -69,7 +67,7 @@ procedure forward_s_loop(ghost iter_a: b16_iter,
     ghost d: pow2_t,
     ghost j: nat,
     ghost bi: nat,
-    ghost view: loop_view)
+    ghost view: floop_view)
 
     returns (ghost iter_a': b16_iter)
 
@@ -155,7 +153,7 @@ procedure forward_j_loop(ghost iter_a: b16_iter,
     ghost d: pow2_t,
     ghost j: nat,
     ghost u: nat,
-    ghost view: loop_view)
+    ghost view: floop_view)
 
     returns (ghost iter_a': b16_iter)
 
@@ -313,7 +311,7 @@ procedure forward_t_loop(ghost iter_a: b16_iter,
     li(t2, 0);
     li(t3, 0);
 
-    ghost var view := build_loop_view(buff_as_n_elems(coeffs), d);
+    ghost var view := build_floop_view(buff_as_n_elems(coeffs), d);
 
     ghost var j :nat := 0;
     ghost var u :nat := 0;

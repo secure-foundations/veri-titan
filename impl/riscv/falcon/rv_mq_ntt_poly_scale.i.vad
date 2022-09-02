@@ -1,8 +1,10 @@
 include "mq_montymul.i.vad"
+include "mq_arith.i.vad"
 
 #verbatim
 
 include "mq_montymul.i.dfy"
+include "../../../../glue/riscv/falcon/bv32_falcon_lemmas.i.dfy"
 
 module rv_mq_ntt_poly_scale {
 
@@ -14,17 +16,13 @@ import opened mem
 import opened stack
 
 import opened bv32_op_s
-import opened bv32_falcon_lemmas
+import opened pow2_s
 
-import opened pows_of_2
 import opened ntt_index
-import opened mq_polys
-import opened poly_view
-import opened nth_root
-import opened ntt_512_params
-
 import opened mq_arith
 import opened mq_montymul
+
+import opened bv32_falcon_lemmas
 
 #endverbatim
 

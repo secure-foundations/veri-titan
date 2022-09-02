@@ -4,8 +4,7 @@ include "../../../spec/arch/riscv/decls.i.vad"
 #verbatim
 
 include "../../../spec/arch/riscv/decls.i.dfy"
-// include "../../../../lib/falcon/bv32_falcon_lemmas.i.dfy"
-// include "../../../../lib/falcon/normalization_lemmas.i.dfy"
+include "../../../../glue/riscv/falcon/normalization_lemmas.i.dfy"
 
 module rv_normlization {
 
@@ -19,10 +18,6 @@ import opened stack
 import opened bv32_op_s
 import opened bv32_falcon_lemmas
 import opened normalization_lemmas
-
-import opened ntt_index
-import opened nth_root
-import opened poly_view
 
 // import opened rv_reg_save
 
@@ -203,15 +198,14 @@ function l2norm_squared_bounded_peri_lemma(
         vv1: uint32, vv2: uint32,
         s1: seq(uint16), s2: seq(uint16), i: nat): void extern;
 function l2norm_squared_bounded_post_lemma(s1: seq(uint16), s2: seq(uint16), norm0: uint32, ng: uint32, norm1: uint32, result: uint32): void extern;
-
-function l2norm_squared_bounded(s1: seq(uint16), s2: seq(uint16)): bool extern;
+function l2norm_squared_result(s1: seq(uint16), s2: seq(uint16), result: uint32): bool extern;
 
 procedure is_short(
     ghost iter_a: b16_iter,
     ghost iter_b: b16_iter)
 
-    requires normalized_iter_inv(heap, iter_a, s4, 0);
-    requires normalized_iter_inv(heap, iter_b, s3, 0);
+    requires normalized_iter_inv(heap, iter_a, s3, 0);
+    requires normalized_iter_inv(heap, iter_b, s4, 0);
 
     reads
         mem; heap;
@@ -220,11 +214,11 @@ procedure is_short(
         a0; a1; a2; s1; s3; s4;
     
     ensures
-        (a0 == 1) <==> l2norm_squared_bounded(iter_a.buff, iter_b.buff);
+        l2norm_squared_result(iter_a.buff, iter_b.buff, a0);
 {
     li(a0, 0); // s
     li(a2, 0); // ng
-    addi(a1, s4, 1024);
+    addi(a1, s3, 1024);
     let buff_a := iter_a.buff;
     let buff_b := iter_b.buff;
 
@@ -234,19 +228,19 @@ procedure is_short(
 
     l2norm_squared_bounded_pre_lemma(buff_a, buff_b);
 
-    while (s4 < a1)
+    while (s3 < a1)
         invariant a1 == next_iter_a.base_ptr + 1024;
         invariant mem == old(mem);
         invariant heap == old(heap);
         invariant i <= seq_len(buff_a);
         invariant next_iter_a.base_ptr == iter_a.base_ptr;
-        invariant normalized_iter_inv(heap, next_iter_a, s4, i);
+        invariant normalized_iter_inv(heap, next_iter_a, s3, i);
         invariant next_iter_b.base_ptr == iter_b.base_ptr;
-        invariant normalized_iter_inv(heap, next_iter_b, s3, i);
+        invariant normalized_iter_inv(heap, next_iter_b, s4, i);
         invariant l2norm_squared_bounded_inv(a0, buff_a, buff_b, i, a2);
-        decreases a1 - s4;
+        decreases a1 - s3;
     {
-        next_iter_a := lh_next(s1, s4, 0, true, next_iter_a);
+        next_iter_a := lh_next(s1, s3, 0, true, next_iter_a);
         let norm0 := a0;
         let ng0 := a2;
         // assert s1 == buff_a[i];
@@ -258,7 +252,7 @@ procedure is_short(
         or(a2, a2, a0);
         let ng1 := a2;
 
-        next_iter_b := lh_next(s1, s3, 0, true, next_iter_b);
+        next_iter_b := lh_next(s1, s4, 0, true, next_iter_b);
         let v2 := s1;
         mul(s1, s1, s1);
         let vv2 := s1;

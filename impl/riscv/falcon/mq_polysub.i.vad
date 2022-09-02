@@ -2,6 +2,7 @@ include "mq_arith.i.vad"
 
 #verbatim
 include "mq_arith.i.dfy"
+include "../../../../glue/riscv/falcon/bv32_falcon_lemmas.i.dfy"
 
 module mq_polysub {
 
@@ -14,16 +15,17 @@ import opened mem
 import opened stack
 
 import opened bv32_op_s
-import opened bv32_falcon_lemmas
+import opened pow2_s
 
-import opened pows_of_2
-import opened ntt_index
-import opened mq_polys
-import opened poly_view
-import opened nth_root
-import opened ntt_512_params
+import opened MQP = falcon_512_i.CMQP
 
 import opened mq_arith
+import opened mq_arith_lemmas
+import opened bv32_falcon_lemmas
+
+const Q := falcon_512_i.Q;
+const N := falcon_512_i.N; 
+
 #endverbatim
 
 function fvar_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int): bool extern;
@@ -31,7 +33,6 @@ function fvar_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int): 
 function poly_sub_loop_inv(f_new: seq(uint16), f: seq(uint16), g: seq(uint16), i: nat): bool extern;
     
 function poly_sub_loop_correct(f_new: seq(uint16), f_old: seq(uint16), f_orig:seq(uint16), g: seq(uint16), i: nat) : void extern;
-
 
 procedure poly_sub_save_regs()
     requires
