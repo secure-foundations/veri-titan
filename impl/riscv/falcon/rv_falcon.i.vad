@@ -39,6 +39,10 @@ const N := falcon_512_i.N;
 
 function rv_falcon_512_lemma(tt0: seq(uint16), tt1: seq(uint16), tt2: seq(uint16), s1: seq(uint16), s2: seq(uint16), h: seq(uint16), c0: seq(uint16), a0: uint32): void extern;
 
+type nelem: Type(0) extern;
+function falcon_verify(c0: seq(uint16), s2: seq(nelem), h: seq(uint16)): bool extern;
+function uint16_buff_as_n_nelems(a: seq(uint16)): seq(nelem) extern;
+
 procedure rv_falcon(
     ghost iter_c0: b16_iter,
     ghost iter_s2: b16_iter,
@@ -111,8 +115,13 @@ returns (ghost next_iter_tt: b16_iter)
         iter_tt.base_ptr != iter_p1.base_ptr;
         iter_tt.base_ptr != iter_p2.base_ptr;
 
-    // ensures
-        // (a0 == 1) <==> falcon_verify(iter_c0.buff, uint16_buff_as_n_nelems(iter_s2.buff), iter_h.buff);
+    ensures
+        (a0 == 1)
+            <==>
+        falcon_verify(
+            buff_as_n_elems(iter_c0.buff), 
+            uint16_buff_as_n_nelems(iter_s2.buff),
+            buff_as_n_elems(iter_h.buff));
 {
     li(s1, 12289);
 

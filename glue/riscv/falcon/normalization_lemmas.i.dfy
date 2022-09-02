@@ -313,7 +313,8 @@ module normalization_lemmas {
         requires tt1 == poly_mod_product(tt0, h);
         requires poly_sub_loop_inv(tt2, tt1, c0, 512);
         requires normalization_inv(s1, tt2, 512);
-        ensures (result == 1) <==> falcon_verify(c0, uint16_buff_as_n_nelems(s2), h);
+        ensures (result == 1) <==> falcon_verify(
+            buff_as_n_elems(c0), uint16_buff_as_n_nelems(s2), buff_as_n_elems(h));
     {
         reveal denormalization_inv();
         assert tt0 == MQN.denormalize_n_elems(uint16_buff_as_n_nelems(s2));
