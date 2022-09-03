@@ -46,17 +46,17 @@ rule otbn-ld
 
 OTBN_ASM_PATH = "gen/otbn_modexp.s"
 RISCV_ASM_PATH = "gen/riscv_modexp.s"
-OTBN_TEST_ASM_PATH = "impl/otbn/run_modexp.s"
+OTBN_TEST_ASM_PATH = "ref/run_modexp.s"
 OUTPUT_ELF_PATH = "gen/run_modexp.elf"
 
 DLL_SOURCES = {
-     "arch/otbn/modexp_printer.s.dfy": OTBN_ASM_PATH,
-    "arch/otbn/simulator.i.dfy": "gen/arch/otbn/sim.out", 
-    "arch/riscv/printer.s.dfy": RISCV_ASM_PATH,
+    "spec/arch/otbn/modexp_printer.s.dfy": OTBN_ASM_PATH,
+    "spec/arch/otbn/simulator.i.dfy": "gen/arch/otbn/sim.out", 
+    "spec/arch/riscv/printer.s.dfy": RISCV_ASM_PATH,
 }
 
 NINJA_PATH = "build.ninja"
-CODE_DIRS = ["arch", "impl", "lib"]
+CODE_DIRS = ["spec", "impl", "glue", "misc"]
 GEN_DIR = "gen"
 
 NL_FILES = {"lib/sub_mod_nl_lemmas.i.dfy"}
@@ -418,6 +418,26 @@ def generate_dll(dfy_path, dll_path):
     # os.system(f"mv {dll_name} {dll_path}")
     # os.system(f"mv {json_name} {json_path}")
 
+def replace_string_file(file_path, src, dst):
+    # print(file_path)
+    with open(file_path) as f:
+        filedata = f.read()
+        # Replace the target string
+    filedata = filedata.replace(src, dst)
+    with open(file_path, 'w') as f:
+        f.write(filedata)
+  
+def replace_string(src, dst):
+    target_dirs = set(CODE_DIRS)
+
+    for root, _, files in os.walk("."):
+        tpl = "." if root == "." else root.split("/")[1]
+        if tpl not in target_dirs:
+            continue
+        for file in files:
+            file_path = os.path.relpath(os.path.join(root, file))
+            replace_string_file(file_path, src, dst)
+
 ## command line interface
 
 def main():
@@ -438,10 +458,12 @@ def main():
     elif option == "dll-gen":
         generate_dll(sys.argv[2], sys.argv[3])
     elif option == "clean":
-        os.system(f"rm -r gen/arch gen/impl gen/lib")
+        os.system(f"rm -r gen/spec gen/impl gen/glue gen/misc")
         os.system("rm " + NINJA_PATH)
     elif option == "setup":
         setup_tools()
+    elif option == "replace":
+        replace_string(sys.argv[2], sys.argv[3])
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,186 @@
+include "../../../spec/arch/msp430/decls.i.vad"
+
+#verbatim
+
+include "../../../spec/arch/msp430/decls.i.dfy"
+include "../../../../glue/msp430/rsa/bv16_mm_lemmas.i.dfy"
+
+module sub_mod {
+
+import opened msp_machine
+import opened msp_decls
+import opened msp_vale
+import opened mem
+import opened stack
+import opened bv16_mm_lemmas
+import opened integers
+
+import opened Power
+
+#endverbatim
+
+function mvar_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int, value: int): bool extern;
+
+function subb_inv(dst: seq(uint16),
+    carry: uint1,
+    src1: seq(uint16),
+    src2: seq(uint16),
+    index: int) : bool extern;
+
+ghost procedure subb_inv_pre_lemma(
+    ghost dst: seq(uint16),
+    ghost src1: seq(uint16),
+    ghost src2: seq(uint16)) extern;
+
+ghost procedure subb_inv_peri_lemma(
+    ghost dst: seq(uint16),
+    ghost new_carry: uint1,
+    ghost src1: seq(uint16),
+    ghost src2: seq(uint16),
+    ghost old_carry: uint1,
+    ghost index: int) extern;
+
+ghost procedure subb_inv_post_lemma(
+
+    ghost dst: seq(uint16),
+    ghost carry: uint1,
+    ghost src1: seq(uint16),
+    ghost src2: seq(uint16)) extern;
+
+procedure save_r7__r10()
+    requires
+        in_stack_addr_range(sp - 8);
+    
+    modifies
+        mem; flat; sp;
+    reads
+        frames; r10; r9; r8; r7;
+    ensures
+        mem == stack_push_batch(old(mem), old(flat),
+            seq(r7, r8, r9, r10));
+        mem == old(mem).(frames := frames);
+        sp == old(sp) - 8;
+        stack_depth(mem) == stack_depth(old(mem)) + 1;
+{
+    pushm_w(4, r10);
+    assert pushm_w_seq(old(this.ms), R(10), 4) == seq(r7, r8, r9, r10);
+}
+
+function Pow(b: int, e: nat): int extern;
+
+procedure sub_mod(
+    ghost iter_a: iter_t,
+    ghost iter_n: iter_t)
+    returns (ghost next_iter_a: iter_t,
+        ghost borrow: uint1)
+
+    {:noInline}
+
+    requires
+        in_stack_addr_range(sp - 8);
+
+        symbols?["n"];
+
+        iter_a.base_ptr != iter_n.base_ptr;
+        mvar_iter_inv(heap, iter_a, r12, 0, (-1));
+        mvar_iter_inv(heap, iter_n, load_symbol(mem, "n"), 0, (-1));
+
+    modifies
+        mem; flat; heap; regs; flags; frames;
+        sp; r7; r8; r9; r10; r11; r12; r13;
+    
+    ensures
+        sp == old(sp);
+        r7 == old(r7);
+        r8 == old(r8);
+        r9 == old(r9);
+        r10 == old(r10);
+
+        mem == old(mem).(heap := heap);
+        mem.heap == old(heap)[next_iter_a.base_ptr := B16(next_iter_a.buff)];
+
+        mvar_iter_inv(heap, next_iter_a, r12, (-1), (-1));
+        next_iter_a.base_ptr == iter_a.base_ptr;
+
+        to_nat(next_iter_a.buff) - Pow(BASE_16, NUM_WORDS) * borrow ==
+            to_nat(iter_a.buff) - to_nat(iter_n.buff);
+        to_nat(iter_a.buff) >= to_nat(iter_n.buff) ==> borrow == 0;
+{
+    save_r7__r10();
+
+    ghost var a_ptr := iter_a.base_ptr;
+    ghost var n_ptr := iter_n.base_ptr;
+
+    ghost var old_a := iter_a.buff;
+
+    next_iter_a := iter_a;
+    ghost var next_iter_n := iter_n;
+
+    mov_w(r12, r7);
+    add_w_imm(384, r7);
+
+    // clear flags
+    subc_w(r9, r9);
+    // assert flags.cf == 0;
+
+    lw_symbol("n", r13);
+
+    assert mvar_iter_inv(heap, iter_n, r13, 0, (-1));
+
+    subb_inv_pre_lemma(next_iter_a.buff, old_a, next_iter_n.buff);
+
+    let saved_frames := mem.frames;
+    let saved_mem := mem;
+
+    ghost var i: int := 0;
+
+    while (r12 < r7)
+        invariant
+            i * 2 == 384 + r12 - r7;
+            r7 == a_ptr + 384;
+            r12 == a_ptr + 2 * i;
+    
+            next_iter_a.base_ptr == a_ptr;
+            next_iter_n.base_ptr == n_ptr;
+            a_ptr != n_ptr;
+            next_iter_n.buff == iter_n.buff;
+
+            mvar_iter_inv(heap, next_iter_a, r12, i, (-1));
+            mvar_iter_inv(heap, next_iter_n, r13, i, (-1));
+            mem == saved_mem.(heap := heap);
+            heap == old(heap)[a_ptr := B16(next_iter_a.buff)];
+
+            subb_inv(next_iter_a.buff, flags.cf, old_a, next_iter_n.buff, i);
+
+            next_iter_a.buff[i..] == old_a[i..];
+        decreases
+            r7 - r12;
+    {
+        assert subb_inv(next_iter_a.buff, flags.cf, old_a, next_iter_n.buff, i);
+
+        next_iter_a := lw_iter(r12, false, r9, next_iter_a);
+        next_iter_n := lw_iter(r13, true, r10, next_iter_n);
+
+        // assert r10 == next_iter_n.buff[i];
+        // assert r9 == old_a[i];
+        borrow := flags.cf;
+        subc_w(r10, r9);
+
+        next_iter_a := sw_iter(r12, true, r9, next_iter_a);
+
+        subb_inv_peri_lemma(next_iter_a.buff, flags.cf,
+            old_a, next_iter_n.buff, borrow, i);
+
+        i := i + 1;
+    }
+
+    subb_inv_post_lemma(next_iter_a.buff, flags.cf, old_a, next_iter_n.buff);
+    borrow := flags.cf;
+
+    assert read_top_frame(mem) == seq(old(r7), old(r8), old(r9), old(r10));
+    popm_w(4, r10);
+}
+
+#verbatim
+}
+#endverbatim

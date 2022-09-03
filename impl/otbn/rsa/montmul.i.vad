@@ -1,0 +1,223 @@
+include "mont_loop.i.vad"
+
+ghost procedure montmul_inv_pre_lemma(
+       ghost a: seq(uint256),
+       ghost x: seq(uint256), 
+       ghost y: seq(uint256), 
+       ghost rsa: rsa_params) extern;
+
+#verbatim
+include "mont_loop.i.dfy"
+
+module montmul {
+
+import opened ot_machine
+import opened ot_abstraction
+import opened ot_decls
+import opened ot_vale
+
+import opened mont_loop
+
+import opened integers
+import opened bv256_mm_lemmas
+
+#endverbatim
+
+function SeqZero #[a: Type(0)](len: int): seq(a) extern;
+
+ghost procedure LemmaSeqZero #[a: Type(0)](ghost xs: seq(a)) extern;
+
+procedure montmul_0(ghost vars: mvars)
+    returns (ghost a_view: seq(uint256))
+
+    {:frame false}
+
+    requires
+        x9 == 3;
+        x10 == 4;
+        x11 == 2;
+    
+        w31 == 0;
+
+        mvars_inv(vars, heap, x20, x19, x16, x17, NA, NA);
+
+    ensures
+        x5 == old(x5);
+        x9 == old(x9);
+        x11 == 2;
+        x20 == old(x20);
+        x21 == old(x21);
+        x23 == old(x23);
+        x24 == old(x24);
+
+        w3 == vars.rsa.M0D;
+        w31 == 0;
+
+        heap == old(heap);
+        flat == old(flat);
+
+        valid_wdr_view(wdrs, a_view, 4, NUM_WORDS);
+        a_view == SeqZero(NUM_WORDS);
+        mvars_inv(vars, heap, x20, x19, x16, x17, NA, NA);
+{
+    comment("/* Load Montgomery constant: w3 <= m0' */");
+    let _ := bn_lid_safe(x9, false, 0, x17, false, vars.m0d_it);
+
+    comment("/* Initialize result buffer with zeroes. */");
+    bn_mov(w2, w31);
+
+    a_view := wdrs[4..4+NUM_WORDS];
+
+    while (LoopImm(12))
+        invariant
+            x5 == old(x5);
+            x9 == old(x9);
+            x10 + loop_ctr == 4 + NUM_WORDS;
+            x11 == 2;
+            x20 == old(x20);
+            x21 == old(x21);
+            x23 == old(x23);
+            x24 == old(x24);
+
+            w2 == 0;
+            w3 == vars.rsa.M0D;
+            w31 == 0;
+
+            mvars_inv(vars, heap, x20, x19, x16, x17, NA, NA);
+            valid_wdr_view(wdrs, a_view, 4, NUM_WORDS);
+            a_view[..x10 - 4] == SeqZero(x10 - 4);
+
+            heap == old(heap);
+            flat == old(flat);
+
+        decreases
+            loop_ctr;
+    {
+        let index := x10 - 4;
+        a_view := a_view[index := 0];
+        bn_movr(x10, true, x11, false);
+    }
+    assert a_view == SeqZero(NUM_WORDS);
+}
+
+procedure montmul(ghost vars: mvars)
+    returns (ghost a_view: seq(uint256))
+
+    {:noInline}
+    {:frame false}
+
+    requires
+        x9 == 3;
+        x10 == 4;
+        x11 == 2;
+
+        mvars_inv(vars, heap, x20, x19, x16, x17, NA, NA);
+
+        w31 == 0;
+    
+    ensures
+        x5 == old(x5);
+        x8 == 4;
+        x9 == old(x9);
+        x10 == 4;
+        x11 == 2;
+
+        x21 == old(x21);
+        x23 == old(x23);
+        x24 == old(x24);
+
+        w31 == 0;
+
+        heap == old(heap);
+        flat == old(flat);
+
+        valid_wdr_view(wdrs, a_view, 4, NUM_WORDS);
+        mvars_inv(vars, heap, NA, x19, x16, x17, NA, NA);
+        montmul_inv(a_view, vars.x_it.buff, NUM_WORDS, vars.y_it.buff, vars.rsa);
+{
+    /* TODO: Can this header comment appear above the procedure? Better yet, can
+       we print the requires/ensures clause in a comment automatically? */
+    comment("/**");
+    comment(" * Variable-time 3072-bit Montgomery Modular Multiplication");
+    comment(" *");
+    comment(" * Returns: C = montmul(A,B) = A*B*R^(-1) mod M");
+    comment(" *");
+    comment(" * This implements the limb-by-limb interleadved Montgomory Modular");
+    comment(" * Multiplication Algorithm. This is only a wrapper around the main loop body.");
+    comment(" * For algorithmic implementation details see the mont_loop subroutine.");
+    comment(" *");
+    comment(" * Flags: Flags have no meaning beyond the scope of this subroutine.");
+    comment(" *");
+    comment(" * @param[in]  x16: dptr_M, dmem pointer to first limb of modulus M");
+    comment(" * @param[in]  x17: dptr_m0d, dmem pointer to Montgomery Constant m0'");
+    comment(" * @param[in]  x19: dptr_a, dmem pointer to first limb of operand A");
+    comment(" * @param[in]  x20: dptr_b, dmem pointer to first limb of operand B");
+    comment(" * @param[in]  w31: all-zero");
+    comment(" * @param[in]  x9: pointer to temp reg, must be set to 3");
+    comment(" * @param[in]  x10: pointer to temp reg, must be set to 4");
+    comment(" * @param[in]  x11: pointer to temp reg, must be set to 2");
+    comment(" * @param[out] [w15:w4]: result C");
+    comment(" */");
+
+    a_view := montmul_0(vars);
+
+    ghost var x_it := vars.x_it;
+
+    assert montmul_inv(a_view, x_it.buff, x_it.index, vars.y_it.buff, vars.rsa) by {
+        montmul_inv_pre_lemma(a_view, x_it.buff, vars.y_it.buff, vars.rsa);
+    }
+
+    comment("/* Iterate over limbs of input operand. */");
+
+    while (LoopImm(12))
+        invariant
+            x5 == old(x5);
+            x9 == old(x9);
+            x11 == 2;
+            x21 == old(x21);
+            x23 == old(x23);
+            x24 == old(x24);
+
+            iter_inv(x_it, heap, x20);
+            x_it.index + loop_ctr == NUM_WORDS;
+            x_it.base_ptr == vars.x_it.base_ptr;
+            x_it.buff == vars.x_it.buff;
+
+            w3 == vars.rsa.M0D;
+            w31 == 0;
+    
+            mvars_inv(vars, heap, NA, x19, x16, x17, NA, NA);
+
+            montmul_inv(a_view, x_it.buff, x_it.index, vars.y_it.buff, vars.rsa);
+
+            valid_wdr_view(wdrs, a_view, 4, NUM_WORDS);
+
+            heap == old(heap);
+            flat == old(flat);
+
+        decreases loop_ctr;
+    {
+        comment("/* Load limb of operand. */");
+        x_it := bn_lid_safe(x11, false, 0, x20, true, x_it);
+
+        comment("/* Save some register values. */");
+        addi(x6, x16, 0);
+        addi(x7, x19, 0);
+
+        comment("/* Main loop body of Montgomery multiplication algorithm. */");
+        a_view := mont_loop(x_it, w2, vars, a_view);
+
+        comment("/* Restore registers. */");
+        addi(x16, x6, 0);
+        addi(x19, x7, 0);
+    }
+
+    comment("/* Restore pointers. */");
+    li(x8, 4);
+    li(x10, 4);
+}
+
+
+#verbatim
+}
+#endverbatim

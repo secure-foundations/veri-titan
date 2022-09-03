@@ -1,0 +1,206 @@
+include "../../../spec/arch/riscv/decls.i.vad"
+
+#verbatim
+
+include "../../../spec/arch/riscv/decls.i.dfy"
+include "../../../../glue/riscv/rsa/bv32_mm_lemmas.i.dfy"
+
+module sub_mod {
+
+import opened integers
+import opened rv_machine
+import opened rv_decls
+import opened rv_vale
+import opened mem
+
+import opened bv32_mm_lemmas
+
+import opened bv32_op_s
+
+import opened Power
+
+#endverbatim
+
+// ghost procedure A_zero() returns (ghost ref: int64_view_t) extern;
+
+function Pow(b: int, e: nat): int extern;
+
+ghost procedure sub_mod_correct_lemma(
+    ghost a: uint32,
+    ghost b: uint32,
+    ghost c: uint32,
+    ghost a0: uint32,
+    ghost a1: uint32,
+    ghost a5: uint32
+) extern;
+
+function sub_mod_loop_inv(
+    old_a: seq(uint32),
+    n: seq(uint32),
+    a: seq(uint32),
+    i: nat,
+    lh: uint32, uh: uint32) : bool extern;
+
+function seq_subb(xs: seq(uint32), ys: seq(uint32)) : tuple(seq(uint32), uint1) extern;
+
+function lemma_sub_mod_correct(
+    old_a: seq(uint32),
+    n: seq(uint32),
+    a: seq(uint32),
+    v0: uint32, v1: uint32,
+    lh: uint32, uh: uint32,
+    lh': uint32, uh': uint32,
+    carry_add: int, carry_sub: int,
+    a3: uint32,
+    i: nat): void extern;
+
+function sub_mod_post_lemma(
+    iter_a: seq(uint32),
+    iter_n: seq(uint32),
+    iter_a': seq(uint32),
+    lh: uint32, uh: uint32): void extern;
+
+function subb_inv_pre_lemma(
+    dst: seq(uint32),
+    src1: seq(uint32),
+    src2: seq(uint32)): void extern;
+
+function A_as_carry(lh: uint32, uh: uint32): uint1 extern;
+
+procedure sub_mod(
+    ghost iter_n: iter_t,
+    ghost iter_a: iter_t)
+
+    returns (
+        ghost iter_a': iter_t,
+        ghost borrow: uint1)
+
+    {:noInline}
+
+    requires
+        iter_safe(iter_n, heap, a1);
+        seq_len(iter_n.buff) == 96;
+        iter_n.index == 0; 
+
+        iter_safe(iter_a, heap, a0);
+        seq_len(iter_a.buff) == 96;
+        iter_a.index == 0;
+
+        iter_n.base_ptr != iter_a.base_ptr;
+
+    modifies
+        a0; a1; a2; a3; a4; a5; a6; heap;
+
+    ensures
+        seq_len(iter_a'.buff) == 96;
+        iter_a'.base_ptr == iter_a.base_ptr;
+        iter_a'.index == 0;
+        heap == old(heap)[iter_a.base_ptr := B32(iter_a'.buff)];
+
+        to_nat(iter_a'.buff) ==
+            to_nat(iter_a.buff) - to_nat(iter_n.buff) + borrow * Pow(BASE_32, 96);
+        to_nat(iter_a.buff) >= to_nat(iter_n.buff) ==> borrow == 0;
+{
+    addi(a2, a1, 0);
+    addi(a6 ,a2, 384);
+
+    // set A to 0
+    li(a5, 0); // 0 in a5 -- lower half of A
+    li(a1, 0); // 0 in a1 -- upper half of A
+
+    ghost var i: nat := 0;
+    iter_a' := iter_a;
+    ghost var old_a := iter_a.buff;
+    ghost var iter_n := iter_n;
+    
+    assert sub_mod_loop_inv(old_a, iter_n.buff, iter_a'.buff, i, 0, 0) by {
+        subb_inv_pre_lemma(iter_a'.buff, old_a, iter_n.buff);
+    }
+
+    ghost var n_ptr := iter_n.base_ptr;
+    ghost var a_ptr := iter_a.base_ptr;
+
+    while (a2 != a6)
+        invariant a2 <= a6;
+        // invariant a2 == old(a1) + 4 * i;
+        invariant a6 == n_ptr + 384;
+        invariant 0 <= i <= 96;
+
+        invariant iter_inv(iter_n, heap, a2);
+        invariant iter_n.base_ptr == n_ptr;
+        invariant iter_n.index == i;
+
+        invariant heap == old(heap)[a_ptr := B32(iter_a'.buff)];
+        invariant iter_inv(iter_a', heap, a0);
+        invariant seq_len(iter_a'.buff) == 96;
+        invariant iter_a'.base_ptr == a_ptr;
+        invariant iter_a'.index == i;
+
+        invariant a_ptr != n_ptr;
+
+        invariant sub_mod_loop_inv(old_a, iter_n.buff, iter_a'.buff, i, a5, a1);
+
+        decreases loop_ctr;
+    {
+        let lh := a5;
+        let uh := a1;
+    
+        lw(a4, a0, 0, iter_a');
+
+        let iter_a_next := b32_iter_load_next(iter_a, true);
+        // load heap from a0 to a4 (a4 == a[i])
+
+        let iter_n_next := lw_next(a3, a2, 0, iter_n); 
+        // load heap from a2 into a3 (a3 == n[i])
+        addi(a2, a2, 4); // increment n pointer
+
+        ghost var a_i := iter_a.buff[i];
+        ghost var n_i := iter_n.buff[i];
+
+        add(a5, a5, a4); // lower half of A += a[i]
+        // assert a5 == uint32_add(A.lh, a_i);
+        ghost var v0 := uint32_add(lh, a_i);
+
+        sub(a3, a5, a3); // lower half of A -= n[i]
+        // assert a3 == uint32_sub(uint32_add(A.lh, a_i), n_i);
+
+        sltu(a4, a5, a4); // overflow check from add
+        let carry_add := a4;
+        // assert carry_add == uint32_lt(uint32_add(A.lh, a_i), a_i);
+
+        add(a4, a4, a1); // add carry bit to upper half of A
+
+        ghost var v1 := a4;
+        // assert v1 == uint32_add(A.uh, carry_add);
+
+        sltu(a5, a5, a3); // underflow check from sub
+        
+        let carry_sub := a5;
+
+        let iter_a'_next := sw_next(a3, a0, 0, true, iter_a');
+
+        addi(a0, a0, 4); // increment a pointer
+        sub(a5, a4, a5); // subtract underflow carry from upper half of A
+        srai(a1, a5, 0x1f); 
+
+        lemma_sub_mod_correct(old_a, iter_n.buff, iter_a'.buff,
+            v0, v1, lh, uh, a5, a1, carry_add, carry_sub, a3, i);
+
+        iter_n := iter_n_next;
+        iter_a' := iter_a'_next;
+        i := i + 1;
+    }
+
+    iter_a' := iter_a'.(index := 0);
+
+    sub_mod_post_lemma(old_a, iter_n.buff, iter_a'.buff, a5, a1);
+
+    borrow := A_as_carry(a5, a1);
+
+    assert to_nat(iter_a'.buff) ==
+            to_nat(old_a) - to_nat(iter_n.buff) + borrow * Pow(BASE_32, 96);
+}
+
+#verbatim
+}
+#endverbatim

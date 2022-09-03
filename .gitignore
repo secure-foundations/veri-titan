@@ -2,9 +2,10 @@ dfy_model/.depend
 .vscode
 otbn_impl/cg.dot
 otbn_impl/cg.png
-gen/arch
+gen/glue/
+gen/misc/
+gen/spec/
 gen/impl
-gen/lib
 gen/*.o
 gen/*.elf
 docs/*.pdf

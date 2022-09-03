@@ -1,8 +1,8 @@
-include "../../arch/msp430/decls.i.vad"
+include "../../spec/arch/msp430/decls.i.vad"
 
 #verbatim
 
-include "../../arch/msp430/decls.i.dfy"
+include "../../spec/arch/msp430/decls.i.dfy"
 
 module examples {
 

@@ -1,8 +1,8 @@
-include "../../arch/otbn/decls.i.vad"
+include "../../spec/arch/otbn/decls.i.vad"
 
 #verbatim
 
-include "../../arch/otbn/decls.i.dfy"
+include "../../spec/arch/otbn/decls.i.dfy"
 
 module examples {
 

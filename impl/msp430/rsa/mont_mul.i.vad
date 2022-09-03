@@ -1,0 +1,235 @@
+include "mont_mul_add.i.vad"
+
+#verbatim
+
+include "mont_mul_add.i.dfy"
+
+module mont_mul {
+
+import opened msp_machine
+import opened msp_decls
+import opened msp_vale
+import opened mem
+import opened stack
+import opened bv16_mm_lemmas
+import opened integers
+
+import opened mul
+import opened sub_mod
+import opened mont_mul_add
+
+#endverbatim
+
+function seq_zero(i: nat): seq(uint16) extern;
+
+function montmul_inv_pre_lemma(
+    c: seq(uint16),
+    a: seq(uint16), 
+    b: seq(uint16), 
+    rsa: rsa_params): void extern;
+
+ function montmul_inv_post_lemma(
+    c: seq(uint16),
+    a: seq(uint16),
+    b: seq(uint16),
+    rsa: rsa_params): void extern;
+
+function IsModEquivalent(
+    a: nat,
+    b: nat,
+    n: nat): bool extern;
+
+procedure memset_clear(ghost iter_c: iter_t)
+    returns (ghost next_iter_c: iter_t)
+
+    requires
+        mvar_iter_inv(heap, iter_c, r12, 0, (-1));
+
+    modifies
+        mem; heap; r8; r9; r12; flags;
+
+    ensures
+        r8 == iter_c.base_ptr + 384;
+        r12 == iter_c.base_ptr + 384;
+        mem == old(mem).(heap := heap);
+        heap == old(heap)[next_iter_c.base_ptr := B16(next_iter_c.buff)];
+        next_iter_c.buff == seq_zero(NUM_WORDS);
+        mvar_iter_inv(heap, next_iter_c, old(r12), 0, (-1));
+{
+    mov_w(r12, r8);
+    add_w_imm(384, r8);
+    mov_w_imm(0, r9);
+    next_iter_c := iter_c;
+    ghost var i: nat := 0;
+    let clear := seq_zero(NUM_WORDS);
+    assert iter_c.buff[..0] == clear[..0];
+
+    while (r12 < r8)
+        invariant
+            r8 == iter_c.base_ptr + 384;
+            r9 == 0;
+            next_iter_c.base_ptr == iter_c.base_ptr;
+            mem == old(mem).(heap := heap);
+            heap == old(heap)[iter_c.base_ptr := B16(next_iter_c.buff)];
+            mvar_iter_inv(heap, next_iter_c, r12, i, (-1));
+
+            next_iter_c.buff[..i] == clear[..i];
+        decreases
+            r8 - r12;
+    {
+        next_iter_c := sw_iter(r12, true, r9, next_iter_c);
+        i := i + 1;
+    }
+    next_iter_c := next_iter_c.(index := 0);
+}
+
+procedure mm_pre(
+    ghost iter_c: iter_t,
+    ghost iter_a: iter_t,
+    ghost iter_b: iter_t,
+    ghost iter_n: iter_t,
+    ghost rsa: rsa_params)
+returns (ghost next_iter_c: iter_t)
+    {:frame false}
+
+    requires
+        iter_c.base_ptr != iter_b.base_ptr;
+        iter_c.base_ptr != iter_a.base_ptr;
+    
+        mvar_iter_inv(heap, iter_c, r12, 0, (-1));
+        mvar_iter_inv(heap, iter_a, r13, 0, (-1));
+        mvar_iter_inv(heap, iter_b, r14, 0, (-1));
+
+        rsa_params_inv(rsa);
+
+    ensures
+        sp == old(sp);
+        r4 == old(r4);
+        r5 == old(r5);
+        r6 == old(r6);
+        r7 == iter_a.base_ptr + 384;
+        mvar_iter_inv(heap, next_iter_c, r8, 0, (-1));
+        mvar_iter_inv(heap, iter_a, r9, 0, (-1));
+        mvar_iter_inv(heap, iter_b, r10, 0, (-1));
+        next_iter_c.base_ptr == iter_c.base_ptr;
+
+        mem == old(mem).(heap := heap);
+        heap == old(heap)[next_iter_c.base_ptr := B16(next_iter_c.buff)];
+
+        montmul_inv(next_iter_c.buff,
+            iter_a.buff, 0, iter_b.buff, rsa);
+{
+    next_iter_c := memset_clear(iter_c);
+
+    add_w_imm((-384), r8);
+    mov_w(r13, r9);
+    mov_w(r14, r10);
+    mov_w(r9, r7);
+    add_w_imm(384, r7);
+
+    montmul_inv_pre_lemma(next_iter_c.buff, iter_a.buff, iter_b.buff, rsa);
+}
+
+procedure mont_mul(
+    ghost iter_c: iter_t,
+    ghost iter_a: iter_t,
+    ghost iter_b: iter_t,
+    ghost iter_n: iter_t,
+    ghost rsa: rsa_params)
+returns (ghost next_iter_c: iter_t)
+
+    {:frame false}
+    {:noInline}
+
+    requires
+        in_stack_addr_range(sp);
+        in_stack_addr_range(sp - 32);
+
+        symbols?["d0inv"];
+        load_symbol(mem, "d0inv") == rsa.M0D;
+
+        iter_c.base_ptr != iter_n.base_ptr;
+        iter_c.base_ptr != iter_b.base_ptr;
+        iter_c.base_ptr != iter_a.base_ptr;
+    
+        mvar_iter_inv(heap, iter_c, r12, 0, (-1));
+        mvar_iter_inv(heap, iter_a, r13, 0, (-1));
+        mvar_iter_inv(heap, iter_b, r14, 0, (-1));
+
+        symbols?["n"];
+        mvar_iter_inv(heap, iter_n, load_symbol(mem, "n"), 0, rsa.M);
+    
+        rsa_params_inv(rsa);
+
+    ensures
+        sp == old(sp);
+        r4 == old(r4);
+        r5 == old(r5);
+        r6 == old(r6);
+        r7 == old(r7);
+        r8 == old(r8);
+        r9 == old(r9);
+        r10 == old(r10);
+
+        mem == old(mem).(heap := heap);
+        heap == old(heap)[next_iter_c.base_ptr := B16(next_iter_c.buff)];
+        next_iter_c.base_ptr == iter_c.base_ptr;
+        mvar_iter_inv(heap, next_iter_c, (-1), (-1), (-1));
+        montmul_inv(next_iter_c.buff, iter_a.buff, NUM_WORDS, iter_b.buff, rsa);
+{
+    save_r7__r10();
+    ghost var next_iter_a := iter_a;
+    next_iter_c := mm_pre(iter_c, iter_a, iter_b, iter_n, rsa);
+    ghost var i: nat := 0;
+
+    let loop_mem := mem;
+
+    while (r9 < r7)
+        invariant
+            in_stack_addr_range(sp - 24);
+    
+            r4 == old(r4);
+            r5 == old(r5);
+            r6 == old(r6);
+
+            symbols?["n"];
+            symbols?["d0inv"];
+            load_symbol(mem, "d0inv") == rsa.M0D;
+
+            r7 == iter_a.base_ptr + 384;
+            mvar_iter_inv(heap, next_iter_c, r8, 0, (-1));
+            next_iter_c.base_ptr == iter_c.base_ptr;
+            mvar_iter_inv(heap, next_iter_a, r9, i, (-1));
+            next_iter_a.base_ptr == iter_a.base_ptr;
+            mvar_iter_inv(heap, iter_b, r10, 0, (-1));
+            mvar_iter_inv(heap, iter_n, load_symbol(mem, "n"), 0, rsa.M);
+
+            iter_c.base_ptr != iter_n.base_ptr;
+            iter_c.base_ptr != iter_b.base_ptr;
+            iter_c.base_ptr != iter_a.base_ptr;
+
+            mem == loop_mem.(heap := heap);
+            heap == loop_mem.heap[next_iter_c.base_ptr := B16(next_iter_c.buff)];
+
+            montmul_inv(next_iter_c.buff, next_iter_a.buff, i, iter_b.buff, rsa);
+        decreases
+            r7 - r9;
+    {
+        mov_w(r8, r12);
+        next_iter_a := lw_iter(r9, true, r13, next_iter_a);
+        mov_w(r10, r14);
+        next_iter_c := mont_mul_add(
+            next_iter_c, r13, iter_b, iter_n, next_iter_a, rsa, i);
+        next_iter_c := next_iter_c.(index := 0);
+        i := i + 1;
+    }
+
+    montmul_inv_post_lemma(next_iter_c.buff, iter_a.buff, iter_b.buff, rsa);
+    assert mem.frames == loop_mem.frames;
+    assert read_top_frame(mem) == seq(old(r7), old(r8), old(r9), old(r10));
+    popm_w(4, r10);
+}
+
+#verbatim
+}
+#endverbatim
