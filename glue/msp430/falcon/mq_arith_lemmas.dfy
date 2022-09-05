@@ -25,6 +25,18 @@ module mq_arith_lemmas {
 
     type uint32_view_t = dw_view_t
 
+    type elem = MQ.elem
+
+    function mqadd(x: elem, y: elem): elem
+    {
+        MQP.mqadd(x, y)
+    }
+
+    function mqsub(x: elem, y: elem): elem
+    {
+        MQP.mqsub(x, y)
+    }
+
     lemma lemma_mq_add_correct(sum: uint16, mask: uint16, r: uint16, x: uint16, y: uint16)
         requires 0 <= x < 12289;
         requires 0 <= y < 12289;
