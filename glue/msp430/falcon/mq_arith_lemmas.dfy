@@ -16,8 +16,6 @@ module mq_arith_lemmas {
     import opened bv16_seq
     import opened msp_machine
     import opened msp_vale
-    // import opened mq_polys
-    // import opened ntt_512_params
     import opened mem
     import flat
 

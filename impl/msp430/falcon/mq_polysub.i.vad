@@ -1,5 +1,4 @@
- "../../../arch/msp430/decls.i.vad"
- "mq_arith.i.vad"
+include "mq_arith.i.vad"
 
 #verbatim
 include "mq_arith.i.dfy"
@@ -17,12 +16,8 @@ import opened stack
 import opened bv16_op_s
 import opened mq_arith_lemmas
 
-import opened pows_of_2
-import opened ntt_index
-import opened mq_polys
-//import opened poly_view
-//import opened nth_root
-import opened ntt_512_params
+import opened pow2_s
+import opened falcon_512_i
 
 import opened mq_arith_impl
 #endverbatim
