@@ -12,11 +12,6 @@ abstract module generic_mm_lemmas {
 
     const NUM_WORDS: nat
 
-    function to_nat(xs: seq<uint>): nat
-    {
-        GBV.BVSEQ.ToNatRight(xs)
-    }
-
     function BASE(): nat
     {
         GBV.BVSEQ.BASE()
@@ -62,30 +57,6 @@ abstract module generic_mm_lemmas {
 /* end section on RSA invariant */
 
 /* begin section on double word addtion */
-
-    datatype dw_view_raw = dw_view_cons(
-        lh: uint, uh: uint, full: nat)
-
-    type dw_view_t = num: dw_view_raw |
-        && num.full < DW_BASE()
-        && num.lh == dw_lh(num.full)
-        && num.uh == dw_uh(num.full)
-        witness *
-
-    lemma dw_view_lemma(num: dw_view_t)
-        ensures num.full
-        == to_nat([num.lh, num.uh])
-        == num.lh + num.uh * BASE();
-        ensures IsModEquivalent(num.full, num.lh, BASE());
-    {
-        reveal dw_lh();
-        reveal dw_uh();
-        LemmaFundamentalDivMod(num.full, BASE());
-        GBV.BVSEQ.LemmaSeqLen2([num.lh, num.uh]);
-        assert num.full - num.lh == num.uh * BASE();
-        DivMod.LemmaModMultiplesBasicAuto();
-        assert (num.uh * BASE()) % BASE() == 0;
-    }
 
     predicate dw_add_is_safe(
         x_lh: uint, x_uh: uint,

@@ -18,37 +18,6 @@ import opened integers
 
 #endverbatim
 
-procedure builtin__mspabi_mpyl()
-    {:noInline}
-
-    requires
-        r15 == 0;
-        r13 == 0;
-    reads
-        r14;
-    modifies
-        r12; r13;
-    ensures
-        to_nat(seq(r12, r13)) == old(r12) * old(r14);
-        to_nat(seq(r12, r13)) == old(r14) * old(r12);
-{
-    assume false;
-}
-
-function mul(a: uint16, b: uint16): uint16 extern;
-
-procedure builtin__mspabi_mpyi()
-    {:noInline}
-    reads
-        r13;
-    modifies
-        r12; 
-    ensures
-        r12 == mul(old(r12), r13);
-{
-    assume false;
-}
-
 function valid_uint32_view(num: uint32_view_t, lh: uint16, uh: uint16): bool extern;
 
 function dw_view_lemma(num: uint32_view_t): void extern;

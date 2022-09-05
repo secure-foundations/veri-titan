@@ -1,11 +1,9 @@
-include "../../../arch/msp430/machine.s.dfy"
-include "../../../arch/msp430/vale.i.dfy"
-include "../../bv16_op_s.dfy"
-include "../../bv16_mm_lemmas.i.dfy"
-include "../mq_polys.dfy"
+include "../../../spec/arch/msp430/machine.s.dfy"
+include "../../../spec/bvop/bv16_op.s.dfy"
+include "../../../spec/arch/msp430/vale.i.dfy"
+include "../../../spec/crypto/falcon512.i.dfy"
 
 //include "../DivModNeg.dfy"
-include "../ntt_params.dfy"
 
 module mq_arith_lemmas {
     import opened Seq
@@ -18,11 +16,14 @@ module mq_arith_lemmas {
     import opened bv16_seq
     import opened msp_machine
     import opened msp_vale
-    import opened mq_polys
-    import opened ntt_512_params
-    import opened bv16_mm_lemmas
+    // import opened mq_polys
+    // import opened ntt_512_params
     import opened mem
     import flat
+
+    import opened falcon_512_i
+
+    type uint32_view_t = dw_view_t
 
     lemma lemma_mq_add_correct(sum: uint16, mask: uint16, r: uint16, x: uint16, y: uint16)
         requires 0 <= x < 12289;
@@ -30,7 +31,7 @@ module mq_arith_lemmas {
         requires sum == msp_add(x, msp_add(y, 0xcfff).0).0;
         requires mask == msp_sub(0, if sum >= 0x8000 then 1 else 0).0;
         requires r == msp_add(sum, uint16_and(12289, mask)).0;
-        ensures r == mqadd(x, y);
+        ensures r == MQP.mqadd(x, y);
     {
         assert Q == 12289;
 
@@ -61,7 +62,7 @@ module mq_arith_lemmas {
         requires var (s, _) := msp_subc(0, 0xFFFF, flags);
                  mask == s;
         requires r == msp_add(diff, uint16_and(12289, mask)).0;
-        ensures r == mqsub(x, y);
+        ensures r == MQP.mqsub(x, y);
     {
         var Q : int := 12289;
         
@@ -100,7 +101,8 @@ module mq_arith_lemmas {
         requires y < Q;
         requires to_nat([xy_lh, xy_uh]) == x * y;
         requires Q0Ixy == mul(xy_lh, 12287);
-        requires valid_uint32_view(sum, partial_lh, partial_uh);
+        requires sum.lh == partial_lh;
+        requires sum.uh == partial_uh;
         requires sum.full == Q * Q0Ixy + xy_lh;
         requires partial_uh_xy_uh == msp_add(partial_uh, xy_uh).0;
         requires m == msp_sub(partial_uh_xy_uh, Q).0;
@@ -232,17 +234,19 @@ module mq_arith_lemmas {
         && buff_is_n_elems(g)
         && 0 <= i <= N.full
         && f_new[i..] == f[i..]
-        && (forall j :: 0 <= j < i ==> f_new[j] == mqsub(f[j], g[j]))
+        && (forall j :: 0 <= j < i ==> f_new[j] == MQP.mqsub(f[j], g[j]))
     }
     
     lemma poly_sub_loop_correct(f_new: seq<uint16>, f_old: seq<uint16>, f_orig:seq<uint16>, g: seq<uint16>, i: nat)
       requires i < N.full;
       requires poly_sub_loop_inv(f_old, f_orig, g, i)
-      requires f_new == f_old[i := mqsub(f_orig[i], g[i])];
+      requires f_new == f_old[i := MQP.mqsub(f_orig[i], g[i])];
       ensures poly_sub_loop_inv(f_new, f_orig, g, i+1);
     {
-      assert |f_new| == |f_old|;
-      assert (forall j | 0 <= j < |f_new| :: j != i
-        ==> f_new[j] == f_old[j] && j == i ==> f_new[j] == mqsub(f_orig[j], g[j]));
+        assert |f_new| == |f_old|;
+        forall j | 0 <= j < |f_new|
+            ensures j != i ==> f_new[j] == f_old[j]
+            ensures j == i ==> f_new[j] == MQP.mqsub(f_orig[j], g[j])
+        {}
     }
 }

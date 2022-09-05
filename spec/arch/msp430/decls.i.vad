@@ -475,6 +475,36 @@ procedure rla_w(inout rd: reg)
     assume false;
 }
 
+procedure builtin__mspabi_mpyl()
+    {:noInline}
+
+    requires
+        r15 == 0;
+        r13 == 0;
+    reads
+        r14;
+    modifies
+        r12; r13;
+    ensures
+        to_nat(seq(r12, r13)) == old(r12) * old(r14);
+        to_nat(seq(r12, r13)) == old(r14) * old(r12);
+{
+    assume false;
+}
+
+function mul(a: uint16, b: uint16): uint16 extern;
+
+procedure builtin__mspabi_mpyi()
+    {:noInline}
+    reads
+        r13;
+    modifies
+        r12; 
+    ensures
+        r12 == mul(old(r12), r13);
+{
+    assume false;
+}
 
 #verbatim
 } // end module bignum_decls

@@ -264,6 +264,35 @@ abstract module bv_op_s
         reveal dw_uh();
     }
 
+    function to_nat(xs: seq<uint>): nat
+    {
+        BVSEQ.ToNatRight(xs)
+    }
+
+    datatype dw_view_raw = dw_view_cons(
+        lh: uint, uh: uint, full: nat)
+
+    type dw_view_t = num: dw_view_raw |
+        && num.full < DW_BASE()
+        && num.lh == dw_lh(num.full)
+        && num.uh == dw_uh(num.full)
+        witness *
+
+    lemma dw_view_lemma(num: dw_view_t)
+        ensures num.full
+        == to_nat([num.lh, num.uh])
+        == num.lh + num.uh * BASE();
+        ensures DivMod.IsModEquivalent(num.full, num.lh, BASE());
+    {
+        reveal dw_lh();
+        reveal dw_uh();
+        DivMod.LemmaFundamentalDivMod(num.full, BASE());
+        BVSEQ.LemmaSeqLen2([num.lh, num.uh]);
+        dw_split_lemma(num.full);
+        DivMod.LemmaModMultiplesBasicAuto();
+        assert (num.uh * BASE()) % BASE() == 0;
+    }
+
 /* mul_add bounds */
 
     lemma full_mul_bound_lemma(a: uint, b: uint)
