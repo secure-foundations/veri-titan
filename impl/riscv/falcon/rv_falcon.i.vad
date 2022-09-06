@@ -25,15 +25,9 @@ import opened ntt_index
 
 import opened rv_normlization
 import opened rv_poly_mul
-
-import opened normalization_lemmas
-import opened falcon_512_i
-
 import opened mq_polysub
-// import opened rv_reg_save
 
-const Q := falcon_512_i.Q;
-const N := falcon_512_i.N; 
+import opened falcon_512_i
 
 #endverbatim
 

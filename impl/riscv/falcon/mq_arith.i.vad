@@ -3,6 +3,7 @@ include "../../../spec/arch/riscv/decls.i.vad"
 #verbatim
 include "../../../spec/arch/riscv/decls.i.dfy"
 include "../../../../glue/riscv/falcon/mq_arith_lemmas.dfy"
+include "../../../../glue/riscv/falcon/bv32_falcon_lemmas.i.dfy"
 
 module mq_arith {
 
@@ -14,8 +15,7 @@ import opened rv_vale
 import opened bv32_op_s
 import opened pow2_s
 import opened mq_arith_lemmas
-
-import opened MQP = falcon_512_i.CMQP
+import opened bv32_falcon_lemmas
 
 #endverbatim
 

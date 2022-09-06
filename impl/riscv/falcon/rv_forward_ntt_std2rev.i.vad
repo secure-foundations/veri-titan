@@ -26,6 +26,7 @@ import opened rv_reg_save
 import opened mq_arith
 import opened mq_montymul
 
+import opened falcon_512_i
 import opened bv32_falcon_lemmas
 
 #endverbatim

@@ -15,7 +15,8 @@ import opened rv_vale
 import opened bv32_op_s
 import opened pow2_s
 
-import opened MQP = falcon_512_i.CMQP
+import opened falcon_512_i
+import opened bv32_falcon_lemmas
 
 import opened mq_arith
 import opened mq_arith_lemmas

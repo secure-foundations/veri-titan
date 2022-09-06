@@ -19,11 +19,10 @@ import opened stack
 import opened bv32_op_s
 import opened pow2_s
 
-// import opened MQP = falcon_512_i.CMQP
 import opened ntt_index
 
+import opened falcon_512_i
 import opened bv32_falcon_lemmas
-
 // import opened rv_reg_save
 
 #endverbatim

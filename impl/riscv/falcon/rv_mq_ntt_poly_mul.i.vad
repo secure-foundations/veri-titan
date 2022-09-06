@@ -21,6 +21,7 @@ import opened ntt_index
 import opened mq_arith
 import opened mq_montymul
 
+import opened falcon_512_i
 import opened bv32_falcon_lemmas
 
 #endverbatim
@@ -28,8 +29,8 @@ import opened bv32_falcon_lemmas
 function fvar_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int): bool extern;
 function pow2_t_cons(n: nat, exp: nat): pow2_t extern;
 
-function mq_ntt_poly_mul_inv(init_a: seq(uint16), a: seq(uint16), b: seq(uint16), i: nat): bool extern;
-function mq_ntt_poly_mul_inv_peri_lemma(init_a: seq(uint16), a: seq(uint16), ai: uint32, b: seq(uint16), i: nat): void extern;
+function circle_product_inv(init_a: seq(uint16), a: seq(uint16), b: seq(uint16), i: nat): bool extern;
+function circle_product_inv_peri_lemma(init_a: seq(uint16), a: seq(uint16), ai: uint32, b: seq(uint16), i: nat): void extern;
 
 procedure mq_ntt_poly_mul(
     ghost iter_a: b16_iter,
@@ -56,7 +57,7 @@ returns (ghost next_iter_a: b16_iter)
         mem == old(mem).(heap := heap);
         heap == old(heap)[iter_a.base_ptr := heap[iter_a.base_ptr]];
 
-        mq_ntt_poly_mul_inv(next_iter_a.buff, iter_a.buff, iter_b.buff, N.full);
+        circle_product_inv(next_iter_a.buff, iter_a.buff, iter_b.buff, N.full);
     {
         let init_a := iter_a.buff;
         next_iter_a := iter_a;
@@ -87,7 +88,7 @@ returns (ghost next_iter_a: b16_iter)
                 fvar_iter_inv(heap, next_iter_b, a1, i);
 
             invariant 
-                mq_ntt_poly_mul_inv(next_iter_a.buff, init_a, iter_b.buff, i);
+                circle_product_inv(next_iter_a.buff, init_a, iter_b.buff, i);
 
             invariant
                 mem == old(mem).(heap := heap);
@@ -104,7 +105,7 @@ returns (ghost next_iter_a: b16_iter)
             next_iter_b := lhu_next(t1, a1, 0, true, next_iter_b);
             poly_mul_inline_montymul();
 
-            mq_ntt_poly_mul_inv_peri_lemma(next_iter_a.buff, init_a, t0, iter_b.buff, i);
+            circle_product_inv_peri_lemma(next_iter_a.buff, init_a, t0, iter_b.buff, i);
 
             next_iter_a := sh_bounded_next(t0, a0, 0, true, next_iter_a);
 

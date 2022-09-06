@@ -21,71 +21,6 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         && buff_is_n_elems(iter.buff)
     }
 
-    function forward_lsize(view: FNTT.loop_view): (r: pow2_t)
-        requires view.loop_view_wf();
-        ensures r.full <= N.full
-    {
-        view.lsize()
-    }
-
-    predicate forward_ntt_eval_all(a: seq<nat>, coeffs: seq<nat>)
-    {
-        && buff_is_n_elems(a)
-        && buff_is_n_elems(coeffs)
-        && FNTT.ntt_eval_all(buff_as_n_elems(a), buff_as_n_elems(coeffs))
-    }
-
-    predicate forward_ntt_eval_all_alt(p: seq<nat>, a: seq<nat>)
-    {
-        && buff_is_n_elems(a)
-        && buff_is_n_elems(p)
-        && var a_hat := MQP.scaled_coeff(buff_as_n_elems(a));
-        && (forall i | 0 <= i < N.full ::
-            MQP.poly_eval(a_hat, MQP.mqpow(MQ.OMEGA, bit_rev_int(i, N))) == p[i])
-    }
-
-    predicate forward_t_loop_inv(a: seq<nat>, d: pow2_t, coeffs: seq<nat>)
-        requires 0 <= d.exp <= N.exp;
-    {
-        && buff_is_n_elems(a)
-        && buff_is_n_elems(coeffs)
-        && FNTT.t_loop_inv(buff_as_n_elems(a), d, buff_as_n_elems(coeffs))
-    }
-
-    predicate forward_s_loop_inv(a: seq<nat>, d: pow2_t, j: nat, bi: nat, view: FNTT.loop_view)
-    {
-        && buff_is_n_elems(a)
-        && view.s_loop_inv(buff_as_n_elems(a), d, j, bi)
-    }
-
-    predicate forward_j_loop_inv(a: seq<nat>, d: pow2_t, j: nat, u: nat, view: FNTT.loop_view)
-    {
-        && buff_is_n_elems(a)
-        && u == j * (2 * d.full)
-        && view.j_loop_inv(buff_as_n_elems(a), d, j)
-    }
-
-    lemma forward_t_loop_inv_pre_lemma(coeffs: seq<nat>)
-        requires buff_is_n_elems(coeffs);
-        ensures N.exp <= N.exp; // ??
-        ensures forward_t_loop_inv(coeffs, N, coeffs);
-    {
-        FNTT.t_loop_inv_pre_lemma(buff_as_n_elems(coeffs));
-    }
-
-    lemma forward_t_loop_inv_post_lemma(a: seq<nat>, one: pow2_t, coeffs: seq<nat>)
-        requires one.exp == 0 <= N.exp;
-        requires forward_t_loop_inv(a, one, coeffs);
-        ensures forward_ntt_eval_all(a, coeffs);
-    {
-        FNTT.t_loop_inv_post_lemma(a, one, coeffs);
-    }
-
-    function mqmul(a: elem, b: elem): elem
-    {
-        MQP.mqmul(a, b)
-    }
-
     lemma forward_s_loop_inv_pre_lemma(
         a: seq<nat>,
         d: pow2_t,
@@ -699,7 +634,7 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         view.shuffle_inv_post_lemma(a);
     }
 
-    predicate mq_ntt_poly_mul_inv(a: seq<nat>, init_a: seq<nat>, b: seq<nat>, i: nat)
+    predicate circle_product_inv(a: seq<nat>, init_a: seq<nat>, b: seq<nat>, i: nat)
     {
         && buff_is_n_elems(init_a)
         && buff_is_n_elems(b)
@@ -709,7 +644,7 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         && (forall j: nat | 0 <= j < i :: a[j] == MQP.mqmul(init_a[j], b[j]))
     }
 
-    lemma mq_ntt_poly_mul_inv_peri_lemma(
+    lemma circle_product_inv_peri_lemma(
         a: seq<nat>, 
         init_a: seq<nat>,
         ai: uint32,
@@ -717,11 +652,11 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         i: nat)
 
         requires i < N.full;
-        requires mq_ntt_poly_mul_inv(a, init_a, b, i);
+        requires circle_product_inv(a, init_a, b, i);
         requires init_a[i] < Q;
         requires b[i] < Q;
         requires ai == MQP.montmul(MQP.montmul(init_a[i], 10952), b[i]);
-        ensures  mq_ntt_poly_mul_inv(a[i := ai], init_a, b, i+1);
+        ensures  circle_product_inv(a[i := ai], init_a, b, i+1);
     {
         var next_a := a[i := ai];
         forall j: nat | 0 <= j < i+1
@@ -772,120 +707,6 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         }
     }
 
-    lemma forward_ntt_lemma(
-        p: seq<nat>,
-        a: seq<nat>)
-
-        requires forward_ntt_eval_all(p, a);
-        ensures forward_ntt_eval_all_alt(p, a)
-    {
-       var a_hat: seq<elem> := MQP.scaled_coeff(a);
-
-        forall i | 0 <= i < N.full
-            ensures MQP.poly_eval(a_hat, MQP.mqpow(PSI, 2 * bit_rev_int(i, N))) == p[i];
-        {
-            var index := 2 * bit_rev_int(i, N);
-            var x := MQP.mqpow(PSI, index);
-            var x_hat := MQP.mqpow(PSI, index + 1);
-
-            var left := MQP.poly_terms(a, x_hat);
-            var right := MQP.poly_terms(a_hat, x);
-
-            assert MQP.poly_eval(a, x_hat) == p[i] by {
-                reveal CPV.points_eval_suffix_inv();
-                assert index * 1 == index;
-            }
-
-            assert left == right by {
-                forall j | 0 <= j < N.full 
-                    ensures left[j] == right[j];
-                {
-                    var x_j := MQP.mqpow(x, j);
-
-                    LemmaMulStrictlyPositive(index, j);
-
-                    assert x_j == MQP.mqpow(PSI, index * j) by {
-                        MQP.mqpow_muls(PSI, index, j);
-                    }
-
-                    calc == {
-                        left[j];
-                        MQP.mqmul(a[j], MQP.mqpow(x_hat, j));
-                        MQP.mqmul(a[j], MQP.mqpow(MQP.mqpow(PSI, index + 1), j));
-                        {
-                            MQP.mqpow_muls(PSI, index + 1, j);
-                        }
-                        MQP.mqmul(a[j], MQP.mqpow(PSI, (index + 1) * j));
-                        {
-                            LemmaMulIsDistributiveAddOtherWayAuto();
-                        }
-                        MQP.mqmul(a[j], MQP.mqpow(PSI, index * j + j));
-                        {
-                            MQP.mqpow_adds(PSI, index * j, j);
-                        }
-                        MQP.mqmul(a[j], MQP.mqmul(x_j, MQP.mqpow(PSI, j)));
-                        {
-                            MQP.mqmul_commutes(x_j, MQP.mqpow(PSI, j));
-                        }
-                        MQP.mqmul(a[j], MQP.mqmul(MQP.mqpow(PSI, j), x_j));
-                        {
-                            MQP.mqmul_associates(a[j], MQP.mqpow(PSI, j), x_j);
-                        }
-                        MQP.mqmul(MQP.mqmul(a[j], MQP.mqpow(PSI, j)), x_j);
-                        MQP.mqmul(a_hat[j], MQP.mqpow(x, j));
-                        right[j];
-                    }
-                }
-            }
-
-            assert MQP.poly_eval(a_hat, x) == p[i] by {
-                reveal MQP.poly_eval();
-                calc == {
-                    MQP.poly_eval(a, x_hat);
-                    MQP.mqsum(left);
-                    MQP.mqsum(right);
-                    MQP.poly_eval(a_hat, x);
-                }
-            }
-        }
-
-        forall i | 0 <= i < N.full
-            ensures MQP.poly_eval(a_hat, MQP.mqpow(MQ.OMEGA, bit_rev_int(i, N))) == p[i];
-        {
-            var index := bit_rev_int(i, N);
-            calc == {
-                MQP.mqpow(PSI, 2 * index);
-                Pow(PSI, 2 * index) % Q;
-                {
-                    LemmaPowMultiplies(PSI, 2, index);
-                }
-                Pow(Pow(PSI, 2), index) % Q;
-                {
-                    LemmaPowModNoop(Pow(PSI, 2), index, Q);
-                }
-                Pow(Pow(PSI, 2) % Q, index) % Q;
-                {
-                    MQ.Nth_root_lemma();
-                }
-                Pow(MQ.OMEGA % Q, index) % Q;
-                {
-                    LemmaPowModNoop(MQ.OMEGA, index, Q);
-                }
-                Pow(MQ.OMEGA, index) % Q;
-                MQP.mqpow(MQ.OMEGA, index);
-            }
-        }
-    }
-    
-    function poly_mod_product(a: seq<nat>, b: seq<nat>): (p: seq<nat>)
-        requires buff_is_n_elems(a)
-        requires buff_is_n_elems(b)
-    {
-        MQP.poly_mod(
-            MQP.poly_mul(buff_as_n_elems(a), buff_as_n_elems(b)),
-            MQP.n_ideal())
-    }
-
     lemma mq_ntt_mul_lemma(
         a0: seq<nat>,
         a1: seq<nat>,
@@ -905,8 +726,7 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
 
         requires forward_ntt_eval_all(a1, a0);
         requires forward_ntt_eval_all(b1, b0);
-        requires mq_ntt_poly_mul_inv(p0, a1, b1, N.full);
-        requires is_bit_rev_shuffle(p0, p1, N);
+        requires circle_product_inv(p0, a1, b1, N.full);
         requires is_bit_rev_shuffle(p0, p1, N);
 
         requires inverse_ntt_eval_all(p2, p1);
@@ -917,101 +737,318 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         ensures p4 == poly_mod_product(a0, b0)
         // MQP.poly_mod_equiv(p4, MQP.poly_mul(a0, b0), MQP.n_ideal());
     {
-        forward_ntt_lemma(a1, a0);
-        forward_ntt_lemma(b1, b0);
-
-        var a_hat := MQP.scaled_coeff(buff_as_n_elems(a0));
-        var b_hat := MQP.scaled_coeff(buff_as_n_elems(b0));
-
-        forall i | 0 <= i < N.full
-            ensures var x := MQP.mqpow(MQ.OMEGA, bit_rev_int(i, N));
-                MQP.mqmul(MQP.poly_eval(a_hat, x), MQP.poly_eval(b_hat, x)) == p0[i];
-        {
-        }
-
-        forall i | 0 <= i < N.full
-            ensures var x := MQP.mqpow(MQ.OMEGA, i);
-                MQP.mqmul(MQP.poly_eval(a_hat, x), MQP.poly_eval(b_hat, x)) == p1[i];
-        {
-            reveal is_bit_rev_shuffle();
-            bit_rev_symmetric(i, N);
-            assert p1[i] == p0[bit_rev_int(i, N)];
-        }
-
-        assert p1 == MQP.circle_product(MQP.NTT(MQP.scaled_coeff(a0)), 
-            MQP.NTT(MQP.scaled_coeff(b0)));
-
-        forall i | 0 <= i < N.full
-            ensures var x := MQP.mqpow(MQ.OMEGA_INV, bit_rev_int(i, N));
-                MQP.poly_eval(p1, x) == p2[i];
-        {
-            reveal CPV.points_eval_suffix_inv();
-            assert bit_rev_int(i, N) * 1 == bit_rev_int(i, N);
-        }
-
-        forall i | 0 <= i < N.full
-            ensures var x := MQP.mqpow(MQ.OMEGA_INV, i);
-                MQP.poly_eval(p1, x) == p3[i];
-        {
-            reveal is_bit_rev_shuffle();
-            bit_rev_symmetric(i, N);
-            assert p3[i] == p2[bit_rev_int(i, N)];
-        }
-
-        var inverse := MQP.INTT(p1);
-
-        var N_INV := MQ.N_INV;
-        var PSI_INV := MQ.PSI_INV;
-        var R_INV := MQ.R_INV;
-
-        forall i | 0 <= i < N.full
-            ensures inverse[i] == (p3[i] * N_INV) % Q
-
-        forall i | 0 <= i < N.full
-            ensures p4[i] == (inverse[i] * MQP.mqpow(PSI_INV, i)) % Q;
-        {
-            MQP.inverse_ntt_scaling_table_axiom(i);
-            var t := MQP.mqpow(PSI_INV, i);
-            var t0 := (t * N_INV) % Q;
-            var t1 := (t0 * R) % Q;
-            var t2 := inverse[i];
-            assert p4[i] == (p3[i] * t1 * R_INV) % Q;
-
-            gbassert IsModEquivalent(p4[i], t2 * t, Q) by {
-                assert IsModEquivalent(R * R_INV, 1, Q) by {
-                    MQ.Nth_root_lemma();
-                }
-                assert IsModEquivalent(t0, t * N_INV, Q);
-                assert IsModEquivalent(t1, t0 * R, Q);
-                assert IsModEquivalent(t2, p3[i] * N_INV, Q);
-                assert IsModEquivalent(p4[i], p3[i] * t1 * R_INV, Q);
-            }
-        }
-
-        assert p4 == MQP.negatively_wrapped_convolution(a0, b0);
-        MQP.negatively_wrapped_convolution_lemma(a0, b0, p4);
+        assume false;
     }
 
-    predicate poly_sub_loop_inv(f_new: seq<nat>, f: seq<nat>, g: seq<nat>, i: nat)
+    predicate uint16_is_normalized(e: uint16)
     {
+        MQN.int_is_normalized(bv16_op_s.to_int16(e))
+    }
+
+    // bascially convert to int16, but with requires
+    // DOES NOT normalize a value
+    // ONLY interprets an uint16 as a normalized value
+    function uint16_as_nelem(e: uint16): nelem
+        requires uint16_is_normalized(e)
+    {
+        bv16_op_s.to_int16(e)
+    }
+
+    predicate {:opaque} normalized_values(a: seq<uint16>)
+        ensures normalized_values(a) ==> |a| == N.full;
+    {
+        && |a| == N.full
+        && (forall i | 0 <= i < |a| :: uint16_is_normalized(a[i]))
+    }
+
+    function uint16_buff_as_n_nelems(a: seq<uint16>): (na: seq<nelem>)
+        requires normalized_values(a);
+    {
+        reveal normalized_values();
+        seq(|a|, i requires 0 <= i < |a| => uint16_as_nelem(a[i]))
+    }
+
+    predicate normalized_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int)
+    {
+        && b16_iter_inv(iter, heap, if address >= 0 then address else iter.cur_ptr())
+        && (index >= 0 ==> iter.index == index)
+        && normalized_values(iter.buff)
+    }
+
+    lemma denormalize_lemma(buff: seq<uint16>, i: nat, a1: uint32, b: uint32, c: uint32, d: uint32)
+        requires normalized_values(buff);
+        requires i < |buff|;
+        requires a1 == uint16_sign_ext(buff[i]);
+        requires b == uint32_srai(a1, 31);
+        requires c == uint32_and(b, Q);
+        requires d == uint32_add(a1, c);
+        ensures uint16_is_normalized(buff[i]);
+        ensures d == MQN.denormalize(uint16_as_nelem(buff[i]));
+    {
+        assert uint16_is_normalized(buff[i]) by {
+            reveal normalized_values();
+        }
+
+        var a0 :uint16 := buff[i];
+        var sa0 := uint16_as_nelem(a0);
+        assert sa0 < 0 ==> a1 == a0 as nat + 0xffff0000;
+        assert sa0 >= 0 ==> a1 == a0;
+
+        if to_int32(a1) >= 0 {
+            assert sa0 >= 0;
+            assert b == 0 by { lemma_rs_by_31(to_int32(a1)); }
+            lemma_uint32_and_Q(b);
+            assert c == 0;
+            assert d == a0;
+            assert d == MQN.denormalize(uint16_as_nelem(a0));
+        }
+        else {
+            assert sa0 < 0;
+            assert int32_rs(to_int32(a1), 31) == -1 by { lemma_rs_by_31(to_int32(a1)); }
+            lemma_uint32_and_Q(b);
+            assert c == Q;
+            assert d == sa0 + Q;
+            assert d == MQN.denormalize(uint16_as_nelem(a0));
+        }
+    }
+
+    predicate {:opaque} denormalization_inv(nv: seq<uint16>, dnv: seq<uint16>, i: nat)
+        requires normalized_values(nv);
+        requires buff_is_n_elems(dnv);
+    {
+        && reveal normalized_values();
+        && i <= N.full
+        && (forall j | 0 <= j < i :: 
+            dnv[j] == MQN.denormalize(uint16_as_nelem(nv[j])))
+    }
+
+    lemma denormalization_pre_lemma(nv: seq<uint16>, dnv: seq<uint16>)
+        requires normalized_values(nv);
+        requires buff_is_n_elems(dnv);
+        ensures denormalization_inv(nv, dnv, 0);
+    {
+        reveal denormalization_inv();
+    }
+
+    lemma denormalization_peri_lemma(buff: seq<uint16>, dnv: seq<uint16>, i: nat, a1: uint32, b: uint32, c: uint32, d: uint32)
+        requires normalized_values(buff);
+        requires buff_is_n_elems(dnv);
+        requires denormalization_inv(buff, dnv, i);
+        requires i < |buff|;
+        requires a1 == uint16_sign_ext(buff[i]);
+        requires b == uint32_srai(a1, 31);
+        requires c == uint32_and(b, Q);
+        requires d == uint32_add(a1, c);
+        ensures uint16_is_normalized(buff[i]);
+        ensures d == MQN.denormalize(uint16_as_nelem(buff[i]));
+        ensures buff_is_n_elems(dnv[i := lh(d)]);
+        ensures denormalization_inv(buff, dnv[i := lh(d)], i + 1);
+    {
+        reveal denormalization_inv();
+        reveal normalized_values();
         reveal buff_is_n_elems();
-        && buff_is_n_elems(f_new)
-        && buff_is_n_elems(f)
-        && buff_is_n_elems(g)
-        && 0 <= i <= N.full
-        && f_new[i..] == f[i..]
-        && (forall j | 0 <= j < i :: f_new[j] == MQP.mqsub(f[j], g[j]))
+
+        var lh, uh := lh(d), uh(d);
+        half_split_lemma(d);
+        assume uh == 0;
+        denormalize_lemma(buff, i, a1, b, c, d);
+        assert d == lh;
+    }
+    
+    // 0 <= e < Q -> -Q/2 <= e <= Q/2
+    predicate {:opaque} normalization_inv(outputs: seq<uint16>,  inputs: seq<uint16>, i: nat)
+    {
+        && buff_is_n_elems(inputs)
+        && |outputs| == N.full
+        && reveal buff_is_n_elems();
+        && i <= N.full
+        && inputs[i..] == outputs[i..]
+        && (forall j | 0 <= j < i :: (
+            && uint16_is_normalized(outputs[j])
+            && uint16_as_nelem(outputs[j]) == MQN.normalize(inputs[j]))
+        )
     }
 
-    lemma poly_sub_loop_correct(f_new: seq<nat>, f_old: seq<nat>, f_orig:seq<nat>, g: seq<nat>, i: nat)
-        requires i < N.full;
-        requires poly_sub_loop_inv(f_old, f_orig, g, i)
-        requires f_new == f_old[i := MQP.mqsub(f_orig[i], g[i])];
-        ensures poly_sub_loop_inv(f_new, f_orig, g, i+1);
+    lemma normalization_pre_lemma(inputs: seq<uint16>)
+        requires buff_is_n_elems(inputs);
+        ensures normalization_inv(inputs, inputs, 0);
     {
-        assert |f_new| == |f_old|;
-        forall j | 0 <= j < |f_new|
-            ensures j != i ==> f_new[j] == f_old[j];
-            ensures j == i ==> f_new[j] == MQP.mqsub(f_orig[j], g[j]);
+        reveal normalization_inv();
     }
+
+    lemma normalization_peri_lemma(outputs: seq<uint16>, inputs: seq<uint16>, i: nat, a: uint32, b: uint32, c: uint32, d: uint32, e: uint32)
+        requires normalization_inv(outputs, inputs, i);
+        requires i < |outputs|;
+        requires a == outputs[i];
+        requires b == uint32_sub(Q/2, a);
+        requires c == uint32_srai(b, 31);
+        requires d == uint32_and(c, Q);
+        requires e == uint32_sub(a, d);
+        ensures normalization_inv(outputs[i := lh(e)], inputs, i + 1);
+    // {
+    //     reveal buff_is_n_elems();
+    //     reveal normalization_inv();
+
+    //     assert outputs[i] == inputs [i];
+
+    //     cond_set_Q_lemma(b, d);
+
+    //     var lh, uh := lh(e), uh(e);
+    //     half_split_lemma(e);
+
+    //     if to_int32(b) >= 0 {
+    //         assert d == 0;
+    //         assume uh == 0; // the upper bits all clear
+    //         assert uint16_as_nelem(e) == MQN.normalize(a);
+    //     } else {
+    //         assert d == Q;
+    //         assert 0 <= a < Q;
+    //         assert to_int32(b) == Q_HLAF - a;
+    //         assert Q_HLAF < a;
+    //         assert to_int32(e) == a as int - Q;
+    //         assert -Q_HLAF <= to_int32(e) <= Q_HLAF;
+    //         if to_int32(e) < 0 {
+    //             assume uh == 0xffff; // the upper bits all set
+    //         } else {
+    //             assume uh == 0; // the upper bits all clear
+    //         }
+    //         assert bv16_op_s.to_int16(lh) == to_int32(e);
+    //     }
+    //     assert uint16_as_nelem(lh) == MQN.normalize(a);
+    // }
+
+    lemma normalization_post_lemma(outputs: seq<uint16>, inputs: seq<uint16>)
+        requires buff_is_n_elems(inputs);
+        requires normalization_inv(outputs, inputs, 512);
+        ensures normalized_values(outputs);
+    {
+        reveal normalization_inv();
+        reveal normalized_values();
+    }
+
+    const NORMSQ_BOUND := integers.BASE_31
+
+    predicate l2norm_squared_bounded_inv(norm: uint32, 
+        s1: seq<uint16>, s2: seq<uint16>, i: nat, ng: uint32)
+    {
+        && normalized_values(s1)
+        && normalized_values(s2)
+        && var ns1 := uint16_buff_as_n_nelems(s1);
+        && var ns2 := uint16_buff_as_n_nelems(s2);
+        && i <= N.full
+        && ((msb(ng) == 0) ==> (norm == MQN.l2norm_squared(ns1, ns2, i)))
+        && ((msb(ng) == 1) ==> (MQN.l2norm_squared(ns1, ns2, i) >= NORMSQ_BOUND))
+    }
+
+    lemma l2norm_squared_bounded_pre_lemma(s1: seq<uint16>, s2: seq<uint16>)
+        requires normalized_values(s1)
+        requires normalized_values(s2)
+        ensures l2norm_squared_bounded_inv(0, s1, s2, 0, 0);
+    {
+        assume msb(0) == 0;
+    }
+
+    lemma l2norm_squared_bounded_peri_lemma(
+        norm0: uint32, norm1: uint32, norm2: uint32,
+        ng0: uint32, ng1: uint32, ng2: uint32,
+        v1: uint32, v2: uint32,
+        vv1: uint32, vv2: uint32,
+        s1: seq<uint16>, s2: seq<uint16>,
+        i: nat)
+
+        requires l2norm_squared_bounded_inv(norm0, s1, s2, i, ng0);
+        requires i < N.full
+        requires v1 == uint16_sign_ext(s1[i])
+        requires v2 == uint16_sign_ext(s2[i])
+        requires vv1 == uint32_mul(v1, v1);
+        requires vv2 == uint32_mul(v2, v2);
+
+        requires norm1 == uint32_add(norm0, vv1);
+        requires norm2 == uint32_add(norm1, vv2);
+        requires ng1 == uint32_or(ng0, norm1);
+        requires ng2 == uint32_or(ng1, norm2);
+
+        ensures l2norm_squared_bounded_inv(norm2, s1, s2, i+1, ng2);
+    {
+        reveal normalized_values();
+        var iv1, iv2 := uint16_as_nelem(s1[i]), uint16_as_nelem(s2[i]);
+        var ivv1, ivv2 := iv1 as int * iv1 as int, iv2 as int * iv2 as int;
+        assume vv1 == ivv1;
+        assume vv2 == ivv2;
+
+        msb_bound_lemma(norm0);
+        msb_bound_lemma(norm1);
+        msb_bound_lemma(norm2);
+
+        if msb(ng0) == 1 {
+            assume msb(ng2) == 1; 
+            return;
+        }
+
+        if msb(ng1) == 1 {
+            assume msb(norm1) == 1;
+            assume msb(ng2) == 1;
+            return;
+        }
+
+        if msb(ng2) == 1 {
+            assume msb(norm2) == 1;
+            return;
+        }
+
+        assume msb(norm2) == 0;
+        assume msb(norm1) == 0;
+        assume msb(norm0) == 0;
+
+        assume vv1 <= 0x80000000;
+        assume vv2 <= 0x80000000;
+
+        return; 
+    }
+
+    predicate l2norm_squared_result(s1: seq<uint16>, s2: seq<uint16>, result: uint32)
+    {
+        && normalized_values(s1)
+        && normalized_values(s2)
+        && ((result == 1) <==> (MQN.l2norm_squared(uint16_buff_as_n_nelems(s1), uint16_buff_as_n_nelems(s2), |s1|) < 0x29845d6))
+    }
+
+    lemma l2norm_squared_bounded_post_lemma(s1: seq<uint16>, s2: seq<uint16>, norm0: uint32, ng: uint32, norm1: uint32, result: uint32)
+        requires l2norm_squared_bounded_inv(norm0, s1, s2, 512, ng);
+        requires norm1 == uint32_or(norm0, uint32_srai(ng, 31));
+        requires result == uint32_lt(norm1, 0x29845d6);
+        ensures l2norm_squared_result(s1, s2, result);
+    {
+        if (msb(ng) == 0) {
+            assume uint32_srai(ng, 31) == 0;
+            assume norm1 == norm0;
+        } else {
+            assume uint32_srai(ng, 31) == 0xffff_ffff;
+            assume norm1 == 0xffff_ffff;
+        }
+    }
+
+    lemma rv_falcon_512_lemma(tt0: seq<uint16>, tt1: seq<uint16>, tt2: seq<uint16>, s1: seq<uint16>, s2: seq<uint16>, h: seq<uint16>, c0: seq<uint16>, result: uint32)
+        requires l2norm_squared_result(s1, s2, result);
+        requires buff_is_n_elems(tt0);
+        requires buff_is_n_elems(c0);
+        requires buff_is_n_elems(h);
+        requires denormalization_inv(s2, tt0, 512);
+        // requires tt1 == poly_mod_product(tt0, h);
+        requires poly_sub_loop_inv(tt2, tt1, c0, 512);
+        requires normalization_inv(s1, tt2, 512);
+        ensures (result == 1) <==> falcon_verify(
+            buff_as_n_elems(c0), uint16_buff_as_n_nelems(s2), buff_as_n_elems(h));
+    // {
+    //     reveal denormalization_inv();
+    //     assert tt0 == MQN.denormalize_n_elems(uint16_buff_as_n_nelems(s2));
+    //     assert tt1 == MQP.poly_mod(MQP.poly_mul(tt0, h), MQP.n_ideal());
+    //     assume c0 == buff_as_n_elems(c0);
+    //     assume h == buff_as_n_elems(h);
+    //     assert tt2 == MQP.poly_sub(tt1, c0);
+    //     reveal normalization_inv();
+    //     assert uint16_buff_as_n_nelems(s1) == MQN.normalize_elems(tt2);
+    //     assert falcon_512_i.bound() == 0x29845d6;
+    // }
+
 }

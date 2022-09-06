@@ -30,6 +30,7 @@ import opened rv_reg_save
 import opened mq_arith
 import opened mq_montymul
 
+import opened falcon_512_i
 import opened bv32_falcon_lemmas
 
 import opened rv_inverse_ntt_std2rev
@@ -41,6 +42,7 @@ import opened rv_mq_ntt_poly_mul
 #endverbatim
 
 function buff_as_n_elems(s: seq(uint16)): seq(uint16) extern;
+function buff_is_n_elems(s: seq(uint16)): bool extern;
 
 function rev_omega_inv_powers_mont_table(): seq(uint16) extern;
 function inverse_ntt_scaling_table(): seq(uint16) extern;
@@ -140,7 +142,11 @@ returns (
         s4 == old(s4);
 
     ensures
-        next_iter_a.buff == poly_mod_product(iter_a.buff, iter_b.buff);
+        buff_is_n_elems(iter_a.buff);
+        buff_is_n_elems(iter_b.buff);
+        next_iter_a.buff == poly_mod_product(
+            buff_as_n_elems(iter_a.buff), 
+            buff_as_n_elems(iter_b.buff));
 {
     mv(s0, a0);
     mv(s1, a1);

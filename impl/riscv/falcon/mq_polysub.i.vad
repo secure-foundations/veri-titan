@@ -2,7 +2,6 @@ include "mq_arith.i.vad"
 
 #verbatim
 include "mq_arith.i.dfy"
-include "../../../../glue/riscv/falcon/bv32_falcon_lemmas.i.dfy"
 
 module mq_polysub {
 
@@ -17,14 +16,11 @@ import opened stack
 import opened bv32_op_s
 import opened pow2_s
 
-import opened MQP = falcon_512_i.CMQP
+import opened falcon_512_i
 
 import opened mq_arith
 import opened mq_arith_lemmas
 import opened bv32_falcon_lemmas
-
-const Q := falcon_512_i.Q;
-const N := falcon_512_i.N; 
 
 #endverbatim
 

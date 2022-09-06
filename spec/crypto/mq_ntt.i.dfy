@@ -77,6 +77,14 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
         PV.points_eval_inv(a, coefficients, x_value, pow2(0))
     }
 
+    lemma ntt_eval_all_specialized_lemma(a: n_elems, coeffs: n_elems, i: nat)
+        requires ntt_eval_all(a, coeffs);
+        requires i < N.full;
+        ensures MQP.poly_eval(coeffs, x_value(i, pow2(0))) == a[i]
+    {
+        reveal PV.points_eval_suffix_inv();
+    }
+
     lemma t_loop_inv_post_lemma(a: n_elems, one: pow2_t, coefficients: n_elems)
         requires one.exp == 0 <= N.exp;
         requires t_loop_inv(a, one, coefficients);
