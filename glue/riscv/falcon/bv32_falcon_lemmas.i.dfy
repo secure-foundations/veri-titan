@@ -1,90 +1,17 @@
+include "../../generic_falcon_lemmas.dfy"
 include "mq_arith_lemmas.dfy"
 
-module bv32_falcon_lemmas {
+module bv32_falcon_lemmas refines generic_falcon_lemmas {
     import opened Seq
-    import opened Power
     import opened Power2
-    import opened DivMod
-    import opened Mul
     import opened DivModNeg
-    import opened integers
     import opened rv_machine
     import opened rv_vale
     import opened mem
     import flat
     import opened bv32_op_s
 
-    import opened pow2_s
-    import opened ntt_index
     import opened mq_arith_lemmas
-    
-    import opened falcon_512_i
-
-    import FNTT = falcon_512_i.FNTT
-    import INTT = falcon_512_i.INTT
-    import opened MQP = falcon_512_i.CMQP
-
-    const Q := falcon_512_i.Q;
-    const N := falcon_512_i.N; 
-    const OMEGA := falcon_512_i.CMQ.OMEGA;
-
-    const R := CMQ.R;
-    const PSI := CMQ.PSI;
-
-    predicate {:opaque} buff_is_n_elems(a: seq<nat>)
-        ensures buff_is_n_elems(a) ==> |a| == N.full;
-    {
-        && (|a| == N.full)
-        && (forall i | 0 <= i < N.full :: a[i] < Q)
-    }
-
-    function block_size(d: pow2_t): pow2_t
-        requires CPV.block_size.requires(d)
-    {
-        CPV.block_size(d)
-    }
-
-    function build_floop_view(s: n_elems, d: pow2_t): floop_view
-        requires FNTT.build_loop_view.requires(s, d)
-    {
-        FNTT.build_loop_view(s, d)
-    }
-
-    function build_iloop_view(s: n_elems, d: pow2_t): iloop_view
-        requires INTT.build_loop_view.requires(s, d)
-    {
-        INTT.build_loop_view(s, d)
-    }
-
-    function montmul(a: elem, b: elem): elem
-    {
-        MQP.montmul(a, b)
-    }
-
-    function rev_mixed_powers_mont_x_value(i: nat, d: pow2_t): (r: elem)
-    {
-        FNTT.rev_mixed_powers_mont_x_value(i, d)
-    }
-
-    function rev_mixed_powers_mont_table(): n_elems
-    {
-        FNTT.rev_mixed_powers_mont_table()
-    }
-
-    function rev_omega_inv_powers_x_value(i: nat, d: pow2_t): (r: elem)
-    {
-        INTT.rev_omega_inv_powers_x_value(i, d)
-    }
-
-    function rev_omega_inv_powers_mont_table(): n_elems
-    {
-        INTT.rev_omega_inv_powers_mont_table()
-    }
-
-    function inverse_ntt_scaling_table(): n_elems
-    {
-        MQP.inverse_ntt_scaling_table()
-    }
 
     predicate fvar_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int)
     {
@@ -94,18 +21,6 @@ module bv32_falcon_lemmas {
         && buff_is_n_elems(iter.buff)
     }
 
-    function {:opaque} buff_as_n_elems(a: seq<uint16>): (a': n_elems)
-        requires buff_is_n_elems(a);
-        ensures a == a';
-    {
-        reveal buff_is_n_elems();
-        a
-    }
-
-    type floop_view = FNTT.loop_view
-
-    type iloop_view = INTT.loop_view
-
     function forward_lsize(view: FNTT.loop_view): (r: pow2_t)
         requires view.loop_view_wf();
         ensures r.full <= N.full
@@ -113,14 +28,14 @@ module bv32_falcon_lemmas {
         view.lsize()
     }
 
-    predicate forward_ntt_eval_all(a: seq<uint16>, coeffs: seq<uint16>)
+    predicate forward_ntt_eval_all(a: seq<nat>, coeffs: seq<nat>)
     {
         && buff_is_n_elems(a)
         && buff_is_n_elems(coeffs)
         && FNTT.ntt_eval_all(buff_as_n_elems(a), buff_as_n_elems(coeffs))
     }
 
-    predicate forward_ntt_eval_all_alt(p: seq<uint16>, a: seq<uint16>)
+    predicate forward_ntt_eval_all_alt(p: seq<nat>, a: seq<nat>)
     {
         && buff_is_n_elems(a)
         && buff_is_n_elems(p)
@@ -129,7 +44,7 @@ module bv32_falcon_lemmas {
             MQP.poly_eval(a_hat, MQP.mqpow(MQ.OMEGA, bit_rev_int(i, N))) == p[i])
     }
 
-    predicate forward_t_loop_inv(a: seq<uint16>, d: pow2_t, coeffs: seq<uint16>)
+    predicate forward_t_loop_inv(a: seq<nat>, d: pow2_t, coeffs: seq<nat>)
         requires 0 <= d.exp <= N.exp;
     {
         && buff_is_n_elems(a)
@@ -137,20 +52,20 @@ module bv32_falcon_lemmas {
         && FNTT.t_loop_inv(buff_as_n_elems(a), d, buff_as_n_elems(coeffs))
     }
 
-    predicate forward_s_loop_inv(a: seq<uint16>, d: pow2_t, j: nat, bi: nat, view: FNTT.loop_view)
+    predicate forward_s_loop_inv(a: seq<nat>, d: pow2_t, j: nat, bi: nat, view: FNTT.loop_view)
     {
         && buff_is_n_elems(a)
         && view.s_loop_inv(buff_as_n_elems(a), d, j, bi)
     }
 
-    predicate forward_j_loop_inv(a: seq<uint16>, d: pow2_t, j: nat, u: nat, view: FNTT.loop_view)
+    predicate forward_j_loop_inv(a: seq<nat>, d: pow2_t, j: nat, u: nat, view: FNTT.loop_view)
     {
         && buff_is_n_elems(a)
         && u == j * (2 * d.full)
         && view.j_loop_inv(buff_as_n_elems(a), d, j)
     }
 
-    lemma forward_t_loop_inv_pre_lemma(coeffs: seq<uint16>)
+    lemma forward_t_loop_inv_pre_lemma(coeffs: seq<nat>)
         requires buff_is_n_elems(coeffs);
         ensures N.exp <= N.exp; // ??
         ensures forward_t_loop_inv(coeffs, N, coeffs);
@@ -158,7 +73,7 @@ module bv32_falcon_lemmas {
         FNTT.t_loop_inv_pre_lemma(buff_as_n_elems(coeffs));
     }
 
-    lemma forward_t_loop_inv_post_lemma(a: seq<uint16>, one: pow2_t, coeffs: seq<uint16>)
+    lemma forward_t_loop_inv_post_lemma(a: seq<nat>, one: pow2_t, coeffs: seq<nat>)
         requires one.exp == 0 <= N.exp;
         requires forward_t_loop_inv(a, one, coeffs);
         ensures forward_ntt_eval_all(a, coeffs);
@@ -172,7 +87,7 @@ module bv32_falcon_lemmas {
     }
 
     lemma forward_s_loop_inv_pre_lemma(
-        a: seq<uint16>,
+        a: seq<nat>,
         d: pow2_t,
         j: nat,
         t: pow2_t,
@@ -223,7 +138,7 @@ module bv32_falcon_lemmas {
     }
 
     lemma forward_s_loop_inv_post_lemma(
-        a: seq<uint16>,
+        a: seq<nat>,
         d: pow2_t,
         j: nat,
         u: uint32,
@@ -276,7 +191,7 @@ module bv32_falcon_lemmas {
     }
 
     lemma forward_s_loop_index_lemma(
-        a: seq<uint16>,
+        a: seq<nat>,
         d: pow2_t,
         j: nat,
         bi: nat,
@@ -312,8 +227,8 @@ module bv32_falcon_lemmas {
     }
 
     predicate forward_s_loop_update(
-        a: seq<uint16>,
-        a': seq<uint16>,
+        a: seq<nat>,
+        a': seq<nat>,
         d: pow2_t,
         j: nat,
         bi: nat,
@@ -338,8 +253,8 @@ module bv32_falcon_lemmas {
         && view.s_loop_update(buff_as_n_elems(a), buff_as_n_elems(a'), d, j, bi)
     }
 
-    lemma forward_s_loop_inv_peri_lemma(a: seq<uint16>,
-        a': seq<uint16>,
+    lemma forward_s_loop_inv_peri_lemma(a: seq<nat>,
+        a': seq<nat>,
         d: pow2_t,
         j: nat,
         bi: nat,
@@ -359,7 +274,7 @@ module bv32_falcon_lemmas {
         }
     }
 
-    lemma forward_higher_points_view_index_lemma(a: seq<uint16>, d: pow2_t, j: nat, bi: nat, view: FNTT.loop_view)
+    lemma forward_higher_points_view_index_lemma(a: seq<nat>, d: pow2_t, j: nat, bi: nat, view: FNTT.loop_view)
         returns (s: nat)
     
         requires forward_s_loop_inv(a, d, j, bi, view);
@@ -376,7 +291,7 @@ module bv32_falcon_lemmas {
         s := view.higher_points_view_index_lemma(buff_as_n_elems(a), d, j, bi);
     }
 
-    lemma forward_j_loop_inv_pre_lemma(a: seq<uint16>, d: pow2_t, view: FNTT.loop_view)
+    lemma forward_j_loop_inv_pre_lemma(a: seq<nat>, d: pow2_t, view: FNTT.loop_view)
         requires 0 <= d.exp < N.exp;
         requires forward_t_loop_inv(a, pow2_double(d), view.coefficients);
         requires view.loop_view_wf();
@@ -386,7 +301,7 @@ module bv32_falcon_lemmas {
         view.j_loop_inv_pre_lemma(buff_as_n_elems(a), d);
     }
 
-    lemma forward_j_loop_inv_post_lemma(a: seq<uint16>, d: pow2_t, j: nat, u: nat, view: FNTT.loop_view)
+    lemma forward_j_loop_inv_post_lemma(a: seq<nat>, d: pow2_t, j: nat, u: nat, view: FNTT.loop_view)
         requires forward_j_loop_inv(a, d, j, u, view);
         requires j == view.lsize().full;
         requires 0 <= view.hsize.exp <= N.exp;
@@ -403,14 +318,14 @@ module bv32_falcon_lemmas {
         view.lsize()
     }
 
-    predicate inverse_ntt_eval_all(a: seq<uint16>, coeffs: seq<uint16>)
+    predicate inverse_ntt_eval_all(a: seq<nat>, coeffs: seq<nat>)
     {
         && buff_is_n_elems(a)
         && buff_is_n_elems(coeffs)
         && INTT.ntt_eval_all(buff_as_n_elems(a), buff_as_n_elems(coeffs))
     }
 
-    predicate inverse_t_loop_inv(a: seq<uint16>, d: pow2_t, coeffs: seq<uint16>)
+    predicate inverse_t_loop_inv(a: seq<nat>, d: pow2_t, coeffs: seq<nat>)
         requires 0 <= d.exp <= N.exp;
     {
         && buff_is_n_elems(a)
@@ -418,20 +333,20 @@ module bv32_falcon_lemmas {
         && INTT.t_loop_inv(buff_as_n_elems(a), d, buff_as_n_elems(coeffs))
     }
 
-    predicate inverse_s_loop_inv(a: seq<uint16>, d: pow2_t, j: nat, bi: nat, view: INTT.loop_view)
+    predicate inverse_s_loop_inv(a: seq<nat>, d: pow2_t, j: nat, bi: nat, view: INTT.loop_view)
     {
         && buff_is_n_elems(a)
         && view.s_loop_inv(buff_as_n_elems(a), d, j, bi)
     }
 
-    predicate inverse_j_loop_inv(a: seq<uint16>, d: pow2_t, j: nat, u: nat, view: INTT.loop_view)
+    predicate inverse_j_loop_inv(a: seq<nat>, d: pow2_t, j: nat, u: nat, view: INTT.loop_view)
     {
         && buff_is_n_elems(a)
         && u == j * (2 * d.full)
         && view.j_loop_inv(buff_as_n_elems(a), d, j)
     }
 
-    lemma inverse_t_loop_inv_pre_lemma(coeffs: seq<uint16>)
+    lemma inverse_t_loop_inv_pre_lemma(coeffs: seq<nat>)
         requires buff_is_n_elems(coeffs);
         ensures N.exp <= N.exp; // ??
         ensures inverse_t_loop_inv(coeffs, N, coeffs);
@@ -439,7 +354,7 @@ module bv32_falcon_lemmas {
         INTT.t_loop_inv_pre_lemma(buff_as_n_elems(coeffs));
     }
 
-    lemma inverse_t_loop_inv_post_lemma(a: seq<uint16>, one: pow2_t, coeffs: seq<uint16>)
+    lemma inverse_t_loop_inv_post_lemma(a: seq<nat>, one: pow2_t, coeffs: seq<nat>)
         requires one.exp == 0 <= N.exp;
         requires inverse_t_loop_inv(a, one, coeffs);
         ensures inverse_ntt_eval_all(a, coeffs);
@@ -448,7 +363,7 @@ module bv32_falcon_lemmas {
     }
 
     lemma inverse_s_loop_inv_pre_lemma(
-        a: seq<uint16>,
+        a: seq<nat>,
         d: pow2_t,
         j: nat,
         t: pow2_t,
@@ -495,7 +410,7 @@ module bv32_falcon_lemmas {
     }
 
     lemma inverse_s_loop_inv_post_lemma(
-        a: seq<uint16>,
+        a: seq<nat>,
         d: pow2_t,
         j: nat,
         u: uint32,
@@ -548,7 +463,7 @@ module bv32_falcon_lemmas {
     }
 
     lemma inverse_s_loop_index_lemma(
-        a: seq<uint16>,
+        a: seq<nat>,
         d: pow2_t,
         j: nat,
         bi: nat,
@@ -584,8 +499,8 @@ module bv32_falcon_lemmas {
     }
 
     predicate inverse_s_loop_update(
-        a: seq<uint16>,
-        a': seq<uint16>,
+        a: seq<nat>,
+        a': seq<nat>,
         d: pow2_t,
         j: nat,
         bi: nat,
@@ -610,8 +525,8 @@ module bv32_falcon_lemmas {
         && view.s_loop_update(buff_as_n_elems(a), buff_as_n_elems(a'), d, j, bi)
     }
 
-    lemma inverse_s_loop_inv_peri_lemma(a: seq<uint16>,
-        a': seq<uint16>,
+    lemma inverse_s_loop_inv_peri_lemma(a: seq<nat>,
+        a': seq<nat>,
         d: pow2_t,
         j: nat,
         bi: nat,
@@ -631,7 +546,7 @@ module bv32_falcon_lemmas {
         }
     }
 
-    lemma inverse_higher_points_view_index_lemma(a: seq<uint16>, d: pow2_t, j: nat, bi: nat, view: INTT.loop_view)
+    lemma inverse_higher_points_view_index_lemma(a: seq<nat>, d: pow2_t, j: nat, bi: nat, view: INTT.loop_view)
         returns (s: nat)
     
         requires inverse_s_loop_inv(a, d, j, bi, view);
@@ -648,7 +563,7 @@ module bv32_falcon_lemmas {
         s := view.higher_points_view_index_lemma(buff_as_n_elems(a), d, j, bi);
     }
 
-    lemma inverse_j_loop_inv_pre_lemma(a: seq<uint16>, d: pow2_t, view: INTT.loop_view)
+    lemma inverse_j_loop_inv_pre_lemma(a: seq<nat>, d: pow2_t, view: INTT.loop_view)
         requires 0 <= d.exp < N.exp;
         requires inverse_t_loop_inv(a, pow2_double(d), view.coefficients);
         requires view.loop_view_wf();
@@ -658,7 +573,7 @@ module bv32_falcon_lemmas {
         view.j_loop_inv_pre_lemma(buff_as_n_elems(a), d);
     }
 
-    lemma inverse_j_loop_inv_post_lemma(a: seq<uint16>, d: pow2_t, j: nat, u: nat, view: INTT.loop_view)
+    lemma inverse_j_loop_inv_post_lemma(a: seq<nat>, d: pow2_t, j: nat, u: nat, view: INTT.loop_view)
         requires inverse_j_loop_inv(a, d, j, u, view);
         requires j == view.lsize().full;
         requires 0 <= view.hsize.exp <= N.exp;
@@ -668,7 +583,7 @@ module bv32_falcon_lemmas {
         view.j_loop_inv_post_lemma(a, d, j);
     }
 
-    function bit_rev_view_init(a: seq<uint16>): (view: rev_view)
+    function bit_rev_view_init(a: seq<nat>): (view: rev_view)
         requires |a| == N.full;
         ensures view.len == N;
         ensures view.shuffle_inv(a);
@@ -678,7 +593,7 @@ module bv32_falcon_lemmas {
         view
     }
 
-    function {:opaque} ftable_cast(ftable: seq<uint16>): (r: seq<(nat, nat)>)
+    function {:opaque} ftable_cast(ftable: seq<nat>): (r: seq<(nat, nat)>)
         requires |ftable| == |init_unfinished(N)|;
         ensures |r| == |init_unfinished(N)| / 2;
     {
@@ -686,21 +601,21 @@ module bv32_falcon_lemmas {
         seq(size, i requires 0 <= i < size => (ftable[2 * i], ftable[2 * i + 1]))
     }
 
-    predicate bit_rev_ftable_wf(ftable: seq<uint16>)
+    predicate bit_rev_ftable_wf(ftable: seq<nat>)
     {
         && |ftable| == |init_unfinished(N)|
         && table_wf(ftable_cast(ftable), N)
     }
 
-    predicate bit_rev_shuffle_inv(a: seq<uint16>, view: rev_view)
+    predicate bit_rev_shuffle_inv(a: seq<nat>, view: rev_view)
         requires |a| == view.len.full;
     {
        view.shuffle_inv(a)
     }
 
     lemma bit_rev_index_lemma(
-        a: seq<uint16>,
-        ftable: seq<uint16>,
+        a: seq<nat>,
+        ftable: seq<nat>,
         sbi: uint32,
         rsbi: uint32,
         ti: nat,
@@ -749,10 +664,10 @@ module bv32_falcon_lemmas {
     }
 
     lemma bit_rev_view_inv_peri_lemma(
-        a: seq<uint16>,
-        next_b: seq<uint16>,
+        a: seq<nat>,
+        next_b: seq<nat>,
         view: rev_view,
-        table: seq<uint16>)
+        table: seq<nat>)
         returns (next_view: rev_view)
 
         requires buff_is_n_elems(view.b);
@@ -773,7 +688,7 @@ module bv32_falcon_lemmas {
         reveal buff_is_n_elems();
     }
 
-    lemma bit_rev_view_inv_post_lemma(a: seq<uint16>, view: rev_view)
+    lemma bit_rev_view_inv_post_lemma(a: seq<nat>, view: rev_view)
 
         requires |a| == N.full;
         requires view.len == N;
@@ -784,7 +699,7 @@ module bv32_falcon_lemmas {
         view.shuffle_inv_post_lemma(a);
     }
 
-    predicate mq_ntt_poly_mul_inv(a: seq<uint16>, init_a: seq<uint16>, b: seq<uint16>, i: nat)
+    predicate mq_ntt_poly_mul_inv(a: seq<nat>, init_a: seq<nat>, b: seq<nat>, i: nat)
     {
         && buff_is_n_elems(init_a)
         && buff_is_n_elems(b)
@@ -795,10 +710,10 @@ module bv32_falcon_lemmas {
     }
 
     lemma mq_ntt_poly_mul_inv_peri_lemma(
-        a: seq<uint16>, 
-        init_a: seq<uint16>,
+        a: seq<nat>, 
+        init_a: seq<nat>,
         ai: uint32,
-        b: seq<uint16>,
+        b: seq<nat>,
         i: nat)
 
         requires i < N.full;
@@ -821,7 +736,7 @@ module bv32_falcon_lemmas {
         }
     }
 
-    predicate mq_poly_scale_inv(a: seq<uint16>, init_a: seq<uint16>, b: seq<uint16>, i: nat)
+    predicate mq_poly_scale_inv(a: seq<nat>, init_a: seq<nat>, b: seq<nat>, i: nat)
     {
         && buff_is_n_elems(init_a)
         && buff_is_n_elems(b)
@@ -832,10 +747,10 @@ module bv32_falcon_lemmas {
     }
 
     lemma mq_poly_scale_peri_lemma(
-        a: seq<uint16>, 
-        init_a: seq<uint16>,
+        a: seq<nat>, 
+        init_a: seq<nat>,
         ai: uint32,
-        b: seq<uint16>,
+        b: seq<nat>,
         i: nat)
 
         requires i < N.full;
@@ -858,8 +773,8 @@ module bv32_falcon_lemmas {
     }
 
     lemma forward_ntt_lemma(
-        p: seq<uint16>,
-        a: seq<uint16>)
+        p: seq<nat>,
+        a: seq<nat>)
 
         requires forward_ntt_eval_all(p, a);
         ensures forward_ntt_eval_all_alt(p, a)
@@ -962,7 +877,7 @@ module bv32_falcon_lemmas {
         }
     }
     
-    function poly_mod_product(a: seq<uint16>, b: seq<uint16>): (p: seq<uint16>)
+    function poly_mod_product(a: seq<nat>, b: seq<nat>): (p: seq<nat>)
         requires buff_is_n_elems(a)
         requires buff_is_n_elems(b)
     {
@@ -972,15 +887,15 @@ module bv32_falcon_lemmas {
     }
 
     lemma mq_ntt_mul_lemma(
-        a0: seq<uint16>,
-        a1: seq<uint16>,
-        b0: seq<uint16>,
-        b1: seq<uint16>,
-        p0: seq<uint16>,
-        p1: seq<uint16>,
-        p2: seq<uint16>,
-        p3: seq<uint16>,
-        p4: seq<uint16>)
+        a0: seq<nat>,
+        a1: seq<nat>,
+        b0: seq<nat>,
+        b1: seq<nat>,
+        p0: seq<nat>,
+        p1: seq<nat>,
+        p2: seq<nat>,
+        p3: seq<nat>,
+        p4: seq<nat>)
 
         requires buff_is_n_elems(p0);
         requires buff_is_n_elems(p1);
@@ -1077,7 +992,7 @@ module bv32_falcon_lemmas {
         MQP.negatively_wrapped_convolution_lemma(a0, b0, p4);
     }
 
-    predicate poly_sub_loop_inv(f_new: seq<uint16>, f: seq<uint16>, g: seq<uint16>, i: nat)
+    predicate poly_sub_loop_inv(f_new: seq<nat>, f: seq<nat>, g: seq<nat>, i: nat)
     {
         reveal buff_is_n_elems();
         && buff_is_n_elems(f_new)
@@ -1088,7 +1003,7 @@ module bv32_falcon_lemmas {
         && (forall j | 0 <= j < i :: f_new[j] == MQP.mqsub(f[j], g[j]))
     }
 
-    lemma poly_sub_loop_correct(f_new: seq<uint16>, f_old: seq<uint16>, f_orig:seq<uint16>, g: seq<uint16>, i: nat)
+    lemma poly_sub_loop_correct(f_new: seq<nat>, f_old: seq<nat>, f_orig:seq<nat>, g: seq<nat>, i: nat)
         requires i < N.full;
         requires poly_sub_loop_inv(f_old, f_orig, g, i)
         requires f_new == f_old[i := MQP.mqsub(f_orig[i], g[i])];

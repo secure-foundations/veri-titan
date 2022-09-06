@@ -1,0 +1,123 @@
+include "mq_polysub.i.vad"
+
+#verbatim
+include "mq_polysub.i.dfy"
+
+module msp_falcon {
+
+import opened integers
+
+import opened msp_machine
+import opened msp_decls
+import opened msp_vale
+import opened mem
+import opened stack
+
+import opened bv16_op_s
+import opened mq_arith_lemmas
+
+import opened pow2_s
+import opened falcon_512_i
+
+import opened mq_arith_impl
+import opened mq_polysub
+
+#endverbatim
+
+function rev_omega_inv_powers_mont_table(): seq(uint16) extern;
+function rev_mixed_powers_mont_table(): seq(uint16) extern;
+function inverse_ntt_scaling_table(): seq(uint16) extern;
+function buff_as_n_elems(s: seq(uint16)): seq(uint16) extern;
+function normalized_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int): bool extern;
+function bit_rev_ftable_wf(s: seq(uint16)): bool extern;
+
+procedure save_r4__r10()
+    requires
+        in_stack_addr_range(sp);
+        in_stack_addr_range(sp - 14);
+    
+    modifies
+        mem; flat; sp;
+    reads
+        r4; r5; r6; r7; r8; r9; r10; 
+    ensures
+        mem == stack_push_batch(old(mem), old(flat),
+            seq(r4, r5, r6, r7, r8, r9, r10));
+        sp == old(sp) - 14;
+        stack_depth(mem) == stack_depth(old(mem)) + 1;
+{
+    pushm_w(7, r10);
+    assert pushm_w_seq(old(this.ms), R(10), 7)
+        == seq(r4, r5, r6, r7, r8, r9, r10);
+}
+
+procedure msp_falcon(
+    ghost iter_c0: iter_t,
+    ghost iter_s2: iter_t,
+    ghost iter_h: iter_t,
+    ghost iter_tt: iter_t,
+    ghost iter_t1: iter_t,
+    ghost iter_t2: iter_t,
+    ghost iter_p1: iter_t,
+    ghost iter_p2: iter_t)
+
+{:frame false}
+{:noInline}
+
+    requires
+        in_stack_addr_range(sp);
+        in_stack_addr_range(sp - 46);
+
+    // requires
+    //     set_len(init_unfinished(N)) == 480;
+
+    // requires
+    //     in_stack_addr_range(sp);
+    //     in_stack_addr_range(sp - 24);
+
+    requires
+        fvar_iter_inv(heap, iter_c0, r12, 0);
+        normalized_iter_inv(heap, iter_s2, r13, 0);
+
+        // writable
+        fvar_iter_inv(heap, iter_h, r14, 0);
+        // writable
+        fvar_iter_inv(heap, iter_tt, r15, 0);
+
+    requires
+        symbols?["bit_rev_table_512"];
+        iter_inv(iter_t1, heap,
+            load_symbol(mem, "bit_rev_table_512"));
+        iter_t1.index == 0;
+        bit_rev_ftable_wf(iter_t1.buff);
+
+    requires
+        symbols?["scaling_factors"];
+        fvar_iter_inv(heap, iter_t2,
+            load_symbol(mem, "scaling_factors"), 0);
+        iter_t2.buff == inverse_ntt_scaling_table();
+
+    requires
+        symbols?["rev_omega_inv_powers_mont_table"];
+        fvar_iter_inv(heap, iter_p1,
+            load_symbol(mem, "rev_omega_inv_powers_mont_table"), 0);
+        iter_p1.buff == rev_omega_inv_powers_mont_table();
+
+    requires
+        symbols?["rev_ntt512_mixed_powers_table"];
+        fvar_iter_inv(heap, iter_p2,
+            load_symbol(mem, "rev_ntt512_mixed_powers_table"), 0);
+        iter_p2.buff == rev_mixed_powers_mont_table();
+{
+    save_r4__r10();
+
+
+
+}
+
+
+
+
+#verbatim
+}
+#endverbatim

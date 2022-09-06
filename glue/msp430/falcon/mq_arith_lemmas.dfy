@@ -17,6 +17,7 @@ module mq_arith_lemmas {
     import opened msp_machine
     import opened msp_vale
     import opened mem
+    import opened pow2_s
     import flat
 
     import opened falcon_512_i
@@ -259,4 +260,57 @@ module mq_arith_lemmas {
             ensures j == i ==> f_new[j] == MQP.mqsub(f_orig[j], g[j])
         {}
     }
+
+    type floop_view = FNTT.loop_view
+
+    type iloop_view = INTT.loop_view
+
+    function block_size(d: pow2_t): pow2_t
+        requires CPV.block_size.requires(d)
+    {
+        CPV.block_size(d)
+    }
+
+    function build_floop_view(s: n_elems, d: pow2_t): floop_view
+        requires FNTT.build_loop_view.requires(s, d)
+    {
+        FNTT.build_loop_view(s, d)
+    }
+
+    function build_iloop_view(s: n_elems, d: pow2_t): iloop_view
+        requires INTT.build_loop_view.requires(s, d)
+    {
+        INTT.build_loop_view(s, d)
+    }
+
+    function montmul(a: elem, b: elem): elem
+    {
+        MQP.montmul(a, b)
+    }
+
+    function rev_mixed_powers_mont_x_value(i: nat, d: pow2_t): (r: elem)
+    {
+        FNTT.rev_mixed_powers_mont_x_value(i, d)
+    }
+
+    function rev_mixed_powers_mont_table(): n_elems
+    {
+        FNTT.rev_mixed_powers_mont_table()
+    }
+
+    function rev_omega_inv_powers_x_value(i: nat, d: pow2_t): (r: elem)
+    {
+        INTT.rev_omega_inv_powers_x_value(i, d)
+    }
+
+    function rev_omega_inv_powers_mont_table(): n_elems
+    {
+        INTT.rev_omega_inv_powers_mont_table()
+    }
+
+    function inverse_ntt_scaling_table(): n_elems
+    {
+        MQP.inverse_ntt_scaling_table()
+    }
+
 }
