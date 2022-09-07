@@ -70,7 +70,7 @@ returns (ghost next_iter_a: b16_iter)
 
         li(t3, 10952);
 
-        reveal buff_is_n_elems;
+        reveal contains_elems;
 
         while (a0 < a3)
             invariant

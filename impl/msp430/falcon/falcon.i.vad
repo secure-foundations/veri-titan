@@ -27,7 +27,7 @@ import opened mq_polysub
 function rev_omega_inv_powers_mont_table(): seq(uint16) extern;
 function rev_mixed_powers_mont_table(): seq(uint16) extern;
 function inverse_ntt_scaling_table(): seq(uint16) extern;
-function buff_as_n_elems(s: seq(uint16)): seq(uint16) extern;
+function as_elems(s: seq(uint16)): seq(uint16) extern;
 function normalized_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int): bool extern;
 function bit_rev_ftable_wf(s: seq(uint16)): bool extern;
 
@@ -77,7 +77,7 @@ procedure msp_falcon(
 
     requires
         fvar_iter_inv(heap, iter_c0, r12, 0);
-        normalized_iter_inv(heap, iter_s2, r13, 0);
+        // normalized_iter_inv(heap, iter_s2, r13, 0);
 
         // writable
         fvar_iter_inv(heap, iter_h, r14, 0);

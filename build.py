@@ -422,7 +422,9 @@ def replace_string_file(file_path, src, dst):
     # print(file_path)
     with open(file_path) as f:
         filedata = f.read()
-        # Replace the target string
+    if not (src in filedata):
+        return
+    # Replace the target string
     filedata = filedata.replace(src, dst)
     with open(file_path, 'w') as f:
         f.write(filedata)

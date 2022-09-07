@@ -11,7 +11,7 @@ abstract module mq_poly_s(MQNTT: ntt_param_s) {
     import opened pow2_s
 
     type elem = MQNTT.elem
-    type n_elems = MQNTT.n_elems
+    type elems = MQNTT.elems
 
     const Q := MQNTT.Q;
     ghost const N := MQNTT.N; 
@@ -134,30 +134,30 @@ abstract module mq_poly_s(MQNTT: ntt_param_s) {
         r
     }
 
-    function circle_product(a: n_elems, b: n_elems): n_elems
+    function circle_product(a: elems, b: elems): elems
     {
         seq(N.full, i requires 0 <= i < N.full => mqmul(a[i], b[i]))
     }
 
-    function NTT(a: n_elems): n_elems
+    function NTT(a: elems): elems
     {
         seq(N.full, i requires 0 <= i < N.full =>
             poly_eval(a, mqpow(MQNTT.OMEGA, i)))
     }
 
-    function INTT(a: n_elems): n_elems
+    function INTT(a: elems): elems
     {
         seq(N.full, i requires 0 <= i < N.full =>
             mqmul(poly_eval(a, mqpow(MQNTT.OMEGA_INV, i)), MQNTT.N_INV))
     }
 
-    function scaled_coeff(a: n_elems): n_elems
+    function scaled_coeff(a: elems): elems
     {
         seq(N.full, i requires 0 <= i < N.full =>
             mqmul(a[i], mqpow(MQNTT.PSI, i)))
     }
 
-    function negatively_wrapped_convolution(a: n_elems, b: n_elems): n_elems
+    function negatively_wrapped_convolution(a: elems, b: elems): elems
     {
         var inverse :seq<elem> :=
             INTT(circle_product(NTT(scaled_coeff(a)), NTT(scaled_coeff(b))));
@@ -173,7 +173,7 @@ abstract module mq_poly_s(MQNTT: ntt_param_s) {
         r
     }
 
-    lemma {:axiom} negatively_wrapped_convolution_lemma(a: n_elems, b: n_elems, p: n_elems)
+    lemma {:axiom} negatively_wrapped_convolution_lemma(a: elems, b: elems, p: elems)
         requires p == negatively_wrapped_convolution(a, b);
         ensures p == poly_mod(poly_mul(a, b), n_ideal())
 }

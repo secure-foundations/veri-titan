@@ -14,7 +14,7 @@ abstract module falcon_s(MQ: ntt_param_s, MQP: mq_poly_s(MQ)) {
     predicate falcon_verify(c0: seq<MQ.elem>, s2: seq<MQN.nelem>, h: seq<MQ.elem>)
         requires |c0| == |s2| == |h| == MQ.N.full;
     {
-        var tt0 := MQN.denormalize_n_elems(s2);
+        var tt0 := MQN.denormalize_elems(s2);
         var tt1 := poly_mod_product(tt0, h);
         var tt2 := MQP.poly_sub(tt1, c0);
         var s1 := MQN.normalize_elems(tt2);

@@ -15,7 +15,7 @@ module poly_view_i(MQ: ntt_param_s) {
     type x_fun = (nat, pow2_t) -> elem
 
     type elem = MQ.elem
-    type n_elems = MQ.n_elems
+    type elems = MQ.elems
 
     const Q := MQ.Q;
     ghost const N := MQ.N; 
@@ -144,7 +144,7 @@ module poly_view_i(MQ: ntt_param_s) {
         seq(size, j requires 0 <= j < size => a[point_view_index(i, j, bsize)])
     }
 
-    // interpret an n_elems buffer as a level view
+    // interpret an elems buffer as a level view
     // contains blocks of points, each block has bsize
     function level_points_view(a: seq<elem>, bsize: pow2_t): (vs: seq<seq<elem>>)
         requires |a| == N.full;
@@ -204,7 +204,7 @@ module poly_view_i(MQ: ntt_param_s) {
 
     // construct polys level view 
     // each block is a poly, has bsize coefficients
-    function {:opaque} level_polys(coefficients: n_elems, bsize: pow2_t): (lps: seq<seq<elem>>)
+    function {:opaque} level_polys(coefficients: elems, bsize: pow2_t): (lps: seq<seq<elem>>)
         requires 0 <= bsize.exp <= N.exp;
         ensures unifromly_sized(lps, bsize);
         decreases N.exp - bsize.exp;
@@ -220,7 +220,7 @@ module poly_view_i(MQ: ntt_param_s) {
             build_lower_level_polys(higher, double_size)
     }
 
-    function base_level_polys(coefficients: n_elems): (lps: seq<seq<elem>>)
+    function base_level_polys(coefficients: elems): (lps: seq<seq<elem>>)
         ensures 0 <= pow2(0).exp <= N.exp;
         ensures unifromly_sized(lps, pow2(0));
     {
@@ -232,14 +232,14 @@ module poly_view_i(MQ: ntt_param_s) {
     }
 
     // this is provable (and sort of already proved), but complicated
-    lemma {:axiom} base_level_polys_lemma(coefficients: n_elems, i: nat)
+    lemma {:axiom} base_level_polys_lemma(coefficients: elems, i: nat)
         requires i < N.full;
         ensures |base_level_polys(coefficients)[bit_rev_int(i, N)]| == 1;
         ensures base_level_polys(coefficients)[bit_rev_int(i, N)][0] == coefficients[i];
         // ensures |base_level_polys()[i]| == 1;
         // ensures base_level_polys()[i][0] == A()[bit_rev_int(i, N)];
 
-    lemma level_polys_index_correspondence_lemma(coefficients: n_elems,
+    lemma level_polys_index_correspondence_lemma(coefficients: elems,
         higher: seq<seq<elem>>,
         hsize: pow2_t,
         i: nat,

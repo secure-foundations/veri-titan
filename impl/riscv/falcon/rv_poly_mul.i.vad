@@ -41,8 +41,8 @@ import opened rv_mq_ntt_poly_mul
 
 #endverbatim
 
-function buff_as_n_elems(s: seq(uint16)): seq(uint16) extern;
-function buff_is_n_elems(s: seq(uint16)): bool extern;
+function as_elems(s: seq(uint16)): seq(uint16) extern;
+function contains_elems(s: seq(uint16)): bool extern;
 
 function rev_omega_inv_powers_mont_table(): seq(uint16) extern;
 function inverse_ntt_scaling_table(): seq(uint16) extern;
@@ -142,11 +142,11 @@ returns (
         s4 == old(s4);
 
     ensures
-        buff_is_n_elems(iter_a.buff);
-        buff_is_n_elems(iter_b.buff);
+        contains_elems(iter_a.buff);
+        contains_elems(iter_b.buff);
         next_iter_a.buff == poly_mod_product(
-            buff_as_n_elems(iter_a.buff), 
-            buff_as_n_elems(iter_b.buff));
+            as_elems(iter_a.buff), 
+            as_elems(iter_b.buff));
 {
     mv(s0, a0);
     mv(s1, a1);

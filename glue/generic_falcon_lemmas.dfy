@@ -14,18 +14,18 @@ abstract module generic_falcon_lemmas {
     import FNTT = falcon_512_i.FNTT
     import INTT = falcon_512_i.INTT
 
-    predicate {:opaque} buff_is_n_elems(a: seq<nat>)
-        ensures buff_is_n_elems(a) ==> |a| == N.full;
+    predicate {:opaque} contains_elems(a: seq<nat>)
+        ensures contains_elems(a) ==> |a| == N.full;
     {
         && (|a| == N.full)
         && (forall i | 0 <= i < N.full :: a[i] < Q)
     }
 
-    function {:opaque} buff_as_n_elems(a: seq<nat>): (a': n_elems)
-        requires buff_is_n_elems(a);
+    function {:opaque} as_elems(a: seq<nat>): (a': elems)
+        requires contains_elems(a);
         ensures a == a';
     {
-        reveal buff_is_n_elems();
+        reveal contains_elems();
         a
     }
 
@@ -58,7 +58,7 @@ abstract module generic_falcon_lemmas {
         FNTT.rev_mixed_powers_mont_x_value(i, d)
     }
 
-    function rev_mixed_powers_mont_table(): n_elems
+    function rev_mixed_powers_mont_table(): elems
     {
         FNTT.rev_mixed_powers_mont_table()
     }
@@ -68,12 +68,12 @@ abstract module generic_falcon_lemmas {
         INTT.rev_omega_inv_powers_x_value(i, d)
     }
 
-    function rev_omega_inv_powers_mont_table(): n_elems
+    function rev_omega_inv_powers_mont_table(): elems
     {
         INTT.rev_omega_inv_powers_mont_table()
     }
 
-    function inverse_ntt_scaling_table(): n_elems
+    function inverse_ntt_scaling_table(): elems
     {
         MQP.inverse_ntt_scaling_table()
     }
@@ -87,7 +87,7 @@ abstract module generic_falcon_lemmas {
         CPV.block_size(d)
     }
 
-    function build_floop_view(s: n_elems, d: pow2_t): floop_view
+    function build_floop_view(s: elems, d: pow2_t): floop_view
         requires FNTT.build_loop_view.requires(s, d)
     {
         FNTT.build_loop_view(s, d)
@@ -102,38 +102,38 @@ abstract module generic_falcon_lemmas {
 
     predicate forward_ntt_eval_all(a: seq<nat>, coeffs: seq<nat>)
     {
-        && buff_is_n_elems(a)
-        && buff_is_n_elems(coeffs)
-        && FNTT.ntt_eval_all(buff_as_n_elems(a), buff_as_n_elems(coeffs))
+        && contains_elems(a)
+        && contains_elems(coeffs)
+        && FNTT.ntt_eval_all(as_elems(a), as_elems(coeffs))
     }
 
     predicate forward_t_loop_inv(a: seq<nat>, d: pow2_t, coeffs: seq<nat>)
         requires 0 <= d.exp <= N.exp;
     {
-        && buff_is_n_elems(a)
-        && buff_is_n_elems(coeffs)
-        && FNTT.t_loop_inv(buff_as_n_elems(a), d, buff_as_n_elems(coeffs))
+        && contains_elems(a)
+        && contains_elems(coeffs)
+        && FNTT.t_loop_inv(as_elems(a), d, as_elems(coeffs))
     }
 
     predicate forward_s_loop_inv(a: seq<nat>, d: pow2_t, j: nat, bi: nat, view: FNTT.loop_view)
     {
-        && buff_is_n_elems(a)
-        && view.s_loop_inv(buff_as_n_elems(a), d, j, bi)
+        && contains_elems(a)
+        && view.s_loop_inv(as_elems(a), d, j, bi)
     }
 
     predicate forward_j_loop_inv(a: seq<nat>, d: pow2_t, j: nat, u: nat, view: FNTT.loop_view)
     {
-        && buff_is_n_elems(a)
+        && contains_elems(a)
         && u == j * (2 * d.full)
-        && view.j_loop_inv(buff_as_n_elems(a), d, j)
+        && view.j_loop_inv(as_elems(a), d, j)
     }
 
     lemma forward_t_loop_inv_pre_lemma(coeffs: seq<nat>)
-        requires buff_is_n_elems(coeffs);
+        requires contains_elems(coeffs);
         ensures N.exp <= N.exp; // ??
         ensures forward_t_loop_inv(coeffs, N, coeffs);
     {
-        FNTT.t_loop_inv_pre_lemma(buff_as_n_elems(coeffs));
+        FNTT.t_loop_inv_pre_lemma(as_elems(coeffs));
     }
 
     lemma forward_t_loop_inv_post_lemma(a: seq<nat>, one: pow2_t, coeffs: seq<nat>)
@@ -145,21 +145,45 @@ abstract module generic_falcon_lemmas {
     }
 
 // intt wraps
+
     type iloop_view = INTT.loop_view
 
-    function build_iloop_view(s: n_elems, d: pow2_t): iloop_view
+    function build_iloop_view(s: elems, d: pow2_t): iloop_view
         requires INTT.build_loop_view.requires(s, d)
     {
         INTT.build_loop_view(s, d)
     }
 
+// bit rev wraps
+
+    function {:opaque} ftable_cast(ftable: seq<nat>): (r: seq<(nat, nat)>)
+        requires |ftable| == |init_unfinished(N)|;
+        ensures |r| == |init_unfinished(N)| / 2;
+    {
+        var size := |init_unfinished(N)| / 2;
+        seq(size, i requires 0 <= i < size => (ftable[2 * i], ftable[2 * i + 1]))
+    }
+
+    predicate bit_rev_ftable_wf(ftable: seq<nat>)
+    {
+        && |ftable| == |init_unfinished(N)|
+        && table_wf(ftable_cast(ftable), N)
+    }
+
+    predicate bit_rev_shuffle_inv(a: seq<nat>, view: rev_view)
+        requires |a| == view.len.full;
+    {
+       view.shuffle_inv(a)
+    }
+
 // polysub wraps
+
     predicate poly_sub_loop_inv(diff: seq<nat>, f: seq<nat>, g: seq<nat>, i: nat)
     {
-        reveal buff_is_n_elems();
-        && buff_is_n_elems(diff)
-        && buff_is_n_elems(f)
-        && buff_is_n_elems(g)
+        reveal contains_elems();
+        && contains_elems(diff)
+        && contains_elems(f)
+        && contains_elems(g)
         && 0 <= i <= N.full
         && diff[i..] == f[i..]
         && (forall j | 0 <= j < i :: diff[j] == MQP.mqsub(f[j], g[j]))

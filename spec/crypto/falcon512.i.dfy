@@ -20,7 +20,7 @@ module falcon_512_i refines
     import INTT = mq_intt_i(CMQ, CMQP, CPV)
 
     type elem = MQ.elem
-    type n_elems = MQ.n_elems
+    type elems = MQ.elems
     type nelem = MQN.nelem
 
     const Q := MQ.Q;
@@ -41,14 +41,14 @@ module falcon_512_i refines
         0x29845d6
     }
 
-    predicate fntt_eval_all_alt(a: n_elems, poly: n_elems)
+    predicate fntt_eval_all_alt(a: elems, poly: elems)
     {
         && var p_hat := MQP.scaled_coeff(poly);
         && (forall i | 0 <= i < N.full ::
             MQP.poly_eval(p_hat, MQP.mqpow(MQ.OMEGA, bit_rev_int(i, N))) == a[i])
     }
 
-    lemma fntt_equi_lemma(a: n_elems, poly: n_elems)
+    lemma fntt_equi_lemma(a: elems, poly: elems)
         requires FNTT.ntt_eval_all(a, poly);
         ensures fntt_eval_all_alt(a, poly)
     {
@@ -151,7 +151,7 @@ module falcon_512_i refines
         }
     }
 
-    predicate is_mm_circle_product(c: n_elems, a: n_elems, b: n_elems, i: nat)
+    predicate is_mm_circle_product(c: elems, a: elems, b: elems, i: nat)
         requires i <= N.full
     {
         forall j: nat | 0 <= j < i ::
@@ -159,8 +159,8 @@ module falcon_512_i refines
     }
 
     lemma poly_mod_product_lemma(
-        a0: n_elems, a1: n_elems, b0: n_elems, b1: n_elems,
-        p0: n_elems, p1: n_elems, p2: n_elems, p3: n_elems, p4: n_elems)
+        a0: elems, a1: elems, b0: elems, b1: elems,
+        p0: elems, p1: elems, p2: elems, p3: elems, p4: elems)
 
         requires FNTT.ntt_eval_all(a1, a0);
         requires FNTT.ntt_eval_all(b1, b0);

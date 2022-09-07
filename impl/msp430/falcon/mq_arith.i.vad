@@ -29,27 +29,27 @@ function lemma_mq_sub_correct(diff: uint16, flags: flags_t, mask: uint16, r: uin
 
 procedure mq_add() 
     lets 
-      Q    @= r9;
-      negQ @= r10;
-      x    @= r11;
-      y    @= r12;
-      r    @= r13;
-      tmp @= r14;
+        Q    @= r9;
+        negQ @= r10;
+        x    @= r11;
+        y    @= r12;
+        r    @= r13;
+        tmp @= r14;
     
     requires
-      Q == 12289;
-      negQ == 0xcfff;
-      x < 12289;
-      y < 12289;
+        Q == 12289;
+        negQ == 0xcfff;
+        x < 12289;
+        y < 12289;
     
     reads
-      Q; negQ; x; y;
+        Q; negQ; x; y;
 
     modifies
-      flags; r; tmp;
+        flags; r; tmp;
     
     ensures
-      r == mqadd(old(x), old(y));
+        r == mqadd(old(x), old(y));
 {
     mov_w(y, tmp);    // tmp <- y
     add_w(negQ, tmp); // tmp <- y - Q
@@ -70,28 +70,27 @@ procedure mq_add()
     lemma_mq_add_correct(sum, mask, r, x, y);
 }
 
-
 procedure mq_sub() 
     lets 
-      Q    @= r9;
-      x    @= r11;
-      y    @= r12;
-      r    @= r13;
-      tmp  @= r14;
-    
+        Q    @= r9;
+        x    @= r11;
+        y    @= r12;
+        r    @= r13;
+        tmp  @= r14;
+
     requires
-      Q == 12289;
-      x < 12289;
-      y < 12289;
+        Q == 12289;
+        x < 12289;
+        y < 12289;
 
     reads
-      Q; x; y;
+        Q; x; y;
 
     modifies
-      flags; r; tmp;
+        flags; r; tmp;
     
     ensures
-      r == mqsub(old(x), old(y));
+        r == mqsub(old(x), old(y));
 {
     mov_w_imm(0-1, r); // r <- 0xFFFF
 
@@ -120,12 +119,12 @@ function lemma_montymul_correct(x: nat, y: nat, xy_lh: uint16, xy_uh: uint16, Q0
 
 procedure montymul()
     lets 
-      Q    @= r9;
-      x    @= r12;
-      y    @= r13;
-      r    @= r11;
-      tmp  @= r10;
-    
+        Q    @= r9;
+        x    @= r12;
+        y    @= r13;
+        r    @= r11;
+        tmp  @= r10;
+        
     requires
         Q == 12289;
         x < 12289;

@@ -14,7 +14,7 @@ module ntt_twiddle_i(MQ: ntt_param_s) {
         import PV = poly_view_i(MQ)
 
         type elem = MQ.elem
-        type n_elems = MQ.n_elems
+        type elems = MQ.elems
 
         const Q := MQ.Q;
         const R := MQ.R;

@@ -2,39 +2,19 @@ include "../../../spec/arch/msp430/machine.s.dfy"
 include "../../../spec/bvop/bv16_op.s.dfy"
 include "../../../spec/arch/msp430/vale.i.dfy"
 include "../../../spec/crypto/falcon512.i.dfy"
+include "../../generic_falcon_lemmas.dfy"
 
-//include "../DivModNeg.dfy"
-
-module mq_arith_lemmas {
+module mq_arith_lemmas refines generic_falcon_lemmas {
     import opened Seq
-    import opened Power
     import opened Power2
-    import opened DivMod
-    import opened Mul
-    import opened integers
     import opened bv16_op_s
     import opened bv16_seq
     import opened msp_machine
     import opened msp_vale
     import opened mem
-    import opened pow2_s
     import flat
 
-    import opened falcon_512_i
-
     type uint32_view_t = dw_view_t
-
-    type elem = MQ.elem
-
-    function mqadd(x: elem, y: elem): elem
-    {
-        MQP.mqadd(x, y)
-    }
-
-    function mqsub(x: elem, y: elem): elem
-    {
-        MQP.mqsub(x, y)
-    }
 
     lemma lemma_mq_add_correct(sum: uint16, mask: uint16, r: uint16, x: uint16, y: uint16)
         requires 0 <= x < 12289;
@@ -214,103 +194,36 @@ module mq_arith_lemmas {
         }
     }
 
-    predicate {:opaque} buff_is_n_elems(a: seq<nat>)
-        ensures buff_is_n_elems(a) ==> |a| == N.full;
-    {
-        && (|a| == N.full)
-        && (forall i | 0 <= i < N.full :: a[i] < Q)
-    }
-
     predicate fvar_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int)
     {
         && b16_iter_inv(heap, iter) //, if address >= 0 then address else iter.cur_ptr())
         && (index >= 0 ==> iter.index == index)
         && |iter.buff| == N.full
-        && buff_is_n_elems(iter.buff)
+        && contains_elems(iter.buff)
     }
 
-    function {:opaque} buff_as_n_elems(a: seq<uint16>): (a': n_elems)
-        requires buff_is_n_elems(a);
-        ensures a == a';
+    predicate is_nelem(e: uint16)
     {
-        reveal buff_is_n_elems();
-        a
+        MQN.int_is_normalized(bv16_op_s.to_int16(e))
     }
 
-    predicate poly_sub_loop_inv(f_new: seq<uint16>, f: seq<uint16>, g: seq<uint16>, i: nat)
+    function as_nelem(e: uint16): nelem
+        requires is_nelem(e)
     {
-        reveal buff_is_n_elems();
-        && buff_is_n_elems(f_new)
-        && buff_is_n_elems(f)
-        && buff_is_n_elems(g)
-        && 0 <= i <= N.full
-        && f_new[i..] == f[i..]
-        && (forall j :: 0 <= j < i ==> f_new[j] == MQP.mqsub(f[j], g[j]))
+        bv16_op_s.to_int16(e)
     }
-    
-    lemma poly_sub_loop_correct(f_new: seq<uint16>, f_old: seq<uint16>, f_orig:seq<uint16>, g: seq<uint16>, i: nat)
-      requires i < N.full;
-      requires poly_sub_loop_inv(f_old, f_orig, g, i)
-      requires f_new == f_old[i := MQP.mqsub(f_orig[i], g[i])];
-      ensures poly_sub_loop_inv(f_new, f_orig, g, i+1);
+
+    predicate {:opaque} valid_nelems(a: seq<uint16>)
+        ensures has_n_nelems(a) ==> |a| == N.full;
     {
-        assert |f_new| == |f_old|;
-        forall j | 0 <= j < |f_new|
-            ensures j != i ==> f_new[j] == f_old[j]
-            ensures j == i ==> f_new[j] == MQP.mqsub(f_orig[j], g[j])
-        {}
+        && |a| == N.full
+        && (forall i | 0 <= i < |a| :: is_nelem(a[i]))
     }
 
-    type floop_view = FNTT.loop_view
-
-    type iloop_view = INTT.loop_view
-
-    function block_size(d: pow2_t): pow2_t
-        requires CPV.block_size.requires(d)
+    function as_nelems(a: seq<uint16>): (na: seq<nelem>)
+        requires valid_nelems(a);
     {
-        CPV.block_size(d)
+        reveal valid_nelems();
+        seq(|a|, i requires 0 <= i < |a| => as_nelem(a[i]))
     }
-
-    function build_floop_view(s: n_elems, d: pow2_t): floop_view
-        requires FNTT.build_loop_view.requires(s, d)
-    {
-        FNTT.build_loop_view(s, d)
-    }
-
-    function build_iloop_view(s: n_elems, d: pow2_t): iloop_view
-        requires INTT.build_loop_view.requires(s, d)
-    {
-        INTT.build_loop_view(s, d)
-    }
-
-    function montmul(a: elem, b: elem): elem
-    {
-        MQP.montmul(a, b)
-    }
-
-    function rev_mixed_powers_mont_x_value(i: nat, d: pow2_t): (r: elem)
-    {
-        FNTT.rev_mixed_powers_mont_x_value(i, d)
-    }
-
-    function rev_mixed_powers_mont_table(): n_elems
-    {
-        FNTT.rev_mixed_powers_mont_table()
-    }
-
-    function rev_omega_inv_powers_x_value(i: nat, d: pow2_t): (r: elem)
-    {
-        INTT.rev_omega_inv_powers_x_value(i, d)
-    }
-
-    function rev_omega_inv_powers_mont_table(): n_elems
-    {
-        INTT.rev_omega_inv_powers_mont_table()
-    }
-
-    function inverse_ntt_scaling_table(): n_elems
-    {
-        MQP.inverse_ntt_scaling_table()
-    }
-
 }
