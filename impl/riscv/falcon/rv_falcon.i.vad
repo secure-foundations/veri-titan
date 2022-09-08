@@ -59,13 +59,13 @@ returns (ghost next_iter_tt: b16_iter)
         in_stack_addr_range(sp - 24);
 
     requires
-        fvar_iter_inv(heap, iter_c0, a0, 0);
-        normalized_iter_inv(heap, iter_s2, a1, 0);
+        elems_iter_inv(heap, iter_c0, a0, 0);
+        nelems_iter_inv(heap, iter_s2, a1, 0);
 
         // writable
-        fvar_iter_inv(heap, iter_h, a2, 0);
+        elems_iter_inv(heap, iter_h, a2, 0);
         // writable
-        fvar_iter_inv(heap, iter_tt, a3, 0);
+        elems_iter_inv(heap, iter_tt, a3, 0);
 
     requires
         symbols?["bit_rev_table_512"];
@@ -77,19 +77,19 @@ returns (ghost next_iter_tt: b16_iter)
 
     requires
         symbols?["scaling_factors"];
-        fvar_iter_inv(heap, iter_t2,
+        elems_iter_inv(heap, iter_t2,
             load_symbol(mem, "scaling_factors"), 0);
         iter_t2.buff == inverse_ntt_scaling_table();
 
     requires
         symbols?["rev_omega_inv_powers_mont_table"];
-        fvar_iter_inv(heap, iter_p1,
+        elems_iter_inv(heap, iter_p1,
             load_symbol(mem, "rev_omega_inv_powers_mont_table"), 0);
         iter_p1.buff == rev_omega_inv_powers_mont_table();
 
     requires
         symbols?["rev_ntt512_mixed_powers_table"];
-        fvar_iter_inv(heap, iter_p2,
+        elems_iter_inv(heap, iter_p2,
             load_symbol(mem, "rev_ntt512_mixed_powers_table"), 0);
         iter_p2.buff == rev_mixed_powers_mont_table();
 
@@ -143,12 +143,12 @@ returns (ghost next_iter_tt: b16_iter)
     next_iter_tt, next_iter_h := poly_sub(next_iter_tt, iter_c0);
     let tt2 := next_iter_tt.buff;
 
-    // assert fvar_iter_inv(heap, next_iter_tt, s3, 0);
+    // assert elems_iter_inv(heap, next_iter_tt, s3, 0);
 
     next_iter_tt := normalize(next_iter_tt);
     
-    assert normalized_iter_inv(heap, iter_s2, s4, 0);
-    assert normalized_iter_inv(heap, next_iter_tt, s3, 0);
+    assert nelems_iter_inv(heap, iter_s2, s4, 0);
+    assert nelems_iter_inv(heap, next_iter_tt, s3, 0);
 
     is_short(next_iter_tt, iter_s2);
 

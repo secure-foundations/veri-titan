@@ -180,26 +180,26 @@ module otbn_lemmas {
       }
     }
 
-    predicate {:opaque} contains_elems(a: seq<nat>)
-        ensures contains_elems(a) ==> |a| == N.full;
+    predicate {:opaque} valid_elems(a: seq<nat>)
+        ensures valid_elems(a) ==> |a| == N.full;
     {
         && (|a| == N.full)
         && (forall i | 0 <= i < N.full :: a[i] < Q)
     }
 
-    predicate fvar_iter_inv(heap: heap_t, iter: b256_iter, address: int, index: int)
+    predicate elems_iter_inv(heap: heap_t, iter: b256_iter, address: int, index: int)
     {
         && b256_iter_inv(heap, iter) //, if address >= 0 then address else iter.cur_ptr())
         && (index >= 0 ==> iter.index == index)
         && |iter.buff| == N.full
-        && contains_elems(iter.buff)
+        && valid_elems(iter.buff)
     }
 
     function {:opaque} as_elems(a: seq<uint256>): (a': elems)
-        requires contains_elems(a);
+        requires valid_elems(a);
         ensures a == a';
     {
-        reveal contains_elems();
+        reveal valid_elems();
         a
     }
     
@@ -210,10 +210,10 @@ module otbn_lemmas {
 
     predicate poly_sub_loop_inv(f_new: seq<uint256>, f: seq<uint256>, g: seq<uint256>, i: nat)
     {
-        reveal contains_elems();
-        && contains_elems(f_new)
-        && contains_elems(f)
-        && contains_elems(g)
+        reveal valid_elems();
+        && valid_elems(f_new)
+        && valid_elems(f)
+        && valid_elems(g)
         && 0 <= i <= N.full
         && f_new[i..] == f[i..]
         && (forall j :: 0 <= j < i ==> f_new[j] == mqsub(f[j], g[j]))

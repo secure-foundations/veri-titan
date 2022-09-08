@@ -26,7 +26,7 @@ import opened bv32_falcon_lemmas
 
 #endverbatim
 
-function fvar_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int): bool extern;
+function elems_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int): bool extern;
 function pow2_t_cons(n: nat, exp: nat): pow2_t extern;
 
 function circle_product_inv(init_a: seq(uint16), a: seq(uint16), b: seq(uint16), i: nat): bool extern;
@@ -40,8 +40,8 @@ returns (ghost next_iter_a: b16_iter)
 
     requires
         iter_a.base_ptr != iter_b.base_ptr;
-        fvar_iter_inv(heap, iter_a, a0, 0);
-        fvar_iter_inv(heap, iter_b, a1, 0);
+        elems_iter_inv(heap, iter_a, a0, 0);
+        elems_iter_inv(heap, iter_b, a1, 0);
 
     modifies
         t0; t1; t2; t3; a0; a1; a2; a3; a4; a5;
@@ -52,7 +52,7 @@ returns (ghost next_iter_a: b16_iter)
 
     ensures
         next_iter_a.base_ptr == iter_a.base_ptr;
-        fvar_iter_inv(heap, next_iter_a, a0, 0);
+        elems_iter_inv(heap, next_iter_a, a0, 0);
 
         mem == old(mem).(heap := heap);
         heap == old(heap)[iter_a.base_ptr := heap[iter_a.base_ptr]];
@@ -70,7 +70,7 @@ returns (ghost next_iter_a: b16_iter)
 
         li(t3, 10952);
 
-        reveal contains_elems;
+        reveal valid_elems;
 
         while (a0 < a3)
             invariant
@@ -81,11 +81,11 @@ returns (ghost next_iter_a: b16_iter)
                 iter_a.base_ptr != iter_b.base_ptr;
 
                 next_iter_a.base_ptr == iter_a.base_ptr;
-                fvar_iter_inv(heap, next_iter_a, a0, i);
+                elems_iter_inv(heap, next_iter_a, a0, i);
                 next_iter_a.buff[i..] == init_a[i..];
 
                 next_iter_b.base_ptr == iter_b.base_ptr;
-                fvar_iter_inv(heap, next_iter_b, a1, i);
+                elems_iter_inv(heap, next_iter_b, a1, i);
 
             invariant 
                 circle_product_inv(next_iter_a.buff, init_a, iter_b.buff, i);

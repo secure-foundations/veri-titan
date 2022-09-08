@@ -22,8 +22,8 @@ import opened bv32_falcon_lemmas
 
 #endverbatim
 
-function fvar_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int): bool extern;
-function normalized_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int): bool extern;
+function elems_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int): bool extern;
+function nelems_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int): bool extern;
 function cond_sub_q_lemma(a: uint16, b: uint16, c: uint16, d: uint16): void extern;
 
 function denormalization_inv(nv: seq(uint16), dnv: seq(uint16), i: nat): bool extern;
@@ -39,9 +39,9 @@ returns (ghost next_iter_tmp: b16_iter)
     requires
         requires s1 == 12289;
 
-        normalized_iter_inv(heap, iter_s2, a1, 0);
+        nelems_iter_inv(heap, iter_s2, a1, 0);
         // writable
-        fvar_iter_inv(heap, iter_tmp, a3, 0);
+        elems_iter_inv(heap, iter_tmp, a3, 0);
 
         iter_s2.base_ptr != iter_tmp.base_ptr;
 
@@ -55,9 +55,9 @@ returns (ghost next_iter_tmp: b16_iter)
     ensures
         a3 == old(a3);
         mem == old(mem).(heap := heap);
-        normalized_iter_inv(heap, iter_s2, iter_s2.base_ptr, 0);
+        nelems_iter_inv(heap, iter_s2, iter_s2.base_ptr, 0);
         next_iter_tmp.base_ptr == iter_tmp.base_ptr;
-        fvar_iter_inv(heap, next_iter_tmp, a3, 0);
+        elems_iter_inv(heap, next_iter_tmp, a3, 0);
 
         heap == old(heap)
             [next_iter_tmp.base_ptr := heap[next_iter_tmp.base_ptr]];
@@ -79,10 +79,10 @@ returns (ghost next_iter_tmp: b16_iter)
 
         invariant next_iter_s2.base_ptr == iter_s2.base_ptr;
         invariant next_iter_s2.buff == iter_s2.buff;
-        invariant normalized_iter_inv(heap, next_iter_s2, a1, u);
+        invariant nelems_iter_inv(heap, next_iter_s2, a1, u);
 
         invariant next_iter_tmp.base_ptr == iter_tmp.base_ptr;
-        invariant fvar_iter_inv(heap, next_iter_tmp, a3, u);
+        invariant elems_iter_inv(heap, next_iter_tmp, a3, u);
 
         invariant denormalization_inv(next_iter_s2.buff, next_iter_tmp.buff, u);
 
@@ -122,7 +122,7 @@ returns (ghost next_iter_tt: b16_iter)
 
     requires
         a0 == 12289;
-        fvar_iter_inv(heap, iter_tt, s3, 0);
+        elems_iter_inv(heap, iter_tt, s3, 0);
 
     modifies
         mem; heap;
@@ -135,7 +135,7 @@ returns (ghost next_iter_tt: b16_iter)
         mem == old(mem).(heap := heap);
         next_iter_tt.base_ptr == iter_tt.base_ptr;
         b16_iter_inv(next_iter_tt, heap, s3);
-        normalized_iter_inv(heap, next_iter_tt, s3, 0);
+        nelems_iter_inv(heap, next_iter_tt, s3, 0);
         heap == old(heap)
             [next_iter_tt.base_ptr := heap[next_iter_tt.base_ptr]];
 
@@ -203,8 +203,8 @@ procedure is_short(
     ghost iter_a: b16_iter,
     ghost iter_b: b16_iter)
 
-    requires normalized_iter_inv(heap, iter_a, s3, 0);
-    requires normalized_iter_inv(heap, iter_b, s4, 0);
+    requires nelems_iter_inv(heap, iter_a, s3, 0);
+    requires nelems_iter_inv(heap, iter_b, s4, 0);
 
     reads
         mem; heap;
@@ -233,9 +233,9 @@ procedure is_short(
         invariant heap == old(heap);
         invariant i <= seq_len(buff_a);
         invariant next_iter_a.base_ptr == iter_a.base_ptr;
-        invariant normalized_iter_inv(heap, next_iter_a, s3, i);
+        invariant nelems_iter_inv(heap, next_iter_a, s3, i);
         invariant next_iter_b.base_ptr == iter_b.base_ptr;
-        invariant normalized_iter_inv(heap, next_iter_b, s4, i);
+        invariant nelems_iter_inv(heap, next_iter_b, s4, i);
         invariant l2norm_squared_bounded_inv(a0, buff_a, buff_b, i, a2);
         decreases a1 - s3;
     {

@@ -50,7 +50,7 @@
 // function operator(.exp) (p :pow2_t): nat extern;
 // const N: pow2_t extern; 
 
-// function fvar_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int): bool extern;
+// function elems_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int): bool extern;
 // function poly_sub_loop_inv(f_new: seq(uint256), f: seq(uint256), g: seq(uint256), i: nat): bool extern;
 // function poly_sub_loop_correct(f_new: seq(uint256), f_old: seq(uint256), f_orig:seq(uint256), g: seq(uint256), i: nat) : void extern;
 // //function b16_iter_inv(heap: heap_t, iter: iter_t) : bool extern;
@@ -80,8 +80,8 @@
 
 //         iter_safe(iter_f, heap, ptr_f);
 //         iter_safe(iter_g, heap, ptr_g);
-//         fvar_iter_inv(heap, iter_f, ptr_f, i);
-//         fvar_iter_inv(heap, iter_g, ptr_g, i);
+//         elems_iter_inv(heap, iter_f, ptr_f, i);
+//         elems_iter_inv(heap, iter_g, ptr_g, i);
 
 //         iter_f.base_ptr != iter_g.base_ptr;
 //         poly_sub_loop_inv(iter_f.buff, f_orig, iter_g.buff, i);
@@ -106,8 +106,8 @@
 
 //         iter_g'.buff == iter_g.buff;
 
-//         fvar_iter_inv(heap, iter_f', ptr_f, i+1);
-//         fvar_iter_inv(heap, iter_g', ptr_g, i+1);
+//         elems_iter_inv(heap, iter_f', ptr_f, i+1);
+//         elems_iter_inv(heap, iter_g', ptr_g, i+1);
         
 //         valid_wdr_view(wdrs, wdr_view, 2, 30);
 
@@ -155,8 +155,8 @@
         
 //         iter_safe(iter_f, heap, ptr_f);
 //         iter_safe(iter_g, heap, ptr_g);
-//         fvar_iter_inv(heap, iter_f, ptr_f, 0);
-//         fvar_iter_inv(heap, iter_g, ptr_g, 0);
+//         elems_iter_inv(heap, iter_f, ptr_f, 0);
+//         elems_iter_inv(heap, iter_g, ptr_g, 0);
 
 //         iter_f.base_ptr != iter_g.base_ptr;
     
@@ -172,7 +172,7 @@
 //         //mem == old(mem).(heap := heap);
 //         iter_f'.base_ptr == iter_f.base_ptr;
 
-//         fvar_iter_inv(heap, iter_f.(buff := iter_f'.buff), ptr_f, 0);
+//         elems_iter_inv(heap, iter_f.(buff := iter_f'.buff), ptr_f, 0);
 //         valid_wdr_view(wdrs, wdr_view, 2, 30);
 //         heap == old(heap)
 //             [iter_f'.base_ptr := heap[iter_f'.base_ptr]];
@@ -199,8 +199,8 @@
 
 //             i < 512 ==> iter_safe(iter_f', heap, ptr_f);
 //             i < 512 ==> iter_safe(iter_g', heap, ptr_g);
-//             fvar_iter_inv(heap, iter_f', ptr_f, i);
-//             fvar_iter_inv(heap, iter_g', ptr_g, i);
+//             elems_iter_inv(heap, iter_f', ptr_f, i);
+//             elems_iter_inv(heap, iter_g', ptr_g, i);
 
 //             valid_wdr_view(wdrs, wdr_view, 2, 30);
 

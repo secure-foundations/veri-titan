@@ -389,7 +389,7 @@ procedure add_w(in rs: reg, inout rd: reg)
 }
     
 procedure add_w_imm(inline imm: int16, inout rd: reg)
-    {:instrucrla_wtion Ins(MSP_ADD_W(Imm(imm), Reg(rd)))}
+    {:inst Ins(MSP_ADD_W(Imm(imm), Reg(rd)))}
     modifies
         flags;
     ensures
@@ -432,6 +432,16 @@ procedure and_w(in rs: reg, inout rd: reg)
         flags;
     ensures 
         rd == uint16_and(old(rs), old(rd));
+{
+    assume false;
+}
+
+procedure and_w_imm(inline n: int16, inout rd: reg)
+    {:instruction Ins(MSP_AND_W(Imm(n), Reg(rd)))}
+    modifies
+        flags;
+    ensures 
+        rd == uint16_and(to_uint16(n), old(rd));
 {
     assume false;
 }

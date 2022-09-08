@@ -16,6 +16,14 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
 
     type uint32_view_t = dw_view_t
 
+    lemma cond_set_Q_lemma(flags0: flags_t, mask: uint16, flags1: flags_t)
+        requires (mask, flags1) == msp_subc(0, 0, flags0);
+        ensures uint16_and(12289, mask) == if flags0.cf == 1 then 12289 else 0;
+    {
+        assert uint16_and(Q, 0xFFFF) == Q by { reveal_and(); }
+        assert uint16_and(Q, 0) == 0 by { reveal_and(); }
+    }
+
     lemma lemma_mq_add_correct(sum: uint16, mask: uint16, r: uint16, x: uint16, y: uint16)
         requires 0 <= x < 12289;
         requires 0 <= y < 12289;
@@ -194,12 +202,13 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
         }
     }
 
-    predicate fvar_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int)
+    predicate elems_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int)
     {
-        && b16_iter_inv(heap, iter) //, if address >= 0 then address else iter.cur_ptr())
+        && b16_iter_inv(heap, iter) 
+        && (address >= 0 ==> iter.cur_ptr() == address)
         && (index >= 0 ==> iter.index == index)
         && |iter.buff| == N.full
-        && contains_elems(iter.buff)
+        && valid_elems(iter.buff)
     }
 
     predicate is_nelem(e: uint16)
@@ -214,7 +223,7 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
     }
 
     predicate {:opaque} valid_nelems(a: seq<uint16>)
-        ensures has_n_nelems(a) ==> |a| == N.full;
+        ensures valid_nelems(a) ==> |a| == N.full;
     {
         && |a| == N.full
         && (forall i | 0 <= i < |a| :: is_nelem(a[i]))
@@ -225,5 +234,44 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
     {
         reveal valid_nelems();
         seq(|a|, i requires 0 <= i < |a| => as_nelem(a[i]))
+    }
+
+    predicate nelems_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int)
+    {
+        && b16_iter_inv(heap, iter)
+        && (address >= 0 ==> iter.cur_ptr() == address)
+        && (index >= 0 ==> iter.index == index)
+        && valid_nelems(iter.buff)
+    }
+
+    predicate denorm_inv(nv: seq<uint16>, dnv: seq<uint16>, i: nat)
+    {
+        && valid_nelems(nv)
+        && valid_elems(dnv)
+        && reveal valid_nelems();
+        && i <= N.full
+        && (forall j | 0 <= j < i :: 
+            dnv[j] == MQN.denormalize(as_nelem(nv[j])))
+    }
+
+    // lemma denorm_inv_pre_lemma(nv: seq<uint16>, dnv: seq<uint16>)
+    //     requires valid_nelems(nv)
+    //     requires valid_elems(dnv)
+    //     ensures denorm_inv(nv, dnv, 0);
+    // {
+    // }
+
+    lemma denorm_inv_peri_lemma(nv: seq<uint16>, dnv: seq<uint16>, i: nat, a: uint16, b: uint16)
+        requires i < N.full;
+        requires denorm_inv(nv, dnv, i);
+        requires a == nv[i];
+        requires var adj := if to_int16(a) < 0 then Q else 0;
+            b == msp_add(adj, a).0;
+        ensures denorm_inv(nv, dnv[i := b], i+1);
+    {
+        reveal valid_elems();
+        reveal valid_nelems();
+        assert is_nelem(nv[i]);
+        assert b == MQN.denormalize(as_nelem(a));
     }
 }

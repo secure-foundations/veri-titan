@@ -14,18 +14,18 @@ abstract module generic_falcon_lemmas {
     import FNTT = falcon_512_i.FNTT
     import INTT = falcon_512_i.INTT
 
-    predicate {:opaque} contains_elems(a: seq<nat>)
-        ensures contains_elems(a) ==> |a| == N.full;
+    predicate {:opaque} valid_elems(a: seq<nat>)
+        ensures valid_elems(a) ==> |a| == N.full;
     {
         && (|a| == N.full)
         && (forall i | 0 <= i < N.full :: a[i] < Q)
     }
 
     function {:opaque} as_elems(a: seq<nat>): (a': elems)
-        requires contains_elems(a);
+        requires valid_elems(a);
         ensures a == a';
     {
-        reveal contains_elems();
+        reveal valid_elems();
         a
     }
 
@@ -102,34 +102,34 @@ abstract module generic_falcon_lemmas {
 
     predicate forward_ntt_eval_all(a: seq<nat>, coeffs: seq<nat>)
     {
-        && contains_elems(a)
-        && contains_elems(coeffs)
+        && valid_elems(a)
+        && valid_elems(coeffs)
         && FNTT.ntt_eval_all(as_elems(a), as_elems(coeffs))
     }
 
     predicate forward_t_loop_inv(a: seq<nat>, d: pow2_t, coeffs: seq<nat>)
         requires 0 <= d.exp <= N.exp;
     {
-        && contains_elems(a)
-        && contains_elems(coeffs)
+        && valid_elems(a)
+        && valid_elems(coeffs)
         && FNTT.t_loop_inv(as_elems(a), d, as_elems(coeffs))
     }
 
     predicate forward_s_loop_inv(a: seq<nat>, d: pow2_t, j: nat, bi: nat, view: FNTT.loop_view)
     {
-        && contains_elems(a)
+        && valid_elems(a)
         && view.s_loop_inv(as_elems(a), d, j, bi)
     }
 
     predicate forward_j_loop_inv(a: seq<nat>, d: pow2_t, j: nat, u: nat, view: FNTT.loop_view)
     {
-        && contains_elems(a)
+        && valid_elems(a)
         && u == j * (2 * d.full)
         && view.j_loop_inv(as_elems(a), d, j)
     }
 
     lemma forward_t_loop_inv_pre_lemma(coeffs: seq<nat>)
-        requires contains_elems(coeffs);
+        requires valid_elems(coeffs);
         ensures N.exp <= N.exp; // ??
         ensures forward_t_loop_inv(coeffs, N, coeffs);
     {
@@ -180,10 +180,10 @@ abstract module generic_falcon_lemmas {
 
     predicate poly_sub_loop_inv(diff: seq<nat>, f: seq<nat>, g: seq<nat>, i: nat)
     {
-        reveal contains_elems();
-        && contains_elems(diff)
-        && contains_elems(f)
-        && contains_elems(g)
+        reveal valid_elems();
+        && valid_elems(diff)
+        && valid_elems(f)
+        && valid_elems(g)
         && 0 <= i <= N.full
         && diff[i..] == f[i..]
         && (forall j | 0 <= j < i :: diff[j] == MQP.mqsub(f[j], g[j]))

@@ -24,8 +24,35 @@ import opened DivMod
 function mqsub(a: nat, b: nat): uint32 extern;
 function mqadd(a: nat, b: nat): uint32 extern;
 
+function cond_set_Q_lemma(flags0: flags_t, mask: uint16, flags1: flags_t): void extern;
 function lemma_mq_add_correct(sum: uint16, mask: uint16, r: uint16, x: uint16, y: uint16) : void extern;
 function lemma_mq_sub_correct(diff: uint16, flags: flags_t, mask: uint16, r: uint16, x: uint16, y: uint16) : void extern;
+function to_int16(i: uint16): int16 extern;
+
+procedure cond_set_Q(inout rd: reg)
+    modifies
+        flags;
+    ensures 
+        (old(flags.cf) == 1) ==> rd == 12289;
+        (old(flags.cf) == 0) ==> rd == 0;
+{
+    clr_w(rd);
+    let flags0 := flags;
+    subc_w(rd, rd);
+    let mask := rd;
+    let flags1 := flags;
+    and_w_imm(12289, rd);
+    cond_set_Q_lemma(flags0, mask, flags1);
+}
+
+procedure check_int16_sign(inout rd: reg)
+    modifies
+        flags;
+    ensures
+        to_int16(old(rd)) < 0 <==> flags.cf == 1;
+{
+    rla_w(rd);
+}
 
 procedure mq_add() 
     lets 

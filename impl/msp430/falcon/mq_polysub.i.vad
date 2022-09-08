@@ -27,7 +27,7 @@ function operator(.full) (p :pow2_t): nat extern;
 function operator(.exp) (p :pow2_t): nat extern;
 const N: pow2_t extern; 
 
-function fvar_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int): bool extern;
+function elems_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int): bool extern;
     
 function poly_sub_loop_inv(f_new: seq(uint16), f: seq(uint16), g: seq(uint16), i: nat): bool extern;
     
@@ -75,8 +75,8 @@ procedure poly_sub_loop_body(ghost f_orig: seq(uint16), ghost iter_f: iter_t,
 
         iter_safe(iter_f, heap, ptr_f);
         iter_safe(iter_g, heap, ptr_g);
-        fvar_iter_inv(heap, iter_f, ptr_f, i);
-        fvar_iter_inv(heap, iter_g, ptr_g, i);
+        elems_iter_inv(heap, iter_f, ptr_f, i);
+        elems_iter_inv(heap, iter_g, ptr_g, i);
 
         iter_f.base_ptr != iter_g.base_ptr;
         poly_sub_loop_inv(iter_f.buff, f_orig, iter_g.buff, i);
@@ -95,8 +95,8 @@ procedure poly_sub_loop_body(ghost f_orig: seq(uint16), ghost iter_f: iter_t,
 
         iter_g'.buff == iter_g.buff;
 
-        fvar_iter_inv(heap, iter_f', ptr_f, i+1);
-        fvar_iter_inv(heap, iter_g', ptr_g, i+1);
+        elems_iter_inv(heap, iter_f', ptr_f, i+1);
+        elems_iter_inv(heap, iter_g', ptr_g, i+1);
 
         mem == old(mem).(heap := heap);
         heap == old(heap)[iter_f.base_ptr := heap[iter_f.base_ptr]];
@@ -142,8 +142,8 @@ procedure poly_sub(
         
         iter_safe(iter_f, heap, ptr_f);
         iter_safe(iter_g, heap, ptr_g);
-        fvar_iter_inv(heap, iter_f, ptr_f, 0);
-        fvar_iter_inv(heap, iter_g, ptr_g, 0);
+        elems_iter_inv(heap, iter_f, ptr_f, 0);
+        elems_iter_inv(heap, iter_g, ptr_g, 0);
 
         iter_f.base_ptr != iter_g.base_ptr;
     
@@ -161,7 +161,7 @@ procedure poly_sub(
         mem == old(mem).(heap := heap);
         iter_f'.base_ptr == iter_f.base_ptr;
     
-        fvar_iter_inv(heap, iter_f.(buff := iter_f'.buff), ptr_f, 0);
+        elems_iter_inv(heap, iter_f.(buff := iter_f'.buff), ptr_f, 0);
         heap == old(heap)
             [iter_f'.base_ptr := heap[iter_f'.base_ptr]];
     
@@ -185,8 +185,8 @@ procedure poly_sub(
 
             ptr_f < end_f ==> iter_safe(iter_f', heap, ptr_f);
             ptr_f < end_f ==> iter_safe(iter_g', heap, ptr_g);
-            fvar_iter_inv(heap, iter_f', ptr_f, i);
-            fvar_iter_inv(heap, iter_g', ptr_g, i);
+            elems_iter_inv(heap, iter_f', ptr_f, i);
+            elems_iter_inv(heap, iter_g', ptr_g, i);
 
             poly_sub_loop_inv(iter_f'.buff, iter_f.buff, iter_g.buff, i);
 
