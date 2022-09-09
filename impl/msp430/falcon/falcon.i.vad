@@ -110,7 +110,7 @@ procedure msp_falcon(
         iter_p2.buff == rev_mixed_powers_mont_table();
 {
     save_r4__r10();
-
+    // denormolize();
 
 
 }

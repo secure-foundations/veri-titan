@@ -54,7 +54,6 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         FNTT.rev_mixed_powers_mont_table_lemma(t, d, j);
         assert uint32_add(t.full, j) == t.full + j;
         ls1_is_double(t.full + j);
-        FNTT.rev_mixed_powers_mont_table_lemma(t, d, j);
 
         assert u == j * (2 * d.full);
         assert d == view.hcount();
@@ -224,26 +223,6 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         ensures s+d.full == CPV.point_view_index(bi, 2*j+1, view.hsize);
     {
         s := view.higher_points_view_index_lemma(as_elems(a), d, j, bi);
-    }
-
-    lemma forward_j_loop_inv_pre_lemma(a: seq<nat>, d: pow2_t, view: FNTT.loop_view)
-        requires 0 <= d.exp < N.exp;
-        requires forward_t_loop_inv(a, pow2_double(d), view.coefficients);
-        requires view.loop_view_wf();
-        requires view.hsize == CPV.block_size(d);
-        ensures forward_j_loop_inv(a, d, 0, 0, view);
-    {
-        view.j_loop_inv_pre_lemma(as_elems(a), d);
-    }
-
-    lemma forward_j_loop_inv_post_lemma(a: seq<nat>, d: pow2_t, j: nat, u: nat, view: FNTT.loop_view)
-        requires forward_j_loop_inv(a, d, j, u, view);
-        requires j == view.lsize().full;
-        requires 0 <= view.hsize.exp <= N.exp;
-        requires view.hsize == CPV.block_size(d);
-        ensures FNTT.t_loop_inv(a, d, view.coefficients);
-    {
-        view.j_loop_inv_post_lemma(a, d, j);
     }
 
     function inverse_lsize(view: INTT.loop_view): (r: pow2_t)

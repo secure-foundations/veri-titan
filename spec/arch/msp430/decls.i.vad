@@ -119,24 +119,24 @@ function operator(.RR) (rsa: rsa_params): nat extern;
 function operator(.R_INV) (rsa: rsa_params): nat extern;
 function rsa_params_inv(rsa: rsa_params): bool extern;
 
-function R(index: int): reg_t extern;
+function GPR(index: int): reg_t extern;
 
 function get_cf(f: flags_t): uint1 extern;
 
 var sp: uint16 {:state reg_t(SP)};
-var r3: uint16 {:state reg_t(R(3))};
-var r4: uint16 {:state reg_t(R(4))};
-var r5: uint16 {:state reg_t(R(5))};
-var r6: uint16 {:state reg_t(R(6))};
-var r7: uint16 {:state reg_t(R(7))};
-var r8: uint16 {:state reg_t(R(8))};
-var r9: uint16 {:state reg_t(R(9))};
-var r10: uint16 {:state reg_t(R(10))};
-var r11: uint16 {:state reg_t(R(11))};
-var r12: uint16 {:state reg_t(R(12))};
-var r13: uint16 {:state reg_t(R(13))};
-var r14: uint16 {:state reg_t(R(14))};
-var r15: uint16 {:state reg_t(R(15))};
+var r3: uint16 {:state reg_t(GPR(3))};
+var r4: uint16 {:state reg_t(GPR(4))};
+var r5: uint16 {:state reg_t(GPR(5))};
+var r6: uint16 {:state reg_t(GPR(6))};
+var r7: uint16 {:state reg_t(GPR(7))};
+var r8: uint16 {:state reg_t(GPR(8))};
+var r9: uint16 {:state reg_t(GPR(9))};
+var r10: uint16 {:state reg_t(GPR(10))};
+var r11: uint16 {:state reg_t(GPR(11))};
+var r12: uint16 {:state reg_t(GPR(12))};
+var r13: uint16 {:state reg_t(GPR(13))};
+var r14: uint16 {:state reg_t(GPR(14))};
+var r15: uint16 {:state reg_t(GPR(15))};
 
 operand_type reg: uint16 @ reg_t :=
     | inout r3  | inout r4  | inout r5  | inout r6
@@ -485,9 +485,21 @@ procedure rla_w(inout rd: reg)
     assume false;
 }
 
+function to_int16(x: uint16):int16  extern;
+function int16_rs(x: int16, shift: nat): int16 extern;
+
+procedure rra_w(inout rd: reg)
+    {:instruction Ins(MSP_RRA_W(Reg(rd)))}
+    modifies 
+        flags;
+    ensures
+        rd == to_uint16(int16_rs(to_int16(old(rd)), 1));
+{
+    assume false;
+}
+
 procedure builtin__mspabi_mpyl()
     {:noInline}
-
     requires
         r15 == 0;
         r13 == 0;

@@ -144,6 +144,26 @@ abstract module generic_falcon_lemmas {
         FNTT.t_loop_inv_post_lemma(a, one, coeffs);
     }
 
+    lemma forward_j_loop_inv_pre_lemma(a: seq<nat>, d: pow2_t, view: FNTT.loop_view)
+        requires 0 <= d.exp < N.exp;
+        requires forward_t_loop_inv(a, pow2_double(d), view.coefficients);
+        requires view.loop_view_wf();
+        requires view.hsize == CPV.block_size(d);
+        ensures forward_j_loop_inv(a, d, 0, 0, view);
+    {
+        view.j_loop_inv_pre_lemma(as_elems(a), d);
+    }
+
+    lemma forward_j_loop_inv_post_lemma(a: seq<nat>, d: pow2_t, j: nat, u: nat, view: FNTT.loop_view)
+        requires forward_j_loop_inv(a, d, j, u, view);
+        requires j == view.lsize().full;
+        requires 0 <= view.hsize.exp <= N.exp;
+        requires view.hsize == CPV.block_size(d);
+        ensures FNTT.t_loop_inv(a, d, view.coefficients);
+    {
+        view.j_loop_inv_post_lemma(a, d, j);
+    }
+
 // intt wraps
 
     type iloop_view = INTT.loop_view

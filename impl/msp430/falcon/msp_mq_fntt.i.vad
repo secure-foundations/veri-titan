@@ -1,0 +1,402 @@
+include "mq_arith.i.vad"
+
+#verbatim
+include "mq_arith.i.dfy"
+
+module msp_mq_norm {
+
+import opened integers
+
+import opened msp_machine
+import opened msp_decls
+import opened msp_vale
+import opened mem
+import opened stack
+
+import opened bv16_op_s
+import opened mq_arith_lemmas
+
+import opened pow2_s
+import opened falcon_512_i
+
+import opened mq_arith_impl
+// import opened mq_polysub
+
+#endverbatim
+
+function elems_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int): bool extern;
+
+function as_elems(s: seq(uint16)): seq(uint16) extern;
+
+function rev_mixed_powers_mont_table(): seq(uint16) extern;
+function rev_mixed_powers_mont_table_lemma(t: pow2_t, d: pow2_t, j: nat): void extern;
+function rev_mixed_powers_mont_x_value(i: nat, d: pow2_t): (r: uint16) extern;
+
+type floop_view: Type(0) extern;
+function operator(.hsize) (p :floop_view): pow2_t extern;
+function build_floop_view(a: seq(uint16), d: pow2_t): floop_view extern;
+function forward_lsize(v: floop_view): pow2_t extern;
+
+function elems_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int): bool extern;
+
+function block_size(c: pow2_t): pow2_t extern;
+
+function pow2_t_cons(n: nat, exp: nat): pow2_t extern;
+function forward_j_loop_inv(a: seq(uint16), hcount: pow2_t, j: nat, u: nat, view: floop_view): bool extern;
+function forward_j_loop_inv_pre_lemma(a: seq(uint16), hcount: pow2_t, view: floop_view): void extern;
+function forward_j_loop_inv_post_lemma(a: seq(uint16), hcount: pow2_t, j: nat, u: nat, view: floop_view): void extern;
+
+function forward_s_loop_inv(a: seq(uint16), d: pow2_t, j: nat, bi: nat, view: floop_view): bool extern;
+function forward_s_loop_inv_pre_lemma(a: seq(uint16), d: pow2_t, j: nat, t: pow2_t, u: nat, w: nat, s: uint16, s_end: uint16, view: floop_view): void extern;
+function forward_s_loop_inv_post_lemma(a: seq(uint16), d: pow2_t, j: nat, u: nat, bi: nat, ot3: nat, t3: nat, t6: nat, view: floop_view): void extern;
+function forward_s_loop_index_lemma(a: seq(uint16), d: pow2_t, j: nat, bi: nat, s4: nat, s2: nat, t4: nat, t5: nat, t6: nat, view: floop_view): (s: nat) extern;
+function forward_s_loop_update(a: seq(uint16), a': seq(uint16), d: pow2_t, j: nat, bi: nat, s: nat, e: uint32, o: uint32, view: floop_view): bool extern;
+function forward_s_loop_inv_peri_lemma(a: seq(uint16), a': seq(uint16), d: pow2_t, j: nat, bi: nat, s: nat, e: uint32, o: uint32, view: floop_view): void extern;
+
+function forward_ntt_eval_all(a: seq(uint16), coeffs: seq(uint16)): bool extern;
+function forward_t_loop_inv(a: seq(uint16), d: pow2_t, c: seq(uint16)): bool extern;
+function forward_t_loop_inv_pre_lemma(c: seq(uint16)): void extern;
+function forward_t_loop_inv_post_lemma(a: seq(uint16), one: pow2_t, c: seq(uint16)): void extern;
+
+procedure save_r4__r10()
+    requires
+        in_stack_addr_range(sp);
+        in_stack_addr_range(sp - 14);
+    
+    modifies
+        mem; flat; sp;
+    reads
+        r4; r5; r6; r7; r8; r9; r10; 
+    ensures
+        mem == stack_push_batch(old(mem), old(flat),
+            seq(r4, r5, r6, r7, r8, r9, r10));
+        sp == old(sp) - 14;
+        stack_depth(mem) == stack_depth(old(mem)) + 1;
+{
+    pushm_w(7, r10);
+    assert pushm_w_seq(old(this.ms), GPR(10), 7)
+        == seq(r4, r5, r6, r7, r8, r9, r10);
+}
+
+// procedure forward_s_loop(
+//     ghost iter_a: b16_iter,
+//     ghost t: pow2_t,
+//     ghost d: pow2_t,
+//     ghost j: nat,
+//     ghost bi: nat,
+//     ghost view: floop_view)
+//     returns (ghost iter_a': iter_t)
+// {:frame false}
+
+//     lets
+//         d         @= r4;
+//         t         @= r5;
+//         j         @= r6;
+//         s         @= r7;
+//         // i         @= r8;
+//         pd        @= r9; 
+//         u         @= r10; 
+//         ao_ptr    @= r11;
+//         a_base    @= r12;
+//         // p_base    @= r13; 
+//         ae_ptr    @= r14;
+//         // s_end     @= r15;
+//     requires
+//         t == gt.full;
+//         pd == 2 * d;
+//         d == gd.full;
+//         j == old(j);
+//         u == old(u);
+
+//         r14 == rev_mixed_powers_mont_table()[t + j];
+//         s == (bi + u) * 2;
+//         // s_end == (d + u) * 2;
+
+//     requires
+//         elems_iter_inv(heap, iter_a, a_base, 0);
+//         forward_s_loop_inv(iter_a.buff, d, j, bi, view);
+//         bi < d.full;
+
+// {
+//     mov_w(s, ao_ptr);
+//     add_w(pd, ao_ptr);
+//     add_w(a_base, ao_ptr);
+
+//     // r14, 
+
+//     // mont_mul 
+//     mov_w(s, ae_ptr);
+//     add_w(a_base, ae_ptr);
+
+//     // a_ptr == 2 * d + (bi + u) * 2;
+
+//     assume false;
+// }
+
+// procedure forward_j_loop(
+//     ghost iter_a: iter_t,
+//     ghost iter_p: iter_t,
+//     ghost gt: pow2_t,
+//     ghost gd: pow2_t,
+//     ghost view: floop_view)
+//     returns (ghost iter_a': iter_t)
+// {:frame false}
+
+//     lets
+//         d         @= r4;
+//         t         @= r5;
+//         j         @= r6;
+//         s         @= r7;
+//         // i         @= r8;
+//         pd        @= r9; 
+//         u         @= r10; 
+//         w_ptr     @= r11; 
+//         a_base    @= r12;
+//         p_base    @= r13; 
+//         w         @= r14;
+//         s_end     @= r15;
+
+//     requires
+//         t == gt.full;
+//         pd == 2 * d;
+//         d == gd.full;
+
+//     requires
+//         elems_iter_inv(heap, iter_a, a_base, 0);
+//         elems_iter_inv(heap, iter_p, p_base, 0);
+//         iter_a.base_ptr != iter_p.base_ptr;
+
+//     requires
+//         forward_j_loop_inv(iter_a.buff, gd, j, u, view);
+//         iter_p.buff == rev_mixed_powers_mont_table();
+//         j < forward_lsize(view).full;
+//         gt == forward_lsize(view);
+// {
+//     iter_a' := iter_a;
+//     mov_w(t, w_ptr);
+//     add_w(j, w_ptr);
+//     add_w(w_ptr, w_ptr);
+
+//     mov_w(u, s);
+//     add_w(s, s);
+
+//     mov_w(pd, s_end);
+//     add_w(s, s_end);
+
+//     forward_s_loop_inv_pre_lemma(iter_a'.buff, gd, j, gt, u, w_ptr, s, s_end, view);
+//     add_w(p_base, w_ptr);
+
+//     // r11 is free now
+//     ghost var iter_p' := iter_p.(index := t + j);
+//     iter_p' := lw_iter(w_ptr, false, w, iter_p');
+
+//     // assert w == rev_mixed_powers_mont_table()[t + j];
+//     ghost var bi:nat := 0;
+
+//     while (s < s_end)
+//         invariant
+//             t == gt.full;
+//             pd == 2 * d;
+//             d == gd.full;
+//             j == old(j);
+//             u == old(u);
+
+//             w == rev_mixed_powers_mont_table()[t + j];
+//             s == (bi + u) * 2;
+//             s_end == (d + u) * 2;
+        
+//         invariant
+//             forward_s_loop_inv(iter_a'.buff, gd, j, bi, view);
+
+//         decreases
+//             s_end - s;
+//     {
+
+
+//         add_w_imm(2, s);
+//         bi := bi + 1;
+//     }
+// }
+
+procedure fntt_t_loop(
+    ghost iter_a: iter_t,
+    ghost iter_p: iter_t,
+    ghost gt: pow2_t,
+    ghost gd: pow2_t,
+    ghost coeffs: seq(uint16))
+
+returns (ghost iter_a': iter_t)
+{:frame false}
+    lets
+        d         @= r4;
+        t         @= r5;
+        j         @= r6;
+        s         @= r7;
+        pd        @= r9; 
+        u         @= r10; 
+        // w         @= r11; 
+        a_base    @= r12;
+        p_base    @= r13; 
+
+    requires
+        t == gt.full;
+        pd == 2 * d;
+        d == gd.full;
+
+    requires
+        elems_iter_inv(heap, iter_a, a_base, 0);
+        elems_iter_inv(heap, iter_p, p_base, 0);
+        iter_a.base_ptr != iter_p.base_ptr;
+
+    requires
+        0 <= gd.exp < N.exp;
+        gt == block_size(pow2_double(gd));
+        forward_t_loop_inv(iter_a.buff, pow2_double(gd), coeffs);
+        iter_p.buff == rev_mixed_powers_mont_table();
+
+    ensures
+        elems_iter_inv(heap, iter_a', a_base, 0);
+        elems_iter_inv(heap, iter_p, p_base, 0);
+        iter_a'.base_ptr == iter_a.base_ptr;
+
+    ensures
+        t == old(t);
+        pd == old(pd);
+        d == old(d);
+
+    ensures
+        mem == old(mem).(heap := heap);
+        heap == old(mem).heap[a_base := heap[a_base]];
+
+    ensures
+        forward_t_loop_inv(iter_a'.buff, gd, coeffs);
+{
+    assume false;
+}
+//  {
+//     mov_w_imm(0, j);
+//     mov_w_imm(0, u);
+
+//     ghost var view := build_floop_view(as_elems(coeffs), gd);
+
+//     iter_a' := iter_a;
+
+//     forward_j_loop_inv_pre_lemma(iter_a'.buff, gd, view);
+
+//     while (j < t)
+//         invariant
+//             t == gt.full;
+//             pd == 2 * d;
+//             d == gd.full;
+
+//         invariant
+//             elems_iter_inv(heap, iter_a', a_base, 0);
+//             elems_iter_inv(heap, iter_p, p_base, 0);
+//             iter_a'.base_ptr == iter_a.base_ptr;
+//             iter_a'.base_ptr != iter_p.base_ptr;
+
+//         invariant
+//             forward_j_loop_inv(iter_a'.buff, gd, j, u, view);
+
+//         decreases
+//             t - j;
+//     {
+//         iter_a' := forward_j_loop(iter_a, iter_p, gt, gd, view);
+//         add_w(pd, u);
+//         add_w_imm(1, j);
+//         assume false;
+//     }
+//  }
+
+procedure fntt(
+    ghost iter_a: iter_t,
+    ghost iter_p: iter_t)
+
+returns (ghost iter_a': iter_t)
+
+{:noInline}
+{:frame false}
+    lets
+        d         @= r4;
+        t         @= r5;
+        j         @= r6;
+        s         @= r7;
+        // i         @= r8;
+        pd        @= r9; 
+
+        a_base    @= r12; 
+        p_base    @= r13; 
+
+    requires
+        in_stack_addr_range(sp);
+        in_stack_addr_range(sp - 14);
+
+    requires
+        elems_iter_inv(heap, iter_a, a_base, 0);
+
+        symbols?["rev_mixed_powers_mont_table"];
+        elems_iter_inv(heap, iter_p,
+            load_symbol(mem, "rev_mixed_powers_mont_table"), 0);
+        iter_p.buff == rev_mixed_powers_mont_table();
+
+        iter_a.base_ptr != iter_p.base_ptr;
+{
+    iter_a' := iter_a;
+
+    save_r4__r10();
+    
+    let mem0 := mem;
+
+    mov_w_imm(512, d);
+    mov_w_imm(1, t);
+    lw_symbol("rev_mixed_powers_mont_table", p_base);
+
+    forward_t_loop_inv_pre_lemma(iter_a.buff);
+    let coeffs := iter_a.buff;
+
+    ghost var gd := N;
+    ghost var i :int := 9;
+    ghost var gt := pow2(0);
+    assume gt.full == 1;
+
+    while (t < 512)
+        invariant
+            t == gt.full;
+            d == gd.full;
+
+        invariant
+            elems_iter_inv(heap, iter_a', a_base, 0);
+            elems_iter_inv(heap, iter_p, p_base, 0);
+            iter_a'.base_ptr == a_base;
+            iter_a'.base_ptr != p_base;
+
+        invariant
+            mem == mem0.(heap := heap);
+            heap == mem0.heap[a_base := heap[a_base]];
+
+        invariant
+            gd.exp == i;
+            0 <= gd.exp <= N.exp;
+            gt == block_size(gd);
+            forward_t_loop_inv(iter_a'.buff, gd, coeffs);
+
+        decreases
+            i;
+    {
+        mov_w(d, pd);
+        gd := half(d, gd);
+        // assert forward_t_loop_inv(iter_a'.buff, pow2_double(gd), coeffs);
+        iter_a' := fntt_t_loop(iter_a', iter_p, gt, gd, coeffs);
+
+        gt := double(t, gt);
+        i := i - 1;
+    }
+
+
+}
+
+
+
+#verbatim
+}
+#endverbatim

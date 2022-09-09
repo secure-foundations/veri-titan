@@ -33,15 +33,28 @@ procedure denormolize(
     ghost iter_s2: iter_t,
     ghost iter_tt: iter_t)
 returns (ghost iter_tt': iter_t)
-{:frame false}
  
     requires
         nelems_iter_inv(heap, iter_s2, r13, 0);
         elems_iter_inv(heap, iter_tt, r15, 0);
         iter_s2.base_ptr != iter_tt.base_ptr;
 
+    modifies
+        mem; heap; flags;
+        r7; r8; r10; r13; r15;
+    
+    ensures
+        iter_tt'.base_ptr == iter_tt.base_ptr;
+        elems_iter_inv(heap, iter_tt', r15, 0);
+
+    ensures
+        mem == old(mem).(heap := heap);
+        heap == old(heap)
+            [iter_tt.base_ptr := heap[iter_tt.base_ptr]];
+
+    ensures
+        denorm_inv(iter_s2.buff, iter_tt'.buff, 512);
 {
-    // ghost var old_mem := mem;
     ghost var iter_s2' := iter_s2;
     iter_tt' := iter_tt;
 
@@ -52,8 +65,6 @@ returns (ghost iter_tt': iter_t)
     
     while (r15 < r10)
         invariant
-            sp == old(sp);
-
             r10 == iter_tt.base_ptr + 1024;
             iter_s2'.base_ptr == iter_s2.base_ptr;
             nelems_iter_inv(heap, iter_s2', r13, i);
@@ -66,7 +77,7 @@ returns (ghost iter_tt': iter_t)
                 [iter_tt.base_ptr := heap[iter_tt.base_ptr]];
 
         invariant
-            denorm_inv(iter_s2'.buff, iter_tt'.buff, i);
+            denorm_inv(iter_s2.buff, iter_tt'.buff, i);
 
         decreases
             r10 - r15;
@@ -86,6 +97,9 @@ returns (ghost iter_tt': iter_t)
 
         i := i + 1;
     }
+
+    iter_tt' := iter_tt'.(index := 0);
+    add_w_imm((-1024), r15);
 }
 
 

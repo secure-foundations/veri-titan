@@ -194,9 +194,9 @@ module msp_vale {
         va_update_reg_t(r, sM, sK)
     }
 
-    function method va_op_cmp_reg_t(r : reg_t)  : reg_t
+    function method va_op_cmp_reg_t(r : reg_t) : operand_t
     {
-        r
+        Reg(r)
     }
 
     predicate va_state_eq(s0: va_state, s1: va_state)
@@ -257,14 +257,14 @@ module msp_vale {
     {
     }
 
-    function method va_const_cmp(n:uint16):uint16 { n }
+    function method va_const_cmp(n:int16): operand_t { Imm(n) }
     function method va_coerce_reg_to_cmp(r: reg_t): reg_t { r }
 
-    function method va_cmp_eq(r1:reg_t, r2:reg_t):cond { EQ(Reg(r1), Reg(r2))  }
+    function method va_cmp_eq(r1:operand_t, r2:operand_t):cond { EQ(r1, r2)  }
     // function method va_cmp_ne(r1:reg_t, r2:reg_t):cond { Cmp(Ne, r1, r2) }
     // function method va_cmp_le(r1:reg_t, r2:reg_t):cond { Cmp(Le, r1, r2) }
     // function method va_cmp_ge(r1:reg_t, r2:reg_t):cond { Cmp(Ge, r1, r2) }
-    function method va_cmp_lt(r1: reg_t, r2: reg_t):cond { LO(Reg(r1), Reg(r2)) }
+    function method va_cmp_lt(r1: operand_t, r2: operand_t):cond { LO(r1, r2) }
     // function method va_cmp_gt(r1:reg_t, r2:reg_t):cond { Cmp(Gt, r1, r2) }
 
     function method va_op_reg_reg_t(r: reg_t): reg_t { r }

@@ -274,4 +274,90 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
         assert is_nelem(nv[i]);
         assert b == MQN.denormalize(as_nelem(a));
     }
+
+    lemma forward_s_loop_inv_pre_lemma(
+        a: seq<nat>,
+        d: pow2_t,
+        j: uint16,
+        t: pow2_t,
+        u: uint16,
+        w: uint16,
+        s: uint16,
+        s_end: uint16,
+        view: FNTT.loop_view)
+
+        requires forward_j_loop_inv(a, d, j, u, view);
+        requires t == view.lsize();
+        requires j < view.lsize().full;
+        requires var w0 := uint16_add(t.full, j);
+            w == uint16_add(w0, w0);
+        requires s == uint16_add(u, u);
+        requires d.full * 2 < BASE_16;
+        requires s_end == uint16_add(d.full * 2, s);
+        ensures s == 2 * u;
+        ensures s_end == (d.full + u) * 2;
+        ensures w == (t.full + j) * 2;
+        ensures forward_s_loop_inv(a, d, j, 0, view);
+        ensures t.full + j < N.full;
+        ensures |FNTT.rev_mixed_powers_mont_table()| == N.full;
+        ensures FNTT.rev_mixed_powers_mont_table()[t.full + j] == 
+            MQP.mqmul(FNTT.rev_mixed_powers_mont_x_value(2 * j, d), R);
+        {
+            view.s_loop_inv_pre_lemma(as_elems(a), d, j);
+            FNTT.rev_mixed_powers_mont_table_lemma(t, d, j);
+
+            assert u == j * (2 * d.full);
+            assert d == view.hcount();
+
+            var p := pow2_mul(t, d);
+            assert p.exp == 8;
+            assume p.full == 256;
+
+            calc {
+                u;
+                j * (2 * d.full);
+                <= 
+                {
+                    LemmaMulInequality(j, t.full, 2 * d.full);
+                }
+                t.full * (2 * d.full);
+                {
+                    LemmaMulProperties();
+                }
+                2 * (t.full * d.full);
+                2 * p.full;
+                512;
+            }
+        }
+
+    lemma forward_s_loop_index_lemma(
+        a: seq<nat>,
+        d: pow2_t,
+        j: nat,
+        bi: nat,
+        // s4: uint32,
+        // s2: uint32,
+        // t4: uint32,
+        // t5: uint32,
+        // t6: uint32,
+        view: FNTT.loop_view)
+        returns (s: nat)
+
+        // requires forward_s_loop_inv(a, d, j, bi, view);
+        // requires bi < d.full
+        // requires s2 == 2 * bi + 2 * (j * (2 * d.full)); 
+        // requires flat.ptr_admissible_32(heap_b32_index_ptr(s4, N.full / 2 - 1));
+        // requires t4 == uint32_add(s4, s2);
+        // requires t5 == uint32_add(t4, t6);
+        // requires t6 == 2 * d.full;
+
+        // ensures s == bi + (2*j) * d.full;
+        // ensures t4 == s4 + 2 * s;
+        // ensures t5 == s4 + 2 * (s + d.full);
+        // ensures s + d.full < N.full;
+        // ensures a[s] == CPV.level_points_view(a, view.hsize)[bi][2*j];
+        // ensures s == CPV.point_view_index(bi, 2*j, view.hsize);
+        // ensures a[s+d.full] == CPV.level_points_view(a, view.hsize)[bi][2*j+1];
+        // ensures s+d.full == CPV.point_view_index(bi, 2*j+1, view.hsize);
+
 }
