@@ -78,44 +78,65 @@ procedure save_r4__r10()
         == seq(r4, r5, r6, r7, r8, r9, r10);
 }
 
-// procedure forward_s_loop(
-//     ghost iter_a: b16_iter,
-//     ghost t: pow2_t,
-//     ghost d: pow2_t,
-//     ghost j: nat,
-//     ghost bi: nat,
-//     ghost view: floop_view)
-//     returns (ghost iter_a': iter_t)
-// {:frame false}
+procedure forward_s_loop(
+    ghost iter_a: iter_t,
+    ghost gd: pow2_t,
+    ghost bi: nat,
+    ghost view: floop_view)
+    returns (ghost iter_a': iter_t)
+{:frame false}
 
-//     lets
-//         d         @= r4;
-//         t         @= r5;
-//         j         @= r6;
-//         s         @= r7;
-//         // i         @= r8;
-//         pd        @= r9; 
-//         u         @= r10; 
-//         ao_ptr    @= r11;
-//         a_base    @= r12;
-//         // p_base    @= r13; 
-//         ae_ptr    @= r14;
-//         // s_end     @= r15;
-//     requires
-//         t == gt.full;
-//         pd == 2 * d;
-//         d == gd.full;
-//         j == old(j);
-//         u == old(u);
+    lets
+        d         @= r4;
+        t         @= r5;
+        j         @= r6;
+        s         @= r7;
+        pd        @= r9; 
+        u         @= r10; 
+        ao_ptr    @= r11;
+        a_base    @= r12;
+        p_base    @= r13; 
+        // ae_ptr    @= r14;
+        w         @= r14;
+        s_end     @= r15;
 
-//         r14 == rev_mixed_powers_mont_table()[t + j];
-//         s == (bi + u) * 2;
-//         // s_end == (d + u) * 2;
+    requires
+        pd == 2 * d;
+        d == gd.full;
+        t + j < 512;
+        r14 == rev_mixed_powers_mont_table()[t + j];
+        s == (bi + u) * 2;
+        // s_end == (d + u) * 2;
 
-//     requires
-//         elems_iter_inv(heap, iter_a, a_base, 0);
-//         forward_s_loop_inv(iter_a.buff, d, j, bi, view);
-//         bi < d.full;
+    requires
+        elems_iter_inv(heap, iter_a, a_base, 0);
+        forward_s_loop_inv(iter_a.buff, gd, j, bi, view);
+        bi < gd.full;
+
+    ensures
+        t == old(t);
+        pd == 2 * d;
+        d == gd.full;
+        j == old(j);
+        u == old(u);
+        s == old(s);
+        w == old(w);
+        p_base == old(p_base);
+        s_end == old(s_end);
+
+    ensures
+        elems_iter_inv(heap, iter_a', a_base, 0);
+        iter_a'.base_ptr == iter_a.base_ptr;
+
+    ensures
+        mem == old(mem).(heap := heap);
+        heap == old(mem).heap[a_base := heap[a_base]];
+    
+    ensures
+        forward_s_loop_inv(iter_a'.buff, gd, j, bi+1, view);
+{
+    assume false;
+}
 
 // {
 //     mov_w(s, ao_ptr);
@@ -133,90 +154,120 @@ procedure save_r4__r10()
 //     assume false;
 // }
 
-// procedure forward_j_loop(
-//     ghost iter_a: iter_t,
-//     ghost iter_p: iter_t,
-//     ghost gt: pow2_t,
-//     ghost gd: pow2_t,
-//     ghost view: floop_view)
-//     returns (ghost iter_a': iter_t)
-// {:frame false}
+procedure forward_j_loop(
+    ghost iter_a: iter_t,
+    ghost iter_p: iter_t,
+    ghost gt: pow2_t,
+    ghost gd: pow2_t,
+    ghost view: floop_view)
+    returns (ghost iter_a': iter_t)
+{:frame false}
 
-//     lets
-//         d         @= r4;
-//         t         @= r5;
-//         j         @= r6;
-//         s         @= r7;
-//         // i         @= r8;
-//         pd        @= r9; 
-//         u         @= r10; 
-//         w_ptr     @= r11; 
-//         a_base    @= r12;
-//         p_base    @= r13; 
-//         w         @= r14;
-//         s_end     @= r15;
+    lets
+        d         @= r4;
+        t         @= r5;
+        j         @= r6;
+        s         @= r7;
+        pd        @= r9; 
+        u         @= r10; 
+        w_ptr     @= r11; 
+        a_base    @= r12;
+        p_base    @= r13; 
+        w         @= r14;
+        s_end     @= r15;
 
-//     requires
-//         t == gt.full;
-//         pd == 2 * d;
-//         d == gd.full;
+    requires
+        t == gt.full;
+        pd == 2 * d;
+        d == gd.full;
 
-//     requires
-//         elems_iter_inv(heap, iter_a, a_base, 0);
-//         elems_iter_inv(heap, iter_p, p_base, 0);
-//         iter_a.base_ptr != iter_p.base_ptr;
+    requires
+        elems_iter_inv(heap, iter_a, a_base, 0);
+        elems_iter_inv(heap, iter_p, p_base, 0);
+        iter_a.base_ptr != iter_p.base_ptr;
 
-//     requires
-//         forward_j_loop_inv(iter_a.buff, gd, j, u, view);
-//         iter_p.buff == rev_mixed_powers_mont_table();
-//         j < forward_lsize(view).full;
-//         gt == forward_lsize(view);
-// {
-//     iter_a' := iter_a;
-//     mov_w(t, w_ptr);
-//     add_w(j, w_ptr);
-//     add_w(w_ptr, w_ptr);
+    requires
+        forward_j_loop_inv(iter_a.buff, gd, j, u, view);
+        iter_p.buff == rev_mixed_powers_mont_table();
+        j < forward_lsize(view).full;
+        gt == forward_lsize(view);
 
-//     mov_w(u, s);
-//     add_w(s, s);
+    ensures
+        t == gt.full;
+        pd == 2 * d;
+        d == gd.full;
+        j == old(j);
+        w == old(w);
+        p_base == old(p_base);
 
-//     mov_w(pd, s_end);
-//     add_w(s, s_end);
+    ensures
+        elems_iter_inv(heap, iter_a', a_base, 0);
+        elems_iter_inv(heap, iter_p, p_base, 0);
+        iter_p.buff == rev_mixed_powers_mont_table();
+        iter_a'.base_ptr == iter_a.base_ptr;
 
-//     forward_s_loop_inv_pre_lemma(iter_a'.buff, gd, j, gt, u, w_ptr, s, s_end, view);
-//     add_w(p_base, w_ptr);
+    ensures
+        mem == old(mem).(heap := heap);
+        heap == old(mem).heap[a_base := heap[a_base]];
 
-//     // r11 is free now
-//     ghost var iter_p' := iter_p.(index := t + j);
-//     iter_p' := lw_iter(w_ptr, false, w, iter_p');
+    ensures
+        forward_j_loop_inv(iter_a'.buff, gd, j + 1, u + 2 * gd.full, view);
+{
+    iter_a' := iter_a;
+    mov_w(t, w_ptr);
+    add_w(j, w_ptr);
+    add_w(w_ptr, w_ptr);
 
-//     // assert w == rev_mixed_powers_mont_table()[t + j];
-//     ghost var bi:nat := 0;
+    mov_w(u, s);
+    add_w(s, s);
 
-//     while (s < s_end)
-//         invariant
-//             t == gt.full;
-//             pd == 2 * d;
-//             d == gd.full;
-//             j == old(j);
-//             u == old(u);
+    mov_w(pd, s_end);
+    add_w(s, s_end);
 
-//             w == rev_mixed_powers_mont_table()[t + j];
-//             s == (bi + u) * 2;
-//             s_end == (d + u) * 2;
-        
-//         invariant
-//             forward_s_loop_inv(iter_a'.buff, gd, j, bi, view);
+    forward_s_loop_inv_pre_lemma(iter_a'.buff, gd, j, gt, u, w_ptr, s, s_end, view);
+    add_w(p_base, w_ptr);
 
-//         decreases
-//             s_end - s;
-//     {
+    // r8, r11 free
+    ghost var iter_p' := iter_p.(index := t + j);
+    iter_p' := lw_iter(w_ptr, false, w, iter_p');
 
+    assert w == rev_mixed_powers_mont_table()[t + j];
+    ghost var bi :nat := 0;
 
-//         add_w_imm(2, s);
-//         bi := bi + 1;
-//     }
-// }
+    while (s < s_end)
+        invariant
+            t == gt.full;
+            pd == 2 * d;
+            d == gd.full;
+            j == old(j);
+            u == old(u);
+            p_base == old(p_base);
+
+            w == rev_mixed_powers_mont_table()[t + j];
+            s == (bi + u) * 2;
+            s_end == (d + u) * 2;
+
+        invariant
+            elems_iter_inv(heap, iter_a', a_base, 0);
+            iter_a'.base_ptr == a_base;
+
+        invariant        
+            mem == old(mem).(heap := heap);
+            heap == old(mem).heap[a_base := heap[a_base]];
+
+        invariant
+            forward_s_loop_inv(iter_a'.buff, gd, j, bi, view);
+
+        decreases
+            s_end - s;
+    {
+        iter_a' := forward_s_loop(iter_a', gd, bi, view);
+        add_w_imm(2, s);
+        bi := bi + 1;
+    }
+
+    assume false;
+}
 
 procedure fntt_t_loop(
     ghost iter_a: iter_t,
@@ -271,42 +322,46 @@ returns (ghost iter_a': iter_t)
     ensures
         forward_t_loop_inv(iter_a'.buff, gd, coeffs);
 {
-    assume false;
-}
-//  {
-//     mov_w_imm(0, j);
-//     mov_w_imm(0, u);
+    mov_w_imm(0, j);
+    mov_w_imm(0, u);
 
-//     ghost var view := build_floop_view(as_elems(coeffs), gd);
+    ghost var view := build_floop_view(as_elems(coeffs), gd);
 
-//     iter_a' := iter_a;
+    iter_a' := iter_a;
 
-//     forward_j_loop_inv_pre_lemma(iter_a'.buff, gd, view);
+    forward_j_loop_inv_pre_lemma(iter_a'.buff, gd, view);
 
-//     while (j < t)
-//         invariant
-//             t == gt.full;
-//             pd == 2 * d;
-//             d == gd.full;
+    while (j < t)
+        invariant
+            t == gt.full;
+            pd == 2 * d;
+            d == gd.full;
 
-//         invariant
-//             elems_iter_inv(heap, iter_a', a_base, 0);
-//             elems_iter_inv(heap, iter_p, p_base, 0);
-//             iter_a'.base_ptr == iter_a.base_ptr;
-//             iter_a'.base_ptr != iter_p.base_ptr;
+        invariant
+            elems_iter_inv(heap, iter_a', a_base, 0);
+            elems_iter_inv(heap, iter_p, p_base, 0);
+            iter_a'.base_ptr == iter_a.base_ptr;
+            iter_a'.base_ptr != iter_p.base_ptr;
 
-//         invariant
-//             forward_j_loop_inv(iter_a'.buff, gd, j, u, view);
+        invariant
+            mem == old(mem).(heap := heap);
+            heap == old(mem).heap[a_base := heap[a_base]];
 
-//         decreases
-//             t - j;
-//     {
-//         iter_a' := forward_j_loop(iter_a, iter_p, gt, gd, view);
-//         add_w(pd, u);
-//         add_w_imm(1, j);
-//         assume false;
-//     }
-//  }
+        invariant
+            forward_j_loop_inv(iter_a'.buff, gd, j, u, view);
+
+        decreases
+            t - j;
+    {
+        let pu := u;
+        iter_a' := forward_j_loop(iter_a', iter_p, gt, gd, view);
+        add_w(pd, u);
+        assume u == j * (2 * d) + 2 * d;
+        add_w_imm(1, j);
+    }
+
+    forward_j_loop_inv_post_lemma(iter_a'.buff, gd, j, u, view);
+ }
 
 procedure fntt(
     ghost iter_a: iter_t,
@@ -385,14 +440,12 @@ returns (ghost iter_a': iter_t)
     {
         mov_w(d, pd);
         gd := half(d, gd);
-        // assert forward_t_loop_inv(iter_a'.buff, pow2_double(gd), coeffs);
+
         iter_a' := fntt_t_loop(iter_a', iter_p, gt, gd, coeffs);
 
         gt := double(t, gt);
         i := i - 1;
     }
-
-
 }
 
 

@@ -252,8 +252,6 @@ function lemma_montymul_correct(x: nat, y: nat, xy_lh: uint16, xy_uh: uint16, Q0
 //         w         @= r14;
 //         x         @= r8;
 // {
-
-
 // }
 
 
