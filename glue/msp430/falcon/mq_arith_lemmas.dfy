@@ -360,4 +360,47 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
         // ensures a[s+d.full] == CPV.level_points_view(a, view.hsize)[bi][2*j+1];
         // ensures s+d.full == CPV.point_view_index(bi, 2*j+1, view.hsize);
 
+
+    lemma forward_s_loop_inv_post_lemma(
+        a: seq<nat>,
+        d: pow2_t,
+        j: nat,
+        u: uint16,
+        bi: nat,
+        view: FNTT.loop_view)
+    
+        requires bi == d.full;
+        requires 2 * d.full < BASE_16;
+        requires u == j * (2 * d.full);
+        requires forward_s_loop_inv(a, d, j, bi, view);
+
+        ensures uint16_add(2 * d.full, u) == (j + 1) * (2 * d.full);
+        ensures forward_j_loop_inv(a, d, j + 1, u + 2 * d.full, view);
+    {
+        view.s_loop_inv_post_lemma(as_elems(a), d, j, bi);
+
+        var t := view.lsize();
+        var p := pow2_mul(t, d);
+        assert p.exp == 8;
+        assume p.full == 256;
+
+        assert u + 2 * d.full == (j + 1) * (2 * d.full) by{
+            LemmaMulProperties();
+        }
+
+        calc {
+            (j + 1) * (2 * d.full);
+            <= 
+            {
+                LemmaMulInequality(j+1, t.full, 2 * d.full);
+            }
+            t.full * (2 * d.full);
+            {
+                LemmaMulProperties();
+            }
+            2 * (t.full * d.full);
+            2 * p.full;
+            512;
+        }
+    }
 }

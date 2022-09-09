@@ -48,7 +48,7 @@ function forward_j_loop_inv_post_lemma(a: seq(uint16), hcount: pow2_t, j: nat, u
 
 function forward_s_loop_inv(a: seq(uint16), d: pow2_t, j: nat, bi: nat, view: floop_view): bool extern;
 function forward_s_loop_inv_pre_lemma(a: seq(uint16), d: pow2_t, j: nat, t: pow2_t, u: nat, w: nat, s: uint16, s_end: uint16, view: floop_view): void extern;
-function forward_s_loop_inv_post_lemma(a: seq(uint16), d: pow2_t, j: nat, u: nat, bi: nat, ot3: nat, t3: nat, t6: nat, view: floop_view): void extern;
+function forward_s_loop_inv_post_lemma(a: seq(uint16), d: pow2_t, j: nat, u: nat, bi: nat, view: floop_view): void extern;
 function forward_s_loop_index_lemma(a: seq(uint16), d: pow2_t, j: nat, bi: nat, s4: nat, s2: nat, t4: nat, t5: nat, t6: nat, view: floop_view): (s: nat) extern;
 function forward_s_loop_update(a: seq(uint16), a': seq(uint16), d: pow2_t, j: nat, bi: nat, s: nat, e: uint32, o: uint32, view: floop_view): bool extern;
 function forward_s_loop_inv_peri_lemma(a: seq(uint16), a': seq(uint16), d: pow2_t, j: nat, bi: nat, s: nat, e: uint32, o: uint32, view: floop_view): void extern;
@@ -93,10 +93,10 @@ procedure forward_s_loop(
         s         @= r7;
         pd        @= r9; 
         u         @= r10; 
+        ae_ptr    @= r8;
         ao_ptr    @= r11;
         a_base    @= r12;
         p_base    @= r13; 
-        // ae_ptr    @= r14;
         w         @= r14;
         s_end     @= r15;
 
@@ -121,6 +121,7 @@ procedure forward_s_loop(
         u == old(u);
         s == old(s);
         w == old(w);
+        a_base == old(a_base);
         p_base == old(p_base);
         s_end == old(s_end);
 
@@ -132,16 +133,14 @@ procedure forward_s_loop(
         mem == old(mem).(heap := heap);
         heap == old(mem).heap[a_base := heap[a_base]];
     
+    // r8, r11 free
+
     ensures
         forward_s_loop_inv(iter_a'.buff, gd, j, bi+1, view);
 {
-    assume false;
-}
-
-// {
-//     mov_w(s, ao_ptr);
-//     add_w(pd, ao_ptr);
-//     add_w(a_base, ao_ptr);
+    mov_w(s, ao_ptr);
+    add_w(pd, ao_ptr);
+    add_w(a_base, ao_ptr);
 
 //     // r14, 
 
@@ -151,8 +150,8 @@ procedure forward_s_loop(
 
 //     // a_ptr == 2 * d + (bi + u) * 2;
 
-//     assume false;
-// }
+    assume false;
+}
 
 procedure forward_j_loop(
     ghost iter_a: iter_t,
@@ -184,7 +183,7 @@ procedure forward_j_loop(
     requires
         elems_iter_inv(heap, iter_a, a_base, 0);
         elems_iter_inv(heap, iter_p, p_base, 0);
-        iter_a.base_ptr != iter_p.base_ptr;
+        a_base != p_base;
 
     requires
         forward_j_loop_inv(iter_a.buff, gd, j, u, view);
@@ -197,7 +196,7 @@ procedure forward_j_loop(
         pd == 2 * d;
         d == gd.full;
         j == old(j);
-        w == old(w);
+    ensures
         p_base == old(p_base);
 
     ensures
@@ -211,7 +210,7 @@ procedure forward_j_loop(
         heap == old(mem).heap[a_base := heap[a_base]];
 
     ensures
-        forward_j_loop_inv(iter_a'.buff, gd, j + 1, u + 2 * gd.full, view);
+        forward_j_loop_inv(iter_a'.buff, gd, j + 1, u, view);
 {
     iter_a' := iter_a;
     mov_w(t, w_ptr);
@@ -227,7 +226,6 @@ procedure forward_j_loop(
     forward_s_loop_inv_pre_lemma(iter_a'.buff, gd, j, gt, u, w_ptr, s, s_end, view);
     add_w(p_base, w_ptr);
 
-    // r8, r11 free
     ghost var iter_p' := iter_p.(index := t + j);
     iter_p' := lw_iter(w_ptr, false, w, iter_p');
 
@@ -241,6 +239,7 @@ procedure forward_j_loop(
             d == gd.full;
             j == old(j);
             u == old(u);
+            a_base == old(a_base);
             p_base == old(p_base);
 
             w == rev_mixed_powers_mont_table()[t + j];
@@ -250,6 +249,8 @@ procedure forward_j_loop(
         invariant
             elems_iter_inv(heap, iter_a', a_base, 0);
             iter_a'.base_ptr == a_base;
+            elems_iter_inv(heap, iter_p, p_base, 0);
+            iter_p.buff == rev_mixed_powers_mont_table();
 
         invariant        
             mem == old(mem).(heap := heap);
@@ -264,11 +265,14 @@ procedure forward_j_loop(
         iter_a' := forward_s_loop(iter_a', gd, bi, view);
         add_w_imm(2, s);
         bi := bi + 1;
+        assert heap[p_base] == old(heap)[p_base];
     }
 
-    assume false;
+    forward_s_loop_inv_post_lemma(iter_a'.buff, gd, j, u, bi, view);
+    add_w(pd, u);
 }
 
+/*
 procedure fntt_t_loop(
     ghost iter_a: iter_t,
     ghost iter_p: iter_t,
@@ -285,7 +289,6 @@ returns (ghost iter_a': iter_t)
         s         @= r7;
         pd        @= r9; 
         u         @= r10; 
-        // w         @= r11; 
         a_base    @= r12;
         p_base    @= r13; 
 
@@ -353,10 +356,7 @@ returns (ghost iter_a': iter_t)
         decreases
             t - j;
     {
-        let pu := u;
         iter_a' := forward_j_loop(iter_a', iter_p, gt, gd, view);
-        add_w(pd, u);
-        assume u == j * (2 * d) + 2 * d;
         add_w_imm(1, j);
     }
 
@@ -447,8 +447,7 @@ returns (ghost iter_a': iter_t)
         i := i - 1;
     }
 }
-
-
+*/
 
 #verbatim
 }
