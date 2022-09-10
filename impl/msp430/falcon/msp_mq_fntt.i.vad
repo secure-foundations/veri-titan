@@ -49,7 +49,7 @@ function forward_j_loop_inv_post_lemma(a: seq(uint16), hcount: pow2_t, j: nat, u
 function forward_s_loop_inv(a: seq(uint16), d: pow2_t, j: nat, bi: nat, view: floop_view): bool extern;
 function forward_s_loop_inv_pre_lemma(a: seq(uint16), d: pow2_t, j: nat, t: pow2_t, u: nat, w: nat, s: uint16, s_end: uint16, view: floop_view): void extern;
 function forward_s_loop_inv_post_lemma(a: seq(uint16), d: pow2_t, j: nat, u: nat, bi: nat, view: floop_view): void extern;
-function forward_s_loop_index_lemma(a: seq(uint16), d: pow2_t, j: nat, bi: nat, s4: nat, s2: nat, t4: nat, t5: nat, t6: nat, view: floop_view): (s: nat) extern;
+function forward_s_loop_index_lemma(a: seq(uint16), d: pow2_t, j: nat, s: uint16, bi: nat, view: floop_view): (gs: nat) extern;
 function forward_s_loop_update(a: seq(uint16), a': seq(uint16), d: pow2_t, j: nat, bi: nat, s: nat, e: uint32, o: uint32, view: floop_view): bool extern;
 function forward_s_loop_inv_peri_lemma(a: seq(uint16), a': seq(uint16), d: pow2_t, j: nat, bi: nat, s: nat, e: uint32, o: uint32, view: floop_view): void extern;
 
@@ -105,6 +105,7 @@ procedure forward_s_loop(
         d == gd.full;
         t + j < 512;
         r14 == rev_mixed_powers_mont_table()[t + j];
+        u == j * (2 * d);
         s == (bi + u) * 2;
         // s_end == (d + u) * 2;
 
@@ -133,17 +134,26 @@ procedure forward_s_loop(
         mem == old(mem).(heap := heap);
         heap == old(mem).heap[a_base := heap[a_base]];
     
-    // r8, r11 free
-
     ensures
         forward_s_loop_inv(iter_a'.buff, gd, j, bi+1, view);
 {
     mov_w(s, ao_ptr);
     add_w(pd, ao_ptr);
+
+    mov_w(a_base, r8);
+    // mov_w(p_base, r11);
+    
+    let gs := forward_s_loop_index_lemma(iter_a.buff, gd, j, s, bi, view);
     add_w(a_base, ao_ptr);
 
-//     // r14, 
+    iter_a' := lw_iter(ao_ptr, false, r12, iter_a.(index := gs + d));
+    assert r12 == iter_a.buff[gs + d];
 
+    montymul_ntt();
+    // mov_w(w, r12);
+
+    // montymul_ntt();
+    // w == r14
 //     // mont_mul 
 //     mov_w(s, ae_ptr);
 //     add_w(a_base, ae_ptr);

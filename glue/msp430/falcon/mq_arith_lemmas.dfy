@@ -330,37 +330,6 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
             }
         }
 
-    lemma forward_s_loop_index_lemma(
-        a: seq<nat>,
-        d: pow2_t,
-        j: nat,
-        bi: nat,
-        // s4: uint32,
-        // s2: uint32,
-        // t4: uint32,
-        // t5: uint32,
-        // t6: uint32,
-        view: FNTT.loop_view)
-        returns (s: nat)
-
-        // requires forward_s_loop_inv(a, d, j, bi, view);
-        // requires bi < d.full
-        // requires s2 == 2 * bi + 2 * (j * (2 * d.full)); 
-        // requires flat.ptr_admissible_32(heap_b32_index_ptr(s4, N.full / 2 - 1));
-        // requires t4 == uint32_add(s4, s2);
-        // requires t5 == uint32_add(t4, t6);
-        // requires t6 == 2 * d.full;
-
-        // ensures s == bi + (2*j) * d.full;
-        // ensures t4 == s4 + 2 * s;
-        // ensures t5 == s4 + 2 * (s + d.full);
-        // ensures s + d.full < N.full;
-        // ensures a[s] == CPV.level_points_view(a, view.hsize)[bi][2*j];
-        // ensures s == CPV.point_view_index(bi, 2*j, view.hsize);
-        // ensures a[s+d.full] == CPV.level_points_view(a, view.hsize)[bi][2*j+1];
-        // ensures s+d.full == CPV.point_view_index(bi, 2*j+1, view.hsize);
-
-
     lemma forward_s_loop_inv_post_lemma(
         a: seq<nat>,
         d: pow2_t,
@@ -401,6 +370,34 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
             2 * (t.full * d.full);
             2 * p.full;
             512;
+        }
+    }
+
+    lemma forward_s_loop_index_lemma(
+        a: seq<nat>,
+        d: pow2_t,
+        j: nat,
+        s: uint16,
+        bi: nat,
+        view: FNTT.loop_view)
+        returns (gs: nat)
+
+        requires forward_s_loop_inv(a, d, j, bi, view);
+        requires bi < d.full
+        requires 2 * d.full < BASE_16;
+        requires s == (bi + j * (2 * d.full)) * 2;
+
+        ensures s == 2 * gs;
+        ensures s + 2 * d.full == 2 * (gs + d.full);
+        ensures gs + d.full < N.full;
+        ensures a[gs] == CPV.level_points_view(a, view.hsize)[bi][2*j];
+        ensures gs == CPV.point_view_index(bi, 2*j, view.hsize);
+        ensures a[gs+d.full] == CPV.level_points_view(a, view.hsize)[bi][2*j+1];
+        ensures gs+d.full == CPV.point_view_index(bi, 2*j+1, view.hsize);
+    {
+        gs := view.higher_points_view_index_lemma(as_elems(a), d, j, bi);
+        assert s == 2 * gs by {
+            LemmaMulProperties();
         }
     }
 }

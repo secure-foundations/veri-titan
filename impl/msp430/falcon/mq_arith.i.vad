@@ -247,12 +247,21 @@ function lemma_montymul_correct(x: nat, y: nat, xy_lh: uint16, xy_uh: uint16, Q0
 // }
 
 
-// procedure montymul_ntt()
-//     lets
-//         w         @= r14;
-//         x         @= r8;
-// {
-// }
+procedure montymul_ntt()
+{:noInline}
+    lets
+        x         @= r12;
+        y         @= r13;
+    requires
+        x < 12289;
+        y < 12289;
+    modifies
+        x; y;
+    ensures
+        IsModEquivalent(x * 4091, old(x * y), 12289);
+{
+    assume false;
+}
 
 
 #verbatim
