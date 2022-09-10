@@ -394,10 +394,13 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
         ensures gs == CPV.point_view_index(bi, 2*j, view.hsize);
         ensures a[gs+d.full] == CPV.level_points_view(a, view.hsize)[bi][2*j+1];
         ensures gs+d.full == CPV.point_view_index(bi, 2*j+1, view.hsize);
+        ensures a[gs+d.full] < Q;
+        ensures a[gs] < Q;
     {
         gs := view.higher_points_view_index_lemma(as_elems(a), d, j, bi);
         assert s == 2 * gs by {
             LemmaMulProperties();
         }
+        reveal valid_elems();
     }
 }

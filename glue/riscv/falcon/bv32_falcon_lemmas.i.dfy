@@ -160,70 +160,22 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         }
     }
 
-    predicate forward_s_loop_update(
-        a: seq<nat>,
-        a': seq<nat>,
-        d: pow2_t,
-        j: nat,
-        bi: nat,
-        s: nat,
-        e: uint32,
-        o: uint32,
-        view: FNTT.loop_view)
-
-        requires forward_s_loop_inv(a, d, j, bi, view);
-        requires bi < d.full
-    {
-        && e < Q
-        && o < Q
-        && |a'| == |a|
-        && s + d.full < |a|
-        && a'[s + d.full] == o
-        && a'[s] == e
-        && a' == a[s + d.full := o][s := e]
-        && assert valid_elems(a') by {
-            reveal valid_elems();
-        }
-        && view.s_loop_update(as_elems(a), as_elems(a'), d, j, bi)
-    }
-
-    lemma forward_s_loop_inv_peri_lemma(a: seq<nat>,
-        a': seq<nat>,
-        d: pow2_t,
-        j: nat,
-        bi: nat,
-        s: nat,
-        e: uint32,
-        o: uint32,
-        view: FNTT.loop_view)
-
-        requires forward_s_loop_inv(a, d, j, bi, view);
-        requires bi < d.full
-        requires forward_s_loop_update(a, a', d, j, bi, s, e, o, view);
-        ensures forward_s_loop_inv(a', d, j, bi+1, view);
-    {
-        view.s_loop_inv_peri_lemma(a, a', d, j, bi);
-        assert valid_elems(a') by {
-            reveal valid_elems();
-        }
-    }
-
-    lemma forward_higher_points_view_index_lemma(a: seq<nat>, d: pow2_t, j: nat, bi: nat, view: FNTT.loop_view)
-        returns (s: nat)
+    // lemma forward_higher_points_view_index_lemma(a: seq<nat>, d: pow2_t, j: nat, bi: nat, view: FNTT.loop_view)
+    //     returns (s: nat)
     
-        requires forward_s_loop_inv(a, d, j, bi, view);
-        requires bi < d.full
-        ensures s == bi + (2*j) * d.full;
-        ensures s + d.full < N.full;
-        ensures a[s] ==
-            CPV.level_points_view(as_elems(a), view.hsize)[bi][2*j];
-        ensures s == CPV.point_view_index(bi, 2*j, view.hsize);
-        ensures a[s+d.full] ==
-            CPV.level_points_view(as_elems(a), view.hsize)[bi][2*j+1];
-        ensures s+d.full == CPV.point_view_index(bi, 2*j+1, view.hsize);
-    {
-        s := view.higher_points_view_index_lemma(as_elems(a), d, j, bi);
-    }
+    //     requires forward_s_loop_inv(a, d, j, bi, view);
+    //     requires bi < d.full
+    //     ensures s == bi + (2*j) * d.full;
+    //     ensures s + d.full < N.full;
+    //     ensures a[s] ==
+    //         CPV.level_points_view(as_elems(a), view.hsize)[bi][2*j];
+    //     ensures s == CPV.point_view_index(bi, 2*j, view.hsize);
+    //     ensures a[s+d.full] ==
+    //         CPV.level_points_view(as_elems(a), view.hsize)[bi][2*j+1];
+    //     ensures s+d.full == CPV.point_view_index(bi, 2*j+1, view.hsize);
+    // {
+    //     s := view.higher_points_view_index_lemma(as_elems(a), d, j, bi);
+    // }
 
     function inverse_lsize(view: INTT.loop_view): (r: pow2_t)
         requires view.loop_view_wf();
@@ -460,22 +412,22 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         }
     }
 
-    lemma inverse_higher_points_view_index_lemma(a: seq<nat>, d: pow2_t, j: nat, bi: nat, view: INTT.loop_view)
-        returns (s: nat)
+    // lemma inverse_higher_points_view_index_lemma(a: seq<nat>, d: pow2_t, j: nat, bi: nat, view: INTT.loop_view)
+    //     returns (s: nat)
     
-        requires inverse_s_loop_inv(a, d, j, bi, view);
-        requires bi < d.full
-        ensures s == bi + (2*j) * d.full;
-        ensures s + d.full < N.full;
-        ensures a[s] ==
-            CPV.level_points_view(as_elems(a), view.hsize)[bi][2*j];
-        ensures s == CPV.point_view_index(bi, 2*j, view.hsize);
-        ensures a[s+d.full] ==
-            CPV.level_points_view(as_elems(a), view.hsize)[bi][2*j+1];
-        ensures s+d.full == CPV.point_view_index(bi, 2*j+1, view.hsize);
-    {
-        s := view.higher_points_view_index_lemma(as_elems(a), d, j, bi);
-    }
+    //     requires inverse_s_loop_inv(a, d, j, bi, view);
+    //     requires bi < d.full
+    //     ensures s == bi + (2*j) * d.full;
+    //     ensures s + d.full < N.full;
+    //     ensures a[s] ==
+    //         CPV.level_points_view(as_elems(a), view.hsize)[bi][2*j];
+    //     ensures s == CPV.point_view_index(bi, 2*j, view.hsize);
+    //     ensures a[s+d.full] ==
+    //         CPV.level_points_view(as_elems(a), view.hsize)[bi][2*j+1];
+    //     ensures s+d.full == CPV.point_view_index(bi, 2*j+1, view.hsize);
+    // {
+    //     s := view.higher_points_view_index_lemma(as_elems(a), d, j, bi);
+    // }
 
     lemma inverse_j_loop_inv_pre_lemma(a: seq<nat>, d: pow2_t, view: INTT.loop_view)
         requires 0 <= d.exp < N.exp;

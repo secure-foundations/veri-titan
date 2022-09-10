@@ -164,6 +164,54 @@ abstract module generic_falcon_lemmas {
         view.j_loop_inv_post_lemma(a, d, j);
     }
 
+    predicate forward_s_loop_update(
+        a: seq<nat>,
+        a': seq<nat>,
+        d: pow2_t,
+        j: nat,
+        bi: nat,
+        s: nat,
+        e: nat,
+        o: nat,
+        view: FNTT.loop_view)
+
+        requires forward_s_loop_inv(a, d, j, bi, view);
+        requires bi < d.full
+    {
+        && e < Q
+        && o < Q
+        && |a'| == |a|
+        && s + d.full < |a|
+        && a'[s + d.full] == o
+        && a'[s] == e
+        && a' == a[s + d.full := o][s := e]
+        && assert valid_elems(a') by {
+            reveal valid_elems();
+        }
+        && view.s_loop_update(as_elems(a), as_elems(a'), d, j, bi)
+    }
+
+    lemma forward_s_loop_inv_peri_lemma(a: seq<nat>,
+        a': seq<nat>,
+        d: pow2_t,
+        j: nat,
+        bi: nat,
+        s: nat,
+        e: nat,
+        o: nat,
+        view: FNTT.loop_view)
+
+        requires forward_s_loop_inv(a, d, j, bi, view);
+        requires bi < d.full
+        requires forward_s_loop_update(a, a', d, j, bi, s, e, o, view);
+        ensures forward_s_loop_inv(a', d, j, bi+1, view);
+    {
+        view.s_loop_inv_peri_lemma(a, a', d, j, bi);
+        assert valid_elems(a') by {
+            reveal valid_elems();
+        }
+    }
+
 // intt wraps
 
     type iloop_view = INTT.loop_view

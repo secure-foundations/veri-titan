@@ -101,21 +101,17 @@ procedure double(inout dst: reg, ghost p: pow2_t)
 
 procedure mq_add() 
     lets 
-        Q    @= r9;
-        negQ @= r10;
         x    @= r11;
         y    @= r12;
         r    @= r13;
-        tmp @= r14;
+        tmp  @= r14;
     
     requires
-        Q == 12289;
-        negQ == 0xcfff;
         x < 12289;
         y < 12289;
     
     reads
-        Q; negQ; x; y;
+        x; y;
 
     modifies
         flags; r; tmp;
@@ -124,7 +120,7 @@ procedure mq_add()
         r == mqadd(old(x), old(y));
 {
     mov_w(y, tmp);    // tmp <- y
-    add_w(negQ, tmp); // tmp <- y - Q
+    add_w_imm((-12289), tmp); // tmp <- y - Q
     add_w(x, tmp);    // tmp <- y - Q + x
     let sum := tmp;
 
@@ -136,7 +132,7 @@ procedure mq_add()
     subc_w(r, r);      // r <- 0 - carry;  r == if carry then 0xFFFF else 0
     let mask := r;
 
-    and_w(Q, r);       // r <- Q & mask
+    and_w_imm(12289, r);       // r <- Q & mask
     add_w(tmp, r);     // r <- (Q & mask) + y - Q + x
 
     lemma_mq_add_correct(sum, mask, r, x, y);
@@ -144,19 +140,17 @@ procedure mq_add()
 
 procedure mq_sub() 
     lets 
-        Q    @= r9;
         x    @= r11;
         y    @= r12;
         r    @= r13;
         tmp  @= r14;
 
     requires
-        Q == 12289;
         x < 12289;
         y < 12289;
 
     reads
-        Q; x; y;
+        x; y;
 
     modifies
         flags; r; tmp;
@@ -164,7 +158,7 @@ procedure mq_sub()
     ensures
         r == mqsub(old(x), old(y));
 {
-    mov_w_imm(0-1, r); // r <- 0xFFFF
+    mov_w_imm((-1), r); // r <- 0xFFFF
 
     mov_w(x, tmp);    // tmp <- x
     sub_w(y, tmp);    // tmp <- x - y
@@ -177,14 +171,14 @@ procedure mq_sub()
     clr_w(r);          // r <- 0
     subc_w(r, r);      // r <- 0 - carry;  r == if carry then 0xFFFF else 0
     let mask := r;
-    
-    and_w(Q, r);       // r <- Q & mask
+
+    and_w_imm(12289, r);       // r <- Q & mask
     add_w(tmp, r);     // r <- (Q & mask) + x - y 
 
     lemma_mq_sub_correct(diff, flags, mask, r, x, y);
 }
 
-function IsModEquivalent(x: int, y: int, m: int) : void extern;
+function IsModEquivalent(x: int, y: int, m: int) : bool extern;
 
 function lemma_cond_add_Q(flags: flags_t, mask: uint16, r: uint16, input: int) : void extern;
 function lemma_montymul_correct(x: nat, y: nat, xy_lh: uint16, xy_uh: uint16, Q0Ixy:nat, sum: uint32_view_t, partial_lh: uint16, partial_uh: uint16, partial_uh_xy_uh:uint16, m: uint16, flags: flags_t, r:uint16) : void extern;
@@ -246,7 +240,6 @@ function lemma_montymul_correct(x: nat, y: nat, xy_lh: uint16, xy_uh: uint16, Q0
 //     lemma_montymul_correct(old(x), old(y), xy_lh, xy_uh, Q0Ixy, sum, partial_lh, partial_uh, partial_uh_xy_uh, m, f, r);
 // }
 
-
 procedure montymul_ntt()
 {:noInline}
     lets
@@ -255,8 +248,10 @@ procedure montymul_ntt()
     requires
         x < 12289;
         y < 12289;
+    reads
+        y;
     modifies
-        x; y;
+        x;
     ensures
         IsModEquivalent(x * 4091, old(x * y), 12289);
 {
