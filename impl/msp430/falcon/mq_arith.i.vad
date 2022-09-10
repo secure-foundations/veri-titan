@@ -29,16 +29,20 @@ function operator(.full) (p :pow2_t): nat extern;
 function operator(.exp) (p :pow2_t): nat extern;
 function pow2_half(p: pow2_t): pow2_t extern;
 function pow2_double(p: pow2_t): pow2_t extern;
-
-function mqsub(a: nat, b: nat): uint32 extern;
-function mqadd(a: nat, b: nat): uint32 extern;
-
-const N: pow2_t extern;
+function pow2_basics(p: pow2_t): void extern;
 
 function cond_set_Q_lemma(flags0: flags_t, mask: uint16, flags1: flags_t): void extern;
 function lemma_mq_add_correct(sum: uint16, mask: uint16, r: uint16, x: uint16, y: uint16) : void extern;
 function lemma_mq_sub_correct(diff: uint16, flags: flags_t, mask: uint16, r: uint16, x: uint16, y: uint16) : void extern;
 function to_int16(i: uint16): int16 extern;
+
+function montmul(a: uint16, b: uint16): uint16 extern;
+function mqmul(a: nat, b: nat): nat extern;
+function mqsub(a: nat, b: nat): uint32 extern;
+function mqadd(a: nat, b: nat): uint32 extern;
+
+const N: pow2_t extern;
+const R: nat extern;
 
 procedure cond_set_Q(inout rd: reg)
     modifies
@@ -253,7 +257,7 @@ procedure montymul_ntt()
     modifies
         x;
     ensures
-        IsModEquivalent(x * 4091, old(x * y), 12289);
+        x == montmul(old(x), old(y));
 {
     assume false;
 }

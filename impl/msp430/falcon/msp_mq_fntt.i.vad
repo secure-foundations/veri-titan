@@ -58,9 +58,7 @@ function forward_ntt_eval_all(a: seq(uint16), coeffs: seq(uint16)): bool extern;
 function forward_t_loop_inv(a: seq(uint16), d: pow2_t, c: seq(uint16)): bool extern;
 function forward_t_loop_inv_pre_lemma(c: seq(uint16)): void extern;
 function forward_t_loop_inv_post_lemma(a: seq(uint16), one: pow2_t, c: seq(uint16)): void extern;
-function montmul(a: uint16, b: uint16): uint16 extern;
-function mqmul(a: nat, b: nat): nat extern;
-const R: nat extern;
+
 
 procedure save_r4__r10()
     requires
@@ -171,8 +169,6 @@ procedure forward_s_loop_inner(
 
     montymul_ntt();
     let x := r12;
-
-    assume x == montmul(a_o, w);
 
     add_w(s, ae_ptr);
     iter_a' := lw_iter(ae_ptr, false, r11, iter_a.(index := gs));
@@ -519,6 +515,13 @@ returns (ghost iter_a': iter_t)
     
     ensures
         sp == old(sp);
+        r4 == old(r4);
+        r5  == old(r5);
+        r6  == old(r6);
+        r7 == old(r7);
+        r8 == old(r8);
+        r9 == old(r9);
+        r10 == old(r10);
         a_base == old(a_base);
 
     ensures
@@ -549,7 +552,7 @@ returns (ghost iter_a': iter_t)
     ghost var gd := N;
     ghost var i :int := 9;
     ghost var gt := pow2(0);
-    assume gt.full == 1;
+    pow2_basics(gt);
 
     while (t < 512)
         invariant
