@@ -160,23 +160,6 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         }
     }
 
-    // lemma forward_higher_points_view_index_lemma(a: seq<nat>, d: pow2_t, j: nat, bi: nat, view: FNTT.loop_view)
-    //     returns (s: nat)
-    
-    //     requires forward_s_loop_inv(a, d, j, bi, view);
-    //     requires bi < d.full
-    //     ensures s == bi + (2*j) * d.full;
-    //     ensures s + d.full < N.full;
-    //     ensures a[s] ==
-    //         CPV.level_points_view(as_elems(a), view.hsize)[bi][2*j];
-    //     ensures s == CPV.point_view_index(bi, 2*j, view.hsize);
-    //     ensures a[s+d.full] ==
-    //         CPV.level_points_view(as_elems(a), view.hsize)[bi][2*j+1];
-    //     ensures s+d.full == CPV.point_view_index(bi, 2*j+1, view.hsize);
-    // {
-    //     s := view.higher_points_view_index_lemma(as_elems(a), d, j, bi);
-    // }
-
     lemma inverse_s_loop_inv_pre_lemma(
         a: seq<nat>,
         d: pow2_t,
@@ -313,33 +296,6 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         }
     }
 
-    // lemma inverse_higher_points_view_index_lemma(a: seq<nat>, d: pow2_t, j: nat, bi: nat, view: INTT.loop_view)
-    //     returns (s: nat)
-    
-    //     requires inverse_s_loop_inv(a, d, j, bi, view);
-    //     requires bi < d.full
-    //     ensures s == bi + (2*j) * d.full;
-    //     ensures s + d.full < N.full;
-    //     ensures a[s] ==
-    //         CPV.level_points_view(as_elems(a), view.hsize)[bi][2*j];
-    //     ensures s == CPV.point_view_index(bi, 2*j, view.hsize);
-    //     ensures a[s+d.full] ==
-    //         CPV.level_points_view(as_elems(a), view.hsize)[bi][2*j+1];
-    //     ensures s+d.full == CPV.point_view_index(bi, 2*j+1, view.hsize);
-    // {
-    //     s := view.higher_points_view_index_lemma(as_elems(a), d, j, bi);
-    // }
-
-    function bit_rev_view_init(a: seq<nat>): (view: rev_view)
-        requires |a| == N.full;
-        ensures view.len == N;
-        ensures view.shuffle_inv(a);
-    {
-        var view := rev_view.init_rev_view(a, N);
-        view.shuffle_inv_pre_lemma(a, N);
-        view
-    }
-
     lemma bit_rev_index_lemma(
         a: seq<nat>,
         ftable: seq<nat>,
@@ -388,79 +344,6 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
 
         ls1_is_double(sbi);
         ls1_is_double(rsbi);
-    }
-
-    lemma bit_rev_view_inv_peri_lemma(
-        a: seq<nat>,
-        next_b: seq<nat>,
-        view: rev_view,
-        table: seq<nat>)
-        returns (next_view: rev_view)
-
-        requires valid_elems(view.b);
-        requires |a| == N.full;
-        requires bit_rev_ftable_wf(table);
-        requires view.len == N;
-        requires view.shuffle_inv(a);
-        requires next_b == view.next_rev_buffer();
-
-        requires 2 * view.ti < |init_unfinished(N)|;
-        ensures next_view == view.next_rev_view(a);
-        ensures next_view.shuffle_inv(a);
-        ensures next_view.b == next_b;
-        ensures valid_elems(next_view.b);
-    {
-        next_view := view.next_rev_view(a);
-        view.shuffle_inv_peri_lemma(a, next_view);
-        reveal valid_elems();
-    }
-
-    lemma bit_rev_view_inv_post_lemma(a: seq<nat>, view: rev_view)
-
-        requires |a| == N.full;
-        requires view.len == N;
-        requires view.shuffle_inv(a);
-        requires 2 * view.ti == |init_unfinished(N)|; 
-        ensures is_bit_rev_shuffle(a, view.b, N);
-    {
-        view.shuffle_inv_post_lemma(a);
-    }
-
-    predicate circle_product_inv(a: seq<nat>, init_a: seq<nat>, b: seq<nat>, i: nat)
-    {
-        && valid_elems(init_a)
-        && valid_elems(b)
-        && i <= |init_a| == |a| == |b| == N.full
-        && init_a[i..] == a[i..]
-        && reveal valid_elems();
-        && (forall j: nat | 0 <= j < i :: a[j] == MQP.mqmul(init_a[j], b[j]))
-    }
-
-    lemma circle_product_inv_peri_lemma(
-        a: seq<nat>, 
-        init_a: seq<nat>,
-        ai: uint32,
-        b: seq<nat>,
-        i: nat)
-
-        requires i < N.full;
-        requires circle_product_inv(a, init_a, b, i);
-        requires init_a[i] < Q;
-        requires b[i] < Q;
-        requires ai == MQP.montmul(MQP.montmul(init_a[i], 10952), b[i]);
-        ensures  circle_product_inv(a[i := ai], init_a, b, i+1);
-    {
-        var next_a := a[i := ai];
-        forall j: nat | 0 <= j < i+1
-            ensures next_a[j] == MQP.mqmul(init_a[j], b[j])
-        {
-            if j != i {
-                assert next_a[j] == a[j];
-            } else {
-                assert next_a[j] == ai;
-                assume ai == MQP.mqmul(init_a[j], b[j]);
-            }
-        }
     }
 
     predicate mq_poly_scale_inv(a: seq<nat>, init_a: seq<nat>, b: seq<nat>, i: nat)

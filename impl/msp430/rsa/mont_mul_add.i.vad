@@ -1,4 +1,4 @@
-include "../mul.i.vad"
+include "../msp_mul.i.vad"
 include "sub_mod.i.vad"
 
 #verbatim

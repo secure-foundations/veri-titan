@@ -1,9 +1,9 @@
-include "mq_arith.i.vad"
+include "msp_mq_arith.i.vad"
 
 #verbatim
-include "mq_arith.i.dfy"
+include "msp_mq_arith.i.dfy"
 
-module mq_polysub {
+module msp_mq_polysub {
 
 import opened integers
 
@@ -19,7 +19,7 @@ import opened mq_arith_lemmas
 import opened pow2_s
 import opened falcon_512_i
 
-import opened mq_arith_impl
+import opened msp_mq_arith
 #endverbatim
 
 type pow2_t: Type(0) extern;
@@ -34,25 +34,6 @@ function poly_sub_loop_inv(f_new: seq(uint16), f: seq(uint16), g: seq(uint16), i
 function poly_sub_loop_correct(f_new: seq(uint16), f_old: seq(uint16), f_orig:seq(uint16), g: seq(uint16), i: nat) : void extern;
 
 function b16_iter_inv(heap: heap_t, iter: iter_t) : bool extern;
-
-procedure save_r7__r10()
-    requires
-        in_stack_addr_range(sp - 8);
-    
-    modifies
-        mem; flat; sp;
-    reads
-        frames; r10; r9; r8; r7;
-    ensures
-        mem == stack_push_batch(old(mem), old(flat),
-            seq(r7, r8, r9, r10));
-        mem == old(mem).(frames := frames);
-        sp == old(sp) - 8;
-        stack_depth(mem) == stack_depth(old(mem)) + 1;
-{
-    pushm_w(4, r10);
-    assert pushm_w_seq(old(this.ms), R(10), 4) == seq(r7, r8, r9, r10);
-}
 
 procedure poly_sub_loop_body(ghost f_orig: seq(uint16), ghost iter_f: iter_t,
     ghost iter_g: iter_t,

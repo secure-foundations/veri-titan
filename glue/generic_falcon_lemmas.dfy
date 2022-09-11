@@ -341,6 +341,48 @@ abstract module generic_falcon_lemmas {
         view.j_loop_inv_post_lemma(a, d, j);
     }
 
+// circle product wrap
+
+    predicate circle_product_inv(a: seq<nat>, init_a: seq<nat>, b: seq<nat>, i: nat)
+    {
+        && valid_elems(a)
+        && valid_elems(init_a)
+        && valid_elems(b)
+        && i <= |init_a| == |a| == |b| == N.full
+        && init_a[i..] == a[i..]
+        && reveal valid_elems();
+        && (forall j: nat | 0 <= j < i :: a[j] == MQP.mqmul(init_a[j], b[j]))
+    }
+
+    lemma circle_product_inv_peri_lemma(
+        a: seq<nat>, 
+        init_a: seq<nat>,
+        b: seq<nat>,
+        i: nat)
+        returns (ai: elem)
+
+        requires i < N.full;
+        requires circle_product_inv(a, init_a, b, i);
+        ensures init_a[i] < Q;
+        ensures b[i] < Q;
+        ensures ai == montmul(montmul(init_a[i], 10952), b[i]);
+        ensures circle_product_inv(a[i := ai], init_a, b, i+1);
+    {
+        reveal valid_elems();
+        ai := montmul(montmul(init_a[i], 10952), b[i]);
+        var next_a := a[i := ai];
+        forall j: nat | 0 <= j < i+1
+            ensures next_a[j] == MQP.mqmul(init_a[j], b[j])
+        {
+            if j != i {
+                assert next_a[j] == a[j];
+            } else {
+                assert next_a[j] == ai;
+                assume ai == MQP.mqmul(init_a[j], b[j]);
+            }
+        }
+    }
+
 // bit rev wraps
 
     function {:opaque} ftable_cast(ftable: seq<nat>): (r: seq<(nat, nat)>)
@@ -365,6 +407,16 @@ abstract module generic_falcon_lemmas {
 
 // polysub wraps
 
+    function bit_rev_view_init(a: seq<nat>): (view: rev_view)
+        requires |a| == N.full;
+        ensures view.len == N;
+        ensures view.shuffle_inv(a);
+    {
+        var view := rev_view.init_rev_view(a, N);
+        view.shuffle_inv_pre_lemma(a, N);
+        view
+    }
+
     predicate poly_sub_loop_inv(diff: seq<nat>, f: seq<nat>, g: seq<nat>, i: nat)
     {
         reveal valid_elems();
@@ -387,5 +439,40 @@ abstract module generic_falcon_lemmas {
             ensures j != i ==> f_new[j] == f_old[j];
             ensures j == i ==> f_new[j] == MQP.mqsub(f_orig[j], g[j]);
         {}
+    }
+
+    lemma bit_rev_view_inv_peri_lemma(
+        a: seq<nat>,
+        next_b: seq<nat>,
+        view: rev_view,
+        table: seq<nat>)
+        returns (next_view: rev_view)
+
+        requires valid_elems(view.b);
+        requires |a| == N.full;
+        requires bit_rev_ftable_wf(table);
+        requires view.len == N;
+        requires view.shuffle_inv(a);
+        requires next_b == view.next_rev_buffer();
+
+        requires 2 * view.ti < |init_unfinished(N)|;
+        ensures next_view == view.next_rev_view(a);
+        ensures next_view.shuffle_inv(a);
+        ensures next_view.b == next_b;
+        ensures valid_elems(next_view.b);
+    {
+        next_view := view.next_rev_view(a);
+        view.shuffle_inv_peri_lemma(a, next_view);
+        reveal valid_elems();
+    }
+
+    lemma bit_rev_view_inv_post_lemma(a: seq<nat>, view: rev_view)
+        requires |a| == N.full;
+        requires view.len == N;
+        requires view.shuffle_inv(a);
+        requires 2 * view.ti == |init_unfinished(N)|; 
+        ensures is_bit_rev_shuffle(a, view.b, N);
+    {
+        view.shuffle_inv_post_lemma(a);
     }
 }

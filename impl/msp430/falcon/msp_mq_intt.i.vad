@@ -1,7 +1,9 @@
-include "mq_arith.i.vad"
+include "msp_mq_arith.i.vad"
+include "../msp_reg_save.i.vad"
 
 #verbatim
-include "mq_arith.i.dfy"
+include "msp_mq_arith.i.dfy"
+include "../msp_reg_save.i.dfy"
 
 module msp_mq_intt {
 
@@ -20,13 +22,12 @@ import opened DivMod
 import opened pow2_s
 import opened falcon_512_i
 
-import opened mq_arith_impl
-// import opened mq_polysub
+import opened msp_mq_arith
+import opened msp_reg_save
 
 #endverbatim
 
 function elems_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int): bool extern;
-
 function as_elems(s: seq(uint16)): seq(uint16) extern;
 
 function rev_omega_inv_powers_mont_table(): seq(uint16) extern;
@@ -41,8 +42,8 @@ function inverse_lsize(v: iloop_view): pow2_t extern;
 function elems_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int): bool extern;
 
 function block_size(c: pow2_t): pow2_t extern;
-
 function pow2_t_cons(n: nat, exp: nat): pow2_t extern;
+
 function inverse_j_loop_inv(a: seq(uint16), hcount: pow2_t, j: nat, u: nat, view: iloop_view): bool extern;
 function inverse_j_loop_inv_pre_lemma(a: seq(uint16), hcount: pow2_t, view: iloop_view): void extern;
 function inverse_j_loop_inv_post_lemma(a: seq(uint16), hcount: pow2_t, j: nat, u: nat, view: iloop_view): void extern;
@@ -59,46 +60,6 @@ function inverse_t_loop_inv(a: seq(uint16), d: pow2_t, c: seq(uint16)): bool ext
 function inverse_t_loop_inv_pre_lemma(c: seq(uint16)): void extern;
 function inverse_t_loop_inv_post_lemma(a: seq(uint16), one: pow2_t, c: seq(uint16)): void extern;
 
-procedure save_r4__r10()
-    requires
-        in_stack_addr_range(sp);
-        in_stack_addr_range(sp - 14);
-    
-    modifies
-        mem; flat; sp;
-    reads
-        r4; r5; r6; r7; r8; r9; r10; 
-    ensures
-        mem == stack_push_batch(old(mem), old(flat),
-            seq(r4, r5, r6, r7, r8, r9, r10));
-        sp == old(sp) - 14;
-        stack_depth(mem) == stack_depth(old(mem)) + 1;
-{
-    pushm_w(7, r10);
-    assert pushm_w_seq(old(this.ms), GPR(10), 7)
-        == seq(r4, r5, r6, r7, r8, r9, r10);
-}
-
-procedure save_r12__r15()
-    requires
-        in_stack_addr_range(sp);
-        in_stack_addr_range(sp - 8);
-    
-    modifies
-        mem; flat; sp;
-    reads
-        r12; r13; r14; r15;
-    ensures
-        mem == stack_push_batch(old(mem), old(flat),
-            seq(r12, r13, r14, r15));
-        sp == old(sp) - 8;
-        stack_depth(mem) == stack_depth(old(mem)) + 1;
-{
-    pushm_w(4, r15);
-    assert pushm_w_seq(old(this.ms), GPR(15), 4)
-        == seq(r12, r13, r14, r15);
-}
-
 procedure inverse_s_loop_inner(
     ghost iter_a: iter_t,
     ghost gd: pow2_t,
@@ -106,6 +67,10 @@ procedure inverse_s_loop_inner(
     ghost view: iloop_view)
     returns (ghost iter_a': iter_t)
 {:frame false}
+    requires
+        in_stack_addr_range(sp);
+        in_stack_addr_range(sp - 12);
+
     lets
         d         @= r4;
         t         @= r5;
@@ -166,7 +131,7 @@ procedure inverse_s_loop_inner(
     let a_e := iter_a.buff[gs];
     let a_o := iter_a.buff[gs + d];
 
-    montymul_ntt();
+    montymul(a_o, w);
     let x := r12;
 
     add_w(s, ae_ptr);
@@ -212,7 +177,7 @@ procedure inverse_s_loop (
 
     requires
         in_stack_addr_range(sp);
-        in_stack_addr_range(sp - 8);
+        in_stack_addr_range(sp - 20);
 
     requires
         pd == 2 * d;
@@ -281,7 +246,7 @@ procedure inverse_j_loop(
 
     requires
         in_stack_addr_range(sp);
-        in_stack_addr_range(sp - 8);
+        in_stack_addr_range(sp - 20);
 
     requires
         t == gt.full;
@@ -402,7 +367,7 @@ returns (ghost iter_a': iter_t)
 
     requires
         in_stack_addr_range(sp);
-        in_stack_addr_range(sp - 8);
+        in_stack_addr_range(sp - 20);
 
     requires
         t == gt.full;
@@ -480,7 +445,7 @@ returns (ghost iter_a': iter_t)
     inverse_j_loop_inv_post_lemma(iter_a'.buff, gd, j, u, view);
  }
 
-procedure fntt(
+procedure intt(
     ghost iter_a: iter_t,
     ghost iter_p: iter_t)
 
@@ -501,7 +466,7 @@ returns (ghost iter_a': iter_t)
 
     requires
         in_stack_addr_range(sp);
-        in_stack_addr_range(sp - 22);
+        in_stack_addr_range(sp - 34);
 
     requires
         elems_iter_inv(heap, iter_a, a_base, 0);

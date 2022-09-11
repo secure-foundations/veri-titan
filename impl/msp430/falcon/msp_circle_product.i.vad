@@ -1,0 +1,125 @@
+include "msp_mq_arith.i.vad"
+
+#verbatim
+include "msp_mq_arith.i.dfy"
+
+module msp_circle_product {
+
+import opened integers
+
+import opened msp_machine
+import opened msp_decls
+import opened msp_vale
+import opened mem
+import opened stack
+
+import opened bv16_op_s
+import opened mq_arith_lemmas
+
+import opened pow2_s
+import opened falcon_512_i
+
+import opened msp_mq_arith
+#endverbatim
+
+function elems_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int): bool extern;
+function circle_product_inv(init_a: seq(uint16), a: seq(uint16), b: seq(uint16), i: nat): bool extern;
+function circle_product_inv_peri_lemma(init_a: seq(uint16), a: seq(uint16), b: seq(uint16), i: nat): nat extern;
+
+procedure circle_product_inner()
+    requires
+        r8 < 12289;
+        r9 < 12289;
+    reads
+        r9;
+    modifies
+        r8;
+    ensures
+        r8 == montmul(montmul(old(r8), 10952), old(r9));
+{
+    assume false;
+}
+
+procedure circle_product(
+    ghost iter_f: iter_t,
+    ghost iter_g: iter_t)
+    returns (ghost iter_f': iter_t)
+
+{:frame false}
+
+    lets 
+        // Q      @= r9;
+        end_f      @= r10;
+        ptr_f      @= r12;
+        ptr_g      @= r13;
+        // tmp    @= r14;
+        // ptr_f  @= r5; 
+        // ptr_g  @= r6; 
+
+    requires
+        in_stack_addr_range(sp);
+        in_stack_addr_range(sp - 16);
+    
+    requires
+        elems_iter_inv(heap, iter_f, ptr_f, 0);
+        elems_iter_inv(heap, iter_g, ptr_g, 0);
+        iter_f.base_ptr != iter_g.base_ptr;
+    
+    ensures
+        elems_iter_inv(heap, iter_f', ptr_f, 0);
+        elems_iter_inv(heap, iter_g, old(ptr_g), 0);
+
+    ensures
+        mem == old(mem).(heap := heap);
+        iter_f'.base_ptr == iter_f.base_ptr;
+
+    ensures
+        circle_product_inv(iter_f'.buff, iter_f.buff, iter_g.buff, N.full);
+{
+    //poly_sub_save_regs();
+    let mem0 := mem;
+    let init_f := iter_f.buff;
+
+    mov_w(ptr_f, end_f);
+    add_w_imm(1024, end_f);
+    
+    iter_f' := iter_f;
+    ghost var iter_g':= iter_g;
+    ghost var i:nat := 0;
+    
+    while (ptr_f < end_f)
+       invariant
+            end_f == 1024 + iter_f.base_ptr;
+            elems_iter_inv(heap, iter_f', ptr_f, i);
+            elems_iter_inv(heap, iter_g', ptr_g, i);
+            iter_f'.base_ptr == iter_f.base_ptr;
+            iter_g'.base_ptr == iter_g.base_ptr;
+
+        invariant
+            mem == mem0.(heap := heap);
+            heap == old(heap)[iter_f.base_ptr := heap[iter_f'.base_ptr]];
+
+        invariant
+            circle_product_inv(iter_f'.buff, init_f, iter_g'.buff, i);
+
+        decreases
+            end_f - ptr_f;
+    {
+        iter_f' := lw_iter(ptr_f, false, r8, iter_f');
+        iter_g' := lw_iter(ptr_g, true, r9, iter_g');
+
+        let p := circle_product_inv_peri_lemma(iter_f'.buff, init_f, iter_g.buff, i);
+
+        circle_product_inner();
+
+        iter_f' := sw_iter(ptr_f, true, r8, iter_f');
+        i := i + 1;
+    }
+
+    add_w_imm((-1024), ptr_f);
+    iter_f' := iter_f'.(index := 0);
+}
+        
+#verbatim
+}
+#endverbatim

@@ -1,7 +1,7 @@
-include "mq_arith.i.vad"
+include "msp_mq_arith.i.vad"
 
 #verbatim
-include "mq_arith.i.dfy"
+include "msp_mq_arith.i.dfy"
 
 module msp_mq_norm {
 
@@ -19,7 +19,7 @@ import opened mq_arith_lemmas
 import opened pow2_s
 import opened falcon_512_i
 
-import opened mq_arith_impl
+import opened msp_mq_arith
 // import opened mq_polysub
 
 #endverbatim
@@ -101,8 +101,6 @@ returns (ghost iter_tt': iter_t)
     iter_tt' := iter_tt'.(index := 0);
     add_w_imm((-1024), r15);
 }
-
-
 
 #verbatim
 }

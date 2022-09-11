@@ -1,25 +1,25 @@
-include "../../../spec/arch/msp430/decls.i.vad"
-include "../mul.i.vad"
+include "../msp_mul.i.vad"
 
 #verbatim
 
 include "../../../../glue/msp430/falcon/mq_arith_lemmas.dfy"
-include "../mul.i.dfy"
+include "../msp_mul.i.dfy"
 
-module mq_arith_impl {
+module msp_mq_arith {
 
 import opened msp_machine
 import opened msp_decls
 import opened msp_vale
 import opened mem
-import opened mul
 import opened stack
 import opened bv16_op_s
 import opened integers
 import opened mq_arith_lemmas
+import opened bv16_mm_lemmas
 import opened DivMod
 
 import opened pow2_s
+// import opened msp_mul
 
 #endverbatim
 
@@ -36,7 +36,10 @@ function lemma_mq_add_correct(sum: uint16, mask: uint16, r: uint16, x: uint16, y
 function lemma_mq_sub_correct(diff: uint16, flags: flags_t, mask: uint16, r: uint16, x: uint16, y: uint16) : void extern;
 function to_int16(i: uint16): int16 extern;
 
-function montmul(a: uint16, b: uint16): uint16 extern;
+function dw_add_lemma(x_lh: uint16, x_uh: uint16, y_lh: uint16, y_uh: uint16, carry: uint1): dw_view_t extern;
+function dw_add_is_safe(x_lh: uint16, x_uh: uint16, y_lh: uint16, y_uh: uint16): bool extern;
+
+function montmul(a: nat, b: nat): uint16 extern;
 function mqmul(a: nat, b: nat): nat extern;
 function mqsub(a: nat, b: nat): uint32 extern;
 function mqadd(a: nat, b: nat): uint32 extern;
@@ -58,6 +61,19 @@ procedure cond_set_Q(inout rd: reg)
     let flags1 := flags;
     and_w_imm(12289, rd);
     cond_set_Q_lemma(flags0, mask, flags1);
+}
+
+procedure cond_add_Q(inout rd: reg, inout rt: reg)
+    requires
+        @rd != @rt;
+    modifies
+        flags;
+    ensures 
+        (old(flags.cf) == 1) ==> rd == fst(msp_add(old(rd), 12289));
+        (old(flags.cf) == 0) ==> rd == old(rd);
+{
+    cond_set_Q(rt);
+    add_w(rt, rd);
 }
 
 procedure check_int16_sign(inout rd: reg)
@@ -182,7 +198,7 @@ procedure mq_sub()
     lemma_mq_sub_correct(diff, flags, mask, r, x, y);
 }
 
-function IsModEquivalent(x: int, y: int, m: int) : bool extern;
+// function IsModEquivalent(x: int, y: int, m: int) : bool extern;
 
 function lemma_cond_add_Q(flags: flags_t, mask: uint16, r: uint16, input: int) : void extern;
 function lemma_montymul_correct(x: nat, y: nat, xy_lh: uint16, xy_uh: uint16, Q0Ixy:nat, sum: uint32_view_t, partial_lh: uint16, partial_uh: uint16, partial_uh_xy_uh:uint16, m: uint16, flags: flags_t, r:uint16) : void extern;
@@ -244,23 +260,94 @@ function lemma_montymul_correct(x: nat, y: nat, xy_lh: uint16, xy_uh: uint16, Q0
 //     lemma_montymul_correct(old(x), old(y), xy_lh, xy_uh, Q0Ixy, sum, partial_lh, partial_uh, partial_uh_xy_uh, m, f, r);
 // }
 
-procedure montymul_ntt()
-{:noInline}
-    lets
-        x         @= r12;
-        y         @= r13;
+procedure montymul(ghost x: nat, ghost y: nat)
+    {:frame false}
+    {:noInline}
+
+    requires
+        in_stack_addr_range(sp);
+        in_stack_addr_range(sp - 12);
+
+    requires
+        x == r12;
+        y == r13;
+    
     requires
         x < 12289;
         y < 12289;
-    reads
-        y;
-    modifies
-        x;
+
     ensures
-        x == montmul(old(x), old(y));
+        sp == old(sp);
+        r4 == old(r4);
+        r5 == old(r5);
+        r6 == old(r6);
+        r7 == old(r7);
+        r8 == old(r8);
+        r9 == old(r9); 
+        r10 == old(r10); 
+        r11 == old(r11);
+        r13 == old(r13);
+        r14 == old(r14);
+        r15 == old(r15);
+
+    ensures
+        mem == old(mem);
+
+    ensures
+        r12 == montmul(x, y);
 {
-    assume false;
+    pushm_w(6, r10);
+
+    mov_w(r13, r8);
+    mov_w(r14, r7);
+    mov_w(r15, r6);
+    mov_w(r11, r5);
+
+    mov_w(r13, r14);
+    clr_w(r13);
+    clr_w(r15);
+
+    builtin__mspabi_mpyl();
+
+    mov_w(r12, r9);
+    mov_w(r13, r10);
+
+    let xy_lh := r9;
+    let xy_uh := r10;
+
+    mov_w_imm(12287, r13);
+    builtin__mspabi_mpyi();
+
+    clr_w(r13);
+    mov_w_imm(12289, r14);
+
+    builtin__mspabi_mpyl(); 
+
+    assert to_nat(seq(r12, r13)) == mul(xy_lh, 12287) * 12289;
+    assert to_nat(seq(r9, r10)) == x * y;
+
+    let xs := seq(r9, r10);
+    let ys := seq(r12, r13);
+
+    add_w(r9, r12);
+    let carry := flags.cf;
+    addc_w(r10, r13);
+
+    assume dw_add_is_safe(xs[0], xs[1], ys[0], ys[1]);
+    let sum := dw_add_lemma(xs[0], xs[1], ys[0], ys[1], carry);
+
+    add_w_imm((-12289), r13);
+    cond_add_Q(r13, r12);
+    mov_w(r13, r12);
+    assume r12 == montmul(x, y);
+
+    mov_w(r8, r13);
+    mov_w(r7, r14);
+    mov_w(r6, r15);
+    mov_w(r5, r11);
+    popm_w(6, r10);
 }
+
 
 
 #verbatim
