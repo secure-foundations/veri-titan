@@ -1272,8 +1272,8 @@ module mq_intt_i(CMQ: ntt_param_s, CMQP: mq_poly_i(CMQ), CPV: poly_view_i(CMQ))
         ensures rev_omega_inv_powers_mont_table()[t.full + j] ==
             MQP.mqmul(rev_omega_inv_powers_x_value(2 * j, d), R);
     {
-            var _ := TWD.twiddle_factors_index_bound_lemma(t, j);
-            rev_omega_inv_powers_mont_table_axiom(t, d, j);
+        var _ := TWD.twiddle_factors_index_bound_lemma(t, j);
+        rev_omega_inv_powers_mont_table_axiom(t, d, j);
     }
 
     function x_value(i: nat, d: pow2_t): (r: elem)

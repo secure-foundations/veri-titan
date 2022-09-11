@@ -177,57 +177,6 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
     //     s := view.higher_points_view_index_lemma(as_elems(a), d, j, bi);
     // }
 
-    function inverse_lsize(view: INTT.loop_view): (r: pow2_t)
-        requires view.loop_view_wf();
-        ensures r.full <= N.full
-    {
-        view.lsize()
-    }
-
-    predicate inverse_ntt_eval_all(a: seq<nat>, coeffs: seq<nat>)
-    {
-        && valid_elems(a)
-        && valid_elems(coeffs)
-        && INTT.ntt_eval_all(as_elems(a), as_elems(coeffs))
-    }
-
-    predicate inverse_t_loop_inv(a: seq<nat>, d: pow2_t, coeffs: seq<nat>)
-        requires 0 <= d.exp <= N.exp;
-    {
-        && valid_elems(a)
-        && valid_elems(coeffs)
-        && INTT.t_loop_inv(as_elems(a), d, as_elems(coeffs))
-    }
-
-    predicate inverse_s_loop_inv(a: seq<nat>, d: pow2_t, j: nat, bi: nat, view: INTT.loop_view)
-    {
-        && valid_elems(a)
-        && view.s_loop_inv(as_elems(a), d, j, bi)
-    }
-
-    predicate inverse_j_loop_inv(a: seq<nat>, d: pow2_t, j: nat, u: nat, view: INTT.loop_view)
-    {
-        && valid_elems(a)
-        && u == j * (2 * d.full)
-        && view.j_loop_inv(as_elems(a), d, j)
-    }
-
-    lemma inverse_t_loop_inv_pre_lemma(coeffs: seq<nat>)
-        requires valid_elems(coeffs);
-        ensures N.exp <= N.exp; // ??
-        ensures inverse_t_loop_inv(coeffs, N, coeffs);
-    {
-        INTT.t_loop_inv_pre_lemma(as_elems(coeffs));
-    }
-
-    lemma inverse_t_loop_inv_post_lemma(a: seq<nat>, one: pow2_t, coeffs: seq<nat>)
-        requires one.exp == 0 <= N.exp;
-        requires inverse_t_loop_inv(a, one, coeffs);
-        ensures inverse_ntt_eval_all(a, coeffs);
-    {
-        INTT.t_loop_inv_post_lemma(a, one, coeffs);
-    }
-
     lemma inverse_s_loop_inv_pre_lemma(
         a: seq<nat>,
         d: pow2_t,
@@ -364,54 +313,6 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         }
     }
 
-    predicate inverse_s_loop_update(
-        a: seq<nat>,
-        a': seq<nat>,
-        d: pow2_t,
-        j: nat,
-        bi: nat,
-        s: nat,
-        e: uint32,
-        o: uint32,
-        view: INTT.loop_view)
-
-        requires inverse_s_loop_inv(a, d, j, bi, view);
-        requires bi < d.full
-    {
-        && e < Q
-        && o < Q
-        && |a'| == |a|
-        && s + d.full < |a|
-        && a'[s + d.full] == o
-        && a'[s] == e
-        && a' == a[s + d.full := o][s := e]
-        && assert valid_elems(a') by {
-            reveal valid_elems();
-        }
-        && view.s_loop_update(as_elems(a), as_elems(a'), d, j, bi)
-    }
-
-    lemma inverse_s_loop_inv_peri_lemma(a: seq<nat>,
-        a': seq<nat>,
-        d: pow2_t,
-        j: nat,
-        bi: nat,
-        s: nat,
-        e: uint32,
-        o: uint32,
-        view: INTT.loop_view)
-
-        requires inverse_s_loop_inv(a, d, j, bi, view);
-        requires bi < d.full
-        requires inverse_s_loop_update(a, a', d, j, bi, s, e, o, view);
-        ensures inverse_s_loop_inv(a', d, j, bi+1, view);
-    {
-        view.s_loop_inv_peri_lemma(a, a', d, j, bi);
-        assert valid_elems(a') by {
-            reveal valid_elems();
-        }
-    }
-
     // lemma inverse_higher_points_view_index_lemma(a: seq<nat>, d: pow2_t, j: nat, bi: nat, view: INTT.loop_view)
     //     returns (s: nat)
     
@@ -428,26 +329,6 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
     // {
     //     s := view.higher_points_view_index_lemma(as_elems(a), d, j, bi);
     // }
-
-    lemma inverse_j_loop_inv_pre_lemma(a: seq<nat>, d: pow2_t, view: INTT.loop_view)
-        requires 0 <= d.exp < N.exp;
-        requires inverse_t_loop_inv(a, pow2_double(d), view.coefficients);
-        requires view.loop_view_wf();
-        requires view.hsize == CPV.block_size(d);
-        ensures inverse_j_loop_inv(a, d, 0, 0, view);
-    {
-        view.j_loop_inv_pre_lemma(as_elems(a), d);
-    }
-
-    lemma inverse_j_loop_inv_post_lemma(a: seq<nat>, d: pow2_t, j: nat, u: nat, view: INTT.loop_view)
-        requires inverse_j_loop_inv(a, d, j, u, view);
-        requires j == view.lsize().full;
-        requires 0 <= view.hsize.exp <= N.exp;
-        requires view.hsize == CPV.block_size(d);
-        ensures INTT.t_loop_inv(a, d, view.coefficients);
-    {
-        view.j_loop_inv_post_lemma(a, d, j);
-    }
 
     function bit_rev_view_init(a: seq<nat>): (view: rev_view)
         requires |a| == N.full;
