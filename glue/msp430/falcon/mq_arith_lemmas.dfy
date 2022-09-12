@@ -533,51 +533,39 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
         reveal valid_elems();
     }
 
-    // lemma bit_rev_index_lemma(
-    //     a: seq<nat>,
-    //     ftable: seq<nat>,
-    //     sbi: uint32,
-    //     rsbi: uint32,
-    //     ti: nat,
-    //     a0: uint32,
-    //     t0: uint32,
-    //     t1: uint32)
+    lemma bit_rev_index_lemma(
+        a: seq<nat>,
+        ftable: seq<nat>,
+        li: nat,
+        ri: nat,
+        ti: nat)
 
-    //     requires |a| == N.full;
-    //     requires bit_rev_ftable_wf(ftable);
+        requires |a| == N.full;
+        requires bit_rev_ftable_wf(ftable);
 
-    //     requires 0 <= 2 * ti + 1 < |ftable|;
-    //     requires sbi == ftable[2 * ti];
-    //     requires rsbi == ftable[2 * ti+1];
-    
-    //     requires t0 == uint32_add(a0, uint32_ls(sbi, 1));
-    //     requires t1 == uint32_add(a0, uint32_ls(rsbi, 1));
+        requires 0 <= 2 * ti + 1 < |ftable|;
+        requires li == ftable[2 * ti];
+        requires ri == ftable[2 * ti+1];
 
-    //     ensures t0 == a0 + 2 * sbi;
-    //     ensures t1 == a0 + 2 * rsbi;
+        ensures li == build_view(a, ti, N).get_split_index();
+        ensures ri == bit_rev_int(ftable[2 * ti], N);
+    {
+        var table := ftable_cast(ftable);
+        assert ti < |table|;
 
-    //     ensures sbi == build_view(a, ti, N).get_split_index();
-    //     ensures rsbi == bit_rev_int(ftable[2 * ti], N);
-    // {
-    //     var table := ftable_cast(ftable);
-    //     assert ti < |table|;
+        assert table[ti].0 == ftable[2 * ti]
+            && table[ti].1 == ftable[2 * ti + 1] by {
+            reveal ftable_cast();
+        }
 
-    //     assert table[ti].0 == ftable[2 * ti]
-    //         && table[ti].1 == ftable[2 * ti + 1] by {
-    //         reveal ftable_cast();
-    //     }
+        assert table[ti].0 == build_view(a, ti, N).get_split_index()
+            && table[ti].1 == bit_rev_int(table[ti].0, N) by {
+            reveal table_wf();
+            reveal table_wf_inner();
+        }
 
-    //     assert table[ti].0 == build_view(a, ti, N).get_split_index()
-    //         && table[ti].1 == bit_rev_int(table[ti].0, N) by {
-    //         reveal table_wf();
-    //         reveal table_wf_inner();
-    //     }
-
-    //     // ftable_index_lemma(a, ftable, table, ti);
-    //     assert sbi == build_view(a, ti, N).get_split_index();
-    //     assert rsbi == bit_rev_int(ftable[2 * ti], N);
-
-    //     ls1_is_double(sbi);
-    //     ls1_is_double(rsbi);
-    // }
+        // ftable_index_lemma(a, ftable, table, ti);
+        assert li == build_view(a, ti, N).get_split_index();
+        assert ri == bit_rev_int(ftable[2 * ti], N);
+    }
 }

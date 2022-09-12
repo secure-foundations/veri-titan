@@ -346,42 +346,6 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         ls1_is_double(rsbi);
     }
 
-    predicate mq_poly_scale_inv(a: seq<nat>, init_a: seq<nat>, b: seq<nat>, i: nat)
-    {
-        && valid_elems(init_a)
-        && valid_elems(b)
-        && reveal valid_elems();
-        && i <= |init_a| == |a| == |b| == N.full
-        && init_a[i..] == a[i..]
-        && (forall j: nat | 0 <= j < i :: a[j] == MQP.montmul(init_a[j], b[j]))
-    }
-
-    lemma mq_poly_scale_peri_lemma(
-        a: seq<nat>, 
-        init_a: seq<nat>,
-        ai: uint32,
-        b: seq<nat>,
-        i: nat)
-
-        requires i < N.full;
-        requires mq_poly_scale_inv(a, init_a, b, i);
-        requires init_a[i] < Q;
-        requires b[i] < Q;
-        requires ai == MQP.montmul(init_a[i], b[i]);
-        ensures  mq_poly_scale_inv(a[i := ai], init_a, b, i+1);
-    {
-        var next_a := a[i := ai];
-        forall j: nat | 0 <= j < i+1
-            ensures next_a[j] == MQP.montmul(init_a[j], b[j])
-        {
-            if j != i {
-                assert next_a[j] == a[j];
-            } else {
-                assert next_a[j] == ai;
-            }
-        }
-    }
-
     lemma mq_ntt_mul_lemma(
         a0: seq<nat>,
         a1: seq<nat>,

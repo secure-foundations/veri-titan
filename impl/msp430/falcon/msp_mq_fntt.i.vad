@@ -40,8 +40,6 @@ function operator(.hsize) (p :floop_view): pow2_t extern;
 function build_floop_view(a: seq(uint16), d: pow2_t): floop_view extern;
 function forward_lsize(v: floop_view): pow2_t extern;
 
-function elems_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int): bool extern;
-
 function block_size(c: pow2_t): pow2_t extern;
 
 function pow2_t_cons(n: nat, exp: nat): pow2_t extern;
@@ -471,11 +469,14 @@ returns (ghost iter_a': iter_t)
 
     requires
         elems_iter_inv(heap, iter_a, a_base, 0);
-
+    requires
         symbols?["rev_mixed_powers_mont_table"];
+    requires
         elems_iter_inv(heap, iter_p,
             load_symbol(mem, "rev_mixed_powers_mont_table"), 0);
+    requires
         iter_p.buff == rev_mixed_powers_mont_table();
+    requires
         iter_a.base_ptr != iter_p.base_ptr;
     
     ensures

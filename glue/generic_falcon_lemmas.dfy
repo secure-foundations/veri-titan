@@ -365,11 +365,11 @@ abstract module generic_falcon_lemmas {
         requires circle_product_inv(a, init_a, b, i);
         ensures init_a[i] < Q;
         ensures b[i] < Q;
-        ensures ai == montmul(montmul(init_a[i], 10952), b[i]);
+        ensures ai == montmul(montmul(init_a[i], b[i]), 10952);
         ensures circle_product_inv(a[i := ai], init_a, b, i+1);
     {
         reveal valid_elems();
-        ai := montmul(montmul(init_a[i], 10952), b[i]);
+        ai := montmul(montmul(init_a[i], b[i]), 10952);
         var next_a := a[i := ai];
         forall j: nat | 0 <= j < i+1
             ensures next_a[j] == MQP.mqmul(init_a[j], b[j])
@@ -475,4 +475,63 @@ abstract module generic_falcon_lemmas {
     {
         view.shuffle_inv_post_lemma(a);
     }
+
+    predicate mq_poly_scale_inv(a: seq<nat>, init_a: seq<nat>, b: seq<nat>, i: nat)
+    {
+        && valid_elems(a)
+        && valid_elems(init_a)
+        && valid_elems(b)
+        && reveal valid_elems();
+        && i <= |init_a| == |a| == |b| == N.full
+        && init_a[i..] == a[i..]
+        && (forall j: nat | 0 <= j < i ::
+            a[j] == MQP.montmul(init_a[j], b[j]))
+    }
+
+    lemma mq_poly_scale_peri_lemma(
+        a: seq<nat>, 
+        init_a: seq<nat>,
+        b: seq<nat>,
+        i: nat)
+        returns (ai: elem)
+
+        requires i < N.full;
+        requires mq_poly_scale_inv(a, init_a, b, i);
+        ensures init_a[i] < Q;
+        ensures b[i] < Q;
+        ensures ai == MQP.montmul(init_a[i], b[i]);
+        ensures mq_poly_scale_inv(a[i := ai], init_a, b, i+1);
+    {
+        reveal valid_elems();
+        ai := MQP.montmul(init_a[i], b[i]);
+        var next_a := a[i := ai];
+        forall j: nat | 0 <= j < i+1
+            ensures next_a[j] == MQP.montmul(init_a[j], b[j])
+        {
+            if j != i {
+                assert next_a[j] == a[j];
+            } else {
+                assert next_a[j] == ai;
+            }
+        }
+    }
+
+    lemma mq_poly_mod_product_lemma(
+        a0: seq<nat>, a1: seq<nat>, b0: seq<nat>, b1: seq<nat>,
+        p0: seq<nat>, p1: seq<nat>, p2: seq<nat>, p3: seq<nat>, p4: seq<nat>)
+
+        requires forward_ntt_eval_all(a1, a0);
+        requires forward_ntt_eval_all(b1, b0);
+        requires circle_product_inv(p0, a1, b1, N.full);
+        requires is_bit_rev_shuffle(p0, p1, N);
+        requires inverse_ntt_eval_all(p2, p1);
+        requires is_bit_rev_shuffle(p2, p3, N);
+        requires mq_poly_scale_inv(
+            p4, p3, MQP.inverse_ntt_scaling_table(), N.full);
+        ensures as_elems(p4) == poly_mod_product(as_elems(a0), as_elems(b0));
+    {
+        reveal valid_elems();
+        poly_mod_product_lemma(a0, a1, b0, b1, p0, p1, p2, p3, p4);
+    }
+
 }

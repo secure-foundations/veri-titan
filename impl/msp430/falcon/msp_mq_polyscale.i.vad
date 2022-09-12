@@ -3,7 +3,7 @@ include "msp_mq_arith.i.vad"
 #verbatim
 include "msp_mq_arith.i.dfy"
 
-module msp_circle_product {
+module msp_mq_polyscale {
 
 import opened integers
 
@@ -23,10 +23,10 @@ import opened msp_mq_arith
 #endverbatim
 
 function elems_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int): bool extern;
-function circle_product_inv(init_a: seq(uint16), a: seq(uint16), b: seq(uint16), i: nat): bool extern;
-function circle_product_inv_peri_lemma(init_a: seq(uint16), a: seq(uint16), b: seq(uint16), i: nat): nat extern;
+function mq_poly_scale_inv(a: seq(uint16), init_a: seq(uint16), b: seq(uint16), i: nat): bool extern;
+function mq_poly_scale_peri_lemma(a: seq(uint16), init_a: seq(uint16), b: seq(uint16), i: nat): uint16 extern;
 
-procedure circle_product(
+procedure polyscale(
     ghost iter_f: iter_t,
     ghost iter_g: iter_t)
     returns (ghost iter_f': iter_t)
@@ -34,36 +34,39 @@ procedure circle_product(
 {:frame false}
     requires
         in_stack_addr_range(sp);
-        in_stack_addr_range(sp - 16);
+        in_stack_addr_range(sp - 12);
     
     requires
         elems_iter_inv(heap, iter_f, r12, 0);
-        elems_iter_inv(heap, iter_g, r13, 0);
+
+    requires
+        symbols?["scaling_factors"];
+        elems_iter_inv(heap, iter_g,
+            load_symbol(mem, "scaling_factors"), 0);
+        // iter_g.buff == inverse_ntt_scaling_table();
         iter_f.base_ptr != iter_g.base_ptr;
-    
-    ensures
-        elems_iter_inv(heap, iter_f', r12, 0);
-        iter_f'.base_ptr == iter_f.base_ptr;
-        elems_iter_inv(heap, iter_g, old(r13), 0);
 
     ensures
         sp == old(sp);
         r12 == old(r12);
 
     ensures
-        mem == old(mem).(heap := heap);
-        heap == old(mem).heap[r12 := heap[r12]];
+        elems_iter_inv(heap, iter_f', r12, 0);
+        iter_f'.base_ptr == iter_f.base_ptr;
 
     ensures
-        circle_product_inv(iter_f'.buff, iter_f.buff, iter_g.buff, N.full);
+        mem == old(mem).(heap := heap);
+        heap == old(mem).heap[iter_f.base_ptr := heap[iter_f.base_ptr]];
+
+    ensures
+        mq_poly_scale_inv(iter_f'.buff, iter_f.buff, iter_g.buff, N.full);
 {
-    //poly_sub_save_regs();
     let mem0 := mem;
     let init_f := iter_f.buff;
 
     mov_w(r12, r10);
     mov_w(r12, r8);
-    mov_w(r13, r9);
+    lw_symbol("scaling_factors", r9);
 
     add_w_imm(1024, r8);
     
@@ -78,13 +81,16 @@ procedure circle_product(
             elems_iter_inv(heap, iter_g', r9, i);
             iter_f'.base_ptr == iter_f.base_ptr;
             iter_g'.base_ptr == iter_g.base_ptr;
+        
+        invariant
+            sp == old(sp);
 
         invariant
             mem == mem0.(heap := heap);
             heap == old(heap)[iter_f.base_ptr := heap[iter_f'.base_ptr]];
 
         invariant
-            circle_product_inv(iter_f'.buff, init_f, iter_g'.buff, i);
+            mq_poly_scale_inv(iter_f'.buff, init_f, iter_g'.buff, i);
 
         decreases
             r8 - r10;
@@ -92,14 +98,14 @@ procedure circle_product(
         iter_f' := lw_iter(r10, false, r12, iter_f');
         iter_g' := lw_iter(r9, true, r13, iter_g');
 
-        let p := circle_product_inv_peri_lemma(iter_f'.buff, init_f, iter_g.buff, i);
+        let p := mq_poly_scale_peri_lemma(iter_f'.buff, init_f, iter_g.buff, i);
 
         montymul(r12, r13);
-        mov_w_imm(10952, r13);
-        montymul(r12, 10952);
+        assert (r12 == p);
 
         iter_f' := sw_iter(r10, true, r12, iter_f');
         i := i + 1;
+        assert elems_iter_inv(heap, iter_f', r10, i);
     }
 
     add_w_imm((-1024), r10);

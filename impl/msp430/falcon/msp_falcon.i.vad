@@ -2,6 +2,8 @@ include "msp_mq_intt.i.vad"
 include "msp_mq_fntt.i.vad"
 include "msp_mq_norm.i.vad"
 include "msp_circle_product.i.vad"
+include "msp_bit_rev.i.vad"
+include "msp_mq_polyscale.i.vad"
 
 #verbatim
 
@@ -9,6 +11,8 @@ include "msp_mq_intt.i.dfy"
 include "msp_mq_fntt.i.dfy"
 include "msp_mq_norm.i.dfy"
 include "msp_circle_product.i.dfy"
+include "msp_bit_rev.i.dfy"
+include "msp_mq_polyscale.i.dfy"
 
 module msp_falcon {
 
@@ -31,6 +35,8 @@ import opened msp_mq_fntt
 import opened msp_mq_intt
 import opened msp_mq_norm
 import opened msp_circle_product
+import opened msp_bit_rev
+import opened msp_mq_polyscale
 
 #endverbatim
 
@@ -40,6 +46,129 @@ function inverse_ntt_scaling_table(): seq(uint16) extern;
 function as_elems(s: seq(uint16)): seq(uint16) extern;
 function nelems_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int): bool extern;
 function bit_rev_ftable_wf(s: seq(uint16)): bool extern;
+function mq_poly_mod_product_lemma(
+        a0: seq(uint16), a1: seq(uint16), b0: seq(uint16), b1: seq(uint16),
+        p0: seq(uint16), p1: seq(uint16), p2: seq(uint16), p3: seq(uint16), p4: seq(uint16)): void extern;
+function poly_mod_product(a0: seq(uint16), b0: seq(uint16)):  seq(uint16) extern;
+
+procedure msp_poly_product(
+    ghost iter_c0: iter_t,
+    ghost iter_h: iter_t,
+    ghost iter_tt: iter_t,
+    ghost iter_t1: iter_t,
+    ghost iter_t2: iter_t,
+    ghost iter_p1: iter_t,
+    ghost iter_p2: iter_t)
+returns (ghost iter_tt': iter_t, ghost iter_h': iter_t)
+
+{:frame false}
+
+    requires
+        in_stack_addr_range(sp);
+        in_stack_addr_range(sp - 34);
+
+    requires
+        elems_iter_inv(heap, iter_c0, r12, 0);
+
+        // writable
+        elems_iter_inv(heap, iter_h, r14, 0);
+        // writable
+        elems_iter_inv(heap, iter_tt, r4, 0);
+
+    requires
+        symbols?["bit_rev_table_512"];
+        iter_inv(iter_t1, heap,
+            load_symbol(mem, "bit_rev_table_512"));
+        iter_t1.index == 0;
+        bit_rev_ftable_wf(iter_t1.buff);
+
+    requires
+        symbols?["scaling_factors"];
+        elems_iter_inv(heap, iter_t2,
+            load_symbol(mem, "scaling_factors"), 0);
+        iter_t2.buff == inverse_ntt_scaling_table();
+
+    requires
+        symbols?["rev_omega_inv_powers_mont_table"];
+        elems_iter_inv(heap, iter_p1,
+            load_symbol(mem, "rev_omega_inv_powers_mont_table"), 0);
+        iter_p1.buff == rev_omega_inv_powers_mont_table();
+
+    requires
+        symbols?["rev_mixed_powers_mont_table"];
+        elems_iter_inv(heap, iter_p2,
+            load_symbol(mem, "rev_mixed_powers_mont_table"), 0);
+        iter_p2.buff == rev_mixed_powers_mont_table();
+
+    requires
+        iter_h.base_ptr != iter_c0.base_ptr;
+        iter_h.base_ptr != iter_tt.base_ptr;
+        iter_h.base_ptr != iter_t1.base_ptr;
+        iter_h.base_ptr != iter_t2.base_ptr;
+        iter_h.base_ptr != iter_p1.base_ptr;
+        iter_h.base_ptr != iter_p2.base_ptr;
+
+        iter_tt.base_ptr != iter_c0.base_ptr;
+        iter_tt.base_ptr != iter_t1.base_ptr;
+        iter_tt.base_ptr != iter_t2.base_ptr;
+        iter_tt.base_ptr != iter_p1.base_ptr;
+        iter_tt.base_ptr != iter_p2.base_ptr;
+
+    ensures
+        sp == old(sp);
+
+    ensures
+        // elems_iter_inv(heap, iter_c0, r13, 0);
+        elems_iter_inv(heap, iter_h', old(r14), 0);
+        iter_h'.base_ptr == iter_h.base_ptr;
+        elems_iter_inv(heap, iter_tt', r12, 0);
+        iter_tt'.base_ptr == iter_tt.base_ptr;
+
+    ensures
+        mem == old(mem).(heap := heap);
+        heap == old(heap)
+            [iter_tt.base_ptr := heap[iter_tt.base_ptr]]
+            [iter_h.base_ptr := heap[iter_h.base_ptr]];
+
+    ensures
+        as_elems(iter_tt'.buff) ==
+            poly_mod_product(as_elems(iter_h.buff), as_elems(iter_tt.buff));
+{
+    iter_tt' := iter_tt;
+    iter_h' := iter_h;
+
+    let a0 := iter_h.buff;
+    mov_w(r14, r12);
+
+    iter_h' := fntt(iter_h', iter_p2);
+    let a1 := iter_h'.buff;
+    mov_w(r12, r5);
+
+    mov_w(r4, r12);
+    let b0 := iter_tt'.buff;
+    iter_tt' := fntt(iter_tt', iter_p2);
+    let b1 := iter_tt'.buff;
+
+    mov_w(r5, r13);
+    iter_tt' := circle_product(iter_tt', iter_h');
+    let p0 := iter_tt'.buff;
+
+    iter_tt' := bit_rev(iter_tt', iter_t1);
+    let p1 := iter_tt'.buff;
+
+    iter_tt' := intt(iter_tt', iter_p1);
+    let p2 := iter_tt'.buff;
+
+    iter_tt' := bit_rev(iter_tt', iter_t1);
+    let p3 := iter_tt'.buff;
+
+    iter_tt' := polyscale(iter_tt', iter_t2);
+    let p4 := iter_tt'.buff;
+
+    mq_poly_mod_product_lemma(a0, a1, b0, b1, p0, p1, p2, p3, p4);
+
+    mov_w(r5, r13);
+}
 
 procedure msp_falcon(
     ghost iter_c0: iter_t,
@@ -120,16 +249,8 @@ procedure msp_falcon(
 
     iter_tt' := denormolize(iter_s2, iter_tt');
 
-    mov_w(r14, r12);
-    iter_h' := fntt(iter_h', iter_p2);
-    mov_w(r12, r5);
-
-    mov_w(r4, r12);
-    iter_tt' := fntt(iter_tt', iter_p2);
-
-    mov_w(r5, r13);
-    iter_tt' := circle_product(iter_tt', iter_h');
-
+    iter_tt', iter_h' := msp_poly_product(iter_c0,
+        iter_h', iter_tt', iter_t1, iter_t2, iter_p1, iter_p2);
 }
 
 
