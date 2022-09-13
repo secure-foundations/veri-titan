@@ -193,6 +193,152 @@ procedure sub_to_reg(
         init_view, iter.buff);
 }
 
+procedure sub_to_reg_copy(
+    ghost init_view: seq(uint256),
+    ghost init_iter: iter_t)
+    returns (ghost curr_view: seq(uint256))
+
+    requires
+        valid_wdr_view(wdrs, init_view, 4, NUM_WORDS);
+
+        iter_safe(init_iter, heap, x16);
+        init_iter.index == 0;
+        seq_len(init_iter.buff) == NUM_WORDS;
+        w31 == 0;
+
+    reads
+        x16; flat; heap;
+        w4; w5; w6; w7; w8; w9; w10; w11; w12; w13; w14; w15;
+
+    modifies
+        fgroups;
+        x8; x9; x10; x11; x12;
+        wdrs; w2; w3; w16; w17; w18; w19;
+        w20; w21; w22; w23; w24; w25; w26; w27; w31;
+
+    ensures
+        w4 == old(w4);
+        w5 == old(w5);
+        w6 == old(w6);
+        w7 == old(w7);
+        w8 == old(w8);
+        w9 == old(w9);
+        w10 == old(w10);
+        w11 == old(w11);
+        w12 == old(w12);
+        w13 == old(w13);
+        w14 == old(w14);
+        w15 == old(w15);
+        w31 == 0;
+
+        valid_wdr_view(wdrs, curr_view, 16, NUM_WORDS);
+
+        to_nat(curr_view) ==
+            to_nat(init_view) - to_nat(init_iter.buff) +
+            bool_to_uint1(fgroups.fg0.cf) * pow_BASE(NUM_WORDS);
+
+        (fgroups.fg0.cf == true <==>
+            to_nat(init_view) < to_nat(init_iter.buff));
+{
+    comment("/**");
+    comment(" * Subtracts the modulus M from A.");
+    comment(" *");
+    comment(" * Flags: After this subroutine, the C flag is set to 1 if the subtraction");
+    comment(" * underflowed.");
+    comment(" *");
+    comment(" * This routine runs in variable time.");
+    comment(" * @param[in]  x16: dmem pointer to first limb of modulus M");
+    comment(" * @param[in]  [w4:w15]: operand A");
+    comment(" * @param[in]  w31: all-zero");
+    comment(" * @param[out] [w16:w27]: result");
+    comment(" *");
+    comment(" * clobbered registers: x8 to x12, w2, w3, w16 to w27");
+    comment(" * clobbered Flag Groups: FG0");
+    comment(" */");
+
+    comment("/* Prepare temporary registers. */");
+    li(x8, 4);
+    li(x9, 2);
+    li(x10, 3);
+    li(x11, 16);
+
+    comment("/* Copy pointer to modulus. */");
+    addi(x12, x16, 0);
+
+    comment("/* Clear flags. */");
+    bn_add(w31, w31, w31, SFT_DFT, 0);
+
+    comment("/* Subtract M from A. */");
+    curr_view := wdrs[16..16+NUM_WORDS];
+    ghost var iter := init_iter;
+    subb_inv_pre_lemma(curr_view, init_view, iter.buff);
+    while (LoopImm(12))
+        invariant
+            x8 == 4 + iter.index;
+            x9 == 2;
+            x10 == 3;
+            x11 == 16 + iter.index;
+
+            w31 == 0;
+
+            iter_inv(iter, heap, x12);
+            iter.buff == init_iter.buff;
+            iter.index + loop_ctr == NUM_WORDS;
+
+            /* input values are unmodified */
+            w4 == old(w4);
+            w5 == old(w5);
+            w6 == old(w6);
+            w7 == old(w7);
+            w8 == old(w8);
+            w9 == old(w9);
+            w10 == old(w10);
+            w11 == old(w11);
+            w12 == old(w12);
+            w13 == old(w13);
+            w14 == old(w14);
+            w15 == old(w15);
+
+            /* input view (unmodified) */
+            valid_wdr_view(wdrs, init_view, 4, NUM_WORDS);
+
+            /* output view */
+            valid_wdr_view(wdrs, curr_view, 16, NUM_WORDS);
+
+            seq_len(init_view) == NUM_WORDS;
+
+            subb_inv(curr_view, bool_to_uint1(fgroups.fg0.cf),
+                init_view, iter.buff, iter.index);
+
+        decreases loop_ctr;
+    {
+        comment("/* w2 <= A[i] */");
+        bn_movr(x9, false, x8, true);
+        assert w2 == init_view[iter.index];
+
+        comment("/* w3 <= M[i] */");
+        let next_iter := bn_lid_safe(x10, false, 0, x12, true, iter);
+        assert w3 == iter.buff[iter.index];
+
+        comment("/* w2 <= w2 - w3 */");
+        let old_carry := bool_to_uint1(fgroups.fg0.cf);
+        bn_subb(w2, w2, w3, SFT_DFT, 0);
+        let new_carry := bool_to_uint1(fgroups.fg0.cf);
+
+        comment("/* out[i] <= w2 */");
+        bn_movr(x11, true, x9, false);
+        curr_view := curr_view[iter.index := w2];
+        assert valid_wdr_view(wdrs, curr_view, 16, NUM_WORDS);
+
+        subb_inv_peri_lemma(curr_view, new_carry,
+            init_view, next_iter.buff, old_carry, iter.index);
+        iter := next_iter;
+    }
+
+    subb_inv_post_lemma(curr_view, bool_to_uint1(fgroups.fg0.cf),
+        init_view, iter.buff);
+}
+
 
 #verbatim
 }
