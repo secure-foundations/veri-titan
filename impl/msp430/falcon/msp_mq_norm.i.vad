@@ -41,7 +41,7 @@ returns (ghost iter_tt': iter_t)
 
     modifies
         mem; heap; flags;
-        r7; r8; r10; r13; r15;
+        r5; r8; r10; r13; r15;
     
     ensures
         iter_tt'.base_ptr == iter_tt.base_ptr;
@@ -82,14 +82,14 @@ returns (ghost iter_tt': iter_t)
         decreases
             r10 - r15;
     {
-        iter_s2' := lw_iter(r13, true, r7, iter_s2');
-        mov_w(r7, r8);
+        iter_s2' := lw_iter(r13, true, r5, iter_s2');
+        mov_w(r5, r8);
         let a := r8;
 
-        rla_w(r7);
-        cond_set_Q(r7);
+        rla_w(r5);
+        cond_set_Q(r5);
 
-        add_w(r7, r8);
+        add_w(r5, r8);
 
         denorm_inv_peri_lemma(iter_s2'.buff, iter_tt'.buff, i, a, r8);
 

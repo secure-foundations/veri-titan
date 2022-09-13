@@ -48,6 +48,8 @@ procedure polyscale(
 
     ensures
         sp == old(sp);
+        r6 == old(r6);
+        r7 == old(r7);
         r12 == old(r12);
 
     ensures
@@ -76,6 +78,8 @@ procedure polyscale(
     
     while (r10 < r8)
        invariant
+            r6 == old(r6);
+            r7 == old(r7);
             r8 == 1024 + iter_f.base_ptr;
             elems_iter_inv(heap, iter_f', r10, i);
             elems_iter_inv(heap, iter_g', r9, i);

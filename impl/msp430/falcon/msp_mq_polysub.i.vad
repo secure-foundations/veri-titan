@@ -35,162 +35,91 @@ function poly_sub_loop_correct(f_new: seq(uint16), f_old: seq(uint16), f_orig:se
 
 function b16_iter_inv(heap: heap_t, iter: iter_t) : bool extern;
 
-procedure poly_sub_loop_body(ghost f_orig: seq(uint16), ghost iter_f: iter_t,
-    ghost iter_g: iter_t,
-    ghost i: nat)
-
-    returns (ghost iter_f': iter_t, ghost iter_g': iter_t)
-    lets 
-        Q      @= r9;
-        x      @= r11;
-        y      @= r12;
-        r      @= r13;
-        tmp    @= r14;
-        ptr_f  @= r5; 
-        ptr_g  @= r6; 
- 
-    requires
-        Q == 12289;
-
-        0 <= i < N.full;    
-
-        iter_safe(iter_f, heap, ptr_f);
-        iter_safe(iter_g, heap, ptr_g);
-        elems_iter_inv(heap, iter_f, ptr_f, i);
-        elems_iter_inv(heap, iter_g, ptr_g, i);
-
-        iter_f.base_ptr != iter_g.base_ptr;
-        poly_sub_loop_inv(iter_f.buff, f_orig, iter_g.buff, i);
-    
-    reads
-        Q;
-    modifies
-        x; y; r; tmp; ptr_f; ptr_g;
-        flags; heap; mem;
-    ensures
-        iter_f'.base_ptr == iter_f.base_ptr;
-        iter_g'.base_ptr == iter_g.base_ptr;
-
-        cur_ptr(iter_f') == ptr_f;
-        cur_ptr(iter_g') == ptr_g;
-
-        iter_g'.buff == iter_g.buff;
-
-        elems_iter_inv(heap, iter_f', ptr_f, i+1);
-        elems_iter_inv(heap, iter_g', ptr_g, i+1);
-
-        mem == old(mem).(heap := heap);
-        heap == old(heap)[iter_f.base_ptr := heap[iter_f.base_ptr]];
-    
-        poly_sub_loop_inv(iter_f'.buff, f_orig, iter_g.buff, i+1);
-
-{
-    lw(ptr_f, false, x, iter_f);
-    iter_g' := lw_iter(ptr_g, true, y, iter_g);
-
-    mq_sub();
-
-    iter_f' := sw_iter(ptr_f, true, r, iter_f);
-
-    poly_sub_loop_correct(iter_f'.buff, iter_f.buff, f_orig, iter_g.buff, i);
-}
-
 /* f' == f - g */
 procedure poly_sub(
     ghost iter_f: iter_t,
     ghost iter_g: iter_t)
-    returns (ghost iter_f': iter_t, ghost iter_g': iter_t)
+    returns (ghost iter_f': iter_t)
 
     lets 
-        Q      @= r9;
-        end_f  @= r10;
-        x      @= r11;
-        y      @= r12;
-        r      @= r13;
-        tmp    @= r14;
-        ptr_f  @= r5; 
-        ptr_g  @= r6; 
+        ptr_f  @= r15;
+        end_f  @= r5;
+        ptr_g  @= r6;
 
     requires
         in_stack_addr_range(sp);
         in_stack_addr_range(sp - 16);
     
-        Q == 12289;
-        N.full == 512;
-    
     requires
-        seq_len(iter_g.buff) == 512;
-        
-        iter_safe(iter_f, heap, ptr_f);
-        iter_safe(iter_g, heap, ptr_g);
-        elems_iter_inv(heap, iter_f, ptr_f, 0);
+        elems_iter_inv(heap, iter_f, r12, 0);
         elems_iter_inv(heap, iter_g, ptr_g, 0);
-
         iter_f.base_ptr != iter_g.base_ptr;
     
-    reads
-        Q;
-
     modifies
-        x; y; r; tmp; ptr_f; ptr_g; end_f;
-        flags; heap; mem;
+        flags; heap; mem; r5; r6; r11; r12; r13; r14; r15;
 
     ensures
-        // TODO: Register promises
-    
+        r12 == old(r12);
+
+    ensures
+        elems_iter_inv(heap, iter_f', r12, 0);
+        iter_f'.base_ptr == iter_f.base_ptr;
+        elems_iter_inv(heap, iter_g, old(ptr_g), 0);
+
     ensures
         mem == old(mem).(heap := heap);
-        iter_f'.base_ptr == iter_f.base_ptr;
-    
-        elems_iter_inv(heap, iter_f.(buff := iter_f'.buff), ptr_f, 0);
         heap == old(heap)
             [iter_f'.base_ptr := heap[iter_f'.base_ptr]];
     
     ensures
-        seq_len(iter_f'.buff) == 512;
         poly_sub_loop_inv(iter_f'.buff, iter_f.buff, iter_g.buff, N.full);
 {
-    //poly_sub_save_regs();
     ghost var old_mem := mem;
+    let f_orig := iter_f.buff;
 
-    mov_w(ptr_f, end_f);
+    mov_w(r12, end_f);
+    mov_w(r12, ptr_f);
     add_w_imm(1024, end_f);
     
     iter_f':= iter_f;
-    iter_g':= iter_g;
+    ghost var iter_g':= iter_g;
+
     ghost var i:nat := 0;
     
-    while (ptr_f < end_f) // 512 iterations
+    while (ptr_f < end_f) 
         invariant
-            iter_g.buff == iter_g'.buff;
+            end_f == iter_f.base_ptr + 1024;
 
-            ptr_f < end_f ==> iter_safe(iter_f', heap, ptr_f);
-            ptr_f < end_f ==> iter_safe(iter_g', heap, ptr_g);
+        invariant
             elems_iter_inv(heap, iter_f', ptr_f, i);
-            elems_iter_inv(heap, iter_g', ptr_g, i);
-
-            poly_sub_loop_inv(iter_f'.buff, iter_f.buff, iter_g.buff, i);
-
             iter_f'.base_ptr == iter_f.base_ptr;
+            elems_iter_inv(heap, iter_g', ptr_g, i);
+            iter_g.base_ptr == iter_g'.base_ptr;
 
+        invariant
             mem == old_mem.(heap := heap);
             heap == old(heap)[iter_f.base_ptr := heap[iter_f'.base_ptr]];
-        invariant
-            Q == 12289;
-            0 <= i <= N.full;
-            (ptr_f - old(ptr_f)) == 2*i;
 
-            iter_f'.base_ptr != iter_g'.base_ptr;
-    
-            end_f == 1024 + iter_f.base_ptr;
-    decreases (N.full - i);
+        invariant
+            poly_sub_loop_inv(iter_f'.buff, iter_f.buff, iter_g.buff, i);
+
+        decreases
+            (N.full - i);
     {
-        iter_f', iter_g' := poly_sub_loop_body(iter_f.buff, iter_f', iter_g', i);
+        let f_prev := iter_f'.buff;
+        lw(ptr_f, false, r11, iter_f');
+        iter_g' := lw_iter(ptr_g, true, r12, iter_g');
+
+        mq_sub();
+
+        iter_f' := sw_iter(ptr_f, true, r13, iter_f');
+        poly_sub_loop_correct(iter_f'.buff, f_prev, f_orig, iter_g.buff, i);
+
         i := i + 1;
     }
-    assert i == 512;
-    
-    //poly_sub_restore_regs();
+    add_w_imm((-1024), ptr_f);
+    mov_w(ptr_f, r12);
+    iter_f' := iter_f'.(index := 0);
 }
         
 #verbatim
