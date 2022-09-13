@@ -91,6 +91,11 @@ abstract module bv_op_s
 
     function method xor(x: uint, y: uint): uint
 
+    function method xori(x: uint, imm: sint): uint
+    {
+        xor(x, to_2s_comp(imm))
+    }
+
     lemma {:axiom} xor_clear_lemma(x: uint, y: uint)
         ensures (x == y) <==> (xor(x, y) == 0)
 

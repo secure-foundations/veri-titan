@@ -281,7 +281,9 @@ function uint32_or(x: uint32, y: uint32): uint32 extern;
 function uint32_and(x: uint32, y: uint32): uint32 extern;
 function uint32_add(x: uint32, y: uint32): uint32 extern;
 function uint32_addi(x: uint32, y: int12): uint32 extern;
+function uint32_and(x: uint32, y: uint32): uint32 extern;
 function uint32_andi(x: uint32, y: int12): uint32 extern;
+function uint32_xori(x: uint32, y: int12): uint32 extern;
 function uint32_not(x: uint32): uint32 extern;
 function uint32_ls(x: uint32, amount: uint32): uint32 extern; 
 function uint32_se(x: uint32, size: int): uint32 extern;
@@ -376,10 +378,30 @@ procedure addi(inout dst: reg32, in src1: reg32, inline imm: int12)
     this := this.(mem := old(this).mem);
 }
 
+procedure and(inout dst: reg32, in src1: reg32, in src2: reg32)
+    {:instruction Ins32(AND(dst, src1, src2))}
+    ensures
+        dst == uint32_and(old(src1), old(src2));
+{
+    reveal eval_code_opaque;
+    reveal valid_state_opaque;
+    this := this.(mem := old(this).mem);
+}
+
 procedure andi(inout dst: reg32, in src1: reg32, inline imm: int12)
     {:instruction Ins32(ANDI(dst, src1, imm))}
     ensures
         dst == uint32_andi(old(src1), imm);
+{
+    reveal eval_code_opaque;
+    reveal valid_state_opaque;
+    this := this.(mem := old(this).mem);
+}
+
+procedure xori(inout dst: reg32, in src1: reg32, inline imm: int12)
+    {:instruction Ins32(XORI(dst, src1, imm))}
+    ensures
+        dst == uint32_xori(old(src1), imm);
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;
