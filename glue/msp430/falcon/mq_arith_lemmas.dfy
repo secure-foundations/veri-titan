@@ -254,13 +254,6 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
             dnv[j] == MQN.denormalize(as_nelem(nv[j])))
     }
 
-    // lemma denorm_inv_pre_lemma(nv: seq<uint16>, dnv: seq<uint16>)
-    //     requires valid_nelems(nv)
-    //     requires valid_elems(dnv)
-    //     ensures denorm_inv(nv, dnv, 0);
-    // {
-    // }
-
     lemma denorm_inv_peri_lemma(nv: seq<uint16>, dnv: seq<uint16>, i: nat, a: uint16, b: uint16)
         requires i < N.full;
         requires denorm_inv(nv, dnv, i);
@@ -273,6 +266,57 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
         reveal valid_nelems();
         assert is_nelem(nv[i]);
         assert b == MQN.denormalize(as_nelem(a));
+    }
+
+    // 0 <= e < Q -> -Q/2 <= e <= Q/2
+    predicate {:opaque} norm_inv(outputs: seq<uint16>, inputs: seq<uint16>, i: nat)
+    {
+        && valid_elems(inputs)
+        && |outputs| == N.full
+        && reveal valid_elems();
+        && i <= N.full
+        && inputs[i..] == outputs[i..]
+        && (forall j | 0 <= j < i :: (
+            && is_nelem(outputs[j])
+            && as_nelem(outputs[j]) == MQN.normalize(inputs[j]))
+        )
+    }
+
+    lemma norm_pre_lemma(inputs: seq<uint16>)
+        requires valid_elems(inputs);
+        ensures norm_inv(inputs, inputs, 0);
+    {
+        reveal norm_inv();
+    }
+
+    lemma norm_peri_lemma(outputs: seq<uint16>, inputs: seq<uint16>, i: nat,
+        w: uint16, fg: flags_t, diff: uint16, mask: uint16, rst: uint16)
+        requires norm_inv(outputs, inputs, i);
+        requires i < |outputs|;
+        requires w == outputs[i];
+        requires (diff, fg) == msp_sub(6144, w);
+        requires fg.cf == 1 ==> mask == 12289;
+        requires fg.cf == 0 ==> mask == 0;
+        requires rst == uint16_sub(w, mask);
+        ensures norm_inv(outputs[i := rst], inputs, i + 1);
+    {
+        reveal norm_inv();
+        reveal valid_elems();
+
+        if 6144 - w < 0 {
+            assert mask == 12289;
+        } else {
+            assert mask == 0;
+        }
+    }
+
+    lemma norm_post_lemma(outputs: seq<uint16>, inputs: seq<uint16>)
+        requires valid_elems(inputs);
+        requires norm_inv(outputs, inputs, 512);
+        ensures valid_nelems(outputs);
+    {
+        reveal norm_inv();
+        reveal valid_nelems();
     }
 
     lemma forward_s_loop_inv_pre_lemma(

@@ -533,5 +533,4 @@ abstract module generic_falcon_lemmas {
         reveal valid_elems();
         poly_mod_product_lemma(a0, a1, b0, b1, p0, p1, p2, p3, p4);
     }
-
 }

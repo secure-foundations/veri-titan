@@ -379,25 +379,16 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         assume false;
     }
 
-    predicate uint16_is_normalized(e: uint16)
+    predicate word_is_normalized(e: uint16)
     {
         MQN.int_is_normalized(bv16_op_s.to_int16(e))
-    }
-
-    // bascially convert to int16, but with requires
-    // DOES NOT normalize a value
-    // ONLY interprets an uint16 as a normalized value
-    function as_nelem(e: uint16): nelem
-        requires uint16_is_normalized(e)
-    {
-        bv16_op_s.to_int16(e)
     }
 
     predicate {:opaque} valid_nelems(a: seq<uint16>)
         ensures valid_nelems(a) ==> |a| == N.full;
     {
         && |a| == N.full
-        && (forall i | 0 <= i < |a| :: uint16_is_normalized(a[i]))
+        && (forall i | 0 <= i < |a| :: word_is_normalized(a[i]))
     }
 
     function as_nelems(a: seq<uint16>): (na: seq<nelem>)
@@ -407,11 +398,10 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         seq(|a|, i requires 0 <= i < |a| => as_nelem(a[i]))
     }
 
-    predicate nelems_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int)
+    function as_nelem(e: uint16): nelem
+        requires word_is_normalized(e)
     {
-        && b16_iter_inv(iter, heap, if address >= 0 then address else iter.cur_ptr())
-        && (index >= 0 ==> iter.index == index)
-        && valid_nelems(iter.buff)
+        bv16_op_s.to_int16(e)
     }
 
     lemma denormalize_lemma(buff: seq<uint16>, i: nat, a1: uint32, b: uint32, c: uint32, d: uint32)
@@ -421,10 +411,10 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         requires b == uint32_srai(a1, 31);
         requires c == uint32_and(b, Q);
         requires d == uint32_add(a1, c);
-        ensures uint16_is_normalized(buff[i]);
+        ensures word_is_normalized(buff[i]);
         ensures d == MQN.denormalize(as_nelem(buff[i]));
     {
-        assert uint16_is_normalized(buff[i]) by {
+        assert word_is_normalized(buff[i]) by {
             reveal valid_nelems();
         }
 
@@ -478,7 +468,7 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         requires b == uint32_srai(a1, 31);
         requires c == uint32_and(b, Q);
         requires d == uint32_add(a1, c);
-        ensures uint16_is_normalized(buff[i]);
+        ensures word_is_normalized(buff[i]);
         ensures d == MQN.denormalize(as_nelem(buff[i]));
         ensures valid_elems(dnv[i := lh(d)]);
         ensures denormalization_inv(buff, dnv[i := lh(d)], i + 1);
@@ -503,7 +493,7 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         && i <= N.full
         && inputs[i..] == outputs[i..]
         && (forall j | 0 <= j < i :: (
-            && uint16_is_normalized(outputs[j])
+            && word_is_normalized(outputs[j])
             && as_nelem(outputs[j]) == MQN.normalize(inputs[j]))
         )
     }

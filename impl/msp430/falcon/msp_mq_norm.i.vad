@@ -102,6 +102,92 @@ returns (ghost iter_tt': iter_t)
     add_w_imm((-1024), r15);
 }
 
+function norm_inv(outputs: seq(uint16), inputs: seq(uint16), i: nat): bool extern;
+function norm_pre_lemma(inputs: seq(uint16)): void extern;
+function iter_inv(iter: iter_t, heap: heap_t, address: int): bool extern;
+function norm_peri_lemma(outputs: seq(uint16), inputs: seq(uint16), i: nat, w: uint16, flags: flags_t, diff: uint16, mask: uint16, rst: uint16): void extern;
+function norm_post_lemma(outputs: seq(uint16), inputs: seq(uint16)): void extern;
+function uint16_sub(a: uint16, b: uint16): uint16 extern;
+
+procedure normolize(
+    ghost iter_tt: iter_t)
+returns (ghost iter_tt': iter_t)
+    requires
+        elems_iter_inv(heap, iter_tt, r12, 0);
+
+    ensures
+        iter_inv(iter_tt', heap, r12);
+        iter_tt'.base_ptr == iter_tt.base_ptr;
+        nelems_iter_inv(heap, iter_tt', r12, 0);
+
+    modifies
+        mem; heap; flags;
+        r5; r6; r10; r12; 
+
+    ensures
+        r12 == old(r12);
+
+    ensures
+        mem == old(mem).(heap := heap);
+        heap == old(heap)
+            [iter_tt'.base_ptr := heap[iter_tt'.base_ptr]];
+
+    ensures
+        norm_inv(iter_tt'.buff, iter_tt.buff, 512);
+
+{
+    let inputs := iter_tt.buff;
+    norm_pre_lemma(inputs);
+
+    iter_tt' := iter_tt;
+    mov_w(r12, r10);
+    add_w_imm(1024, r10);
+
+    ghost var i:nat := 0;
+
+    while (r12 < r10)
+        invariant
+            r10 == iter_tt.base_ptr + 1024;
+        
+        invariant
+            iter_inv(iter_tt', heap, r12);
+            iter_tt'.base_ptr == iter_tt.base_ptr;
+            seq_len(iter_tt'.buff) == 512;
+            iter_tt'.index == i;
+
+        invariant
+            mem == old(mem).(heap := heap);
+            heap == old(heap)
+                [iter_tt.base_ptr := heap[iter_tt.base_ptr]];
+
+        invariant
+            norm_inv(iter_tt'.buff, inputs, i);
+
+        decreases
+            r10 - r12;
+    {
+        iter_tt' := lw_iter(r12, false, r5, iter_tt');
+        // mov_w(r5, r6);
+        mov_w_imm(6144, r6);
+        sub_w(r5, r6);
+        let diff := r6;
+        let fg := flags;
+        cond_set_Q(r6);
+        let mask := r6;
+        sub_w(r6, r5);
+
+        norm_peri_lemma(iter_tt'.buff, inputs, i, iter_tt'.buff[i], fg, diff, mask, r5);
+
+        iter_tt' := sw_iter(r12, true, r5, iter_tt');
+        i := i + 1;
+    }
+    norm_post_lemma(iter_tt'.buff, inputs);
+    mov_w_imm((-1024), r12);
+}
+
+
+
+
 #verbatim
 }
 #endverbatim
