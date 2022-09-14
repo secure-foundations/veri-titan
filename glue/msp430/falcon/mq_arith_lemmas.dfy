@@ -664,4 +664,13 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
         assume l2norm_squared(s1, s2, 512) == 
             MQN.l2norm_squared(as_nelems(s1), as_nelems(s2), 512);
     }
+
+    lemma or_consts_lemma()
+        ensures uint16_or(0xFFFF, 0xFFFF) == 0xFFFF;
+        ensures uint16_or(0xFFFF, 0) == 0xFFFF;
+        ensures uint16_or(0, 0xFFFF) == 0xFFFF;
+        ensures uint16_or(0, 0) == 0;
+    {
+        reveal_or();
+    }
 }

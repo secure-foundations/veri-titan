@@ -2,25 +2,24 @@ include "ntt_twiddle.i.dfy"
 
 abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ)) {
     import opened Seq
-        import opened Power
-        import opened Power2
-        import opened DivMod
-        import opened Mul
+    import opened Power
+    import opened Power2
+    import opened DivMod
+    import opened Mul
 
-        import opened pow2_s
-        import opened ntt_index
+    import opened pow2_s
+    import opened ntt_index
 
-        type elem = MQ.elem
-        type elems = MQ.elems
+    type elem = MQ.elem
+    type elems = MQ.elems
 
-        const Q := MQ.Q;
-        const R := MQ.R;
-        const PSI := MQ.PSI;
-        const OMEGA := MQ.OMEGA;
-        const OMEGA_INV := MQ.OMEGA_INV;
-        const R_INV := MQ.R_INV;
-        ghost const N := MQ.N;
-
+    const Q := MQ.Q;
+    const R := MQ.R;
+    const PSI := MQ.PSI;
+    const OMEGA := MQ.OMEGA;
+    const OMEGA_INV := MQ.OMEGA_INV;
+    const R_INV := MQ.R_INV;
+    ghost const N := MQ.N;
 
     function x_value(i: nat, d: pow2_t): elem
 

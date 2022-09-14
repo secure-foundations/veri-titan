@@ -185,8 +185,7 @@ returns (ghost iter_tt': iter_t)
     mov_w_imm((-1024), r12);
 }
 
-function general_dw_add_lemma(xs: seq(uint16), ys: seq(uint16), zs: seq(uint16),
-    c1: uint1, c2: uint1): uint32_view_t extern;
+function general_dw_add_lemma(xs: seq(uint16), ys: seq(uint16), zs: seq(uint16), c1: uint1, c2: uint1): uint32_view_t extern;
 function build_dw_view(lh: uint16, uh: uint16): uint32_view_t extern;
 function dw_view_lemma(v: uint32_view_t): void extern;
 
@@ -228,6 +227,8 @@ procedure dw_add(in rsl: reg, in rsh: reg, inout rdl: reg, inout rdh: reg, ghost
     sum' := general_dw_add_lemma(seq(x_lh, x_uh), seq(y_lh, y_uh),
         seq(z_lh, z_uh), c1, c2);
 }
+
+function or_consts_lemma(): void extern;
 
 procedure accumulate(ghost sum: uint32_view_t, ghost asum: nat)
     returns (ghost sum': uint32_view_t, ghost asum': nat)
@@ -272,10 +273,7 @@ procedure accumulate(ghost sum: uint32_view_t, ghost asum: nat)
     subc_w(r13, r13);
     bis_w(r13, over);
     
-    assume uint16_or(0xFFFF, 0xFFFF) == 0xFFFF;
-    assume uint16_or(0xFFFF, 0) == 0xFFFF;
-    assume uint16_or(0, 0xFFFF) == 0xFFFF;
-    assume uint16_or(0, 0) == 0;
+    or_consts_lemma();
 
     asum' := asum + old(r12) * old(r12);
 }
