@@ -436,6 +436,19 @@ procedure and_w(in rs: reg, inout rd: reg)
     assume false;
 }
 
+
+function uint16_or(x: uint16, y: uint16): uint16 extern;
+
+procedure bis_w(in rs: reg, inout rd: reg)
+    {:instruction Ins(MSP_AND_W(Reg(rs), Reg(rd)))}
+    modifies
+        flags;
+    ensures 
+        rd == uint16_or(old(rs), old(rd));
+{
+    assume false;
+}
+
 procedure and_w_imm(inline n: int16, inout rd: reg)
     {:instruction Ins(MSP_AND_W(Imm(n), Reg(rd)))}
     modifies

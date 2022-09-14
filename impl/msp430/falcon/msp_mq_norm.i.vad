@@ -109,7 +109,7 @@ function norm_peri_lemma(outputs: seq(uint16), inputs: seq(uint16), i: nat, w: u
 function norm_post_lemma(outputs: seq(uint16), inputs: seq(uint16)): void extern;
 function uint16_sub(a: uint16, b: uint16): uint16 extern;
 
-procedure normolize(
+procedure normalize(
     ghost iter_tt: iter_t)
 returns (ghost iter_tt': iter_t)
     requires
@@ -185,8 +185,221 @@ returns (ghost iter_tt': iter_t)
     mov_w_imm((-1024), r12);
 }
 
+function general_dw_add_lemma(xs: seq(uint16), ys: seq(uint16), zs: seq(uint16),
+    c1: uint1, c2: uint1): uint32_view_t extern;
+function build_dw_view(lh: uint16, uh: uint16): uint32_view_t extern;
+function dw_view_lemma(v: uint32_view_t): void extern;
 
+procedure dw_add(in rsl: reg, in rsh: reg, inout rdl: reg, inout rdh: reg, ghost sum: uint32_view_t)
+    returns (ghost sum': uint32_view_t)
+    requires
+        @rdl != @rsl;
+        @rdl != @rsh;
+        @rdl != @rdh;
 
+        @rdh != @rsl;
+        @rdh != @rsh;
+    requires
+        sum.lh == rdl;
+        sum.uh == rdh;
+    modifies
+        flags;
+    ensures
+        sum'.lh == rdl;
+        sum'.uh == rdh;
+        sum'.full == to_nat(seq(rdl, rdh));
+        sum'.full + flags.cf * 0x100000000 == 
+            to_nat(seq(old(rsl), old(rsh))) + sum.full;
+{
+    dw_view_lemma(sum);
+    let x_lh := rsl;
+    let x_uh := rsh;
+    let y_lh := rdl;
+    let y_uh := rdh;
+
+    add_w(rsl, rdl);
+    let c1 := flags.cf;
+    addc_w(rsh, rdh);
+    let c2 := flags.cf;
+
+    let z_lh := rdl;
+    let z_uh := rdh;
+
+    sum' := general_dw_add_lemma(seq(x_lh, x_uh), seq(y_lh, y_uh),
+        seq(z_lh, z_uh), c1, c2);
+}
+
+procedure accumulate(ghost sum: uint32_view_t, ghost asum: nat)
+    returns (ghost sum': uint32_view_t, ghost asum': nat)
+
+    lets 
+        over     @= r4;
+        s_lh     @= r10;
+        s_uh     @= r11;
+
+    requires
+        sum.lh == s_lh;
+        sum.uh == s_uh;
+        over == 0xFFFF || over == 0;
+        r15 == 0;
+    
+    requires
+        over == 0 ==> sum.full == asum;
+        over == 0xFFFF ==> asum >= 0x100000000;
+
+    modifies
+        flags;
+        over; s_lh; s_uh; r12; r13; r14;
+
+    ensures
+        over == 0xFFFF || over == 0;
+        sum'.lh == s_lh;
+        sum'.uh == s_uh;
+
+    ensures
+        asum' == asum + old(r12) * old(r12);
+        over == 0 ==> sum'.full == asum';
+        over == 0xFFFF ==> asum' >= 0x100000000;
+{
+    mov_w(r12, r14);
+    clr_w(r13);
+    builtin__mspabi_mpyl();
+
+    sum' := dw_add(r12, r13, s_lh, s_uh, sum);
+    let cf := flags.cf;
+
+    clr_w(r13);
+    subc_w(r13, r13);
+    bis_w(r13, over);
+    
+    assume uint16_or(0xFFFF, 0xFFFF) == 0xFFFF;
+    assume uint16_or(0xFFFF, 0) == 0xFFFF;
+    assume uint16_or(0, 0xFFFF) == 0xFFFF;
+    assume uint16_or(0, 0) == 0;
+
+    asum' := asum + old(r12) * old(r12);
+}
+
+function l2norm_squared(s1: seq(uint16), s2: seq(uint16), i: nat): nat extern;
+
+procedure is_short(
+    ghost iter_a: iter_t,
+    ghost iter_b: iter_t)
+
+    lets 
+        over     @= r4;
+        ptr_a    @= r5;
+        ptr_b    @= r7;
+        end_b    @= r8;
+        s_lh     @= r10;
+        s_uh     @= r11;
+
+    requires
+        nelems_iter_inv(heap, iter_a, r12, 0);
+        nelems_iter_inv(heap, iter_b, r7, 0);
+
+    reads
+        mem; heap;
+
+    modifies
+        flags;
+        r4; r5; r7; r8; r10; r11; r12; r13; r14; r15;
+
+    ensures
+        (r12 == 1)
+            <==> 
+        l2norm_squared(iter_a.buff, iter_b.buff, N.full) < 0x29845d6;
+{
+    mov_w(r12, ptr_a);
+    mov_w(ptr_b, end_b);
+    clr_w(r15);
+    add_w_imm(1024, end_b);
+
+    ghost var iter_a' := iter_a;
+    ghost var iter_b' := iter_b;
+    ghost var i: nat := 0;
+
+    clr_w(s_lh);
+    clr_w(s_uh);
+    clr_w(over);
+
+    ghost var asum :nat := 0;
+    ghost var sum := build_dw_view(s_lh, s_uh);
+    dw_view_lemma(sum);
+
+    while (ptr_b < end_b)
+        invariant
+            r15 == 0;
+
+        invariant
+            s_lh == sum.lh;
+            s_uh == sum.uh;
+
+            over == 0 || over == 0xFFFF;
+            over == 0 ==> sum.full == asum;
+            over == 0xFFFF ==> asum >= 0x100000000;
+
+            end_b == iter_b'.base_ptr + 1024;
+
+        invariant
+            nelems_iter_inv(heap, iter_a', ptr_a, i);
+            iter_a'.base_ptr == iter_a.base_ptr;
+            nelems_iter_inv(heap, iter_b', ptr_b, i);
+            iter_b'.base_ptr == iter_b.base_ptr;
+
+        invariant
+            asum == l2norm_squared(iter_a'.buff, iter_b'.buff, i);
+
+        decreases
+            end_b - ptr_b;
+    {
+        let ai := iter_a'.buff[i];
+        let bi := iter_b'.buff[i];
+
+        iter_a' := lw_iter(ptr_a, true, r12, iter_a');
+
+        sum, asum := accumulate(sum, asum);
+
+        iter_b' := lw_iter(ptr_b, true, r12, iter_b');
+
+        sum, asum := accumulate(sum, asum);
+
+        i := i + 1;
+    }
+
+    mov_w_imm(0x45d6, r14);
+    sub_w(r14, s_lh);
+    mov_w_imm(0x298, r13);
+    subc_w(r13, s_uh);
+    dw_view_lemma(sum);
+
+    assert (s_lh + s_uh * 0x10000 ==
+        sum.lh + sum.uh * 0x10000 - 0x29845d6 + flags.cf * 0x100000000);
+
+    assert flags.cf == 1 ==> sum.full < 0x29845d6;
+    assert flags.cf == 0 ==> sum.full >= 0x29845d6;
+
+    clr_w(r14);
+    subc_w(r14, r14);
+
+    clr_w(r13);
+    add_w_imm((-1), r13);
+
+    assert r13 == 0xFFFF;
+
+    mov_w_imm(0, r12);
+
+    if (r14 == r13) {
+        mov_w_imm(1, r12);
+    }
+
+    if (over == r13) {
+        mov_w_imm(0, r12);
+    }
+
+    assert asum == l2norm_squared(iter_a.buff, iter_b.buff, N.full);
+    assert r12 == 1 <==> asum < 0x29845d6;
+}
 
 #verbatim
 }

@@ -251,12 +251,12 @@ procedure msp_falcon(
 
     iter_tt', iter_h' := msp_poly_product(iter_h', iter_tt', iter_t1, iter_t2, iter_p1, iter_p2);
 
+    iter_tt' := poly_sub(iter_tt', iter_c0);
     // assert elems_iter_inv(heap, iter_tt', r12, 0);
-    // assert elems_iter_inv(heap, iter_c0, r6, 0);
     // assert nelems_iter_inv(heap, iter_s2, r7, 0);
 
-    iter_tt' := poly_sub(iter_tt', iter_c0);
-    assert elems_iter_inv(heap, iter_tt', r12, 0);
+    iter_tt' := normalize(iter_tt');
+    assert nelems_iter_inv(heap, iter_tt', r12, 0);
     assert nelems_iter_inv(heap, iter_s2, r7, 0);
 }
 

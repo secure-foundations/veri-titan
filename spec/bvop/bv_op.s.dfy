@@ -293,6 +293,23 @@ abstract module bv_op_s
         assert (num.uh * BASE()) % BASE() == 0;
     }
 
+    function build_dw_view(lh: uint, uh: uint): dw_view_t
+    {
+        reveal dw_lh();
+        reveal dw_uh();
+        BVSEQ.LemmaSeqLen2([lh, uh]);
+        BVSEQ.LemmaSeqNatBound([lh, uh]);
+        var full := lh + uh * BASE();
+        assert Power.Pow(BASE(), 2) == DW_BASE() by {
+            reveal Power.Pow();
+        }
+        dw_split_lemma(full);
+        DivMod.LemmaFundamentalDivModConverse(full, BASE(), uh, lh);
+        assert lh == dw_lh(full);
+        assert uh == dw_uh(full);
+        dw_view_cons(lh, uh, full)
+    }
+
 /* mul_add bounds */
 
     lemma full_mul_bound_lemma(a: uint, b: uint)

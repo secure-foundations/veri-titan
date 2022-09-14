@@ -12,6 +12,9 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
     import opened msp_machine
     import opened msp_vale
     import opened mem
+
+    import opened GBV = bv16_op_s
+
     import flat
 
     type uint32_view_t = dw_view_t
@@ -611,5 +614,21 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
         // ftable_index_lemma(a, ftable, table, ti);
         assert li == build_view(a, ti, N).get_split_index();
         assert ri == bit_rev_int(ftable[2 * ti], N);
+    }
+
+    const NORMSQ_BOUND := 0x100000000
+
+    function l2norm_squared(s1: seq<uint16>, s2: seq<uint16>, i: nat): nat
+        requires |s1| == |s2|
+        requires i <= |s1|
+    {
+        if i == 0 then
+            0
+        else
+            var v1, v2 := s1[i-1] as int, s2[i-1] as int;
+            LemmaMulStrictlyPositive(v1, v1);
+            LemmaMulStrictlyPositive(v2, v2);
+            var vv1, vv2 := v1 * v1, v2 * v2;
+            l2norm_squared(s1, s2, i-1) + vv1 + vv2
     }
 }
