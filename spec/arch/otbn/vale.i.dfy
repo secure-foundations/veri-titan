@@ -82,9 +82,19 @@ module ot_vale {
         bv32_op_s.add(x, y)
     }
 
+    function method uint32_and(x: uint32, y: uint32): uint32
+    {
+        bv32_op_s.and(x, y)
+    }
+
     function method uint32_andi(x: uint32, y: bv32_op_s.sint): uint32
     {
         bv32_op_s.andi(x, y)
+    }
+
+    function method uint32_xori(x: uint32, y: bv32_op_s.sint): uint32
+    {
+        bv32_op_s.xori(x, y)
     }
 
     // otbn state realted

@@ -1,0 +1,318 @@
+include "../../../spec/arch/otbn/decls.i.vad"
+include "montmul.i.vad"
+
+#verbatim
+include "../../../spec/arch/otbn/decls.i.dfy"
+include "../../../../glue/otbn/rsa/bv256_mm_lemmas.i.dfy"
+
+include "cond_sub_to_reg.i.dfy"
+include "montmul.i.dfy"
+
+module mont_rr {
+
+import opened ot_machine
+import opened ot_abstraction
+import opened ot_decls
+import opened ot_vale
+
+import opened cond_sub_to_reg
+import opened montmul
+
+import opened integers
+import opened bv256_mm_lemmas
+
+#endverbatim
+
+function xor_clear_lemma(x: uint256) : void extern;
+
+function xor_negation_lemma(x: uint32) : void extern;
+
+function addc_inv(dst: seq(uint256),
+    carry: uint1,
+    src1: seq(uint256),
+    src2: seq(uint256),
+    index: int) : bool extern;
+
+ghost procedure addc_inv_pre_lemma(
+    ghost dst: seq(uint256),
+    ghost src1: seq(uint256),
+    ghost src2: seq(uint256)) extern;
+
+ghost procedure addc_inv_peri_lemma(
+    ghost dst: seq(uint256),
+    ghost new_carry: uint1,
+    ghost src1: seq(uint256),
+    ghost src2: seq(uint256),
+    ghost old_carry: uint1,
+    ghost index: int) extern;
+
+ghost procedure addc_inv_post_lemma(
+    ghost dst: seq(uint256),
+    ghost carry: uint1,
+    ghost src1: seq(uint256),
+    ghost src2: seq(uint256)) extern;
+
+function double_modulo_pre(
+    a: seq(uint256),
+    rsa: rsa_params) : bool extern;
+
+function double_modulo_post(
+    a: seq(uint256),
+    aa: seq(uint256),
+    rsa: rsa_params) : bool extern;
+
+function double_modulo_select_nosub_lemma(
+    a: nat,
+    aa: nat,
+    carry: uint1,
+    borrow: uint1,
+    select: uint32,
+    M: nat) : void extern;
+
+function double_modulo_select_withsub_lemma(
+    a: nat,
+    aa: nat,
+    carry: uint1,
+    borrow: uint1,
+    select: uint32,
+    M: nat) : void extern;
+
+procedure double_mod_copy_result(
+    ghost src_view: seq(uint256))
+    returns (ghost dst_view: seq(uint256))
+
+    requires
+        seq_len(src_view) == NUM_WORDS;
+        valid_wdr_view(wdrs, src_view, 16, NUM_WORDS);
+
+    reads
+        w16; w17; w18; w19; w20; w21; w22; w23; w24; w25; w26; w27;
+
+        // This does not actually read w31, but for some reason I can't prove
+        // w31 == 0 in the caller unless I trace it here.
+        w31;
+
+    modifies
+        x8; x11; w2;
+        w4; w5; w6; w7; w8; w9; w10; w11; w12; w13; w14; w15;
+        wdrs;
+
+    ensures
+        w31 == old(w31);
+        seq_len(dst_view) == NUM_WORDS;
+        valid_wdr_view(wdrs, dst_view, 4, NUM_WORDS);
+        dst_view == src_view;
+
+{
+      li(x8, 4);
+      li(x11, 16);
+      ghost var index : nat := 0;
+      dst_view := wdrs[4..4+NUM_WORDS];
+      while (LoopImm(12))
+          invariant
+              x8 == 4 + index;
+              x11 == 16 + index;
+              w31 == old(w31);
+
+              0 <= index;
+              index <= NUM_WORDS;
+              index + loop_ctr == NUM_WORDS;
+
+              valid_wdr_view(wdrs, dst_view, 4, NUM_WORDS);
+              valid_wdr_view(wdrs, src_view, 16, NUM_WORDS);
+
+              seq_len(src_view) == NUM_WORDS;
+              seq_len(dst_view) == NUM_WORDS;
+              src_view[index..] == wdrs[x11..16+NUM_WORDS];
+              dst_view[..index] == src_view[..index];
+
+          decreases loop_ctr;
+      {
+          dst_view := dst_view[index := wdrs[x11]];
+          assert dst_view[index] == src_view[index];
+          bn_movr(x8, false, x11, true);
+          addi(x8, x8, 1);
+          index := index + 1;
+          assert dst_view[..index] == src_view[..index];
+      }
+}
+
+procedure double(
+    ghost A_view: seq(uint256))
+    returns (ghost AA_view: seq(uint256))
+
+    requires
+        w31 == 0;
+
+        valid_wdr_view(wdrs, A_view, 4, NUM_WORDS);
+
+    modifies
+        x9; x10; w2;
+        w4; w5; w6; w7; w8; w9; w10; w11; w12; w13; w14; w15;
+        w31; wdrs; fgroups;
+
+    ensures
+        w31 == 0;
+
+        valid_wdr_view(wdrs, AA_view, 4, NUM_WORDS);
+
+        to_nat(AA_view) ==
+            to_nat(A_view) + to_nat(A_view) -
+            bool_to_uint1(fgroups.fg0.cf) * pow_BASE(NUM_WORDS);
+
+{
+    comment("/* Clear flags. */");
+    bn_add(w31, w31, w31, SFT_DFT, 0);
+
+    comment("/* Compute aa=(A + A).");
+    comment("     [w4:w15] <= (A+A) mod 2^3072 = aa[0:3071] */");
+    li(x9, 2);
+    li(x10, 4);
+    AA_view := wdrs[4..4+NUM_WORDS];
+    ghost var index : nat := 0;
+    addc_inv_pre_lemma(AA_view, A_view, A_view);
+    while (LoopImm(12))
+        invariant
+            x9 == 2;
+            x10 == 4 + index;
+            w31 == 0;
+
+            0 <= index;
+            index <= NUM_WORDS;
+            index + loop_ctr == NUM_WORDS;
+
+            valid_wdr_view(wdrs, AA_view, 4, NUM_WORDS);
+
+            seq_len(A_view) == NUM_WORDS;
+            A_view[index..] == wdrs[x10..4 + NUM_WORDS];
+
+            addc_inv(AA_view, bool_to_uint1(fgroups.fg0.cf),
+                A_view, A_view, index);
+
+        decreases loop_ctr;
+    {
+        comment("/* w2 <= a[i] */");
+        bn_movr(x9, false, x10, false);
+
+        comment("/* w2 <= w2 + w2 */");
+        let old_carry := bool_to_uint1(fgroups.fg0.cf);
+        bn_addc(w2, w2, w2, SFT_DFT, 0);
+        let new_carry := bool_to_uint1(fgroups.fg0.cf);
+
+        comment("/* a[i] <= w2 */");
+        bn_movr(x10, true, x9, false);
+        AA_view := AA_view[index := w2];
+
+        addc_inv_peri_lemma(AA_view, new_carry,
+            A_view, A_view, old_carry, index);
+        index := index + 1;
+    }
+    addc_inv_post_lemma(AA_view, bool_to_uint1(fgroups.fg0.cf),
+        A_view, A_view);
+}
+
+procedure double_mod_var(
+    ghost A_view: seq(uint256),
+    ghost m_it: iter_t,
+    ghost rsa: rsa_params)
+    returns (ghost AA_view: seq(uint256))
+
+    requires
+        x0 == 0;
+        w31 == 0;
+
+        valid_wdr_view(wdrs, A_view, 4, NUM_WORDS);
+
+        iter_safe(m_it, heap, x16);
+        m_it.index == 0;
+        seq_len(m_it.buff) == NUM_WORDS;
+        to_nat(m_it.buff) == rsa.M;
+
+        double_modulo_pre(A_view, rsa);
+
+    reads
+        x0; x16; flat; heap;
+
+    modifies
+        fgroups;
+        x2; x3; x8; x9; x10; x11; x12;
+        wdrs; w2; w3;
+        w4; w5; w6; w7; w8; w9; w10; w11; w12; w13; w14; w15;
+        w16; w17; w18; w19;
+        w20; w21; w22; w23; w24; w25; w26; w27; w31;
+
+    ensures
+        w31 == 0;
+
+        valid_wdr_view(wdrs, AA_view, 4, NUM_WORDS);
+
+        double_modulo_post(A_view, AA_view, rsa);
+
+{
+
+  comment("double_modulo_post(to_nat(A_view), to_nat(AA_view), vars.rsa);");
+  comment("/**");
+  comment(" * Doubles a number and reduces modulo M in-place.");
+  comment(" *");
+  comment(" *   Returns: C = (A + A) mod M");
+  comment(" *");
+  comment(" * Requires that A < M < 2^3072. Writes output to the A buffer in DMEM. This");
+  comment(" * routine runs in variable time.");
+  comment(" *");
+  comment(" * Flags: Flags have no meaning beyond the scope of this subroutine.");
+  comment(" *");
+  comment(" * @param[in]  x16: dmem pointer to first limb of modulus M");
+  comment(" * @param[in]  [w4:w15]: operand A");
+  comment(" * @param[in]  w31: all-zero");
+  comment(" * @param[out] [w4:w15]: result C");
+  comment(" *");
+  comment(" * clobbered registers: x2, x3, x7 to x12, w2 to w27");
+  comment(" * clobbered Flag Groups: FG0");
+  comment(" */");
+
+  comment("/* Save copy of pointer to modulus. */");
+  addi(x12, x16, 0);
+
+  // Double the input in-place.
+  AA_view := double(A_view);
+
+  comment("/* Extract final carry bit from flags register.");
+  comment("     x2 <= aa[3072] */");
+  csrrs(x2, 0x7c0, x0);
+  andi(x2, x2, 1);
+  read_carry_flag_lemma(fgroups.fg0);
+  ghost var carry_from_add : bool := fgroups.fg0.cf;
+
+  let withsub_view := sub_to_reg_copy(AA_view, m_it);
+
+  comment("/* Extract final borrow bit from flags register. */");
+  csrrs(x3, 0x7c0, x0);
+  andi(x3, x3, 1);
+  read_carry_flag_lemma(fgroups.fg0);
+  ghost var borrow_from_sub : bool := fgroups.fg0.cf;
+
+  comment("/**");
+  comment(" * Select either aa or aa' based on carry/borrow bits.");
+  comment(" *");
+  comment(" * If aa < M, it follows that the carry bit aa[3072] = 0 (since M < 2^3072).");
+  comment(" * It also follows that the borrow from subtracting M must be 1. In this");
+  comment(" * case, select aa; otherwise, select aa-M.");
+  comment(" */");
+  comment("/* x2 <= (!x2) & x3 */");
+  xori(x2, x2, 1);
+  and(x2, x2, x3);
+
+  comment("/* Select aa if x2 = 1, otherwise aa-M. */");
+  if (x2 == x0) {
+      double_modulo_select_withsub_lemma(to_nat(A_view), to_nat(AA_view), bool_to_uint1(carry_from_add), bool_to_uint1(borrow_from_sub), x2, to_nat(m_it.buff));
+      comment("/* Copy subtraction result to w4:w15. */");
+      AA_view := double_mod_copy_result(withsub_view);
+  } else {
+      double_modulo_select_nosub_lemma(to_nat(A_view), to_nat(AA_view), bool_to_uint1(carry_from_add), bool_to_uint1(borrow_from_sub), x2, to_nat(m_it.buff));
+  }
+
+}
+
+#verbatim
+}
+#endverbatim

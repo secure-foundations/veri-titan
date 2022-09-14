@@ -45,10 +45,10 @@ method printIns32(ins:ins32)
         //     printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
         //     print("\n");
 
-        // case AND(dst, src1, src2) =>
-        //     print ("and ");
-        //     printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
-        //     print("\n");
+        case AND(dst, src1, src2) =>
+            print ("and ");
+            printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
+            print("\n");
 
         case ANDI(dst, src1, src2) =>
             print ("andi ");
@@ -70,10 +70,10 @@ method printIns32(ins:ins32)
         //     printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
         //     print("\n");
 
-        // case XORI(dst, src1, src2) =>
-        //     print ("xori ");
-        //     printReg32(dst); print(", "); printReg32(src1); print(", "); print(src2);
-        //     print("\n");
+        case XORI(dst, src1, src2) =>
+            print ("xori ");
+            printReg32(dst); print(", "); printReg32(src1); print(", "); print(src2);
+            print("\n");
 
         // case LUI(dst, src) =>
         //     print ("lui ");
