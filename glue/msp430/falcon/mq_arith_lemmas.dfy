@@ -273,6 +273,7 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
 
     // 0 <= e < Q -> -Q/2 <= e <= Q/2
     predicate {:opaque} norm_inv(outputs: seq<uint16>, inputs: seq<uint16>, i: nat)
+        ensures norm_inv(outputs, inputs, i) ==> |outputs| == N.full
     {
         && valid_elems(inputs)
         && |outputs| == N.full
@@ -630,5 +631,37 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
             LemmaMulStrictlyPositive(v2, v2);
             var vv1, vv2 := v1 * v1, v2 * v2;
             l2norm_squared(s1, s2, i-1) + vv1 + vv2
+    }
+
+    lemma falcon_lemma(
+        tt0: seq<uint16>, tt1: seq<uint16>, tt2: seq<uint16>,
+        s1: seq<uint16>, s2: seq<uint16>, h: seq<uint16>, c0: seq<uint16>,
+        result: uint16)
+
+    requires valid_elems(tt0);
+    requires valid_elems(tt1);
+    requires valid_elems(h);
+    requires denorm_inv(s2, tt0, 512);
+    requires as_elems(tt1) ==
+            poly_mod_product(as_elems(tt0), as_elems(h));
+    requires poly_sub_loop_inv(tt2, tt1, c0, 512);
+    requires norm_inv(s1, tt2, 512);
+    requires (result == 1)
+            <==> 
+        l2norm_squared(s1, s2, 512) < 0x29845d6;
+    ensures (result == 1)
+            <==>
+        falcon_verify(as_elems(c0), as_nelems(s2), as_elems(h));
+    {
+        reveal valid_nelems();
+        reveal valid_elems();
+        reveal norm_inv();
+
+        assert tt0 == MQN.denormalize_elems(as_nelems(s2));
+        assert tt1 == poly_mod_product(as_elems(tt0), as_elems(h));
+        assert tt2 == MQP.poly_sub(tt1, c0);
+        assert as_nelems(s1) == MQN.normalize_elems(tt2);
+        assume l2norm_squared(s1, s2, 512) == 
+            MQN.l2norm_squared(as_nelems(s1), as_nelems(s2), 512);
     }
 }

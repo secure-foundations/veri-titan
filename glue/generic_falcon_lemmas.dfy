@@ -590,7 +590,8 @@ abstract module generic_falcon_lemmas {
         requires is_bit_rev_shuffle(p2, p3, N);
         requires mq_poly_scale_inv(
             p4, p3, MQP.inverse_ntt_scaling_table(), N.full);
-        ensures as_elems(p4) == poly_mod_product(as_elems(a0), as_elems(b0));
+        ensures as_elems(p4)
+            == poly_mod_product(as_elems(a0), as_elems(b0));
     {
         reveal valid_elems();
         poly_mod_product_lemma(a0, a1, b0, b1, p0, p1, p2, p3, p4);

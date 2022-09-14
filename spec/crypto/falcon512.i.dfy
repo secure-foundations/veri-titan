@@ -242,6 +242,5 @@ module falcon_512_i refines
 
         assert p4 == MQP.negatively_wrapped_convolution(a0, b0);
         MQP.negatively_wrapped_convolution_lemma(a0, b0, p4);
-
     }
 }
