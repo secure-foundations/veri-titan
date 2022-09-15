@@ -221,8 +221,6 @@ procedure is_short(
     ghost var iter_b' := iter_b;
     ghost var i: nat := 0;
 
-    l2norm_squared_bounded_pre_lemma(buff_a, buff_b);
-
     while (s3 < a1)
         invariant a1 == iter_a'.base_ptr + 1024;
         invariant mem == old(mem);

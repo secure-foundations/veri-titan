@@ -455,7 +455,6 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
 
         var lh, uh := lh(d), uh(d);
         half_split_lemma(d);
-        assume uh == 0;
         denormalize_lemma(buff, i, a1, b, c, d);
         assert d == lh;
     }
@@ -498,34 +497,20 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         reveal valid_elems();
         reveal normalization_inv();
 
-        assume false;
+        assert value == outputs[i];
+        half_split_lemma(rst);
+        var lh, uh := lh(rst), uh(rst);
 
-    //     assert outputs[i] == inputs [i];
-
-    //     cond_set_Q_lemma(b, d);
-
-    //     var lh, uh := lh(e), uh(e);
-    //     half_split_lemma(e);
-
-    //     if to_int32(b) >= 0 {
-    //         assert d == 0;
-    //         assume uh == 0; // the upper bits all clear
-    //         assert as_nelem(e) == MQN.normalize(a);
-    //     } else {
-    //         assert d == Q;
-    //         assert 0 <= a < Q;
-    //         assert to_int32(b) == Q_HLAF - a;
-    //         assert Q_HLAF < a;
-    //         assert to_int32(e) == a as int - Q;
-    //         assert -Q_HLAF <= to_int32(e) <= Q_HLAF;
-    //         if to_int32(e) < 0 {
-    //             assume uh == 0xffff; // the upper bits all set
-    //         } else {
-    //             assume uh == 0; // the upper bits all clear
-    //         }
-    //         assert bv16_op_s.to_int16(lh) == to_int32(e);
-    //     }
-    //     assert as_nelem(lh) == MQN.normalize(a);
+        if to_int32(diff) >= 0 {
+            assert as_nelem(rst) == MQN.normalize(value);
+        } else {
+            if to_int32(rst) < 0 {
+                assume uh == 0xffff; // the upper bits all set
+            } else {
+                assume uh == 0; // the upper bits all clear
+            }
+        }
+        assert as_nelem(lh) == MQN.normalize(value);
     }
 
     lemma normalization_post_lemma(outputs: seq<uint16>, inputs: seq<uint16>)
@@ -549,14 +534,6 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         && i <= N.full
         && ((msb(ng) == 0) ==> (norm == MQN.l2norm_squared(ns1, ns2, i)))
         && ((msb(ng) == 1) ==> (MQN.l2norm_squared(ns1, ns2, i) >= NORMSQ_BOUND))
-    }
-
-    lemma l2norm_squared_bounded_pre_lemma(s1: seq<uint16>, s2: seq<uint16>)
-        requires valid_nelems(s1)
-        requires valid_nelems(s2)
-        ensures l2norm_squared_bounded_inv(0, s1, s2, 0, 0);
-    {
-        assume msb(0) == 0;
     }
 
     lemma l2norm_squared_bounded_peri_lemma(
