@@ -67,11 +67,6 @@ module ot_vale {
         a * b
     }
 
-    function method bool_to_uint1(b: bool): uint1
-    {
-        bv256_op_s.bool_to_uint1(b)
-    }
-
     function method uint32_addi(x: uint32, y: bv32_op_s.sint): uint32
     {
         bv32_op_s.addi(x, y)

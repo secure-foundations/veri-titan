@@ -20,6 +20,7 @@ import opened montmul
 
 import opened integers
 import opened bv256_mm_lemmas
+import opened bv256_op_s
 
 #endverbatim
 
