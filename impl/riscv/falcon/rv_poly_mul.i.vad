@@ -47,15 +47,9 @@ function valid_elems(s: seq(uint16)): bool extern;
 function rev_omega_inv_powers_mont_table(): seq(uint16) extern;
 function inverse_ntt_scaling_table(): seq(uint16) extern;
 function inverse_ntt_rev2std_lemma(a0: seq(uint16), a1: seq(uint16), a2: seq(uint16), a3: seq(uint16), a4: seq(uint16)): void extern;
-function mq_ntt_mul_lemma(a0: seq(uint16), a1: seq(uint16), b0: seq(uint16), b1: seq(uint16),
-        p0: seq(uint16),
-        p1: seq(uint16),
-        p2: seq(uint16),
-        p3: seq(uint16),
-        p4: seq(uint16)): void extern;
-
+function mq_poly_mod_product_lemma(a0: seq(uint16), a1: seq(uint16), b0: seq(uint16), b1: seq(uint16),
+        p0: seq(uint16), p1: seq(uint16), p2: seq(uint16), p3: seq(uint16), p4: seq(uint16)): void extern;
 function poly_mod_equiv(a: seq(uint16), b: seq(uint16), m: seq(uint16)): bool extern;
-
 function poly_mod_product(a0: seq(uint16), b0: seq(uint16)): seq(uint16) extern;
 
 procedure ntt_poly_mul(
@@ -180,7 +174,7 @@ returns (
     next_iter_a := mq_ntt_poly_scale(next_iter_a, iter_t2);
     let buff_p4 := next_iter_a.buff;
 
-    mq_ntt_mul_lemma(buff_a0, buff_a1, buff_b0, buff_b1,
+    mq_poly_mod_product_lemma(buff_a0, buff_a1, buff_b0, buff_b1,
         buff_p0, buff_p1, buff_p2, buff_p3, buff_p4);
 
     next_iter_a := next_iter_a.(index := 0);

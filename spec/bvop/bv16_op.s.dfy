@@ -56,11 +56,6 @@ module bv16_op_s refines bv_op_s
         (x as bv16 << amount) as uint
     }
 
-    function method {:opaque} msb(x: uint): uint1
-    {
-        if ((x as bv256 >> 16) & 1 == 1) then 1 else 0
-    }
-
     function uint16_lt(x: uint, y: uint): uint
     {
         if x < y then 1 else 0

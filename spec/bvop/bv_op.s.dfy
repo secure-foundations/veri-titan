@@ -121,6 +121,9 @@ abstract module bv_op_s
     }
 
     function method msb(x: uint): uint1
+    {
+        if x >= BASE()/2 then 1 else 0
+    }
 
 /* addition */
 

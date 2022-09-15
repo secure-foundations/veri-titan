@@ -355,39 +355,6 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         ls1_is_double(rsbi);
     }
 
-    lemma mq_ntt_mul_lemma(
-        a0: seq<nat>,
-        a1: seq<nat>,
-        b0: seq<nat>,
-        b1: seq<nat>,
-        p0: seq<nat>,
-        p1: seq<nat>,
-        p2: seq<nat>,
-        p3: seq<nat>,
-        p4: seq<nat>)
-
-        requires valid_elems(p0);
-        requires valid_elems(p1);
-        requires valid_elems(p2);
-        requires valid_elems(p3);
-        requires valid_elems(p4);
-
-        requires forward_ntt_eval_all(a1, a0);
-        requires forward_ntt_eval_all(b1, b0);
-        requires circle_product_inv(p0, a1, b1, N.full);
-        requires is_bit_rev_shuffle(p0, p1, N);
-
-        requires inverse_ntt_eval_all(p2, p1);
-        requires is_bit_rev_shuffle(p2, p3, N);
-
-        requires mq_poly_scale_inv(p4, p3, MQP.inverse_ntt_scaling_table(), N.full);
-
-        ensures p4 == poly_mod_product(a0, b0)
-        // MQP.poly_mod_equiv(p4, MQP.poly_mul(a0, b0), MQP.n_ideal());
-    {
-        assume false;
-    }
-
     predicate word_is_normalized(e: uint16)
     {
         MQN.int_is_normalized(bv16_op_s.to_int16(e))
@@ -514,18 +481,24 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         reveal normalization_inv();
     }
 
-    lemma normalization_peri_lemma(outputs: seq<uint16>, inputs: seq<uint16>, i: nat, a: uint32, b: uint32, c: uint32, d: uint32, e: uint32)
+    function cond_Q(src: uint32): uint32
+    {
+        if to_int32(src) >= 0 then 0 else 12289
+    }
+
+    lemma normalization_peri_lemma(outputs: seq<uint16>, inputs: seq<uint16>, i: nat, value: uint32, diff: uint32, mask: uint32, rst: uint32)
         requires normalization_inv(outputs, inputs, i);
         requires i < |outputs|;
-        requires a == outputs[i];
-        requires b == uint32_sub(Q/2, a);
-        requires c == uint32_srai(b, 31);
-        requires d == uint32_and(c, Q);
-        requires e == uint32_sub(a, d);
-        ensures normalization_inv(outputs[i := lh(e)], inputs, i + 1);
-    // {
-    //     reveal valid_elems();
-    //     reveal normalization_inv();
+        requires value == uint16_sign_ext(outputs[i])
+        requires diff == uint32_sub(Q/2, value);
+        requires mask == cond_Q(diff);
+        requires rst == uint32_sub(value, mask);
+        ensures normalization_inv(outputs[i := lh(rst)], inputs, i + 1);
+    {
+        reveal valid_elems();
+        reveal normalization_inv();
+
+        assume false;
 
     //     assert outputs[i] == inputs [i];
 
@@ -553,7 +526,7 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
     //         assert bv16_op_s.to_int16(lh) == to_int32(e);
     //     }
     //     assert as_nelem(lh) == MQN.normalize(a);
-    // }
+    }
 
     lemma normalization_post_lemma(outputs: seq<uint16>, inputs: seq<uint16>)
         requires valid_elems(inputs);

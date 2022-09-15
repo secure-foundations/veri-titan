@@ -66,6 +66,23 @@ function mqmul(a: nat, b: nat): uint32 extern;
 function mqsub(a: nat, b: nat): uint32 extern;
 function mqadd(a: nat, b: nat): uint32 extern;
 
+function cond_set_Q_lemma(a: uint32, b: uint32): void extern;
+function cond_Q(a: uint32): uint32 extern;
+
+procedure cond_set_Q(inout src: reg32, inout dst: reg32, in qsrc: reg32)
+    requires
+        @dst != @qsrc;
+        @src != @qsrc;
+        qsrc == 12289;
+
+    ensures
+        dst == cond_Q(old(src));
+{
+    srai(dst, src, 31);
+    and(dst, dst, qsrc);
+    cond_set_Q_lemma(old(src), dst);
+}
+
 ghost procedure lemma_mq_add_correct(
     ghost d: uint32,
     ghost b: uint32,
@@ -163,7 +180,7 @@ procedure ntt_inline_mq_sub()
     let r := a3;
     lemma_mq_sub_correct(d, b, c, r, x, y);
 }
-    
+
 #verbatim
 }
 #endverbatim

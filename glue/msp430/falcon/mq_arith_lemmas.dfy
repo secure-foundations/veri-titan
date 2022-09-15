@@ -359,7 +359,8 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
 
         var p := pow2_mul(t, d);
         assert p.exp == 8;
-        assume p.full == 256;
+        MQ.Nth_root_lemma();
+        assert p.full == 256;
 
         calc {
             u;
@@ -398,8 +399,7 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
 
         var t := view.lsize();
         var p := pow2_mul(t, d);
-        assert p.exp == 8;
-        assume p.full == 256;
+        MQ.Nth_root_lemma();
 
         assert u + 2 * d.full == (j + 1) * (2 * d.full) by{
             LemmaMulProperties();
@@ -488,7 +488,7 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
 
         var p := pow2_mul(t, d);
         assert p.exp == 8;
-        assume p.full == 256;
+        MQ.Nth_root_lemma();
 
         calc {
             u;
@@ -528,7 +528,7 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
         var t := view.lsize();
         var p := pow2_mul(t, d);
         assert p.exp == 8;
-        assume p.full == 256;
+        MQ.Nth_root_lemma();
 
         assert u + 2 * d.full == (j + 1) * (2 * d.full) by{
             LemmaMulProperties();

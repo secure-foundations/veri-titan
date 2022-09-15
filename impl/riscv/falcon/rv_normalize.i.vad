@@ -1,10 +1,8 @@
-include "../../../spec/arch/riscv/decls.i.vad"
-// include "rv_reg_save.i.vad"
+include "mq_arith.i.vad"
 
 #verbatim
 
-include "../../../spec/arch/riscv/decls.i.dfy"
-include "../../../../glue/riscv/falcon/bv32_falcon_lemmas.i.dfy"
+include "mq_arith.i.dfy"
 
 module rv_normlization {
 
@@ -18,7 +16,7 @@ import opened stack
 import opened bv32_op_s
 import opened bv32_falcon_lemmas
 
-// import opened rv_reg_save
+import opened mq_arith
 
 #endverbatim
 
@@ -112,13 +110,13 @@ returns (ghost next_iter_tmp: b16_iter)
 
 function normalization_inv(outputs: seq(uint16), inputs: seq(uint16), i: nat): bool extern;
 function normalization_pre_lemma(inputs: seq(uint16)): void extern;
-function normalization_peri_lemma(outputs: seq(uint16), inputs: seq(uint16), i: nat, a: uint32, b: uint32, c: uint32, d: uint32, e: uint32) : void extern;
-function normalization_post_lemma(outputs: seq(uint16), inputs: seq(uint16)) : void extern;
+function normalization_peri_lemma(outputs: seq(uint16), inputs: seq(uint16), i: nat, value: uint32, diff: uint32, mask: uint32, rst: uint32): void extern;
+function normalization_post_lemma(outputs: seq(uint16), inputs: seq(uint16)): void extern;
 
 procedure normalize(
     ghost iter_tt: b16_iter)
 
-returns (ghost next_iter_tt: b16_iter)
+returns (ghost iter_tt': b16_iter)
 
     requires
         a0 == 12289;
@@ -133,20 +131,20 @@ returns (ghost next_iter_tt: b16_iter)
 
     ensures
         mem == old(mem).(heap := heap);
-        next_iter_tt.base_ptr == iter_tt.base_ptr;
-        b16_iter_inv(next_iter_tt, heap, s3);
-        nelems_iter_inv(heap, next_iter_tt, s3, 0);
+        iter_tt'.base_ptr == iter_tt.base_ptr;
+        b16_iter_inv(iter_tt', heap, s3);
+        nelems_iter_inv(heap, iter_tt', s3, 0);
         heap == old(heap)
-            [next_iter_tt.base_ptr := heap[next_iter_tt.base_ptr]];
+            [iter_tt'.base_ptr := heap[iter_tt'.base_ptr]];
 
     ensures
-        normalization_inv(next_iter_tt.buff, iter_tt.buff, 512);
+        normalization_inv(iter_tt'.buff, iter_tt.buff, 512);
 {
     li(t2, 6144);
     addi(a1, s3, 1024);
     ghost var i :nat := 0;
     let inputs := iter_tt.buff;
-    next_iter_tt := iter_tt;
+    iter_tt' := iter_tt;
 
     normalization_pre_lemma(iter_tt.buff);
 
@@ -154,38 +152,36 @@ returns (ghost next_iter_tt: b16_iter)
         invariant a0 == 12289;
         invariant t2 == 6144;
         invariant a1 == iter_tt.base_ptr + 1024;
-        invariant iter_tt.base_ptr == next_iter_tt.base_ptr;
-        invariant b16_iter_inv(next_iter_tt, heap, s3);
-        invariant seq_len(next_iter_tt.buff) == 512;
-        invariant next_iter_tt.index == i;
-        invariant normalization_inv(next_iter_tt.buff, inputs, i);
+        invariant iter_tt.base_ptr == iter_tt'.base_ptr;
+        invariant b16_iter_inv(iter_tt', heap, s3);
+        invariant seq_len(iter_tt'.buff) == 512;
+        invariant iter_tt'.index == i;
+        invariant normalization_inv(iter_tt'.buff, inputs, i);
         invariant mem == old(mem).(heap := heap);
         invariant heap == old(heap)
-                [next_iter_tt.base_ptr := heap[next_iter_tt.base_ptr]];
+                [iter_tt'.base_ptr := heap[iter_tt'.base_ptr]];
         decreases a1 - s3;
     {
-        next_iter_tt := lh_next(t1, s3, 0, false, next_iter_tt);
-        assume t1 == inputs[i];
-        let ai := t1;
+        iter_tt' := lh_next(t1, s3, 0, false, iter_tt');
+
+        let value := t1;
         sub(t3, t2, t1);
         let diff := t3;
-        srai(t3, t3, 31);
-        let shift := t3;
-        and(t3, t3, a0);
+        cond_set_Q(t3, t3, a0);
         let mask := t3;
         sub(t1, t1, t3);
 
-        normalization_peri_lemma(next_iter_tt.buff, inputs, i, ai, diff, shift, mask, t1);
+        normalization_peri_lemma(iter_tt'.buff, inputs, i, value, diff, mask, t1);
 
-        next_iter_tt := sh_next(t1, s3, 0, true, next_iter_tt);
+        iter_tt' := sh_next(t1, s3, 0, true, iter_tt');
         addi(s3, s3, 2);
         i := i + 1;
     }
-    next_iter_tt := next_iter_tt.(index := 0);
+    iter_tt' := iter_tt'.(index := 0);
     addi(s3, s3, (-1024));
     assert i == 512;
 
-    normalization_post_lemma(next_iter_tt.buff, inputs);
+    normalization_post_lemma(iter_tt'.buff, inputs);
 }
 
 function l2norm_squared_bounded_inv(norm: uint32, s1: seq(uint16), s2: seq(uint16), i: nat, ng: uint32): bool extern;
@@ -221,25 +217,25 @@ procedure is_short(
     let buff_a := iter_a.buff;
     let buff_b := iter_b.buff;
 
-    ghost var next_iter_a := iter_a;
-    ghost var next_iter_b := iter_b;
+    ghost var iter_a' := iter_a;
+    ghost var iter_b' := iter_b;
     ghost var i: nat := 0;
 
     l2norm_squared_bounded_pre_lemma(buff_a, buff_b);
 
     while (s3 < a1)
-        invariant a1 == next_iter_a.base_ptr + 1024;
+        invariant a1 == iter_a'.base_ptr + 1024;
         invariant mem == old(mem);
         invariant heap == old(heap);
         invariant i <= seq_len(buff_a);
-        invariant next_iter_a.base_ptr == iter_a.base_ptr;
-        invariant nelems_iter_inv(heap, next_iter_a, s3, i);
-        invariant next_iter_b.base_ptr == iter_b.base_ptr;
-        invariant nelems_iter_inv(heap, next_iter_b, s4, i);
+        invariant iter_a'.base_ptr == iter_a.base_ptr;
+        invariant nelems_iter_inv(heap, iter_a', s3, i);
+        invariant iter_b'.base_ptr == iter_b.base_ptr;
+        invariant nelems_iter_inv(heap, iter_b', s4, i);
         invariant l2norm_squared_bounded_inv(a0, buff_a, buff_b, i, a2);
         decreases a1 - s3;
     {
-        next_iter_a := lh_next(s1, s3, 0, true, next_iter_a);
+        iter_a' := lh_next(s1, s3, 0, true, iter_a');
         let norm0 := a0;
         let ng0 := a2;
         // assert s1 == buff_a[i];
@@ -251,7 +247,7 @@ procedure is_short(
         or(a2, a2, a0);
         let ng1 := a2;
 
-        next_iter_b := lh_next(s1, s4, 0, true, next_iter_b);
+        iter_b' := lh_next(s1, s4, 0, true, iter_b');
         let v2 := s1;
         mul(s1, s1, s1);
         let vv2 := s1;

@@ -58,15 +58,9 @@ module bv32_op_s refines bv_op_s
         (x as bv32 << amount) as uint
     }
 
-    function method {:opaque} msb(x: uint): uint1
-    {
-        if ((x as bv32 >> 32) & 1 == 1) then 1 else 0
-    }
-
     lemma msb_bound_lemma(x: uint)
         ensures msb(x) == 1 <==> x >= 0x80000000
     {
-        assume false;
     }
 
     function uint32_lt(x: uint, y: uint): uint
