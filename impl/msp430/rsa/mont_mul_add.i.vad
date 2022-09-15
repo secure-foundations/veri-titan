@@ -3,7 +3,7 @@ include "sub_mod.i.vad"
 
 #verbatim
 
-include "../mul.i.dfy"
+include "../msp_mul.i.dfy"
 include "sub_mod.i.dfy"
 
 module mont_mul_add {
@@ -16,8 +16,9 @@ import opened stack
 import opened bv16_mm_lemmas
 import opened integers
 
-import opened mul
+import opened msp_mul
 import opened sub_mod
+import opened msp_reg_save
 
 #endverbatim
 
@@ -93,26 +94,6 @@ function montmul_inv_lemma(
     d0: int,
     b: seq(uint16),
     rsa: rsa_params): void extern;
-
-procedure save_r4__r10()
-    requires
-        in_stack_addr_range(sp);
-        in_stack_addr_range(sp - 14);
-    
-    modifies
-        mem; flat; sp;
-    reads
-        r4; r5; r6; r7; r8; r9; r10; 
-    ensures
-        mem == stack_push_batch(old(mem), old(flat),
-            seq(r4, r5, r6, r7, r8, r9, r10));
-        sp == old(sp) - 14;
-        stack_depth(mem) == stack_depth(old(mem)) + 1;
-{
-    pushm_w(7, r10);
-    assert pushm_w_seq(old(this.ms), R(10), 7)
-        == seq(r4, r5, r6, r7, r8, r9, r10);
-}
 
 function frames_top_diff(f1: frames_t, f2: frames_t): bool extern;
 

@@ -13,12 +13,13 @@ import opened mem
 import opened stack
 import opened bv16_mm_lemmas
 import opened integers
+import opened Power
 
 import opened sub_mod
 import opened mont_mul
 import opened mont_mul_add
+import opened msp_reg_save
 
-import opened Power
 
 #endverbatim
 

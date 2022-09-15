@@ -1,8 +1,8 @@
-include "../../../spec/arch/msp430/decls.i.vad"
+include "../msp_reg_save.i.vad"
 
 #verbatim
 
-include "../../../spec/arch/msp430/decls.i.dfy"
+include "../msp_reg_save.i.dfy"
 include "../../../../glue/msp430/rsa/bv16_mm_lemmas.i.dfy"
 
 module sub_mod {
@@ -16,6 +16,8 @@ import opened bv16_mm_lemmas
 import opened integers
 
 import opened Power
+
+import opened msp_reg_save
 
 #endverbatim
 
@@ -41,30 +43,10 @@ ghost procedure subb_inv_peri_lemma(
     ghost index: int) extern;
 
 ghost procedure subb_inv_post_lemma(
-
     ghost dst: seq(uint16),
     ghost carry: uint1,
     ghost src1: seq(uint16),
     ghost src2: seq(uint16)) extern;
-
-procedure save_r7__r10()
-    requires
-        in_stack_addr_range(sp - 8);
-    
-    modifies
-        mem; flat; sp;
-    reads
-        frames; r10; r9; r8; r7;
-    ensures
-        mem == stack_push_batch(old(mem), old(flat),
-            seq(r7, r8, r9, r10));
-        mem == old(mem).(frames := frames);
-        sp == old(sp) - 8;
-        stack_depth(mem) == stack_depth(old(mem)) + 1;
-{
-    pushm_w(4, r10);
-    assert pushm_w_seq(old(this.ms), R(10), 4) == seq(r7, r8, r9, r10);
-}
 
 function Pow(b: int, e: nat): int extern;
 
