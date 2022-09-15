@@ -11,7 +11,7 @@ import opened integers
 import opened rv_machine
 import opened rv_decls
 import opened rv_vale
-
+import opened bv32_op_s
 import opened bv32_mm_lemmas
 
 #endverbatim

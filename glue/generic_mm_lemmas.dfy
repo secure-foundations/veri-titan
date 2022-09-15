@@ -17,11 +17,6 @@ abstract module generic_mm_lemmas {
         GBV.BVSEQ.BASE()
     }
 
-    function to_nat(xs: seq<uint>): nat
-    {
-        BVSEQ.ToNatRight(xs)
-    }
-
     predicate cong_BASE(x: int, y: int)
     {
         IsModEquivalent(x, y, BASE())
