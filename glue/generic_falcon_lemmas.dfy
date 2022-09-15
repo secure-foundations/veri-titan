@@ -16,17 +16,17 @@ abstract module generic_falcon_lemmas {
     import FNTT = falcon_512_i.FNTT
     import INTT = falcon_512_i.INTT
 
-    type uint = GBV.BVSEQ.uint
+    type uint = BVSEQ.uint
 
     function BASE(): nat
     {
-        GBV.BVSEQ.BASE()
+        BVSEQ.BASE()
     }
 
     lemma general_dw_add_lemma(
         xs: seq<uint>, ys: seq<uint>, zs: seq<uint>,
         c1: uint1, c2: uint1)
-    returns (z: dw_view_t)
+    returns (z: GBV.dw_view_t)
         requires |xs| == |ys| == |zs| == 2;
         requires (zs[0], c1) == GBV.addc(xs[0], ys[0], 0);
         requires (zs[1], c2) == GBV.addc(xs[1], ys[1], c1);

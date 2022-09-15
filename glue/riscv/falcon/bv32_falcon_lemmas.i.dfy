@@ -12,6 +12,7 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
     import opened bv32_op_s
 
     import opened mq_arith_lemmas
+    import opened GBV = bv32_op_s
 
     predicate elems_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int)
     {
@@ -19,6 +20,14 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         && (index >= 0 ==> iter.index == index)
         && |iter.buff| == N.full
         && valid_elems(iter.buff)
+    }
+
+    predicate nelems_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int)
+    {
+        && b16_iter_inv(iter, heap, if address >= 0 then address else iter.cur_ptr())
+        && (index >= 0 ==> iter.index == index)
+        && |iter.buff| == N.full
+        && valid_nelems(iter.buff)
     }
 
     lemma forward_s_loop_inv_pre_lemma(

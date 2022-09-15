@@ -32,7 +32,7 @@ function elems_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int):
 function pow2_t_cons(n: nat, exp: nat): pow2_t extern;
 
 function mq_poly_scale_inv(init_a: seq(uint16), a: seq(uint16), b: seq(uint16), i: nat): bool extern;
-function mq_poly_scale_peri_lemma(init_a: seq(uint16), a: seq(uint16), ai: uint32, b: seq(uint16), i: nat): void extern;
+function mq_poly_scale_peri_lemma(init_a: seq(uint16), a: seq(uint16), b: seq(uint16), i: nat): uint32 extern;
 
 procedure mq_ntt_poly_scale(
     ghost iter_a: b16_iter,
@@ -104,7 +104,7 @@ returns (ghost next_iter_a: b16_iter)
             next_iter_t := lhu_next(t1, a1, 0, true, next_iter_t);
             poly_mul_inline_montymul();
 
-            mq_poly_scale_peri_lemma(next_iter_a.buff, init_a, t0, iter_t.buff, i);
+            let ai := mq_poly_scale_peri_lemma(next_iter_a.buff, init_a, iter_t.buff, i);
 
             next_iter_a := sh_bounded_next(t0, a0, 0, true, next_iter_a);
 
