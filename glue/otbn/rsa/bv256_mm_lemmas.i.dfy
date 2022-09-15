@@ -234,6 +234,16 @@ module bv256_mm_lemmas refines generic_mm_lemmas {
         reveal bv32_op_s.and();
     }
 
+    lemma xor_negation_lemma(
+        x: uint32)
+        ensures x == 0 ==> bv32_op_s.xor(x, 1) == 1;
+        ensures x == 1 ==> bv32_op_s.xor(x,1) == 0;
+    {
+        reveal bv32_op_s.xor();
+        assert bv32_op_s.xor(0, 1) == 1;
+        assert bv32_op_s.xor(1,1) == 0;
+    }
+
     lemma read_carry_flag_lemma(flags: flags_t)
         ensures uint32_andi(flags_as_uint(flags), 1)
             == if flags.cf then 1 else 0;
@@ -244,6 +254,87 @@ module bv256_mm_lemmas refines generic_mm_lemmas {
         var carry := uint32_andi(value, 1);
         and_lsb_lemma(value);
         assert carry == if flags.cf then 1 else 0;
+    }
+
+    lemma double_modulo_selector_lemma(
+        carry: uint1,
+        borrow: uint1,
+        select: uint32)
+        requires select == bv32_op_s.and(bv32_op_s.xor(carry, 1), borrow);
+        ensures select == 0 ==> (carry == 1 || borrow == 0);
+        ensures select != 0 ==> (carry == 0 && borrow == 1);
+    {
+        reveal bv32_op_s.xor();
+        reveal bv32_op_s.and();
+        xor_negation_lemma(carry);
+        assert (carry == 0 || carry == 1);
+        assert (borrow == 0 || borrow == 1);
+
+        if (carry == 0) {
+            assert bv32_op_s.xor(carry, 1) == 1;
+            if (borrow == 0) {
+                assert select == 0;
+            } else {
+                assert borrow == 1;
+                assert select == 1;
+            }
+        } else {
+            assert carry == 1;
+            assert bv32_op_s.xor(carry, 1) == 0;
+            assert bv32_op_s.and(0, 0) == 0;
+            assert bv32_op_s.and(0, 1) == 0;
+            assert select == 0;
+        }
+    }
+
+    lemma double_modulo_select_nosub_lemma(
+        a: nat,
+        aa: nat,
+        carry: uint1,
+        borrow: uint1,
+        select: uint32,
+        M: nat)
+        requires 0 < M < pow_BASE(NUM_WORDS);
+        requires carry == 0 ==> aa == a + a;
+        requires borrow == 1 <==> aa < M;
+        requires select == bv32_op_s.and(bv32_op_s.xor(carry, 1), borrow);
+        requires select != 0;
+        ensures aa == (a + a) % M;
+    {
+        double_modulo_selector_lemma(carry, borrow, select);
+        assert borrow == 1;
+        assert carry == 0;
+        assert a + a < M;
+        LemmaSmallMod(a + a, M);
+    }
+
+    lemma double_modulo_select_withsub_lemma(
+        a: nat,
+        aa: nat,
+        carry: uint1,
+        borrow: uint1,
+        select: uint32,
+        M: nat)
+        requires a < M;
+        requires 0 < M < pow_BASE(NUM_WORDS);
+        requires pow_BASE(NUM_WORDS) < 2 * M;
+        requires aa == a + a - carry * pow_BASE(NUM_WORDS);
+        requires carry == 1 ==> a + a >= pow_BASE(NUM_WORDS);
+        requires borrow == 1 <==> aa < M;
+        requires select == bv32_op_s.and(bv32_op_s.xor(carry, 1), borrow);
+        requires select == 0;
+        ensures aa - M + borrow * pow_BASE(NUM_WORDS) == (a + a) % M;
+    {
+        double_modulo_selector_lemma(carry, borrow, select);
+        if (carry == 1) {
+          assert (borrow == 1);
+          LemmaModSubMultiplesVanish(a + a, M);
+          LemmaSmallMod((a + a) - M, M);
+       }
+       if (borrow == 0) {
+          LemmaModSubMultiplesVanish(a + a, M);
+          LemmaSmallMod((a + a) - M, M);
+       }
     }
 }
 

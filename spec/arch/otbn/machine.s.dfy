@@ -91,7 +91,9 @@ module ot_machine {
     datatype ins32 =
         | ADD(xrd: reg32_t, xrs1: reg32_t, xrs2: reg32_t)
         | ADDI(xrd: reg32_t, xrs1: reg32_t, imm: int12)
+        | AND(xrd: reg32_t, xrs1: reg32_t, xrs2: reg32_t)
         | ANDI(xrd: reg32_t, xrs1: reg32_t, imm: int12)
+        | XORI(xrd: reg32_t, xrs1: reg32_t, imm: int12)
         | LW(xrd: reg32_t, offset: int12, xrs1: reg32_t)
         | SW(xrs2: reg32_t, offset: int12, xrs1: reg32_t)
         // | LOOP(grs: reg32_t, bodysize: uint32)
@@ -470,10 +472,25 @@ predicate method while_overlap(c:code)
             write_reg32(xrd, sum)
         }
 
+        function method eval_AND(xrd: reg32_t, xrs1: reg32_t, xrs2: reg32_t): state
+        {
+            var v1 := read_reg32(xrs1);
+            var v2 := read_reg32(xrs2);
+            var sum := bv32_op_s.and(v1, v2);
+            write_reg32(xrd, sum)
+        }
+
         function method eval_ANDI(xrd: reg32_t, xrs1: reg32_t, imm: int12): state
         {
             var v1 := read_reg32(xrs1);
             var sum := bv32_op_s.andi(v1, imm);
+            write_reg32(xrd, sum)
+        }
+
+        function method eval_XORI(xrd: reg32_t, xrs1: reg32_t, imm: int12): state
+        {
+            var v1 := read_reg32(xrs1);
+            var sum := bv32_op_s.xori(v1, imm);
             write_reg32(xrd, sum)
         }
 
@@ -728,7 +745,9 @@ predicate method while_overlap(c:code)
             else match xins
                 case ADD(xrd, xrs1, xrs2) => eval_ADD(xrd, xrs1, xrs2)
                 case ADDI(xrd, xrs1, imm) => eval_ADDI(xrd, xrs1, imm)
+                case AND(xrd, xrs1, xrs2) => eval_AND(xrd, xrs1, xrs2)
                 case ANDI(xrd, xrs1, imm) => eval_ANDI(xrd, xrs1, imm)
+                case XORI(xrd, xrs1, imm) => eval_XORI(xrd, xrs1, imm)
                 case LW(xrd, offset, xrs1) => eval_LW(xrd, offset, xrs1)
                 case SW(xrs2, offset, xrs1) => eval_SW(xrs2, offset, xrs1)
                 case CSRRS(grd, csr, grs1) => eval_CSRRS(grd, csr, grs1)

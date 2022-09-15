@@ -44,6 +44,9 @@ abstract module generic_mm_lemmas {
         // modulo is none zero
         && rsa.M != 0
         && cong_BASE(rsa.M0D * rsa.M, -1)
+        // modulus is exactly the expected number of bits
+        && rsa.M < pow_BASE(NUM_WORDS)
+        && pow_BASE(NUM_WORDS) < 2 * rsa.M
         // signature
         && 0 < rsa.SIG < rsa.M
         && rsa.R == pow_BASE(NUM_WORDS)
@@ -263,6 +266,112 @@ abstract module generic_mm_lemmas {
     }
 
 /* end section on multi word subtraction */
+
+/* begin section on multi word addition */
+
+    function seq_add(x: seq<uint>, y: seq<uint>): (seq<uint>, uint)
+        requires |x| == |y|
+    {
+        GBV.BVSEQ.SeqAdd(x, y)
+    }
+
+    predicate addc_inv(
+        dst: seq<uint>,
+        carry: uint1,
+        src1: seq<uint>,
+        src2: seq<uint>,
+        index: nat)
+    requires |dst| == |src1| == |src2|;
+    requires index <= |src1|;
+    {
+        (dst[..index], carry)
+            == seq_add(src1[..index], src2[..index])
+    }
+
+    lemma addc_inv_pre_lemma(
+        dst: seq<uint>,
+        src1: seq<uint>,
+        src2: seq<uint>)
+    requires |dst| == |src1| == |src2|;
+    ensures addc_inv(dst, 0, src1, src2, 0)
+    {
+        reveal GBV.BVSEQ.SeqAdd();
+    }
+
+    lemma addc_inv_peri_lemma(
+        dst: seq<uint>,
+        new_carry: uint1,
+        src1: seq<uint>,
+        src2: seq<uint>,
+        old_carry: uint1,
+        index: nat)
+
+    requires |dst| == |src1| == |src2|;
+    requires index < |src1|;
+    requires addc_inv(dst, old_carry, src1, src2, index);
+    requires (dst[index], new_carry)
+        == GBV.addc(src1[index], src2[index], old_carry);
+    ensures addc_inv(dst, new_carry, src1, src2, index + 1);
+    {
+        reveal GBV.BVSEQ.SeqAdd();
+        var (zs, bin) := seq_add(src1[..index], src2[..index]);
+        var (z, bout) := GBV.addc(src1[index], src2[index], old_carry);
+
+        assert dst[..index+1] == zs + [z];
+        assert src1[..index+1] == src1[..index] + [src1[index]];
+        assert src2[..index+1] == src2[..index] + [src2[index]];
+    }
+
+    lemma addc_inv_post_lemma(
+        dst: seq<uint>,
+        carry: uint1,
+        src1: seq<uint>,
+        src2: seq<uint>)
+
+    requires |dst| == |src1| == |src2|;
+    requires addc_inv(dst, carry, src1, src2, |dst|);
+    ensures to_nat(dst) == to_nat(src1) + to_nat(src2) - carry * pow_BASE(|dst|);
+    ensures carry * pow_BASE(|dst|) == pow_BASE(|dst|) * carry;
+    ensures carry == 0 <==> to_nat(src1) + to_nat(src2) < pow_BASE(|dst|);
+    {
+        var index := |dst|;
+        assert dst[..index] == dst;
+        assert src1[..index] == src1;
+        assert src2[..index] == src2;
+
+        GBV.BVSEQ.LemmaSeqAdd(src1, src2, dst, carry);
+
+        assert to_nat(src1) + to_nat(src2) - carry * pow_BASE(index) == to_nat(dst);
+
+        GBV.BVSEQ.LemmaSeqNatBound(dst);
+        Mul.LemmaMulIsCommutativeAuto();
+    }
+
+/* end section on multi word addition */
+
+/* begin section on multi word double-modulo */
+
+predicate double_modulo_pre(
+    a: seq<uint>,
+    rsa: rsa_params)
+{
+    && |a| == NUM_WORDS
+    && rsa_params_inv(rsa)
+    && to_nat(a) < rsa.M
+}
+
+predicate double_modulo_post(
+    a: seq<uint>,
+    aa: seq<uint>,
+    rsa: rsa_params)
+{
+    && |a| == |aa| == NUM_WORDS
+    && rsa_params_inv(rsa)
+    && to_nat(aa) == (to_nat(a) + to_nat(a)) % rsa.M
+}
+
+/* end section on multi word double-modulo */
+
 /* begin section on mont loop */
 
     lemma mont_loop_cong_lemma(
@@ -899,7 +1008,6 @@ abstract module generic_mm_lemmas {
                 IsModEquivalent(raw_val, adjusted_val, rsa.M);
                 IsModEquivalent(adjusted_val, Pow(rsa.SIG, rsa.E), rsa.M);
             }
-
             LemmaSmallMod(adjusted_val, rsa.M);
         }
     }
