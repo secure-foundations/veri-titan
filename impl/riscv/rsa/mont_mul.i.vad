@@ -88,7 +88,7 @@ procedure mm_clear(ghost iter_c: iter_t)
     let ptr_c := iter_c.base_ptr;
     ghost var iter_c := iter_c;
 
-    assume iter_c.buff[..0] == seq_zero(0);
+    assert iter_c.buff[..0] == seq_zero(0);
 
     while (s1 < s4) 
         invariant

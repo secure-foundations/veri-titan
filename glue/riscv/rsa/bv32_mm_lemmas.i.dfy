@@ -115,11 +115,6 @@ module bv32_mm_lemmas refines generic_mm_lemmas {
             vars.iter_b, vars.iter_c, vars.iter_n)
     }
 
-    function seq_zero(i: nat): seq<uint32>
-    {
-        GBV.BVSEQ.SeqZero(NUM_WORDS)
-    }
-
     datatype mp_vars = mp_vars(
         iter_rr: iter_t, 
         iter_n: iter_t,

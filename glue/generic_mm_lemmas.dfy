@@ -187,6 +187,11 @@ abstract module generic_mm_lemmas {
 
 /* begin section on multi word subtraction */
 
+    function seq_zero(i: nat): seq<uint>
+    {
+        GBV.BVSEQ.SeqZero(i)
+    }
+
     function seq_sub(x: seq<uint>, y: seq<uint>): (seq<uint>, uint)
         requires |x| == |y|
     {
