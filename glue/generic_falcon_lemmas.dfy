@@ -199,10 +199,23 @@ abstract module generic_falcon_lemmas {
     }
 
     lemma forward_t_loop_inv_post_lemma(a: seq<nat>, one: pow2_t, coeffs: seq<nat>)
-        requires one.exp == 0 <= N.exp;
+        requires 0 <= one.exp <= N.exp;
+        requires block_size(one).full >= 512;
         requires forward_t_loop_inv(a, one, coeffs);
         ensures forward_ntt_eval_all(a, coeffs);
     {
+        var t := pow2_div(N, one);
+        if t.exp > 9 {
+            Power.LemmaPowStrictlyIncreases(2, 9, t.exp);
+            assert false;
+        }
+        MQ.Nth_root_lemma();
+        if t.exp < 9 {
+            reveal Power2.Pow2();
+            Power.LemmaPowStrictlyIncreases(2, t.exp, 9);
+            assert false;
+        }
+        assert t.exp == 9;
         FNTT.t_loop_inv_post_lemma(a, one, coeffs);
     }
 
@@ -328,10 +341,23 @@ abstract module generic_falcon_lemmas {
     }
 
     lemma inverse_t_loop_inv_post_lemma(a: seq<nat>, one: pow2_t, coeffs: seq<nat>)
-        requires one.exp == 0 <= N.exp;
+        requires 0 <= one.exp <= N.exp;
+        requires block_size(one).full >= 512;
         requires inverse_t_loop_inv(a, one, coeffs);
         ensures inverse_ntt_eval_all(a, coeffs);
     {
+        var t := pow2_div(N, one);
+        if t.exp > 9 {
+            Power.LemmaPowStrictlyIncreases(2, 9, t.exp);
+            assert false;
+        }
+        MQ.Nth_root_lemma();
+        if t.exp < 9 {
+            reveal Power2.Pow2();
+            Power.LemmaPowStrictlyIncreases(2, t.exp, 9);
+            assert false;
+        }
+        assert t.exp == 9;
         INTT.t_loop_inv_post_lemma(a, one, coeffs);
     }
 

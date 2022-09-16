@@ -553,7 +553,6 @@ returns (ghost iter_a': iter_t)
         i := i - 1;
     }
 
-    assume gd.exp == 0;
     inverse_t_loop_inv_post_lemma(iter_a'.buff, gd, coeffs);
 
     popm_w(7, r10);
