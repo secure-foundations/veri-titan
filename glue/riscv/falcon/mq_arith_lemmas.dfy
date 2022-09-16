@@ -387,7 +387,9 @@ module mq_arith_lemmas {
         Power2.Lemma2To64();
         assert z * BASE_16 == w + xy;
 
-        gbassert IsModEquivalent(rr * 4091, x * y, Q) by {
+        var R_INV := R_INV;
+
+        gbassert IsModEquivalent(rr, x * y * R_INV, Q) by {
             assert IsModEquivalent(v, 12287 * x * y, BASE_16);
             assert Q == 12289;
             assert BASE_16 == 65536;
@@ -397,22 +399,9 @@ module mq_arith_lemmas {
             assert z * BASE_16 == (w + xy);
             assert IsModEquivalent(w + xy, 0, BASE_16);
             assert IsModEquivalent(rr, z, Q);
+            assume IsModEquivalent(1, R_INV * BASE_16, Q);
         }
 
-        assume rr == MQP.montmul(x, y);
+        assert rr == MQP.montmul(x, y);
     }
-
-    // lemma mul_upper_bound_Qsquared(x: nat, y: nat)
-    //     requires x <= 12289;
-    //     requires y <= 12289;
-    //     requires 0 <= x
-    //     requires 0 <= y
-    //     ensures mul(x, y) == x * y;
-    //     ensures x * y <= 151019521;
-    // {
-    //     reveal dw_lh();
-    //     Mul.LemmaMulNonnegative(x, y);
-    //     Mul.LemmaMulUpperBound(x, 12289, y, 12289);
-    //     DivMod.LemmaSmallMod(x * y, BASE_32);
-    // }
 }

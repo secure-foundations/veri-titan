@@ -2,6 +2,42 @@ include "falcon.s.dfy"
 include "mq_ntt.i.dfy"
 include "mq_poly.i.dfy"
 
+module ntt512_param_i refines ntt_param_s {
+    import opened Power2
+
+    function method pow2_9(): pow2_t
+    {
+        Lemma2To64();
+        pow2_t_cons(512, 9)
+    }
+
+    const Q := 12289
+
+    const N := pow2_9();
+
+    const R := 4091
+
+    const R2 := 10952
+
+//     lemma Nth_root_lemma()
+//     {
+//         assume Pow(PSI, 2 * N.full) % Q == 1;
+//         assume Pow(PSI, N.full) % Q == Q - 1;
+//         assume (PSI * PSI_INV) % Q == 1;
+
+//         assume IsModEquivalent(Pow(PSI, 2), OMEGA, Q);
+
+//         assume Pow(OMEGA, N.full) % Q == 1;
+//         assume Pow(OMEGA_INV, pow2_half(N).full) % Q == Q - 1;
+//         assume (OMEGA * OMEGA_INV) % Q == 1;
+
+//         assume (R_INV * R) % Q == 1;
+//         assume IsModEquivalent(R2, R * R, Q); 
+
+//         assume (N_INV * N.full) % Q == 1;
+//     }
+}
+
 module falcon_512_i refines
     falcon_s(ntt512_param_i, mq_poly_i(ntt512_param_i))
 {
@@ -179,23 +215,24 @@ module falcon_512_i refines
         var a_hat := MQP.scaled_coeff(a0);
         var b_hat := MQP.scaled_coeff(b0);
 
-        forall i | 0 <= i < N.full
-            ensures var x := MQP.mqpow(MQ.OMEGA, bit_rev_int(i, N));
-                MQP.mqmul(MQP.poly_eval(a_hat, x), MQP.poly_eval(b_hat, x)) == p0[i];
-        {
-        }
-
-        forall i | 0 <= i < N.full
-            ensures var x := MQP.mqpow(MQ.OMEGA, i);
-                MQP.mqmul(MQP.poly_eval(a_hat, x), MQP.poly_eval(b_hat, x)) == p1[i];
-        {
-            reveal is_bit_rev_shuffle();
-            bit_rev_symmetric(i, N);
-            assert p1[i] == p0[bit_rev_int(i, N)];
-        }
-
         assert p1 == MQP.circle_product(MQP.NTT(MQP.scaled_coeff(a0)), 
-            MQP.NTT(MQP.scaled_coeff(b0)));
+            MQP.NTT(MQP.scaled_coeff(b0))) by {
+
+            forall i | 0 <= i < N.full
+                ensures var x := MQP.mqpow(MQ.OMEGA, bit_rev_int(i, N));
+                    MQP.mqmul(MQP.poly_eval(a_hat, x), MQP.poly_eval(b_hat, x)) == p0[i];
+            {
+            }
+
+            forall i | 0 <= i < N.full
+                ensures var x := MQP.mqpow(MQ.OMEGA, i);
+                    MQP.mqmul(MQP.poly_eval(a_hat, x), MQP.poly_eval(b_hat, x)) == p1[i];
+            {
+                reveal is_bit_rev_shuffle();
+                bit_rev_symmetric(i, N);
+                assert p1[i] == p0[bit_rev_int(i, N)];
+            }
+        }
 
         forall i | 0 <= i < N.full
             ensures var x := MQP.mqpow(MQ.OMEGA_INV, bit_rev_int(i, N));
@@ -213,6 +250,7 @@ module falcon_512_i refines
             bit_rev_symmetric(i, N);
             assert p3[i] == p2[bit_rev_int(i, N)];
         }
+
         var inverse := MQP.INTT(p1);
 
         forall i | 0 <= i < N.full
@@ -227,10 +265,10 @@ module falcon_512_i refines
             var t0 := (t * N_INV) % Q;
             var t1 := (t0 * R) % Q;
             var t2 := inverse[i];
-            assert p4[i] == (p3[i] * t1 * R_INV) % Q;
+            // assert p4[i] == (p3[i] * t1 * R_INV) % Q;
 
             gbassert IsModEquivalent(p4[i], t2 * t, Q) by {
-                assert IsModEquivalent(R * R_INV, 1, Q) by {
+                assert IsModEquivalent(R_INV * R, 1, Q) by {
                     MQ.Nth_root_lemma();
                 }
                 assert IsModEquivalent(t0, t * N_INV, Q);
@@ -238,9 +276,12 @@ module falcon_512_i refines
                 assert IsModEquivalent(t2, p3[i] * N_INV, Q);
                 assert IsModEquivalent(p4[i], p3[i] * t1 * R_INV, Q);
             }
+            LemmaSmallMod(p4[i], Q);
+            assert p4[i] == (t2 * t) % Q;
         }
 
         assert p4 == MQP.negatively_wrapped_convolution(a0, b0);
+
         MQP.negatively_wrapped_convolution_lemma(a0, b0, p4);
     }
 }

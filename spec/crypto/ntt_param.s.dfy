@@ -54,35 +54,3 @@ abstract module ntt_param_s {
 
         ensures (N_INV * N.full) % Q == 1;
 }
-
-module ntt512_param_i refines ntt_param_s {
-    import opened Power2
-
-    function method pow2_9(): pow2_t
-    {
-        Lemma2To64();
-        pow2_t_cons(512, 9)
-    }
-
-    const Q := 12289
-
-    const N := pow2_9();
-
-//     lemma Nth_root_lemma()
-//     {
-//         assume Pow(PSI, 2 * N.full) % Q == 1;
-//         assume Pow(PSI, N.full) % Q == Q - 1;
-//         assume (PSI * PSI_INV) % Q == 1;
-
-//         assume IsModEquivalent(Pow(PSI, 2), OMEGA, Q);
-
-//         assume Pow(OMEGA, N.full) % Q == 1;
-//         assume Pow(OMEGA_INV, pow2_half(N).full) % Q == Q - 1;
-//         assume (OMEGA * OMEGA_INV) % Q == 1;
-
-//         assume (R_INV * R) % Q == 1;
-//         assume IsModEquivalent(R2, R * R, Q); 
-
-//         assume (N_INV * N.full) % Q == 1;
-//     }
-}
