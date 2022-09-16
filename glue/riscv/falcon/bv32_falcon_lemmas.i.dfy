@@ -413,21 +413,13 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         }
     }
 
-    predicate {:opaque} denormalization_inv(nv: seq<uint16>, dnv: seq<uint16>, i: nat)
-        requires valid_nelems(nv);
-        requires valid_elems(dnv);
+    predicate denormalization_inv(nv: seq<uint16>, dnv: seq<uint16>, i: nat)
     {
+        && valid_nelems(nv)
+        && valid_elems(dnv)
         && i <= N.full
         && (forall j | 0 <= j < i :: 
             dnv[j] == MQN.denormalize(as_nelem(nv[j])))
-    }
-
-    lemma denormalization_pre_lemma(nv: seq<uint16>, dnv: seq<uint16>)
-        requires valid_nelems(nv);
-        requires valid_elems(dnv);
-        ensures denormalization_inv(nv, dnv, 0);
-    {
-        reveal denormalization_inv();
     }
 
     lemma denormalization_peri_lemma(buff: seq<uint16>, dnv: seq<uint16>, i: nat, a1: uint32, b: uint32, c: uint32, d: uint32)
@@ -444,9 +436,7 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         ensures valid_elems(dnv[i := lh(d)]);
         ensures denormalization_inv(buff, dnv[i := lh(d)], i + 1);
     {
-        reveal denormalization_inv();
         reveal valid_elems();
-
         var lh, uh := lh(d), uh(d);
         half_split_lemma(d);
         denormalize_lemma(buff, i, a1, b, c, d);
@@ -516,21 +506,6 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
     }
 
     const NORMSQ_BOUND := integers.BASE_31
-
-    // predicate is_short_inv(norm: uint32, 
-    //     s1: seq<uint16>, s2: seq<uint16>, i: nat, ng: uint32)
-    // {
-    //     && valid_nelems(s1)
-    //     && valid_nelems(s2)
-    //     && var ns1 := as_nelems(s1);
-    //     && var ns2 := as_nelems(s2);
-    //     && i <= N.full
-    //     && ((msb(ng) == 0) ==> (norm == MQN.l2norm_squared(ns1, ns2, i)))
-    //     && ((msb(ng) == 1) ==> (MQN.l2norm_squared(ns1, ns2, i) >= NORMSQ_BOUND))
-    // }
-
-    // lemma int_square_bound_lemma(x: int)
-    //     ensures 0 <= x * x;
 
     function l2norm_squared(s1: seq<uint16>, s2: seq<uint16>, i: nat): nat
         requires i <= N.full;
@@ -615,27 +590,35 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         }
     }
 
-    // lemma rv_falcon_512_lemma(tt0: seq<uint16>, tt1: seq<uint16>, tt2: seq<uint16>, s1: seq<uint16>, s2: seq<uint16>, h: seq<uint16>, c0: seq<uint16>, result: uint32)
-    //     requires l2norm_squared_result(s1, s2, result);
-    //     requires valid_elems(tt0);
-    //     requires valid_elems(c0);
-    //     requires valid_elems(h);
-    //     requires denormalization_inv(s2, tt0, 512);
-    //     // requires tt1 == poly_mod_product(tt0, h);
-    //     requires poly_sub_loop_inv(tt2, tt1, c0, 512);
-    //     requires normalization_inv(s1, tt2, 512);
-    //     ensures (result == 1) <==> falcon_verify(
-    //         as_elems(c0), as_nelems(s2), as_elems(h));
-    // // {
-    // //     reveal denormalization_inv();
-    // //     assert tt0 == MQN.denormalize_n_elems(as_nelems(s2));
-    // //     assert tt1 == MQP.poly_mod(MQP.poly_mul(tt0, h), MQP.n_ideal());
-    // //     assume c0 == as_elems(c0);
-    // //     assume h == as_elems(h);
-    // //     assert tt2 == MQP.poly_sub(tt1, c0);
-    // //     reveal normalization_inv();
-    // //     assert as_nelems(s1) == MQN.normalize_elems(tt2);
-    // //     assert falcon_512_i.bound() == 0x29845d6;
-    // // }
+    lemma falcon_lemma(
+        tt0: seq<uint16>, tt1: seq<uint16>, tt2: seq<uint16>,
+        s1: seq<uint16>, s2: seq<uint16>, h: seq<uint16>, c0: seq<uint16>,
+        result: uint32)
+
+    requires valid_elems(tt0);
+    requires valid_elems(tt1);
+    requires valid_elems(h);
+    requires denormalization_inv(s2, tt0, 512);
+    requires as_elems(tt1) ==
+            poly_mod_product(as_elems(tt0), as_elems(h));
+    requires poly_sub_loop_inv(tt2, tt1, c0, 512);
+    requires normalization_inv(s1, tt2, 512);
+    requires valid_nelems(s1);
+    requires valid_nelems(s2);
+    requires (result == 1) <==>
+        l2norm_squared(s1, s2, 512) < 0x29845d6;
+    ensures (result == 1) <==>
+        falcon_verify(as_elems(c0), as_nelems(s2), as_elems(h));
+    {
+        reveal valid_elems();
+        reveal normalization_inv();
+
+        assert tt0 == MQN.denormalize_elems(as_nelems(s2));
+        assert tt1 == poly_mod_product(as_elems(tt0), as_elems(h));
+        assert tt2 == MQP.poly_sub(tt1, c0);
+        assert as_nelems(s1) == MQN.normalize_elems(tt2);
+        assert l2norm_squared(s1, s2, 512) == 
+            MQN.l2norm_squared(as_nelems(s1), as_nelems(s2), 512);
+    }
 
 }

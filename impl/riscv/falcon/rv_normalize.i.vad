@@ -25,7 +25,6 @@ function nelems_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int)
 function cond_sub_q_lemma(a: uint16, b: uint16, c: uint16, d: uint16): void extern;
 
 function denormalization_inv(nv: seq(uint16), dnv: seq(uint16), i: nat): bool extern;
-function denormalization_pre_lemma(nv: seq(uint16), dnv: seq(uint16)): void extern;
 function denormalization_peri_lemma(buff: seq(uint16), dnv: seq(uint16), i: nat, a1: uint32, b: uint32, c: uint32, d: uint32): void extern;
 
 procedure denormalize(
@@ -68,8 +67,6 @@ returns (ghost next_iter_tmp: b16_iter)
     next_iter_tmp := iter_tmp;
 
     ghost var u :nat := 0;
-
-    denormalization_pre_lemma(next_iter_s2.buff, iter_tmp.buff);
 
     while (a1 < t1)
         invariant s1 == 12289;
