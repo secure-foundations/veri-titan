@@ -115,7 +115,7 @@ abstract module bv_op_s
       requires valid_shift(amount);
       ensures ls(x, amount) == (x * Power2.Pow2(amount)) % BASE();
 
-    function method {:opaque} lsb(x: uint): uint1
+    function method lsb(x: uint): uint1
     {
         x % 2
     }
@@ -123,6 +123,13 @@ abstract module bv_op_s
     function method msb(x: uint): uint1
     {
         if x >= BASE()/2 then 1 else 0
+    }
+
+    lemma mul_equiv_lemma(x: sint, y: sint) 
+        ensures var p :int := x * y;
+            mul(to_2s_comp(x), to_2s_comp(y)) == p % BASE();
+    {
+        assume false;
     }
 
 /* addition */

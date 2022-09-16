@@ -355,27 +355,25 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         ls1_is_double(rsbi);
     }
 
-    predicate word_is_normalized(e: uint16)
+    predicate valid_nelem(e: uint16)
     {
         MQN.int_is_normalized(bv16_op_s.to_int16(e))
     }
 
-    predicate {:opaque} valid_nelems(a: seq<uint16>)
-        ensures valid_nelems(a) ==> |a| == N.full;
+    predicate valid_nelems(a: seq<uint16>)
     {
         && |a| == N.full
-        && (forall i | 0 <= i < |a| :: word_is_normalized(a[i]))
+        && (forall i | 0 <= i < |a| :: valid_nelem(a[i]))
     }
 
     function as_nelems(a: seq<uint16>): (na: seq<nelem>)
         requires valid_nelems(a);
     {
-        reveal valid_nelems();
         seq(|a|, i requires 0 <= i < |a| => as_nelem(a[i]))
     }
 
     function as_nelem(e: uint16): nelem
-        requires word_is_normalized(e)
+        requires valid_nelem(e)
     {
         bv16_op_s.to_int16(e)
     }
@@ -387,12 +385,10 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         requires b == uint32_srai(a1, 31);
         requires c == uint32_and(b, Q);
         requires d == uint32_add(a1, c);
-        ensures word_is_normalized(buff[i]);
+        ensures valid_nelem(buff[i]);
         ensures d == MQN.denormalize(as_nelem(buff[i]));
     {
-        assert word_is_normalized(buff[i]) by {
-            reveal valid_nelems();
-        }
+        assert valid_nelem(buff[i]);
 
         var a0 :uint16 := buff[i];
         var sa0 := as_nelem(a0);
@@ -421,7 +417,6 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         requires valid_nelems(nv);
         requires valid_elems(dnv);
     {
-        && reveal valid_nelems();
         && i <= N.full
         && (forall j | 0 <= j < i :: 
             dnv[j] == MQN.denormalize(as_nelem(nv[j])))
@@ -444,13 +439,12 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         requires b == uint32_srai(a1, 31);
         requires c == uint32_and(b, Q);
         requires d == uint32_add(a1, c);
-        ensures word_is_normalized(buff[i]);
+        ensures valid_nelem(buff[i]);
         ensures d == MQN.denormalize(as_nelem(buff[i]));
         ensures valid_elems(dnv[i := lh(d)]);
         ensures denormalization_inv(buff, dnv[i := lh(d)], i + 1);
     {
         reveal denormalization_inv();
-        reveal valid_nelems();
         reveal valid_elems();
 
         var lh, uh := lh(d), uh(d);
@@ -468,7 +462,7 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         && i <= N.full
         && inputs[i..] == outputs[i..]
         && (forall j | 0 <= j < i :: (
-            && word_is_normalized(outputs[j])
+            && valid_nelem(outputs[j])
             && as_nelem(outputs[j]) == MQN.normalize(inputs[j]))
         )
     }
@@ -519,124 +513,129 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         ensures valid_nelems(outputs);
     {
         reveal normalization_inv();
-        reveal valid_nelems();
     }
 
     const NORMSQ_BOUND := integers.BASE_31
 
-    predicate l2norm_squared_bounded_inv(norm: uint32, 
-        s1: seq<uint16>, s2: seq<uint16>, i: nat, ng: uint32)
-    {
-        && valid_nelems(s1)
-        && valid_nelems(s2)
-        && var ns1 := as_nelems(s1);
-        && var ns2 := as_nelems(s2);
-        && i <= N.full
-        && ((msb(ng) == 0) ==> (norm == MQN.l2norm_squared(ns1, ns2, i)))
-        && ((msb(ng) == 1) ==> (MQN.l2norm_squared(ns1, ns2, i) >= NORMSQ_BOUND))
-    }
-
-    lemma l2norm_squared_bounded_peri_lemma(
-        norm0: uint32, norm1: uint32, norm2: uint32,
-        ng0: uint32, ng1: uint32, ng2: uint32,
-        v1: uint32, v2: uint32,
-        vv1: uint32, vv2: uint32,
-        s1: seq<uint16>, s2: seq<uint16>,
-        i: nat)
-
-        requires l2norm_squared_bounded_inv(norm0, s1, s2, i, ng0);
-        requires i < N.full
-        requires v1 == uint16_sign_ext(s1[i])
-        requires v2 == uint16_sign_ext(s2[i])
-        requires vv1 == uint32_mul(v1, v1);
-        requires vv2 == uint32_mul(v2, v2);
-
-        requires norm1 == uint32_add(norm0, vv1);
-        requires norm2 == uint32_add(norm1, vv2);
-        requires ng1 == uint32_or(ng0, norm1);
-        requires ng2 == uint32_or(ng1, norm2);
-
-        ensures l2norm_squared_bounded_inv(norm2, s1, s2, i+1, ng2);
-    {
-        reveal valid_nelems();
-        var iv1, iv2 := as_nelem(s1[i]), as_nelem(s2[i]);
-        var ivv1, ivv2 := iv1 as int * iv1 as int, iv2 as int * iv2 as int;
-        assume vv1 == ivv1;
-        assume vv2 == ivv2;
-
-        msb_bound_lemma(norm0);
-        msb_bound_lemma(norm1);
-        msb_bound_lemma(norm2);
-
-        if msb(ng0) == 1 {
-            assume msb(ng2) == 1; 
-            return;
-        }
-
-        if msb(ng1) == 1 {
-            assume msb(norm1) == 1;
-            assume msb(ng2) == 1;
-            return;
-        }
-
-        if msb(ng2) == 1 {
-            assume msb(norm2) == 1;
-            return;
-        }
-
-        assume msb(norm2) == 0;
-        assume msb(norm1) == 0;
-        assume msb(norm0) == 0;
-
-        assume vv1 <= 0x80000000;
-        assume vv2 <= 0x80000000;
-
-        return; 
-    }
-
-    predicate l2norm_squared_result(s1: seq<uint16>, s2: seq<uint16>, result: uint32)
-    {
-        && valid_nelems(s1)
-        && valid_nelems(s2)
-        && ((result == 1) <==> (MQN.l2norm_squared(as_nelems(s1), as_nelems(s2), |s1|) < 0x29845d6))
-    }
-
-    lemma l2norm_squared_bounded_post_lemma(s1: seq<uint16>, s2: seq<uint16>, norm0: uint32, ng: uint32, norm1: uint32, result: uint32)
-        requires l2norm_squared_bounded_inv(norm0, s1, s2, 512, ng);
-        requires norm1 == uint32_or(norm0, uint32_srai(ng, 31));
-        requires result == uint32_lt(norm1, 0x29845d6);
-        ensures l2norm_squared_result(s1, s2, result);
-    {
-        if (msb(ng) == 0) {
-            assume uint32_srai(ng, 31) == 0;
-            assume norm1 == norm0;
-        } else {
-            assume uint32_srai(ng, 31) == 0xffff_ffff;
-            assume norm1 == 0xffff_ffff;
-        }
-    }
-
-    lemma rv_falcon_512_lemma(tt0: seq<uint16>, tt1: seq<uint16>, tt2: seq<uint16>, s1: seq<uint16>, s2: seq<uint16>, h: seq<uint16>, c0: seq<uint16>, result: uint32)
-        requires l2norm_squared_result(s1, s2, result);
-        requires valid_elems(tt0);
-        requires valid_elems(c0);
-        requires valid_elems(h);
-        requires denormalization_inv(s2, tt0, 512);
-        // requires tt1 == poly_mod_product(tt0, h);
-        requires poly_sub_loop_inv(tt2, tt1, c0, 512);
-        requires normalization_inv(s1, tt2, 512);
-        ensures (result == 1) <==> falcon_verify(
-            as_elems(c0), as_nelems(s2), as_elems(h));
+    // predicate is_short_inv(norm: uint32, 
+    //     s1: seq<uint16>, s2: seq<uint16>, i: nat, ng: uint32)
     // {
-    //     reveal denormalization_inv();
-    //     assert tt0 == MQN.denormalize_n_elems(as_nelems(s2));
-    //     assert tt1 == MQP.poly_mod(MQP.poly_mul(tt0, h), MQP.n_ideal());
-    //     assume c0 == as_elems(c0);
-    //     assume h == as_elems(h);
-    //     assert tt2 == MQP.poly_sub(tt1, c0);
-    //     reveal normalization_inv();
-    //     assert as_nelems(s1) == MQN.normalize_elems(tt2);
-    //     assert falcon_512_i.bound() == 0x29845d6;
+    //     && valid_nelems(s1)
+    //     && valid_nelems(s2)
+    //     && var ns1 := as_nelems(s1);
+    //     && var ns2 := as_nelems(s2);
+    //     && i <= N.full
+    //     && ((msb(ng) == 0) ==> (norm == MQN.l2norm_squared(ns1, ns2, i)))
+    //     && ((msb(ng) == 1) ==> (MQN.l2norm_squared(ns1, ns2, i) >= NORMSQ_BOUND))
     // }
+
+    // lemma int_square_bound_lemma(x: int)
+    //     ensures 0 <= x * x;
+
+    function l2norm_squared(s1: seq<uint16>, s2: seq<uint16>, i: nat): nat
+        requires i <= N.full;
+        requires valid_nelems(s1);
+        requires valid_nelems(s2);
+    {
+        var ns1 := as_nelems(s1);
+        var ns2 := as_nelems(s2);
+        MQN.l2norm_squared(ns1, ns2, i)
+    }
+
+    lemma accumulate_lemma(v16: uint16, sum: uint32, sum': uint32,
+        over: uint32, over': uint32, gsum: nat)
+        returns (gsum': nat)
+        requires msb(over) == 1 ==> gsum >= NORMSQ_BOUND;
+        requires msb(over) == 0 ==> sum == gsum < NORMSQ_BOUND;
+
+        requires valid_nelem(v16);
+        requires var v32 := uint16_sign_ext(v16);
+            sum' == uint32_add(sum, uint32_mul(v32, v32));
+        requires over' == uint32_or(over, sum');
+
+        ensures gsum' == gsum + as_nelem(v16) * as_nelem(v16);
+        ensures msb(over') == 1 ==> gsum' >= NORMSQ_BOUND;
+        ensures msb(over') == 0 ==> sum' == gsum' < NORMSQ_BOUND;
+    {
+        var v32 := uint16_sign_ext(v16);
+        var iv16 :int := bv16_op_s.to_int16(v16);
+        var iv32 :int := to_int32(v32);
+        var p := uint32_mul(v32, v32);
+        gsum' := gsum + p;
+
+        mul_equiv_lemma(iv32, iv32);
+
+        assert -12289 <= iv16 <= 12289;
+        assume 0 <= iv16 * iv16 <= 151019521;
+
+        calc == {
+            p;
+            (iv32 * iv32) % 0x100000000;
+            (iv16 * iv16) % 0x100000000;
+            {
+                LemmaSmallMod(151019521, 0x100000000);
+            }
+            (iv16 * iv16);
+        }
+
+        assert msb(sum') == 1 ==> msb(over') == 1 by {
+            reveal or();
+        }
+        assert msb(over) == 1 ==> msb(over') == 1 by {
+            reveal or();
+        }
+        assume (msb(sum') == 0 && msb(over) == 0)
+            ==> msb(over') == 0;
+    }
+
+    lemma is_short_post_lemma(s1: seq<uint16>, s2: seq<uint16>, 
+        sum: uint32, sum': uint32, over: uint32, over': uint32, gsum: nat)
+        requires valid_nelems(s1);
+        requires valid_nelems(s2);
+        requires gsum == l2norm_squared(s1, s2, N.full);
+        requires msb(over) == 1 ==> gsum >= NORMSQ_BOUND;
+        requires msb(over) == 0 ==> sum == gsum < NORMSQ_BOUND;
+        requires over' == uint32_srai(over, 31);
+        requires sum' == or(over', sum);
+        ensures gsum < NORMSQ_BOUND ==> sum' == sum;
+        ensures gsum >= NORMSQ_BOUND ==> sum' == 0xffff_ffff;
+    {
+        lemma_rs_by_31(to_int32(over));
+
+        if (msb(over) == 0) {
+            assert over' == 0;
+            assert sum' == sum by {
+                reveal or();
+            }
+        } else {
+            assert over' == 0xffff_ffff;
+            assert sum' == 0xffff_ffff by {
+                reveal or();
+            }
+        }
+    }
+
+    // lemma rv_falcon_512_lemma(tt0: seq<uint16>, tt1: seq<uint16>, tt2: seq<uint16>, s1: seq<uint16>, s2: seq<uint16>, h: seq<uint16>, c0: seq<uint16>, result: uint32)
+    //     requires l2norm_squared_result(s1, s2, result);
+    //     requires valid_elems(tt0);
+    //     requires valid_elems(c0);
+    //     requires valid_elems(h);
+    //     requires denormalization_inv(s2, tt0, 512);
+    //     // requires tt1 == poly_mod_product(tt0, h);
+    //     requires poly_sub_loop_inv(tt2, tt1, c0, 512);
+    //     requires normalization_inv(s1, tt2, 512);
+    //     ensures (result == 1) <==> falcon_verify(
+    //         as_elems(c0), as_nelems(s2), as_elems(h));
+    // // {
+    // //     reveal denormalization_inv();
+    // //     assert tt0 == MQN.denormalize_n_elems(as_nelems(s2));
+    // //     assert tt1 == MQP.poly_mod(MQP.poly_mul(tt0, h), MQP.n_ideal());
+    // //     assume c0 == as_elems(c0);
+    // //     assume h == as_elems(h);
+    // //     assert tt2 == MQP.poly_sub(tt1, c0);
+    // //     reveal normalization_inv();
+    // //     assert as_nelems(s1) == MQN.normalize_elems(tt2);
+    // //     assert falcon_512_i.bound() == 0x29845d6;
+    // // }
 
 }

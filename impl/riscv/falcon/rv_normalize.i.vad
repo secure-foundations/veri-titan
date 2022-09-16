@@ -184,32 +184,63 @@ returns (ghost iter_tt': b16_iter)
     normalization_post_lemma(iter_tt'.buff, inputs);
 }
 
-function l2norm_squared_bounded_inv(norm: uint32, s1: seq(uint16), s2: seq(uint16), i: nat, ng: uint32): bool extern;
-function l2norm_squared_bounded_pre_lemma(s1: seq(uint16), s2: seq(uint16)): void extern;
-function l2norm_squared_bounded_peri_lemma(
-        norm0: uint32, norm1: uint32, norm2: uint32,
-        ng0: uint32, ng1: uint32, ng2: uint32,
-        v1: uint32, v2: uint32,
-        vv1: uint32, vv2: uint32,
-        s1: seq(uint16), s2: seq(uint16), i: nat): void extern;
-function l2norm_squared_bounded_post_lemma(s1: seq(uint16), s2: seq(uint16), norm0: uint32, ng: uint32, norm1: uint32, result: uint32): void extern;
-function l2norm_squared_result(s1: seq(uint16), s2: seq(uint16), result: uint32): bool extern;
+function is_short_post_lemma(s1: seq(uint16), s2: seq(uint16), sum: uint32, sum': uint32, over: uint32, over': uint32, gsum: nat): void extern;
+// function l2norm_squared_result(s1: seq(uint16), s2: seq(uint16), result: uint32): bool extern;
+
+function mul_equiv_lemma(x: int32, y: int32): void extern;
+function to_int32(x: uint32): int32 extern;
+function valid_nelem(x: uint16): bool extern;
+function accumulate_lemma(v16: uint16, sum: uint32, sum': uint32,
+        over: uint32, over': uint32, gsum: nat): nat extern;
+function msb(x: uint32): uint1 extern;
+function as_nelem(x: uint16): int extern;
+
+procedure accumulate(ghost lh: uint16, ghost gsum: nat)
+    returns (ghost gsum': nat)
+    requires
+        s1 == uint16_sign_ext(lh);
+        msb(a2) == 1 ==> gsum >= 0x80000000;
+        msb(a2) == 0 ==> gsum < 0x80000000;
+        msb(a2) == 0 ==> a0 == gsum;
+
+    requires
+        valid_nelem(lh);
+
+    modifies
+        s1; a0; a2;
+    
+    ensures
+        gsum' == gsum + as_nelem(lh) * as_nelem(lh);
+        msb(a2) == 1 ==> gsum' >= 0x80000000;
+        msb(a2) == 0 ==> gsum' < 0x80000000;
+        msb(a2) == 0 ==> a0 == gsum';
+{
+    mul(s1, s1, s1);
+    add(a0, a0, s1);
+    or(a2, a2, a0);
+    gsum' := accumulate_lemma(lh, old(a0), a0, old(a2), a2, gsum);
+}
+
+function l2norm_squared(s1: seq(uint16), s2: seq(uint16), i: nat): nat extern;
 
 procedure is_short(
     ghost iter_a: b16_iter,
     ghost iter_b: b16_iter)
 
-    requires nelems_iter_inv(heap, iter_a, s3, 0);
-    requires nelems_iter_inv(heap, iter_b, s4, 0);
+    requires
+        nelems_iter_inv(heap, iter_a, s3, 0);
+        nelems_iter_inv(heap, iter_b, s4, 0);
 
     reads
         mem; heap;
     
     modifies
         a0; a1; a2; s1; s3; s4;
-    
+
     ensures
-        l2norm_squared_result(iter_a.buff, iter_b.buff, a0);
+        (a0 == 1)
+            <==>
+        l2norm_squared(iter_a.buff, iter_b.buff, 512) < 0x29845d6;
 {
     li(a0, 0); // s
     li(a2, 0); // ng
@@ -220,55 +251,54 @@ procedure is_short(
     ghost var iter_a' := iter_a;
     ghost var iter_b' := iter_b;
     ghost var i: nat := 0;
+    ghost var gsum :nat := 0;
 
     while (s3 < a1)
-        invariant a1 == iter_a'.base_ptr + 1024;
-        invariant mem == old(mem);
-        invariant heap == old(heap);
-        invariant i <= seq_len(buff_a);
-        invariant iter_a'.base_ptr == iter_a.base_ptr;
-        invariant nelems_iter_inv(heap, iter_a', s3, i);
-        invariant iter_b'.base_ptr == iter_b.base_ptr;
-        invariant nelems_iter_inv(heap, iter_b', s4, i);
-        invariant l2norm_squared_bounded_inv(a0, buff_a, buff_b, i, a2);
+        invariant
+            a1 == iter_a'.base_ptr + 1024;
+            msb(a2) == 1 ==> gsum >= 0x80000000;
+            msb(a2) == 0 ==> gsum < 0x80000000;
+            msb(a2) == 0 ==> a0 == gsum;
+
+        invariant
+            nelems_iter_inv(heap, iter_a', s3, i);
+            iter_a'.base_ptr == iter_a.base_ptr;
+            nelems_iter_inv(heap, iter_b', s4, i);
+            iter_b'.base_ptr == iter_b.base_ptr;
+
+        invariant
+            mem == old(mem);
+            heap == old(heap);
+
+        invariant
+            gsum == l2norm_squared(iter_a'.buff, iter_b'.buff, i);
+
         decreases a1 - s3;
     {
         iter_a' := lh_next(s1, s3, 0, true, iter_a');
-        let norm0 := a0;
-        let ng0 := a2;
-        // assert s1 == buff_a[i];
-        let v1 := s1;
-        mul(s1, s1, s1);
-        let vv1 := s1;
-        add(a0, a0, s1);
-        let norm1 := a0;
-        or(a2, a2, a0);
-        let ng1 := a2;
+
+        gsum := accumulate(buff_a[i], gsum);
 
         iter_b' := lh_next(s1, s4, 0, true, iter_b');
-        let v2 := s1;
-        mul(s1, s1, s1);
-        let vv2 := s1;
-        add(a0, a0, s1);
-        or(a2, a2, a0);
 
-        l2norm_squared_bounded_peri_lemma(norm0, norm1, a0,
-            ng0, ng1, a2, v1, v2, vv1, vv2, buff_a, buff_b, i);
+        gsum := accumulate(buff_b[i], gsum);
 
         addi(s3, s3, 2);
         addi(s4, s4, 2);
         i := i + 1;
     }
 
-    let norm0 := a0;
-    let ng := a2;
+    let over := a2;
     srai(a2, a2, 31);
-    or(a0, a0, a2);
-    let norm1 := a0;
+    let over' := a2;
+    let sum := a0;
+
+    or(a0, a2, a0);
+    let sum' := a0;
     li(a1, 0x29845d6);
     sltu(a0, a0, a1);
 
-    l2norm_squared_bounded_post_lemma(buff_a, buff_b, norm0, ng, norm1, a0);
+    is_short_post_lemma(buff_a, buff_b, sum, sum', over, over', gsum);
 }
 
 
