@@ -489,9 +489,9 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
             assert as_nelem(rst) == MQN.normalize(value);
         } else {
             if to_int32(rst) < 0 {
-                assume uh == 0xffff; // the upper bits all set
+                assert uh == 0xffff; // the upper bits all set
             } else {
-                assume uh == 0; // the upper bits all clear
+                assert uh == 0; // the upper bits all clear
             }
         }
         assert as_nelem(lh) == MQN.normalize(value);
