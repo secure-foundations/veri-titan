@@ -34,7 +34,6 @@ function pow2_basics_lemma(p: pow2_t): void extern;
 
 function cond_set_Q_lemma(flags0: flags_t, mask: uint16, flags1: flags_t): void extern;
 function lemma_mq_add_correct(sum: uint16, mask: uint16, r: uint16, x: uint16, y: uint16) : void extern;
-function lemma_mq_sub_correct(diff: uint16, flags: flags_t, mask: uint16, r: uint16, x: uint16, y: uint16) : void extern;
 function to_int16(i: uint16): int16 extern;
 
 function dw_add_lemma(x_lh: uint16, x_uh: uint16, y_lh: uint16, y_uh: uint16, carry: uint1): dw_view_t extern;
@@ -77,14 +76,14 @@ procedure cond_add_Q(inout rd: reg, inout rt: reg)
     add_w(rt, rd);
 }
 
-procedure check_int16_sign(inout rd: reg)
-    modifies
-        flags;
-    ensures
-        to_int16(old(rd)) < 0 <==> flags.cf == 1;
-{
-    rla_w(rd);
-}
+// procedure check_int16_sign(inout rd: reg)
+//     modifies
+//         flags;
+//     ensures
+//         to_int16(old(rd)) < 0 <==> flags.cf == 1;
+// {
+//     rla_w(rd);
+// }
 
 function rs1_lemma(x: uint16): void extern;
 
@@ -148,20 +147,11 @@ procedure mq_add()
     mov_w(y, tmp);    // tmp <- y
     add_w_imm((-12289), tmp); // tmp <- y - Q
     add_w(x, tmp);    // tmp <- y - Q + x
-    let sum := tmp;
-
     // If we're still negative, create a mask of 0xFFFF.  Else, use 0.
     mov_w(tmp, r);     // r <- tmp
     rla_w(r);          // carry <- MSB of r
-    let carry := flags.cf;
-    clr_w(r);          // r <- 0
-    subc_w(r, r);      // r <- 0 - carry;  r == if carry then 0xFFFF else 0
-    let mask := r;
-
-    and_w_imm(12289, r);       // r <- Q & mask
+    cond_set_Q(r);
     add_w(tmp, r);     // r <- (Q & mask) + y - Q + x
-
-    lemma_mq_add_correct(sum, mask, r, x, y);
 }
 
 procedure mq_sub() 
@@ -185,86 +175,55 @@ procedure mq_sub()
         r == mqsub(old(x), old(y));
 {
     mov_w_imm((-1), r); // r <- 0xFFFF
-
     mov_w(x, tmp);    // tmp <- x
     sub_w(y, tmp);    // tmp <- x - y
-    let diff := tmp;
-    let diff_flags := flags;
-    
-    let carry := flags.cf;  // carry == 1 if we went negative, else carry == 0
-
-    // If we went negative, create a mask of 0xFFFF.  Else, use 0.
-    clr_w(r);          // r <- 0
-    subc_w(r, r);      // r <- 0 - carry;  r == if carry then 0xFFFF else 0
-    let mask := r;
-
-    and_w_imm(12289, r);       // r <- Q & mask
+    cond_set_Q(r);
     add_w(tmp, r);     // r <- (Q & mask) + x - y 
-
-    lemma_mq_sub_correct(diff, flags, mask, r, x, y);
 }
 
-// function IsModEquivalent(x: int, y: int, m: int) : bool extern;
+function general_dw_add_lemma(xs: seq(uint16), ys: seq(uint16), zs: seq(uint16), c1: uint1, c2: uint1): uint32_view_t extern;
+function build_dw_view(lh: uint16, uh: uint16): uint32_view_t extern;
+function dw_view_lemma(v: uint32_view_t): void extern;
 
-function lemma_cond_add_Q(flags: flags_t, mask: uint16, r: uint16, input: int) : void extern;
+procedure dw_add(in rsl: reg, in rsh: reg, inout rdl: reg, inout rdh: reg, ghost sum: uint32_view_t)
+    returns (ghost sum': uint32_view_t)
+    requires
+        @rdl != @rsl;
+        @rdl != @rsh;
+        @rdl != @rdh;
+
+        @rdh != @rsl;
+        @rdh != @rsh;
+    requires
+        sum.lh == rdl;
+        sum.uh == rdh;
+    modifies
+        flags;
+    ensures
+        sum'.lh == rdl;
+        sum'.uh == rdh;
+        sum'.full == to_nat(seq(rdl, rdh));
+        sum'.full + flags.cf * 0x100000000 == 
+            to_nat(seq(old(rsl), old(rsh))) + sum.full;
+{
+    dw_view_lemma(sum);
+    let x_lh := rsl;
+    let x_uh := rsh;
+    let y_lh := rdl;
+    let y_uh := rdh;
+
+    add_w(rsl, rdl);
+    let c1 := flags.cf;
+    addc_w(rsh, rdh);
+    let c2 := flags.cf;
+
+    let z_lh := rdl;
+    let z_uh := rdh;
+
+    sum' := general_dw_add_lemma(seq(x_lh, x_uh), seq(y_lh, y_uh),
+        seq(z_lh, z_uh), c1, c2);
+}
 function lemma_montymul_correct(x: nat, y: nat, xy_lh: uint16, xy_uh: uint16, Q0Ixy:nat, sum: uint32_view_t, partial_lh: uint16, partial_uh: uint16, partial_uh_xy_uh:uint16, m: uint16, flags: flags_t, r:uint16) : void extern;
-
-// procedure montymul()
-//     lets 
-//         x    @= r12;
-//         y    @= r13;
-//         r    @= r11;
-//         tmp  @= r10;
-        
-//     requires
-//         x < 12289;
-//         y < 12289;
-//         r15 == 0;
-//     modifies
-//         flags;
-//         x; y; r; tmp; r14; r15;
-//     ensures
-//         IsModEquivalent(r * 4091, old(x * y), 12289);
-// {
-//     mov_w(y, r14);
-//     clr_w(y);
-//     // to_nat(seq(r12, r13)) == old(r12) * old(r14);
-//     builtin__mspabi_mpyl();     // x, y <- lh(x*y), uh(x*y)
-//     ghost var xy_lh := x;
-//     ghost var xy_uh := y;
-//     mov_w(y, tmp);              // tmp <- xy_uh
-//     mov_w(x, r14);              // r14 <- xy_lh
-    
-//     mov_w_imm(12287, y);        // Need to use y's register for multiplication
-//     builtin__mspabi_mpyi();     // x <- lh(x*y) * (Q-2)
-//     ghost var Q0Ixy := x;
-
-  
-//     mov_w_imm(12289, y);                // y <- Q
-//     // sum.full == old(r13) * old(r12) + old(r14);
-//     let sum := mula16();  // x, y <- Q * Q0Ixy + lh(x*y)
-//     let partial_lh := x;
-//     let partial_uh := y;
-//     add_w(tmp, y);              // y += xy_uh, so x, y == Q * Q0Ixy + x*y
-//     let partial_uh_xy_uh := y;
-
-//     // Now we ignore the lower-half (b/c the C code uses a >> 16)
-//     add_w_imm((-12289), y);       // y -= Q
-//     let f := flags;
-//     let m := y;
-
-//     // If we went negative, create a mask of 0xFFFF.  Else, use 0.
-//     clr_w(r);          // r <- 0
-//     subc_w(r, r);      // r <- 0 - carry;  r == if carry then 0xFFFF else 0
-//     let mask := r;
-    
-//     and_w_imm(12289, r);       // r <- Q & mask
-//     let applied_mask := r;
-//     add_w(y, r);       // r <- (Q & mask) + y
-
-//     lemma_cond_add_Q(f, mask, r, y);
-//     lemma_montymul_correct(old(x), old(y), xy_lh, xy_uh, Q0Ixy, sum, partial_lh, partial_uh, partial_uh_xy_uh, m, f, r);
-// }
 
 procedure montymul(ghost x: nat, ghost y: nat)
     {:frame false}
@@ -329,18 +288,16 @@ procedure montymul(ghost x: nat, ghost y: nat)
 
     builtin__mspabi_mpyl(); 
 
-    assert to_nat(seq(r12, r13)) == mul(xy_lh, 12287) * 12289;
+    ghost var sum := build_dw_view(r12, r13); 
+    // assert to_nat(seq(r12, r13)) == mul(xy_lh, 12287) * 12289;
+
+    dw_view_lemma(sum);
+    assert sum.full == mul(xy_lh, 12287) * 12289;
     assert to_nat(seq(r9, r10)) == x * y;
 
-    let xs := seq(r9, r10);
-    let ys := seq(r12, r13);
-
-    add_w(r9, r12);
-    let carry := flags.cf;
-    addc_w(r10, r13);
-
-    assume dw_add_is_safe(xs[0], xs[1], ys[0], ys[1]);
-    let sum := dw_add_lemma(xs[0], xs[1], ys[0], ys[1], carry);
+    sum := dw_add(r9, r10, r12, r13, sum);
+    assert sum.full + flags.cf * 0x100000000 == 
+        x * y + mul(xy_lh, 12287) * 12289;
 
     add_w_imm((-12289), r13);
     cond_add_Q(r13, r12);
@@ -353,8 +310,6 @@ procedure montymul(ghost x: nat, ghost y: nat)
     mov_w(r5, r11);
     popm_w(6, r10);
 }
-
-
 
 #verbatim
 }

@@ -21,13 +21,6 @@ module mq_arith_lemmas {
 
     import opened falcon_512_i
 
-    // lemma {:axiom} rs1_is_half(a: uint32)
-    //     ensures uint32_rs(a, 1) == a / 2;
-
-    // lemma {:axiom} ls1_lemma(a: uint32)
-    //     requires a < BASE_31;
-    //     ensures uint32_ls(a, 1) == a * 2;
-
     lemma lemma_rs_by_31(x: int32)
         ensures x >= 0 ==> int32_rs(x, 31) == 0;
         ensures x < 0 ==> int32_rs(x, 31) == -1;
@@ -83,18 +76,6 @@ module mq_arith_lemmas {
         }
     }
 
-    lemma lemma_mq_add_correct(d: uint32, b: uint32, c: uint32, r: uint32, x: uint32, y: uint32)
-        requires 0 <= x < 12289;
-        requires 0 <= y < 12289;
-        requires d == uint32_add(x, uint32_add(y, to_uint32((-12289))));
-        requires b == uint32_srai(d, 31);
-        requires c == uint32_and(b, Q);
-        requires r == uint32_add(c, d);
-        ensures r == (x + y) % 12289;
-    {
-        cond_set_Q_lemma(d, c);
-    } 
-
     lemma lemma_uint32_and_Q(x: uint32)
         ensures x == 0 ==> uint32_and(x, Q) == 0;
         ensures to_int32(x) == -1 ==> uint32_and(x, Q) == Q;
@@ -104,18 +85,6 @@ module mq_arith_lemmas {
             assert x == 4294967295;
             assert uint32_and(4294967295, Q) == Q;
         }
-    }
-
-    lemma lemma_mq_sub_correct(d: uint32, b: uint32, c: uint32, r: uint32, x: int, y: int)
-        requires 0 <= x < 12289;
-        requires 0 <= y < 12289;
-        requires d == uint32_sub(x, y);
-        requires b == uint32_srai(d, 31);
-        requires c == uint32_and(b, 12289);
-        requires r == uint32_add(c, d);
-        ensures r == (x - y) % 12289;
-    {
-        cond_set_Q_lemma(d, c);
     }
 
     lemma lemma_positive_rs(x: uint32, shift: nat)
@@ -249,8 +218,6 @@ module mq_arith_lemmas {
         assert z <= (Q * (BASE_16 - 1) + (Q-1) * (Q-1)) / 65536 by {
             DivMod.LemmaDivIsOrdered(wxy, Q * (BASE_16 - 1) + (Q-1) * (Q-1), 65536);
         }
-
-
 
         assert (Q * (BASE_16 - 1) + (Q-1) * (Q-1)) == 956354559;
 
