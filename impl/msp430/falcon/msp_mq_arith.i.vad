@@ -17,6 +17,7 @@ import opened integers
 import opened mq_arith_lemmas
 import opened bv16_mm_lemmas
 import opened DivMod
+import opened falcon_512_i
 
 import opened pow2_s
 // import opened msp_mul
@@ -29,7 +30,7 @@ function operator(.full) (p :pow2_t): nat extern;
 function operator(.exp) (p :pow2_t): nat extern;
 function pow2_half(p: pow2_t): pow2_t extern;
 function pow2_double(p: pow2_t): pow2_t extern;
-function pow2_basics(p: pow2_t): void extern;
+function pow2_basics_lemma(p: pow2_t): void extern;
 
 function cond_set_Q_lemma(flags0: flags_t, mask: uint16, flags1: flags_t): void extern;
 function lemma_mq_add_correct(sum: uint16, mask: uint16, r: uint16, x: uint16, y: uint16) : void extern;
@@ -85,6 +86,10 @@ procedure check_int16_sign(inout rd: reg)
     rla_w(rd);
 }
 
+function rs1_lemma(x: uint16): void extern;
+
+function pow2_increases_lemma(n: pow2_t, n': pow2_t): void extern;
+
 procedure half(inout dst: reg, ghost p: pow2_t)
     returns (ghost p': pow2_t)
     requires
@@ -97,9 +102,10 @@ procedure half(inout dst: reg, ghost p: pow2_t)
         dst == p'.full;
         p' == pow2_half(p);
 {
+    rs1_lemma(dst);
+    pow2_increases_lemma(p, N);
     rra_w(dst);
     p' := pow2_half(p);
-    assume false;
 }
 
 procedure double(inout dst: reg, ghost p: pow2_t)
@@ -115,8 +121,8 @@ procedure double(inout dst: reg, ghost p: pow2_t)
         p' == pow2_double(p);
 {
     add_w(dst, dst);
+    pow2_increases_lemma(p, N);
     p' := pow2_double(p);
-    assume false;
 }
 
 procedure mq_add() 

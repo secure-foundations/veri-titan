@@ -19,7 +19,7 @@ import opened bv32_falcon_lemmas
 
 #endverbatim
 
-function rs1_is_half(a: uint32): void extern;
+function rs1_lemma(x: uint32): void extern;
 
 procedure p2_half(inout dst: reg32, ghost p: pow2_t)
     returns (ghost p': pow2_t)
@@ -33,17 +33,17 @@ procedure p2_half(inout dst: reg32, ghost p: pow2_t)
 {
     srli(dst, dst, 1);
     p' := pow2_half(p);
-    rs1_is_half(old(dst));
+    rs1_lemma(old(dst));
 }
 
 procedure half(inout dst: reg32)
     ensures dst == old(dst) / 2;
 {
     srli(dst, dst, 1);
-    rs1_is_half(old(dst));
+    rs1_lemma(old(dst));
 }
 
-function ls1_is_double(a: uint32): void extern;
+function ls1_lemma(a: uint32): void extern;
 
 procedure p2_double(inout dst: reg32, ghost p: pow2_t)
     returns (ghost p': pow2_t)
@@ -58,7 +58,7 @@ procedure p2_double(inout dst: reg32, ghost p: pow2_t)
     slli(dst, dst, 1);
     assume p.full <= 512;
     p' := pow2_double(p);
-    ls1_is_double(old(dst));
+    ls1_lemma(old(dst));
 }
 
 function montmul(a: nat, b: nat): uint32 extern;

@@ -63,7 +63,7 @@ function inverse_t_loop_inv(a: seq(uint16), d: pow2_t, c: seq(uint16)): bool ext
 function inverse_t_loop_inv_pre_lemma(c: seq(uint16)): void extern;
 function inverse_t_loop_inv_post_lemma(a: seq(uint16), one: pow2_t, c: seq(uint16)): void extern;
 
-function pow2_basics(p: pow2_t): void extern;
+function pow2_basics_lemma(p: pow2_t): void extern;
 
 procedure inverse_s_loop(ghost iter_a: b16_iter,
     ghost t: pow2_t,
@@ -422,7 +422,7 @@ returns (ghost iter_a': b16_iter)
 
     li(a5, 1); // t 
     ghost var t := pow2(0);
-    pow2_basics(t);
+    pow2_basics_lemma(t);
 
     inverse_t_loop_inv_pre_lemma(iter_a.buff);
 

@@ -46,16 +46,6 @@ module bv16_op_s refines bv_op_s
         amount <= 16
     }
 
-    function method {:opaque} rs(x: uint, amount: uint): uint
-    {
-        (x as bv16 >> amount) as uint
-    }
-
-    function method {:opaque} ls(x: uint, amount: uint): uint
-    {
-        (x as bv16 << amount) as uint
-    }
-
     function uint16_lt(x: uint, y: uint): uint
     {
         if x < y then 1 else 0

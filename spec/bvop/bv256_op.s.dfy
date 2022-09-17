@@ -44,16 +44,6 @@ module bv256_op_s refines bv_op_s
         amount <= 256
     }
 
-    function method {:opaque} rs(x: uint, amount: uint): uint
-    {
-        (x as bv256 >> amount) as uint
-    }
-
-    function method {:opaque} ls(x: uint, amount: uint): uint
-    {
-        (x as bv256 << amount) as uint
-    }
-
     lemma {:axiom} ls_is_mul(x: uint, num_bytes: integers.uint5, r: uint)
         requires r == ls(x, num_bytes * 8);
         ensures (num_bytes == 0) ==> r == x;

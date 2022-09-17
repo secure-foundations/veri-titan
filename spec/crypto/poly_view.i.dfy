@@ -40,7 +40,7 @@ module poly_view_i(MQ: ntt_param_s) {
         assert left.full * (m.full / 2) == N.full;
         var right := pow2_div(N, m);
         var half := m.full / 2;
-        pow2_basics(m);
+        pow2_basics_lemma(m);
 
         calc == {
             left.full * half;
@@ -166,7 +166,7 @@ module poly_view_i(MQ: ntt_param_s) {
         ensures unifromly_sized(lower, pow2_half(bsize));
     {
         reveal unifromly_sized();
-        pow2_basics(bsize);
+        pow2_basics_lemma(bsize);
         block_count_half_lemma(bsize);
         var new_size := pow2_half(bsize);
         var new_count := |higher| * 2;
@@ -182,7 +182,7 @@ module poly_view_i(MQ: ntt_param_s) {
         ensures unifromly_sized(higher, pow2_double(bsize));
     {
         reveal unifromly_sized();
-        pow2_basics(bsize);
+        pow2_basics_lemma(bsize);
         var new_size := pow2_double(bsize);
         block_count_half_lemma(new_size);
         var new_count := |lower| / 2;

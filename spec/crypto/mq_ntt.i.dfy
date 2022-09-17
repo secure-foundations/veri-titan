@@ -94,7 +94,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
         var points := PV.level_points_view(a, sz);
         var polys := PV.level_polys(coefficients, sz);
         MQ.Nth_root_lemma();
-        pow2_basics(one);
+        pow2_basics_lemma(one);
         assert one.full == 1;
         assert sz == N;
         assert points[0] == a;

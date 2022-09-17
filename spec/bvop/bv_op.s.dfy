@@ -103,17 +103,46 @@ abstract module bv_op_s
 
     function method rs(x: uint, amount: uint): uint
         requires valid_shift(amount)
+    {
+        (x / Power2.Pow2(amount)) % BASE()
+    }
 
-    lemma {:axiom} rs_is_div_mod_base(x: uint, amount: uint)
-      requires valid_shift(amount);
-      ensures rs(x, amount) == (x / Power2.Pow2(amount)) % BASE();
+    lemma rs1_lemma(x: uint)
+        requires valid_shift(1)
+        ensures rs(x, 1) == x / 2;
+    {
+        Power2.Lemma2To64();
+        calc == {
+            rs(x, 1);
+            (x / 2) % BASE();
+            {
+                DivMod.LemmaSmallMod(x/2, BASE());
+            }
+            (x / 2);
+        }
+    }
 
     function method ls(x: uint, amount: uint): uint
         requires valid_shift(amount)
+    {
+        (x * Power2.Pow2(amount)) % BASE()
+    }
 
-    lemma {:axiom} ls_is_mul_mod_base(x: uint, amount: uint)
-      requires valid_shift(amount);
-      ensures ls(x, amount) == (x * Power2.Pow2(amount)) % BASE();
+    lemma ls1_lemma(x: uint)
+        requires valid_shift(1)
+        requires x < BASE()/2;
+        ensures ls(x, 1) == x * 2;
+    {
+        Power2.Lemma2To64();
+        calc == {
+            ls(x, 1);
+            (x * 2) % BASE();
+            {
+                DivMod.LemmaSmallMod(x * 2, BASE());
+            }
+            (x * 2);
+        }
+    }
 
     function method lsb(x: uint): uint1
     {

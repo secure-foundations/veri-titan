@@ -62,7 +62,7 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         view.s_loop_inv_pre_lemma(as_elems(a), d, j);
         FNTT.rev_mixed_powers_mont_table_lemma(t, d, j);
         assert uint32_add(t.full, j) == t.full + j;
-        ls1_is_double(t.full + j);
+        ls1_lemma(t.full + j);
 
         assert u == j * (2 * d.full);
         assert d == view.hcount();
@@ -200,7 +200,7 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         view.s_loop_inv_pre_lemma(as_elems(a), d, j);
         INTT.rev_omega_inv_powers_mont_table_lemma(t, d, j);
         assert uint32_add(t.full, j) == t.full + j;
-        ls1_is_double(t.full + j);
+        ls1_lemma(t.full + j);
         // rev_omega_inv_powers_mont_table_lemma(t, d, j);
 
         assert u == j * (2 * d.full);
@@ -351,8 +351,8 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         assert sbi == build_view(a, ti, N).get_split_index();
         assert rsbi == bit_rev_int(ftable[2 * ti], N);
 
-        ls1_is_double(sbi);
-        ls1_is_double(rsbi);
+        ls1_lemma(sbi);
+        ls1_lemma(rsbi);
     }
 
     predicate valid_nelem(e: uint16)

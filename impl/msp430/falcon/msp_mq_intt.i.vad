@@ -516,7 +516,7 @@ returns (ghost iter_a': iter_t)
     ghost var gd := N;
     ghost var i :int := 9;
     ghost var gt := pow2(0);
-    pow2_basics(gt);
+    pow2_basics_lemma(gt);
 
     while (t < 512)
         invariant

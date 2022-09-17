@@ -48,16 +48,6 @@ module bv32_op_s refines bv_op_s
         amount <= 32
     }
 
-    function method {:opaque} rs(x: uint, amount: uint): uint
-    {
-        (x as bv32 >> amount) as uint
-    }
-
-    function method {:opaque} ls(x: uint, amount: uint): uint
-    {
-        (x as bv32 << amount) as uint
-    }
-
     lemma msb_bound_lemma(x: uint)
         ensures msb(x) == 1 <==> x >= 0x80000000
     {

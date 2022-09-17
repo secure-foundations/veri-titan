@@ -278,7 +278,7 @@ module mq_poly_i(CMQ: ntt_param_s)
         requires |a| == len.full;
         ensures |r| == len.full / 2;
     {
-        pow2_basics(len);
+        pow2_basics_lemma(len);
         seq(len.full/2, n requires 0 <= n < len.full/2 => a[n * 2])
     }
 
@@ -286,7 +286,7 @@ module mq_poly_i(CMQ: ntt_param_s)
         requires |a| == len.full;
         ensures |r| == len.full / 2;
     {
-        pow2_basics(len);
+        pow2_basics_lemma(len);
         seq(len.full/2, n requires 0 <= n < len.full/2 => a[n * 2 + 1])
     }
 
@@ -296,7 +296,7 @@ module mq_poly_i(CMQ: ntt_param_s)
         ensures even_indexed_items(r, pow2_double(len)) == a;
         ensures odd_indexed_items(r, pow2_double(len)) == b;
     {
-        pow2_basics(len);
+        pow2_basics_lemma(len);
         var new_len := pow2_double(len);
         var r := seq(new_len.full, n requires 0 <= n < new_len.full => 
             if n % 2 == 0 then a[n/2] else b[n/2]);

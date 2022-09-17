@@ -21,12 +21,12 @@ module mq_arith_lemmas {
 
     import opened falcon_512_i
 
-    lemma {:axiom} rs1_is_half(a: uint32)
-        ensures uint32_rs(a, 1) == a / 2;
+    // lemma {:axiom} rs1_is_half(a: uint32)
+    //     ensures uint32_rs(a, 1) == a / 2;
 
-    lemma {:axiom} ls1_is_double(a: uint32)
-        requires a < BASE_31;
-        ensures uint32_ls(a, 1) == a * 2;
+    // lemma {:axiom} ls1_lemma(a: uint32)
+    //     requires a < BASE_31;
+    //     ensures uint32_ls(a, 1) == a * 2;
 
     lemma lemma_rs_by_31(x: int32)
         ensures x >= 0 ==> int32_rs(x, 31) == 0;
@@ -197,7 +197,7 @@ module mq_arith_lemmas {
         DivMod.LemmaSmallMod(a * b, BASE_32);
 
         assert a * b == ab;
-        assert ab3 == 3 * ab by { ls1_is_double(ab); }
+        assert ab3 == 3 * ab by { ls1_lemma(ab); }
         assert ab3 == 3 * a * b by { Mul.LemmaMulIsAssociativeAuto(); }
     }
 
@@ -209,7 +209,6 @@ module mq_arith_lemmas {
       ensures w <= Q * (BASE_16 - 1);
     {
         var lsv3 := uint32_ls(v3, 12);
-        assert lsv3 == (v3 * Power2.Pow2(12)) % BASE_32 by { ls_is_mul_mod_base(v3, 12); }
         assert lsv3 == (3 * v * Power2.Pow2(12)) % BASE_32 by { Mul.LemmaMulIsAssociativeAuto(); }
 
         var lsv3_int := lsv3 as int;
@@ -233,20 +232,30 @@ module mq_arith_lemmas {
         assert wxy == w + xy;
 
         assert z == uint32_rs(wxy, 16);
-        assert z == (wxy / Power2.Pow2(16)) % BASE_32 by { rs_is_div_mod_base(wxy, 16); }
+
+        assert Power2.Pow2(16) == 65536 by {
+            Power2.Lemma2To64();
+        }
+
+        assert z == (wxy / 65536) % BASE_32;
 
         assert wxy <= Q * (BASE_16 - 1) + (Q-1) * (Q-1);
-        assert z == (wxy / Power2.Pow2(16)) by {
-            DivMod.LemmaDivNonincreasing(wxy, Power2.Pow2(16));
-            DivMod.LemmaDivPosIsPos(wxy, Power2.Pow2(16));
-            DivMod.LemmaSmallMod((wxy / Power2.Pow2(16)), BASE_32);
+        assert z == (wxy / 65536) by {
+            DivMod.LemmaDivNonincreasing(wxy, 65536);
+            DivMod.LemmaDivPosIsPos(wxy, 65536);
+            DivMod.LemmaSmallMod((wxy / 65536), BASE_32);
         }
         
-        assert z <= (Q * (BASE_16 - 1) + (Q-1) * (Q-1)) / Power2.Pow2(16) by {
-            DivMod.LemmaDivIsOrdered(wxy, Q * (BASE_16 - 1) + (Q-1) * (Q-1), Power2.Pow2(16));
+        assert z <= (Q * (BASE_16 - 1) + (Q-1) * (Q-1)) / 65536 by {
+            DivMod.LemmaDivIsOrdered(wxy, Q * (BASE_16 - 1) + (Q-1) * (Q-1), 65536);
         }
 
-        assert z <= 14592 by { Power2.Lemma2To64(); }
+
+
+        assert (Q * (BASE_16 - 1) + (Q-1) * (Q-1)) == 956354559;
+
+        assert z <= 14592;
+
         assert 14592 < 2 * Q;
     }
 
@@ -261,7 +270,7 @@ module mq_arith_lemmas {
         ensures IsModEquivalent(12287 * x * y, 12287 * xy, BASE_32);
     {
         var sh := uint32_ls(xy3, 12);
-        assert sh == (xy3 * Power2.Pow2(12)) % BASE_32 by { ls_is_mul_mod_base(xy3, 12); }
+        assert sh == (xy3 * Power2.Pow2(12)) % BASE_32;
 
         var sh_int := sh as int;
         var xy_int := xy as int;
@@ -285,25 +294,30 @@ module mq_arith_lemmas {
         ensures v < BASE_16; 
         ensures v3 == 3 * v;
     {
+        assert Power2.Pow2(16) == 65536 by {
+            Power2.Lemma2To64();
+        }
+
         var lsx := uint32_ls(Q0Ixy, 16);
-        assert lsx == (Q0Ixy * Power2.Pow2(16)) % BASE_32 by { ls_is_mul_mod_base(Q0Ixy, 16); }
+        assert lsx == (Q0Ixy * 65536) % BASE_32;
         
-        assert v == (lsx / Power2.Pow2(16)) % BASE_32 by { rs_is_div_mod_base(lsx, 16); }
+        assert v == (lsx / 65536) % BASE_32;
         assert v < BASE_32;
-        assert v == (lsx / Power2.Pow2(16)) by {
-            DivMod.LemmaDivNonincreasing(lsx, Power2.Pow2(16));
-            DivMod.LemmaDivPosIsPos(lsx, Power2.Pow2(16));
-            DivMod.LemmaSmallMod((lsx / Power2.Pow2(16)), BASE_32);
+        assert v == (lsx / 65536) by {
+            DivMod.LemmaDivNonincreasing(lsx, 65536);
+            DivMod.LemmaDivPosIsPos(lsx, 65536);
+            DivMod.LemmaSmallMod((lsx / 65536), BASE_32);
         }
         assert v < BASE_16 by {
             Power2.Lemma2To64();
             DivMod.LemmaDivIsOrdered(lsx, BASE_32, BASE_16);
         }
 
-        assert v3 == v * 3 by { ls1_is_double(v); }
+        assert v3 == v * 3 by { ls1_lemma(v); }
 
-        assert IsModEquivalent(v * BASE_16, Q0Ixy * BASE_16, BASE_32) by { Power2.Lemma2To64(); }
-        assert BASE_16 * BASE_16 == BASE_32;// by { Power2.Lemma2To64(); }
+        assert IsModEquivalent(v * BASE_16, Q0Ixy * BASE_16, BASE_32) 
+        by { Power2.Lemma2To64(); }
+        assert BASE_16 * BASE_16 == BASE_32;// by { }
 
         calc {
             (v * BASE_16) % BASE_32;
@@ -383,7 +397,6 @@ module mq_arith_lemmas {
         }
 
         DivMod.LemmaFundamentalDivMod(w + xy, BASE_16);
-        rs_is_div_mod_base(w + xy, 16);
         Power2.Lemma2To64();
         assert z * BASE_16 == w + xy;
 
