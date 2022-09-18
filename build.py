@@ -51,7 +51,7 @@ OUTPUT_ELF_PATH = "gen/run_modexp.elf"
 
 DLL_SOURCES = {
     "spec/arch/otbn/modexp_printer.s.dfy": OTBN_ASM_PATH,
-    "spec/arch/otbn/simulator.i.dfy": "gen/arch/otbn/sim.out", 
+    "spec/arch/otbn/simulator.i.dfy": "gen/otbn_sim.out", 
     "spec/arch/riscv/printer.s.dfy": RISCV_ASM_PATH,
 }
 

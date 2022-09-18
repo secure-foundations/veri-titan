@@ -154,12 +154,12 @@ abstract module bv_op_s
         if x >= BASE()/2 then 1 else 0
     }
 
-    lemma mul_equiv_lemma(x: sint, y: sint) 
+    lemma {:axiom} mul_equiv_lemma(x: sint, y: sint) 
         ensures var p :int := x * y;
             mul(to_2s_comp(x), to_2s_comp(y)) == p % BASE();
-    {
-        assume false;
-    }
+    // {
+        // assume false;
+    // }
 
 /* addition */
 
