@@ -186,6 +186,10 @@ returns (ghost iter_tt': iter_t)
 }
 
 function or_consts_lemma(): void extern;
+function accumulate_lemma(v16: uint16, sum: uint32_view_t, sum': uint32_view_t, 
+    cf: uint1, mask: uint16, over: uint16, over': uint16, gsum: nat): nat extern;
+function valid_nelem(v16: uint16): bool extern;
+function as_nelem(v16: uint16): int extern;
 
 procedure accumulate(ghost sum: uint32_view_t, ghost asum: nat)
     returns (ghost sum': uint32_view_t, ghost asum': nat)
@@ -200,6 +204,7 @@ procedure accumulate(ghost sum: uint32_view_t, ghost asum: nat)
         sum.uh == s_uh;
         over == 0xFFFF || over == 0;
         r15 == 0;
+        valid_nelem(r12);
     
     requires
         over == 0 ==> sum.full == asum;
@@ -215,10 +220,11 @@ procedure accumulate(ghost sum: uint32_view_t, ghost asum: nat)
         sum'.uh == s_uh;
 
     ensures
-        asum' == asum + old(r12) * old(r12);
+        asum' == asum + as_nelem(old(r12)) * as_nelem(old(r12));
         over == 0 ==> sum'.full == asum';
         over == 0xFFFF ==> asum' >= 0x100000000;
 {
+    let v16 := r12;
     mov_w(r12, r14);
     clr_w(r13);
     builtin__mspabi_mpyl();
@@ -229,13 +235,12 @@ procedure accumulate(ghost sum: uint32_view_t, ghost asum: nat)
     clr_w(r13);
     subc_w(r13, r13);
     bis_w(r13, over);
-    
-    or_consts_lemma();
 
-    asum' := asum + old(r12) * old(r12);
+    asum' := accumulate_lemma(v16, sum, sum', cf, r13, old(over), over, asum);
 }
 
 function l2norm_squared(s1: seq(uint16), s2: seq(uint16), i: nat): nat extern;
+// function as_elems(s: seq(uint16)): seq(nelem) extern;
 
 procedure is_short(
     ghost iter_a: iter_t,
@@ -308,6 +313,8 @@ procedure is_short(
         decreases
             end_b - ptr_b;
     {
+        reveal valid_nelems;
+
         let ai := iter_a'.buff[i];
         let bi := iter_b'.buff[i];
 
