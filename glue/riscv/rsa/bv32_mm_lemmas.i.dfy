@@ -339,7 +339,9 @@ module bv32_mm_lemmas refines generic_mm_lemmas {
         ensures uh == 0
     {
         assert uh == to_uint32(int32_rs(0, 31));
-        assume int32_rs(0, 31) == 0;
+        Power2.Lemma2To64();
+        LemmaBasicDiv(0x100000000);
+        assert int32_rs(0, 31) == 0;
     }
 
     lemma halves_equal(lh: uint32, uh: uint32)
