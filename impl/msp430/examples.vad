@@ -37,7 +37,7 @@ procedure save_r10__r7()
         stack_depth(mem) == stack_depth(old(mem)) + 1;
 {
     pushm_w(4, r10);
-    assert pushm_w_seq(old(this.ms), R(10), 4) == seq(r7, r8, r9, r10);
+    assert pushm_w_seq(old(this.ms), GPR(10), 4) == seq(r7, r8, r9, r10);
 }
 
 procedure restore_test()
