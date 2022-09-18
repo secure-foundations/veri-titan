@@ -23,7 +23,7 @@ import opened bv256_op_s
 
 #endverbatim
 
-ghost procedure xor_clear_lemma(ghost x: uint256) extern;
+ghost procedure xor_clear_lemma(ghost x: uint256, ghost y: uint256) extern;
 
 function modexp_var_inv(a: nat, i: nat, rsa: rsa_params): bool extern;
 
@@ -196,7 +196,7 @@ procedure modexp_var_0(ghost init_vars: mvars)
         mvars_init(init_vars, heap, old(x16), old(x17), old(x26), x23, x24);
 {
     comment("/* Prepare all-zero register. */");
-    xor_clear_lemma(w31);
+    xor_clear_lemma(w31, w31);
     bn_xor(w31, w31, w31, SFT_DFT, 0);
 
     comment("/* Prepare pointers to temporary registers. */");

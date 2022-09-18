@@ -53,12 +53,6 @@ module ot_vale {
         a % n
     }
 
-    lemma xor_clear_lemma(x: uint256)
-        ensures bv256_op_s.xor(x, x) == 0;
-    {
-        bv256_op_s.xor_clear_lemma(x, x);
-    }
-
     // need this for mul
 
     function va_mul_nat(a: nat, b: nat): nat
