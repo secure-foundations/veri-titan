@@ -303,6 +303,8 @@ module mq_arith_lemmas {
 
         var R_INV := R_INV;
 
+        MQ.Nth_root_lemma();
+
         gbassert IsModEquivalent(rr, x * y * R_INV, Q) by {
             assert IsModEquivalent(v, 12287 * x * y, BASE_16);
             assert Q == 12289;
@@ -313,7 +315,7 @@ module mq_arith_lemmas {
             assert z * BASE_16 == (w + xy);
             assert IsModEquivalent(w + xy, 0, BASE_16);
             assert IsModEquivalent(rr, z, Q);
-            assume IsModEquivalent(1, R_INV * BASE_16, Q);
+            assert IsModEquivalent(1, R_INV * BASE_16, Q);
         }
 
         assert rr == MQP.montmul(x, y);
