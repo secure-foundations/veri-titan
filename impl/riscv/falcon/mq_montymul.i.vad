@@ -15,7 +15,8 @@ import opened rv_vale
 import opened bv32_op_s
 import opened pow2_s
 
-import opened MQP = falcon_512_i.CMQP
+import opened falcon_512_i
+import opened bv32_falcon_lemmas
 
 import opened mq_arith
 import opened mq_arith_lemmas
@@ -29,7 +30,6 @@ function lemma_Q0Ixy_correct(x: nat, y: nat, xy: nat, xy3: nat, Q0Ixy: nat) : vo
 function lemma_shiftadd3(x: uint32, v: uint32, v3: nat) : void extern;
 function lemma_12289(v: uint32, v3: uint32, w: uint32) : void extern;
 function lemma_zw_shift(w: uint32, xy: uint32, z:uint32) : void extern;
-function lemma_cond_add_Q(z: uint32, d: uint32, b: uint32, c: uint32, r: uint32) : void extern;
 function lemma_montymul_correct(x: nat, y: nat, xy: uint32, Q0Ixy: nat, v: nat, w: uint32, z: uint32, r: uint32) : void extern;
     
 function IsModEquivalent(x: int, y: int, m: int) : void extern;
@@ -47,7 +47,7 @@ procedure montymul(ghost x: nat, ghost y: nat) returns (ghost r: uint32)
     modifies
         a1; a3; a4; a5;
     ensures
-        IsModEquivalent(r * 4091, x * y, 12289);
+        a3 == montmul(x, y);
         r == a3;
 {
     mul(a3, a3, a1);
@@ -92,15 +92,10 @@ procedure montymul(ghost x: nat, ghost y: nat) returns (ghost r: uint32)
     lemma_zw_shift(w, xy, z);
     
     sub(a5, a5, a0);
-    ghost var d := a5;
-    srai(a3, a5, 0x1f);
-    ghost var b := a3;
-    and(a3, a3, a0);
-    ghost var c := a3;
+    cond_set_Q(a3, a5, a0);
     add(a3, a3, a5);
-    r := a3;
-    lemma_cond_add_Q(z, d, b, c, r);
 
+    r := a3;
     lemma_montymul_correct(x, y, xy, Q0Ixy, v, w, z, r);
 }
 
@@ -111,7 +106,6 @@ procedure poly_mul_inline_montymul()
     modifies
         t1; t0; a4; a5;
     ensures
-        IsModEquivalent(t0 * 4091, old(t0) * old(t1), 12289);
         t0 < 12289;
         t0 == montmul(old(t0), old(t1));
 {
@@ -161,15 +155,9 @@ procedure poly_mul_inline_montymul()
     li(a4, 12289);
     
     sub(a5, a5, a4);
-    ghost var d := a5;
-    srai(t0, a5, 0x1f);
-    ghost var b := t0;
-    and(t0, t0, a4);
-    ghost var c := t0;
+    cond_set_Q(t0, a5, a4);
     add(t0, t0, a5);
     let r := t0;
-    lemma_cond_add_Q(z, d, b, c, r);
-
     lemma_montymul_correct(x, y, xy, Q0Ixy, v, w, z, r);
 }
 
@@ -182,7 +170,6 @@ procedure ntt_inline_mq_montymul()
     modifies
         a1; a4; a3;
     ensures
-        IsModEquivalent(a1 * 4091, old(a1) * s5, 12289);
         a1 < 12289;
         a1 == montmul(old(a1), old(s5));
 {
@@ -233,14 +220,11 @@ procedure ntt_inline_mq_montymul()
     li(a4, 12289);
 
     sub(a3, a3, a4);
-    ghost var d := a3;
-    srai(a1, a3, 0x1f);
-    ghost var b := a1;
-    and(a1, a1, a4);
+
+    cond_set_Q(a1, a3, a4);
     ghost var c := a1;
     add(a1, a1, a3);
     let r := a1;
-    lemma_cond_add_Q(z, d, b, c, r);
 
     lemma_montymul_correct(x, y, xy, Q0Ixy, v, w, z, r);
 }

@@ -11,12 +11,16 @@ import opened msp_decls
 import opened msp_vale
 import opened mem
 import opened stack
-import opened bv16_mm_lemmas
 import opened integers
 
-import opened mul
+import opened bv16_mm_lemmas
+import opened bv16_op_s
+
+import opened msp_mul
 import opened sub_mod
 import opened mont_mul_add
+
+import opened msp_reg_save
 
 #endverbatim
 

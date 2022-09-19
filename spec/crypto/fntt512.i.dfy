@@ -15,8 +15,8 @@
 //     import opened nth_root
 //     import opened forward_ntt
 
-//     method j_loop(a: n_elems, p: n_elems, t: pow2_t, d: pow2_t, j: nat, u: nat, ghost view: loop_view)
-//     returns (a': n_elems)
+//     method j_loop(a: elems, p: elems, t: pow2_t, d: pow2_t, j: nat, u: nat, ghost view: loop_view)
+//     returns (a': elems)
 //         requires u == j * (2 * d.full);
 //         requires view.j_loop_inv(a, d, j);
 //         requires t == view.lsize();
@@ -42,7 +42,7 @@
 //         while (s < u + d.full)
 //             invariant view.s_loop_inv(a', d, j, s-u);
 //         {
-//             var a :n_elems := a';
+//             var a :elems := a';
 //             var bi := s-u;
 
 //             var _ := view.higher_points_view_index_lemma(a, d, j, bi);
@@ -62,8 +62,8 @@
 //         view.s_loop_inv_post_lemma(a', d, j, d.full);
 //     }
 
-//     method t_loop(a: n_elems, p: n_elems, t: pow2_t, d: pow2_t, ghost coeffs: n_elems)
-//         returns (a': n_elems)
+//     method t_loop(a: elems, p: elems, t: pow2_t, d: pow2_t, ghost coeffs: elems)
+//         returns (a': elems)
 //         requires 0 <= d.exp < N.exp;
 //         requires t_loop_inv(a, pow2_double(d), coeffs);
 //         requires p == rev_mixed_powers_mont_table();
@@ -100,8 +100,8 @@
 //         view.j_loop_inv_post_lemma(a', d, j);
 //     }
 
-//     method mulntt_ct(a: n_elems, p: n_elems)
-//         returns (a': n_elems)
+//     method mulntt_ct(a: elems, p: elems)
+//         returns (a': elems)
 //         requires N == pow2_t_cons(512, 9);
 //         requires p == rev_mixed_powers_mont_table();
 //         ensures points_eval_inv(a', a, x_value, pow2(0));

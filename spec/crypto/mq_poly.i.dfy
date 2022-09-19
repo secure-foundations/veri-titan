@@ -278,7 +278,7 @@ module mq_poly_i(CMQ: ntt_param_s)
         requires |a| == len.full;
         ensures |r| == len.full / 2;
     {
-        pow2_basics(len);
+        pow2_basics_lemma(len);
         seq(len.full/2, n requires 0 <= n < len.full/2 => a[n * 2])
     }
 
@@ -286,7 +286,7 @@ module mq_poly_i(CMQ: ntt_param_s)
         requires |a| == len.full;
         ensures |r| == len.full / 2;
     {
-        pow2_basics(len);
+        pow2_basics_lemma(len);
         seq(len.full/2, n requires 0 <= n < len.full/2 => a[n * 2 + 1])
     }
 
@@ -296,7 +296,7 @@ module mq_poly_i(CMQ: ntt_param_s)
         ensures even_indexed_items(r, pow2_double(len)) == a;
         ensures odd_indexed_items(r, pow2_double(len)) == b;
     {
-        pow2_basics(len);
+        pow2_basics_lemma(len);
         var new_len := pow2_double(len);
         var r := seq(new_len.full, n requires 0 <= n < new_len.full => 
             if n % 2 == 0 then a[n/2] else b[n/2]);
@@ -376,7 +376,7 @@ module mq_poly_i(CMQ: ntt_param_s)
     lemma mqmul_commutes(a: elem, b: elem)
         ensures mqmul(a, b) == mqmul(b, a);
     {
-        assume false;
+        LemmaMulIsCommutative(a, b);
     }
 
     lemma mqmul_distributes(x: elem, y: elem, z: elem)
@@ -416,13 +416,38 @@ module mq_poly_i(CMQ: ntt_param_s)
         ensures b * c >= 0;
         ensures mqpow(mqpow(x, b), c) == mqpow(x, b * c);
     {
-        assume false;
+        calc == {
+            mqpow(mqpow(x, b), c);
+            Pow(Pow(x, b) % Q, c) % Q;
+            {
+                LemmaPowModNoop(Pow(x, b), c, Q);
+            }
+            Pow(Pow(x, b), c) % Q;
+            {
+                LemmaPowMultiplies(x, b, c);
+            }
+            Pow(x, b * c) % Q;
+            mqpow(x, b * c);
+        }
+        LemmaMulNonnegative(b, c);
     }
 
     lemma mqpow_adds(x: elem, b: nat, c: nat)
         ensures mqmul(mqpow(x, b), mqpow(x, c)) == mqpow(x, b + c);
     {
-        assume false;
+        calc == {
+            mqmul(mqpow(x, b), mqpow(x, c));
+            ((Pow(x, b) % Q) * (Pow(x, c) % Q)) % Q;
+            {
+                LemmaMulModNoopGeneral(Pow(x, b), Pow(x, c), Q);
+            }
+            (Pow(x, b) * Pow(x, c)) % Q;
+            {
+                LemmaPowAdds(x, b, c);
+            }
+            Pow(x, b + c) % Q;
+            mqpow(x, b + c);
+        }
     }
 
     lemma mqpow_group(x:elem, offset:nat)

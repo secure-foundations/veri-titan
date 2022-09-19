@@ -1,5 +1,5 @@
 include "vale.i.dfy"
-include "../../gen/impl/otbn/modexp_var.i.dfy"
+include "../../../gen/impl/otbn/rsa/modexp_var.i.dfy"
 
 module otbn_exe {
     import opened integers

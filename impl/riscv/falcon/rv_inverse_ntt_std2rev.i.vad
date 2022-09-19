@@ -26,11 +26,12 @@ import opened rv_reg_save
 import opened mq_arith
 import opened mq_montymul
 
+import opened falcon_512_i
 import opened bv32_falcon_lemmas
 
 #endverbatim
 
-function buff_as_n_elems(s: seq(uint16)): seq(uint16) extern;
+function as_elems(s: seq(uint16)): seq(uint16) extern;
 
 function rev_omega_inv_powers_mont_table(): seq(uint16) extern;
 function rev_omega_inv_powers_mont_table_lemma(t: pow2_t, d: pow2_t, j: nat): void extern;
@@ -41,7 +42,7 @@ function operator(.hsize) (p :iloop_view): pow2_t extern;
 function build_iloop_view(a: seq(uint16), d: pow2_t): iloop_view extern;
 function inverse_lsize(v: iloop_view): pow2_t extern;
 
-function fvar_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int): bool extern;
+function elems_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int): bool extern;
 
 function block_size(c: pow2_t): pow2_t extern;
 
@@ -61,6 +62,8 @@ function inverse_ntt_eval_all(a: seq(uint16), coeffs: seq(uint16)): bool extern;
 function inverse_t_loop_inv(a: seq(uint16), d: pow2_t, c: seq(uint16)): bool extern;
 function inverse_t_loop_inv_pre_lemma(c: seq(uint16)): void extern;
 function inverse_t_loop_inv_post_lemma(a: seq(uint16), one: pow2_t, c: seq(uint16)): void extern;
+
+function pow2_basics_lemma(p: pow2_t): void extern;
 
 procedure inverse_s_loop(ghost iter_a: b16_iter,
     ghost t: pow2_t,
@@ -85,7 +88,7 @@ procedure inverse_s_loop(ghost iter_a: b16_iter,
         s2 == 2 * bi + 2 * (j * (2 * d.full));// s
 
     requires
-        fvar_iter_inv(heap, iter_a, s4, 0);
+        elems_iter_inv(heap, iter_a, s4, 0);
         inverse_s_loop_inv(iter_a.buff, d, j, bi, view);
         bi < d.full;
         s5 == mqmul(rev_omega_inv_powers_x_value(2 * j, d), R);
@@ -108,7 +111,7 @@ procedure inverse_s_loop(ghost iter_a: b16_iter,
 
     ensures
         iter_a'.base_ptr == iter_a.base_ptr;
-        fvar_iter_inv(heap, iter_a', s4, 0);
+        elems_iter_inv(heap, iter_a', s4, 0);
         mem == old(mem).(heap := heap);
         heap == old(heap)[iter_a.base_ptr := heap[iter_a.base_ptr]];
 
@@ -168,8 +171,8 @@ procedure inverse_j_loop(ghost iter_a: b16_iter,
         t6 == 2 * d.full;
 
     requires
-        fvar_iter_inv(heap, iter_p, s3, 0);
-        fvar_iter_inv(heap, iter_a, s4, 0);
+        elems_iter_inv(heap, iter_p, s3, 0);
+        elems_iter_inv(heap, iter_a, s4, 0);
         iter_a.base_ptr != iter_p.base_ptr;
 
         iter_p.buff == rev_omega_inv_powers_mont_table();
@@ -194,7 +197,7 @@ procedure inverse_j_loop(ghost iter_a: b16_iter,
         ra == old(ra);
 
         iter_a'.base_ptr == iter_a.base_ptr;
-        fvar_iter_inv(heap, iter_a', s4, 0);
+        elems_iter_inv(heap, iter_a', s4, 0);
         mem == old(mem).(heap := heap);
         heap == old(heap)[iter_a.base_ptr := heap[iter_a.base_ptr]];
 
@@ -235,7 +238,7 @@ procedure inverse_j_loop(ghost iter_a: b16_iter,
             ra == old(ra);
 
         invariant
-            fvar_iter_inv(heap, iter_a', s4, 0);
+            elems_iter_inv(heap, iter_a', s4, 0);
             mem == old(mem).(heap := heap);
             heap == old(heap)[iter_a.base_ptr := heap[iter_a.base_ptr]];
         
@@ -267,8 +270,8 @@ procedure inverse_t_loop(ghost iter_a: b16_iter,
     {:frame false}
 
     requires
-        fvar_iter_inv(heap, iter_p, s3, 0);
-        fvar_iter_inv(heap, iter_a, s4, 0);
+        elems_iter_inv(heap, iter_p, s3, 0);
+        elems_iter_inv(heap, iter_a, s4, 0);
         iter_a.base_ptr != iter_p.base_ptr;
 
     requires
@@ -302,7 +305,7 @@ procedure inverse_t_loop(ghost iter_a: b16_iter,
         ra == old(ra);
 
         mem == old(mem).(heap := heap);
-        fvar_iter_inv(heap, iter_a', s4, 0);
+        elems_iter_inv(heap, iter_a', s4, 0);
         heap == old(heap)[iter_a.base_ptr := heap[iter_a.base_ptr]];
     
     ensures
@@ -311,7 +314,7 @@ procedure inverse_t_loop(ghost iter_a: b16_iter,
     li(t2, 0);
     li(t3, 0);
 
-    ghost var view := build_iloop_view(buff_as_n_elems(coeffs), d);
+    ghost var view := build_iloop_view(as_elems(coeffs), d);
 
     ghost var j :nat := 0;
     ghost var u :nat := 0;
@@ -337,9 +340,9 @@ procedure inverse_t_loop(ghost iter_a: b16_iter,
 
         invariant
             iter_a.base_ptr != iter_p.base_ptr;
-            fvar_iter_inv(heap, iter_p, s3, 0);
+            elems_iter_inv(heap, iter_p, s3, 0);
             iter_a'.base_ptr == iter_a.base_ptr;
-            fvar_iter_inv(heap, iter_a', s4, 0);
+            elems_iter_inv(heap, iter_a', s4, 0);
             heap == old(heap)[iter_a.base_ptr := heap[iter_a.base_ptr]];
             mem == old(mem).(heap := heap);
 
@@ -372,9 +375,9 @@ returns (ghost iter_a': b16_iter)
         in_stack_addr_range(sp - 24);
 
     requires
-        fvar_iter_inv(heap, iter_a, a0, 0);
+        elems_iter_inv(heap, iter_a, a0, 0);
         symbols?["rev_omega_inv_powers_mont_table"];
-        fvar_iter_inv(heap, iter_p,
+        elems_iter_inv(heap, iter_p,
             load_symbol(mem, "rev_omega_inv_powers_mont_table"), 0);
         iter_a.base_ptr != iter_p.base_ptr;
 
@@ -389,7 +392,7 @@ returns (ghost iter_a': b16_iter)
         s4 == old(s4);
 
     ensures
-        fvar_iter_inv(heap, iter_a', iter_a'.base_ptr, 0);
+        elems_iter_inv(heap, iter_a', iter_a'.base_ptr, 0);
 
     ensures
         mem == old(mem).(heap := heap);
@@ -419,16 +422,16 @@ returns (ghost iter_a': b16_iter)
 
     li(a5, 1); // t 
     ghost var t := pow2(0);
-    assume t.full == 1;
+    pow2_basics_lemma(t);
 
     inverse_t_loop_inv_pre_lemma(iter_a.buff);
 
     while (s1 > x0)
         invariant
             iter_a'.base_ptr != iter_p.base_ptr;
-            fvar_iter_inv(heap, iter_a', s4, 0);
+            elems_iter_inv(heap, iter_a', s4, 0);
             iter_a'.base_ptr == iter_a.base_ptr;
-            fvar_iter_inv(heap, iter_p, s3, 0);
+            elems_iter_inv(heap, iter_p, s3, 0);
 
             mem == mem0.(heap := heap);
             heap == old(heap)

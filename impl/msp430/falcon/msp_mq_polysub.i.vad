@@ -1,0 +1,127 @@
+include "msp_mq_arith.i.vad"
+
+#verbatim
+include "msp_mq_arith.i.dfy"
+
+module msp_mq_polysub {
+
+import opened integers
+
+import opened msp_machine
+import opened msp_decls
+import opened msp_vale
+import opened mem
+import opened stack
+
+import opened bv16_op_s
+import opened mq_arith_lemmas
+
+import opened pow2_s
+import opened falcon_512_i
+
+import opened msp_mq_arith
+#endverbatim
+
+type pow2_t: Type(0) extern;
+function operator(.full) (p :pow2_t): nat extern;
+function operator(.exp) (p :pow2_t): nat extern;
+const N: pow2_t extern; 
+
+function elems_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int): bool extern;
+    
+function poly_sub_loop_inv(f_new: seq(uint16), f: seq(uint16), g: seq(uint16), i: nat): bool extern;
+    
+function poly_sub_loop_correct(f_new: seq(uint16), f_old: seq(uint16), f_orig:seq(uint16), g: seq(uint16), i: nat) : void extern;
+
+function b16_iter_inv(heap: heap_t, iter: iter_t) : bool extern;
+
+/* f' == f - g */
+procedure poly_sub(
+    ghost iter_f: iter_t,
+    ghost iter_g: iter_t)
+    returns (ghost iter_f': iter_t)
+
+    lets 
+        ptr_f  @= r15;
+        end_f  @= r5;
+        ptr_g  @= r6;
+
+    requires
+        in_stack_addr_range(sp);
+        in_stack_addr_range(sp - 16);
+    
+    requires
+        elems_iter_inv(heap, iter_f, r12, 0);
+        elems_iter_inv(heap, iter_g, ptr_g, 0);
+        iter_f.base_ptr != iter_g.base_ptr;
+    
+    modifies
+        flags; heap; mem; r5; r6; r11; r12; r13; r14; r15;
+
+    ensures
+        r12 == old(r12);
+
+    ensures
+        elems_iter_inv(heap, iter_f', r12, 0);
+        iter_f'.base_ptr == iter_f.base_ptr;
+        elems_iter_inv(heap, iter_g, old(ptr_g), 0);
+
+    ensures
+        mem == old(mem).(heap := heap);
+        heap == old(heap)
+            [iter_f'.base_ptr := heap[iter_f'.base_ptr]];
+    
+    ensures
+        poly_sub_loop_inv(iter_f'.buff, iter_f.buff, iter_g.buff, N.full);
+{
+    ghost var old_mem := mem;
+    let f_orig := iter_f.buff;
+
+    mov_w(r12, end_f);
+    mov_w(r12, ptr_f);
+    add_w_imm(1024, end_f);
+    
+    iter_f':= iter_f;
+    ghost var iter_g':= iter_g;
+
+    ghost var i:nat := 0;
+    
+    while (ptr_f < end_f) 
+        invariant
+            end_f == iter_f.base_ptr + 1024;
+
+        invariant
+            elems_iter_inv(heap, iter_f', ptr_f, i);
+            iter_f'.base_ptr == iter_f.base_ptr;
+            elems_iter_inv(heap, iter_g', ptr_g, i);
+            iter_g.base_ptr == iter_g'.base_ptr;
+
+        invariant
+            mem == old_mem.(heap := heap);
+            heap == old(heap)[iter_f.base_ptr := heap[iter_f'.base_ptr]];
+
+        invariant
+            poly_sub_loop_inv(iter_f'.buff, iter_f.buff, iter_g.buff, i);
+
+        decreases
+            (N.full - i);
+    {
+        let f_prev := iter_f'.buff;
+        lw(ptr_f, false, r11, iter_f');
+        iter_g' := lw_iter(ptr_g, true, r12, iter_g');
+
+        mq_sub();
+
+        iter_f' := sw_iter(ptr_f, true, r13, iter_f');
+        poly_sub_loop_correct(iter_f'.buff, f_prev, f_orig, iter_g.buff, i);
+
+        i := i + 1;
+    }
+    add_w_imm((-1024), ptr_f);
+    mov_w(ptr_f, r12);
+    iter_f' := iter_f'.(index := 0);
+}
+        
+#verbatim
+}
+#endverbatim

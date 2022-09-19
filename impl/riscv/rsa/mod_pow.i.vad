@@ -21,6 +21,7 @@ import opened mem
 import opened stack
 
 import opened bv32_mm_lemmas
+import opened bv32_op_s
 
 import opened Power
 import opened DivMod

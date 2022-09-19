@@ -1,5 +1,5 @@
 include "printer.s.dfy"
-include "../../gen/impl/otbn/nop_tests.i.dfy"
+include "../../../gen/impl/otbn/nop_tests.i.dfy"
 
 /* 
  A module for testing that OTBN code correctly includes NOP

@@ -51,7 +51,7 @@ OUTPUT_ELF_PATH = "gen/run_modexp.elf"
 
 DLL_SOURCES = {
     "spec/arch/otbn/modexp_printer.s.dfy": OTBN_ASM_PATH,
-    "spec/arch/otbn/simulator.i.dfy": "gen/arch/otbn/sim.out", 
+    "spec/arch/otbn/simulator.i.dfy": "gen/otbn_sim.out", 
     "spec/arch/riscv/printer.s.dfy": RISCV_ASM_PATH,
 }
 
@@ -422,7 +422,9 @@ def replace_string_file(file_path, src, dst):
     # print(file_path)
     with open(file_path) as f:
         filedata = f.read()
-        # Replace the target string
+    if not (src in filedata):
+        return
+    # Replace the target string
     filedata = filedata.replace(src, dst)
     with open(file_path, 'w') as f:
         f.write(filedata)

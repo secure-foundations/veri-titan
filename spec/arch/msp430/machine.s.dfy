@@ -16,7 +16,7 @@ module msp_machine {
     datatype reg_t =  
         // | PC
         | SP
-        | R(i: reg_idx)
+        | GPR(i: reg_idx)
 
     /* state definition */
 
@@ -89,7 +89,7 @@ module msp_machine {
     predicate valid_push_pop_m(r: reg_t, n: nat)
     {
         && n != 0
-        && r.R?
+        && r.GPR?
         && 4 <= r.i - n + 1 <= r.i
     }
 
@@ -140,7 +140,7 @@ module msp_machine {
         | MSP_MOV_B(src: operand_t, dst: operand_t)
         // | MSP_CMP_W(src: operand_t, dst: operand_t)
         | MSP_RLA_W(dst: operand_t)
-        | MSP_RRAX_W(dst: operand_t)
+        | MSP_RRA_W(dst: operand_t)
         | MSP_PUSHM_W(dst: operand_t, n: operand_t)
         | MSP_POPM_W(dst: operand_t, n: operand_t)
         // BR

@@ -53,23 +53,12 @@ module ot_vale {
         a % n
     }
 
-    lemma xor_clear_lemma(x: uint256)
-        ensures bv256_op_s.xor(x, x) == 0;
-    {
-        bv256_op_s.xor_clear_lemma(x, x);
-    }
-
     // need this for mul
 
     function va_mul_nat(a: nat, b: nat): nat
     {
         Mul.LemmaMulNonnegativeAuto();
         a * b
-    }
-
-    function method bool_to_uint1(b: bool): uint1
-    {
-        bv256_op_s.bool_to_uint1(b)
     }
 
     function method uint32_addi(x: uint32, y: bv32_op_s.sint): uint32

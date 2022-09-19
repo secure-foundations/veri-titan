@@ -2,29 +2,28 @@ include "ntt_twiddle.i.dfy"
 
 abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ)) {
     import opened Seq
-        import opened Power
-        import opened Power2
-        import opened DivMod
-        import opened Mul
+    import opened Power
+    import opened Power2
+    import opened DivMod
+    import opened Mul
 
-        import opened pow2_s
-        import opened ntt_index
+    import opened pow2_s
+    import opened ntt_index
 
-        type elem = MQ.elem
-        type n_elems = MQ.n_elems
+    type elem = MQ.elem
+    type elems = MQ.elems
 
-        const Q := MQ.Q;
-        const R := MQ.R;
-        const PSI := MQ.PSI;
-        const OMEGA := MQ.OMEGA;
-        const OMEGA_INV := MQ.OMEGA_INV;
-        const R_INV := MQ.R_INV;
-        ghost const N := MQ.N;
-
+    const Q := MQ.Q;
+    const R := MQ.R;
+    const PSI := MQ.PSI;
+    const OMEGA := MQ.OMEGA;
+    const OMEGA_INV := MQ.OMEGA_INV;
+    const R_INV := MQ.R_INV;
+    ghost const N := MQ.N;
 
     function x_value(i: nat, d: pow2_t): elem
 
-    predicate {:opaque} t_loop_inv(a: n_elems, count: pow2_t, coefficients: n_elems)
+    predicate {:opaque} t_loop_inv(a: elems, count: pow2_t, coefficients: elems)
         requires 0 <= count.exp <= N.exp;
     {
         var sz := PV.block_size(count);
@@ -48,7 +47,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
         }
     }
 
-    lemma t_loop_inv_pre_lemma(coefficients: n_elems)
+    lemma t_loop_inv_pre_lemma(coefficients: elems)
         ensures N.exp <= N.exp; // ??
         ensures t_loop_inv(coefficients, N, coefficients);
     {
@@ -72,12 +71,20 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
         }
     }
 
-    predicate ntt_eval_all(a: n_elems, coefficients: n_elems)
+    predicate ntt_eval_all(a: elems, coefficients: elems)
     {
         PV.points_eval_inv(a, coefficients, x_value, pow2(0))
     }
 
-    lemma t_loop_inv_post_lemma(a: n_elems, one: pow2_t, coefficients: n_elems)
+    lemma ntt_eval_all_specialized_lemma(a: elems, coeffs: elems, i: nat)
+        requires ntt_eval_all(a, coeffs);
+        requires i < N.full;
+        ensures MQP.poly_eval(coeffs, x_value(i, pow2(0))) == a[i]
+    {
+        reveal PV.points_eval_suffix_inv();
+    }
+
+    lemma t_loop_inv_post_lemma(a: elems, one: pow2_t, coefficients: elems)
         requires one.exp == 0 <= N.exp;
         requires t_loop_inv(a, one, coefficients);
         ensures ntt_eval_all(a, coefficients);
@@ -87,7 +94,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
         var points := PV.level_points_view(a, sz);
         var polys := PV.level_polys(coefficients, sz);
         MQ.Nth_root_lemma();
-        pow2_basics(one);
+        pow2_basics_lemma(one);
         assert one.full == 1;
         assert sz == N;
         assert points[0] == a;
@@ -98,7 +105,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
     }
 
     datatype loop_view = loop_view(
-        coefficients: n_elems,
+        coefficients: elems,
         lower: seq<seq<elem>>, // lower polys
         higher: seq<seq<elem>>, // higher polys
         hsize: pow2_t)
@@ -172,7 +179,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
         //         hsize)
         // }
 
-        predicate {:opaque} j_loop_higher_inv(a: n_elems, hcount: pow2_t, j: nat)
+        predicate {:opaque} j_loop_higher_inv(a: elems, hcount: pow2_t, j: nat)
             requires hcount.exp <= N.exp;
             requires loop_view_wf();
             requires hsize == PV.block_size(hcount);
@@ -182,7 +189,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
                 PV.points_eval_prefix_inv(hpoints[i], higher[bit_rev_int(i, hcount)], x_value, 2*j, hcount))
         }
 
-        predicate {:opaque} j_loop_lower_inv(a: n_elems, hcount: pow2_t, j: nat)
+        predicate {:opaque} j_loop_lower_inv(a: elems, hcount: pow2_t, j: nat)
             requires hcount.exp <= N.exp;
             requires loop_view_wf();
             requires hsize == PV.block_size(hcount);
@@ -193,7 +200,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
                 PV.points_eval_suffix_inv(lpoints[i], lower[bit_rev_int(i, lcount)], x_value, j, lcount))
         }
 
-        predicate j_loop_inv(a: n_elems, hcount: pow2_t, j: nat)
+        predicate j_loop_inv(a: elems, hcount: pow2_t, j: nat)
         {
             && loop_view_wf()
             && hcount.exp <= N.exp
@@ -203,7 +210,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
             && j_loop_lower_inv(a, hcount, j)
         }
 
-        predicate {:opaque} s_loop_higher_inv(a: n_elems, hcount: pow2_t, j: nat, bi: nat)
+        predicate {:opaque} s_loop_higher_inv(a: elems, hcount: pow2_t, j: nat, bi: nat)
             requires hcount.exp <= N.exp;
             requires bi <= hcount.full;
             requires loop_view_wf();
@@ -216,7 +223,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
                 PV.points_eval_prefix_inv(hpoints[i], higher[bit_rev_int(i, hcount)], x_value, 2*j, hcount))
         }
 
-        predicate {:opaque} s_loop_lower_inv(a: n_elems, hcount: pow2_t, j: nat, bi: nat)
+        predicate {:opaque} s_loop_lower_inv(a: elems, hcount: pow2_t, j: nat, bi: nat)
             requires hcount.exp <= N.exp;
             requires bi <= hcount.full;
             requires loop_view_wf();
@@ -231,7 +238,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
                 PV.points_eval_suffix_inv(lpoints[i], lower[bit_rev_int(i, lcount)], x_value, j, lcount))
         }
 
-        predicate s_loop_inv(a: n_elems, hcount: pow2_t, j: nat, bi: nat)
+        predicate s_loop_inv(a: elems, hcount: pow2_t, j: nat, bi: nat)
         {
             && loop_view_wf()
             && hcount.exp <= N.exp
@@ -242,7 +249,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
             && s_loop_lower_inv(a, hcount, j, bi)
         }
 
-        // lemma s_loop_index_bound(a: n_elems, hcount: pow2_t, j: nat, bi: nat)
+        // lemma s_loop_index_bound(a: elems, hcount: pow2_t, j: nat, bi: nat)
         //     requires loop_view_wf();
         //     requires hcount.exp <= N.exp;
         //     requires bi < hcount.full;
@@ -257,7 +264,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
         //     assert (2*j) * hcount.full + hcount.full == (2*j + 1) * hcount.full;
         // }
 
-        lemma higher_points_view_index_lemma(a: n_elems, hcount: pow2_t, j: nat, bi: nat)
+        lemma higher_points_view_index_lemma(a: elems, hcount: pow2_t, j: nat, bi: nat)
             returns (s: nat)
     
             requires s_loop_inv(a, hcount, j, bi);
@@ -303,7 +310,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
             }
         }
 
-        lemma lower_points_view_index_lemma(a: n_elems, hcount: pow2_t, j: nat, bi: nat)
+        lemma lower_points_view_index_lemma(a: elems, hcount: pow2_t, j: nat, bi: nat)
             returns (s: nat)
 
             requires s_loop_inv(a, hcount, j, bi);
@@ -378,7 +385,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
             higher[bit_rev_int(bi, hcount())]
         }
     
-        lemma lower_points_view_value_lemma(a: n_elems, hcount: pow2_t, j: nat, bi: nat, s: nat)
+        lemma lower_points_view_value_lemma(a: elems, hcount: pow2_t, j: nat, bi: nat, s: nat)
             requires s_loop_inv(a, hcount, j, bi);
             requires bi < hcount.full;
             requires s == bi + (2*j) * hcount.full;
@@ -415,7 +422,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
             }
         }
 
-        lemma level_polys_bitrev_index_correspondence_lemma(a: n_elems, hcount: pow2_t, j: nat, bi: nat)
+        lemma level_polys_bitrev_index_correspondence_lemma(a: elems, hcount: pow2_t, j: nat, bi: nat)
             requires s_loop_inv(a, hcount, j, bi);
             requires bi < hcount.full
             ensures |get_full_poly(bi)| == hsize.full;
@@ -439,7 +446,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
             // assert bit_rev_int(bi + hcount.full, lcount()) == 2 * ri + 1;
         }
 
-        predicate s_loop_update(a: n_elems, a': n_elems, hcount: pow2_t, j: nat, bi: nat)
+        predicate s_loop_update(a: elems, a': elems, hcount: pow2_t, j: nat, bi: nat)
             requires s_loop_inv(a, hcount, j, bi);
             requires x_value.requires(2*j, hcount);
             requires bi < hcount.full
@@ -455,7 +462,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
                 [s' := MQP.mqsub(a[s], MQP.montmul(a[s'], w))]
         }
 
-        lemma s_loop_perserves_higher_inv_lemma(a: n_elems, a': n_elems, hcount: pow2_t, j: nat, bi: nat)
+        lemma s_loop_perserves_higher_inv_lemma(a: elems, a': elems, hcount: pow2_t, j: nat, bi: nat)
             requires s_loop_inv(a, hcount, j, bi);
             requires x_value.requires(2*j, hcount);
             requires bi < hcount.full
@@ -517,7 +524,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
             }
         }
 
-        lemma s_loop_perserves_lower_inv_lemma(a: n_elems, a': n_elems, hcount: pow2_t, j: nat, bi: nat)
+        lemma s_loop_perserves_lower_inv_lemma(a: elems, a': elems, hcount: pow2_t, j: nat, bi: nat)
             requires s_loop_inv(a, hcount, j, bi);
             requires bi < hcount.full
             requires s_loop_update(a, a', hcount, j, bi);
@@ -592,7 +599,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
             }
         }
 
-        lemma s_loop_inv_peri_lemma(a: n_elems, a': n_elems, hcount: pow2_t, j: nat, bi: nat)
+        lemma s_loop_inv_peri_lemma(a: elems, a': elems, hcount: pow2_t, j: nat, bi: nat)
             requires s_loop_inv(a, hcount, j, bi);
             requires bi < hcount.full
             requires s_loop_update(a, a', hcount, j, bi);
@@ -602,7 +609,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
             s_loop_perserves_lower_inv_lemma(a, a', hcount, j, bi);
         }
 
-        lemma s_loop_inv_pre_lemma(a: n_elems, hcount: pow2_t, j: nat)
+        lemma s_loop_inv_pre_lemma(a: elems, hcount: pow2_t, j: nat)
             requires j_loop_inv(a, hcount, j);
             requires j < lsize().full;
             ensures s_loop_inv(a, hcount, j, 0);
@@ -630,7 +637,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
             }
         }
 
-        lemma s_loop_inv_post_lemma(a: n_elems, hcount: pow2_t, j: nat, bi: nat)
+        lemma s_loop_inv_post_lemma(a: elems, hcount: pow2_t, j: nat, bi: nat)
             requires s_loop_inv(a, hcount, j, bi);
             requires bi == hcount.full;
             ensures j_loop_inv(a, hcount, j + 1)
@@ -659,7 +666,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
             }
         }
 
-        lemma j_loop_inv_pre_lemma(a: n_elems, hcount: pow2_t)
+        lemma j_loop_inv_pre_lemma(a: elems, hcount: pow2_t)
             requires 0 <= hcount.exp < N.exp;
             requires t_loop_inv(a, pow2_double(hcount), coefficients);
             requires loop_view_wf();
@@ -693,7 +700,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
             }
         }
 
-        lemma j_loop_inv_post_lemma(a: n_elems, hcount: pow2_t, j: nat)
+        lemma j_loop_inv_post_lemma(a: elems, hcount: pow2_t, j: nat)
             requires j_loop_inv(a, hcount, j);
             requires j == lsize().full;
             requires 0 <= hsize.exp <= N.exp;
@@ -717,7 +724,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
         }
     }
 
-    function build_loop_view(coefficients: n_elems, hcount: pow2_t): (view: loop_view)
+    function build_loop_view(coefficients: elems, hcount: pow2_t): (view: loop_view)
         requires 0 <= hcount.exp < N.exp
         ensures view.loop_view_wf();
     {
@@ -741,7 +748,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
         requires x == x_value(2 * j, view.hcount());
         ensures MQP.mqmul(x, x) == x_value(j, view.lcount());
 
-    lemma ct_butterfly_even_lemma(view: loop_view, a: n_elems, hcount: pow2_t, j: nat, bi: nat, s: nat, w: elem)
+    lemma ct_butterfly_even_lemma(view: loop_view, a: elems, hcount: pow2_t, j: nat, bi: nat, s: nat, w: elem)
         requires view.s_loop_inv(a, hcount, j, bi);
         requires s == bi + (2*j) * hcount.full;
         requires bi < hcount.full
@@ -751,7 +758,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
         ensures MQP.poly_eval(view.get_full_poly(bi), x_value(2*j, hcount))
             == MQP.mqadd(a[s], MQP.montmul(a[s+hcount.full], w));
 
-    lemma ct_butterfly_odd_lemma(view: loop_view, a: n_elems, hcount: pow2_t, j: nat, bi: nat, s: nat, w: elem)
+    lemma ct_butterfly_odd_lemma(view: loop_view, a: elems, hcount: pow2_t, j: nat, bi: nat, s: nat, w: elem)
         requires view.s_loop_inv(a, hcount, j, bi);
         requires bi < hcount.full
         requires s == bi + (2*j) * hcount.full;
@@ -993,7 +1000,7 @@ module mq_fntt_i(CMQ: ntt_param_s, CMQP: mq_poly_i(CMQ), CPV: poly_view_i(CMQ))
         }
     }
 
-    lemma ct_butterfly_even_lemma(view: loop_view, a: n_elems, hcount: pow2_t, j: nat, bi: nat, s: nat, w: elem)
+    lemma ct_butterfly_even_lemma(view: loop_view, a: elems, hcount: pow2_t, j: nat, bi: nat, s: nat, w: elem)
         // requires view.s_loop_inv(a, hcount, j, bi);
         // requires s == bi + (2*j) * hcount.full;
         // requires bi < hcount.full
@@ -1045,7 +1052,7 @@ module mq_fntt_i(CMQ: ntt_param_s, CMQP: mq_poly_i(CMQ), CPV: poly_view_i(CMQ))
         CMQP.poly_eval_split_lemma(f_poly, e_poly, o_poly, view.hsize, x);
     }
 
-    lemma ct_butterfly_odd_lemma(view: loop_view, a: n_elems, hcount: pow2_t, j: nat, bi: nat, s: nat, w: elem)
+    lemma ct_butterfly_odd_lemma(view: loop_view, a: elems, hcount: pow2_t, j: nat, bi: nat, s: nat, w: elem)
         // requires view.s_loop_inv(a, hcount, j, bi);
         // requires bi < hcount.full
         // requires s == bi + (2*j) * hcount.full;
@@ -1264,8 +1271,8 @@ module mq_intt_i(CMQ: ntt_param_s, CMQP: mq_poly_i(CMQ), CPV: poly_view_i(CMQ))
         ensures rev_omega_inv_powers_mont_table()[t.full + j] ==
             MQP.mqmul(rev_omega_inv_powers_x_value(2 * j, d), R);
     {
-            var _ := TWD.twiddle_factors_index_bound_lemma(t, j);
-            rev_omega_inv_powers_mont_table_axiom(t, d, j);
+        var _ := TWD.twiddle_factors_index_bound_lemma(t, j);
+        rev_omega_inv_powers_mont_table_axiom(t, d, j);
     }
 
     function x_value(i: nat, d: pow2_t): (r: elem)
@@ -1390,7 +1397,7 @@ module mq_intt_i(CMQ: ntt_param_s, CMQP: mq_poly_i(CMQ), CPV: poly_view_i(CMQ))
         }
     }
 
-    lemma ct_butterfly_even_lemma(view: loop_view, a: n_elems, hcount: pow2_t, j: nat, bi: nat, s: nat, w: elem)
+    lemma ct_butterfly_even_lemma(view: loop_view, a: elems, hcount: pow2_t, j: nat, bi: nat, s: nat, w: elem)
         // requires s_loop_inv(a, hcount, j, bi);
         // requires s == bi + (2*j) * hcount.full;
         // requires bi < hcount.full
@@ -1441,7 +1448,7 @@ module mq_intt_i(CMQ: ntt_param_s, CMQP: mq_poly_i(CMQ), CPV: poly_view_i(CMQ))
         CMQP.poly_eval_split_lemma(f_poly, e_poly, o_poly, view.hsize, x);
     }
 
-    lemma ct_butterfly_odd_lemma(view: loop_view, a: n_elems, hcount: pow2_t, j: nat, bi: nat, s: nat, w: elem)
+    lemma ct_butterfly_odd_lemma(view: loop_view, a: elems, hcount: pow2_t, j: nat, bi: nat, s: nat, w: elem)
         // requires s_loop_inv(a, hcount, j, bi);
         // requires bi < hcount.full
         // requires s == bi + (2*j) * hcount.full;

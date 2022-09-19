@@ -13,50 +13,9 @@ import opened stack
 
 #endverbatim
 
-// type seq(a: Type(0)): Type(0) {: primitive} extern;
-// function operator([]) #[a: Type(0)](s: seq(a), i: int): a extern;
-// function operator([ := ]) #[a: Type(0)](s: seq(a), i: int, v: a): seq(a) extern;
-// function operator([ .. ]) #[a: Type(0)](s: seq(a), begin: int, end: int): seq(a) extern;
-// function seq_len #[a: Type(0)] (s: seq(a)): nat extern;
-// function seq_concat #[a: Type(0)](x: seq(a), y: seq(a)): seq(a) extern;
-// function seq_append #[a: Type(0)](xs: seq(a), x: a): seq(a) extern;
-
-// type map(a: Type(0), b: Type(0)): Type(0) extern;
-// function operator(?[]) #[a:Type(0), b:Type(0)](m:map(a, b), rsa:a):bool extern;
-// function operator([]) #[a: Type(0), b: Type(0)](m: map(a, b), rsa: a): b extern;
-// function operator([ := ]) #[a: Type(0), b: Type(0)](m: map(a, b), rsa: a, v: b): map(a, b) extern;
-
-// type set(a: Type(0)): Type(0) {: primitive} extern;
-// function operator(?[]) #[a:Type(0)](m:set(a), i:a):bool extern;
-// function set_len #[a: Type(0)] (s: set(a)): nat extern;
-
-// type nat:     Type(0) := int_range(0, _);
-// type uint1:   Type(0) := int_range(0, 1);
-// type uint2:   Type(0) := int_range(0, 3);
-// type uint5:   Type(0) := int_range(0, 31);
-// type uint16:  Type(0) := int_range(0, 0xffff);
-// type uint32:  Type(0) := int_range(0, 0xffffffff);
-// type uint64:  Type(0) := int_range(0, 0xffffffff_ffffffff);
-// type uint128: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff);
-// type uint256: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff);
-
-// type int32:  Type(0) := int_range((-0x80000000), 0x7fffffff);
-// type int64:  Type(0) := int_range((-0x80000000_00000000), 0x7fffffff_ffffffff);
-
 function power(b: int, e: nat) : nat extern;
 function cong(a: int, b: int, n: int) : bool extern;
 function cong_B32(a: int, b: int): bool extern;
-
-// const BASE_16:  nat extern;
-// const BASE_32:  nat extern;
-// const BASE_64:  nat extern;
-// const BASE_128: nat extern;
-// const BASE_256: nat extern;
-// const BASE_512: nat extern;
-// const NUM_WORDS:nat extern;
-
-// const BASE_31:  int extern;
-// const BASE_63:  int extern;
 
 const NA: int extern;
 
@@ -75,9 +34,6 @@ type gprs_t: Type(0) extern;
 function operator([]) (s: gprs_t, i: int): uint32 extern;
 function operator([ := ]) (s: gprs_t, i: int, v: uint32): gprs_t extern;
 function operator([ .. ]) (s: gprs_t, begin: int, end: int): seq(uint32) extern;
-
-function fst #[a: Type(0), b: Type(0)](m: tuple(a, b)): a extern;
-function snd #[a: Type(0), b: Type(0)](m: tuple(a, b)): b extern;
 
 function bool_to_uint1(i:bool) : uint1 extern;
 function A_as_carry(i:int) : uint1 extern;

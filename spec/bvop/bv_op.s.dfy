@@ -103,24 +103,63 @@ abstract module bv_op_s
 
     function method rs(x: uint, amount: uint): uint
         requires valid_shift(amount)
+    {
+        (x / Power2.Pow2(amount)) % BASE()
+    }
 
-    lemma {:axiom} rs_is_div_mod_base(x: uint, amount: uint)
-      requires valid_shift(amount);
-      ensures rs(x, amount) == (x / Power2.Pow2(amount)) % BASE();
+    lemma rs1_lemma(x: uint)
+        requires valid_shift(1)
+        ensures rs(x, 1) == x / 2;
+    {
+        Power2.Lemma2To64();
+        calc == {
+            rs(x, 1);
+            (x / 2) % BASE();
+            {
+                DivMod.LemmaSmallMod(x/2, BASE());
+            }
+            (x / 2);
+        }
+    }
 
     function method ls(x: uint, amount: uint): uint
         requires valid_shift(amount)
+    {
+        (x * Power2.Pow2(amount)) % BASE()
+    }
 
-    lemma {:axiom} ls_is_mul_mod_base(x: uint, amount: uint)
-      requires valid_shift(amount);
-      ensures ls(x, amount) == (x * Power2.Pow2(amount)) % BASE();
+    lemma ls1_lemma(x: uint)
+        requires valid_shift(1)
+        requires x < BASE()/2;
+        ensures ls(x, 1) == x * 2;
+    {
+        Power2.Lemma2To64();
+        calc == {
+            ls(x, 1);
+            (x * 2) % BASE();
+            {
+                DivMod.LemmaSmallMod(x * 2, BASE());
+            }
+            (x * 2);
+        }
+    }
 
-    function method {:opaque} lsb(x: uint): uint1
+    function method lsb(x: uint): uint1
     {
         x % 2
     }
 
     function method msb(x: uint): uint1
+    {
+        if x >= BASE()/2 then 1 else 0
+    }
+
+    lemma {:axiom} mul_equiv_lemma(x: sint, y: sint) 
+        ensures var p :int := x * y;
+            mul(to_2s_comp(x), to_2s_comp(y)) == p % BASE();
+    // {
+        // assume false;
+    // }
 
 /* addition */
 
@@ -267,6 +306,52 @@ abstract module bv_op_s
         Mul.LemmaMulIsCommutativeAuto();
         reveal dw_lh();
         reveal dw_uh();
+    }
+
+    function to_nat(xs: seq<uint>): nat
+    {
+        BVSEQ.ToNatRight(xs)
+    }
+
+    datatype dw_view_raw = dw_view_cons(
+        lh: uint, uh: uint, full: nat)
+
+    type dw_view_t = num: dw_view_raw |
+        && num.full < DW_BASE()
+        && num.lh == dw_lh(num.full)
+        && num.uh == dw_uh(num.full)
+        witness *
+
+    lemma dw_view_lemma(num: dw_view_t)
+        ensures num.full
+        == to_nat([num.lh, num.uh])
+        == num.lh + num.uh * BASE();
+        ensures DivMod.IsModEquivalent(num.full, num.lh, BASE());
+    {
+        reveal dw_lh();
+        reveal dw_uh();
+        DivMod.LemmaFundamentalDivMod(num.full, BASE());
+        BVSEQ.LemmaSeqLen2([num.lh, num.uh]);
+        dw_split_lemma(num.full);
+        DivMod.LemmaModMultiplesBasicAuto();
+        assert (num.uh * BASE()) % BASE() == 0;
+    }
+
+    function build_dw_view(lh: uint, uh: uint): dw_view_t
+    {
+        reveal dw_lh();
+        reveal dw_uh();
+        BVSEQ.LemmaSeqLen2([lh, uh]);
+        BVSEQ.LemmaSeqNatBound([lh, uh]);
+        var full := lh + uh * BASE();
+        assert Power.Pow(BASE(), 2) == DW_BASE() by {
+            reveal Power.Pow();
+        }
+        dw_split_lemma(full);
+        DivMod.LemmaFundamentalDivModConverse(full, BASE(), uh, lh);
+        assert lh == dw_lh(full);
+        assert uh == dw_uh(full);
+        dw_view_cons(lh, uh, full)
     }
 
 /* mul_add bounds */

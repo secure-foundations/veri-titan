@@ -14,7 +14,7 @@ module ntt_twiddle_i(MQ: ntt_param_s) {
         import PV = poly_view_i(MQ)
 
         type elem = MQ.elem
-        type n_elems = MQ.n_elems
+        type elems = MQ.elems
 
         const Q := MQ.Q;
         const R := MQ.R;
@@ -183,7 +183,7 @@ module ntt_twiddle_i(MQ: ntt_param_s) {
                 ensures Pow(OMEGA_INV, a + N.full / 2) % Q == (Q - Pow(OMEGA_INV, a) % Q) % Q;
         {
                 MQ.Nth_root_lemma();
-                pow2_basics(N);
+                pow2_basics_lemma(N);
                 var HN := N.full / 2;
                 var t0 := Pow(OMEGA_INV, a);
 
@@ -246,7 +246,7 @@ module ntt_twiddle_i(MQ: ntt_param_s) {
                         <=
                         2 * (N.full / 2);
                         {
-                                pow2_basics(N);
+                                pow2_basics_lemma(N);
                         }
                         N.full;
                 }
