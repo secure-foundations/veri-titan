@@ -51,10 +51,10 @@ abstract module bv_op_s
 {
     import opened BVSEQ: LittleEndianNat
     import Mul
-    import DivMod
     import Power2
 
     import integers
+    import opened DivMod
 
     type uint1 = integers.uint1
 
@@ -154,12 +154,26 @@ abstract module bv_op_s
         if x >= BASE()/2 then 1 else 0
     }
 
-    lemma {:axiom} mul_equiv_lemma(x: sint, y: sint) 
+    lemma mul_equiv_lemma(x: sint, y: sint) 
         ensures var p :int := x * y;
             mul(to_2s_comp(x), to_2s_comp(y)) == p % BASE();
-    // {
-        // assume false;
-    // }
+    {
+        var ix: int := x;
+        var iy: int := y;
+        var ux: int := to_2s_comp(x);
+        var uy: int := to_2s_comp(y);
+        var nx := if x < 0 then 1 else 0;
+        var ny := if y < 0 then 1 else 0;
+
+        gbassert IsModEquivalent(ux * uy, ix * iy, BASE()) by {
+            assert ux == nx * BASE() + ix;
+            assert uy == ny * BASE() + iy;
+            assert nx * (nx - 1) == 0;
+            assert ny * (ny - 1) == 0;
+        }
+
+        reveal dw_lh();
+    }
 
 /* addition */
 
