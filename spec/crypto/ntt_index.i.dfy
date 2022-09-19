@@ -878,6 +878,14 @@ module ntt_index {
             table_wf_inner(table, a, len)
     }
 
+    lemma table_wf_lemma(table: seq<(nat, nat)>, a: seq<nat>, len: pow2_t)
+        requires table_wf(table, len)
+        requires |a| == len.full >= 4;
+        ensures table_wf_inner(table, a, len);
+    {
+        reveal table_wf();
+    }
+
     method bit_rev(a: seq<nat>, len: pow2_t, table: seq<(nat, nat)>)
         returns (b: seq<nat>)
         requires |a| == len.full >= 4;
@@ -887,7 +895,7 @@ module ntt_index {
     {
         b := a;
         var ti := 0;
-        assume table_wf_inner(table, a, len);
+        table_wf_lemma(table, a, len);
         reveal table_wf_inner();
         ghost var view := rev_view.init_rev_view(a, len);
         view.shuffle_inv_pre_lemma(a, len);
