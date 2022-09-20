@@ -58,6 +58,9 @@ abstract module bv_op_s
 
     type uint1 = integers.uint1
 
+    lemma base_basic_lemma()
+        ensures BASE() % 2 == 0
+
     // the signed version of uint
     type sint = i: int | -(BASE()/2 as int) <= i < BASE()/2 as int
 
@@ -193,6 +196,12 @@ abstract module bv_op_s
     function method to_2s_comp(n: sint): uint
     {
         if n < 0 then n + BASE() else n
+    }
+
+    function method from_2s_comp(x: uint): sint
+    {
+        base_basic_lemma();
+        if x < (BASE()/2) then x else x - BASE()
     }
 
     function method addi(x: uint, imm: sint): uint

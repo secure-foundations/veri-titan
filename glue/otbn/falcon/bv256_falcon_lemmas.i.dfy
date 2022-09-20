@@ -68,26 +68,26 @@ module bv256_falcon_lemmas refines generic_falcon_lemmas {
     }
 
     lemma lemma_elem_prod_bound(x: uint256, y: uint256, r: uint256)
-      requires x < 12289 && y < 12289
-      requires r == x * y
-      ensures r <= 150994944
+        requires x < 12289 && y < 12289
+        requires r == x * y
+        ensures r <= 150994944
     {
-      LemmaMulUpperBound(x, 12288, y, 12288);
+        LemmaMulUpperBound(x, 12288, y, 12288);
     }
 
     lemma lemma_small(x:uint256)
       requires x < BASE_64
       ensures bv256_op_s.lh(x) % BASE_64 == x
     {
-      calc{
-        bv256_op_s.lh(x) % BASE_64;
-          { reveal bv256_op_s.lh(); }
-        (x % BASE_256) % BASE_64;
-          { LemmaSmallMod(x, BASE_256); }
-        x % BASE_64;
-          { LemmaSmallMod(x, BASE_64); }
-        x;
-      }
+        calc{
+            bv256_op_s.lh(x) % BASE_64;
+            { reveal bv256_op_s.lh(); }
+            (x % BASE_256) % BASE_64;
+            { LemmaSmallMod(x, BASE_256); }
+            x % BASE_64;
+            { LemmaSmallMod(x, BASE_64); }
+            x;
+        }
     }
 
     lemma lemma_small_mulqacc(x: uint256, y: uint256, r: uint256, old_wacc: uint256, old_flags: flags_t)
@@ -171,9 +171,45 @@ module bv256_falcon_lemmas refines generic_falcon_lemmas {
 
     predicate elems_iter_inv(heap: heap_t, iter: b256_iter, address: int, index: int)
     {
-        && b256_iter_inv(heap, iter) //, if address >= 0 then address else iter.cur_ptr())
+        && b256_iter_inv(heap, iter)
+        && (address >= 0 ==> address == iter.cur_ptr())
         && (index >= 0 ==> iter.index == index)
         && |iter.buff| == N.full
         && valid_elems(iter.buff)
+    }
+
+    predicate valid_nelem(e: uint256)
+    {
+        MQN.int_is_normalized(from_2s_comp(e))
+    }
+
+    predicate valid_nelems(a: seq<uint256>)
+    {
+        && |a| == N.full
+        && (forall i | 0 <= i < |a| :: valid_nelem(a[i]))
+    }
+
+    function as_nelem(e: uint256): nelem
+        requires valid_nelem(e)
+    {
+        from_2s_comp(e)
+    }
+
+    predicate nelems_iter_inv(heap: heap_t, iter: b256_iter, address: int, index: int)
+    {
+        && b256_iter_inv(heap, iter)
+        && (address >= 0 ==> address == iter.cur_ptr())
+        && (index >= 0 ==> iter.index == index)
+        && |iter.buff| == N.full
+        && valid_nelems(iter.buff)
+    }
+
+    predicate denorm_inv(nv: seq<uint256>, dnv: seq<uint256>, i: nat)
+    {
+        && valid_nelems(nv)
+        && valid_elems(dnv)
+        && i <= N.full
+        && (forall j | 0 <= j < i :: 
+            dnv[j] == MQN.denormalize(as_nelem(nv[j])))
     }
 }

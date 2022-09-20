@@ -1,8 +1,8 @@
-include "mq_arith.i.vad"
+include "ot_mq_arith.i.vad"
 
 #verbatim
 
-include "mq_arith.i.dfy"
+include "ot_mq_arith.i.dfy"
 
 module mq_polysub {
 

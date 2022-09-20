@@ -156,15 +156,14 @@ module ot_machine {
 
     function method otbn_addm(x: uint256, y: uint256, mod: uint256) : (r: uint256)
     {
-      var interm := x + y;
-      if interm < mod then interm else (interm - mod) % BASE_256
+        var interm := x + y;
+        if interm < mod then interm else (interm - mod) % BASE_256
     }
-
 
     function method otbn_subm(x: uint256, y: uint256, mod: uint256) : (r: uint256)
     {
-      var interm : int := x as int - y as int;
-      if interm < 0 then (interm + mod) % BASE_256 else interm
+        var interm : int := x as int - y as int;
+        if interm < 0 then (interm + mod) % BASE_256 else interm
     }
 
     function method otbn_subb(x: uint256, y: uint256, shift: shift_t, borrow: bool) : (uint256, flags_t)
