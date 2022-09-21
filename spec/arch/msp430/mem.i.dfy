@@ -525,7 +525,7 @@ module mem {
     predicate {:opaque} symbols_inv()
     {
       forall name: string :: 
-        name in symbols ==> heap_w16_ptr_valid(heap, symbols[name])
+        name in symbols ==> ptr_admissible_16(symbols[name])
     }
 
     function load_symbol(name: string): uint16
@@ -533,8 +533,7 @@ module mem {
       requires symbols_inv()
     {
       reveal symbols_inv();
-      assert heap_w16_ptr_valid(heap, symbols[name]);
-      heap[symbols[name]].w16
+      symbols[name]
     }
 
     lemma heap_b16_write_preverses_inv(

@@ -13,31 +13,6 @@ module ot_decls {
 
 #endverbatim
 
-// type seq(a: Type(0)): Type(0) {: primitive} extern;
-// function operator([]) #[a: Type(0)](s: seq(a), i: int): a extern; 
-// function operator([ := ]) #[a: Type(0)](s: seq(a), i: int, v: a): seq(a) extern;
-// function operator([ .. ]) #[a: Type(0)](s: seq(a), begin: int, end: int): seq(a) extern;
-// function seq_len #[a: Type(0)] (s: seq(a)): nat extern;
-// function seq_concat #[a: Type(0)](x: seq(a), y: seq(a)): seq(a) extern;
-// function seq_append #[a: Type(0)](xs: seq(a), x: a): seq(a) extern;
-
-// type map(a: Type(0), b: Type(0)): Type(0) extern;
-// function operator(?[]) #[a:Type(0), b:Type(0)](m:map(a, b), rsa:a):bool extern;
-// function operator([]) #[a: Type(0), b: Type(0)](m: map(a, b), rsa: a): b extern;
-// function operator([ := ]) #[a: Type(0), b: Type(0)](m: map(a, b), rsa: a, v: b): map(a, b) extern;
-
-// type nat:     Type(0) := int_range(0, _);
-// type uint1:   Type(0) := int_range(0, 2);
-// type uint2:   Type(0) := int_range(0, 4);
-// type uint4:   Type(0) := int_range(0, 16);
-// type uint5:   Type(0) := int_range(0, 32);
-// type uint10:  Type(0) := int_range(0, 1024);
-// type uint32:  Type(0) := int_range(0, 0xffffffff);
-// type uint128: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff);
-// type uint256: Type(0) := int_range(0, 0xffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff_ffffffff);
-
-// type int10:  Type(0) := int_range((-512), 512);
-// type int12:  Type(0) := int_range((-2048), 2048);
 
 function Pow(b: int, e: nat) : int extern;
 function IsModEquivalent(a: int, b: int, n: int) : bool extern;
@@ -45,14 +20,6 @@ function cong_BASE(a: int, b: int) : bool extern;
 function pow_BASE(e: nat): nat extern;
 
 function GPR(index: nat): reg32_t extern;
-
-// const BASE_32:   nat extern;
-// const BASE_64:   nat extern; 
-// const BASE_128:  nat extern; 
-// const BASE_256:  nat extern;
-// const BASE_512:  nat extern;
-// const NUM_WORDS: nat extern;
-// const NTT_PRIME: nat extern;
 
 type state: Type(0) {: primitive} extern;
 
@@ -128,6 +95,8 @@ function operator(.uh) (num: uint512_view_t): int extern;
 function operator(.li) (num: uint512_view_t): int extern;
 function operator(.ui) (num: uint512_view_t): int extern;
 function operator(.full) (num: uint512_view_t): int extern;
+
+var symbols: map(string, uint32) {:state symbols()};
 
 var ok: bool {:state ok()};
 
@@ -281,12 +250,14 @@ function uint32_or(x: uint32, y: uint32): uint32 extern;
 function uint32_and(x: uint32, y: uint32): uint32 extern;
 function uint32_add(x: uint32, y: uint32): uint32 extern;
 function uint32_addi(x: uint32, y: int12): uint32 extern;
-function uint32_and(x: uint32, y: uint32): uint32 extern;
+function uint32_add(x: uint32, y: uint32): uint32 extern;
+function uint32_sub(x: uint32, y: uint32): uint32 extern;
 function uint32_andi(x: uint32, y: int12): uint32 extern;
 function uint32_xori(x: uint32, y: int12): uint32 extern;
 function uint32_not(x: uint32): uint32 extern;
 function uint32_ls(x: uint32, amount: uint32): uint32 extern; 
 function uint32_se(x: uint32, size: int): uint32 extern;
+function uint32_rs(x: uint32, size: int): uint32 extern;
 
 function uint256_hwb(x: uint256, v: uint128, lower: bool): uint256 extern;
 function uint256_qmul(x: uint256, qx: uint2, y: uint256, qy: uint2): uint128 extern;
@@ -378,6 +349,16 @@ procedure addi(inout dst: reg32, in src1: reg32, inline imm: int12)
     this := this.(mem := old(this).mem);
 }
 
+procedure sub(inout dst: reg32, in src1: reg32, in src2: reg32)
+    {:instruction Ins32(SUB(dst, src1, src2))}
+    ensures
+        dst == uint32_sub(old(src1), old(src2));
+{
+    reveal eval_code_opaque;
+    reveal valid_state_opaque;
+    this := this.(mem := old(this).mem);
+}
+
 procedure and(inout dst: reg32, in src1: reg32, in src2: reg32)
     {:instruction Ins32(AND(dst, src1, src2))}
     ensures
@@ -421,10 +402,35 @@ procedure csrrs(inout grd: reg32, inline csr: uint12, in grs1: reg32)
     this := this.(mem := old(this).mem);
 }
 
+procedure srli(inout dst: reg32, in src1: reg32, inline imm: uint5)
+    {:instruction Ins32(SRLI(dst, src1, imm))}
+    ensures
+        dst == uint32_rs(old(src1), imm);
+{
+    reveal eval_code_opaque;
+    reveal valid_state_opaque;
+    this := this.(mem := old(this).mem);
+}
+
 procedure li(inout dst: reg32, inline imm: uint32)
     {:instruction Ins32(LI(dst, imm))}
     ensures
         dst == imm;
+{
+    reveal eval_code_opaque;
+    reveal valid_state_opaque;
+    this := this.(mem := old(this).mem);
+}
+
+procedure la(inout dst: reg32, inline name: string)
+    {:instruction Ins32(LA(dst, name))}
+    requires
+        symbols?[name];
+    reads
+        symbols;
+    ensures
+        symbols == old(symbols);
+        dst == symbols[name];
 {
     reveal eval_code_opaque;
     reveal valid_state_opaque;

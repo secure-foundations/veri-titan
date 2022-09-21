@@ -20,14 +20,6 @@ import opened falcon_512_i
 
 #endverbatim
 
-type pow2_t: Type(0) extern;
-function pow2(exp: int): pow2_t extern;
-function operator(.full) (p :pow2_t): nat extern;
-function operator(.exp) (p :pow2_t): nat extern;
-function pow2_half(p: pow2_t): pow2_t extern;
-function pow2_double(p: pow2_t): pow2_t extern;
-function pow2_basics_lemma(p: pow2_t): void extern;
-
 const N: pow2_t extern; 
 
 function elems_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int): bool extern;
@@ -36,43 +28,66 @@ function denorm_inv(nv: seq(uint256), dnv: seq(uint256), i: nat): bool extern;
 function denorm_inv_peri_lemma(nv: seq(uint256), dnv: seq(uint256), i: nat, a: uint256, b: uint256): void extern;
 function msb(x: uint256): uint1 extern;
 
-procedure denormolize(
+procedure denorm(
     ghost iter_s2: iter_t,
     ghost iter_tt: iter_t)
 returns (ghost iter_tt': iter_t)
-{:frame false}
 
     requires
-        // Q    @= w1;
         w1 == Q;
         w2 == 0;
 
-        nelems_iter_inv(heap, iter_s2, x2, 0);
-        elems_iter_inv(heap, iter_tt, x3, 0);
+        nelems_iter_inv(heap, iter_s2, x3, 0);
+        elems_iter_inv(heap, iter_tt, x5, 0);
         iter_s2.base_ptr != iter_tt.base_ptr;
+
+    modifies
+        flat; heap; fgroups;
+        x3; x5; x6; x7; x8;
+        w3; w4; wdrs; 
+
+    reads
+        w1; w2;
+
+    ensures
+        x3 == old(x3);
+        x5 == old(x5);
+
+    ensures
+        nelems_iter_inv(heap, iter_s2, x3, 0);
+        elems_iter_inv(heap, iter_tt', x5, 0);
+        iter_tt'.base_ptr == iter_tt.base_ptr;
+
+    ensures
+        heap == old(heap)
+            [iter_tt'.base_ptr := heap[iter_tt'.base_ptr]];
+
+    ensures
+        denorm_inv(iter_s2.buff, iter_tt'.buff, N.full);
 {
     ghost var iter_s2' := iter_s2;
     iter_tt' := iter_tt;
     ghost var i: nat := 0;
-    li(x4, 3);
-    // li(x5, 4);
+    addi(x7, x3, 0);
+    addi(x8, x5, 0);
+    li(x6, 3);
 
-    // iter_s2' := bn_lid_safe(x4, false, 0, x2, true, iter_s2');
     reveal valid_elems;
 
     while (LoopImm(512))
         invariant
-            x4 == 3;
-            // x5 == 4;
+            x6 == 3;
+            x7 == iter_s2'.base_ptr;
+            x8 == iter_tt'.base_ptr;
 
         invariant
             w1 == Q;
             w2 == 0;
 
         invariant
-            nelems_iter_inv(heap, iter_s2', x2, i);
+            nelems_iter_inv(heap, iter_s2', x3, i);
             iter_s2'.base_ptr == iter_s2.base_ptr;
-            elems_iter_inv(heap, iter_tt', x3, i);
+            elems_iter_inv(heap, iter_tt', x5, i);
             iter_tt'.base_ptr == iter_tt.base_ptr;
 
         invariant
@@ -89,16 +104,22 @@ returns (ghost iter_tt': iter_t)
         decreases
             loop_ctr;
     {
-        iter_s2' := bn_lid_safe(x4, false, 0, x2, true, iter_s2');
+        iter_s2' := bn_lid_safe(x6, false, 0, x3, true, iter_s2');
         let nv := iter_s2'.buff[i];
         // assert w3 == nv; 
         bn_add(w4, w2, w3, SFT_DFT, 0);
         bn_add(w4, w1, w3, SFT_DFT, 1);
         bn_sel(w3, w4, w3, 0, 1);
 
-        iter_tt' := bn_sid_safe(x4, false, 0, x3, true, iter_tt');
+        iter_tt' := bn_sid_safe(x6, false, 0, x5, true, iter_tt');
         i := i + 1;
     }
+
+    iter_s2' := iter_s2'.(index := 0);
+    iter_tt' := iter_tt'.(index := 0);
+
+    addi(x3, x7, 0);
+    addi(x5, x8, 0);
 }
 
 

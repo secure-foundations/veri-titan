@@ -212,4 +212,17 @@ module bv256_falcon_lemmas refines generic_falcon_lemmas {
         && (forall j | 0 <= j < i :: 
             dnv[j] == MQN.denormalize(as_nelem(nv[j])))
     }
+
+    predicate heap_b32_ptr_valid(heap: heap_t, base_ptr: nat, count: nat)
+    {
+        forall i: nat | i < count ::
+            heap_w32_ptr_valid(heap, base_ptr + i * 4)
+    }
+
+    function b32_seq(heap: heap_t, base_ptr: nat, count: nat): seq<uint32>
+        requires heap_b32_ptr_valid(heap, base_ptr, count);
+    {
+        seq(count, i requires 0 <= i < count =>
+            heap_w32_read(heap, base_ptr + i * 4))
+    }
 }

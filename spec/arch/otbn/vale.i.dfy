@@ -71,6 +71,11 @@ module ot_vale {
         bv32_op_s.add(x, y)
     }
 
+    function method uint32_sub(x: uint32, y: uint32): uint32
+    {
+        bv32_op_s.sub(x, y)
+    }
+
     function method uint32_and(x: uint32, y: uint32): uint32
     {
         bv32_op_s.and(x, y)
@@ -84,6 +89,11 @@ module ot_vale {
     function method uint32_xori(x: uint32, y: bv32_op_s.sint): uint32
     {
         bv32_op_s.xori(x, y)
+    }
+
+    function method uint32_rs(x: uint32, shamt: uint5): uint32
+    {
+        bv32_op_s.rs(x, shamt)
     }
 
     // otbn state realted
@@ -380,6 +390,11 @@ module ot_vale {
     function va_get_ok(s: va_state): bool
     {
         s.ms.ok
+    }
+
+    function va_get_symbols(s: va_state): map<string, uint32>
+    {
+        s.ms.symbols
     }
 
     predicate va_state_eq(s0: va_state, s1: va_state)

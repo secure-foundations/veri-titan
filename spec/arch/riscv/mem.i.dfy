@@ -628,7 +628,7 @@ module mem {
     predicate {:opaque} symbols_inv()
     {
       forall name: string :: 
-        name in symbols ==> heap_w32_ptr_valid(heap, symbols[name])
+        name in symbols ==> ptr_admissible_32(symbols[name])
     }
 
     function load_symbol(name: string): uint32
@@ -636,8 +636,7 @@ module mem {
       requires symbols_inv()
     {
       reveal symbols_inv();
-      assert heap_w32_ptr_valid(heap, symbols[name]);
-      heap[symbols[name]].w32
+      symbols[name]
     }
 
     lemma heap_b32_write_preverses_inv(
