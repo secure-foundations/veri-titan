@@ -91,6 +91,11 @@ module ot_vale {
         bv32_op_s.xori(x, y)
     }
 
+    function method uint32_ls(x: uint32, shamt: uint5): uint32
+    {
+        bv32_op_s.ls(x, shamt)
+    }
+
     function method uint32_rs(x: uint32, shamt: uint5): uint32
     {
         bv32_op_s.rs(x, shamt)

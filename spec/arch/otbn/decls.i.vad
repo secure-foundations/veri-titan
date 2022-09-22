@@ -402,6 +402,16 @@ procedure csrrs(inout grd: reg32, inline csr: uint12, in grs1: reg32)
     this := this.(mem := old(this).mem);
 }
 
+procedure slli(inout dst: reg32, in src1: reg32, inline imm: uint5)
+    {:instruction Ins32(SLLI(dst, src1, imm))}
+    ensures
+        dst == uint32_ls(old(src1), imm);
+{
+    reveal eval_code_opaque;
+    reveal valid_state_opaque;
+    this := this.(mem := old(this).mem);
+}
+
 procedure srli(inout dst: reg32, in src1: reg32, inline imm: uint5)
     {:instruction Ins32(SRLI(dst, src1, imm))}
     ensures

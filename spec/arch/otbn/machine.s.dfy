@@ -95,6 +95,7 @@ module ot_machine {
         | AND(xrd: reg32_t, xrs1: reg32_t, xrs2: reg32_t)
         | ANDI(xrd: reg32_t, xrs1: reg32_t, imm: int12)
         | XORI(xrd: reg32_t, xrs1: reg32_t, imm: int12)
+        | SLLI(xrd: reg32_t, xrs1: reg32_t, shamt: uint5)
         | SRLI(xrd: reg32_t, xrs1: reg32_t, shamt: uint5)
         | LW(xrd: reg32_t, offset: int12, xrs1: reg32_t)
         | SW(xrs2: reg32_t, offset: int12, xrs1: reg32_t)
@@ -550,6 +551,13 @@ module ot_machine {
                 this.(ok := false)
         }
 
+        function method eval_SLLI(xrd: reg32_t, xrs1: reg32_t, shamt: uint5): state
+        {
+            var v1 := read_reg32(xrs1);
+            var value := bv32_op_s.ls(v1, shamt);
+            write_reg32(xrd, value)   
+        }
+
         function method eval_SRLI(xrd: reg32_t, xrs1: reg32_t, shamt: uint5): state
         {
             var v1 := read_reg32(xrs1);
@@ -780,6 +788,7 @@ module ot_machine {
                 case LW(xrd, offset, xrs1) => eval_LW(xrd, offset, xrs1)
                 case SW(xrs2, offset, xrs1) => eval_SW(xrs2, offset, xrs1)
                 case CSRRS(grd, csr, grs1) => eval_CSRRS(grd, csr, grs1)
+                case SLLI(xrd, xrs1, shamt) => eval_SLLI(xrd, xrs1, shamt)
                 case SRLI(xrd, xrs1, shamt) => eval_SRLI(xrd, xrs1, shamt)
                 case LI(xrd, imm32) => eval_LI(xrd, imm32)
                 case LA(xrd, name) => eval_LA(xrd, name)

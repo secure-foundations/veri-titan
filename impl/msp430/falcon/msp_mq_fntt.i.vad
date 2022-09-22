@@ -48,7 +48,7 @@ function forward_j_loop_inv_pre_lemma(a: seq(uint16), hcount: pow2_t, view: floo
 function forward_j_loop_inv_post_lemma(a: seq(uint16), hcount: pow2_t, j: nat, u: nat, view: floop_view): void extern;
 
 function forward_s_loop_inv(a: seq(uint16), d: pow2_t, j: nat, bi: nat, view: floop_view): bool extern;
-function forward_s_loop_inv_pre_lemma(a: seq(uint16), d: pow2_t, j: nat, t: pow2_t, u: nat, w: nat, s: uint16, s_end: uint16, view: floop_view): void extern;
+function forward_s_loop_inv_pre_lemma(a: seq(uint16), d: pow2_t, j: nat, t: pow2_t, u: nat, view: floop_view): void extern;
 function forward_s_loop_inv_post_lemma(a: seq(uint16), d: pow2_t, j: nat, u: nat, bi: nat, view: floop_view): void extern;
 function forward_s_loop_index_lemma(a: seq(uint16), d: pow2_t, j: nat, s: uint16, bi: nat, view: floop_view): (gs: nat) extern;
 function forward_s_loop_update(a: seq(uint16), a': seq(uint16), d: pow2_t, j: nat, bi: nat, s: nat, e: uint32, o: uint32, view: floop_view): bool extern;
@@ -295,7 +295,7 @@ procedure forward_j_loop(
     mov_w(pd, s_end);
     add_w(s, s_end);
 
-    forward_s_loop_inv_pre_lemma(iter_a'.buff, gd, j, gt, u, w_ptr, s, s_end, view);
+    forward_s_loop_inv_pre_lemma(iter_a'.buff, gd, j, gt, u, view);
     add_w(p_base, w_ptr);
 
     ghost var iter_p' := iter_p.(index := t + j);

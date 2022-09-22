@@ -187,6 +187,7 @@ abstract module generic_falcon_lemmas {
     {
         && valid_elems(a)
         && u == j * (2 * d.full)
+        && u <= 512
         && view.j_loop_inv(as_elems(a), d, j)
     }
 
@@ -239,6 +240,41 @@ abstract module generic_falcon_lemmas {
         view.j_loop_inv_post_lemma(a, d, j);
     }
 
+    lemma forward_s_loop_inv_pre_lemma(
+        a: seq<nat>,
+        d: pow2_t,
+        j: nat,
+        t: pow2_t,
+        u: nat,
+        view: FNTT.loop_view)
+
+        requires forward_j_loop_inv(a, d, j, u, view);
+        requires t == view.lsize();
+        requires j < view.lsize().full;
+
+        ensures forward_s_loop_inv(a, d, j, 0, view);
+        ensures t.full + j < N.full;
+        ensures 2 * u + 2 * d.full < BASE_16;
+        ensures |FNTT.rev_mixed_powers_mont_table()| == N.full;
+        ensures FNTT.rev_mixed_powers_mont_table()[t.full + j] == 
+            MQP.mqmul(FNTT.rev_mixed_powers_mont_x_value(2 * j, d), R);
+    {
+        view.s_loop_inv_pre_lemma(as_elems(a), d, j);
+        FNTT.rev_mixed_powers_mont_table_lemma(t, d, j);
+
+        assert u == j * (2 * d.full);
+        assert d == view.hcount();
+
+        calc {
+            j * (2 * d.full) + d.full;
+            <= 
+            {
+                LemmaMulInequality(j, 512, 2 * d.full);
+            }
+            512 * (2 * d.full) + d.full;
+        }
+    }
+
     predicate forward_s_loop_update(
         a: seq<nat>,
         a': seq<nat>,
@@ -285,6 +321,77 @@ abstract module generic_falcon_lemmas {
         assert valid_elems(a') by {
             reveal valid_elems();
         }
+    }
+
+    lemma forward_s_loop_inv_post_lemma(
+        a: seq<nat>,
+        d: pow2_t,
+        j: nat,
+        u: nat,
+        bi: nat,
+        view: FNTT.loop_view)
+    
+        requires bi == d.full;
+        requires u == j * (2 * d.full);
+        requires forward_s_loop_inv(a, d, j, bi, view);
+
+        ensures 2 * d.full + u == (j + 1) * (2 * d.full) <= 512;
+        ensures forward_j_loop_inv(a, d, j + 1, u + 2 * d.full, view);
+    {
+        view.s_loop_inv_post_lemma(as_elems(a), d, j, bi);
+
+        var t := view.lsize();
+        var p := pow2_mul(t, d);
+        MQ.Nth_root_lemma();
+
+        assert u + 2 * d.full == (j + 1) * (2 * d.full) by{
+            LemmaMulProperties();
+        }
+
+        calc {
+            (j + 1) * (2 * d.full);
+            <= 
+            {
+                LemmaMulInequality(j+1, t.full, 2 * d.full);
+            }
+            t.full * (2 * d.full);
+            {
+                LemmaMulProperties();
+            }
+            2 * (t.full * d.full);
+            2 * p.full;
+            512;
+        }
+    }
+
+    lemma forward_s_loop_index_lemma(
+        a: seq<nat>,
+        d: pow2_t,
+        j: nat,
+        s: nat,
+        bi: nat,
+        view: FNTT.loop_view)
+        returns (gs: nat)
+
+        requires forward_s_loop_inv(a, d, j, bi, view);
+        requires bi < d.full
+        requires s == (bi + j * (2 * d.full)) * 2;
+
+        ensures s == 2 * gs;
+        ensures s + 2 * d.full == 2 * (gs + d.full);
+        ensures gs + d.full < N.full;
+        ensures a[gs] == CPV.level_points_view(a, view.hsize)[bi][2*j];
+        ensures gs == CPV.point_view_index(bi, 2*j, view.hsize);
+        ensures a[gs+d.full] == CPV.level_points_view(a, view.hsize)[bi][2*j+1];
+        ensures gs+d.full == CPV.point_view_index(bi, 2*j+1, view.hsize);
+        ensures a[gs+d.full] < Q;
+        ensures a[gs] < Q;
+    {
+        gs := view.higher_points_view_index_lemma(as_elems(a), d, j, bi);
+        assert s == 2 * gs by {
+            LemmaMulProperties();
+        }
+        reveal valid_elems();
     }
 
 // intt wraps
@@ -428,6 +535,125 @@ abstract module generic_falcon_lemmas {
     {
         view.j_loop_inv_post_lemma(a, d, j);
     }
+
+    lemma inverse_s_loop_inv_pre_lemma(
+        a: seq<nat>,
+        d: pow2_t,
+        j: nat,
+        t: pow2_t,
+        u: nat,
+        view: INTT.loop_view)
+
+        requires inverse_j_loop_inv(a, d, j, u, view);
+        requires t == view.lsize();
+        requires j < view.lsize().full;
+
+        ensures inverse_s_loop_inv(a, d, j, 0, view);
+        ensures 2 * u + 2 * d.full < BASE_16;
+        ensures t.full + j < N.full;
+        ensures |INTT.rev_omega_inv_powers_mont_table()| == N.full;
+        ensures INTT.rev_omega_inv_powers_mont_table()[t.full + j] == 
+            MQP.mqmul(INTT.rev_omega_inv_powers_x_value(2 * j, d), R);
+    {
+        view.s_loop_inv_pre_lemma(as_elems(a), d, j);
+        INTT.rev_omega_inv_powers_mont_table_lemma(t, d, j);
+
+        assert u == j * (2 * d.full);
+        assert d == view.hcount();
+
+        var p := pow2_mul(t, d);
+        assert p.exp == 8;
+        MQ.Nth_root_lemma();
+
+        calc {
+            u;
+            j * (2 * d.full);
+            <= 
+            {
+                LemmaMulInequality(j, t.full, 2 * d.full);
+            }
+            t.full * (2 * d.full);
+            {
+                LemmaMulProperties();
+            }
+            2 * (t.full * d.full);
+            2 * p.full;
+            512;
+        }
+    }
+
+    lemma inverse_s_loop_inv_post_lemma(
+        a: seq<nat>,
+        d: pow2_t,
+        j: nat,
+        u: nat,
+        bi: nat,
+        view: INTT.loop_view)
+    
+        requires bi == d.full;
+        requires u == j * (2 * d.full);
+        requires inverse_s_loop_inv(a, d, j, bi, view);
+
+        ensures 2 * d.full + u == (j + 1) * (2 * d.full) <= 512;
+        ensures inverse_j_loop_inv(a, d, j + 1, u + 2 * d.full, view);
+    {
+        view.s_loop_inv_post_lemma(as_elems(a), d, j, bi);
+
+        var t := view.lsize();
+        var p := pow2_mul(t, d);
+        assert p.exp == 8;
+        MQ.Nth_root_lemma();
+
+        assert u + 2 * d.full == (j + 1) * (2 * d.full) by{
+            LemmaMulProperties();
+        }
+
+        calc {
+            (j + 1) * (2 * d.full);
+            <= 
+            {
+                LemmaMulInequality(j+1, t.full, 2 * d.full);
+            }
+            t.full * (2 * d.full);
+            {
+                LemmaMulProperties();
+            }
+            2 * (t.full * d.full);
+            2 * p.full;
+            512;
+        }
+    }
+
+    lemma inverse_s_loop_index_lemma(
+        a: seq<nat>,
+        d: pow2_t,
+        j: nat,
+        s: nat,
+        bi: nat,
+        view: INTT.loop_view)
+        returns (gs: nat)
+
+        requires inverse_s_loop_inv(a, d, j, bi, view);
+        requires bi < d.full
+        requires s == (bi + j * (2 * d.full)) * 2;
+
+        ensures s == 2 * gs;
+        ensures s + 2 * d.full == 2 * (gs + d.full);
+        ensures gs + d.full < N.full;
+        ensures a[gs] == CPV.level_points_view(a, view.hsize)[bi][2*j];
+        ensures gs == CPV.point_view_index(bi, 2*j, view.hsize);
+        ensures a[gs+d.full] == CPV.level_points_view(a, view.hsize)[bi][2*j+1];
+        ensures gs+d.full == CPV.point_view_index(bi, 2*j+1, view.hsize);
+        ensures a[gs+d.full] < Q;
+        ensures a[gs] < Q;
+    {
+        gs := view.higher_points_view_index_lemma(as_elems(a), d, j, bi);
+        assert s == 2 * gs by {
+            LemmaMulProperties();
+        }
+        reveal valid_elems();
+    }
+
 
 // circle product wrap
 
