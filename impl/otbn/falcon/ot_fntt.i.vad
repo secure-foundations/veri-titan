@@ -473,6 +473,7 @@ returns (ghost iter_a': iter_t)
 
     ensures
         forward_ntt_eval_all(iter_a'.buff, iter_a.buff);
+
 {
     iter_a' := iter_a;
 
