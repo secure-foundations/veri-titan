@@ -52,8 +52,8 @@ function forward_s_loop_inv(a: wbuff, d: pow2_t, j: nat, bi: nat, view: floop_vi
 function forward_s_loop_inv_pre_lemma(a: wbuff, d: pow2_t, j: nat, t: pow2_t, u: nat, view: floop_view): void extern;
 function forward_s_loop_inv_post_lemma(a: wbuff, d: pow2_t, j: nat, u: nat, bi: nat, view: floop_view): void extern;
 function forward_s_loop_index_lemma(a: wbuff, d: pow2_t, j: nat, s: nat, bi: nat, view: floop_view): (gs: nat) extern;
-function forward_s_loop_update(a: wbuff, a': wbuff, d: pow2_t, j: nat, bi: nat, s: nat, e: uint32, o: uint32, view: floop_view): bool extern;
-function forward_s_loop_inv_peri_lemma(a: wbuff, a': wbuff, d: pow2_t, j: nat, bi: nat, s: nat, e: uint32, o: uint32, view: floop_view): void extern;
+function forward_s_loop_update(a: wbuff, a': wbuff, d: pow2_t, j: nat, bi: nat, s: nat, e: nat, o: nat, view: floop_view): bool extern;
+function forward_s_loop_inv_peri_lemma(a: wbuff, a': wbuff, d: pow2_t, j: nat, bi: nat, s: nat, e: nat, o: nat, view: floop_view): void extern;
 
 function forward_ntt_eval_all(a: wbuff, coeffs: wbuff): bool extern;
 function forward_t_loop_inv(a: wbuff, d: pow2_t, c: wbuff): bool extern;
@@ -62,10 +62,13 @@ function forward_t_loop_inv_post_lemma(a: wbuff, one: pow2_t, c: wbuff): void ex
 
 function elems_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int): bool extern;
 function msb(x: uint256): uint1 extern;
+function montmul(x: nat, y: nat): nat extern;
 
 const R: nat extern;
 
 function mqmul(x: nat, y: nat): nat extern;
+function mqsub(x: nat, y: nat): nat extern;
+function mqadd(x: nat, y: nat): nat extern;
 
 procedure forward_s_loop(
     ghost iter_a: iter_t,
@@ -74,13 +77,13 @@ procedure forward_s_loop(
     ghost view: floop_view)
     returns (ghost iter_a': iter_t)
 {:frame false}
-     lets
+    lets
         d         @= x6;
         t         @= x7;
         j         @= x8;
         s         @= x9;
-        pd        @= x10;
         u         @= x12;
+        pd        @= x10;
 
         a_base    @= x4; 
         p_base    @= x11;
@@ -89,16 +92,18 @@ procedure forward_s_loop(
         ae_ptr    @= x14;
 
     requires
-        pd == 2 * d;
         d == gd.full;
         u == j * (2 * gd.full);
-        s == (bi + u) * 2;
+        s == (bi + u) * 32;
 
-        // x15 == 3;
-        // set fixed indirect reg
+        x15 == 2;
+        x16 == 0;
 
     requires
-        w3 ==  mqmul(rev_mixed_powers_mont_x_value(2 * j, gd), R);
+        w1 == 12289;
+        w3 == mqmul(rev_mixed_powers_mont_x_value(2 * j, gd), R);
+        w5 == 12287;
+        wmod == Q;
 
     requires
         elems_iter_inv(heap, iter_a, a_base, 0);
@@ -108,16 +113,21 @@ procedure forward_s_loop(
     ensures
         d == old(d);
         t == old(t);
-        pd == 2 * d;
-        d == gd.full;
+        pd == old(pd);
         j == old(j);
-        s == old(s);
+        s == (bi + u + 1) * 32;
         u == old(u);
         a_base == old(a_base);
         p_base == old(p_base);
 
+        x15 == 2;
+        x16 == 0;
+
     ensures
+        w1 == old(w1);
         w3 == old(w3);
+        w5 == old(w5);
+        wmod == Q;
 
     ensures
         elems_iter_inv(heap, iter_a', old(a_base), 0);
@@ -129,43 +139,42 @@ procedure forward_s_loop(
     ensures
         forward_s_loop_inv(iter_a'.buff, gd, j, bi+1, view);
 {
-    add(ao_ptr, s, d);
-    slli(ao_ptr, ao_ptr, 5);
-    add(ao_ptr, ao_ptr, a_base);
-
-    slli(ae_ptr, s, 5);
-    add(ae_ptr, ae_ptr, a_base);
+    left_shift_5(ao_ptr, d);
+    add(ae_ptr, s, a_base);
+    add(ao_ptr, ae_ptr, ao_ptr);
 
     let gs := forward_s_loop_index_lemma(iter_a.buff, gd, j, s, bi, view);
+    let a_e := iter_a.buff[gs];
+    let a_o := iter_a.buff[gs + d];
 
-    let _ := bn_lid_safe(x15, false, 0, ae_ptr, false, iter_a.(index := gs + d));
-    let _ := bn_lid_safe(x15, false, 0, ao_ptr, false, iter_a.(index := gs));
+    iter_a' := bn_lid_safe(x15, false, 0, ao_ptr, false, iter_a.(index := gs + d));
+    // assert w2 == a_o;
+ 
+    bn_mov(w6, w3);
+    montymul();
+    assume (w4 == montmul(a_o, old(w3)));
+    let x := w4;
 
-    // let a_e := iter_a.buff[gs];
-    // let a_o := iter_a.buff[gs + d];
+    iter_a' := bn_lid_safe(x15, false, 0, ae_ptr, false, iter_a.(index := gs));
+    // assert w2 == a_e;
 
-    // montymul(a_o, w);
-    // let x := r12;
+    mq_sub(w0, w2, w4);
+    let o := w0;
 
-    // add_w(s, ae_ptr);
-    // iter_a' := lw_iter(ae_ptr, false, r11, iter_a.(index := gs));
+    iter_a' := bn_sid_safe(x16, false, 0, ao_ptr, false, iter_a'.(index := gs + d));
 
-    // mq_sub();
+    mq_add(w0, w2, w4);
+    let e := w0;
 
-    // // assert r13 == mqsub(a_e, x);
-    // let o := r13;
-    // iter_a' := sw_iter(ao_ptr, false, r13, iter_a'.(index := gs + d));
 
-    // mq_add();
-    // // assert r13 == mqadd(a_e, x);
-    // let e := r13;
-    // iter_a' := sw_iter(ae_ptr, false, r13, iter_a'.(index := gs));
-    // // assert e == mqadd(a_e, montmul(a_o, old(w)));
-    // // assert o == mqsub(a_e, montmul(a_o, old(w)));
-    // // assert forward_s_loop_update(iter_a.buff, iter_a'.buff, gd, j, bi, gs, e, o, view);
-    // forward_s_loop_inv_peri_lemma(iter_a.buff, iter_a'.buff, gd, j, bi, gs, e, o, view);
-    // iter_a' := iter_a'.(index := 0);
-    assume false;
+    iter_a' := bn_sid_safe(x16, false, 0, ae_ptr, false, iter_a'.(index := gs));
+
+    forward_s_loop_inv_peri_lemma(iter_a.buff, iter_a'.buff, gd, j, bi, gs, e, o, view);
+
+    bn_mov(w3, w6);
+    addi(s, s, 32);
+
+    iter_a' := iter_a'.(index := 0);
 }
 
 procedure forward_j_loop(
@@ -177,21 +186,28 @@ procedure forward_j_loop(
     returns (ghost iter_a': iter_t)
 {:frame false}
 
-     lets
+    lets
         d         @= x6;
         t         @= x7;
         j         @= x8;
         s         @= x9;
-        pd        @= x10;
         u         @= x12;
-
+        pd        @= x10;
         a_base    @= x4; 
         p_base    @= x11; 
 
     requires
         t == gt.full;
-        pd == 2 * d;
         d == gd.full;
+        pd == 2 * d;
+
+        x15 == 2;
+        x16 == 0;
+
+    requires
+        w1 == 12289;
+        w5 == 12287;
+        wmod == Q;
 
     requires
         elems_iter_inv(heap, iter_a, a_base, 0);
@@ -206,11 +222,19 @@ procedure forward_j_loop(
 
     ensures
         t == gt.full;
-        pd == 2 * d;
         d == gd.full;
+        pd == old(pd);
         j == old(j);
         a_base == old(a_base);
         p_base == old(p_base);
+
+        x15 == 2;
+        x16 == 0;
+
+    ensures
+        w1 == 12289;
+        w5 == 12287;
+        wmod == Q;
 
     ensures
         elems_iter_inv(heap, iter_a', a_base, 0);
@@ -225,9 +249,7 @@ procedure forward_j_loop(
         forward_j_loop_inv(iter_a'.buff, gd, j + 1, u, view);
 {
     add(x13, t, j);
-    let idx := x13;
-    slli(x13, x13, 5);
-    assume x13 == idx * 32;
+    left_shift_5(x13, x13);
     add(x13, p_base, x13);
 
     addi(x14, x0, 3);
@@ -239,7 +261,7 @@ procedure forward_j_loop(
     ghost var bi :nat := 0;
     iter_a' := iter_a;
 
-    add(s, u, u);
+    left_shift_5(s, u);
 
     while (Loop(d))
         invariant
@@ -252,7 +274,14 @@ procedure forward_j_loop(
             bi + loop_ctr == d;
             a_base == old(a_base);
             p_base == old(p_base);
-            s == (bi + u) * 2;
+            s == (bi + u) * 32;
+            x15 == 2;
+            x16 == 0;
+
+        invariant
+            w1 == 12289;
+            w5 == 12287;
+            wmod == Q;
 
         invariant
             w3 == mqmul(rev_mixed_powers_mont_x_value(2 * j, gd), R);
@@ -271,7 +300,6 @@ procedure forward_j_loop(
             loop_ctr;
     {
         iter_a' := forward_s_loop(iter_a', gd, bi, view);
-        addi(s, s, 2);
         bi := bi + 1;
     }
 
@@ -279,182 +307,232 @@ procedure forward_j_loop(
     add(u, u, pd);
 }
 
-// procedure fntt_t_loop(ghost iter_a: iter_t,
-//     ghost iter_p: iter_t,
-//     ghost gt: pow2_t,
-//     ghost gd: pow2_t,
-//     ghost coeffs: wbuff)
-// returns (ghost iter_a': iter_t)
-//     {:frame false}
+procedure fntt_t_loop(ghost iter_a: iter_t,
+    ghost iter_p: iter_t,
+    ghost gt: pow2_t,
+    ghost gd: pow2_t,
+    ghost coeffs: wbuff)
+returns (ghost iter_a': iter_t)
+    {:frame false}
 
-//     lets
-//         d         @= x6;
-//         t         @= x7;
-//         j         @= x8;
-//         s         @= x9;
-//         pd        @= x10;
-//         u         @= x12;
+    lets
+        d         @= x6;
+        t         @= x7;
+        j         @= x8;
+        s         @= x9;
+        pd        @= x10;
+        u         @= x12;
 
-//         a_base    @= x4; 
-//         p_base    @= x11;
+        a_base    @= x4; 
+        p_base    @= x11;
 
-//     requires
-//         t == gt.full;
-//         pd == 2 * d;
-//         d == gd.full;
+    requires
+        t == gt.full;
+        pd == 2 * d;
+        d == gd.full;
+        
+        x15 == 2;
+        x16 == 0;
 
-//     requires
-//         elems_iter_inv(heap, iter_a, a_base, 0);
-//         elems_iter_inv(heap, iter_p, p_base, 0);
-//         iter_a.base_ptr != iter_p.base_ptr;
+    requires
+        w1 == 12289;
+        w5 == 12287;
+        wmod == Q;
 
-//     requires
-//         0 <= gd.exp < N.exp;
-//         gt == block_size(pow2_double(gd));
-//         forward_t_loop_inv(iter_a.buff, pow2_double(gd), coeffs);
-//         iter_p.buff == rev_mixed_powers_mont_table();
+    requires
+        elems_iter_inv(heap, iter_a, a_base, 0);
+        elems_iter_inv(heap, iter_p, p_base, 0);
+        iter_a.base_ptr != iter_p.base_ptr;
 
-//      ensures
-//         t == old(t);
-//         pd == old(pd);
-//         d == old(d);
-//         a_base == old(a_base);
+    requires
+        0 <= gd.exp < N.exp;
+        gt == block_size(pow2_double(gd));
+        forward_t_loop_inv(iter_a.buff, pow2_double(gd), coeffs);
+        iter_p.buff == rev_mixed_powers_mont_table();
 
-//     ensures
-//         elems_iter_inv(heap, iter_a', a_base, 0);
-//         elems_iter_inv(heap, iter_p, p_base, 0);
-//         heap == old(heap)[a_base := heap[a_base]];
+    ensures
+        t == old(t);
+        d == old(d);
+        x15 == 2;
+        x16 == 0;
+        pd == old(pd);
+        a_base == old(a_base);
+
+    ensures
+        w1 == 12289;
+        w5 == 12287;
+        wmod == Q;
+
+    ensures
+        elems_iter_inv(heap, iter_a', a_base, 0);
+        iter_a'.base_ptr == iter_a.base_ptr;
+        elems_iter_inv(heap, iter_p, p_base, 0);
+        heap == old(heap)[a_base := heap[a_base]];
     
-//     ensures
-//         forward_t_loop_inv(iter_a'.buff, gd, coeffs);
-// {
-//     addi(j, x0, 0);
-//     addi(u, x0, 0);
+    ensures
+        forward_t_loop_inv(iter_a'.buff, gd, coeffs);
+{
+    addi(j, x0, 0);
+    addi(u, x0, 0);
 
-//     ghost var view := build_floop_view(as_elems(coeffs), gd);
+    ghost var view := build_floop_view(as_elems(coeffs), gd);
 
-//     iter_a' := iter_a;
+    iter_a' := iter_a;
 
-//     forward_j_loop_inv_pre_lemma(iter_a'.buff, gd, view);
-//     sub(x13, t, j);
-//     let j_lc := t - j;
+    forward_j_loop_inv_pre_lemma(iter_a'.buff, gd, view);
+    sub(x13, t, j);
+    let j_lc := t - j;
 
-//     while (Loop(x13))
-//         invariant
-//             t == gt.full;
-//             pd == 2 * d;
-//             d == gd.full;
-//             a_base == old(a_base);
-//             p_base == old(p_base);
-//             j + loop_ctr == j_lc;
+    while (Loop(x13))
+        invariant
+            t == gt.full;
+            pd == 2 * d;
+            d == gd.full;
+            a_base == old(a_base);
+            p_base == old(p_base);
+            j + loop_ctr == j_lc;
+            x15 == 2;
+            x16 == 0;
 
-//         invariant
-//             elems_iter_inv(heap, iter_a', a_base, 0);
-//             elems_iter_inv(heap, iter_p, p_base, 0);
-//             iter_a'.base_ptr == iter_a.base_ptr;
-//             iter_a'.base_ptr != iter_p.base_ptr;
+        invariant
+            w1 == 12289;
+            w5 == 12287;
+            wmod == Q;
 
-//         invariant
-//             heap == old(heap)[a_base := heap[a_base]];
+        invariant
+            elems_iter_inv(heap, iter_a', a_base, 0);
+            elems_iter_inv(heap, iter_p, p_base, 0);
+            iter_a'.base_ptr == iter_a.base_ptr;
+            iter_a'.base_ptr != iter_p.base_ptr;
 
-//         invariant
-//             forward_j_loop_inv(iter_a'.buff, gd, j, u, view);
+        invariant
+            heap == old(heap)[a_base := heap[a_base]];
 
-//         decreases
-//             loop_ctr;
-//     {
-//         iter_a' := forward_j_loop(iter_a', iter_p, gt, gd, view);
-//         addi(j, j, 1);
-//     }
+        invariant
+            forward_j_loop_inv(iter_a'.buff, gd, j, u, view);
 
-//     forward_j_loop_inv_post_lemma(iter_a'.buff, gd, j, u, view);
-// }
+        decreases
+            loop_ctr;
+    {
+        iter_a' := forward_j_loop(iter_a', iter_p, gt, gd, view);
+        addi(j, j, 1);
+    }
 
-// procedure fntt(
-//     ghost iter_a: iter_t,
-//     ghost iter_p: iter_t)
-// returns (ghost iter_a': iter_t)
+    forward_j_loop_inv_post_lemma(iter_a'.buff, gd, j, u, view);
+}
 
-// {:noInline}
-// {:frame false}
+procedure fntt(
+    ghost iter_a: iter_t,
+    ghost iter_p: iter_t)
+returns (ghost iter_a': iter_t)
 
-//     lets
-//         d         @= x6;
-//         t         @= x7;
-//         j         @= x8;
-//         s         @= x9;
-//         pd        @= x10; 
+{:noInline}
+{:frame false}
 
-//         a_base    @= x4; 
-//         p_base    @= x11; 
+    lets
+        d         @= x6;
+        t         @= x7;
+        j         @= x8;
+        s         @= x9;
+        pd        @= x10; 
 
-//     requires
-//         elems_iter_inv(heap, iter_a, x4, 0);
+        a_base    @= x4; 
+        p_base    @= x11; 
 
-//     requires
-//         symbols?["rev_mixed_powers_mont_table"];
-//         elems_iter_inv(heap, iter_p, 
-//             symbols["rev_mixed_powers_mont_table"], 0);
-//         iter_p.buff == rev_mixed_powers_mont_table();
+    requires 
+        w1 == 12289;
+        w5 == 12287;
+        wmod == Q;
 
-//     requires
-//         iter_a.base_ptr != iter_p.base_ptr;
+    requires
+        elems_iter_inv(heap, iter_a, x4, 0);
 
-// {
-//     iter_a' := iter_a;
+    requires
+        symbols?["rev_mixed_powers_mont_table"];
+        elems_iter_inv(heap, iter_p, 
+            symbols["rev_mixed_powers_mont_table"], 0);
+        iter_p.buff == rev_mixed_powers_mont_table();
 
-//     addi(d, x0, 512);
-//     addi(t, x0, 1);
+    requires
+        iter_a.base_ptr != iter_p.base_ptr;
 
-//     la(p_base, "rev_mixed_powers_mont_table");
+    ensures
+        a_base == old(a_base);
 
-//     forward_t_loop_inv_pre_lemma(iter_a.buff);
-//     let coeffs := iter_a.buff;
+    ensures
+        w1 == 12289;
+        w5 == 12287;
+        wmod == Q;
 
-//     ghost var gd := N;
-//     ghost var i :int := 9;
-//     ghost var gt := pow2(0);
-//     pow2_basics_lemma(gt);
+    ensures
+        elems_iter_inv(heap, iter_a', a_base, 0);
+        iter_a'.base_ptr == iter_a.base_ptr;
 
-//     while (LoopImm(9))
-//         invariant
-//             t == gt.full;
-//             d == gd.full;
-//             a_base == old(a_base);
+    ensures
+        heap == old(heap)[a_base := heap[a_base]];
 
-//         invariant
-//             elems_iter_inv(heap, iter_a', a_base, 0);
-//             iter_a'.base_ptr == a_base;
-//             elems_iter_inv(heap, iter_p, p_base, 0);
-//             iter_p.base_ptr == p_base;
+    ensures
+        forward_ntt_eval_all(iter_a'.buff, iter_a.buff);
+{
+    iter_a' := iter_a;
 
-//         invariant
-//             heap == old(heap)[a_base := heap[a_base]];
+    addi(d, x0, 512);
+    addi(t, x0, 1);
 
-//         invariant
-//             gd.exp == loop_ctr;
-//             0 <= gd.exp <= N.exp;
-//             gt == block_size(gd);
-//             forward_t_loop_inv(iter_a'.buff, gd, coeffs);
+    addi(x15, x0, 2);
+    addi(x16, x0, 0);
 
-//         decreases
-//             loop_ctr;
-//     {
-//         addi(pd, d, 0);
-//         gd := half(d, gd);
+    la(p_base, "rev_mixed_powers_mont_table");
 
-//         iter_a' := fntt_t_loop(iter_a', iter_p, gt, gd, coeffs);
+    forward_t_loop_inv_pre_lemma(iter_a.buff);
+    let coeffs := iter_a.buff;
 
-//         gt := double(t, gt);
-//         i := i - 1;
-//     }
+    ghost var gd := N;
+    ghost var i :int := 9;
+    ghost var gt := pow2(0);
+    pow2_basics_lemma(gt);
 
-// //     forward_t_loop_inv_post_lemma(iter_a'.buff, gd, coeffs);
+    while (LoopImm(9))
+        invariant
+            t == gt.full;
+            d == gd.full;
+    
+            x15 == 2;
+            x16 == 0;
 
-// //     popm_w(7, r10);
+        invariant
+            w1 == 12289;
+            w5 == 12287;
+            wmod == Q;
 
-//     assume false;
-// }
+        invariant
+            elems_iter_inv(heap, iter_a', a_base, 0);
+            iter_a'.base_ptr == iter_a.base_ptr;
+            elems_iter_inv(heap, iter_p, p_base, 0);
+
+        invariant
+            heap == old(heap)[a_base := heap[a_base]];
+
+        invariant
+            gd.exp == loop_ctr;
+            0 <= gd.exp <= N.exp;
+            gt == block_size(gd);
+            forward_t_loop_inv(iter_a'.buff, gd, coeffs);
+
+        decreases
+            loop_ctr;
+    {
+        addi(pd, d, 0);
+        gd := half(d, gd);
+
+        iter_a' := fntt_t_loop(iter_a', iter_p, gt, gd, coeffs);
+
+        gt := double(t, gt);
+        i := i - 1;
+    }
+
+    forward_t_loop_inv_post_lemma(iter_a'.buff, gd, coeffs);
+}
 
 #verbatim
 }

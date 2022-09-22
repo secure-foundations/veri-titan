@@ -375,10 +375,11 @@ abstract module generic_falcon_lemmas {
 
         requires forward_s_loop_inv(a, d, j, bi, view);
         requires bi < d.full
-        requires s == (bi + j * (2 * d.full)) * 2;
+        // requires s == (bi + j * (2 * d.full)) * 2;
 
-        ensures s == 2 * gs;
-        ensures s + 2 * d.full == 2 * (gs + d.full);
+        // ensures s == 2 * gs;
+        ensures gs == bi + j * (2 * d.full);
+        // ensures 2 * gs + 2 * d.full == 2 * (gs + d.full);
         ensures gs + d.full < N.full;
         ensures a[gs] == CPV.level_points_view(a, view.hsize)[bi][2*j];
         ensures gs == CPV.point_view_index(bi, 2*j, view.hsize);
@@ -388,9 +389,7 @@ abstract module generic_falcon_lemmas {
         ensures a[gs] < Q;
     {
         gs := view.higher_points_view_index_lemma(as_elems(a), d, j, bi);
-        assert s == 2 * gs by {
-            LemmaMulProperties();
-        }
+        LemmaMulProperties();
         reveal valid_elems();
     }
 

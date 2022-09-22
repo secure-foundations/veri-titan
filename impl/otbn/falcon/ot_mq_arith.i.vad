@@ -153,8 +153,6 @@ procedure half(inout dst: reg32, ghost p: pow2_t)
     requires
         dst == p.full;
         (512 >= p.full >= 2) || (9 >= p.exp >= 1);
-    // modifies
-    //     flags;
     ensures
         dst == old(dst) / 2;
         dst == p'.full;
@@ -171,8 +169,6 @@ procedure double(inout dst: reg32, ghost p: pow2_t)
     requires
         dst == p.full;
         (512 >= p.full >= 1) || (9 >= p.exp >= 0);
-    // modifies
-    //     flags;
     ensures
         dst == old(dst) * 2;
         dst == p'.full;
@@ -182,6 +178,22 @@ procedure double(inout dst: reg32, ghost p: pow2_t)
     pow2_increases_lemma(p, N);
     p' := pow2_double(p);
 }
+
+procedure left_shift_4(inout dst: reg32, in src: reg32)
+    ensures old(src) < 0x10000000 ==> dst == old(src) * 16;
+{
+    slli(dst, src, 4);
+    assume false;
+}
+
+procedure left_shift_5(inout dst: reg32, in src: reg32)
+    ensures old(src) < 0x8000000 ==> dst == old(src) * 32;
+{
+    slli(dst, src, 5);
+    assume false;
+}
+
+
 
 #verbatim
 }
