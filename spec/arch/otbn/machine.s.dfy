@@ -119,7 +119,7 @@ module ot_machine {
             shift_qws: uint2, fg: uint1)
         | BN_SUB(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
         | BN_SUBB(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
-        // | BN_SUBI(wrd: reg256_t, wrs1: reg256_t, imm: uint10, fg: uint1)
+        | BN_SUBI(wrd: reg256_t, wrs1: reg256_t, imm: uint10, fg: uint1)
         | BN_SUBM(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t)
         // | BN_AND(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
         // | BN_OR(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
@@ -713,6 +713,13 @@ module ot_machine {
             write_reg256(wrd, diff).write_flags(fg, flags)
         }
 
+        function method eval_BN_SUBI(wrd: reg256_t, wrs1: reg256_t, imm: uint10, fg: uint1): state
+        {
+            var v1 := read_reg256(wrs1);
+            var (diff, flags) := otbn_subb(v1, imm, SFT_DFT, false);
+            write_reg256(wrd, diff).write_flags(fg, flags)
+        }
+
         function method eval_BN_SUBM(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t) : state
         {
           var v1 := read_reg256(wrs1);
@@ -818,6 +825,8 @@ module ot_machine {
                     eval_BN_SUB(wrd, wrs1, wrs2, shift, fg)
                 case BN_SUBB(wrd, wrs1, wrs2, shift, fg) => 
                     eval_BN_SUBB(wrd, wrs1, wrs2, shift, fg)
+                case BN_SUBI(wrd, wrs1, imm, fg) =>
+                    eval_BN_SUBI(wrd, wrs1, imm, fg)
                 case BN_SUBM(wrd, wrs1, wrs2) =>
                     eval_BN_SUBM(wrd, wrs1, wrs2)
                 case BN_NOT(wrd, wrs, shift, fg) => 

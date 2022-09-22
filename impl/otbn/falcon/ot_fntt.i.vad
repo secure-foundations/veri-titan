@@ -4,7 +4,7 @@ include "ot_mq_arith.i.vad"
 
 include "ot_mq_arith.i.dfy"
 
-module ot_norm {
+module ot_fntt {
 
 import opened ot_machine
 import opened ot_abstraction
@@ -76,7 +76,6 @@ procedure forward_s_loop(
     ghost bi: nat,
     ghost view: floop_view)
     returns (ghost iter_a': iter_t)
-{:frame false}
     lets
         d         @= x6;
         t         @= x7;
@@ -99,6 +98,15 @@ procedure forward_s_loop(
         x15 == 2;
         x16 == 0;
 
+    modifies
+        heap; flat; wdrs; fgroups;
+        x9; x13; x14; x15; x16;
+        w0; w2; w3; w4; w6; wacc;
+
+    reads
+        x0; t; d; x12; pd; j; a_base; p_base;
+        w1; w5; wmod;
+
     requires
         w1 == 12289;
         w3 == mqmul(rev_mixed_powers_mont_x_value(2 * j, gd), R);
@@ -111,23 +119,14 @@ procedure forward_s_loop(
         bi < gd.full;
 
     ensures
-        d == old(d);
-        t == old(t);
-        pd == old(pd);
-        j == old(j);
         s == (bi + u + 1) * 32;
-        u == old(u);
-        a_base == old(a_base);
-        p_base == old(p_base);
-
-        x15 == 2;
-        x16 == 0;
+        x15 == old(x15);
+        x16 == old(x16);
 
     ensures
         w1 == old(w1);
         w3 == old(w3);
         w5 == old(w5);
-        wmod == Q;
 
     ensures
         elems_iter_inv(heap, iter_a', old(a_base), 0);
@@ -184,7 +183,6 @@ procedure forward_j_loop(
     ghost gd: pow2_t,
     ghost view: floop_view)
     returns (ghost iter_a': iter_t)
-{:frame false}
 
     lets
         d         @= x6;
@@ -220,16 +218,18 @@ procedure forward_j_loop(
         j < forward_lsize(view).full;
         gt == forward_lsize(view);
 
-    ensures
-        t == gt.full;
-        d == gd.full;
-        pd == old(pd);
-        j == old(j);
-        a_base == old(a_base);
-        p_base == old(p_base);
+    modifies
+        heap; flat; wdrs; fgroups;
+        x9; x12; x13; x14; x15; x16;
+        w0; w2; w3; w4; w6; wacc;
 
-        x15 == 2;
-        x16 == 0;
+    reads
+        x0; t; d; pd; j; a_base; p_base;
+        w1; w5; wmod;
+
+    ensures
+        x15 == old(x15);
+        x16 == old(x16);
 
     ensures
         w1 == 12289;
@@ -313,8 +313,6 @@ procedure fntt_t_loop(ghost iter_a: iter_t,
     ghost gd: pow2_t,
     ghost coeffs: wbuff)
 returns (ghost iter_a': iter_t)
-    {:frame false}
-
     lets
         d         @= x6;
         t         @= x7;
@@ -350,13 +348,18 @@ returns (ghost iter_a': iter_t)
         forward_t_loop_inv(iter_a.buff, pow2_double(gd), coeffs);
         iter_p.buff == rev_mixed_powers_mont_table();
 
+    modifies
+        heap; flat; wdrs; fgroups;
+        x8; x9; x12; x13; x14; x15; x16;
+        w0; w2; w3; w4; w6; wacc;
+
+    reads
+        x0; t; d; pd; a_base; p_base;
+        w1; w5; wmod;
+
     ensures
-        t == old(t);
-        d == old(d);
-        x15 == 2;
-        x16 == 0;
-        pd == old(pd);
-        a_base == old(a_base);
+        x15 == old(x15);
+        x16 == old(x16);
 
     ensures
         w1 == 12289;
@@ -426,9 +429,6 @@ procedure fntt(
     ghost iter_p: iter_t)
 returns (ghost iter_a': iter_t)
 
-{:noInline}
-{:frame false}
-
     lets
         d         @= x6;
         t         @= x7;
@@ -456,8 +456,15 @@ returns (ghost iter_a': iter_t)
     requires
         iter_a.base_ptr != iter_p.base_ptr;
 
-    ensures
-        a_base == old(a_base);
+    modifies
+        heap; flat; wdrs; fgroups; 
+        x9; x12; x13; x14; x15; x16; t; d; pd; j; p_base;
+        w0; w2; w3; w4; w6; wacc;
+
+    reads
+        symbols;
+        x0; a_base;
+        w1; w5; wmod;
 
     ensures
         w1 == 12289;
@@ -473,7 +480,6 @@ returns (ghost iter_a': iter_t)
 
     ensures
         forward_ntt_eval_all(iter_a'.buff, iter_a.buff);
-
 {
     iter_a' := iter_a;
 

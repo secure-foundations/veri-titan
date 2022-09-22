@@ -4,7 +4,7 @@ include "ot_mq_arith.i.vad"
 
 include "ot_mq_arith.i.dfy"
 
-module ot_norm {
+module ot_intt {
 
 import opened ot_machine
 import opened ot_abstraction
@@ -421,7 +421,7 @@ returns (ghost iter_a': iter_t)
     inverse_j_loop_inv_post_lemma(iter_a'.buff, gd, j, u, view);
 }
 
-procedure fntt(
+procedure intt(
     ghost iter_a: iter_t,
     ghost iter_p: iter_t)
 returns (ghost iter_a': iter_t)
