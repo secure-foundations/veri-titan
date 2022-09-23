@@ -1,0 +1,140 @@
+include "ot_mq_arith.i.vad"
+
+#verbatim
+
+include "ot_mq_arith.i.dfy"
+
+module ot_circle_product {
+
+import opened ot_machine
+import opened ot_abstraction
+import opened ot_decls
+import opened ot_vale
+
+import opened DivMod
+
+import opened integers
+import opened bv256_op_s
+import opened bv256_falcon_lemmas
+import opened falcon_512_i
+
+import opened ot_mq_arith
+
+#endverbatim
+
+function elems_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int): bool extern;
+function circle_product_inv(init_a: seq(uint256), a: seq(uint256), b: seq(uint256), i: nat): bool extern;
+function circle_product_inv_peri_lemma(init_a: seq(uint256), a: seq(uint256), b: seq(uint256), i: nat): nat extern;
+
+procedure circle_product(
+    ghost iter_f: iter_t,
+    ghost iter_g: iter_t)
+returns (ghost iter_f': iter_t)
+
+    requires
+        w1 == 12289;
+        w5 == 12287;
+        w6 == 10952;
+
+    requires
+        elems_iter_inv(heap, iter_f, x5, 0);
+        elems_iter_inv(heap, iter_g, x4, 0);
+        iter_f.base_ptr != iter_g.base_ptr;
+
+    modifies
+        flat; heap; wdrs; fgroups;
+        x4; x5; x6; x7; x8; x9;
+        w2; w3; w4; wacc;
+
+    reads
+        w1; w5; w6;
+
+    ensures
+        w1 == 12289;
+        w5 == 12287;
+        w6 == 10952;
+
+    ensures
+        elems_iter_inv(heap, iter_f', x5, 0);
+        elems_iter_inv(heap, iter_g, x4, 0);
+        iter_f'.base_ptr == iter_f.base_ptr;
+
+    ensures
+        heap == old(heap)
+            [iter_f'.base_ptr := heap[iter_f'.base_ptr]];
+
+    ensures
+        circle_product_inv(iter_f'.buff, iter_f.buff, iter_g.buff, 512);
+{
+    iter_f' := iter_f;
+    ghost var iter_g' := iter_g;
+    ghost var i :nat := 0;
+    let init_f := iter_f.buff;
+
+    addi(x7, x5, 0);
+    addi(x8, x4, 0);
+    li(x6, 3);
+    li(x9, 2);
+
+    while (LoopImm(512))
+        invariant
+            x9 == 2;
+            x6 == 3;
+            x7 == iter_f'.base_ptr;
+            x8 == iter_g'.base_ptr;
+
+        invariant
+            w1 == 12289;
+            w5 == 12287;
+            w6 == 10952;
+
+        invariant
+            elems_iter_inv(heap, iter_f', x5, i);
+            iter_f'.base_ptr == iter_f.base_ptr;
+            elems_iter_inv(heap, iter_g', x4, i);
+            iter_g'.base_ptr == iter_g.base_ptr;
+
+        invariant
+            0 <= i <= 512;
+            i + loop_ctr == 512;
+
+        invariant
+            heap == old(heap)[iter_f.base_ptr := heap[iter_f'.base_ptr]];
+
+        invariant
+            circle_product_inv(iter_f'.buff, init_f, iter_g'.buff, i);
+
+        decreases
+            loop_ctr;
+    {
+        iter_f' := bn_lid_safe(x6, false, 0, x5, false, iter_f');
+        iter_g' := bn_lid_safe(x9, false, 0, x4, true, iter_g');
+
+        let p := circle_product_inv_peri_lemma(iter_f'.buff, init_f, iter_g.buff, i);
+
+        assert w3 == iter_f'.buff[i];
+        assert w2 == iter_g'.buff[i];
+        montymul();
+        let t := w4;
+        assert w4 == montmul(iter_f'.buff[i], iter_g'.buff[i]);
+
+        bn_mov(w2, w4);
+        bn_mov(w3, w6);
+        montymul();
+
+        assert w4 == montmul(t, 10952);
+        bn_mov(w3, w4);
+        iter_f' := bn_sid_safe(x6, false, 0, x5, true, iter_f');
+
+        i := i + 1;
+    }
+
+    iter_f' := iter_f'.(index := 0);
+
+    addi(x5, x7, 0);
+    addi(x4, x8, 0);
+}
+
+#verbatim
+}
+#endverbatim

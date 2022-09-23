@@ -1,11 +1,9 @@
-include "ot_mq_arith.i.vad"
 include "ot_norm.i.vad"
 include "ot_fntt.i.vad"
 include "ot_intt.i.vad"
 
 #verbatim
 
-include "ot_mq_arith.i.dfy"
 include "ot_norm.i.dfy"
 include "ot_fntt.i.dfy"
 include "ot_intt.i.dfy"
@@ -52,8 +50,6 @@ function bit_rev_ftable_wf(table: seq(uint32)): bool extern;
 function xor_clear_lemma(x: uint256, y: uint256): void extern;
 
 procedure poly_mul(
-    ghost iter_c0: iter_t,
-    ghost iter_s2: iter_t,
     ghost iter_h: iter_t,
     ghost iter_tt: iter_t,
     ghost iter_t1: iter_t,
@@ -91,35 +87,39 @@ returns (ghost iter_tt': iter_t, ghost iter_h': iter_t)
         iter_p1.buff == rev_omega_inv_powers_mont_table();
 
     requires
-        symbols?["rev_ntt512_mixed_powers_table"];
+        symbols?["rev_mixed_powers_mont_table"];
         elems_iter_inv(heap, iter_p2,
-            symbols["rev_ntt512_mixed_powers_table"], 0);
+            symbols["rev_mixed_powers_mont_table"], 0);
         iter_p2.buff == rev_mixed_powers_mont_table();
 
     requires
-        iter_h.base_ptr != iter_c0.base_ptr;
-        iter_h.base_ptr != iter_s2.base_ptr;
         iter_h.base_ptr != iter_tt.base_ptr;
         iter_h.base_ptr != iter_t1.base_ptr;
         iter_h.base_ptr != iter_t2.base_ptr;
         iter_h.base_ptr != iter_p1.base_ptr;
         iter_h.base_ptr != iter_p2.base_ptr;
 
-        iter_tt.base_ptr != iter_c0.base_ptr;
-        iter_tt.base_ptr != iter_s2.base_ptr;
         iter_tt.base_ptr != iter_t1.base_ptr;
-        iter_tt.base_ptr != iter_t2.base_ptr;        
+        iter_tt.base_ptr != iter_t2.base_ptr;
+        iter_tt.base_ptr != iter_p1.base_ptr;
+        iter_tt.base_ptr != iter_p2.base_ptr;
 {
-    // iter_tt' := iter_tt;
-    // iter_h' := iter_h;
-    bn_subi(w5, w1, 2, 0);
+    iter_tt' := iter_tt;
+    iter_h' := iter_h;
 
+    bn_subi(w5, w1, 2, 0);
+    addi(x17, x4, 0);
     addi(x4, x5, 0);
 
     iter_tt' := fntt(iter_tt', iter_p2);
-    // fntt();
-        // w5 == 12287;
-        // wmod == Q;
+    addi(x5, x4, 0);
+
+    addi(x4, x17, 0);
+    iter_h' := fntt(iter_h', iter_p2);
+
+    assert elems_iter_inv(heap, iter_tt', x5, 0);
+    assert elems_iter_inv(heap, iter_h', x4, 0);
+
 }
 
 procedure ot_falcon(

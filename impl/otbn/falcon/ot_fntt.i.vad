@@ -151,7 +151,6 @@ procedure forward_s_loop(
  
     bn_mov(w6, w3);
     montymul();
-    assume (w4 == montmul(a_o, old(w3)));
     let x := w4;
 
     iter_a' := bn_lid_safe(x15, false, 0, ae_ptr, false, iter_a.(index := gs));
