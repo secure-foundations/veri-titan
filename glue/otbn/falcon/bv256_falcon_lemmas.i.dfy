@@ -9,6 +9,7 @@ module bv256_falcon_lemmas refines generic_falcon_lemmas {
     import opened ot_vale
     import opened ot_machine
     import opened mem
+    import flat
 
     lemma addm_correct_lemma(x: uint256, y:uint256, mod: uint256)
         requires x < mod;
@@ -218,11 +219,45 @@ module bv256_falcon_lemmas refines generic_falcon_lemmas {
         forall i: nat | i < count ::
             heap_w32_ptr_valid(heap, base_ptr + i * 4)
     }
-
+    
     function b32_seq(heap: heap_t, base_ptr: nat, count: nat): seq<uint32>
         requires heap_b32_ptr_valid(heap, base_ptr, count);
     {
         seq(count, i requires 0 <= i < count =>
             heap_w32_read(heap, base_ptr + i * 4))
+    }
+
+    lemma heap_b256_write_preserves_b32_ptr_lemma(
+        state: va_state, state': va_state,
+        base_ptr: nat, count: nat,
+        iter: iter_t, addr: nat, value: uint256)
+        requires valid_state_opaque(state);
+        requires heap_b32_ptr_valid(state.mem.heap, base_ptr, count);
+        requires iter_safe(iter, state.mem.heap, addr);
+        requires state'.mem.heap == heap_b256_write(state.mem.heap, iter, value);
+        requires state'.ms.flat == flat.flat_write_256(state.ms.flat, iter.cur_ptr(), value)
+        ensures heap_b32_ptr_valid(state'.mem.heap, base_ptr, count);
+        ensures b32_seq(state.mem.heap, base_ptr, count)
+            == b32_seq(state'.mem.heap, base_ptr, count);
+    {
+        var flat := state.ms.flat;
+        var flat' := state'.ms.flat;
+        var heap := state.mem.heap;
+        var heap' := state'.mem.heap;
+        reveal valid_state_opaque();
+
+        var imem := state.mem.as_imem(flat);
+
+        var b256_base_ptr := iter.base_ptr;
+        var new_b256 := heap'[b256_base_ptr];
+
+        assert heap' == heap[b256_base_ptr := new_b256];
+
+        forall i: nat | i < count
+            ensures heap_w32_ptr_valid(heap', base_ptr + i * 4);
+            ensures heap'[base_ptr + i * 4] == heap[base_ptr + i * 4];
+        {
+            imem.heap_b256_write_preserves_w32_inv(flat, flat', iter, value, base_ptr + i * 4);
+        }
     }
 }

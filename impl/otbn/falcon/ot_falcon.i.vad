@@ -1,12 +1,14 @@
 include "ot_norm.i.vad"
 include "ot_fntt.i.vad"
 include "ot_intt.i.vad"
+include "ot_circle_product.i.vad"
 
 #verbatim
 
 include "ot_norm.i.dfy"
 include "ot_fntt.i.dfy"
 include "ot_intt.i.dfy"
+include "ot_circle_product.i.dfy"
 
 module ot_falcon {
 
@@ -24,6 +26,7 @@ import opened falcon_512_i
 import opened ot_norm
 import opened ot_fntt
 import opened ot_intt
+import opened ot_circle_product
 
 #endverbatim
 
@@ -52,7 +55,7 @@ function xor_clear_lemma(x: uint256, y: uint256): void extern;
 procedure poly_mul(
     ghost iter_h: iter_t,
     ghost iter_tt: iter_t,
-    ghost iter_t1: iter_t,
+    // ghost iter_t1: iter_t,
     ghost iter_t2: iter_t,
     ghost iter_p1: iter_t,
     ghost iter_p2: iter_t)
@@ -62,8 +65,9 @@ returns (ghost iter_tt': iter_t, ghost iter_h': iter_t)
 {:frame false}
 
     requires
-        w1 == Q;
-        wmod == Q;
+        w1 == 12289;
+        w5 == 12287;
+        wmod == 12289;
 
     requires
         elems_iter_inv(heap, iter_h, x4, 0);
@@ -120,6 +124,9 @@ returns (ghost iter_tt': iter_t, ghost iter_h': iter_t)
     assert elems_iter_inv(heap, iter_tt', x5, 0);
     assert elems_iter_inv(heap, iter_h', x4, 0);
 
+    assume w6 == 10952;
+
+    iter_tt' := circle_product(iter_tt', iter_h'); 
 }
 
 procedure ot_falcon(

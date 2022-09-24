@@ -50,6 +50,10 @@ returns (ghost iter_f': iter_t)
         w1; w5; w6;
 
     ensures
+        x4 == old(x4);
+        x5 == old(x5);
+
+    ensures
         w1 == 12289;
         w5 == 12287;
         w6 == 10952;
