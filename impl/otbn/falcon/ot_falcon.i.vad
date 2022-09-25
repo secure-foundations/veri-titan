@@ -3,6 +3,7 @@ include "ot_fntt.i.vad"
 include "ot_intt.i.vad"
 include "ot_circle_product.i.vad"
 include "ot_bit_rev.i.vad"
+include "ot_polyscale.i.vad"
 
 #verbatim
 
@@ -11,6 +12,7 @@ include "ot_fntt.i.dfy"
 include "ot_intt.i.dfy"
 include "ot_circle_product.i.dfy"
 include "ot_bit_rev.i.dfy"
+include "ot_polyscale.i.dfy"
 
 module ot_falcon {
 
@@ -30,6 +32,7 @@ import opened ot_fntt
 import opened ot_intt
 import opened ot_circle_product
 import opened ot_bit_rev
+import opened ot_polyscale
 
 #endverbatim
 
@@ -54,6 +57,11 @@ function heap_b32_ptr_valid(heap: heap_t, base_ptr: nat, count: nat): bool exter
 function b32_seq(heap: heap_t, base_ptr: nat, count: nat): seq(uint32) extern;
 function bit_rev_ftable_wf(table: seq(uint32)): bool extern;
 function xor_clear_lemma(x: uint256, y: uint256): void extern;
+function heap_b256_writes_preserves_b32_ptr_lemma(state: state, state': state, base_ptr: nat, count: nat, addr1: int, addr2: int): void extern;
+function mq_poly_mod_product_lemma(
+    a0: wbuff, a1: wbuff, b0: wbuff, b1: wbuff,
+    p0: wbuff, p1: wbuff, p2: wbuff, p3: wbuff, p4: wbuff): void extern;
+function poly_mod_product(a0: wbuff, b0: wbuff): wbuff extern;
 
 procedure poly_mul(
     ghost iter_h: iter_t,
@@ -111,32 +119,67 @@ returns (ghost iter_tt': iter_t, ghost iter_h': iter_t)
         iter_tt.base_ptr != iter_t2.base_ptr;
         iter_tt.base_ptr != iter_p1.base_ptr;
         iter_tt.base_ptr != iter_p2.base_ptr;
+
+    ensures
+        elems_iter_inv(heap, iter_tt', x4, 0);
+        iter_tt'.base_ptr == iter_tt.base_ptr;
+        elems_iter_inv(heap, iter_h', old(x4), 0);
+        iter_h'.base_ptr == iter_h.base_ptr;
+
+    ensures
+        heap == old(heap)
+            [iter_tt.base_ptr := heap[iter_tt.base_ptr]]
+            [iter_h.base_ptr := heap[iter_h.base_ptr]];
+
+    ensures
+        as_elems(iter_tt'.buff) ==
+            poly_mod_product(as_elems(iter_tt.buff), as_elems(iter_h.buff));
 {
+    let state0 := this;
+
     iter_tt' := iter_tt;
     iter_h' := iter_h;
+
+    let a0 := iter_tt'.buff;
 
     bn_subi(w5, w1, 2, 0);
     addi(x17, x4, 0);
     addi(x4, x5, 0);
 
     iter_tt' := fntt(iter_tt', iter_p2);
+    let a1 := iter_tt'.buff;
+
     addi(x5, x4, 0);
-
     addi(x4, x17, 0);
-    iter_h' := fntt(iter_h', iter_p2);
 
-    assert elems_iter_inv(heap, iter_tt', x5, 0);
-    assert elems_iter_inv(heap, iter_h', x4, 0);
+    let b0 := iter_h'.buff;
+    iter_h' := fntt(iter_h', iter_p2);
+    let b1 := iter_h'.buff;
 
     assume w6 == 10952;
 
     iter_tt' := circle_product(iter_tt', iter_h'); 
-
     let p0 := iter_tt'.buff;
 
-    iter_tt' := bit_rev(iter_tt');
+    heap_b256_writes_preserves_b32_ptr_lemma(state0, this, br_base, 480, iter_tt'.base_ptr, iter_h'.base_ptr);
+
+    iter_tt' := bit_rev(iter_tt', br_base);
     let p1 := iter_tt'.buff;
-    
+
+    addi(x4, x5, 0);
+    iter_tt' := intt(iter_tt', iter_p1);
+    let p2 := iter_tt'.buff;
+
+    heap_b256_writes_preserves_b32_ptr_lemma(state0, this, br_base, 480, iter_tt'.base_ptr, iter_h'.base_ptr);
+
+    addi(x5, x4, 0);
+    iter_tt' := bit_rev(iter_tt', br_base);
+    let p3 := iter_tt'.buff;
+
+    iter_tt' := polyscale(iter_tt', iter_t2);
+    let p4 := iter_tt'.buff;
+
+    mq_poly_mod_product_lemma(a0, a1, b0, b1, p0, p1, p2, p3, p4);
 }
 
 // procedure ot_falcon(

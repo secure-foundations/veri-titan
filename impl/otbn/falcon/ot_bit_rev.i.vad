@@ -50,7 +50,7 @@ const Q: nat extern;
 const N: pow2_t extern; 
 
 function heap_b32_ptr_specialize_lemma(heap: heap_t, base_ptr: nat, count: nat, i: nat): void extern;
-function heap_b256_write_preserves_b32_ptr_lemma(state: state, state': state, base_ptr: nat, count: nat, addr: nat): void extern;
+function heap_b256_write_preserves_b32_ptr_lemma(state: state, state': state, base_ptr: nat, count: nat, addr: int): void extern;
 
 
 procedure bit_rev(
@@ -83,6 +83,7 @@ returns (ghost iter_a': iter_t)
     ensures
         w1 == old(w1);
         w5 == old(w5);
+        w6 == old(w6);
         wmod == old(wmod);
 
     ensures
@@ -132,6 +133,7 @@ returns (ghost iter_a': iter_t)
         invariant
             w1 == old(w1);
             w5 == old(w5);
+            w6 == old(w6);
             wmod == old(wmod);
 
         invariant

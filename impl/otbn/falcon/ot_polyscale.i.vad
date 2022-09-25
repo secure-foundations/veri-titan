@@ -1,0 +1,135 @@
+include "ot_mq_arith.i.vad"
+
+#verbatim
+
+include "ot_mq_arith.i.dfy"
+
+module ot_polyscale {
+
+import opened ot_machine
+import opened ot_abstraction
+import opened ot_decls
+import opened ot_vale
+
+import opened DivMod
+
+import opened integers
+import opened bv256_op_s
+import opened bv256_falcon_lemmas
+import opened falcon_512_i
+
+import opened ot_mq_arith
+
+#endverbatim
+
+function elems_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int): bool extern;
+function mq_poly_scale_inv(a: seq(uint256), init_a: seq(uint256), b: seq(uint256), i: nat): bool extern;
+function mq_poly_scale_peri_lemma(a: seq(uint256), init_a: seq(uint256), b: seq(uint256), i: nat): uint256 extern;
+
+procedure polyscale(
+    ghost iter_f: iter_t,
+    ghost iter_g: iter_t)
+returns (ghost iter_f': iter_t)
+
+    requires
+        w1 == 12289;
+        w5 == 12287;
+
+    requires
+        elems_iter_inv(heap, iter_f, x4, 0);
+
+        symbols?["scaling_factors"];
+        elems_iter_inv(heap, iter_g, symbols["scaling_factors"], 0);
+        iter_f.base_ptr != iter_g.base_ptr;
+
+    modifies
+        flat; heap; wdrs; fgroups;
+        x4; x5; x6; x7; x8; x9;
+        w2; w3; w4; wacc;
+
+    reads
+        w1; w5; w6; symbols;
+
+    ensures
+        x4 == old(x4);
+
+    ensures
+        w1 == 12289;
+        w5 == 12287;
+
+    ensures
+        elems_iter_inv(heap, iter_f', x4, 0);
+        iter_f'.base_ptr == iter_f.base_ptr;
+
+    ensures
+        heap == old(heap)
+            [iter_f'.base_ptr := heap[iter_f'.base_ptr]];
+
+    ensures
+        mq_poly_scale_inv(iter_f'.buff, iter_f.buff, iter_g.buff, 512);
+{
+    iter_f' := iter_f;
+    ghost var iter_g' := iter_g;
+    ghost var i :nat := 0;
+    let init_f := iter_f.buff;
+
+    addi(x7, x4, 0);
+    la(x5, "scaling_factors");
+
+    li(x6, 3);
+    li(x9, 2);
+
+    while (LoopImm(512))
+        invariant
+            x9 == 2;
+            x6 == 3;
+            x7 == iter_f'.base_ptr;
+
+        invariant
+            w1 == 12289;
+            w5 == 12287;
+
+        invariant
+            elems_iter_inv(heap, iter_f', x4, i);
+            iter_f'.base_ptr == iter_f.base_ptr;
+            elems_iter_inv(heap, iter_g', x5, i);
+            iter_g'.base_ptr == iter_g.base_ptr;
+
+        invariant
+            0 <= i <= 512;
+            i + loop_ctr == 512;
+
+        invariant
+            heap == old(heap)[iter_f.base_ptr := heap[iter_f'.base_ptr]];
+
+        invariant
+            mq_poly_scale_inv(iter_f'.buff, init_f, iter_g'.buff, i);
+
+        decreases
+            loop_ctr;
+    {
+        iter_f' := bn_lid_safe(x9, false, 0, x4, false, iter_f');
+        iter_g' := bn_lid_safe(x6, false, 0, x5, true, iter_g');
+
+        let p := mq_poly_scale_peri_lemma(iter_f'.buff, init_f, iter_g.buff, i);
+
+        assert w2 == iter_f'.buff[i];
+        assert w3 == iter_g'.buff[i];
+
+        montymul();
+
+        bn_mov(w2, w4);
+
+        iter_f' := bn_sid_safe(x9, false, 0, x4, true, iter_f');
+
+        i := i + 1;
+    }
+
+    iter_f' := iter_f'.(index := 0);
+
+    addi(x4, x7, 0);
+}
+
+#verbatim
+}
+#endverbatim

@@ -264,4 +264,21 @@ module bv256_falcon_lemmas refines generic_falcon_lemmas {
     //         imem.heap_b256_write_preserves_w32_inv(flat, flat', iter, value, base_ptr + i * 4);
     //     }
     // }
+
+    lemma heap_b256_writes_preserves_b32_ptr_lemma(
+        state: va_state, state': va_state,
+        base_ptr: nat, count: nat, b256_ptr1: uint32, b256_ptr2: uint32)
+        requires valid_state_opaque(state);
+        requires valid_state_opaque(state');
+        requires heap_b32_ptr_valid(state.mem.heap, base_ptr, count);
+        requires heap_b256_ptr_valid(state.mem.heap, b256_ptr1);
+        requires heap_b256_ptr_valid(state.mem.heap, b256_ptr2);
+        requires heap_b256_ptr_valid(state'.mem.heap, b256_ptr1);
+        requires heap_b256_ptr_valid(state'.mem.heap, b256_ptr2);
+        requires state'.mem.heap ==
+            state.mem.heap[b256_ptr1 := state'.mem.heap[b256_ptr1]]
+                [b256_ptr2 := state'.mem.heap[b256_ptr2]];
+        ensures heap_b32_ptr_valid(state'.mem.heap, base_ptr, count);
+        ensures b32_seq(state.mem.heap, base_ptr, count)
+            == b32_seq(state'.mem.heap, base_ptr, count);
 }

@@ -330,7 +330,6 @@ procedure fntt_t_loop(ghost iter_a: iter_t,
     ghost gd: pow2_t,
     ghost coeffs: wbuff)
 returns (ghost iter_a': iter_t)
-    {:frame false}
 
     lets
         d         @= x6;
@@ -453,7 +452,6 @@ procedure intt(
 returns (ghost iter_a': iter_t)
 
 {:noInline}
-{:frame false}
 
     lets
         d         @= x6;
