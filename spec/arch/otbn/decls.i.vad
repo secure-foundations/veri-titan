@@ -768,6 +768,7 @@ function bn_sid_correct(gs: state,
     : tuple(mem_t, iter_t) extern;
 
 function heap_write_wword(heap: heap_t, iter: iter_t, ptr: nat, value: uint256): heap_t extern;
+function flat_write_256(flat: flat_t, addr: uint32, value: uint256): flat_t extern;
 
 procedure bn_sid_safe(
     inout grs2: reg32, inline grs2_inc: bool,
@@ -789,6 +790,8 @@ procedure bn_sid_safe(
     modifies
         heap; flat;
     ensures
+        let addr := wwrod_offset_ptr(old(grs1), offset);
+        flat == flat_write_256(old(flat), addr, wdrs[old(grs2)]);
         grs1 == (if grs1_inc then (old(grs1) + 32) else old(grs1));
         grs2 == (if grs2_inc then (old(grs2) + 1) else old(grs2));
         heap == heap_b256_write(old(heap), iter, wdrs[old(grs2)]);

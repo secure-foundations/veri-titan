@@ -270,42 +270,6 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
         reveal valid_nelems();
     }
 
-    lemma bit_rev_index_lemma(
-        a: seq<nat>,
-        ftable: seq<nat>,
-        li: nat,
-        ri: nat,
-        ti: nat)
-
-        requires |a| == N.full;
-        requires bit_rev_ftable_wf(ftable);
-
-        requires 0 <= 2 * ti + 1 < |ftable|;
-        requires li == ftable[2 * ti];
-        requires ri == ftable[2 * ti+1];
-
-        ensures li == build_view(a, ti, N).get_split_index();
-        ensures ri == bit_rev_int(ftable[2 * ti], N);
-    {
-        var table := ftable_cast(ftable);
-        assert ti < |table|;
-
-        assert table[ti].0 == ftable[2 * ti]
-            && table[ti].1 == ftable[2 * ti + 1] by {
-            reveal ftable_cast();
-        }
-
-        assert table[ti].0 == build_view(a, ti, N).get_split_index()
-            && table[ti].1 == bit_rev_int(table[ti].0, N) by {
-            reveal table_wf();
-            reveal table_wf_inner();
-        }
-
-        // ftable_index_lemma(a, ftable, table, ti);
-        assert li == build_view(a, ti, N).get_split_index();
-        assert ri == bit_rev_int(ftable[2 * ti], N);
-    }
-
     const NORMSQ_BOUND := 0x100000000
 
     function l2norm_squared(s1: seq<uint16>, s2: seq<uint16>, i: nat): nat

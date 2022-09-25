@@ -2,6 +2,7 @@ include "ot_norm.i.vad"
 include "ot_fntt.i.vad"
 include "ot_intt.i.vad"
 include "ot_circle_product.i.vad"
+include "ot_bit_rev.i.vad"
 
 #verbatim
 
@@ -9,6 +10,7 @@ include "ot_norm.i.dfy"
 include "ot_fntt.i.dfy"
 include "ot_intt.i.dfy"
 include "ot_circle_product.i.dfy"
+include "ot_bit_rev.i.dfy"
 
 module ot_falcon {
 
@@ -27,6 +29,7 @@ import opened ot_norm
 import opened ot_fntt
 import opened ot_intt
 import opened ot_circle_product
+import opened ot_bit_rev
 
 #endverbatim
 
@@ -55,7 +58,7 @@ function xor_clear_lemma(x: uint256, y: uint256): void extern;
 procedure poly_mul(
     ghost iter_h: iter_t,
     ghost iter_tt: iter_t,
-    // ghost iter_t1: iter_t,
+    ghost br_base: uint32,
     ghost iter_t2: iter_t,
     ghost iter_p1: iter_t,
     ghost iter_p2: iter_t)
@@ -75,8 +78,9 @@ returns (ghost iter_tt': iter_t, ghost iter_h': iter_t)
 
     requires
         symbols?["bit_rev_table_512"];
-        heap_b32_ptr_valid(heap, symbols["bit_rev_table_512"], 480);
-        bit_rev_ftable_wf(b32_seq(heap, symbols["bit_rev_table_512"], 480));
+        symbols["bit_rev_table_512"] == br_base;
+        heap_b32_ptr_valid(heap, br_base, 480);
+        bit_rev_ftable_wf(b32_seq(heap, br_base, 480));
 
     requires
         symbols?["scaling_factors"];
@@ -98,12 +102,12 @@ returns (ghost iter_tt': iter_t, ghost iter_h': iter_t)
 
     requires
         iter_h.base_ptr != iter_tt.base_ptr;
-        iter_h.base_ptr != iter_t1.base_ptr;
+        iter_h.base_ptr != br_base;
         iter_h.base_ptr != iter_t2.base_ptr;
         iter_h.base_ptr != iter_p1.base_ptr;
         iter_h.base_ptr != iter_p2.base_ptr;
 
-        iter_tt.base_ptr != iter_t1.base_ptr;
+        iter_tt.base_ptr != br_base;
         iter_tt.base_ptr != iter_t2.base_ptr;
         iter_tt.base_ptr != iter_p1.base_ptr;
         iter_tt.base_ptr != iter_p2.base_ptr;
@@ -127,79 +131,85 @@ returns (ghost iter_tt': iter_t, ghost iter_h': iter_t)
     assume w6 == 10952;
 
     iter_tt' := circle_product(iter_tt', iter_h'); 
-}
 
-procedure ot_falcon(
-    ghost iter_c0: iter_t,
-    ghost iter_s2: iter_t,
-    ghost iter_h: iter_t,
-    ghost iter_tt: iter_t,
-    ghost iter_t1: iter_t,
-    ghost iter_t2: iter_t,
-    ghost iter_p1: iter_t,
-    ghost iter_p2: iter_t)
+    let p0 := iter_tt'.buff;
 
-returns (ghost iter_tt': iter_t)
-
-{:noInline}
-{:frame false}
-
-    requires
-        wmod == Q;
-        w1 == Q;
-
-    requires
-        elems_iter_inv(heap, iter_c0, x2, 0);
-        nelems_iter_inv(heap, iter_s2, x3, 0);
-
-        elems_iter_inv(heap, iter_h, x4, 0);
-        elems_iter_inv(heap, iter_tt, x5, 0);
-
-    requires
-        symbols?["bit_rev_table_512"];
-        heap_b32_ptr_valid(heap, symbols["bit_rev_table_512"], 480);
-        bit_rev_ftable_wf(b32_seq(heap, symbols["bit_rev_table_512"], 480));
-
-    requires
-        symbols?["scaling_factors"];
-        elems_iter_inv(heap, iter_t2,
-            symbols["scaling_factors"], 0);
-        iter_t2.buff == inverse_ntt_scaling_table();
-
-    requires
-        symbols?["rev_omega_inv_powers_mont_table"];
-        elems_iter_inv(heap, iter_p1,
-            symbols["rev_omega_inv_powers_mont_table"], 0);
-        iter_p1.buff == rev_omega_inv_powers_mont_table();
-
-    requires
-        symbols?["rev_ntt512_mixed_powers_table"];
-        elems_iter_inv(heap, iter_p2,
-            symbols["rev_ntt512_mixed_powers_table"], 0);
-        iter_p2.buff == rev_mixed_powers_mont_table();
-
-    requires
-        iter_h.base_ptr != iter_c0.base_ptr;
-        iter_h.base_ptr != iter_s2.base_ptr;
-        iter_h.base_ptr != iter_tt.base_ptr;
-        iter_h.base_ptr != iter_t1.base_ptr;
-        iter_h.base_ptr != iter_t2.base_ptr;
-        iter_h.base_ptr != iter_p1.base_ptr;
-        iter_h.base_ptr != iter_p2.base_ptr;
-
-        iter_tt.base_ptr != iter_c0.base_ptr;
-        iter_tt.base_ptr != iter_s2.base_ptr;
-        iter_tt.base_ptr != iter_t1.base_ptr;
-        iter_tt.base_ptr != iter_t2.base_ptr;
-        iter_tt.base_ptr != iter_p1.base_ptr;
-        iter_tt.base_ptr != iter_p2.base_ptr;
-{
-    xor_clear_lemma(w2, w2);
-    bn_xor(w2, w2, w2, SFT_DFT, 0);
-    // bn_addi(w1, w2, 12289, 0);
-    iter_tt' := denorm(iter_s2, iter_tt);
+    iter_tt' := bit_rev(iter_tt');
+    let p1 := iter_tt'.buff;
     
 }
+
+// procedure ot_falcon(
+//     ghost iter_c0: iter_t,
+//     ghost iter_s2: iter_t,
+//     ghost iter_h: iter_t,
+//     ghost iter_tt: iter_t,
+//     ghost iter_t1: iter_t,
+//     ghost iter_t2: iter_t,
+//     ghost iter_p1: iter_t,
+//     ghost iter_p2: iter_t)
+
+// returns (ghost iter_tt': iter_t)
+
+// {:noInline}
+// {:frame false}
+
+//     requires
+//         wmod == Q;
+//         w1 == Q;
+
+//     requires
+//         elems_iter_inv(heap, iter_c0, x2, 0);
+//         nelems_iter_inv(heap, iter_s2, x3, 0);
+
+//         elems_iter_inv(heap, iter_h, x4, 0);
+//         elems_iter_inv(heap, iter_tt, x5, 0);
+
+//     requires
+//         symbols?["bit_rev_table_512"];
+//         heap_b32_ptr_valid(heap, symbols["bit_rev_table_512"], 480);
+//         bit_rev_ftable_wf(b32_seq(heap, symbols["bit_rev_table_512"], 480));
+
+//     requires
+//         symbols?["scaling_factors"];
+//         elems_iter_inv(heap, iter_t2,
+//             symbols["scaling_factors"], 0);
+//         iter_t2.buff == inverse_ntt_scaling_table();
+
+//     requires
+//         symbols?["rev_omega_inv_powers_mont_table"];
+//         elems_iter_inv(heap, iter_p1,
+//             symbols["rev_omega_inv_powers_mont_table"], 0);
+//         iter_p1.buff == rev_omega_inv_powers_mont_table();
+
+//     requires
+//         symbols?["rev_ntt512_mixed_powers_table"];
+//         elems_iter_inv(heap, iter_p2,
+//             symbols["rev_ntt512_mixed_powers_table"], 0);
+//         iter_p2.buff == rev_mixed_powers_mont_table();
+
+//     requires
+//         iter_h.base_ptr != iter_c0.base_ptr;
+//         iter_h.base_ptr != iter_s2.base_ptr;
+//         iter_h.base_ptr != iter_tt.base_ptr;
+//         iter_h.base_ptr != iter_t1.base_ptr;
+//         iter_h.base_ptr != iter_t2.base_ptr;
+//         iter_h.base_ptr != iter_p1.base_ptr;
+//         iter_h.base_ptr != iter_p2.base_ptr;
+
+//         iter_tt.base_ptr != iter_c0.base_ptr;
+//         iter_tt.base_ptr != iter_s2.base_ptr;
+//         iter_tt.base_ptr != iter_t1.base_ptr;
+//         iter_tt.base_ptr != iter_t2.base_ptr;
+//         iter_tt.base_ptr != iter_p1.base_ptr;
+//         iter_tt.base_ptr != iter_p2.base_ptr;
+// {
+//     xor_clear_lemma(w2, w2);
+//     bn_xor(w2, w2, w2, SFT_DFT, 0);
+//     // bn_addi(w1, w2, 12289, 0);
+//     iter_tt' := denorm(iter_s2, iter_tt);
+    
+// }
 
     
 // {:frame false}

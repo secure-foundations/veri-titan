@@ -76,7 +76,7 @@ procedure inverse_s_loop(
     ghost bi: nat,
     ghost view: iloop_view)
     returns (ghost iter_a': iter_t)
-{:frame false}
+
     lets
         d         @= x6;
         t         @= x7;
@@ -109,6 +109,15 @@ procedure inverse_s_loop(
         elems_iter_inv(heap, iter_a, a_base, 0);
         inverse_s_loop_inv(iter_a.buff, gd, j, bi, view);
         bi < gd.full;
+
+    modifies
+        heap; flat; wdrs; fgroups;
+        x9; x13; x14; x15; x16;
+        w0; w2; w3; w4; w6; wacc;
+
+    reads
+        x0; t; d; x12; pd; j; a_base; p_base;
+        w1; w5; wmod;
 
     ensures
         d == old(d);
@@ -184,7 +193,6 @@ procedure inverse_j_loop(
     ghost gd: pow2_t,
     ghost view: iloop_view)
     returns (ghost iter_a': iter_t)
-{:frame false}
 
     lets
         d         @= x6;
@@ -219,6 +227,15 @@ procedure inverse_j_loop(
         iter_p.buff == rev_omega_inv_powers_mont_table();
         j < inverse_lsize(view).full;
         gt == inverse_lsize(view);
+
+    modifies
+        heap; flat; wdrs; fgroups;
+        x9; x12; x13; x14; x15; x16;
+        w0; w2; w3; w4; w6; wacc;
+
+    reads
+        x0; t; d; pd; j; a_base; p_base;
+        w1; w5; wmod;
 
     ensures
         t == gt.full;
@@ -350,6 +367,15 @@ returns (ghost iter_a': iter_t)
         inverse_t_loop_inv(iter_a.buff, pow2_double(gd), coeffs);
         iter_p.buff == rev_omega_inv_powers_mont_table();
 
+    modifies
+        heap; flat; wdrs; fgroups;
+        x8; x9; x12; x13; x14; x15; x16;
+        w0; w2; w3; w4; w6; wacc;
+
+    reads
+        x0; t; d; pd; a_base; p_base;
+        w1; w5; wmod;
+
     ensures
         t == old(t);
         d == old(d);
@@ -455,6 +481,16 @@ returns (ghost iter_a': iter_t)
 
     requires
         iter_a.base_ptr != iter_p.base_ptr;
+
+    modifies
+        heap; flat; wdrs; fgroups; 
+        x9; x12; x13; x14; x15; x16; t; d; pd; j; p_base;
+        w0; w2; w3; w4; w6; wacc;
+
+    reads
+        symbols;
+        x0; a_base;
+        w1; w5; wmod;
 
     ensures
         a_base == old(a_base);
