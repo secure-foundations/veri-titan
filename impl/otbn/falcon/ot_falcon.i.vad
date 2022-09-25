@@ -63,7 +63,7 @@ function mq_poly_mod_product_lemma(
     p0: wbuff, p1: wbuff, p2: wbuff, p3: wbuff, p4: wbuff): void extern;
 function poly_mod_product(a0: wbuff, b0: wbuff): wbuff extern;
 
-procedure poly_mul(
+procedure poly_product(
     ghost iter_h: iter_t,
     ghost iter_tt: iter_t,
     ghost br_base: uint32,
@@ -119,6 +119,10 @@ returns (ghost iter_tt': iter_t, ghost iter_h': iter_t)
         iter_tt.base_ptr != iter_t2.base_ptr;
         iter_tt.base_ptr != iter_p1.base_ptr;
         iter_tt.base_ptr != iter_p2.base_ptr;
+
+    ensures
+        x2 == old(x2);
+        x3 == old(x3);
 
     ensures
         elems_iter_inv(heap, iter_tt', x4, 0);
@@ -182,153 +186,82 @@ returns (ghost iter_tt': iter_t, ghost iter_h': iter_t)
     mq_poly_mod_product_lemma(a0, a1, b0, b1, p0, p1, p2, p3, p4);
 }
 
-// procedure ot_falcon(
-//     ghost iter_c0: iter_t,
-//     ghost iter_s2: iter_t,
-//     ghost iter_h: iter_t,
-//     ghost iter_tt: iter_t,
-//     ghost iter_t1: iter_t,
-//     ghost iter_t2: iter_t,
-//     ghost iter_p1: iter_t,
-//     ghost iter_p2: iter_t)
+procedure ot_falcon(
+    ghost iter_c0: iter_t,
+    ghost iter_s2: iter_t,
+    ghost iter_h: iter_t,
+    ghost iter_tt: iter_t,
+    ghost br_base: uint32,
+    ghost iter_t2: iter_t,
+    ghost iter_p1: iter_t,
+    ghost iter_p2: iter_t)
 
-// returns (ghost iter_tt': iter_t)
+returns (ghost iter_tt': iter_t)
 
-// {:noInline}
-// {:frame false}
+{:noInline}
+{:frame false}
 
-//     requires
-//         wmod == Q;
-//         w1 == Q;
+    requires
+        wmod == Q;
+        w1 == Q;
 
-//     requires
-//         elems_iter_inv(heap, iter_c0, x2, 0);
-//         nelems_iter_inv(heap, iter_s2, x3, 0);
+    requires
+        elems_iter_inv(heap, iter_c0, x2, 0);
+        nelems_iter_inv(heap, iter_s2, x3, 0);
 
-//         elems_iter_inv(heap, iter_h, x4, 0);
-//         elems_iter_inv(heap, iter_tt, x5, 0);
+        elems_iter_inv(heap, iter_h, x4, 0);
+        elems_iter_inv(heap, iter_tt, x5, 0);
 
-//     requires
-//         symbols?["bit_rev_table_512"];
-//         heap_b32_ptr_valid(heap, symbols["bit_rev_table_512"], 480);
-//         bit_rev_ftable_wf(b32_seq(heap, symbols["bit_rev_table_512"], 480));
+    requires
+        symbols?["bit_rev_table_512"];
+        symbols["bit_rev_table_512"] == br_base;
+        heap_b32_ptr_valid(heap, br_base, 480);
+        bit_rev_ftable_wf(b32_seq(heap, br_base, 480));
 
-//     requires
-//         symbols?["scaling_factors"];
-//         elems_iter_inv(heap, iter_t2,
-//             symbols["scaling_factors"], 0);
-//         iter_t2.buff == inverse_ntt_scaling_table();
+    requires
+        symbols?["scaling_factors"];
+        elems_iter_inv(heap, iter_t2,
+            symbols["scaling_factors"], 0);
+        iter_t2.buff == inverse_ntt_scaling_table();
 
-//     requires
-//         symbols?["rev_omega_inv_powers_mont_table"];
-//         elems_iter_inv(heap, iter_p1,
-//             symbols["rev_omega_inv_powers_mont_table"], 0);
-//         iter_p1.buff == rev_omega_inv_powers_mont_table();
+    requires
+        symbols?["rev_omega_inv_powers_mont_table"];
+        elems_iter_inv(heap, iter_p1,
+            symbols["rev_omega_inv_powers_mont_table"], 0);
+        iter_p1.buff == rev_omega_inv_powers_mont_table();
 
-//     requires
-//         symbols?["rev_ntt512_mixed_powers_table"];
-//         elems_iter_inv(heap, iter_p2,
-//             symbols["rev_ntt512_mixed_powers_table"], 0);
-//         iter_p2.buff == rev_mixed_powers_mont_table();
+    requires
+        symbols?["rev_mixed_powers_mont_table"];
+        elems_iter_inv(heap, iter_p2,
+            symbols["rev_mixed_powers_mont_table"], 0);
+        iter_p2.buff == rev_mixed_powers_mont_table();
 
-//     requires
-//         iter_h.base_ptr != iter_c0.base_ptr;
-//         iter_h.base_ptr != iter_s2.base_ptr;
-//         iter_h.base_ptr != iter_tt.base_ptr;
-//         iter_h.base_ptr != iter_t1.base_ptr;
-//         iter_h.base_ptr != iter_t2.base_ptr;
-//         iter_h.base_ptr != iter_p1.base_ptr;
-//         iter_h.base_ptr != iter_p2.base_ptr;
+    requires
+        iter_h.base_ptr != iter_c0.base_ptr;
+        iter_h.base_ptr != iter_s2.base_ptr;
+        iter_h.base_ptr != iter_tt.base_ptr;
+        iter_h.base_ptr != br_base;
+        iter_h.base_ptr != iter_t2.base_ptr;
+        iter_h.base_ptr != iter_p1.base_ptr;
+        iter_h.base_ptr != iter_p2.base_ptr;
 
-//         iter_tt.base_ptr != iter_c0.base_ptr;
-//         iter_tt.base_ptr != iter_s2.base_ptr;
-//         iter_tt.base_ptr != iter_t1.base_ptr;
-//         iter_tt.base_ptr != iter_t2.base_ptr;
-//         iter_tt.base_ptr != iter_p1.base_ptr;
-//         iter_tt.base_ptr != iter_p2.base_ptr;
-// {
-//     xor_clear_lemma(w2, w2);
-//     bn_xor(w2, w2, w2, SFT_DFT, 0);
-//     // bn_addi(w1, w2, 12289, 0);
-//     iter_tt' := denorm(iter_s2, iter_tt);
+        iter_tt.base_ptr != iter_c0.base_ptr;
+        iter_tt.base_ptr != iter_s2.base_ptr;
+        iter_tt.base_ptr != br_base;
+        iter_tt.base_ptr != iter_t2.base_ptr;
+        iter_tt.base_ptr != iter_p1.base_ptr;
+        iter_tt.base_ptr != iter_p2.base_ptr;
+{
+    iter_tt' := denorm(iter_s2, iter_tt);
+    ghost var iter_h' := iter_h;
+
+    bn_subi(w5, w1, 2, 0);
+    heap_b256_write_preserves_b32_ptr_lemma(old(this), this, br_base, 480, iter_tt'.base_ptr);
+
+    iter_tt', iter_h' := poly_product(iter_h', iter_tt', br_base, iter_t2, iter_p1, iter_p2);
+    let tt1 := iter_tt'.buff;
     
-// }
-
-    
-// {:frame false}
-//     lets
-
-//     requires
-//         elems_iter_inv(heap, iter_a, a_base, 0);
-//         elems_iter_inv(heap, iter_p,
-//             load_symbol(mem, "rev_mixed_powers_mont_table"), 0);
-//     requires
-//         iter_p.buff == rev_mixed_powers_mont_table();
-//     requires
-//         iter_a.base_ptr != iter_p.base_ptr;
-    
-//     // ensures
-//     //     elems_iter_inv(heap, iter_a', a_base, 0);
-//     //     iter_a'.base_ptr == iter_a.base_ptr;
-
-//     // ensures
-//     //     heap == old(mem).heap[a_base := heap[a_base]];
-
-//     ensures
-//         forward_ntt_eval_all(iter_a'.buff, iter_a.buff);
-// {
-//     mov_w_imm(512, d);
-//     mov_w_imm(1, t);
-//     lw_symbol("rev_mixed_powers_mont_table", p_base);
-
-//     forward_t_loop_inv_pre_lemma(iter_a.buff);
-//     let coeffs := iter_a.buff;
-
-//     ghost var gd := N;
-//     ghost var i :int := 9;
-//     ghost var gt := pow2(0);
-//     pow2_basics_lemma(gt);
-
-//     while (t < 512)
-//         invariant
-//             sp == sp0;
-//             t == gt.full;
-//             d == gd.full;
-//             a_base == old(a_base);
-
-//         invariant
-//             elems_iter_inv(heap, iter_a', a_base, 0);
-//             elems_iter_inv(heap, iter_p, p_base, 0);
-//             iter_a'.base_ptr == a_base;
-//             iter_a'.base_ptr != p_base;
-
-//         invariant
-//             heap == mem0.heap[a_base := heap[a_base]];
-
-//         invariant
-//             gd.exp == i;
-//             0 <= gd.exp <= N.exp;
-//             gt == block_size(gd);
-//             forward_t_loop_inv(iter_a'.buff, gd, coeffs);
-
-//         decreases
-//             i;
-//     {
-//         mov_w(d, pd);
-//         gd := half(d, gd);
-
-//         iter_a' := fntt_t_loop(iter_a', iter_p, gt, gd, coeffs);
-
-//         gt := double(t, gt);
-//         i := i - 1;
-//     }
-
-//     forward_t_loop_inv_post_lemma(iter_a'.buff, gd, coeffs);
-
-//     popm_w(7, r10);
-//     iter_a' := iter_a'.(index := 0);
-//     assert frames == old(frames);
-// }
+}
 
 #verbatim
 }
