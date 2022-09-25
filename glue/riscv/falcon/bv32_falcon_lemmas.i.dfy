@@ -30,78 +30,57 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         && valid_nelems(iter.buff)
     }
 
-    lemma bit_rev_index_lemma(
-        a: seq<nat>,
-        ftable: seq<nat>,
-        sbi: uint32,
-        rsbi: uint32,
-        ti: nat,
-        a0: uint32,
-        t0: uint32,
-        t1: uint32)
+    // lemma bit_rev_index_lemma(
+    //     a: seq<nat>,
+    //     ftable: seq<nat>,
+    //     sbi: uint32,
+    //     rsbi: uint32,
+    //     ti: nat,
+    //     a0: uint32,
+    //     t0: uint32,
+    //     t1: uint32)
 
-        requires |a| == N.full;
-        requires bit_rev_ftable_wf(ftable);
+    //     requires |a| == N.full;
+    //     requires bit_rev_ftable_wf(ftable);
 
-        requires 0 <= 2 * ti + 1 < |ftable|;
-        requires sbi == ftable[2 * ti];
-        requires rsbi == ftable[2 * ti+1];
+    //     requires 0 <= 2 * ti + 1 < |ftable|;
+    //     requires sbi == ftable[2 * ti];
+    //     requires rsbi == ftable[2 * ti+1];
     
-        requires flat.ptr_admissible_32(heap_b32_index_ptr(a0, N.full / 2 - 1));
+    //     requires flat.ptr_admissible_32(heap_b32_index_ptr(a0, N.full / 2 - 1));
 
-        requires t0 == uint32_add(a0, uint32_ls(sbi, 1));
-        requires t1 == uint32_add(a0, uint32_ls(rsbi, 1));
+    //     requires t0 == uint32_add(a0, uint32_ls(sbi, 1));
+    //     requires t1 == uint32_add(a0, uint32_ls(rsbi, 1));
 
-        ensures t0 == a0 + 2 * sbi;
-        ensures t1 == a0 + 2 * rsbi;
+    //     ensures t0 == a0 + 2 * sbi;
+    //     ensures t1 == a0 + 2 * rsbi;
 
-        ensures sbi == build_view(a, ti, N).get_split_index();
-        ensures rsbi == bit_rev_int(ftable[2 * ti], N);
-    {
-        var table := ftable_cast(ftable);
-        assert ti < |table|;
+    //     ensures sbi == build_view(a, ti, N).get_split_index();
+    //     ensures rsbi == bit_rev_int(ftable[2 * ti], N);
+    // {
+    //     var table := ftable_cast(ftable);
+    //     assert ti < |table|;
 
-        assert table[ti].0 == ftable[2 * ti]
-            && table[ti].1 == ftable[2 * ti + 1] by {
-            reveal ftable_cast();
-        }
+    //     assert table[ti].0 == ftable[2 * ti]
+    //         && table[ti].1 == ftable[2 * ti + 1] by {
+    //         reveal ftable_cast();
+    //     }
 
-        assert table[ti].0 == build_view(a, ti, N).get_split_index()
-            && table[ti].1 == bit_rev_int(table[ti].0, N) by {
-            reveal table_wf();
-            reveal table_wf_inner();
-        }
+    //     assert table[ti].0 == build_view(a, ti, N).get_split_index()
+    //         && table[ti].1 == bit_rev_int(table[ti].0, N) by {
+    //         reveal table_wf();
+    //         reveal table_wf_inner();
+    //     }
 
-        // ftable_index_lemma(a, ftable, table, ti);
-        assert sbi == build_view(a, ti, N).get_split_index();
-        assert rsbi == bit_rev_int(ftable[2 * ti], N);
+    //     // ftable_index_lemma(a, ftable, table, ti);
+    //     assert sbi == build_view(a, ti, N).get_split_index();
+    //     assert rsbi == bit_rev_int(ftable[2 * ti], N);
 
-        ls1_lemma(sbi);
-        ls1_lemma(rsbi);
-    }
+    //     ls1_lemma(sbi);
+    //     ls1_lemma(rsbi);
+    // }
 
-    predicate valid_nelem(e: uint16)
-    {
-        MQN.int_is_normalized(bv16_op_s.to_int16(e))
-    }
 
-    predicate valid_nelems(a: seq<uint16>)
-    {
-        && |a| == N.full
-        && (forall i | 0 <= i < |a| :: valid_nelem(a[i]))
-    }
-
-    function as_nelems(a: seq<uint16>): (na: seq<nelem>)
-        requires valid_nelems(a);
-    {
-        seq(|a|, i requires 0 <= i < |a| => as_nelem(a[i]))
-    }
-
-    function as_nelem(e: uint16): nelem
-        requires valid_nelem(e)
-    {
-        bv16_op_s.to_int16(e)
-    }
 
     lemma denormalize_lemma(buff: seq<uint16>, i: nat, a1: uint32, b: uint32, c: uint32, d: uint32)
         requires valid_nelems(buff);
@@ -138,19 +117,10 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         }
     }
 
-    predicate denormalization_inv(nv: seq<uint16>, dnv: seq<uint16>, i: nat)
-    {
-        && valid_nelems(nv)
-        && valid_elems(dnv)
-        && i <= N.full
-        && (forall j | 0 <= j < i :: 
-            dnv[j] == MQN.denormalize(as_nelem(nv[j])))
-    }
-
     lemma denormalization_peri_lemma(buff: seq<uint16>, dnv: seq<uint16>, i: nat, a1: uint32, b: uint32, c: uint32, d: uint32)
         requires valid_nelems(buff);
         requires valid_elems(dnv);
-        requires denormalization_inv(buff, dnv, i);
+        requires denorm_inv(buff, dnv, i);
         requires i < |buff|;
         requires a1 == uint16_sign_ext(buff[i]);
         requires b == uint32_srai(a1, 31);
@@ -159,7 +129,7 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         ensures valid_nelem(buff[i]);
         ensures d == MQN.denormalize(as_nelem(buff[i]));
         ensures valid_elems(dnv[i := lh(d)]);
-        ensures denormalization_inv(buff, dnv[i := lh(d)], i + 1);
+        ensures denorm_inv(buff, dnv[i := lh(d)], i + 1);
     {
         reveal valid_elems();
         var lh, uh := lh(d), uh(d);
@@ -167,26 +137,13 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         denormalize_lemma(buff, i, a1, b, c, d);
         assert d == lh;
     }
-    
-    // 0 <= e < Q -> -Q/2 <= e <= Q/2
-    predicate {:opaque} normalization_inv(outputs: seq<uint16>,  inputs: seq<uint16>, i: nat)
-    {
-        && valid_elems(inputs)
-        && |outputs| == N.full
-        && reveal valid_elems();
-        && i <= N.full
-        && inputs[i..] == outputs[i..]
-        && (forall j | 0 <= j < i :: (
-            && valid_nelem(outputs[j])
-            && as_nelem(outputs[j]) == MQN.normalize(inputs[j]))
-        )
-    }
+
 
     lemma normalization_pre_lemma(inputs: seq<uint16>)
         requires valid_elems(inputs);
-        ensures normalization_inv(inputs, inputs, 0);
+        ensures norm_inv(inputs, inputs, 0);
     {
-        reveal normalization_inv();
+        reveal norm_inv();
     }
 
     function cond_Q(src: uint32): uint32
@@ -195,16 +152,16 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
     }
 
     lemma normalization_peri_lemma(outputs: seq<uint16>, inputs: seq<uint16>, i: nat, value: uint32, diff: uint32, mask: uint32, rst: uint32)
-        requires normalization_inv(outputs, inputs, i);
+        requires norm_inv(outputs, inputs, i);
         requires i < |outputs|;
         requires value == uint16_sign_ext(outputs[i])
         requires diff == uint32_sub(Q/2, value);
         requires mask == cond_Q(diff);
         requires rst == uint32_sub(value, mask);
-        ensures normalization_inv(outputs[i := lh(rst)], inputs, i + 1);
+        ensures norm_inv(outputs[i := lh(rst)], inputs, i + 1);
     {
         reveal valid_elems();
-        reveal normalization_inv();
+        reveal norm_inv();
 
         assert value == outputs[i];
         half_split_lemma(rst);
@@ -224,10 +181,10 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
 
     lemma normalization_post_lemma(outputs: seq<uint16>, inputs: seq<uint16>)
         requires valid_elems(inputs);
-        requires normalization_inv(outputs, inputs, 512);
+        requires norm_inv(outputs, inputs, 512);
         ensures valid_nelems(outputs);
     {
-        reveal normalization_inv();
+        reveal norm_inv();
     }
 
     const NORMSQ_BOUND := integers.BASE_31
@@ -323,11 +280,11 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
     requires valid_elems(tt0);
     requires valid_elems(tt1);
     requires valid_elems(h);
-    requires denormalization_inv(s2, tt0, 512);
+    requires denorm_inv(s2, tt0, 512);
     requires as_elems(tt1) ==
             poly_mod_product(as_elems(tt0), as_elems(h));
     requires poly_sub_loop_inv(tt2, tt1, c0, 512);
-    requires normalization_inv(s1, tt2, 512);
+    requires norm_inv(s1, tt2, 512);
     requires valid_nelems(s1);
     requires valid_nelems(s2);
     requires (result == 1) <==>
@@ -336,7 +293,7 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         falcon_verify(as_elems(c0), as_nelems(s2), as_elems(h));
     {
         reveal valid_elems();
-        reveal normalization_inv();
+        reveal norm_inv();
 
         assert tt0 == MQN.denormalize_elems(as_nelems(s2));
         assert tt1 == poly_mod_product(as_elems(tt0), as_elems(h));

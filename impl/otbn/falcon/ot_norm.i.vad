@@ -18,6 +18,8 @@ import opened bv256_op_s
 import opened bv256_falcon_lemmas
 import opened falcon_512_i
 
+import opened ot_mq_arith
+
 #endverbatim
 
 const N: pow2_t extern; 
@@ -28,7 +30,7 @@ function denorm_inv(nv: seq(uint256), dnv: seq(uint256), i: nat): bool extern;
 function denorm_inv_peri_lemma(nv: seq(uint256), dnv: seq(uint256), i: nat, a: uint256, b: uint256): void extern;
 function msb(x: uint256): uint1 extern;
 
-procedure denorm(
+procedure denormolize(
     ghost iter_s2: iter_t,
     ghost iter_tt: iter_t)
 returns (ghost iter_tt': iter_t)
@@ -125,6 +127,87 @@ returns (ghost iter_tt': iter_t)
 
     addi(x3, x7, 0);
     addi(x5, x8, 0);
+}
+
+function norm_inv(outputs: seq(uint256), inputs: seq(uint256), i: nat): bool extern;
+function norm_pre_lemma(inputs: seq(uint256)): void extern;
+function iter_inv(iter: iter_t, heap: heap_t, address: int): bool extern;
+function norm_peri_lemma(outputs: seq(uint256), inputs: seq(uint256), i: nat, w: uint16, flags: flags_t, diff: uint16, mask: uint16, rst: uint16): void extern;
+function norm_post_lemma(outputs: seq(uint256), inputs: seq(uint256)): void extern;
+
+procedure normalize(
+    ghost iter_tt: iter_t)
+returns (ghost iter_tt': iter_t)
+{:frame false}
+
+    requires
+        w1 == Q;
+        w4 == Q/2;
+
+    requires
+        elems_iter_inv(heap, iter_tt, x4, 0);
+
+    ensures
+        nelems_iter_inv(heap, iter_tt', old(x4), 0);
+        iter_tt'.base_ptr == iter_tt.base_ptr;
+   
+    ensures
+        heap == old(heap)
+            [iter_tt'.base_ptr := heap[iter_tt'.base_ptr]];
+
+    ensures
+        norm_inv(iter_tt'.buff, iter_tt.buff, 512);
+{
+    bn_clear(w2);
+
+    iter_tt' := iter_tt;
+    li(x6, 3);
+
+    ghost var i :nat := 0;
+    reveal norm_inv;
+    reveal valid_elems;
+
+    while (LoopImm(512))
+        invariant
+            x6 == 3;
+
+        invariant
+            w1 == Q;
+            w2 == 0;
+            w4 == Q/2;
+
+        invariant
+            iter_inv(iter_tt', heap, x4);
+            iter_tt'.base_ptr == iter_tt.base_ptr;
+            seq_len(iter_tt'.buff) == 512;
+            iter_tt'.index == i;
+
+        invariant
+            heap == old(heap)
+            [iter_tt'.base_ptr := heap[iter_tt'.base_ptr]];
+
+        invariant
+            norm_inv(iter_tt'.buff, iter_tt.buff, i);
+
+        invariant
+            iter_tt'.index + loop_ctr == 512;
+
+        decreases
+            loop_ctr;
+    {
+        iter_tt' := bn_lid_safe(x6, false, 0, x4, false, iter_tt');
+
+        let vv := w3;
+
+        bn_sub(w5, w4, w3, SFT_DFT, 0);
+        bn_sub(w5, w3, w1, SFT_DFT, 1);
+        bn_sel(w3, w5, w3, 0, 0);
+
+        iter_tt' := bn_sid_safe(x6, false, 0, x4, true, iter_tt');
+
+        i := i + 1;
+    }
+    iter_tt' := iter_tt'.(index := 0);
 }
 
 

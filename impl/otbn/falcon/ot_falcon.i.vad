@@ -4,6 +4,7 @@ include "ot_intt.i.vad"
 include "ot_circle_product.i.vad"
 include "ot_bit_rev.i.vad"
 include "ot_polyscale.i.vad"
+include "ot_polysub.i.vad"
 
 #verbatim
 
@@ -13,6 +14,7 @@ include "ot_intt.i.dfy"
 include "ot_circle_product.i.dfy"
 include "ot_bit_rev.i.dfy"
 include "ot_polyscale.i.dfy"
+include "ot_polysub.i.dfy"
 
 module ot_falcon {
 
@@ -33,6 +35,7 @@ import opened ot_intt
 import opened ot_circle_product
 import opened ot_bit_rev
 import opened ot_polyscale
+import opened ot_polysub
 
 #endverbatim
 
@@ -123,6 +126,9 @@ returns (ghost iter_tt': iter_t, ghost iter_h': iter_t)
     ensures
         x2 == old(x2);
         x3 == old(x3);
+
+    ensures
+        wmod == 12289;
 
     ensures
         elems_iter_inv(heap, iter_tt', x4, 0);
@@ -252,7 +258,7 @@ returns (ghost iter_tt': iter_t)
         iter_tt.base_ptr != iter_p1.base_ptr;
         iter_tt.base_ptr != iter_p2.base_ptr;
 {
-    iter_tt' := denorm(iter_s2, iter_tt);
+    iter_tt' := denormolize(iter_s2, iter_tt);
     ghost var iter_h' := iter_h;
 
     bn_subi(w5, w1, 2, 0);
@@ -260,7 +266,20 @@ returns (ghost iter_tt': iter_t)
 
     iter_tt', iter_h' := poly_product(iter_h', iter_tt', br_base, iter_t2, iter_p1, iter_p2);
     let tt1 := iter_tt'.buff;
-    
+
+    assert elems_iter_inv(heap, iter_c0, x2, 0);
+    assert nelems_iter_inv(heap, iter_s2, x3, 0);
+
+    addi(x5, x4, 0);
+    addi(x6, x2, 0);
+    let wut := x5;
+    iter_tt' := poly_sub(iter_tt', iter_c0);
+
+    assume w1 == Q;
+    assume w4 == Q/2;
+
+    iter_tt' := normalize(iter_tt');
+
 }
 
 #verbatim

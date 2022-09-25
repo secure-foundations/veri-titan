@@ -2,7 +2,7 @@ include "../spec/bvop/bv_op.s.dfy"
 include "../spec/crypto/falcon512.i.dfy"
 
 abstract module generic_falcon_lemmas {
-    import opened GBV: bv_op_s
+    import opened MWD: bv_op_s
 
     import opened Mul
     import opened Power
@@ -16,65 +16,66 @@ abstract module generic_falcon_lemmas {
     import FNTT = falcon_512_i.FNTT
     import INTT = falcon_512_i.INTT
 
-    type uint = BVSEQ.uint
+    // type uint = BVSEQ.uint
 
-    function BASE(): nat
-    {
-        BVSEQ.BASE()
-    }
+    // function BASE(): nat
+    // {
+    //     BVSEQ.BASE()
+    // }
 
-    lemma general_dw_add_lemma(
-        xs: seq<uint>, ys: seq<uint>, zs: seq<uint>,
-        c1: uint1, c2: uint1)
-    returns (z: GBV.dw_view_t)
-        requires |xs| == |ys| == |zs| == 2;
-        requires (zs[0], c1) == GBV.addc(xs[0], ys[0], 0);
-        requires (zs[1], c2) == GBV.addc(xs[1], ys[1], c1);
-        ensures z.lh == zs[0];
-        ensures z.uh == zs[1];
-        ensures z.full == to_nat(zs);
-        ensures z.full + c2 * BASE() * BASE() == to_nat(xs) + to_nat(ys);
-    {
-        var x_full := to_nat(xs);
-        var y_full := to_nat(ys);
-        var z_full := to_nat(zs);
+    type mword = MWD.BVSEQ.uint
 
-        GBV.BVSEQ.LemmaSeqLen2(xs);
-        GBV.BVSEQ.LemmaSeqLen2(ys);
-        GBV.BVSEQ.LemmaSeqLen2(zs);
+    // lemma general_dw_add_lemma(
+    //     xs: seq<uint>, ys: seq<uint>, zs: seq<uint>,
+    //     c1: uint1, c2: uint1)
+    // returns (z: GBV.dw_view_t)
+    //     requires |xs| == |ys| == |zs| == 2;
+    //     requires (zs[0], c1) == GBV.addc(xs[0], ys[0], 0);
+    //     requires (zs[1], c2) == GBV.addc(xs[1], ys[1], c1);
+    //     ensures z.lh == zs[0];
+    //     ensures z.uh == zs[1];
+    //     ensures z.full == to_nat(zs);
+    //     ensures z.full + c2 * BASE() * BASE() == to_nat(xs) + to_nat(ys);
+    // {
+    //     var x_full := to_nat(xs);
+    //     var y_full := to_nat(ys);
+    //     var z_full := to_nat(zs);
 
-        var x_lh, x_uh := xs[0], xs[1];
-        var y_lh, y_uh := ys[0], ys[1];
-        var z_lh, z_uh := zs[0], zs[1];
+    //     GBV.BVSEQ.LemmaSeqLen2(xs);
+    //     GBV.BVSEQ.LemmaSeqLen2(ys);
+    //     GBV.BVSEQ.LemmaSeqLen2(zs);
 
-        assert x_full == x_lh + x_uh * BASE();
-        assert y_full == y_lh + y_uh * BASE();
-        assert z_full == z_lh + z_uh * BASE();
+    //     var x_lh, x_uh := xs[0], xs[1];
+    //     var y_lh, y_uh := ys[0], ys[1];
+    //     var z_lh, z_uh := zs[0], zs[1];
 
-        calc == {
-            z_uh * BASE() + c2 * BASE() * BASE();
-            {
-                LemmaMulProperties();
-            }
-            (z_uh + c2 * BASE()) * BASE();
-            {
-                assert z_uh + c2 * BASE() == x_uh + y_uh + c1;
-            }
-            (x_uh + y_uh + c1) * BASE();
-            {
-                LemmaMulProperties();
-            }
-            x_uh * BASE() + y_uh * BASE() + c1 * BASE();
-            {
-                assert x_lh + y_lh == z_lh + c1 * BASE();
-            }
-            x_uh * BASE() + y_uh * BASE() + x_lh + y_lh - z_lh;
-        }
+    //     assert x_full == x_lh + x_uh * BASE();
+    //     assert y_full == y_lh + y_uh * BASE();
+    //     assert z_full == z_lh + z_uh * BASE();
 
-        assert z_full + c2 * BASE() * BASE() == x_full + y_full;
-        z := build_dw_view(z_lh, z_uh);
-    }
+    //     calc == {
+    //         z_uh * BASE() + c2 * BASE() * BASE();
+    //         {
+    //             LemmaMulProperties();
+    //         }
+    //         (z_uh + c2 * BASE()) * BASE();
+    //         {
+    //             assert z_uh + c2 * BASE() == x_uh + y_uh + c1;
+    //         }
+    //         (x_uh + y_uh + c1) * BASE();
+    //         {
+    //             LemmaMulProperties();
+    //         }
+    //         x_uh * BASE() + y_uh * BASE() + c1 * BASE();
+    //         {
+    //             assert x_lh + y_lh == z_lh + c1 * BASE();
+    //         }
+    //         x_uh * BASE() + y_uh * BASE() + x_lh + y_lh - z_lh;
+    //     }
 
+    //     assert z_full + c2 * BASE() * BASE() == x_full + y_full;
+    //     z := build_dw_view(z_lh, z_uh);
+    // }
 
     predicate {:opaque} valid_elems(a: seq<nat>)
         ensures valid_elems(a) ==> |a| == N.full;
@@ -89,6 +90,52 @@ abstract module generic_falcon_lemmas {
     {
         reveal valid_elems();
         a
+    }
+
+    predicate valid_nelem(e: mword)
+    {
+        MQN.int_is_normalized(MWD.from_2s_comp(e))
+    }
+
+    function as_nelem(e: mword): nelem
+        requires valid_nelem(e)
+    {
+        MWD.from_2s_comp(e)
+    }
+
+    predicate valid_nelems(a: seq<mword>)
+    {
+        && |a| == N.full
+        && (forall i | 0 <= i < |a| :: valid_nelem(a[i]))
+    }
+
+    function as_nelems(a: seq<mword>): (na: seq<nelem>)
+        requires valid_nelems(a);
+    {
+        seq(|a|, i requires 0 <= i < |a| => as_nelem(a[i]))
+    }
+
+    predicate denorm_inv(nv: seq<mword>, dnv: seq<nat>, i: nat)
+    {
+        && valid_nelems(nv)
+        && valid_elems(dnv)
+        && i <= N.full
+        && (forall j | 0 <= j < i :: 
+            dnv[j] == MQN.denormalize(as_nelem(nv[j])))
+    }
+    
+    // 0 <= e < Q -> -Q/2 <= e <= Q/2
+    predicate {:opaque} norm_inv(outputs: seq<mword>, inputs: seq<nat>, i: nat)
+    {
+        && valid_elems(inputs)
+        && |outputs| == N.full
+        && reveal valid_elems();
+        && i <= N.full
+        && inputs[i..] == outputs[i..]
+        && (forall j | 0 <= j < i :: (
+            && valid_nelem(outputs[j])
+            && as_nelem(outputs[j]) == MQN.normalize(inputs[j]))
+        )
     }
 
 // mq arith wraps
@@ -141,6 +188,7 @@ abstract module generic_falcon_lemmas {
     }
 
 // fntt wraps
+
     type floop_view = FNTT.loop_view
 
     function block_size(d: pow2_t): pow2_t
@@ -711,40 +759,34 @@ abstract module generic_falcon_lemmas {
        view.shuffle_inv(a)
     }
 
-// polysub wraps
-
-    function bit_rev_view_init(a: seq<nat>): (view: rev_view)
+    lemma bit_rev_index_lemma(a: seq<nat>, ftable: seq<nat>, li: nat, ri: nat, ti: nat)
         requires |a| == N.full;
-        ensures view.len == N;
-        ensures view.shuffle_inv(a);
-    {
-        var view := rev_view.init_rev_view(a, N);
-        view.shuffle_inv_pre_lemma(a, N);
-        view
-    }
+        requires bit_rev_ftable_wf(ftable);
 
-    predicate poly_sub_loop_inv(diff: seq<nat>, f: seq<nat>, g: seq<nat>, i: nat)
-    {
-        reveal valid_elems();
-        && valid_elems(diff)
-        && valid_elems(f)
-        && valid_elems(g)
-        && 0 <= i <= N.full
-        && diff[i..] == f[i..]
-        && (forall j | 0 <= j < i :: diff[j] == MQP.mqsub(f[j], g[j]))
-    }
+        requires 0 <= 2 * ti + 1 < |ftable|;
+        requires li == ftable[2 * ti];
+        requires ri == ftable[2 * ti+1];
 
-    lemma poly_sub_loop_correct(f_new: seq<nat>, f_old: seq<nat>, f_orig:seq<nat>, g: seq<nat>, i: nat)
-        requires i < N.full;
-        requires poly_sub_loop_inv(f_old, f_orig, g, i)
-        requires f_new == f_old[i := MQP.mqsub(f_orig[i], g[i])];
-        ensures poly_sub_loop_inv(f_new, f_orig, g, i+1);
+        ensures li == build_view(a, ti, N).get_split_index();
+        ensures ri == bit_rev_int(ftable[2 * ti], N);
     {
-        assert |f_new| == |f_old|;
-        forall j | 0 <= j < |f_new|
-            ensures j != i ==> f_new[j] == f_old[j];
-            ensures j == i ==> f_new[j] == MQP.mqsub(f_orig[j], g[j]);
-        {}
+        var table := ftable_cast(ftable);
+        assert ti < |table|;
+
+        assert table[ti].0 == ftable[2 * ti]
+            && table[ti].1 == ftable[2 * ti + 1] by {
+            reveal ftable_cast();
+        }
+
+        assert table[ti].0 == build_view(a, ti, N).get_split_index()
+            && table[ti].1 == bit_rev_int(table[ti].0, N) by {
+            reveal table_wf();
+            reveal table_wf_inner();
+        }
+
+        // ftable_index_lemma(a, ftable, table, ti);
+        assert li == build_view(a, ti, N).get_split_index();
+        assert ri == bit_rev_int(ftable[2 * ti], N);
     }
 
     lemma bit_rev_view_inv_peri_lemma(
@@ -841,39 +883,40 @@ abstract module generic_falcon_lemmas {
         poly_mod_product_lemma(a0, a1, b0, b1, p0, p1, p2, p3, p4);
     }
 
-    lemma bit_rev_index_lemma(
-        a: seq<nat>,
-        ftable: seq<nat>,
-        li: nat,
-        ri: nat,
-        ti: nat)
+// polysub wraps
 
+    function bit_rev_view_init(a: seq<nat>): (view: rev_view)
         requires |a| == N.full;
-        requires bit_rev_ftable_wf(ftable);
-
-        requires 0 <= 2 * ti + 1 < |ftable|;
-        requires li == ftable[2 * ti];
-        requires ri == ftable[2 * ti+1];
-
-        ensures li == build_view(a, ti, N).get_split_index();
-        ensures ri == bit_rev_int(ftable[2 * ti], N);
+        ensures view.len == N;
+        ensures view.shuffle_inv(a);
     {
-        var table := ftable_cast(ftable);
-        assert ti < |table|;
-
-        assert table[ti].0 == ftable[2 * ti]
-            && table[ti].1 == ftable[2 * ti + 1] by {
-            reveal ftable_cast();
-        }
-
-        assert table[ti].0 == build_view(a, ti, N).get_split_index()
-            && table[ti].1 == bit_rev_int(table[ti].0, N) by {
-            reveal table_wf();
-            reveal table_wf_inner();
-        }
-
-        // ftable_index_lemma(a, ftable, table, ti);
-        assert li == build_view(a, ti, N).get_split_index();
-        assert ri == bit_rev_int(ftable[2 * ti], N);
+        var view := rev_view.init_rev_view(a, N);
+        view.shuffle_inv_pre_lemma(a, N);
+        view
     }
+
+    predicate poly_sub_loop_inv(diff: seq<nat>, f: seq<nat>, g: seq<nat>, i: nat)
+    {
+        reveal valid_elems();
+        && valid_elems(diff)
+        && valid_elems(f)
+        && valid_elems(g)
+        && 0 <= i <= N.full
+        && diff[i..] == f[i..]
+        && (forall j | 0 <= j < i :: diff[j] == MQP.mqsub(f[j], g[j]))
+    }
+
+    lemma poly_sub_loop_correct(f_new: seq<nat>, f_old: seq<nat>, f_orig:seq<nat>, g: seq<nat>, i: nat)
+        requires i < N.full;
+        requires poly_sub_loop_inv(f_old, f_orig, g, i)
+        requires f_new == f_old[i := MQP.mqsub(f_orig[i], g[i])];
+        ensures poly_sub_loop_inv(f_new, f_orig, g, i+1);
+    {
+        assert |f_new| == |f_old|;
+        forall j | 0 <= j < |f_new|
+            ensures j != i ==> f_new[j] == f_old[j];
+            ensures j == i ==> f_new[j] == MQP.mqsub(f_orig[j], g[j]);
+        {}
+    }
+
 }

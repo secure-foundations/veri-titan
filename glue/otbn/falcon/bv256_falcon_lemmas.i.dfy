@@ -4,8 +4,8 @@ include "../../../spec/bvop/bv256_op.s.dfy"
 include "../../generic_falcon_lemmas.dfy"
 
 module bv256_falcon_lemmas refines generic_falcon_lemmas {
-    import opened GBV = bv256_op_s
-    
+    import opened MWD = bv256_op_s
+
     import opened ot_vale
     import opened ot_machine
     import opened mem
@@ -179,23 +179,6 @@ module bv256_falcon_lemmas refines generic_falcon_lemmas {
         && valid_elems(iter.buff)
     }
 
-    predicate valid_nelem(e: uint256)
-    {
-        MQN.int_is_normalized(from_2s_comp(e))
-    }
-
-    predicate valid_nelems(a: seq<uint256>)
-    {
-        && |a| == N.full
-        && (forall i | 0 <= i < |a| :: valid_nelem(a[i]))
-    }
-
-    function as_nelem(e: uint256): nelem
-        requires valid_nelem(e)
-    {
-        from_2s_comp(e)
-    }
-
     predicate nelems_iter_inv(heap: heap_t, iter: b256_iter, address: int, index: int)
     {
         && b256_iter_inv(heap, iter)
@@ -203,15 +186,6 @@ module bv256_falcon_lemmas refines generic_falcon_lemmas {
         && (index >= 0 ==> iter.index == index)
         && |iter.buff| == N.full
         && valid_nelems(iter.buff)
-    }
-
-    predicate denorm_inv(nv: seq<uint256>, dnv: seq<uint256>, i: nat)
-    {
-        && valid_nelems(nv)
-        && valid_elems(dnv)
-        && i <= N.full
-        && (forall j | 0 <= j < i :: 
-            dnv[j] == MQN.denormalize(as_nelem(nv[j])))
     }
 
     predicate heap_b32_ptr_valid(heap: heap_t, base_ptr: nat, count: nat)
@@ -281,4 +255,9 @@ module bv256_falcon_lemmas refines generic_falcon_lemmas {
         ensures heap_b32_ptr_valid(state'.mem.heap, base_ptr, count);
         ensures b32_seq(state.mem.heap, base_ptr, count)
             == b32_seq(state'.mem.heap, base_ptr, count);
+    {
+        assume false;
+    }
+
+
 }
