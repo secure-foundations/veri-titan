@@ -17,6 +17,11 @@ module bv32_op_s refines bv_op_s
     import DivModNeg
     import bv16_op_s
 
+    lemma base_basic_lemma()
+        ensures BASE() % 2 == 0
+    {
+    }
+
     // half word base
     function method HW_BASE(): nat
     {

@@ -30,58 +30,6 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         && valid_nelems(iter.buff)
     }
 
-    // lemma bit_rev_index_lemma(
-    //     a: seq<nat>,
-    //     ftable: seq<nat>,
-    //     sbi: uint32,
-    //     rsbi: uint32,
-    //     ti: nat,
-    //     a0: uint32,
-    //     t0: uint32,
-    //     t1: uint32)
-
-    //     requires |a| == N.full;
-    //     requires bit_rev_ftable_wf(ftable);
-
-    //     requires 0 <= 2 * ti + 1 < |ftable|;
-    //     requires sbi == ftable[2 * ti];
-    //     requires rsbi == ftable[2 * ti+1];
-    
-    //     requires flat.ptr_admissible_32(heap_b32_index_ptr(a0, N.full / 2 - 1));
-
-    //     requires t0 == uint32_add(a0, uint32_ls(sbi, 1));
-    //     requires t1 == uint32_add(a0, uint32_ls(rsbi, 1));
-
-    //     ensures t0 == a0 + 2 * sbi;
-    //     ensures t1 == a0 + 2 * rsbi;
-
-    //     ensures sbi == build_view(a, ti, N).get_split_index();
-    //     ensures rsbi == bit_rev_int(ftable[2 * ti], N);
-    // {
-    //     var table := ftable_cast(ftable);
-    //     assert ti < |table|;
-
-    //     assert table[ti].0 == ftable[2 * ti]
-    //         && table[ti].1 == ftable[2 * ti + 1] by {
-    //         reveal ftable_cast();
-    //     }
-
-    //     assert table[ti].0 == build_view(a, ti, N).get_split_index()
-    //         && table[ti].1 == bit_rev_int(table[ti].0, N) by {
-    //         reveal table_wf();
-    //         reveal table_wf_inner();
-    //     }
-
-    //     // ftable_index_lemma(a, ftable, table, ti);
-    //     assert sbi == build_view(a, ti, N).get_split_index();
-    //     assert rsbi == bit_rev_int(ftable[2 * ti], N);
-
-    //     ls1_lemma(sbi);
-    //     ls1_lemma(rsbi);
-    // }
-
-
-
     lemma denormalize_lemma(buff: seq<uint16>, i: nat, a1: uint32, b: uint32, c: uint32, d: uint32)
         requires valid_nelems(buff);
         requires i < |buff|;
@@ -137,7 +85,6 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
         denormalize_lemma(buff, i, a1, b, c, d);
         assert d == lh;
     }
-
 
     lemma normalization_pre_lemma(inputs: seq<uint16>)
         requires valid_elems(inputs);

@@ -4,7 +4,7 @@ include "../../../spec/bvop/bv256_op.s.dfy"
 include "../../generic_falcon_lemmas.dfy"
 
 module bv256_falcon_lemmas refines generic_falcon_lemmas {
-    import opened MWD = bv256_op_s
+    import MWD = bv256_op_s
 
     import opened ot_vale
     import opened ot_machine

@@ -15,6 +15,11 @@ module bv16_op_s refines bv_op_s
     import opened BVSEQ = bv16_seq
     import DivModNeg
 
+    lemma base_basic_lemma()
+        ensures BASE() % 2 == 0
+    {
+    }
+
     // half word base
     function method HW_BASE(): nat
     {

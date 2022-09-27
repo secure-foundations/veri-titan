@@ -364,7 +364,7 @@ returns (ghost next_iter_c: iter_t)
     montmul_inv_lemma(original_c, next_iter_c.buff, iter_a.buff, i, d0, iter_b.buff, rsa);
 }
 
-procedure mont_mul_add(
+procedure mont_mul_add_inner(
     ghost iter_c: iter_t,
     ghost a: uint16,
     ghost iter_b: iter_t,
@@ -372,15 +372,12 @@ procedure mont_mul_add(
     ghost iter_a: iter_t,
     ghost rsa: rsa_params,
     ghost i: nat)
-
 returns (ghost next_iter_c: iter_t)
 
     {:frame false}
-    {:noInline}
-
     requires
         in_stack_addr_range(sp);
-        in_stack_addr_range(sp - 24);
+        in_stack_addr_range(sp - 10);
 
         symbols?["n"];
         symbols?["d0inv"];
@@ -401,13 +398,6 @@ returns (ghost next_iter_c: iter_t)
 
     ensures
         sp == old(sp);
-        r4 == old(r4);
-        r5 == old(r5);
-        r6 == old(r6);
-        r7 == old(r7);
-        r8 == old(r8);
-        r9 == old(r9);
-        r10 == old(r10);
 
         mem == old(mem).(heap := heap);
         heap == old(heap)[next_iter_c.base_ptr := B16(next_iter_c.buff)];
@@ -415,7 +405,6 @@ returns (ghost next_iter_c: iter_t)
         mvar_iter_inv(heap, next_iter_c, (-1), (-1), (-1));
         montmul_inv(next_iter_c.buff, iter_a.buff, i+1, iter_b.buff, rsa);
 {
-    save_r4__r10();
     let pre_mem := mem;
 
     ghost var A: uint32_view_t;
@@ -480,11 +469,66 @@ returns (ghost next_iter_c: iter_t)
     next_iter_c := mma_post(A, B, original_c,
         next_iter_c, a, next_iter_b, iter_n, j, iter_a, rsa, i);
 
-    // assert montmul_inv(next_iter_c.buff, iter_a.buff, i+1, iter_b.buff, rsa);
+    assert montmul_inv(next_iter_c.buff, iter_a.buff, i+1, iter_b.buff, rsa);
 
     assert frames == loop_mem.frames;
     pop_frame(2);
     assert frames == pre_mem.frames;
+}
+
+procedure mont_mul_add(
+    ghost iter_c: iter_t,
+    ghost a: uint16,
+    ghost iter_b: iter_t,
+    ghost iter_n: iter_t,
+    ghost iter_a: iter_t,
+    ghost rsa: rsa_params,
+    ghost i: nat)
+
+returns (ghost next_iter_c: iter_t)
+    {:frame false}
+    {:noInline}
+
+    requires
+        in_stack_addr_range(sp);
+        in_stack_addr_range(sp - 24);
+
+        symbols?["n"];
+        symbols?["d0inv"];
+        load_symbol(mem, "d0inv") == rsa.M0D;
+
+        iter_c.base_ptr != iter_n.base_ptr;
+        iter_c.base_ptr != iter_b.base_ptr;
+        iter_c.base_ptr != iter_a.base_ptr;
+
+        mvar_iter_inv(heap, iter_c, r12, 0, (-1));
+        r13 == a;
+        mvar_iter_inv(heap, iter_b, r14, 0, (-1));
+        mvar_iter_inv(heap, iter_n, load_symbol(mem, "n"), 0, rsa.M);
+
+        montmul_inv(iter_c.buff, iter_a.buff, i, iter_b.buff, rsa);
+        i < NUM_WORDS;
+        iter_a.buff[i] == a;
+
+    ensures
+        sp == old(sp);
+        r4 == old(r4);
+        r5 == old(r5);
+        r6 == old(r6);
+        r7 == old(r7);
+        r8 == old(r8);
+        r9 == old(r9);
+        r10 == old(r10);
+
+        mem == old(mem).(heap := heap);
+        heap == old(heap)[next_iter_c.base_ptr := B16(next_iter_c.buff)];
+        next_iter_c.base_ptr == iter_c.base_ptr;
+        mvar_iter_inv(heap, next_iter_c, (-1), (-1), (-1));
+        montmul_inv(next_iter_c.buff, iter_a.buff, i+1, iter_b.buff, rsa);
+{
+    save_r4__r10();
+    next_iter_c := mont_mul_add_inner(iter_c, a, iter_b, iter_n, iter_a, rsa, i);
+    assert read_top_frame(mem) == seq(old(r4), old(r5), old(r6), old(r7), old(r8), old(r9), old(r10));
     popm_w(7, r10);
     assert frames == old(frames);
 }
