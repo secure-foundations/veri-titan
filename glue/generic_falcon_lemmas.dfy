@@ -16,66 +16,7 @@ abstract module generic_falcon_lemmas {
     import FNTT = falcon_512_i.FNTT
     import INTT = falcon_512_i.INTT
 
-    // type uint = BVSEQ.uint
-
-    // function BASE(): nat
-    // {
-    //     BVSEQ.BASE()
-    // }
-
     type mword = MWD.BVSEQ.uint
-
-    // lemma general_dw_add_lemma(
-    //     xs: seq<uint>, ys: seq<uint>, zs: seq<uint>,
-    //     c1: uint1, c2: uint1)
-    // returns (z: GBV.dw_view_t)
-    //     requires |xs| == |ys| == |zs| == 2;
-    //     requires (zs[0], c1) == GBV.addc(xs[0], ys[0], 0);
-    //     requires (zs[1], c2) == GBV.addc(xs[1], ys[1], c1);
-    //     ensures z.lh == zs[0];
-    //     ensures z.uh == zs[1];
-    //     ensures z.full == to_nat(zs);
-    //     ensures z.full + c2 * BASE() * BASE() == to_nat(xs) + to_nat(ys);
-    // {
-    //     var x_full := to_nat(xs);
-    //     var y_full := to_nat(ys);
-    //     var z_full := to_nat(zs);
-
-    //     GBV.BVSEQ.LemmaSeqLen2(xs);
-    //     GBV.BVSEQ.LemmaSeqLen2(ys);
-    //     GBV.BVSEQ.LemmaSeqLen2(zs);
-
-    //     var x_lh, x_uh := xs[0], xs[1];
-    //     var y_lh, y_uh := ys[0], ys[1];
-    //     var z_lh, z_uh := zs[0], zs[1];
-
-    //     assert x_full == x_lh + x_uh * BASE();
-    //     assert y_full == y_lh + y_uh * BASE();
-    //     assert z_full == z_lh + z_uh * BASE();
-
-    //     calc == {
-    //         z_uh * BASE() + c2 * BASE() * BASE();
-    //         {
-    //             LemmaMulProperties();
-    //         }
-    //         (z_uh + c2 * BASE()) * BASE();
-    //         {
-    //             assert z_uh + c2 * BASE() == x_uh + y_uh + c1;
-    //         }
-    //         (x_uh + y_uh + c1) * BASE();
-    //         {
-    //             LemmaMulProperties();
-    //         }
-    //         x_uh * BASE() + y_uh * BASE() + c1 * BASE();
-    //         {
-    //             assert x_lh + y_lh == z_lh + c1 * BASE();
-    //         }
-    //         x_uh * BASE() + y_uh * BASE() + x_lh + y_lh - z_lh;
-    //     }
-
-    //     assert z_full + c2 * BASE() * BASE() == x_full + y_full;
-    //     z := build_dw_view(z_lh, z_uh);
-    // }
 
     predicate {:opaque} valid_elems(a: seq<nat>)
         ensures valid_elems(a) ==> |a| == N.full;
