@@ -2,7 +2,7 @@ include "../spec/bvop/bv_op.s.dfy"
 include "../spec/crypto/falcon512.i.dfy"
 
 abstract module generic_falcon_lemmas {
-    import opened MWD: bv_op_s
+    import MWD: bv_op_s
 
     import opened Mul
     import opened Power

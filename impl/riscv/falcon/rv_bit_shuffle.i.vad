@@ -44,7 +44,7 @@ function build_view(a: seq(uint16), i: nat, len: pow2_t): rev_view extern;
 function is_bit_rev_shuffle(a: seq(uint16), b: seq(uint16), len: pow2_t): bool extern;
 function bit_rev_view_init(a: seq(uint16)): rev_view extern;
 function bit_rev_view_inv_peri_lemma(a: seq(uint16), next_b: seq(uint16), view: rev_view, table: seq(uint16)): rev_view extern;
-function bit_rev_index_lemma(a: seq(uint16),ftable: seq(uint16), sbi: uint32,rsbi: uint32, ti: nat, a0: uint32, t0: uint32, t1: uint32): void extern;
+function bit_rev_index_lemma(a: seq(uint16),ftable: seq(uint16), sbi: uint32, rsbi: uint32, ti: nat): void extern;
 function bit_rev_view_inv_post_lemma(a: seq(uint16), view: rev_view): void  extern;
 function bit_rev_ftable_wf(table: seq(uint16)): bool extern;
 function bit_rev_shuffle_inv(a: seq(uint16), view: rev_view): bool extern;
@@ -140,13 +140,13 @@ returns (ghost next_iter_a: b16_iter)
             // assert sbi == iter_t.buff[2 * ti];
             // assert rsbi == iter_t.buff[2 * ti+1];
 
-            slli(t0, t0, 1);
+            add(t0, t0, t0);
             add(t0, a0, t0);
 
-            slli(t1, t1, 1);
+            add(t1, t1, t1);
             add(t1, a0, t1);
 
-            bit_rev_index_lemma(initial_a, iter_t.buff, sbi, rsbi, ti, a0, t0, t1);
+            bit_rev_index_lemma(initial_a, iter_t.buff, sbi, rsbi, ti);
 
             lhu(a3, t0, 0, next_iter_a.(index := sbi));
             lhu(a4, t1, 0, next_iter_a.(index := rsbi));

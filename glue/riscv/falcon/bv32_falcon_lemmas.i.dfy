@@ -12,7 +12,7 @@ module bv32_falcon_lemmas refines generic_falcon_lemmas {
     import opened bv32_op_s
 
     import opened mq_arith_lemmas
-    import opened GBV = bv32_op_s
+    import MWD = bv16_op_s
 
     predicate elems_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int)
     {
