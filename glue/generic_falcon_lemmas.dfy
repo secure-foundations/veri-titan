@@ -138,6 +138,16 @@ abstract module generic_falcon_lemmas {
         )
     }
 
+    function l2norm_squared(s1: seq<mword>, s2: seq<mword>, i: nat): nat
+        requires i <= N.full;
+        requires valid_nelems(s1);
+        requires valid_nelems(s2);
+    {
+        var ns1 := as_nelems(s1);
+        var ns2 := as_nelems(s2);
+        MQN.l2norm_squared(ns1, ns2, i)
+    }
+
 // mq arith wraps
 
     function montmul(a: elem, b: elem): elem
@@ -918,5 +928,37 @@ abstract module generic_falcon_lemmas {
             ensures j == i ==> f_new[j] == MQP.mqsub(f_orig[j], g[j]);
         {}
     }
+
+    lemma falcon_lemma(
+        tt0: seq<nat>, tt1: seq<nat>, tt2: seq<nat>,
+        s1: seq<mword>, s2: seq<mword>, h: seq<nat>, c0: seq<nat>,
+        result: nat)
+
+    requires valid_elems(tt0);
+    requires valid_elems(tt1);
+    requires valid_elems(h);
+    requires denorm_inv(s2, tt0, 512);
+    requires as_elems(tt1) ==
+            poly_mod_product(as_elems(tt0), as_elems(h));
+    requires poly_sub_loop_inv(tt2, tt1, c0, 512);
+    requires norm_inv(s1, tt2, 512);
+    requires valid_nelems(s1);
+    requires valid_nelems(s2);
+    requires (result == 1) <==>
+        l2norm_squared(s1, s2, 512) < 0x29845d6;
+    ensures (result == 1) <==>
+        falcon_verify(as_elems(c0), as_nelems(s2), as_elems(h));
+    {
+        reveal valid_elems();
+        reveal norm_inv();
+
+        assert tt0 == MQN.denormalize_elems(as_nelems(s2));
+        assert tt1 == poly_mod_product(as_elems(tt0), as_elems(h));
+        assert tt2 == MQP.poly_sub(tt1, c0);
+        assert as_nelems(s1) == MQN.normalize_elems(tt2);
+        assert l2norm_squared(s1, s2, 512) == 
+            MQN.l2norm_squared(as_nelems(s1), as_nelems(s2), 512);
+    }
+
 
 }

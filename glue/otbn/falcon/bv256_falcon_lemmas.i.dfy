@@ -259,5 +259,25 @@ module bv256_falcon_lemmas refines generic_falcon_lemmas {
         assume false;
     }
 
+    lemma accumlate_lemma(a: seq<mword>, i: nat)
+        returns (p: nat)
+
+        requires valid_nelems(a);
+        requires i < 512;
+        ensures p == otbn_qmul(a[i], 0, a[i], 0);
+        ensures p <= 37748736;
+        ensures p == as_nelem(a[i]) * as_nelem(a[i]);
+    {
+        // var ai := a[i];
+        assume false;
+    }
+
+    // lemma bound_lemma()
+    // {
+    //     var product := otbn_mulqacc_safe(false, old(src1), qwsel1, old(src2), qwsel2, shift, 0);
+    //     let result := otbn_mulqacc_so(product, old(dst), lower, old(get_fgroup(fgroups, fg)));
+
+
+    // }
 
 }

@@ -134,7 +134,7 @@ module ot_machine {
         | BN_MOV(wrd: reg256_t, wrs: reg256_t)
         | BN_MOVR(grd: reg32_t, grd_inc: bool, grs: reg32_t, grs_inc: bool)
         | BN_WSRR(wrd: reg256_t, wsr: uint2)
-        // | BN_WSRRW
+        | BN_WSRW(wsr: uint2, wrs: reg256_t)
 
 /* stateless semantic functions  */
 
@@ -565,6 +565,29 @@ module ot_machine {
             write_reg32(xrd, value)
         }
 
+        function method eval_ins32(xins: ins32): state
+        {
+            if !ok then
+                this
+            else match xins
+                case ADD(xrd, xrs1, xrs2) => eval_ADD(xrd, xrs1, xrs2)
+                case ADDI(xrd, xrs1, imm) => eval_ADDI(xrd, xrs1, imm)
+                case SUB(xrd, xrs1, xrs2) => eval_SUB(xrd, xrs1, xrs2)
+                case AND(xrd, xrs1, xrs2) => eval_AND(xrd, xrs1, xrs2)
+                case ANDI(xrd, xrs1, imm) => eval_ANDI(xrd, xrs1, imm)
+                case XORI(xrd, xrs1, imm) => eval_XORI(xrd, xrs1, imm)
+                case LW(xrd, offset, xrs1) => eval_LW(xrd, offset, xrs1)
+                case SW(xrs2, offset, xrs1) => eval_SW(xrs2, offset, xrs1)
+                case CSRRS(grd, csr, grs1) => eval_CSRRS(grd, csr, grs1)
+                case SLLI(xrd, xrs1, shamt) => eval_SLLI(xrd, xrs1, shamt)
+                case SRLI(xrd, xrs1, shamt) => eval_SRLI(xrd, xrs1, shamt)
+                case LI(xrd, imm32) => eval_LI(xrd, imm32)
+                case LA(xrd, name) => eval_LA(xrd, name)
+                case ECALL => this
+                case NOP => this
+                case UNIMP => this.(ok:=false)
+        }
+
         function method read_reg256(r: reg256_t) : uint256
         {
             match r {
@@ -781,27 +804,12 @@ module ot_machine {
             write_reg256(wrd, val)
         }
 
-        function method eval_ins32(xins: ins32): state
+        function method eval_BN_WSRW(wsr: uint2, wrs: reg256_t): state
         {
-            if !ok then
-                this
-            else match xins
-                case ADD(xrd, xrs1, xrs2) => eval_ADD(xrd, xrs1, xrs2)
-                case ADDI(xrd, xrs1, imm) => eval_ADDI(xrd, xrs1, imm)
-                case SUB(xrd, xrs1, xrs2) => eval_SUB(xrd, xrs1, xrs2)
-                case AND(xrd, xrs1, xrs2) => eval_AND(xrd, xrs1, xrs2)
-                case ANDI(xrd, xrs1, imm) => eval_ANDI(xrd, xrs1, imm)
-                case XORI(xrd, xrs1, imm) => eval_XORI(xrd, xrs1, imm)
-                case LW(xrd, offset, xrs1) => eval_LW(xrd, offset, xrs1)
-                case SW(xrs2, offset, xrs1) => eval_SW(xrs2, offset, xrs1)
-                case CSRRS(grd, csr, grs1) => eval_CSRRS(grd, csr, grs1)
-                case SLLI(xrd, xrs1, shamt) => eval_SLLI(xrd, xrs1, shamt)
-                case SRLI(xrd, xrs1, shamt) => eval_SRLI(xrd, xrs1, shamt)
-                case LI(xrd, imm32) => eval_LI(xrd, imm32)
-                case LA(xrd, name) => eval_LA(xrd, name)
-                case ECALL => this
-                case NOP => this
-                case UNIMP => this.(ok:=false)
+            var val := read_reg256(wrs);
+            if wsr == 0 then this.(wmod := val)
+            else if wsr == 3 then this.(wacc := val)
+            else this.(ok := false)
         }
 
         function method eval_ins256(wins: ins256): state
@@ -845,6 +853,8 @@ module ot_machine {
                     eval_BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc)
                 case BN_WSRR(wrd, wsr) => 
                     eval_BN_WSRR(wrd, wsr)
+                case BN_WSRW(wsr, wrs) => 
+                    eval_BN_WSRW(wsr, wrs)
         }
 
         function method eval_block(block: codes): state

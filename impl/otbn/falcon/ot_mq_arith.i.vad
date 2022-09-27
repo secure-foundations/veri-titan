@@ -82,6 +82,7 @@ procedure mq_sub(inout dst: reg256, in src1: reg256, in src2: reg256)
 
 procedure bn_clear(inout dst: reg256)
     modifies fgroups;
+    ensures fgroups.fg1 == old(fgroups.fg1);
     ensures dst == 0;
 {
     xor_clear_lemma(dst, dst);

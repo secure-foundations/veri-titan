@@ -846,7 +846,37 @@ procedure bn_sel(inout dst: reg256, in src1: reg256, in src2: reg256, inline whi
     reveal valid_state_opaque;
     this := this.(mem := old(this).mem);
 }
-    
+
+procedure bn_wsrr(inout dst: reg256, inline src: uint2)
+    {:instruction Ins256(BN_WSRR(dst, src))} 
+    requires
+        src == 0 || src == 3;
+    reads
+        wmod; wacc;
+    ensures
+        src == 0 ==> dst == wmod;
+        src == 3 ==> dst == wacc;
+{
+    reveal eval_code_opaque;
+    reveal valid_state_opaque;
+    this := this.(mem := old(this).mem);
+}
+
+procedure bn_wsrw(inline dst: uint2, in src: reg256)
+    {:instruction Ins256(BN_WSRW(dst, src))} 
+    requires
+        dst == 0 || dst == 3;
+    modifies
+        wmod; wacc;
+    ensures
+        dst == 0 ==> (wmod == src && wacc == old(wacc));
+        dst == 3 ==> (wacc == src && wmod == old(wmod));
+{
+    reveal eval_code_opaque;
+    reveal valid_state_opaque;
+    this := this.(mem := old(this).mem);
+}
+
 procedure comment(inline comment: string)
     {:instruction Comment(comment)}
 {

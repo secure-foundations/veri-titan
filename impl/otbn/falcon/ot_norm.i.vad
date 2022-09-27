@@ -134,6 +134,8 @@ function norm_pre_lemma(inputs: seq(uint256)): void extern;
 function iter_inv(iter: iter_t, heap: heap_t, address: int): bool extern;
 function norm_peri_lemma(outputs: seq(uint256), inputs: seq(uint256), i: nat, w: uint16, flags: flags_t, diff: uint16, mask: uint16, rst: uint16): void extern;
 function norm_post_lemma(outputs: seq(uint256), inputs: seq(uint256)): void extern;
+function l2norm_squared(s1: seq(uint256), s2: seq(uint256), i: nat): nat extern;
+function otbn_qmul(x: uint256, qx: uint2, y: uint256, qy: uint2): nat extern;
 
 procedure normalize(
     ghost iter_tt: iter_t)
@@ -148,7 +150,10 @@ returns (ghost iter_tt': iter_t)
         elems_iter_inv(heap, iter_tt, x4, 0);
 
     ensures
-        nelems_iter_inv(heap, iter_tt', old(x4), 0);
+        x3 == old(x3);
+
+    ensures
+        nelems_iter_inv(heap, iter_tt', x4, 0);
         iter_tt'.base_ptr == iter_tt.base_ptr;
    
     ensures
@@ -158,6 +163,7 @@ returns (ghost iter_tt': iter_t)
     ensures
         norm_inv(iter_tt'.buff, iter_tt.buff, 512);
 {
+    addi(x5, x4, 0);
     bn_clear(w2);
 
     iter_tt' := iter_tt;
@@ -169,6 +175,8 @@ returns (ghost iter_tt': iter_t)
 
     while (LoopImm(512))
         invariant
+            x3 == old(x3);
+            x5 == old(x4);
             x6 == 3;
 
         invariant
@@ -207,7 +215,102 @@ returns (ghost iter_tt': iter_t)
 
         i := i + 1;
     }
+    addi(x4,x5, 0);
     iter_tt' := iter_tt'.(index := 0);
+}
+
+function accumlate_lemma(a: seq(uint256), i: nat): nat extern;
+function otbn_hwb(x: uint256, v: uint256, lower: bool): uint256 extern;
+
+procedure is_short(
+    ghost iter_a: iter_t,
+    ghost iter_b: iter_t)
+{:frame false}
+    lets 
+        x    @= w3; 
+        y    @= w4;
+
+    requires
+        nelems_iter_inv(heap, iter_a, x4, 0);
+        nelems_iter_inv(heap, iter_b, x3, 0);
+
+    ensures
+        fgroups.fg0.cf
+            <==>
+        l2norm_squared(iter_a.buff, iter_b.buff, 512) < 0x29845d6;
+{
+    ghost var iter_a' := iter_a;
+    ghost var iter_b' := iter_b;
+
+    ghost var i :nat := 0;
+
+    addi(x6, x0, 3);
+    addi(x7, x0, 4);
+
+    bn_clear(x);
+    bn_wsrw(3, x);
+
+    while (LoopImm(512))
+        invariant
+            x6 == 3;
+            x7 == 4;
+
+        invariant
+            nelems_iter_inv(heap, iter_a', x4, i);
+            iter_a'.base_ptr == iter_a.base_ptr;
+            nelems_iter_inv(heap, iter_b', x3, i);
+            iter_b'.base_ptr == iter_b.base_ptr;
+
+        invariant
+            wacc <= 8589934592 * i;
+            wacc == l2norm_squared(iter_a.buff, iter_b.buff, i);
+
+        invariant
+            heap == old(heap);
+
+        invariant
+            loop_ctr + i == 512;
+
+        decreases
+            loop_ctr;
+    {
+        iter_a' := bn_lid_safe(x6, false, 0, x4, true, iter_a');
+        iter_b' := bn_lid_safe(x7, false, 0, x3, true, iter_b');
+
+        let pa := accumlate_lemma(iter_a.buff, i);
+        let pb := accumlate_lemma(iter_b.buff, i);
+       
+        bn_mulqacc_safe(x, 0, x, 0, 0);
+        bn_mulqacc_safe(y, 0, y, 0, 0);
+
+        i := i + 1;
+    }
+
+    bn_wsrr(x, 3);
+
+    assert x == l2norm_squared(iter_a.buff, iter_b.buff, 512);
+
+    bn_clear(y);
+    bn_addi(y, y, 81, 0);
+    assume otbn_qmul(81, 0, 81, 0) == 6561;
+
+    bn_mulqacc_z(y, 0, y, 0, 0);
+    bn_wsrr(y, 3);
+    assert y == 6561;
+    bn_addi(y, y, 37, 0);
+
+    bn_mulqacc_z(y, 0, y, 0, 0);
+
+    assume otbn_qmul(6598, 0, 6598, 0) == 43533604;
+
+    bn_wsrr(y, 3);
+    assert y == 43533604;
+
+    bn_addi(y, y, 178, 0);
+
+    assert y == 0x29845d6;
+
+    bn_sub(x, x, y, SFT_DFT, 0);
 }
 
 
