@@ -5,7 +5,7 @@ include "../../../spec/arch/otbn/decls.i.vad"
 include "../../../spec/arch/otbn/decls.i.dfy"
 include "../../../../glue/otbn/falcon/bv256_falcon_lemmas.i.dfy"
 
-module mq_arith {
+module ot_mq_arith {
 
 import opened ot_machine
 import opened ot_abstraction
@@ -18,9 +18,20 @@ import opened bv256_falcon_lemmas
 import opened DivMod
 import opened falcon_512_i
 
+import opened pow2_s
+
 #endverbatim
 
+type pow2_t: Type(0) extern;
+function pow2(exp: int): pow2_t extern;
+function operator(.full) (p :pow2_t): nat extern;
+function operator(.exp) (p :pow2_t): nat extern;
+function pow2_half(p: pow2_t): pow2_t extern;
+function pow2_double(p: pow2_t): pow2_t extern;
+function pow2_basics_lemma(p: pow2_t): void extern;
+
 const Q: nat extern;
+const N: pow2_t extern; 
 
 function mod(a: int, n: int): int extern;
 function addm_correct_lemma(x: uint256, y: uint256, mod: uint256): void extern;
@@ -30,6 +41,10 @@ function SFT(left: bool, bytes: uint5): shift_t extern;
 function lemma_small_mulqacc(x: uint256, y: uint256, r: uint256, old_wacc: uint256, old_flags: flags_t): void extern;
 function lemma_elem_prod_bound(x: uint256, y: uint256, r: uint256): void extern;
 function lemma_montymul_correct(x: uint256, y: uint256, prod: uint256, sum: uint256, shifted: uint256, diff1: uint256, flags: flags_t, diff2: uint256): void extern;
+
+function rs1_lemma(x: uint32): void extern;
+function ls1_lemma(a: uint32): void extern;
+function pow2_increases_lemma(n: pow2_t, n': pow2_t): void extern;
 
 procedure mq_add(inout dst: reg256, in src1: reg256, in src2: reg256)
     requires
@@ -67,11 +82,14 @@ procedure mq_sub(inout dst: reg256, in src1: reg256, in src2: reg256)
 
 procedure bn_clear(inout dst: reg256)
     modifies fgroups;
+    ensures fgroups.fg1 == old(fgroups.fg1);
     ensures dst == 0;
 {
     xor_clear_lemma(dst, dst);
     bn_xor(dst, dst, dst, SFT_DFT, 0);
 }
+
+function montmul(x: nat, y: nat): nat extern;
 
 procedure montymul()
     lets 
@@ -93,6 +111,7 @@ procedure montymul()
         fgroups;
     ensures
         IsModEquivalent(r * 4091, old(x * y), 12289);
+        r == montmul(old(x), old(y));
 {
     bn_clear(r);  // r <- 0
 
@@ -131,7 +150,55 @@ procedure montymul()
     bn_add(r, r, y, SFT_DFT, 0);       // r += y 
 
     lemma_montymul_correct(old(x), old(y), prod, sum, shifted, diff, flags, r);
+
+    assume false;
 }
+
+procedure half(inout dst: reg32, ghost p: pow2_t)
+    returns (ghost p': pow2_t)
+    requires
+        dst == p.full;
+        (512 >= p.full >= 2) || (9 >= p.exp >= 1);
+    ensures
+        dst == old(dst) / 2;
+        dst == p'.full;
+        p' == pow2_half(p);
+{
+    rs1_lemma(dst);
+    pow2_increases_lemma(p, N);
+    srli(dst, dst, 1);
+    p' := pow2_half(p);
+}
+
+procedure double(inout dst: reg32, ghost p: pow2_t)
+    returns (ghost p': pow2_t)
+    requires
+        dst == p.full;
+        (512 >= p.full >= 1) || (9 >= p.exp >= 0);
+    ensures
+        dst == old(dst) * 2;
+        dst == p'.full;
+        p' == pow2_double(p);
+{
+    add(dst, dst, dst);
+    pow2_increases_lemma(p, N);
+    p' := pow2_double(p);
+}
+
+procedure left_shift_4(inout dst: reg32, in src: reg32)
+    ensures old(src) < 0x10000000 ==> dst == old(src) * 16;
+{
+    slli(dst, src, 4);
+    assume false;
+}
+
+procedure left_shift_5(inout dst: reg32, in src: reg32)
+    ensures old(src) < 0x8000000 ==> dst == old(src) * 32;
+{
+    slli(dst, src, 5);
+    assume false;
+}
+
 
 
 #verbatim

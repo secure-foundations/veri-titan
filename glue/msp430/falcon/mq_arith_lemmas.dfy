@@ -11,13 +11,70 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
     import opened bv16_seq
     import opened msp_machine
     import opened msp_vale
+
     import opened mem
-
-    import opened GBV = bv16_op_s
-
     import flat
 
+    import MWD = bv16_op_s
+
     type uint32_view_t = dw_view_t
+
+    function BASE(): nat
+    {
+        BVSEQ.BASE()
+    }
+
+    lemma general_dw_add_lemma(
+        xs: seq<uint>, ys: seq<uint>, zs: seq<uint>,
+        c1: uint1, c2: uint1)
+    returns (z: dw_view_t)
+        requires |xs| == |ys| == |zs| == 2;
+        requires (zs[0], c1) == addc(xs[0], ys[0], 0);
+        requires (zs[1], c2) == addc(xs[1], ys[1], c1);
+        ensures z.lh == zs[0];
+        ensures z.uh == zs[1];
+        ensures z.full == to_nat(zs);
+        ensures z.full + c2 * BASE() * BASE() == to_nat(xs) + to_nat(ys);
+    {
+        var x_full := to_nat(xs);
+        var y_full := to_nat(ys);
+        var z_full := to_nat(zs);
+
+        BVSEQ.LemmaSeqLen2(xs);
+        BVSEQ.LemmaSeqLen2(ys);
+        BVSEQ.LemmaSeqLen2(zs);
+
+        var x_lh, x_uh := xs[0], xs[1];
+        var y_lh, y_uh := ys[0], ys[1];
+        var z_lh, z_uh := zs[0], zs[1];
+
+        assert x_full == x_lh + x_uh * BASE();
+        assert y_full == y_lh + y_uh * BASE();
+        assert z_full == z_lh + z_uh * BASE();
+
+        calc == {
+            z_uh * BASE() + c2 * BASE() * BASE();
+            {
+                LemmaMulProperties();
+            }
+            (z_uh + c2 * BASE()) * BASE();
+            {
+                assert z_uh + c2 * BASE() == x_uh + y_uh + c1;
+            }
+            (x_uh + y_uh + c1) * BASE();
+            {
+                LemmaMulProperties();
+            }
+            x_uh * BASE() + y_uh * BASE() + c1 * BASE();
+            {
+                assert x_lh + y_lh == z_lh + c1 * BASE();
+            }
+            x_uh * BASE() + y_uh * BASE() + x_lh + y_lh - z_lh;
+        }
+
+        assert z_full + c2 * BASE() * BASE() == x_full + y_full;
+        z := build_dw_view(z_lh, z_uh);
+    }
 
     lemma cond_set_Q_lemma(flags0: flags_t, mask: uint16, flags1: flags_t)
         requires (mask, flags1) == msp_subc(0, 0, flags0);
@@ -161,31 +218,6 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
         && valid_elems(iter.buff)
     }
 
-    predicate valid_nelem(e: uint16)
-    {
-        MQN.int_is_normalized(bv16_op_s.to_int16(e))
-    }
-
-    function as_nelem(e: uint16): nelem
-        requires valid_nelem(e)
-    {
-        bv16_op_s.to_int16(e)
-    }
-
-    predicate {:opaque} valid_nelems(a: seq<uint16>)
-        ensures valid_nelems(a) ==> |a| == N.full;
-    {
-        && |a| == N.full
-        && (forall i | 0 <= i < |a| :: valid_nelem(a[i]))
-    }
-
-    function as_nelems(a: seq<uint16>): (na: seq<nelem>)
-        requires valid_nelems(a);
-    {
-        reveal valid_nelems();
-        seq(|a|, i requires 0 <= i < |a| => as_nelem(a[i]))
-    }
-
     predicate nelems_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int)
     {
         && b16_iter_inv(heap, iter)
@@ -194,387 +226,28 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
         && valid_nelems(iter.buff)
     }
 
-    predicate denorm_inv(nv: seq<uint16>, dnv: seq<uint16>, i: nat)
-    {
-        && valid_nelems(nv)
-        && valid_elems(dnv)
-        && reveal valid_nelems();
-        && i <= N.full
-        && (forall j | 0 <= j < i :: 
-            dnv[j] == MQN.denormalize(as_nelem(nv[j])))
-    }
+    // lemma norm_peri_lemma(outputs: seq<uint16>, inputs: seq<uint16>, i: nat,
+    //     w: uint16, fg: flags_t, diff: uint16, mask: uint16, rst: uint16)
+    //     requires norm_inv(outputs, inputs, i);
+    //     requires i < |outputs|;
+    //     requires w == outputs[i];
+    //     requires (diff, fg) == msp_sub(6144, w);
+    //     requires fg.cf == 1 ==> mask == 12289;
+    //     requires fg.cf == 0 ==> mask == 0;
+    //     requires rst == uint16_sub(w, mask);
+    //     ensures norm_inv(outputs[i := rst], inputs, i + 1);
+    // {
+    //     reveal norm_inv();
+    //     reveal valid_elems();
 
-    lemma denorm_inv_peri_lemma(nv: seq<uint16>, dnv: seq<uint16>, i: nat, a: uint16, b: uint16)
-        requires i < N.full;
-        requires denorm_inv(nv, dnv, i);
-        requires a == nv[i];
-        requires var adj := if to_int16(a) < 0 then Q else 0;
-            b == msp_add(adj, a).0;
-        ensures denorm_inv(nv, dnv[i := b], i+1);
-    {
-        reveal valid_elems();
-        reveal valid_nelems();
-        assert valid_nelem(nv[i]);
-        assert b == MQN.denormalize(as_nelem(a));
-    }
-
-    // 0 <= e < Q -> -Q/2 <= e <= Q/2
-    predicate {:opaque} norm_inv(outputs: seq<uint16>, inputs: seq<uint16>, i: nat)
-        ensures norm_inv(outputs, inputs, i) ==> |outputs| == N.full
-    {
-        && valid_elems(inputs)
-        && |outputs| == N.full
-        && reveal valid_elems();
-        && i <= N.full
-        && inputs[i..] == outputs[i..]
-        && (forall j | 0 <= j < i :: (
-            && valid_nelem(outputs[j])
-            && as_nelem(outputs[j]) == MQN.normalize(inputs[j]))
-        )
-    }
-
-    lemma norm_pre_lemma(inputs: seq<uint16>)
-        requires valid_elems(inputs);
-        ensures norm_inv(inputs, inputs, 0);
-    {
-        reveal norm_inv();
-    }
-
-    lemma norm_peri_lemma(outputs: seq<uint16>, inputs: seq<uint16>, i: nat,
-        w: uint16, fg: flags_t, diff: uint16, mask: uint16, rst: uint16)
-        requires norm_inv(outputs, inputs, i);
-        requires i < |outputs|;
-        requires w == outputs[i];
-        requires (diff, fg) == msp_sub(6144, w);
-        requires fg.cf == 1 ==> mask == 12289;
-        requires fg.cf == 0 ==> mask == 0;
-        requires rst == uint16_sub(w, mask);
-        ensures norm_inv(outputs[i := rst], inputs, i + 1);
-    {
-        reveal norm_inv();
-        reveal valid_elems();
-
-        if 6144 - w < 0 {
-            assert mask == 12289;
-        } else {
-            assert mask == 0;
-        }
-    }
-
-    lemma norm_post_lemma(outputs: seq<uint16>, inputs: seq<uint16>)
-        requires valid_elems(inputs);
-        requires norm_inv(outputs, inputs, 512);
-        ensures valid_nelems(outputs);
-    {
-        reveal norm_inv();
-        reveal valid_nelems();
-    }
-
-    lemma forward_s_loop_inv_pre_lemma(
-        a: seq<nat>,
-        d: pow2_t,
-        j: uint16,
-        t: pow2_t,
-        u: uint16,
-        w: uint16,
-        s: uint16,
-        s_end: uint16,
-        view: FNTT.loop_view)
-
-        requires forward_j_loop_inv(a, d, j, u, view);
-        requires t == view.lsize();
-        requires j < view.lsize().full;
-        requires var w0 := uint16_add(t.full, j);
-            w == uint16_add(w0, w0);
-        requires s == uint16_add(u, u);
-        requires d.full * 2 < BASE_16;
-        requires s_end == uint16_add(d.full * 2, s);
-        ensures s == 2 * u;
-        ensures s_end == (d.full + u) * 2;
-        ensures w == (t.full + j) * 2;
-        ensures forward_s_loop_inv(a, d, j, 0, view);
-        ensures t.full + j < N.full;
-        ensures |FNTT.rev_mixed_powers_mont_table()| == N.full;
-        ensures FNTT.rev_mixed_powers_mont_table()[t.full + j] == 
-            MQP.mqmul(FNTT.rev_mixed_powers_mont_x_value(2 * j, d), R);
-    {
-        view.s_loop_inv_pre_lemma(as_elems(a), d, j);
-        FNTT.rev_mixed_powers_mont_table_lemma(t, d, j);
-
-        assert u == j * (2 * d.full);
-        assert d == view.hcount();
-
-        var p := pow2_mul(t, d);
-        assert p.exp == 8;
-        MQ.Nth_root_lemma();
-        assert p.full == 256;
-
-        calc {
-            u;
-            j * (2 * d.full);
-            <= 
-            {
-                LemmaMulInequality(j, t.full, 2 * d.full);
-            }
-            t.full * (2 * d.full);
-            {
-                LemmaMulProperties();
-            }
-            2 * (t.full * d.full);
-            2 * p.full;
-            512;
-        }
-    }
-
-    lemma forward_s_loop_inv_post_lemma(
-        a: seq<nat>,
-        d: pow2_t,
-        j: nat,
-        u: uint16,
-        bi: nat,
-        view: FNTT.loop_view)
-    
-        requires bi == d.full;
-        requires 2 * d.full < BASE_16;
-        requires u == j * (2 * d.full);
-        requires forward_s_loop_inv(a, d, j, bi, view);
-
-        ensures uint16_add(2 * d.full, u) == (j + 1) * (2 * d.full);
-        ensures forward_j_loop_inv(a, d, j + 1, u + 2 * d.full, view);
-    {
-        view.s_loop_inv_post_lemma(as_elems(a), d, j, bi);
-
-        var t := view.lsize();
-        var p := pow2_mul(t, d);
-        MQ.Nth_root_lemma();
-
-        assert u + 2 * d.full == (j + 1) * (2 * d.full) by{
-            LemmaMulProperties();
-        }
-
-        calc {
-            (j + 1) * (2 * d.full);
-            <= 
-            {
-                LemmaMulInequality(j+1, t.full, 2 * d.full);
-            }
-            t.full * (2 * d.full);
-            {
-                LemmaMulProperties();
-            }
-            2 * (t.full * d.full);
-            2 * p.full;
-            512;
-        }
-    }
-
-    lemma forward_s_loop_index_lemma(
-        a: seq<nat>,
-        d: pow2_t,
-        j: nat,
-        s: uint16,
-        bi: nat,
-        view: FNTT.loop_view)
-        returns (gs: nat)
-
-        requires forward_s_loop_inv(a, d, j, bi, view);
-        requires bi < d.full
-        requires 2 * d.full < BASE_16;
-        requires s == (bi + j * (2 * d.full)) * 2;
-
-        ensures s == 2 * gs;
-        ensures s + 2 * d.full == 2 * (gs + d.full);
-        ensures gs + d.full < N.full;
-        ensures a[gs] == CPV.level_points_view(a, view.hsize)[bi][2*j];
-        ensures gs == CPV.point_view_index(bi, 2*j, view.hsize);
-        ensures a[gs+d.full] == CPV.level_points_view(a, view.hsize)[bi][2*j+1];
-        ensures gs+d.full == CPV.point_view_index(bi, 2*j+1, view.hsize);
-        ensures a[gs+d.full] < Q;
-        ensures a[gs] < Q;
-    {
-        gs := view.higher_points_view_index_lemma(as_elems(a), d, j, bi);
-        assert s == 2 * gs by {
-            LemmaMulProperties();
-        }
-        reveal valid_elems();
-    }
-
-    lemma inverse_s_loop_inv_pre_lemma(
-        a: seq<nat>,
-        d: pow2_t,
-        j: uint16,
-        t: pow2_t,
-        u: uint16,
-        w: uint16,
-        s: uint16,
-        s_end: uint16,
-        view: INTT.loop_view)
-
-        requires inverse_j_loop_inv(a, d, j, u, view);
-        requires t == view.lsize();
-        requires j < view.lsize().full;
-        requires var w0 := uint16_add(t.full, j);
-            w == uint16_add(w0, w0);
-        requires s == uint16_add(u, u);
-        requires d.full * 2 < BASE_16;
-        requires s_end == uint16_add(d.full * 2, s);
-        ensures s == 2 * u;
-        ensures s_end == (d.full + u) * 2;
-        ensures w == (t.full + j) * 2;
-        ensures inverse_s_loop_inv(a, d, j, 0, view);
-        ensures t.full + j < N.full;
-        ensures |INTT.rev_omega_inv_powers_mont_table()| == N.full;
-        ensures INTT.rev_omega_inv_powers_mont_table()[t.full + j] == 
-            MQP.mqmul(INTT.rev_omega_inv_powers_x_value(2 * j, d), R);
-    {
-        view.s_loop_inv_pre_lemma(as_elems(a), d, j);
-        INTT.rev_omega_inv_powers_mont_table_lemma(t, d, j);
-
-        assert u == j * (2 * d.full);
-        assert d == view.hcount();
-
-        var p := pow2_mul(t, d);
-        assert p.exp == 8;
-        MQ.Nth_root_lemma();
-
-        calc {
-            u;
-            j * (2 * d.full);
-            <= 
-            {
-                LemmaMulInequality(j, t.full, 2 * d.full);
-            }
-            t.full * (2 * d.full);
-            {
-                LemmaMulProperties();
-            }
-            2 * (t.full * d.full);
-            2 * p.full;
-            512;
-        }
-    }
-
-    lemma inverse_s_loop_inv_post_lemma(
-        a: seq<nat>,
-        d: pow2_t,
-        j: nat,
-        u: uint16,
-        bi: nat,
-        view: INTT.loop_view)
-    
-        requires bi == d.full;
-        requires 2 * d.full < BASE_16;
-        requires u == j * (2 * d.full);
-        requires inverse_s_loop_inv(a, d, j, bi, view);
-
-        ensures uint16_add(2 * d.full, u) == (j + 1) * (2 * d.full);
-        ensures inverse_j_loop_inv(a, d, j + 1, u + 2 * d.full, view);
-    {
-        view.s_loop_inv_post_lemma(as_elems(a), d, j, bi);
-
-        var t := view.lsize();
-        var p := pow2_mul(t, d);
-        assert p.exp == 8;
-        MQ.Nth_root_lemma();
-
-        assert u + 2 * d.full == (j + 1) * (2 * d.full) by{
-            LemmaMulProperties();
-        }
-
-        calc {
-            (j + 1) * (2 * d.full);
-            <= 
-            {
-                LemmaMulInequality(j+1, t.full, 2 * d.full);
-            }
-            t.full * (2 * d.full);
-            {
-                LemmaMulProperties();
-            }
-            2 * (t.full * d.full);
-            2 * p.full;
-            512;
-        }
-    }
-
-    lemma inverse_s_loop_index_lemma(
-        a: seq<nat>,
-        d: pow2_t,
-        j: nat,
-        s: uint16,
-        bi: nat,
-        view: INTT.loop_view)
-        returns (gs: nat)
-
-        requires inverse_s_loop_inv(a, d, j, bi, view);
-        requires bi < d.full
-        requires 2 * d.full < BASE_16;
-        requires s == (bi + j * (2 * d.full)) * 2;
-
-        ensures s == 2 * gs;
-        ensures s + 2 * d.full == 2 * (gs + d.full);
-        ensures gs + d.full < N.full;
-        ensures a[gs] == CPV.level_points_view(a, view.hsize)[bi][2*j];
-        ensures gs == CPV.point_view_index(bi, 2*j, view.hsize);
-        ensures a[gs+d.full] == CPV.level_points_view(a, view.hsize)[bi][2*j+1];
-        ensures gs+d.full == CPV.point_view_index(bi, 2*j+1, view.hsize);
-        ensures a[gs+d.full] < Q;
-        ensures a[gs] < Q;
-    {
-        gs := view.higher_points_view_index_lemma(as_elems(a), d, j, bi);
-        assert s == 2 * gs by {
-            LemmaMulProperties();
-        }
-        reveal valid_elems();
-    }
-
-    lemma bit_rev_index_lemma(
-        a: seq<nat>,
-        ftable: seq<nat>,
-        li: nat,
-        ri: nat,
-        ti: nat)
-
-        requires |a| == N.full;
-        requires bit_rev_ftable_wf(ftable);
-
-        requires 0 <= 2 * ti + 1 < |ftable|;
-        requires li == ftable[2 * ti];
-        requires ri == ftable[2 * ti+1];
-
-        ensures li == build_view(a, ti, N).get_split_index();
-        ensures ri == bit_rev_int(ftable[2 * ti], N);
-    {
-        var table := ftable_cast(ftable);
-        assert ti < |table|;
-
-        assert table[ti].0 == ftable[2 * ti]
-            && table[ti].1 == ftable[2 * ti + 1] by {
-            reveal ftable_cast();
-        }
-
-        assert table[ti].0 == build_view(a, ti, N).get_split_index()
-            && table[ti].1 == bit_rev_int(table[ti].0, N) by {
-            reveal table_wf();
-            reveal table_wf_inner();
-        }
-
-        // ftable_index_lemma(a, ftable, table, ti);
-        assert li == build_view(a, ti, N).get_split_index();
-        assert ri == bit_rev_int(ftable[2 * ti], N);
-    }
+    //     if 6144 - w < 0 {
+    //         assert mask == 12289;
+    //     } else {
+    //         assert mask == 0;
+    //     }
+    // }
 
     const NORMSQ_BOUND := 0x100000000
-
-    function l2norm_squared(s1: seq<uint16>, s2: seq<uint16>, i: nat): nat
-        requires i <= N.full;
-        requires valid_nelems(s1);
-        requires valid_nelems(s2);
-    {
-        var ns1 := as_nelems(s1);
-        var ns2 := as_nelems(s2);
-        MQN.l2norm_squared(ns1, ns2, i)
-    }
 
     lemma accumulate_lemma(v16: uint16,
         sum: uint32_view_t, sum': uint32_view_t,
@@ -603,40 +276,6 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
         assume 0 <= iv16 * iv16 <= 151019521;
         assume (iv16 * iv16) == v16 * v16;
         gsum' := gsum + v16 * v16;
-    }
-
-    lemma falcon_lemma(
-        tt0: seq<uint16>, tt1: seq<uint16>, tt2: seq<uint16>,
-        s1: seq<uint16>, s2: seq<uint16>, h: seq<uint16>, c0: seq<uint16>,
-        result: uint16)
-
-    requires valid_elems(tt0);
-    requires valid_elems(tt1);
-    requires valid_elems(h);
-    requires denorm_inv(s2, tt0, 512);
-    requires as_elems(tt1) ==
-            poly_mod_product(as_elems(tt0), as_elems(h));
-    requires poly_sub_loop_inv(tt2, tt1, c0, 512);
-    requires norm_inv(s1, tt2, 512);
-    requires valid_nelems(s1);
-    requires valid_nelems(s2);
-    requires (result == 1)
-            <==> 
-        l2norm_squared(s1, s2, 512) < 0x29845d6;
-    ensures (result == 1)
-            <==>
-        falcon_verify(as_elems(c0), as_nelems(s2), as_elems(h));
-    {
-        reveal valid_nelems();
-        reveal valid_elems();
-        reveal norm_inv();
-
-        assert tt0 == MQN.denormalize_elems(as_nelems(s2));
-        assert tt1 == poly_mod_product(as_elems(tt0), as_elems(h));
-        assert tt2 == MQP.poly_sub(tt1, c0);
-        assert as_nelems(s1) == MQN.normalize_elems(tt2);
-        assert l2norm_squared(s1, s2, 512) == 
-            MQN.l2norm_squared(as_nelems(s1), as_nelems(s2), 512);
     }
 
     lemma or_consts_lemma()

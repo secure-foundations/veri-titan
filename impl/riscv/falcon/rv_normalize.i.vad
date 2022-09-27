@@ -24,7 +24,7 @@ function elems_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int):
 function nelems_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int): bool extern;
 function cond_sub_q_lemma(a: uint16, b: uint16, c: uint16, d: uint16): void extern;
 
-function denormalization_inv(nv: seq(uint16), dnv: seq(uint16), i: nat): bool extern;
+function denorm_inv(nv: seq(uint16), dnv: seq(uint16), i: nat): bool extern;
 function denormalization_peri_lemma(buff: seq(uint16), dnv: seq(uint16), i: nat, a1: uint32, b: uint32, c: uint32, d: uint32): void extern;
 
 procedure denormalize(
@@ -60,7 +60,7 @@ returns (ghost next_iter_tmp: b16_iter)
             [next_iter_tmp.base_ptr := heap[next_iter_tmp.base_ptr]];
 
     ensures
-        denormalization_inv(iter_s2.buff, next_iter_tmp.buff, 512);
+        denorm_inv(iter_s2.buff, next_iter_tmp.buff, 512);
 {
     addi(t1, a1, 1024);
     ghost var next_iter_s2 := iter_s2;
@@ -79,7 +79,7 @@ returns (ghost next_iter_tmp: b16_iter)
         invariant next_iter_tmp.base_ptr == iter_tmp.base_ptr;
         invariant elems_iter_inv(heap, next_iter_tmp, a3, u);
 
-        invariant denormalization_inv(next_iter_s2.buff, next_iter_tmp.buff, u);
+        invariant denorm_inv(next_iter_s2.buff, next_iter_tmp.buff, u);
 
         invariant mem == old(mem).(heap := heap);
         invariant heap == old(heap)
@@ -105,7 +105,7 @@ returns (ghost next_iter_tmp: b16_iter)
     next_iter_tmp := next_iter_tmp.(index := 0);
 }
 
-function normalization_inv(outputs: seq(uint16), inputs: seq(uint16), i: nat): bool extern;
+function norm_inv(outputs: seq(uint16), inputs: seq(uint16), i: nat): bool extern;
 function normalization_pre_lemma(inputs: seq(uint16)): void extern;
 function normalization_peri_lemma(outputs: seq(uint16), inputs: seq(uint16), i: nat, value: uint32, diff: uint32, mask: uint32, rst: uint32): void extern;
 function normalization_post_lemma(outputs: seq(uint16), inputs: seq(uint16)): void extern;
@@ -135,7 +135,7 @@ returns (ghost iter_tt': b16_iter)
             [iter_tt'.base_ptr := heap[iter_tt'.base_ptr]];
 
     ensures
-        normalization_inv(iter_tt'.buff, iter_tt.buff, 512);
+        norm_inv(iter_tt'.buff, iter_tt.buff, 512);
 {
     li(t2, 6144);
     addi(a1, s3, 1024);
@@ -153,7 +153,7 @@ returns (ghost iter_tt': b16_iter)
         invariant b16_iter_inv(iter_tt', heap, s3);
         invariant seq_len(iter_tt'.buff) == 512;
         invariant iter_tt'.index == i;
-        invariant normalization_inv(iter_tt'.buff, inputs, i);
+        invariant norm_inv(iter_tt'.buff, inputs, i);
         invariant mem == old(mem).(heap := heap);
         invariant heap == old(heap)
                 [iter_tt'.base_ptr := heap[iter_tt'.base_ptr]];

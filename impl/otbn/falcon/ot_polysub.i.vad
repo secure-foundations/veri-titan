@@ -1,10 +1,10 @@
-include "mq_arith.i.vad"
+include "ot_mq_arith.i.vad"
 
 #verbatim
 
-include "mq_arith.i.dfy"
+include "ot_mq_arith.i.dfy"
 
-module mq_polysub {
+module ot_polysub {
 
 import opened ot_machine
 import opened ot_abstraction
@@ -15,8 +15,9 @@ import opened integers
 import opened bv256_op_s
 import opened bv256_falcon_lemmas
 import opened DivMod
-import opened mq_arith
 import opened falcon_512_i
+
+import opened ot_mq_arith
 
 #endverbatim
     
@@ -51,8 +52,7 @@ function poly_sub_loop_correct(f_new: seq(uint256), f_old: seq(uint256), f_orig:
 
 procedure poly_sub_loop_body(ghost f_orig: seq(uint256), ghost iter_f: iter_t,
     ghost iter_g: iter_t,
-    ghost i: nat,
-    ghost wdr_view: seq(uint256))
+    ghost i: nat)
 
     returns (ghost iter_f': iter_t, ghost iter_g': iter_t)
     lets 
@@ -79,8 +79,6 @@ procedure poly_sub_loop_body(ghost f_orig: seq(uint256), ghost iter_f: iter_t,
         iter_f.base_ptr != iter_g.base_ptr;
         poly_sub_loop_inv(iter_f.buff, f_orig, iter_g.buff, i);
 
-        valid_wdr_view(wdrs, wdr_view, 2, 30);
-    
     reads
         Q;
     modifies
@@ -102,8 +100,6 @@ procedure poly_sub_loop_body(ghost f_orig: seq(uint256), ghost iter_f: iter_t,
         elems_iter_inv(heap, iter_f', ptr_f, i+1);
         elems_iter_inv(heap, iter_g', ptr_g, i+1);
         
-        valid_wdr_view(wdrs, wdr_view, 2, 30);
-
         //flat == old(flat).(heap := heap);
         heap == old(heap)[iter_f.base_ptr := heap[iter_f.base_ptr]];
     
@@ -124,9 +120,8 @@ procedure poly_sub_loop_body(ghost f_orig: seq(uint256), ghost iter_f: iter_t,
 /* f' == f - g */
 procedure poly_sub(
     ghost iter_f: iter_t,
-    ghost iter_g: iter_t,
-    ghost wdr_view: seq(uint256))
-    returns (ghost iter_f': iter_t, ghost iter_g': iter_t)
+    ghost iter_g: iter_t)
+    returns (ghost iter_f': iter_t)
 
     lets 
         Q       @= wmod;
@@ -152,8 +147,7 @@ procedure poly_sub(
         elems_iter_inv(heap, iter_g, ptr_g, 0);
 
         iter_f.base_ptr != iter_g.base_ptr;
-    
-         valid_wdr_view(wdrs, wdr_view, 2, 30);
+
     reads
         Q;
 
@@ -165,8 +159,7 @@ procedure poly_sub(
         //mem == old(mem).(heap := heap);
         iter_f'.base_ptr == iter_f.base_ptr;
 
-        elems_iter_inv(heap, iter_f.(buff := iter_f'.buff), ptr_f, 0);
-        valid_wdr_view(wdrs, wdr_view, 2, 30);
+        elems_iter_inv(heap, iter_f', old(ptr_f), 0);
         heap == old(heap)
             [iter_f'.base_ptr := heap[iter_f'.base_ptr]];
     
@@ -179,7 +172,7 @@ procedure poly_sub(
     li(x_index, 0);
     li(y_index, 1);
     iter_f':= iter_f;
-    iter_g':= iter_g;
+    ghost var iter_g':= iter_g;
     ghost var i:nat := 0;
     
     while (LoopImm(512)) // 512 iterations
@@ -194,8 +187,6 @@ procedure poly_sub(
             i < 512 ==> iter_safe(iter_g', heap, ptr_g);
             elems_iter_inv(heap, iter_f', ptr_f, i);
             elems_iter_inv(heap, iter_g', ptr_g, i);
-
-            valid_wdr_view(wdrs, wdr_view, 2, 30);
 
             poly_sub_loop_inv(iter_f'.buff, iter_f.buff, iter_g.buff, i);
 
@@ -212,10 +203,11 @@ procedure poly_sub(
     
     decreases (N.full - i);
     {
-        iter_f', iter_g' := poly_sub_loop_body(iter_f.buff, iter_f', iter_g', i, wdr_view);
+        iter_f', iter_g' := poly_sub_loop_body(iter_f.buff, iter_f', iter_g', i);
         i := i + 1;
     }
-    assert i == 512;
+
+    iter_f' := iter_f'.(index := 0);
 }
 
 #verbatim

@@ -14,6 +14,11 @@ module bv256_op_s refines bv_op_s
 {
     import opened BVSEQ = bv256_seq 
 
+    lemma base_basic_lemma()
+        ensures BASE() % 2 == 0
+    {
+    }
+
     function method HW_BASE(): nat
     {
         integers.BASE_128

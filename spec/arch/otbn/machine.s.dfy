@@ -91,14 +91,18 @@ module ot_machine {
     datatype ins32 =
         | ADD(xrd: reg32_t, xrs1: reg32_t, xrs2: reg32_t)
         | ADDI(xrd: reg32_t, xrs1: reg32_t, imm: int12)
+        | SUB(xrd: reg32_t, xrs1: reg32_t, xrs2: reg32_t)
         | AND(xrd: reg32_t, xrs1: reg32_t, xrs2: reg32_t)
         | ANDI(xrd: reg32_t, xrs1: reg32_t, imm: int12)
         | XORI(xrd: reg32_t, xrs1: reg32_t, imm: int12)
+        | SLLI(xrd: reg32_t, xrs1: reg32_t, shamt: uint5)
+        | SRLI(xrd: reg32_t, xrs1: reg32_t, shamt: uint5)
         | LW(xrd: reg32_t, offset: int12, xrs1: reg32_t)
         | SW(xrs2: reg32_t, offset: int12, xrs1: reg32_t)
         // | LOOP(grs: reg32_t, bodysize: uint32)
         // | LOOPI(iterations: uint32, bodysize: uint32)
         | LI(xrd: reg32_t, imm32: uint32)
+        | LA(xrd: reg32_t, name: string)
         | CSRRS(grd: reg32_t, csr: uint12, grs1: reg32_t)
         | ECALL
         | NOP
@@ -115,7 +119,7 @@ module ot_machine {
             shift_qws: uint2, fg: uint1)
         | BN_SUB(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
         | BN_SUBB(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
-        // | BN_SUBI(wrd: reg256_t, wrs1: reg256_t, imm: uint10, fg: uint1)
+        | BN_SUBI(wrd: reg256_t, wrs1: reg256_t, imm: uint10, fg: uint1)
         | BN_SUBM(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t)
         // | BN_AND(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
         // | BN_OR(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t, shift: shift_t, fg: uint1)
@@ -130,7 +134,7 @@ module ot_machine {
         | BN_MOV(wrd: reg256_t, wrs: reg256_t)
         | BN_MOVR(grd: reg32_t, grd_inc: bool, grs: reg32_t, grs_inc: bool)
         | BN_WSRR(wrd: reg256_t, wsr: uint2)
-        // | BN_WSRRW
+        | BN_WSRW(wsr: uint2, wrs: reg256_t)
 
 /* stateless semantic functions  */
 
@@ -156,15 +160,14 @@ module ot_machine {
 
     function method otbn_addm(x: uint256, y: uint256, mod: uint256) : (r: uint256)
     {
-      var interm := x + y;
-      if interm < mod then interm else (interm - mod) % BASE_256
+        var interm := x + y;
+        if interm < mod then interm else (interm - mod) % BASE_256
     }
-
 
     function method otbn_subm(x: uint256, y: uint256, mod: uint256) : (r: uint256)
     {
-      var interm : int := x as int - y as int;
-      if interm < 0 then (interm + mod) % BASE_256 else interm
+        var interm : int := x as int - y as int;
+        if interm < 0 then (interm + mod) % BASE_256 else interm
     }
 
     function method otbn_subb(x: uint256, y: uint256, shift: shift_t, borrow: bool) : (uint256, flags_t)
@@ -346,54 +349,55 @@ module ot_machine {
         | va_CCons(hd: code, tl: codes)
 
 /* control flow overlap detection */
-datatype simple_code =
-  | SIns
-  | SJump
-  | SWhile(s:seq<simple_code>)
-  | SBranch(s:seq<simple_code>)
+    datatype simple_code =
+        | SIns
+        | SJump
+        | SWhile(s:seq<simple_code>)
+        | SBranch(s:seq<simple_code>)
 
-function method simplify_codes(c:codes) : seq<simple_code>
-{
-  match c 
-    case CNil => []
-    case va_CCons(hd, tl) => simplify_code(hd) + simplify_codes(tl)
-}
+    function method simplify_codes(c:codes) : seq<simple_code>
+    {
+        match c 
+            case CNil => []
+            case va_CCons(hd, tl) =>
+                simplify_code(hd) + simplify_codes(tl)
+    }
 
-// Intended to be called on the body of each top-level function.
-function method simplify_code(c:code) : seq<simple_code>
-{
-  match c
-    case Ins32(_) => [SIns]
-    case Ins256(_) => [SIns]
-    case Block(b) => simplify_codes(b)
-    case While(_, body) => [SWhile(simplify_code(body))]
-    case IfElse(_, tbody, fbody) => [SBranch(simplify_code(tbody))]
-    case Function(_, body) => [SJump]
-    case Comment(_) => []
-}
+    // Intended to be called on the body of each top-level function.
+    function method simplify_code(c:code) : seq<simple_code>
+    {
+    match c
+        case Ins32(_) => [SIns]
+        case Ins256(_) => [SIns]
+        case Block(b) => simplify_codes(b)
+        case While(_, body) => [SWhile(simplify_code(body))]
+        case IfElse(_, tbody, fbody) => [SBranch(simplify_code(tbody))]
+        case Function(_, body) => [SJump]
+        case Comment(_) => []
+    }
 
-predicate method has_overlap(c:simple_code) 
-{
-  match c
-    case SIns => false
-    case SJump => false
-    case SBranch(s) => false
-    case SWhile(s) =>
-      if |s| == 0 then false
-      else if (Seq.Last(s).SWhile? || Seq.Last(s).SBranch? || Seq.Last(s).SJump?) then true
-      else has_overlap_seq(s)
-}
+    predicate method has_overlap(c:simple_code) 
+    {
+        match c
+            case SIns => false
+            case SJump => false
+            case SBranch(s) => false
+            case SWhile(s) =>
+                if |s| == 0 then false
+                else if (Seq.Last(s).SWhile? || Seq.Last(s).SBranch? || Seq.Last(s).SJump?) then true
+                else has_overlap_seq(s)
+    }
 
-predicate method has_overlap_seq(s:seq<simple_code>)
-{
-  if |s| == 0 then false
-  else has_overlap(s[0]) || has_overlap_seq(s[1..])
-}
+    predicate method has_overlap_seq(s:seq<simple_code>)
+    {
+        if |s| == 0 then false
+        else has_overlap(s[0]) || has_overlap_seq(s[1..])
+    }
 
-predicate method while_overlap(c:code) 
-{
-  has_overlap_seq(simplify_code(c))
-}
+    predicate method while_overlap(c:code) 
+    {
+        has_overlap_seq(simplify_code(c))
+    }
 
 /* state definitions */
 
@@ -410,6 +414,8 @@ predicate method while_overlap(c:code)
 
         flat: flat_t,
 
+        symbols: map<string, uint32>,
+
         ok: bool)
     {
         static function method init(): state
@@ -418,7 +424,7 @@ predicate method while_overlap(c:code)
                 state(seq(32, n => 0), seq(32, n => 0),
                 0, 0, 0, 0,
                 fgroups_t(flags, flags),
-                map[], true)
+                map[], map[], true)
         }
 
         function method read_reg32(r: reg32_t): uint32
@@ -472,6 +478,14 @@ predicate method while_overlap(c:code)
             write_reg32(xrd, sum)
         }
 
+        function method eval_SUB(xrd: reg32_t, xrs1: reg32_t, xrs2: reg32_t): state
+        {
+            var v1 := read_reg32(xrs1);
+            var v2 := read_reg32(xrs2);
+            var diff := bv32_op_s.sub(v1, v2);
+            write_reg32(xrd, diff)
+        }
+
         function method eval_AND(xrd: reg32_t, xrs1: reg32_t, xrs2: reg32_t): state
         {
             var v1 := read_reg32(xrs1);
@@ -483,15 +497,15 @@ predicate method while_overlap(c:code)
         function method eval_ANDI(xrd: reg32_t, xrs1: reg32_t, imm: int12): state
         {
             var v1 := read_reg32(xrs1);
-            var sum := bv32_op_s.andi(v1, imm);
-            write_reg32(xrd, sum)
+            var rst := bv32_op_s.andi(v1, imm);
+            write_reg32(xrd, rst)
         }
 
         function method eval_XORI(xrd: reg32_t, xrs1: reg32_t, imm: int12): state
         {
             var v1 := read_reg32(xrs1);
-            var sum := bv32_op_s.xori(v1, imm);
-            write_reg32(xrd, sum)
+            var rst := bv32_op_s.xori(v1, imm);
+            write_reg32(xrd, rst)
         }
 
         function method eval_CSRRS(grd: reg32_t, csr: uint12, grs1: reg32_t): state
@@ -527,6 +541,51 @@ predicate method while_overlap(c:code)
         function method eval_LI(xrd: reg32_t, imm: uint32): state
         {
             write_reg32(xrd, imm)
+        }
+
+        function method eval_LA(xrd: reg32_t, name: string): state
+        {
+            if name in symbols then
+                write_reg32(xrd, symbols[name])
+            else
+                this.(ok := false)
+        }
+
+        function method eval_SLLI(xrd: reg32_t, xrs1: reg32_t, shamt: uint5): state
+        {
+            var v1 := read_reg32(xrs1);
+            var value := bv32_op_s.ls(v1, shamt);
+            write_reg32(xrd, value)   
+        }
+
+        function method eval_SRLI(xrd: reg32_t, xrs1: reg32_t, shamt: uint5): state
+        {
+            var v1 := read_reg32(xrs1);
+            var value := bv32_op_s.rs(v1, shamt);
+            write_reg32(xrd, value)
+        }
+
+        function method eval_ins32(xins: ins32): state
+        {
+            if !ok then
+                this
+            else match xins
+                case ADD(xrd, xrs1, xrs2) => eval_ADD(xrd, xrs1, xrs2)
+                case ADDI(xrd, xrs1, imm) => eval_ADDI(xrd, xrs1, imm)
+                case SUB(xrd, xrs1, xrs2) => eval_SUB(xrd, xrs1, xrs2)
+                case AND(xrd, xrs1, xrs2) => eval_AND(xrd, xrs1, xrs2)
+                case ANDI(xrd, xrs1, imm) => eval_ANDI(xrd, xrs1, imm)
+                case XORI(xrd, xrs1, imm) => eval_XORI(xrd, xrs1, imm)
+                case LW(xrd, offset, xrs1) => eval_LW(xrd, offset, xrs1)
+                case SW(xrs2, offset, xrs1) => eval_SW(xrs2, offset, xrs1)
+                case CSRRS(grd, csr, grs1) => eval_CSRRS(grd, csr, grs1)
+                case SLLI(xrd, xrs1, shamt) => eval_SLLI(xrd, xrs1, shamt)
+                case SRLI(xrd, xrs1, shamt) => eval_SRLI(xrd, xrs1, shamt)
+                case LI(xrd, imm32) => eval_LI(xrd, imm32)
+                case LA(xrd, name) => eval_LA(xrd, name)
+                case ECALL => this
+                case NOP => this
+                case UNIMP => this.(ok:=false)
         }
 
         function method read_reg256(r: reg256_t) : uint256
@@ -677,6 +736,13 @@ predicate method while_overlap(c:code)
             write_reg256(wrd, diff).write_flags(fg, flags)
         }
 
+        function method eval_BN_SUBI(wrd: reg256_t, wrs1: reg256_t, imm: uint10, fg: uint1): state
+        {
+            var v1 := read_reg256(wrs1);
+            var (diff, flags) := otbn_subb(v1, imm, SFT_DFT, false);
+            write_reg256(wrd, diff).write_flags(fg, flags)
+        }
+
         function method eval_BN_SUBM(wrd: reg256_t, wrs1: reg256_t, wrs2: reg256_t) : state
         {
           var v1 := read_reg256(wrs1);
@@ -738,23 +804,12 @@ predicate method while_overlap(c:code)
             write_reg256(wrd, val)
         }
 
-        function method eval_ins32(xins: ins32): state
+        function method eval_BN_WSRW(wsr: uint2, wrs: reg256_t): state
         {
-            if !ok then
-                this
-            else match xins
-                case ADD(xrd, xrs1, xrs2) => eval_ADD(xrd, xrs1, xrs2)
-                case ADDI(xrd, xrs1, imm) => eval_ADDI(xrd, xrs1, imm)
-                case AND(xrd, xrs1, xrs2) => eval_AND(xrd, xrs1, xrs2)
-                case ANDI(xrd, xrs1, imm) => eval_ANDI(xrd, xrs1, imm)
-                case XORI(xrd, xrs1, imm) => eval_XORI(xrd, xrs1, imm)
-                case LW(xrd, offset, xrs1) => eval_LW(xrd, offset, xrs1)
-                case SW(xrs2, offset, xrs1) => eval_SW(xrs2, offset, xrs1)
-                case CSRRS(grd, csr, grs1) => eval_CSRRS(grd, csr, grs1)
-                case LI(xrd, imm32) => eval_LI(xrd, imm32)
-                case ECALL => this
-                case NOP => this
-                case UNIMP => this.(ok:=false)
+            var val := read_reg256(wrs);
+            if wsr == 0 then this.(wmod := val)
+            else if wsr == 3 then this.(wacc := val)
+            else this.(ok := false)
         }
 
         function method eval_ins256(wins: ins256): state
@@ -778,6 +833,8 @@ predicate method while_overlap(c:code)
                     eval_BN_SUB(wrd, wrs1, wrs2, shift, fg)
                 case BN_SUBB(wrd, wrs1, wrs2, shift, fg) => 
                     eval_BN_SUBB(wrd, wrs1, wrs2, shift, fg)
+                case BN_SUBI(wrd, wrs1, imm, fg) =>
+                    eval_BN_SUBI(wrd, wrs1, imm, fg)
                 case BN_SUBM(wrd, wrs1, wrs2) =>
                     eval_BN_SUBM(wrd, wrs1, wrs2)
                 case BN_NOT(wrd, wrs, shift, fg) => 
@@ -796,6 +853,8 @@ predicate method while_overlap(c:code)
                     eval_BN_SID(grs2, grs2_inc, offset, grs1, grs1_inc)
                 case BN_WSRR(wrd, wsr) => 
                     eval_BN_WSRR(wrd, wsr)
+                case BN_WSRW(wsr, wrs) => 
+                    eval_BN_WSRW(wsr, wrs)
         }
 
         function method eval_block(block: codes): state

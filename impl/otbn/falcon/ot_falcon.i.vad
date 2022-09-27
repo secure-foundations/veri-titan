@@ -1,0 +1,306 @@
+include "ot_norm.i.vad"
+include "ot_fntt.i.vad"
+include "ot_intt.i.vad"
+include "ot_circle_product.i.vad"
+include "ot_bit_rev.i.vad"
+include "ot_polyscale.i.vad"
+include "ot_polysub.i.vad"
+
+#verbatim
+
+include "ot_norm.i.dfy"
+include "ot_fntt.i.dfy"
+include "ot_intt.i.dfy"
+include "ot_circle_product.i.dfy"
+include "ot_bit_rev.i.dfy"
+include "ot_polyscale.i.dfy"
+include "ot_polysub.i.dfy"
+
+module ot_falcon {
+
+import opened ot_machine
+import opened ot_abstraction
+import opened ot_decls
+import opened ot_vale
+
+import opened DivMod
+
+import opened integers
+import opened bv256_op_s
+import opened bv256_falcon_lemmas
+import opened falcon_512_i
+import opened ot_norm
+import opened ot_fntt
+import opened ot_intt
+import opened ot_circle_product
+import opened ot_bit_rev
+import opened ot_polyscale
+import opened ot_polysub
+
+#endverbatim
+
+type pow2_t: Type(0) extern;
+function pow2(exp: int): pow2_t extern;
+function operator(.full) (p :pow2_t): nat extern;
+function operator(.exp) (p :pow2_t): nat extern;
+function pow2_half(p: pow2_t): pow2_t extern;
+function pow2_double(p: pow2_t): pow2_t extern;
+function pow2_basics_lemma(p: pow2_t): void extern;
+
+type wbuff: Type(0) := seq(uint256);
+
+function elems_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int): bool extern;
+function nelems_iter_inv(heap: heap_t, iter: iter_t, address: int, index: int): bool extern;
+function as_elems(s: wbuff): wbuff extern;
+function msb(x: uint256): uint1 extern;
+function inverse_ntt_scaling_table(): wbuff extern;
+function rev_omega_inv_powers_mont_table(): wbuff extern;
+function rev_mixed_powers_mont_table(): wbuff extern;
+function heap_b32_ptr_valid(heap: heap_t, base_ptr: nat, count: nat): bool extern;
+function b32_seq(heap: heap_t, base_ptr: nat, count: nat): seq(uint32) extern;
+function bit_rev_ftable_wf(table: seq(uint32)): bool extern;
+function xor_clear_lemma(x: uint256, y: uint256): void extern;
+function heap_b256_writes_preserves_b32_ptr_lemma(state: state, state': state, base_ptr: nat, count: nat, addr1: int, addr2: int): void extern;
+function mq_poly_mod_product_lemma(
+    a0: wbuff, a1: wbuff, b0: wbuff, b1: wbuff,
+    p0: wbuff, p1: wbuff, p2: wbuff, p3: wbuff, p4: wbuff): void extern;
+function poly_mod_product(a0: wbuff, b0: wbuff): wbuff extern;
+function falcon_lemma(tt0: wbuff, tt1: wbuff, tt2: wbuff, s1: wbuff, s2: wbuff, h:wbuff, c0:wbuff, result: nat): void extern;
+function as_nelems(a: wbuff): seq(nelem) extern;
+function falcon_verify(c0: wbuff, s2: seq(nelem), h: wbuff): bool extern;
+
+procedure poly_product(
+    ghost iter_h: iter_t,
+    ghost iter_tt: iter_t,
+    ghost br_base: uint32,
+    ghost iter_t2: iter_t,
+    ghost iter_p1: iter_t,
+    ghost iter_p2: iter_t)
+
+returns (ghost iter_tt': iter_t, ghost iter_h': iter_t)
+
+{:frame false}
+
+    requires
+        w1 == 12289;
+        w5 == 12287;
+        wmod == 12289;
+
+    requires
+        elems_iter_inv(heap, iter_h, x4, 0);
+        elems_iter_inv(heap, iter_tt, x5, 0);
+
+    requires
+        symbols?["bit_rev_table_512"];
+        symbols["bit_rev_table_512"] == br_base;
+        heap_b32_ptr_valid(heap, br_base, 480);
+        bit_rev_ftable_wf(b32_seq(heap, br_base, 480));
+
+    requires
+        symbols?["scaling_factors"];
+        elems_iter_inv(heap, iter_t2,
+            symbols["scaling_factors"], 0);
+        iter_t2.buff == inverse_ntt_scaling_table();
+
+    requires
+        symbols?["rev_omega_inv_powers_mont_table"];
+        elems_iter_inv(heap, iter_p1,
+            symbols["rev_omega_inv_powers_mont_table"], 0);
+        iter_p1.buff == rev_omega_inv_powers_mont_table();
+
+    requires
+        symbols?["rev_mixed_powers_mont_table"];
+        elems_iter_inv(heap, iter_p2,
+            symbols["rev_mixed_powers_mont_table"], 0);
+        iter_p2.buff == rev_mixed_powers_mont_table();
+
+    requires
+        iter_h.base_ptr != iter_tt.base_ptr;
+        iter_h.base_ptr != br_base;
+        iter_h.base_ptr != iter_t2.base_ptr;
+        iter_h.base_ptr != iter_p1.base_ptr;
+        iter_h.base_ptr != iter_p2.base_ptr;
+
+        iter_tt.base_ptr != br_base;
+        iter_tt.base_ptr != iter_t2.base_ptr;
+        iter_tt.base_ptr != iter_p1.base_ptr;
+        iter_tt.base_ptr != iter_p2.base_ptr;
+
+    ensures
+        x2 == old(x2);
+        x3 == old(x3);
+
+    ensures
+        wmod == 12289;
+
+    ensures
+        elems_iter_inv(heap, iter_tt', x4, 0);
+        iter_tt'.base_ptr == iter_tt.base_ptr;
+        elems_iter_inv(heap, iter_h', old(x4), 0);
+        iter_h'.base_ptr == iter_h.base_ptr;
+
+    ensures
+        heap == old(heap)
+            [iter_tt.base_ptr := heap[iter_tt.base_ptr]]
+            [iter_h.base_ptr := heap[iter_h.base_ptr]];
+
+    ensures
+        as_elems(iter_tt'.buff) ==
+            poly_mod_product(as_elems(iter_tt.buff), as_elems(iter_h.buff));
+{
+    let state0 := this;
+
+    iter_tt' := iter_tt;
+    iter_h' := iter_h;
+
+    let a0 := iter_tt'.buff;
+
+    bn_subi(w5, w1, 2, 0);
+    addi(x17, x4, 0);
+    addi(x4, x5, 0);
+
+    iter_tt' := fntt(iter_tt', iter_p2);
+    let a1 := iter_tt'.buff;
+
+    addi(x5, x4, 0);
+    addi(x4, x17, 0);
+
+    let b0 := iter_h'.buff;
+    iter_h' := fntt(iter_h', iter_p2);
+    let b1 := iter_h'.buff;
+
+    assume w6 == 10952;
+
+    iter_tt' := circle_product(iter_tt', iter_h'); 
+    let p0 := iter_tt'.buff;
+
+    heap_b256_writes_preserves_b32_ptr_lemma(state0, this, br_base, 480, iter_tt'.base_ptr, iter_h'.base_ptr);
+
+    iter_tt' := bit_rev(iter_tt', br_base);
+    let p1 := iter_tt'.buff;
+
+    addi(x4, x5, 0);
+    iter_tt' := intt(iter_tt', iter_p1);
+    let p2 := iter_tt'.buff;
+
+    heap_b256_writes_preserves_b32_ptr_lemma(state0, this, br_base, 480, iter_tt'.base_ptr, iter_h'.base_ptr);
+
+    addi(x5, x4, 0);
+    iter_tt' := bit_rev(iter_tt', br_base);
+    let p3 := iter_tt'.buff;
+
+    iter_tt' := polyscale(iter_tt', iter_t2);
+    let p4 := iter_tt'.buff;
+
+    mq_poly_mod_product_lemma(a0, a1, b0, b1, p0, p1, p2, p3, p4);
+}
+
+procedure ot_falcon(
+    ghost iter_c0: iter_t,
+    ghost iter_s2: iter_t,
+    ghost iter_h: iter_t,
+    ghost iter_tt: iter_t,
+    ghost br_base: uint32,
+    ghost iter_t2: iter_t,
+    ghost iter_p1: iter_t,
+    ghost iter_p2: iter_t)
+
+returns (ghost iter_tt': iter_t)
+
+{:noInline}
+{:frame false}
+
+    requires
+        wmod == Q;
+        w1 == Q;
+
+    requires
+        elems_iter_inv(heap, iter_c0, x2, 0);
+        nelems_iter_inv(heap, iter_s2, x3, 0);
+
+        elems_iter_inv(heap, iter_h, x4, 0);
+        elems_iter_inv(heap, iter_tt, x5, 0);
+
+    requires
+        symbols?["bit_rev_table_512"];
+        symbols["bit_rev_table_512"] == br_base;
+        heap_b32_ptr_valid(heap, br_base, 480);
+        bit_rev_ftable_wf(b32_seq(heap, br_base, 480));
+
+    requires
+        symbols?["scaling_factors"];
+        elems_iter_inv(heap, iter_t2,
+            symbols["scaling_factors"], 0);
+        iter_t2.buff == inverse_ntt_scaling_table();
+
+    requires
+        symbols?["rev_omega_inv_powers_mont_table"];
+        elems_iter_inv(heap, iter_p1,
+            symbols["rev_omega_inv_powers_mont_table"], 0);
+        iter_p1.buff == rev_omega_inv_powers_mont_table();
+
+    requires
+        symbols?["rev_mixed_powers_mont_table"];
+        elems_iter_inv(heap, iter_p2,
+            symbols["rev_mixed_powers_mont_table"], 0);
+        iter_p2.buff == rev_mixed_powers_mont_table();
+
+    requires
+        iter_h.base_ptr != iter_c0.base_ptr;
+        iter_h.base_ptr != iter_s2.base_ptr;
+        iter_h.base_ptr != iter_tt.base_ptr;
+        iter_h.base_ptr != br_base;
+        iter_h.base_ptr != iter_t2.base_ptr;
+        iter_h.base_ptr != iter_p1.base_ptr;
+        iter_h.base_ptr != iter_p2.base_ptr;
+
+        iter_tt.base_ptr != iter_c0.base_ptr;
+        iter_tt.base_ptr != iter_s2.base_ptr;
+        iter_tt.base_ptr != br_base;
+        iter_tt.base_ptr != iter_t2.base_ptr;
+        iter_tt.base_ptr != iter_p1.base_ptr;
+        iter_tt.base_ptr != iter_p2.base_ptr;
+
+    ensures
+        fgroups.fg0.cf
+            <==>
+        falcon_verify(as_elems(iter_c0.buff), as_nelems(iter_s2.buff), as_elems(iter_h.buff));
+{
+    ghost var iter_h' := iter_h;
+
+    iter_tt' := denormolize(iter_s2, iter_tt);
+    let tt0 := iter_tt'.buff;
+
+
+    bn_subi(w5, w1, 2, 0);
+    heap_b256_write_preserves_b32_ptr_lemma(old(this), this, br_base, 480, iter_tt'.base_ptr);
+
+    iter_tt', iter_h' := poly_product(iter_h', iter_tt', br_base, iter_t2, iter_p1, iter_p2);
+    let tt1 := iter_tt'.buff;
+
+    // assert elems_iter_inv(heap, iter_c0, x2, 0);
+    // assert nelems_iter_inv(heap, iter_s2, x3, 0);
+
+    addi(x5, x4, 0);
+    addi(x6, x2, 0);
+    let wut := x5;
+    iter_tt' := poly_sub(iter_tt', iter_c0);
+    let tt2 := iter_tt'.buff;
+
+    assume w1 == Q;
+    assume w4 == Q/2;
+
+    iter_tt' := normalize(iter_tt');
+    let tt3 := iter_tt'.buff;
+
+    assert nelems_iter_inv(heap, iter_tt', x4, 0);
+    assert nelems_iter_inv(heap, iter_s2, x3, 0);
+
+    is_short(iter_tt', iter_s2);
+
+    falcon_lemma(tt0, tt1, tt2, tt3, iter_s2.buff, iter_h.buff, iter_c0.buff, bool_to_uint1(fgroups.fg0.cf));
+}
+
+#verbatim
+}
+#endverbatim
