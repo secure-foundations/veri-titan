@@ -160,6 +160,11 @@ method printIns256(ins:ins256)
             printShift(shift); print(", "); printFlags(fg);
             print("\n");
 
+        case BN_ADDM(dst, src1, src2) =>
+            print("bn.addm ");
+            printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2);
+            print("\n");
+
         case BN_ADDI(dst, src, imm, fg) =>
             print("bn.addi ");
             printReg256(dst); print(", "); printReg256(src); print(", "); print(imm);
@@ -179,12 +184,6 @@ method printIns256(ins:ins256)
             printAccShift(shift); print(", "); printFlags(fg); 
             print("\n");
 
-        // todo
-        // case BN_SUBI(dst, src1, src2, fg) =>
-        //     print("bn.subi ");
-        //     printReg256(dst); print(", "); printReg256(src1); print(", "); print(src2); print(", ");
-        //     printFlags(fg); print("\n");
-
         case BN_SUBB(dst, src1, src2, shift, fg) =>
             print("bn.subb ");
             printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(" ");
@@ -198,10 +197,15 @@ method printIns256(ins:ins256)
             print("\n");
 
         // TODO: fix otbn_subm in ot_machine file
-        // case BN_SUBM(dst, src1, src2) =>
-        //     print("bn.subm ");
-        //     printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2);
-        //     print("\n");
+        case BN_SUBM(dst, src1, src2) =>
+            print("bn.subm ");
+            printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2);
+            print("\n");
+
+        case BN_SUBI(dst, src1, src2, fg) =>
+            print("bn.subi ");
+            printReg256(dst); print(", "); printReg256(src1); print(", "); print(src2); print(", ");
+            printFlags(fg); print("\n");
 
         // case BN_OR(dst, src1, src2, shift) =>
         //     print("bn.or ");
@@ -227,6 +231,12 @@ method printIns256(ins:ins256)
         //     printReg256(src2); print(" >> "); print(imm);
         //     print("\n");
 
+        case BN_NOT(dst, src1, shift, fg) =>
+            print("bn.not ");
+            printReg256(dst); print(", "); printReg256(src1); print(", ");
+            printShift(shift); print(", "); printFlags(fg);
+            print("\n");
+
         case BN_SEL(dst, src1, src2, fg, flag) =>
             print("bn.sel ");
             printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2); print(", ");
@@ -249,7 +259,17 @@ method printIns256(ins:ins256)
             printReg32(grs); if grs_inc { print("++"); }
             print("\n");
 
-        case _ => print("TODO256 "); print(ins);
+        case BN_WSRR(wrd: reg256_t, wsr: uint2) =>
+            print("bn.wsrr ");
+            printReg256(wrd); print(", "); print(wsr);
+            print("\n");
+
+        case BN_WSRW(wsr: uint2, wrs: reg256_t) =>
+            print("bn.wsrw ");
+            print(wsr); print(", "); printReg256(wrs);
+            print("\n");
+
+        // case _ => print("TODO256 "); print(ins);
 }
 
 method printWhileCond(wcond: whileCond)

@@ -44,15 +44,16 @@ rule otbn-ld
     command = otbn_ld.py $in -o $out
 """
 
-OTBN_ASM_PATH = "gen/otbn_modexp.s"
-RISCV_ASM_PATH = "gen/riscv_modexp.s"
 OTBN_TEST_ASM_PATH = "ref/run_modexp.s"
-OUTPUT_ELF_PATH = "gen/run_modexp.elf"
+OTBN_RSA_ASM_PATH = "gen/otbn_modexp.s"
+OTBN_RSA_ELF_PATH = "gen/run_modexp.elf"
 
 DLL_SOURCES = {
-    "spec/arch/otbn/modexp_printer.s.dfy": OTBN_ASM_PATH,
-    "spec/arch/otbn/simulator.i.dfy": "gen/otbn_sim.out", 
-    "spec/arch/riscv/printer.s.dfy": RISCV_ASM_PATH,
+    "spec/arch/otbn/print_rsa.s.dfy": OTBN_RSA_ASM_PATH,
+    "spec/arch/otbn/print_falcon.s.dfy": "gen/otbn_falcon.s",
+    # "spec/arch/otbn/simulator.i.dfy": "gen/otbn_sim.out", 
+    "spec/arch/riscv/print_falcon.s.dfy": "gen/riscv_falcon.s",
+    "spec/arch/riscv/print_rsa.s.dfy": "gen/riscv_modexp.s",
 }
 
 NINJA_PATH = "build.ninja"
@@ -324,11 +325,11 @@ class Generator():
             self.content.append(f"build {dll_out_path}: dll-run {dll_path} \n")
 
     def generate_elf_rules(self):
-        output_o_path = get_o_path(OTBN_ASM_PATH)
-        self.content.append(f"build {output_o_path}: otbn-as {OTBN_ASM_PATH}\n")
+        output_o_path = get_o_path(OTBN_RSA_ASM_PATH)
+        self.content.append(f"build {output_o_path}: otbn-as {OTBN_RSA_ASM_PATH}\n")
         test_o_path = get_o_path(OTBN_TEST_ASM_PATH)
         self.content.append(f"build {test_o_path}: otbn-as {OTBN_TEST_ASM_PATH}\n")
-        self.content.append(f"build {OUTPUT_ELF_PATH}: otbn-ld {test_o_path} {output_o_path}\n")
+        self.content.append(f"build {OTBN_RSA_ELF_PATH}: otbn-ld {test_o_path} {output_o_path}\n")
 
     def generate_rules(self):
         # rules to build .dfy from .vad 
