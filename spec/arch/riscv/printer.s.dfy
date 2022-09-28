@@ -1,10 +1,12 @@
 include "vale.i.dfy"
 include "../../../gen/impl/riscv/rsa/mod_pow.i.dfy"
+include "../../../gen/impl/riscv/falcon/rv_falcon.i.dfy"
 
 module riscv_printer {
     import opened integers
     import opened rv_machine
     import opened mod_pow
+    import opened rv_falcon
 
 method printReg32(r:reg32_t)
 {
@@ -41,54 +43,69 @@ method printReg32(r:reg32_t)
         case T4 =>  print("t4");  // x29		temporary register 4	no
         case T5 =>  print("t5");  // x30		temporary register 5	no
         case T6 =>  print("t6");  // x31		temporary register 6	no
-        case _ =>   print("Register not recognized.");
+        // case _ =>   print("Register not recognized.");
 }
 
 method printIns32(ins:ins32)
 {
     match ins
+        case RV_LH(rd, rs1, imm) =>
+            print ("lh ");
+            printReg32(rd); print(", "); print(imm); print("("); printReg32(rs1); print(")");
+            print("\n");
+
         case RV_LW(rd, rs1, imm) =>
             print ("lw ");
+            printReg32(rd); print(", "); print(imm); print("("); printReg32(rs1); print(")");
+            print("\n");
+
+        case RV_LHU(rd, rs1, imm) =>
+            print ("lhu ");
             printReg32(rd); print(", "); print(imm); print("("); printReg32(rs1); print(")");
             print("\n");
 
         case RV_ADDI(rd, rs1, imm) =>
             print ("addi ");
             printReg32(rd); print(", "); printReg32(rs1); print(", "); print(imm);
-            print("\n");                                              
+            print("\n");    
                                                                       
-        case RV_SLTI(rd, rs1, imm) =>                                  
-            print ("slti ");                                          
+        case RV_SLTI(rd, rs1, imm) =>
+            print ("slti ");
             printReg32(rd); print(", "); printReg32(rs1); print(", "); print(imm);
-            print("\n");                                              
+            print("\n");    
                                                                       
-        case RV_XORI(rd, rs1, imm) =>                                  
-            print ("xori ");                                          
+        case RV_XORI(rd, rs1, imm) =>
+            print ("xori ");
             printReg32(rd); print(", "); printReg32(rs1); print(", "); print(imm);
-            print("\n");                                              
+            print("\n");    
                                                                       
-        case RV_ORI(rd, rs1, imm) =>                                   
-            print ("ori ");                                           
+        case RV_ORI(rd, rs1, imm) => 
+            print ("ori "); 
             printReg32(rd); print(", "); printReg32(rs1); print(", "); print(imm);
-            print("\n");                                              
+            print("\n");    
                                                                       
-        case RV_ANDI(rd, rs1, imm) =>                                  
-            print ("andi ");                                          
+        case RV_ANDI(rd, rs1, imm) =>
+            print ("andi ");
             printReg32(rd); print(", "); printReg32(rs1); print(", "); print(imm);
-            print("\n");                                              
+            print("\n");    
                                                                       
-        case RV_SRLI(rd, rs1, imm) =>                                  
-            print ("srli ");                                          
+        case RV_SRLI(rd, rs1, imm) =>
+            print ("srli ");
             printReg32(rd); print(", "); printReg32(rs1); print(", "); print(imm);
-            print("\n");                                              
+            print("\n");    
                                                                       
-        case RV_SRAI(rd, rs1, imm) =>                                  
-            print ("srai ");                                          
+        case RV_SRAI(rd, rs1, imm) =>
+            print ("srai ");
             printReg32(rd); print(", "); printReg32(rs1); print(", "); print(imm);
-            print("\n");                                              
+            print("\n");    
+
+        case RV_SH(rs2, base, imm) =>
+            print ("sh ");
+            printReg32(rs2); print(", "); print(imm); print("("); printReg32(base); print(")");
+            print("\n");
                                                                       
-        case RV_SW(rs2, base, imm) =>                                    
-            print ("sw ");                                          
+        case RV_SW(rs2, base, imm) =>  
+            print ("sw ");
             printReg32(rs2); print(", "); print(imm); print("("); printReg32(base); print(")");
             print("\n");
             
@@ -105,6 +122,11 @@ method printIns32(ins:ins32)
         case RV_SLL(rd, rs1, rs2) =>
             print ("sll ");
             printReg32(rd); print(", "); printReg32(rs1); print(", "); printReg32(rs2);
+            print("\n");
+
+        case RV_SLLI(rd, rs1, shamt6) =>
+            print ("slli ");
+            printReg32(rd); print(", "); printReg32(rs1); print(", "); print(shamt6);
             print("\n");
 
         case RV_SLT(rd, rs1, rs2) =>
@@ -152,6 +174,11 @@ method printIns32(ins:ins32)
             printReg32(rd); print(", "); print(imm);
             print("\n");
 
+        case RV_LA(rd, symbol) =>
+            print ("la ");
+            printReg32(rd); print(", "); print(symbol);
+            print("\n");
+
         case RV_NEG(rd, rs1) =>
             print ("neg ");
             printReg32(rd); print(", "); print(rs1);
@@ -177,7 +204,7 @@ method printIns32(ins:ins32)
             printReg32(rd); print(", "); printReg32(rs1); print(", "); printReg32(rs2);
             print("\n");
             
-        case _ => print("Instruction not supported: "); print(ins);
+        // case _ => print("Instruction not supported: "); print(ins);
 }
 
 method printWCondOp(op: cmp)
@@ -355,9 +382,13 @@ method Main()
     var comment := "/*\n  This code is generated by the veri-titan project: https://github.com/secure-foundations/veri-titan\n\n  The mod_pow assembly snippet expects arguments in the following way:\n\n  a0:\n      @param d0inv      Precomputed Montgomery constant, considered part of key d0inv=-n^(-1) mod R\n\n  a1: \n      @param out        Output message as little-endian array\n\n  a2:\n      @param workbuf32  Work buffer, caller must verify this is 2 x RSANUMWORDS elements long.\n\n  a3:\n      @param rr         Precomputed constant, (R*R) mod n, considered part of key\n\n  a4:\n      @param n          Modulus of key\n\n  a5:\n      @param in         Input signature as little-endian array\n\n  It should correspond to this C signature:\n\n  void mod_pow(const uint32_t d0inv,\n          uint32_t *out,\n          uint32_t *workbuf32,\n          const uint32_t * rr,\n          const uint32_t *n,\n          uint32_t *in)\n*/\n";
     print(comment);
 
-    reveal va_code_mod_pow();
-    var printer := new Printer({"mod_pow"});
-    printer.printProc(va_code_mod_pow());
+    // reveal va_code_mod_pow();
+    // var printer := new Printer({"mod_pow"});
+    // printer.printProc(va_code_mod_pow());
+    reveal va_code_rv_falcon();
+    var printer := new Printer({"rv_falcon"});
+    printer.printProc(va_code_rv_falcon());
+    
 }
 
 }

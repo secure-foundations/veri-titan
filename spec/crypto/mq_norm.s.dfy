@@ -41,7 +41,7 @@ module mq_norm_s(MQ: ntt_param_s) {
     {
     }
 
-    lemma square_positive_lemma(a: int)
+    lemma {:axiom} square_positive_lemma(a: int)
         ensures a * a >= 0;
 
     function l2norm_squared(s1: seq<nelem>, s2: seq<nelem>, i: nat): nat

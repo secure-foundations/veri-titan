@@ -37,7 +37,7 @@ abstract module ntt_param_s {
     type elems = s: seq<elem>
         | |s| == N.full witness *
 
-    lemma Nth_root_lemma()
+    lemma {:axiom} Nth_root_lemma()
         ensures N.exp >= 2;
 
         ensures IsModEquivalent(Pow(PSI, 2), OMEGA, Q);

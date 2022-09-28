@@ -48,7 +48,7 @@ procedure rv_falcon(
     ghost iter_p2: b16_iter)
 
 returns (ghost iter_tt': b16_iter)
-
+{:noInline}
 {:frame false}
 
     requires

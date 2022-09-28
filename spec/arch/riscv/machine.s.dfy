@@ -111,28 +111,28 @@ module rv_machine {
     
     // base integer instruction set, 32-bit
     datatype ins32 =
-    | RV_LB(rd: reg32_t, rs1: reg32_t, oimm12: uint32)
+    // | RV_LB(rd: reg32_t, rs1: reg32_t, oimm12: uint32)
     | RV_LH (rd: reg32_t, rs1: reg32_t, oimm12: uint32)
     | RV_LW (rd: reg32_t, rs1: reg32_t, oimm12: uint32)
-    | RV_LBU (rd: reg32_t, rs1: reg32_t, oimm12: uint32)
+    // | RV_LBU (rd: reg32_t, rs1: reg32_t, oimm12: uint32)
     | RV_LHU (rd: reg32_t, rs1: reg32_t, oimm12: uint32)
 
-    | RV_FENCE (pred: uint32, succ: uint32)
-    | RV_FENCE_I
+    // | RV_FENCE (pred: uint32, succ: uint32)
+    // | RV_FENCE_I
 
     | RV_ADDI (rd: reg32_t, rs1: reg32_t, simm12: int32) // sign extends, ignore overflow
     | RV_SLLI (rd: reg32_t, rs1: reg32_t, shamt6: uint32) // logical left shift
     | RV_SLTI (rd: reg32_t, rs1: reg32_t, simm12: int32) // sign extend, 1 if rs1 (signed) < imm, else 0
-    | RV_SLTIU (rd: reg32_t, rs1: reg32_t, imm12: uint32) // compare both vals as unsigned.
+    // | RV_SLTIU (rd: reg32_t, rs1: reg32_t, imm12: uint32) // compare both vals as unsigned.
     | RV_XORI (rd: reg32_t, rs1: reg32_t, imm12: uint32)
     | RV_ORI (rd: reg32_t, rs1: reg32_t, imm12: uint32)
     | RV_ANDI (rd: reg32_t, rs1: reg32_t, imm12: uint32)
     | RV_SRLI (rd: reg32_t, rs1: reg32_t, shamt6: uint32) // logical right shift
     | RV_SRAI (rd: reg32_t, rs1: reg32_t, shamt6: uint32) // arithmetic right shift
 
-    | RV_AUIPC (rd: reg32_t, oimm20: uint32)
+    // | RV_AUIPC (rd: reg32_t, oimm20: uint32)
 
-    | RV_SB (rs1: reg32_t, rs2: reg32_t, imm12: uint32)
+    // | RV_SB (rs1: reg32_t, rs2: reg32_t, imm12: uint32)
     | RV_SH (rs1: reg32_t, rs2: reg32_t, imm12: uint32)
     | RV_SW (rs1: reg32_t, rs2: reg32_t, imm12: uint32)
 
@@ -166,27 +166,27 @@ module rv_machine {
     // standard extension for integer mult and div, 32-bit
     | RV_MUL (rd: reg32_t, rs1: reg32_t, rs2: reg32_t)
     | RV_MULH (rd: reg32_t, rs1: reg32_t, rs2: reg32_t)
-    | RV_MULHSU (rd: reg32_t, rs1: reg32_t, rs2: reg32_t)
+    // | RV_MULHSU (rd: reg32_t, rs1: reg32_t, rs2: reg32_t)
     | RV_MULHU (rd: reg32_t, rs1: reg32_t, rs2: reg32_t)
     | RV_DIV (rd: reg32_t, rs1: reg32_t, rs2: reg32_t)
-    | RV_DIVU (rd: reg32_t, rs1: reg32_t, rs2: reg32_t)
-    | RV_REM (rd: reg32_t, rs1: reg32_t, rs2: reg32_t)
-    | RV_REMU (rd: reg32_t, rs1: reg32_t, rs2: reg32_t)
+    // | RV_DIVU (rd: reg32_t, rs1: reg32_t, rs2: reg32_t)
+    // | RV_REM (rd: reg32_t, rs1: reg32_t, rs2: reg32_t)
+    // | RV_REMU (rd: reg32_t, rs1: reg32_t, rs2: reg32_t)
 
     // control and status register extension
-    | RISC_ECALL
-    | RISC_EBREAK
-    | RISC_URET
-    | RISC_SRET
-    | RISC_MRET
-    | RISC_WFI
-    | RISC_SFENCE_VMA (rs1: reg32_t, rs2: reg32_t)
-    | RISC_CSRRW (rd: reg32_t, rs1: reg32_t, csr12: uint32)
-    | RISC_CSRRS (rd: reg32_t, rs1: reg32_t, csr12: uint32)
-    | RISC_CSRRC (rd: reg32_t, rs1: reg32_t, csr12: uint32)
-    | RISC_CSRRWI (rd: reg32_t, zimm: uint32, csr12: uint32)
-    | RISC_CSRRSI (rd: reg32_t, zimm: uint32, csr12: uint32)
-    | RISC_CSRRCI (rd: reg32_t, zimm: uint32, csr12: uint32)
+    // | RISC_ECALL
+    // | RISC_EBREAK
+    // | RISC_URET
+    // | RISC_SRET
+    // | RISC_MRET
+    // | RISC_WFI
+    // | RISC_SFENCE_VMA (rs1: reg32_t, rs2: reg32_t)
+    // | RISC_CSRRW (rd: reg32_t, rs1: reg32_t, csr12: uint32)
+    // | RISC_CSRRS (rd: reg32_t, rs1: reg32_t, csr12: uint32)
+    // | RISC_CSRRC (rd: reg32_t, rs1: reg32_t, csr12: uint32)
+    // | RISC_CSRRWI (rd: reg32_t, zimm: uint32, csr12: uint32)
+    // | RISC_CSRRSI (rd: reg32_t, zimm: uint32, csr12: uint32)
+    // | RISC_CSRRCI (rd: reg32_t, zimm: uint32, csr12: uint32)
 
     predicate eval_ins32(ins: ins32, s: state, r: state)
     {
