@@ -682,8 +682,16 @@ abstract module generic_falcon_lemmas {
             if j != i {
                 assert next_a[j] == a[j];
             } else {
-                assert next_a[j] == ai;
-                assume ai == MQP.mqmul(init_a[j], b[j]);
+                var t :int := montmul(init_a[i], b[i]);
+                var R_INV :int := CMQ.R_INV;
+                var b_i :int := b[i];
+                CMQ.Nth_root_lemma(); 
+                gbassert IsModEquivalent(ai, init_a[i] * b_i, 12289) by {
+                    assert IsModEquivalent(R_INV * 4091, 1, 12289);
+                    assert IsModEquivalent(t, init_a[i] * b_i * R_INV, 12289);
+                    assert IsModEquivalent(ai, t * 10952 * R_INV, 12289);
+                }
+                LemmaSmallMod(ai, 12289);
             }
         }
     }
