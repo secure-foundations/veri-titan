@@ -17,6 +17,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <assert.h>
 
 extern void mod_pow(const uint32_t d0inv,
         uint32_t *out,
@@ -337,8 +338,8 @@ int main(void) {
 
   mod_pow(d0inv,out,workbuf,rr,n,sig);
   
-  for (int i=0; i<(RSANUMWORDS); i++) {
-    printf("Limb %d: 0x%08lx\n", i, out[i]);
-  }
+  // for (int i=0; i<(RSANUMWORDS); i++) {
+  //   assert(out[i] == 0x5555);
+  // }
 }
 

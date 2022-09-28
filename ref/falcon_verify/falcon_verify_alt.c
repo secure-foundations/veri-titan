@@ -277,27 +277,27 @@ PQCLEAN_FALCON512_CLEAN_is_short(
     return s < (((uint32_t)7085 * (uint32_t)12289) >> (10 - 9));
 }
 
-static void print_uint16_array(FILE *f, uint16_t *a, uint16_t n) {
-  uint32_t i, k;
-  fprintf(f, "[");
+// static void print_uint16_array(FILE *f, uint16_t *a, uint16_t n) {
+//   uint32_t i, k;
+//   fprintf(f, "[");
 
-  k = 0;
-  for (i=0; i<n; i++) {
-    if (k == 0) fprintf(f, " ");
-    fprintf(f, "%d", a[i]);
-    k ++;
-    if (k == 16) {
-      fprintf(f, ",");
-      k = 0;
-    } else {
-      fprintf(f, ", ");
-    }
-  }
-//   if (k > 0) {
-//     fprintf(f, "\n");
+//   k = 0;
+//   for (i=0; i<n; i++) {
+//     if (k == 0) fprintf(f, " ");
+//     fprintf(f, "%d", a[i]);
+//     k ++;
+//     if (k == 16) {
+//       fprintf(f, ",");
+//       k = 0;
+//     } else {
+//       fprintf(f, ", ");
+//     }
 //   }
-  fprintf(f, "]\n");
-}
+// //   if (k > 0) {
+// //     fprintf(f, "\n");
+// //   }
+//   fprintf(f, "]\n");
+// }
 
 void forward_ntt(uint16_t *a) {
   uint32_t j, s, t, u, d;
@@ -410,5 +410,5 @@ PQCLEAN_FALCON512_CLEAN_verify_raw(const uint16_t *c0, const int16_t *s2,
      * Signature is valid if and only if the aggregate (-s1,s2) vector
      * is short enough.
      */
-    PQCLEAN_FALCON512_CLEAN_is_short((int16_t *)tt, s2);
+    return PQCLEAN_FALCON512_CLEAN_is_short((int16_t *)tt, s2);
 }
