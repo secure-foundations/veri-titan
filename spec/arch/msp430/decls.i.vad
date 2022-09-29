@@ -389,7 +389,7 @@ procedure add_w(in rs: reg, inout rd: reg)
 }
     
 procedure add_w_imm(inline imm: int16, inout rd: reg)
-    {:inst Ins(MSP_ADD_W(Imm(imm), Reg(rd)))}
+    {:instruction Ins(MSP_ADD_W(Imm(imm), Reg(rd)))}
     modifies
         flags;
     ensures

@@ -159,9 +159,9 @@ module msp_machine {
 
     datatype cond =
         | EQ(o1: operand_t, o2: operand_t)
-        | NE(o1: operand_t, o2: operand_t)
+        // | NE(o1: operand_t, o2: operand_t)
         | LO(o1: operand_t, o2: operand_t) // Jump if lower (unsigned)
-        | HS(o1: operand_t, o2: operand_t) // Jump if higher or same (unsigned)
+        // | HS(o1: operand_t, o2: operand_t) // Jump if higher or same (unsigned)
     
     datatype code =
         | Ins(ins: ins_t)
@@ -187,9 +187,9 @@ module msp_machine {
     {
         match c
           case EQ(o1, o2)  => (eval_operand(s, o1) == eval_operand(s, o2))
-          case NE(o1, o2)  => (eval_operand(s, o1) != eval_operand(s, o2))
+        //   case NE(o1, o2)  => (eval_operand(s, o1) != eval_operand(s, o2))
           case LO(o1, o2)  => (eval_operand(s, o1) < eval_operand(s, o2))
-          case HS(o1, o2)  => (eval_operand(s, o1) >= eval_operand(s, o2))
+        //   case HS(o1, o2)  => (eval_operand(s, o1) >= eval_operand(s, o2))
     }
 
     predicate eval_if_else(cond:cond, ifT:code, ifF:code, s:state, r:state)

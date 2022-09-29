@@ -65,6 +65,26 @@ procedure restore_test()
     popm_w(4, r10);
 }
 
+procedure loop()
+    {:noInline}
+    {:frame false}
+{
+    mov_w_imm(8, r6);
+    mov_w_imm(0, r5);
+
+    while (r5 < r6)
+        invariant
+            r6 == 8;
+            r5 <= 8;
+        decreases
+            r6 - r5;
+    {
+        add_w_imm(1, r5);
+        add_w_imm(2, r7);
+    }
+
+}
+
 #verbatim
 }
 #endverbatim

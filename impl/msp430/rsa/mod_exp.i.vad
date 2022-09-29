@@ -280,7 +280,6 @@ procedure mp_post(
 returns (ghost next_iter_out: iter_t)
 
     {:frame false}
-    {:noInline}
 
     requires
         in_stack_addr_range(sp);

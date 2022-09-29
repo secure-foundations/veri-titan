@@ -54,6 +54,8 @@ DLL_SOURCES = {
     # "spec/arch/otbn/simulator.i.dfy": "gen/otbn_sim.out", 
     "spec/arch/riscv/print_falcon.s.dfy": "gen/riscv_falcon.s",
     "spec/arch/riscv/print_rsa.s.dfy": "gen/riscv_modexp.s",
+    "spec/arch/msp430/print_falcon.s.dfy": "gen/msp_falcon.s",
+    "spec/arch/msp430/print_rsa.s.dfy": "gen/msp_modexp.s",
 }
 
 NINJA_PATH = "build.ninja"
