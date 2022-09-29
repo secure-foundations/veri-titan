@@ -92,7 +92,8 @@ returns (ghost iter_tt': iter_t)
 
         add_w(r5, r8);
 
-        iter_tt' := sw_iter(r15, true, r8, iter_tt');
+        iter_tt' := sw_iter(r8, r15, iter_tt');
+        add_w_imm(2, r15);
 
         i := i + 1;
     }
@@ -178,7 +179,8 @@ returns (ghost iter_tt': iter_t)
 
         // norm_peri_lemma(iter_tt'.buff, inputs, i, iter_tt'.buff[i], fg, diff, mask, r5);
 
-        iter_tt' := sw_iter(r12, true, r5, iter_tt');
+        iter_tt' := sw_iter(r5, r12, iter_tt');
+        add_w_imm(2, r12);
         i := i + 1;
     }
     mov_w_imm((-1024), r12);

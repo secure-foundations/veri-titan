@@ -141,12 +141,12 @@ procedure inverse_s_loop_inner(
 
     // assert r13 == mqsub(a_e, x);
     let o := r13;
-    iter_a' := sw_iter(ao_ptr, false, r13, iter_a'.(index := gs + d));
+    iter_a' := sw_iter(r13, ao_ptr, iter_a'.(index := gs + d));
 
     mq_add();
     // assert r13 == mqadd(a_e, x);
     let e := r13;
-    iter_a' := sw_iter(ae_ptr, false, r13, iter_a'.(index := gs));
+    iter_a' := sw_iter(r13, ae_ptr, iter_a'.(index := gs));
     // assert e == mqadd(a_e, montmul(a_o, old(w)));
     // assert o == mqsub(a_e, montmul(a_o, old(w)));
     // assert inverse_s_loop_update(iter_a.buff, iter_a'.buff, gd, j, bi, gs, e, o, view);

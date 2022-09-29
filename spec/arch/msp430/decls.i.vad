@@ -242,29 +242,27 @@ procedure pop_frame(inline num_bytes: int16)
     assume false;
 }
 
-procedure lw_stack(inline offset: uint16, inout rd: reg)
-    {:instruction Ins(MSP_MOV_W(Idx(SP, offset), Reg(rd)))}
+procedure lw_stack(inout rd: reg)
+    {:instruction Ins(MSP_MOV_W(Idx(SP, 0), Reg(rd)))}
     requires
-        mod(offset, 2) == 0;
-        frame_index_valid(mem, offset / 2);
+        frame_index_valid(mem, 0);
     reads
         mem; flat;
     ensures
         mem == old(mem);
-        rd == read_frame(mem, flat, offset / 2);
+        rd == read_frame(mem, flat, 0);
 {
     assume false;
 }
 
-procedure sw_stack(inline offset: uint16, in rs: reg)
-    {:instruction Ins(MSP_MOV_W(Reg(rs), Idx(SP, offset)))}
+procedure sw_stack(in rs: reg)
+    {:instruction Ins(MSP_MOV_W(Reg(rs), Idx(SP, 0)))}
     requires
-        mod(offset, 2) == 0;
-        frame_index_valid(mem, offset / 2);
+        frame_index_valid(mem, 0);
     modifies
         mem; flat;
     ensures
-        let rst := write_frame(old(mem), old(flat), offset / 2, rs);
+        let rst := write_frame(old(mem), old(flat), 0, rs);
         mem == fst(rst);
         flat == snd(rst);
 {
@@ -301,21 +299,6 @@ procedure lw(inout rs: reg, inline inc: bool, inout rd: reg, ghost iter: iter_t)
     assume false;
 }
 
-function load_symbol(mem: mem_t, name: string): uint16 extern;
-
-procedure lw_symbol(inline name: string, inout rd: reg)
-    {:instruction Ins(MSP_MOV_W(Abs(name), Reg(rd)))}
-    requires
-        symbols?[name];
-    reads
-        mem;
-    ensures
-        mem == old(mem);
-        rd == load_symbol(mem, name);
-{
-    assume false;
-}
-
 procedure lw_iter(inout rs: reg, inline inc: bool, inout rd: reg, ghost iter: iter_t)
     returns (ghost next_iter: iter_t)
     requires
@@ -333,35 +316,62 @@ procedure lw_iter(inout rs: reg, inline inc: bool, inout rd: reg, ghost iter: it
     next_iter := b16_iter_load_next(iter, inc);
 }
 
-procedure sw(inout rs1: reg, inline inc: bool, in rs2: reg, ghost iter: iter_t)
-    {:instruction Ins(MSP_MOV_W(Reg(rs1), RegIndir(rs2, inc)))}
+function load_symbol(mem: mem_t, name: string): uint16 extern;
+
+procedure lw_symbol(inline name: string, inout rd: reg)
+    {:instruction Ins(MSP_MOV_W(Abs(name), Reg(rd)))}
     requires
-        @rs1 != @rs2;
-        iter_safe(iter, heap, rs1);
-    modifies
-        heap;
+        symbols?[name];
+    reads
+        mem;
     ensures
-        rs1 == (if inc then old(rs1) + 2 else old(rs1));
-        heap == heap_b16_write(old(heap), iter, old(rs2));
+        mem == old(mem);
+        rd == load_symbol(mem, name);
 {
     assume false;
 }
 
-procedure sw_iter(inout rs1: reg, inline inc: bool, in rs2: reg, ghost iter: iter_t)
-    returns (ghost next_iter: iter_t)
+procedure sw(in rs1: reg, inline offset: int16, in rs2: reg, ghost iter: iter_t)
+    {:instruction Ins(MSP_MOV_W(Reg(rs1), Idx(rs2, offset)))}
     requires
-        @rs1 != @rs2;
-        iter_safe(iter, heap, rs1);
+        iter_safe(iter, heap, rs2 + offset);
     modifies
         heap;
     ensures
-        rs1 == (if inc then old(rs1) + 2 else old(rs1));
-        next_iter == b16_iter_store_next(iter, rs2, inc);
-        iter_inv(next_iter, heap, rs1);
-        heap == heap_b16_write(old(heap), iter, rs2);
+        heap == heap_b16_write(old(heap), iter, rs1);
 {
-    sw(rs1, inc, rs2, iter);
-    next_iter := b16_iter_store_next(iter, rs2, inc);
+    assume false;
+}
+
+procedure sw_iter(in rs1: reg, in rs2: reg, ghost iter: iter_t)
+    returns (ghost next_iter: iter_t)
+    requires
+        iter_safe(iter, heap, rs2);
+    modifies
+        heap;
+    ensures
+        next_iter == b16_iter_store_next(iter, rs1, true);
+        iter_inv(next_iter, heap, rs2 + 2);
+        heap == heap_b16_write(old(heap), iter, rs1);
+{
+    sw(rs1, 0, rs2, iter);
+    next_iter := b16_iter_store_next(iter, rs1, true);
+}
+
+procedure sw_prev_iter(in rs1: reg, in rs2: reg, ghost iter: iter_t)
+    returns (ghost next_iter: iter_t)
+    requires
+        rs2-2 >= 0;
+        iter_safe(iter, heap, rs2-2);
+    modifies
+        heap;
+    ensures
+        next_iter == b16_iter_store_next(iter, rs1, true);
+        iter_inv(next_iter, heap, rs2);
+        heap == heap_b16_write(old(heap), iter, rs1);
+{
+    sw(rs1, (-2), rs2, iter);
+    next_iter := b16_iter_store_next(iter, rs1, true);
 }
 
 function to_uint16(x: int16): uint16 extern;

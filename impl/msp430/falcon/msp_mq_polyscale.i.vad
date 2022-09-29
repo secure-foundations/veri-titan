@@ -107,7 +107,8 @@ procedure polyscale(
         montymul(r12, r13);
         assert (r12 == p);
 
-        iter_f' := sw_iter(r10, true, r12, iter_f');
+        iter_f' := sw_iter(r12, r10, iter_f');
+        add_w_imm(2, r10);
         i := i + 1;
         assert elems_iter_inv(heap, iter_f', r10, i);
     }

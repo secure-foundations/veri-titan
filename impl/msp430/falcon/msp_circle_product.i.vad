@@ -103,7 +103,9 @@ procedure circle_product(
         mov_w_imm(10952, r13);
         montymul(r12, 10952);
 
-        iter_f' := sw_iter(r10, true, r12, iter_f');
+        iter_f' := sw_iter(r12, r10, iter_f');
+        add_w_imm(2, r10);
+
         i := i + 1;
     }
 

@@ -142,15 +142,20 @@ procedure sub_mod(
     {
         assert subb_inv(next_iter_a.buff, flags.cf, old_a, next_iter_n.buff, i);
 
-        next_iter_a := lw_iter(r12, false, r9, next_iter_a);
+        next_iter_a := lw_iter(r12, true, r9, next_iter_a);
         next_iter_n := lw_iter(r13, true, r10, next_iter_n);
 
-        // assert r10 == next_iter_n.buff[i];
-        // assert r9 == old_a[i];
+        assert r10 == next_iter_n.buff[i];
+        assert r9 == old_a[i];
         borrow := flags.cf;
+        let ao_i := r9;
         subc_w(r10, r9);
+        let ai := r9;
+        let ni := r10;
 
-        next_iter_a := sw_iter(r12, true, r9, next_iter_a);
+        next_iter_a := sw_prev_iter(r9, r12, next_iter_a.(index := i));
+
+        assert next_iter_a.buff[i] == ai;
 
         subb_inv_peri_lemma(next_iter_a.buff, flags.cf,
             old_a, next_iter_n.buff, borrow, i);

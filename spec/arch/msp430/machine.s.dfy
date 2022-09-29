@@ -24,7 +24,7 @@ module msp_machine {
 
     datatype operand_t = 
         | Reg(r: reg_t)
-        | Idx(r: reg_t, index: uint16)
+        | Idx(r: reg_t, index: int16)
         | Abs(s: string)
         | RegIndir(r: reg_t, inc: bool)
         | Imm(i: int16)

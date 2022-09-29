@@ -19,7 +19,7 @@ module msp_printer {
         match op
             case Reg(r) => printReg(r);
             case Idx(r, index) => 
-                printReg(r); print("("); print(index); print(")");
+                print(index); print("("); printReg(r); print(")");
             case Abs(s) => 
                 print("&"); print(s);
             case RegIndir(r, inc) =>
@@ -72,14 +72,6 @@ module msp_printer {
                 print("\n");
     }
     
-    // method printCond(op: cond)
-    // {
-    //     match op
-    //         case EQ(o1, o2) =>
-    //             print("")
-    //         case LO(o1, o2) =>
-    // }
-
     method printWhileCond(wcond: cond, lcount: int)
     {
         match wcond
@@ -106,7 +98,7 @@ module msp_printer {
             case LO(o1, o2) =>
                 print("\tCMP.W\t"); printOperand(o1); print(","); printOperand(o2);
                 print("\n");
-                print("\tJL\t"); print("if_true"); print(lcount);
+                print("\tJLO\t"); print("if_true"); print(lcount);
                 print("\n");
     }
 

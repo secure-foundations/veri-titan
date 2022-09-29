@@ -159,8 +159,8 @@ returns (ghost iter_a': iter_t)
         iter_a' := lw_iter(r8, false, r6, iter_a'.(index := li));
         iter_a' := lw_iter(r7, false, r5, iter_a'.(index := ri));
         
-        iter_a' := sw_iter(r8, false, r5, iter_a'.(index := li));
-        iter_a' := sw_iter(r7, false, r6, iter_a'.(index := ri));
+        iter_a' := sw_iter(r5, r8, iter_a'.(index := li));
+        iter_a' := sw_iter(r6, r7, iter_a'.(index := ri));
 
         view := bit_rev_view_inv_peri_lemma(init_a, iter_a'.buff, view, iter_p'.buff);
         iter_a' := iter_a'.(index := 0);

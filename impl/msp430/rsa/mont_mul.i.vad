@@ -81,7 +81,8 @@ procedure memset_clear(ghost iter_c: iter_t)
         decreases
             r8 - r12;
     {
-        next_iter_c := sw_iter(r12, true, r9, next_iter_c);
+        next_iter_c := sw_iter(r9, r12, next_iter_c);
+        add_w_imm(2, r12);
         i := i + 1;
     }
     next_iter_c := next_iter_c.(index := 0);

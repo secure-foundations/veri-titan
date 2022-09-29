@@ -118,6 +118,6 @@ void mod_pow(uint16_t *out,
   mont_mul(out, a_r, in);  /* aaa = a_r * a / R mod M */
 
   /* Make sure aaa < mod; aaa is at most 1x mod too large. */
-  if (ge_mod(out))
+  if (a_r[0] < aa_r[0])
     sub_mod(out);
 }

@@ -191,7 +191,7 @@ procedure mma_pre(
     mov_w(r7, r15);
     add_w_imm(382, r15);
     n_end := r15;
-    sw_stack(0, r15);
+    sw_stack(r15);
 
     mont_loop_inv_pre_lemma(a, r4, rsa.M0D, A, B,
         iter_b.buff, iter_n.buff, iter_c.buff);
@@ -280,7 +280,8 @@ returns (
     mov_w(r12, r14);
     mov_w(r13, r10);
 
-    next_iter_c := sw_iter(r8, true, r14, iter_c);
+    next_iter_c := sw_iter(r14, r8, iter_c);
+    add_w_imm(2, r8);
 
     mont_loop_inv_peri_lemma(a, r4, A, B, next_A, next_B, 
         iter_b.buff, iter_n.buff, original_c, iter_c.buff, next_iter_c.buff, j);
@@ -341,7 +342,8 @@ returns (ghost next_iter_c: iter_t)
     mov_w_imm(0, r15);
     add_w(r10, r9);
     addc_w(r15, r15);
-    next_iter_c := sw_iter(r8, true, r9, iter_c);
+    next_iter_c := sw_iter(r9, r8, iter_c);
+    add_w_imm(2, r8);
     // assert r15 == 0 || r15 == 1;
     let bout: uint1 := if r15 == 0 then 0 else 1;
     // assert r9 < r10 ==> r15 == 1;
@@ -461,7 +463,7 @@ returns (ghost next_iter_c: iter_t)
     {
         A, B, next_iter_b, next_iter_c, next_iter_n := 
             mma_loop(A, B, original_c, next_iter_c, a, next_iter_b, next_iter_n, rsa, j);
-        lw_stack(0, r15);
+        lw_stack(r15);
         // assert r15 == n_end;
         j := j + 1;
     }

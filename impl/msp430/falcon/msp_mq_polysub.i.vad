@@ -112,7 +112,8 @@ procedure poly_sub(
 
         mq_sub();
 
-        iter_f' := sw_iter(ptr_f, true, r13, iter_f');
+        iter_f' := sw_iter(r13, ptr_f, iter_f');
+        add_w_imm(2, ptr_f);
         poly_sub_loop_correct(iter_f'.buff, f_prev, f_orig, iter_g.buff, i);
 
         i := i + 1;
