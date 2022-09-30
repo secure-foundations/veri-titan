@@ -372,13 +372,13 @@ returns (ghost iter_a': b16_iter)
     
     requires
         in_stack_addr_range(sp);
-        in_stack_addr_range(sp - 24);
+        in_stack_addr_range(sp - 28);
 
     requires
         elems_iter_inv(heap, iter_a, a0, 0);
-        symbols?["rev_ntt512_mixed_powers_table"];
+        symbols?["rev_mixed_powers_mont_table"];
         elems_iter_inv(heap, iter_p,
-            load_symbol(mem, "rev_ntt512_mixed_powers_table"), 0);
+            load_symbol(mem, "rev_mixed_powers_mont_table"), 0);
         iter_a.base_ptr != iter_p.base_ptr;
 
     requires
@@ -403,12 +403,12 @@ returns (ghost iter_a': b16_iter)
     ensures
         forward_ntt_eval_all(iter_a'.buff, iter_a.buff);
 {
-    save_s0__r5();
+    save_s0__s5();
 
     let mem0 := mem;
     iter_a' := iter_a;
 
-    lw_symbol(s3, "rev_ntt512_mixed_powers_table");
+    lw_symbol(s3, "rev_mixed_powers_mont_table");
 
     mv(s4, a0);
 
@@ -465,7 +465,7 @@ returns (ghost iter_a': b16_iter)
         addi(s1, s1, (-1));
     }
 
-    restore_s0__r5();
+    restore_s0__s5();
     forward_t_loop_inv_post_lemma(iter_a'.buff, d, iter_a.buff);
 }
 

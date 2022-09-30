@@ -17,22 +17,23 @@ import opened bv32_op_s
 
 #endverbatim
 
-procedure save_s0__r5()
+procedure save_s0__s5()
     requires
         in_stack_addr_range(sp);
-        in_stack_addr_range(sp - 24);
+        in_stack_addr_range(sp - 28);
 
     modifies
         mem; flat; sp;
     reads
-        s0; s1; s2; s3; s4; s5;
+        ra; s0; s1; s2; s3; s4; s5;
     ensures
-        sp == old(sp) - 24;
+        sp == old(sp) - 28;
         mem == stack_push_batch(old(mem), old(flat),
-            seq(s5, s4, s3, s2, s1, s0));
+            seq(s5, s4, s3, s2, s1, s0, ra));
         stack_depth(mem) == stack_depth(old(mem)) + 1;
 {
-    push_frame((-24));
+    push_frame((-28));
+    sw_stack(ra, 24);
     sw_stack(s0, 20);
     sw_stack(s1, 16);
     sw_stack(s2, 12);
@@ -40,24 +41,24 @@ procedure save_s0__r5()
     sw_stack(s4, 4);
     sw_stack(s5, 0);
 
-    let target := stack_push_batch(old(mem), old(flat), seq(s5, s4, s3, s2, s1, s0));
+    let target := stack_push_batch(old(mem), old(flat), seq(s5, s4, s3, s2, s1, s0, ra));
     assert top_frame(target.frames) == top_frame(mem.frames);
 }
 
-procedure restore_s0__r5()
+procedure restore_s0__s5()
     requires
         stack_depth(mem) >= 2;
-        seq_len(top_frame(mem.frames).content) == 6;
+        seq_len(top_frame(mem.frames).content) == 7;
 
     reads
         flat;
     modifies
         mem; sp;
     modifies
-        s0; s1; s2; s3; s4; s5;
+        ra; s0; s1; s2; s3; s4; s5;
 
     ensures
-        sp == old(sp) + 24;
+        sp == old(sp) + 28;
         flat == old(flat);
         mem == stack_pop_frame(old(mem), flat);
     ensures
@@ -69,13 +70,14 @@ procedure restore_s0__r5()
         s4 == frame[1];
         s5 == frame[0];
 {
+    lw_stack(ra, 24);
     lw_stack(s0, 20);
     lw_stack(s1, 16);
     lw_stack(s2, 12);
     lw_stack(s3, 8);
     lw_stack(s4, 4);
     lw_stack(s5, 0);
-    pop_frame(24);
+    pop_frame(28);
 }
 
 #verbatim

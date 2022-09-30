@@ -1,12 +1,20 @@
-include "rv_poly_mul.i.vad"
 include "rv_normalize.i.vad"
 include "mq_polysub.i.vad"
+include "rv_inverse_ntt_std2rev.i.vad"
+include "rv_forward_ntt_std2rev.i.vad"
+include "rv_bit_shuffle.i.vad"
+include "rv_mq_ntt_poly_scale.i.vad"
+include "rv_mq_ntt_poly_mul.i.vad"
 
 #verbatim
 
-include "rv_poly_mul.i.dfy"
 include "rv_normalize.i.dfy"
 include "mq_polysub.i.dfy"
+include "rv_inverse_ntt_std2rev.i.dfy"
+include "rv_forward_ntt_std2rev.i.dfy"
+include "rv_bit_shuffle.i.dfy"
+include "rv_mq_ntt_poly_scale.i.dfy"
+include "rv_mq_ntt_poly_mul.i.dfy"
 
 module rv_falcon {
 
@@ -24,8 +32,12 @@ import opened pow2_s
 import opened ntt_index
 
 import opened rv_normlization
-import opened rv_poly_mul
 import opened mq_polysub
+import opened rv_inverse_ntt_std2rev
+import opened rv_forward_ntt_std2rev
+import opened rv_bit_shuffle
+import opened rv_mq_ntt_poly_scale
+import opened rv_mq_ntt_poly_mul
 
 import opened falcon_512_i
 
@@ -36,6 +48,194 @@ function falcon_lemma(tt0: seq(uint16), tt1: seq(uint16), tt2: seq(uint16), s1: 
 type nelem: Type(0) extern;
 function falcon_verify(c0: seq(uint16), s2: seq(nelem), h: seq(uint16)): bool extern;
 function as_nelems(a: seq(uint16)): seq(nelem) extern;
+
+function as_elems(s: seq(uint16)): seq(uint16) extern;
+function valid_elems(s: seq(uint16)): bool extern;
+
+function rev_omega_inv_powers_mont_table(): seq(uint16) extern;
+function inverse_ntt_scaling_table(): seq(uint16) extern;
+function inverse_ntt_rev2std_lemma(a0: seq(uint16), a1: seq(uint16), a2: seq(uint16), a3: seq(uint16), a4: seq(uint16)): void extern;
+function mq_poly_mod_product_lemma(a0: seq(uint16), a1: seq(uint16), b0: seq(uint16), b1: seq(uint16),
+        p0: seq(uint16), p1: seq(uint16), p2: seq(uint16), p3: seq(uint16), p4: seq(uint16)): void extern;
+function poly_mod_equiv(a: seq(uint16), b: seq(uint16), m: seq(uint16)): bool extern;
+function poly_mod_product(a0: seq(uint16), b0: seq(uint16)): seq(uint16) extern;
+
+procedure ntt_poly_mul(
+    ghost iter_a: b16_iter,
+    ghost iter_b: b16_iter,
+    ghost iter_t1: b16_iter,
+    ghost iter_t2: b16_iter,
+    ghost iter_p1: b16_iter,
+    ghost iter_p2: b16_iter)
+
+returns (
+    ghost next_iter_a: b16_iter,
+    ghost next_iter_b: b16_iter)
+
+    {:frame false}
+
+    requires
+        set_len(init_unfinished(N)) == 480;
+
+    requires
+        in_stack_addr_range(sp);
+        in_stack_addr_range(sp - 28);
+
+    requires
+        elems_iter_inv(heap, iter_a, a0, 0);
+
+    requires
+        elems_iter_inv(heap, iter_b, a1, 0);
+
+    requires
+        symbols?["bit_rev_table_512"];
+        b16_iter_inv(iter_t1, heap,
+            load_symbol(mem, "bit_rev_table_512"));
+        iter_t1.index == 0;
+
+        bit_rev_ftable_wf(iter_t1.buff);
+
+    requires
+        symbols?["scaling_factors"];
+        elems_iter_inv(heap, iter_t2,
+            load_symbol(mem, "scaling_factors"), 0);
+        iter_t2.buff == inverse_ntt_scaling_table();
+
+    requires
+        symbols?["rev_omega_inv_powers_mont_table"];
+        elems_iter_inv(heap, iter_p1,
+            load_symbol(mem, "rev_omega_inv_powers_mont_table"), 0);
+        iter_p1.buff == rev_omega_inv_powers_mont_table();
+
+    requires
+        symbols?["rev_mixed_powers_mont_table"];
+        elems_iter_inv(heap, iter_p2,
+            load_symbol(mem, "rev_mixed_powers_mont_table"), 0);
+        iter_p2.buff == rev_mixed_powers_mont_table();
+
+    requires
+        iter_a.base_ptr != iter_t1.base_ptr;
+        iter_a.base_ptr != iter_t2.base_ptr;
+        iter_a.base_ptr != iter_p1.base_ptr;
+        iter_a.base_ptr != iter_p2.base_ptr;
+        iter_a.base_ptr != iter_b.base_ptr;
+
+        iter_b.base_ptr != iter_t1.base_ptr;
+        iter_b.base_ptr != iter_t2.base_ptr;
+        iter_b.base_ptr != iter_p1.base_ptr;
+        iter_b.base_ptr != iter_p2.base_ptr;
+
+    ensures
+        elems_iter_inv(heap, next_iter_a, next_iter_a.base_ptr, 0);
+        elems_iter_inv(heap, next_iter_b, next_iter_b.base_ptr, 0);
+
+    ensures
+        mem == old(mem).(heap := heap);
+        next_iter_a.base_ptr == iter_a.base_ptr;
+        next_iter_b.base_ptr == iter_b.base_ptr;
+
+        heap == old(heap)
+            [next_iter_a.base_ptr := heap[next_iter_a.base_ptr]]
+            [next_iter_b.base_ptr := heap[next_iter_b.base_ptr]];
+    
+    ensures
+        s2 == old(s2);
+        s3 == old(s3);
+        s4 == old(s4);
+
+    ensures
+        valid_elems(iter_a.buff);
+        valid_elems(iter_b.buff);
+        next_iter_a.buff == poly_mod_product(
+            as_elems(iter_a.buff), 
+            as_elems(iter_b.buff));
+{
+    mv(s0, a0);
+    mv(s1, a1);
+
+    let buff_a0 := iter_a.buff;
+    let buff_b0 := iter_b.buff;
+
+    next_iter_a := forward_ntt_std2rev(iter_a, iter_p2);
+    let buff_a1 := next_iter_a.buff;
+
+    mv(a0, s1);
+    next_iter_b := forward_ntt_std2rev(iter_b, iter_p2);
+    let buff_b1 := next_iter_b.buff;
+
+    mv(a0, s0);
+    mv(a1, s1);
+    next_iter_a := mq_ntt_poly_mul(next_iter_a, next_iter_b);
+    let buff_p0 := next_iter_a.buff;
+
+    next_iter_a := bit_rev(next_iter_a, iter_t1);
+    let buff_p1 := next_iter_a.buff;
+
+    mv(s0, a0);
+    next_iter_a := inverse_ntt_std2rev(next_iter_a, iter_p1);
+    let buff_p2 := next_iter_a.buff;
+
+    mv(a0, s0);
+    next_iter_a := bit_rev(next_iter_a, iter_t1);
+    let buff_p3 := next_iter_a.buff;
+
+    next_iter_a := mq_ntt_poly_scale(next_iter_a, iter_t2);
+    let buff_p4 := next_iter_a.buff;
+
+    mq_poly_mod_product_lemma(buff_a0, buff_a1, buff_b0, buff_b1,
+        buff_p0, buff_p1, buff_p2, buff_p3, buff_p4);
+
+    next_iter_a := next_iter_a.(index := 0);
+    next_iter_b := next_iter_b.(index := 0);
+}
+
+procedure save_s0()
+    requires
+        in_stack_addr_range(sp);
+        in_stack_addr_range(sp - 8);
+
+    modifies
+        mem; flat; sp;
+    reads
+        ra; s0; 
+    ensures
+        sp == old(sp) - 8;
+        mem == stack_push_batch(old(mem), old(flat),
+            seq(s0, ra));
+        stack_depth(mem) == stack_depth(old(mem)) + 1;
+{
+    push_frame((-8));
+    sw_stack(ra, 4);
+    sw_stack(s0, 0);
+
+    let target := stack_push_batch(old(mem), old(flat), seq(s0, ra));
+    assert top_frame(target.frames) == top_frame(mem.frames);
+}
+
+procedure restore_s0()
+    requires
+        stack_depth(mem) >= 2;
+        seq_len(top_frame(mem.frames).content) == 2;
+
+    reads
+        flat;
+    modifies
+        mem; sp;
+    modifies
+        ra; s0;
+
+    ensures
+        sp == old(sp) + 8;
+        flat == old(flat);
+        mem == stack_pop_frame(old(mem), flat);
+    // ensures
+    //     let frame := top_frame(old(mem.frames)).content;
+{
+    lw_stack(ra, 4);
+    lw_stack(s0, 0);
+    pop_frame(8);
+}
+
 
 procedure rv_falcon(
     ghost iter_c0: b16_iter,
@@ -56,7 +256,7 @@ returns (ghost iter_tt': b16_iter)
 
     requires
         in_stack_addr_range(sp);
-        in_stack_addr_range(sp - 24);
+        in_stack_addr_range(sp - 36);
 
     requires
         elems_iter_inv(heap, iter_c0, a0, 0);
@@ -88,9 +288,9 @@ returns (ghost iter_tt': b16_iter)
         iter_p1.buff == rev_omega_inv_powers_mont_table();
 
     requires
-        symbols?["rev_ntt512_mixed_powers_table"];
+        symbols?["rev_mixed_powers_mont_table"];
         elems_iter_inv(heap, iter_p2,
-            load_symbol(mem, "rev_ntt512_mixed_powers_table"), 0);
+            load_symbol(mem, "rev_mixed_powers_mont_table"), 0);
         iter_p2.buff == rev_mixed_powers_mont_table();
 
     requires
@@ -117,6 +317,8 @@ returns (ghost iter_tt': b16_iter)
             as_nelems(iter_s2.buff),
             as_elems(iter_h.buff));
 {
+    save_s0();
+
     li(s1, 12289);
 
     mv(s2, a0);
@@ -151,6 +353,8 @@ returns (ghost iter_tt': b16_iter)
 
     falcon_lemma(tt0, tt1, tt2,
         iter_tt'.buff, iter_s2.buff, iter_h.buff, iter_c0.buff, a0);
+
+    restore_s0();
 }
 
 #verbatim
