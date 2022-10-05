@@ -338,8 +338,8 @@ int main(void) {
 
   mod_pow(d0inv,out,workbuf,rr,n,sig);
   
-  // for (int i=0; i<(RSANUMWORDS); i++) {
-  //   assert(out[i] == 0x5555);
-  // }
+  for (int i=0; i<(RSANUMWORDS); i++) {
+    assert(out[i] == 0x55555555);
+  }
 }
 

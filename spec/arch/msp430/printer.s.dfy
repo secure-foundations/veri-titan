@@ -178,6 +178,8 @@ class Printer {
         modifies this
     {
         var defs, res := getFunctions(code, {}, []); 
+        // do not print these two as procs
+        printed := printed + {"builtin__mspabi_mpyl", "builtin__mspabi_mpyi"};
 
         var i := 0;
         while i < |res|

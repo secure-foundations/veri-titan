@@ -38,6 +38,7 @@ import opened rv_forward_ntt_std2rev
 import opened rv_bit_shuffle
 import opened rv_mq_ntt_poly_scale
 import opened rv_mq_ntt_poly_mul
+import opened rv_reg_save
 
 import opened falcon_512_i
 
@@ -189,54 +190,6 @@ returns (
     next_iter_b := next_iter_b.(index := 0);
 }
 
-procedure save_s0()
-    requires
-        in_stack_addr_range(sp);
-        in_stack_addr_range(sp - 8);
-
-    modifies
-        mem; flat; sp;
-    reads
-        ra; s0; 
-    ensures
-        sp == old(sp) - 8;
-        mem == stack_push_batch(old(mem), old(flat),
-            seq(s0, ra));
-        stack_depth(mem) == stack_depth(old(mem)) + 1;
-{
-    push_frame((-8));
-    sw_stack(ra, 4);
-    sw_stack(s0, 0);
-
-    let target := stack_push_batch(old(mem), old(flat), seq(s0, ra));
-    assert top_frame(target.frames) == top_frame(mem.frames);
-}
-
-procedure restore_s0()
-    requires
-        stack_depth(mem) >= 2;
-        seq_len(top_frame(mem.frames).content) == 2;
-
-    reads
-        flat;
-    modifies
-        mem; sp;
-    modifies
-        ra; s0;
-
-    ensures
-        sp == old(sp) + 8;
-        flat == old(flat);
-        mem == stack_pop_frame(old(mem), flat);
-    // ensures
-    //     let frame := top_frame(old(mem.frames)).content;
-{
-    lw_stack(ra, 4);
-    lw_stack(s0, 0);
-    pop_frame(8);
-}
-
-
 procedure rv_falcon(
     ghost iter_c0: b16_iter,
     ghost iter_s2: b16_iter,
@@ -256,7 +209,7 @@ returns (ghost iter_tt': b16_iter)
 
     requires
         in_stack_addr_range(sp);
-        in_stack_addr_range(sp - 36);
+        in_stack_addr_range(sp - 42);
 
     requires
         elems_iter_inv(heap, iter_c0, a0, 0);
@@ -317,7 +270,7 @@ returns (ghost iter_tt': b16_iter)
             as_nelems(iter_s2.buff),
             as_elems(iter_h.buff));
 {
-    save_s0();
+    save_s0__s5();
 
     li(s1, 12289);
 
@@ -354,7 +307,7 @@ returns (ghost iter_tt': b16_iter)
     falcon_lemma(tt0, tt1, tt2,
         iter_tt'.buff, iter_s2.buff, iter_h.buff, iter_c0.buff, a0);
 
-    restore_s0();
+    restore_s0__s5();
 }
 
 #verbatim
