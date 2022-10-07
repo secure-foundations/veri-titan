@@ -1,0 +1,382 @@
+.globl msp_falcon
+msp_falcon:
+  PUSHM.W	#7,R10
+  MOV.W	R12,R6
+  MOV.W	R13,R7
+  MOV.W	R15,R4
+  MOV.W	R15,R10
+  ADD.W	#1024,R10
+
+w_start0:
+	CMP.W	R15,R10
+	JGE	w_end0
+  MOV.W	@R13+,R5
+  MOV.W	R5,R8
+  RLA.W	R5
+  CLR.W	R5
+  SUBC.W	R5,R5
+  AND.W	#12289,R5
+  ADD.W	R5,R8
+  MOV.W	R8,0(R15)
+  ADD.W	#2,R15
+  JMP w_start0
+
+w_end0:
+  ADD.W	#-1024,R15
+  MOV.W	R4,R12
+  MOV.W	R14,R5
+  CALL #fntt
+  MOV.W	R5,R12
+  CALL #fntt
+  MOV.W	R12,R13
+  MOV.W	R4,R12
+  MOV.W	R12,R10
+  MOV.W	R12,R8
+  MOV.W	R13,R9
+  ADD.W	#1024,R8
+
+w_start1:
+	CMP.W	R10,R8
+	JGE	w_end1
+  MOV.W	@R10,R12
+  MOV.W	@R9+,R13
+  CALL #montymul
+  MOV.W	#10952,R13
+  CALL #montymul
+  MOV.W	R12,0(R10)
+  ADD.W	#2,R10
+  JMP w_start1
+
+w_end1:
+  ADD.W	#-1024,R10
+  MOV.W	R10,R12
+  CALL #bit_rev
+  CALL #intt
+  CALL #bit_rev
+  MOV.W	R12,R10
+  MOV.W	R12,R8
+  MOV.W	&scaling_factors,R9
+  ADD.W	#1024,R8
+
+w_start2:
+	CMP.W	R10,R8
+	JGE	w_end2
+  MOV.W	@R10,R12
+  MOV.W	@R9+,R13
+  CALL #montymul
+  MOV.W	R12,0(R10)
+  ADD.W	#2,R10
+  JMP w_start2
+
+w_end2:
+  ADD.W	#-1024,R10
+  MOV.W	R10,R12
+  MOV.W	R5,R13
+  MOV.W	R12,R5
+  MOV.W	R12,R15
+  ADD.W	#1024,R5
+
+w_start3:
+	CMP.W	R15,R5
+	JGE	w_end3
+  MOV.W	@R15,R11
+  MOV.W	@R6+,R12
+  MOV.W	#-1,R13
+  MOV.W	R11,R14
+  SUB.W	R12,R14
+  CLR.W	R13
+  SUBC.W	R13,R13
+  AND.W	#12289,R13
+  ADD.W	R14,R13
+  MOV.W	R13,0(R15)
+  ADD.W	#2,R15
+  JMP w_start3
+
+w_end3:
+  ADD.W	#-1024,R15
+  MOV.W	R15,R12
+  MOV.W	R12,R10
+  ADD.W	#1024,R10
+
+w_start4:
+	CMP.W	R12,R10
+	JGE	w_end4
+  MOV.W	@R12,R5
+  MOV.W	#6144,R6
+  SUB.W	R5,R6
+  CLR.W	R6
+  SUBC.W	R6,R6
+  AND.W	#12289,R6
+  SUB.W	R6,R5
+  MOV.W	R5,0(R12)
+  ADD.W	#2,R12
+  JMP w_start4
+
+w_end4:
+  MOV.W	#-1024,R12
+  MOV.W	R12,R5
+  MOV.W	R7,R8
+  CLR.W	R15
+  ADD.W	#1024,R8
+  CLR.W	R10
+  CLR.W	R11
+  CLR.W	R4
+
+w_start5:
+	CMP.W	R7,R8
+	JGE	w_end5
+  MOV.W	@R5+,R12
+  MOV.W	R12,R14
+  CLR.W	R13
+  CALL #builtin__mspabi_mpyl
+  ADD.W	R12,R10
+  ADDC.W	R13,R11
+  CLR.W	R13
+  SUBC.W	R13,R13
+  AND.W	R13,R4
+  MOV.W	@R7+,R12
+  MOV.W	R12,R14
+  CLR.W	R13
+  CALL #builtin__mspabi_mpyl
+  ADD.W	R12,R10
+  ADDC.W	R13,R11
+  CLR.W	R13
+  SUBC.W	R13,R13
+  AND.W	R13,R4
+  JMP w_start5
+
+w_end5:
+  MOV.W	#17878,R14
+  SUB.W	R14,R10
+  MOV.W	#664,R13
+  SUBC.W	R13,R11
+  CLR.W	R14
+  SUBC.W	R14,R14
+  CLR.W	R13
+  ADD.W	#-1,R13
+  MOV.W	#0,R12
+	CMP.W	R14,R13
+	JEQ	if_true6
+  JMP if_end6
+
+if_true6:
+  MOV.W	#1,R12
+
+if_end6:
+	CMP.W	R4,R13
+	JEQ	if_true7
+  JMP if_end7
+
+if_true7:
+  MOV.W	#0,R12
+
+if_end7:
+  POPM.W	#7,R10
+  RET
+
+fntt:
+  PUSHM.W	#7,R10
+  MOV.W	#512,R4
+  MOV.W	#1,R5
+  MOV.W	&rev_mixed_powers_mont_table,R14
+
+w_start8:
+	CMP.W	R5,#512
+	JGE	w_end8
+  MOV.W	R4,R9
+  RRA.W	R4
+  MOV.W	#0,R6
+  MOV.W	#0,R10
+
+w_start9:
+	CMP.W	R6,R5
+	JGE	w_end9
+  MOV.W	R5,R11
+  ADD.W	R6,R11
+  ADD.W	R11,R11
+  MOV.W	R10,R7
+  ADD.W	R7,R7
+  MOV.W	R9,R15
+  ADD.W	R7,R15
+  ADD.W	R14,R11
+  MOV.W	@R11,R13
+
+w_start10:
+	CMP.W	R7,R15
+	JGE	w_end10
+  PUSHM.W	#4,R15
+  MOV.W	R7,R15
+  ADD.W	R9,R15
+  MOV.W	R12,R8
+  ADD.W	R12,R15
+  MOV.W	@R15,R12
+  CALL #montymul
+  ADD.W	R7,R8
+  MOV.W	@R8,R11
+  MOV.W	#-1,R13
+  MOV.W	R11,R14
+  SUB.W	R12,R14
+  CLR.W	R13
+  SUBC.W	R13,R13
+  AND.W	#12289,R13
+  ADD.W	R14,R13
+  MOV.W	R13,0(R15)
+  MOV.W	R12,R14
+  ADD.W	#-12289,R14
+  ADD.W	R11,R14
+  MOV.W	R14,R13
+  RLA.W	R13
+  CLR.W	R13
+  SUBC.W	R13,R13
+  AND.W	#12289,R13
+  ADD.W	R14,R13
+  MOV.W	R13,0(R8)
+  POPM.W	#4,R15
+  ADD.W	#2,R7
+  JMP w_start10
+
+w_end10:
+  ADD.W	R9,R10
+  ADD.W	#1,R6
+  JMP w_start9
+
+w_end9:
+  ADD.W	R5,R5
+  JMP w_start8
+
+w_end8:
+  POPM.W	#7,R10
+  RET
+
+montymul:
+  PUSHM.W	#6,R10
+  MOV.W	R13,R8
+  MOV.W	R14,R7
+  MOV.W	R15,R6
+  MOV.W	R11,R5
+  MOV.W	R13,R14
+  CLR.W	R13
+  CLR.W	R15
+  CALL #builtin__mspabi_mpyl
+  MOV.W	R12,R9
+  MOV.W	R13,R10
+  MOV.W	#12287,R13
+  CALL #builtin__mspabi_mpyi
+  CLR.W	R13
+  MOV.W	#12289,R14
+  CALL #builtin__mspabi_mpyl
+  ADD.W	R9,R12
+  ADDC.W	R10,R13
+  MOV.W	#12289,R12
+  SUB.W	R12,R13
+  CLR.W	R12
+  SUBC.W	R12,R12
+  AND.W	#12289,R12
+  ADD.W	R12,R13
+  MOV.W	R13,R12
+  MOV.W	R8,R13
+  MOV.W	R7,R14
+  MOV.W	R6,R15
+  MOV.W	R5,R11
+  POPM.W	#6,R10
+  RET
+
+bit_rev:
+  PUSHM.W	#6,R10
+  MOV.W	&bit_rev_table_512,R9
+  MOV.W	R9,R10
+  ADD.W	#960,R10
+
+w_start11:
+	CMP.W	R9,R10
+	JGE	w_end11
+  MOV.W	@R9+,R8
+  MOV.W	@R9+,R7
+  ADD.W	R8,R8
+  ADD.W	R7,R7
+  ADD.W	R12,R8
+  ADD.W	R12,R7
+  MOV.W	@R8,R6
+  MOV.W	@R7,R5
+  MOV.W	R5,0(R8)
+  MOV.W	R6,0(R7)
+  JMP w_start11
+
+w_end11:
+  POPM.W	#6,R10
+  RET
+
+intt:
+  PUSHM.W	#7,R10
+  MOV.W	#512,R4
+  MOV.W	#1,R5
+  MOV.W	&rev_omega_inv_powers_mont_table,R14
+
+w_start12:
+	CMP.W	R5,#512
+	JGE	w_end12
+  MOV.W	R4,R9
+  RRA.W	R4
+  MOV.W	#0,R6
+  MOV.W	#0,R10
+
+w_start13:
+	CMP.W	R6,R5
+	JGE	w_end13
+  MOV.W	R5,R11
+  ADD.W	R6,R11
+  ADD.W	R11,R11
+  MOV.W	R10,R7
+  ADD.W	R7,R7
+  MOV.W	R9,R15
+  ADD.W	R7,R15
+  ADD.W	R14,R11
+  MOV.W	@R11,R13
+
+w_start14:
+	CMP.W	R7,R15
+	JGE	w_end14
+  PUSHM.W	#4,R15
+  MOV.W	R7,R15
+  ADD.W	R9,R15
+  MOV.W	R12,R8
+  ADD.W	R12,R15
+  MOV.W	@R15,R12
+  CALL #montymul
+  ADD.W	R7,R8
+  MOV.W	@R8,R11
+  MOV.W	#-1,R13
+  MOV.W	R11,R14
+  SUB.W	R12,R14
+  CLR.W	R13
+  SUBC.W	R13,R13
+  AND.W	#12289,R13
+  ADD.W	R14,R13
+  MOV.W	R13,0(R15)
+  MOV.W	R12,R14
+  ADD.W	#-12289,R14
+  ADD.W	R11,R14
+  MOV.W	R14,R13
+  RLA.W	R13
+  CLR.W	R13
+  SUBC.W	R13,R13
+  AND.W	#12289,R13
+  ADD.W	R14,R13
+  MOV.W	R13,0(R8)
+  POPM.W	#4,R15
+  ADD.W	#2,R7
+  JMP w_start14
+
+w_end14:
+  ADD.W	R9,R10
+  ADD.W	#1,R6
+  JMP w_start13
+
+w_end13:
+  ADD.W	R5,R5
+  JMP w_start12
+
+w_end12:
+  POPM.W	#7,R10
+  RET
+
