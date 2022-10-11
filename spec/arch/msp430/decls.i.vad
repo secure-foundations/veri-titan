@@ -319,7 +319,7 @@ procedure lw_iter(inout rs: reg, inline inc: bool, inout rd: reg, ghost iter: it
 function load_symbol(mem: mem_t, name: string): uint16 extern;
 
 procedure lw_symbol(inline name: string, inout rd: reg)
-    {:instruction Ins(MSP_MOV_W(Abs(name), Reg(rd)))}
+    {:instruction Ins(MSP_MOV_W(ISym(name), Reg(rd)))}
     requires
         symbols?[name];
     reads
@@ -521,7 +521,7 @@ procedure rra_w(inout rd: reg)
     assume false;
 }
 
-procedure builtin__mspabi_mpyl()
+procedure __mspabi_mpyl()
     {:noInline}
     requires
         r15 == 0;
@@ -539,7 +539,7 @@ procedure builtin__mspabi_mpyl()
 
 function mul(a: uint16, b: uint16): uint16 extern;
 
-procedure builtin__mspabi_mpyi()
+procedure __mspabi_mpyi()
     {:noInline}
     reads
         r13;

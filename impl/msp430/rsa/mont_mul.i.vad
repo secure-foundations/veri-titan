@@ -150,8 +150,7 @@ returns (ghost next_iter_c: iter_t)
         in_stack_addr_range(sp);
         in_stack_addr_range(sp - 32);
 
-        symbols?["d0inv"];
-        load_symbol(mem, "d0inv") == rsa.M0D;
+        rsa.M0D == 0x71df;
 
         iter_c.base_ptr != iter_n.base_ptr;
         iter_c.base_ptr != iter_b.base_ptr;
@@ -198,8 +197,6 @@ returns (ghost next_iter_c: iter_t)
             r6 == old(r6);
 
             symbols?["n"];
-            symbols?["d0inv"];
-            load_symbol(mem, "d0inv") == rsa.M0D;
 
             r7 == iter_a.base_ptr + 384;
             mvar_iter_inv(heap, next_iter_c, r8, 0, (-1));
@@ -225,7 +222,6 @@ returns (ghost next_iter_c: iter_t)
         mov_w(r10, r14);
         next_iter_c := mont_mul_add(
             next_iter_c, r13, iter_b, iter_n, next_iter_a, rsa, i);
-        next_iter_c := next_iter_c.(index := 0);
         i := i + 1;
     }
 

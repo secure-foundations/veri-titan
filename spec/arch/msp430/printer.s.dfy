@@ -20,12 +20,12 @@ module msp_printer {
             case Reg(r) => printReg(r);
             case Idx(r, index) => 
                 print(index); print("("); printReg(r); print(")");
-            case Abs(s) => 
-                print("&"); print(s);
             case RegIndir(r, inc) =>
                 print("@"); printReg(r); if inc { print("+"); }
             case Imm(i) =>
                 print("#"); print(i);
+            case ISym(s) => 
+                print("#"); print(s);
     }
 
     method printIns(ins: ins_t)
@@ -76,12 +76,12 @@ module msp_printer {
     {
         match wcond
             case EQ(o1, o2) =>
-                print("\tCMP.W\t"); printOperand(o1); print(","); printOperand(o2);
+                print("\tCMP.W\t"); printOperand(o2); print(","); printOperand(o1);
                 print("\n");
                 print("\tJNE\t"); print("w_end"); print(lcount);
                 print("\n");
             case LO(o1, o2) =>
-                print("\tCMP.W\t"); printOperand(o1); print(","); printOperand(o2);
+                print("\tCMP.W\t"); printOperand(o2); print(","); printOperand(o1);
                 print("\n");
                 print("\tJGE\t"); print("w_end"); print(lcount);
                 print("\n");
@@ -91,12 +91,12 @@ module msp_printer {
     {
         match wcond
             case EQ(o1, o2) =>
-                print("\tCMP.W\t"); printOperand(o1); print(","); printOperand(o2);
+                print("\tCMP.W\t"); printOperand(o2); print(","); printOperand(o1);
                 print("\n");
                 print("\tJEQ\t"); print("if_true"); print(lcount);
                 print("\n");
             case LO(o1, o2) =>
-                print("\tCMP.W\t"); printOperand(o1); print(","); printOperand(o2);
+                print("\tCMP.W\t"); printOperand(o2); print(","); printOperand(o1);
                 print("\n");
                 print("\tJLO\t"); print("if_true"); print(lcount);
                 print("\n");
@@ -179,7 +179,7 @@ class Printer {
     {
         var defs, res := getFunctions(code, {}, []); 
         // do not print these two as procs
-        printed := printed + {"builtin__mspabi_mpyl", "builtin__mspabi_mpyi"};
+        printed := printed + {"__mspabi_mpyl", "__mspabi_mpyi"};
 
         var i := 0;
         while i < |res|

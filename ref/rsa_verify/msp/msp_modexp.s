@@ -1,5 +1,5 @@
-.globl mod_exp
-mod_exp:
+.globl mod_pow
+mod_pow:
   PUSHM.W	#7,R10
   MOV.W	R12,R10
   MOV.W	R13,R9
@@ -14,7 +14,7 @@ mod_exp:
   CALL #mont_mul
 
 w_start0:
-	CMP.W	R5,R6
+	CMP.W	R6,R5
 	JGE	w_end0
   MOV.W	R8,R12
   MOV.W	R9,R13
@@ -34,10 +34,10 @@ w_end0:
   CALL #mont_mul
   MOV.W	R10,R12
   ADD.W	#384,R12
-  MOV.W	&n,R11
+  MOV.W	#n,R11
 
 w_start1:
-	CMP.W	R10,R12
+	CMP.W	R12,R10
 	JGE	w_end1
   MOV.W	@R10+,R7
   MOV.W	@R11+,R8
@@ -49,7 +49,7 @@ w_end1:
   ADDC.W	R7,R7
   ADD.W	#-384,R12
   MOV.W	#0,R8
-	CMP.W	R7,R8
+	CMP.W	R8,R7
 	JEQ	if_true2
   JMP if_end2
 
@@ -67,7 +67,7 @@ mont_mul:
   MOV.W	#0,R9
 
 w_start3:
-	CMP.W	R12,R8
+	CMP.W	R8,R12
 	JGE	w_end3
   MOV.W	R9,0(R12)
   ADD.W	#2,R12
@@ -81,7 +81,7 @@ w_end3:
   ADD.W	#384,R7
 
 w_start4:
-	CMP.W	R9,R7
+	CMP.W	R7,R9
 	JGE	w_end4
   MOV.W	R8,R12
   MOV.W	@R9+,R13
@@ -105,10 +105,10 @@ mont_mul_add:
   CALL #mula16
   MOV.W	R12,R10
   MOV.W	R13,R9
-  MOV.W	&d0inv,R13
-  CALL #builtin__mspabi_mpyi
+  MOV.W	#29151,R13
+  CALL #__mspabi_mpyi
   MOV.W	R12,R4
-  MOV.W	&n,R7
+  MOV.W	#n,R7
   MOV.W	@R7+,R13
   MOV.W	R10,R14
   CALL #mula16
@@ -118,7 +118,7 @@ mont_mul_add:
   MOV.W	R15,0(SP)
 
 w_start5:
-	CMP.W	R7,R15
+	CMP.W	R15,R7
 	JGE	w_end5
   MOV.W	R5,R12
   MOV.W	@R6+,R13
@@ -146,7 +146,7 @@ w_end5:
   ADDC.W	R15,R15
   MOV.W	R9,0(R8)
   ADD.W	#2,R8
-	CMP.W	R9,R10
+	CMP.W	R10,R9
 	JLO	if_true6
   JMP if_end6
 
@@ -166,7 +166,7 @@ mula16:
   MOV.W	R13,R14
   MOV.W	#0,R15
   MOV.W	#0,R13
-  CALL #builtin__mspabi_mpyl
+  CALL #__mspabi_mpyl
   MOV.W	#0,R11
   ADD.W	R10,R12
   ADDC.W	R11,R13
@@ -180,7 +180,7 @@ mulaa16:
   MOV.W	R13,R14
   MOV.W	#0,R15
   MOV.W	#0,R13
-  CALL #builtin__mspabi_mpyl
+  CALL #__mspabi_mpyl
   MOV.W	R10,R14
   MOV.W	#0,R15
   ADD.W	R14,R12
@@ -197,10 +197,10 @@ sub_mod:
   MOV.W	R12,R7
   ADD.W	#384,R7
   SUBC.W	R9,R9
-  MOV.W	&n,R13
+  MOV.W	#n,R13
 
 w_start7:
-	CMP.W	R12,R7
+	CMP.W	R7,R12
 	JGE	w_end7
   MOV.W	@R12+,R9
   MOV.W	@R13+,R10

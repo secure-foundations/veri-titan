@@ -228,7 +228,7 @@ procedure accumulate(ghost sum: uint32_view_t, ghost asum: nat)
     let v16 := r12;
     mov_w(r12, r14);
     clr_w(r13);
-    builtin__mspabi_mpyl();
+    __mspabi_mpyl();
 
     sum' := dw_add(r12, r13, s_lh, s_uh, sum);
     let cf := flags.cf;

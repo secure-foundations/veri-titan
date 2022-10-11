@@ -25,9 +25,10 @@ module msp_machine {
     datatype operand_t = 
         | Reg(r: reg_t)
         | Idx(r: reg_t, index: int16)
-        | Abs(s: string)
+        // | Abs(s: string)
         | RegIndir(r: reg_t, inc: bool)
         | Imm(i: int16)
+        | ISym(s: string)
     
     datatype flags_t = flags_cons(msb: uint1, zero: uint1, cf: uint1 /*, over: uint1 */)
 

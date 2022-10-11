@@ -68,8 +68,7 @@ returns (ghost next_iter_ar: iter_t)
         in_stack_addr_range(sp);
         in_stack_addr_range(sp - 32);
 
-        symbols?["d0inv"];
-        load_symbol(mem, "d0inv") == rsa.M0D;
+        rsa.M0D == 0x71df;
 
         iter_out.base_ptr != iter_ar.base_ptr;
         iter_out.base_ptr != iter_aar.base_ptr;
@@ -149,8 +148,7 @@ returns (ghost next_iter_ar: iter_t,
         in_stack_addr_range(sp);
         in_stack_addr_range(sp - 32);
 
-        symbols?["d0inv"];
-        load_symbol(mem, "d0inv") == rsa.M0D;
+        rsa.M0D == 0x71df;
 
         iter_ar.base_ptr != iter_aar.base_ptr;
         iter_ar.base_ptr != iter_in.base_ptr;
@@ -263,7 +261,6 @@ ensures
     }
 
     subb_inv_post_lemma(diff, flags.cf, next_iter_out.buff, next_iter_n.buff);
-    // borrow := flags.cf;
 
     mov_w_imm(0, r7);
     addc_w(r7, r7);
@@ -286,9 +283,7 @@ returns (ghost next_iter_out: iter_t)
         in_stack_addr_range(sp - 32);
 
         rsa.E0 == 16;
-
-        symbols?["d0inv"];
-        load_symbol(mem, "d0inv") == rsa.M0D;
+        rsa.M0D == 0x71df;
 
         iter_out.base_ptr != iter_ar.base_ptr;
         iter_out.base_ptr != iter_in.base_ptr;
@@ -331,7 +326,7 @@ returns (ghost next_iter_out: iter_t)
         to_nat(next_iter_out.buff), r7 != r8, rsa);
 }
 
-procedure mod_exp(
+procedure mod_pow(
     ghost iter_out: iter_t,
     ghost iter_ar: iter_t,
     ghost iter_aar: iter_t,
@@ -353,9 +348,7 @@ returns (
         in_stack_addr_range(sp - 46);
 
         rsa.E0 == 16;
-
-        symbols?["d0inv"];
-        load_symbol(mem, "d0inv") == rsa.M0D;
+        rsa.M0D == 0x71df;
 
         iter_out.base_ptr != iter_ar.base_ptr;
         iter_out.base_ptr != iter_aar.base_ptr;
@@ -412,9 +405,6 @@ returns (
         invariant
             r6 == 8;
             r5 <= 8;
-
-            symbols?["d0inv"];
-            load_symbol(mem, "d0inv") == rsa.M0D;
 
             iter_out.base_ptr != iter_ar.base_ptr;
             iter_out.base_ptr != iter_aar.base_ptr;

@@ -53,7 +53,7 @@ procedure mula16() returns (ghost sum: uint32_view_t)
     mov_w(r13, r14);
     mov_w_imm(0, r15);
     mov_w_imm(0, r13);
-    builtin__mspabi_mpyl();
+    __mspabi_mpyl();
 
     let x_lh := r12;
     let x_uh := r13;
@@ -103,7 +103,7 @@ procedure mulaa16()
     mov_w(r13, r14);
     mov_w_imm(0, r15);
     mov_w_imm(0, r13);
-    builtin__mspabi_mpyl();
+    __mspabi_mpyl();
 
     ghost var x_lh := r12;
     ghost var x_uh := r13;

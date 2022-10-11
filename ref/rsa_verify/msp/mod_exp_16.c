@@ -85,13 +85,20 @@ void mont_mul(uint16_t *c,
     mont_mul_add(c, a[i], b);
 }
 
-// void print_buff(char* name, const uint16_t* a, uint16_t len)
+// void print_buff(char* name, const uint16_t* a)
 // {
 //   printf("%s = to_nat(\"", name);
-//   for (int i = 0; i < len; i++) {
+//   for (int i = 0; i < RSANUMWORDS; i++) {
 //     printf("%04x", a[i]);  // endian reversed
 //   }
 //   printf("\")\n");
+// }
+
+// void print_raw_buff(const uint16_t* a)
+// {
+//   for (int i = 0; i < RSANUMWORDS; i++) {
+//     printf("%x\n", a[i]);  
+//   }
 // }
 
 /**
@@ -118,6 +125,7 @@ void mod_pow(uint16_t *out,
 
   /* Exponent 65537 */
   mont_mul(a_r, in, rr);  /* a_r = a * RR / R mod M */
+  // print_raw_buff(a_r);
 
   for (i = 0; i < 16; i += 2) {
     mont_mul(aa_r, a_r, a_r); /* aa_r = a_r * a_r / R mod M */

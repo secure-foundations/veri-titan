@@ -6,7 +6,7 @@ import opened msp_printer
 
 method Main()
 {
-    reveal va_code_mod_exp();
-    var printer := new Printer({"mod_exp"});
-    printer.printProc(va_code_mod_exp());
+    reveal va_code_mod_pow();
+    var printer := new Printer({"mod_pow"});
+    printer.printProc(va_code_mod_pow());
 }

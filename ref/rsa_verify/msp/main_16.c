@@ -15,64 +15,64 @@ const uint16_t sig[RSANUMWORDS] = {0xe983,0xceb7,0xb200,0xe693,0x3989,0xf915,0x9
 
 uint16_t d0inv = 0x71df;
 
-int ge_mod_wrap(const uint16_t *a)
-{
-  if (a[RSANUMWORDS] > 0) {
-    return 1;
-  }
-  return ge_mod(a);
-}
+// int ge_mod_wrap(const uint16_t *a)
+// {
+//   if (a[RSANUMWORDS] > 0) {
+//     return 1;
+//   }
+//   return ge_mod(a);
+// }
 
-void sub_mod_ext(uint16_t *a)
-{
-  int32_t A = 0;
-  uint16_t i;
-  for (i = 0; i < RSANUMWORDS + 1; ++i) {
-    if (i == RSANUMWORDS) {
-      A += (uint32_t)a[i];
-    } else {
-      A += (uint32_t)a[i] - n[i];
-    }
-    a[i] = (uint16_t)A;
-    A >>= 16;
-  }
-}
+// void sub_mod_ext(uint16_t *a)
+// {
+//   int32_t A = 0;
+//   uint16_t i;
+//   for (i = 0; i < RSANUMWORDS + 1; ++i) {
+//     if (i == RSANUMWORDS) {
+//       A += (uint32_t)a[i];
+//     } else {
+//       A += (uint32_t)a[i] - n[i];
+//     }
+//     a[i] = (uint16_t)A;
+//     A >>= 16;
+//   }
+// }
 
-void double_mod(uint16_t* a)
-{
-  uint32_t sum = 0;
-  for (int i = 0; i < RSANUMWORDS+1; i ++)
-  {
-    sum += (uint32_t) a[i];
-    sum += (uint32_t) a[i];
-    a[i] = (uint16_t) sum;
-    sum >>= 16;
-  }
-}
+// void double_mod(uint16_t* a)
+// {
+//   uint32_t sum = 0;
+//   for (int i = 0; i < RSANUMWORDS+1; i ++)
+//   {
+//     sum += (uint32_t) a[i];
+//     sum += (uint32_t) a[i];
+//     a[i] = (uint16_t) sum;
+//     sum >>= 16;
+//   }
+// }
 
-void compute_rr(uint16_t* a, uint16_t* workbuf)
-{
-  for (int i = 0; i < RSANUMWORDS; i ++) { a[i] = 0; }
-  a[RSANUMWORDS] = 1;
-  sub_mod_ext(a);
+// void compute_rr(uint16_t* a, uint16_t* workbuf)
+// {
+//   for (int i = 0; i < RSANUMWORDS; i ++) { a[i] = 0; }
+//   a[RSANUMWORDS] = 1;
+//   sub_mod_ext(a);
 
-  for (int i = 0; i < 96; i ++) {
-    double_mod(a);
-    if (ge_mod_wrap(a)) {
-      sub_mod_ext(a);
-    }
-  }
+//   for (int i = 0; i < 96; i ++) {
+//     double_mod(a);
+//     if (ge_mod_wrap(a)) {
+//       sub_mod_ext(a);
+//     }
+//   }
 
-  mont_mul(workbuf, a, a);
-  mont_mul(a, workbuf, workbuf);
-  mont_mul(workbuf, a, a);
-  mont_mul(a, workbuf, workbuf);
-  mont_mul(workbuf, a, a);
+//   mont_mul(workbuf, a, a);
+//   mont_mul(a, workbuf, workbuf);
+//   mont_mul(workbuf, a, a);
+//   mont_mul(a, workbuf, workbuf);
+//   mont_mul(workbuf, a, a);
 
-  for (int i = 0; i < RSANUMWORDS; i ++) {
-    a[i] = workbuf[i];
-  }
-}
+//   for (int i = 0; i < RSANUMWORDS; i ++) {
+//     a[i] = workbuf[i];
+//   }
+// }
 
 int main(void) {
   // uint16_t RR[RSANUMWORDS+1];
@@ -81,7 +81,14 @@ int main(void) {
   // compute_rr(RR, workbuf);
   // print_buff("RR", RR, RSANUMWORDS);
   mod_pow(out,workbuf,rr,sig);
-  for (int i=0; i<(RSANUMWORDS); i++) {
-    assert(out[i] == 0x5555);
-  }
+
+  // for (int i=0; i<(RSANUMWORDS); i++) {
+  //   out[i] = 0x5555;
+  // }
+  // print_buff("in", out);
+  // print_buff("n", n);
+  // sub_mod(out);
+  // print_buff("out", out);
+
+  // print_raw_buff(out);
 }

@@ -120,7 +120,7 @@ procedure mma_pre(
         in_stack_addr_range(sp - 4);
 
         symbols?["n"];
-        symbols?["d0inv"];
+        rsa.M0D == 0x71df;
 
         iter_c.base_ptr != iter_n.base_ptr;
         iter_c.base_ptr != iter_b.base_ptr;
@@ -129,8 +129,6 @@ procedure mma_pre(
         r13 == a;
         mvar_iter_inv(heap, iter_b, r14, 0, (-1));
         mvar_iter_inv(heap, iter_n, load_symbol(mem, "n"), 0, rsa.M);
-
-        load_symbol(mem, "d0inv") == rsa.M0D;
 
         rsa_params_inv(rsa);
 
@@ -175,8 +173,8 @@ procedure mma_pre(
     mov_w(r12, r10); // r10 == lh(A)
     mov_w(r13, r9);  // r9  == uh(A)
 
-    lw_symbol("d0inv", r13);
-    builtin__mspabi_mpyi();
+    mov_w_imm(0x71df, r13);
+    __mspabi_mpyi();
     mov_w(r12, r4);
 
     lw_symbol("n", r7);
@@ -222,8 +220,7 @@ returns (
         in_stack_addr_range(sp - 4);
 
         symbols?["n"];
-        symbols?["d0inv"];
-        load_symbol(mem, "d0inv") == rsa.M0D;
+        rsa.M0D == 0x71df;
 
         iter_c.base_ptr != iter_n.base_ptr;
         iter_c.base_ptr != iter_b.base_ptr;
@@ -309,6 +306,7 @@ returns (ghost next_iter_c: iter_t)
         in_stack_addr_range(sp - 8);
 
         symbols?["n"];
+        rsa.M0D == 0x71df;
 
         iter_c.base_ptr != iter_n.base_ptr;
         iter_c.base_ptr != iter_b.base_ptr;
@@ -331,11 +329,14 @@ returns (ghost next_iter_c: iter_t)
 
     ensures
         sp == old(sp);
-        mem == old(mem).(heap := heap);
-        heap == old(heap)[next_iter_c.base_ptr := B16(next_iter_c.buff)];
-
+    ensures
         next_iter_c.base_ptr == iter_c.base_ptr;
-        mvar_iter_inv(heap, next_iter_c, (-1), (-1), (-1));
+        mvar_iter_inv(heap, next_iter_c, iter_c.base_ptr, 0, (-1));
+
+    ensures
+        mem == old(mem).(heap := heap);
+        heap == old(heap)[iter_c.base_ptr := heap[iter_c.base_ptr]];
+
         montmul_inv(next_iter_c.buff, iter_a.buff, i+1, iter_b.buff, rsa);
 {
     let d0 := r4;
@@ -364,6 +365,7 @@ returns (ghost next_iter_c: iter_t)
         to_nat(original_c), pre_sub_c, next_iter_c.buff, bout, next_bout);
 
     montmul_inv_lemma(original_c, next_iter_c.buff, iter_a.buff, i, d0, iter_b.buff, rsa);
+    next_iter_c := next_iter_c.(index := 0);
 }
 
 procedure mont_mul_add_inner(
@@ -382,8 +384,7 @@ returns (ghost next_iter_c: iter_t)
         in_stack_addr_range(sp - 10);
 
         symbols?["n"];
-        symbols?["d0inv"];
-        load_symbol(mem, "d0inv") == rsa.M0D;
+        rsa.M0D == 0x71df;
 
         iter_c.base_ptr != iter_n.base_ptr;
         iter_c.base_ptr != iter_b.base_ptr;
@@ -401,10 +402,14 @@ returns (ghost next_iter_c: iter_t)
     ensures
         sp == old(sp);
 
-        mem == old(mem).(heap := heap);
-        heap == old(heap)[next_iter_c.base_ptr := B16(next_iter_c.buff)];
+    ensures
         next_iter_c.base_ptr == iter_c.base_ptr;
-        mvar_iter_inv(heap, next_iter_c, (-1), (-1), (-1));
+        mvar_iter_inv(heap, next_iter_c, iter_c.base_ptr, 0, (-1));
+
+    ensures
+        mem == old(mem).(heap := heap);
+        heap == old(heap)[iter_c.base_ptr := heap[iter_c.base_ptr]];
+
         montmul_inv(next_iter_c.buff, iter_a.buff, i+1, iter_b.buff, rsa);
 {
     let pre_mem := mem;
@@ -433,8 +438,6 @@ returns (ghost next_iter_c: iter_t)
             read_top_frame(mem) == seq(n_end);
 
             symbols?["n"];
-            symbols?["d0inv"];
-            load_symbol(mem, "d0inv") == rsa.M0D;
 
             next_iter_b.base_ptr == iter_b.base_ptr;
             next_iter_n.base_ptr == iter_n.base_ptr;
@@ -496,8 +499,7 @@ returns (ghost next_iter_c: iter_t)
         in_stack_addr_range(sp - 24);
 
         symbols?["n"];
-        symbols?["d0inv"];
-        load_symbol(mem, "d0inv") == rsa.M0D;
+        rsa.M0D == 0x71df;
 
         iter_c.base_ptr != iter_n.base_ptr;
         iter_c.base_ptr != iter_b.base_ptr;
@@ -522,10 +524,13 @@ returns (ghost next_iter_c: iter_t)
         r9 == old(r9);
         r10 == old(r10);
 
-        mem == old(mem).(heap := heap);
-        heap == old(heap)[next_iter_c.base_ptr := B16(next_iter_c.buff)];
+    ensures
         next_iter_c.base_ptr == iter_c.base_ptr;
-        mvar_iter_inv(heap, next_iter_c, (-1), (-1), (-1));
+        mvar_iter_inv(heap, next_iter_c, iter_c.base_ptr, 0, (-1));
+
+    ensures
+        mem == old(mem).(heap := heap);
+        heap == old(heap)[iter_c.base_ptr := heap[iter_c.base_ptr]];
         montmul_inv(next_iter_c.buff, iter_a.buff, i+1, iter_b.buff, rsa);
 {
     save_r4__r10();

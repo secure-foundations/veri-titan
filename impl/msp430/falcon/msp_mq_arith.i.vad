@@ -274,7 +274,7 @@ procedure montymul(ghost x: nat, ghost y: nat)
     clr_w(r13);
     clr_w(r15);
 
-    builtin__mspabi_mpyl();
+    __mspabi_mpyl();
 
     mov_w(r12, r9);
     mov_w(r13, r10);
@@ -283,12 +283,12 @@ procedure montymul(ghost x: nat, ghost y: nat)
     let xy_uh := r10;
 
     mov_w_imm(12287, r13);
-    builtin__mspabi_mpyi();
+    __mspabi_mpyi();
 
     clr_w(r13);
     mov_w_imm(12289, r14);
 
-    builtin__mspabi_mpyl(); 
+    __mspabi_mpyl(); 
 
     ghost var sum := build_dw_view(r12, r13); 
 
