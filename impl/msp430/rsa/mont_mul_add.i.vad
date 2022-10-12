@@ -303,7 +303,7 @@ returns (ghost next_iter_c: iter_t)
 
     requires
         in_stack_addr_range(sp);
-        in_stack_addr_range(sp - 8);
+        in_stack_addr_range(sp - 10);
 
         symbols?["n"];
         rsa.M0D == 0x71df;
@@ -381,7 +381,7 @@ returns (ghost next_iter_c: iter_t)
     {:frame false}
     requires
         in_stack_addr_range(sp);
-        in_stack_addr_range(sp - 10);
+        in_stack_addr_range(sp - 12);
 
         symbols?["n"];
         rsa.M0D == 0x71df;
@@ -496,7 +496,7 @@ returns (ghost next_iter_c: iter_t)
 
     requires
         in_stack_addr_range(sp);
-        in_stack_addr_range(sp - 24);
+        in_stack_addr_range(sp - 28);
 
         symbols?["n"];
         rsa.M0D == 0x71df;

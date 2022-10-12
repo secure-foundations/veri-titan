@@ -1,5 +1,6 @@
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #define PQCLEAN_FALCON512_CLEAN_CRYPTO_SECRETKEYBYTES   1281
 #define PQCLEAN_FALCON512_CLEAN_CRYPTO_PUBLICKEYBYTES   897
@@ -259,6 +260,29 @@ void inverse_ntt(uint16_t *a) {
  * tmp[] must have 16-bit alignment.
  */
 
+
+ static void print_uint16_array(FILE *f, uint16_t *a, uint16_t n) {
+  uint32_t i, k;
+  fprintf(f, "[");
+
+  k = 0;
+  for (i=0; i<n; i++) {
+    if (k == 0) fprintf(f, " ");
+    fprintf(f, "%d", a[i]);
+    k ++;
+    if (k == 16) {
+      fprintf(f, ",");
+      k = 0;
+    } else {
+      fprintf(f, ", ");
+    }
+  }
+//   if (k > 0) {
+//     fprintf(f, "\n");
+//   }
+  fprintf(f, "]\n");
+}
+
 int rv_falcon(const uint16_t *c0, const int16_t *s2,
                                    uint16_t *h, uint16_t *tmp) {
     size_t u, n;
@@ -281,7 +305,7 @@ int rv_falcon(const uint16_t *c0, const int16_t *s2,
     /*
      * Compute -s1 = s2*h - c0 mod phi mod q (in tt[]).
      */
-    // print_uint16_array(stdout, h, 512);
+    print_uint16_array(stdout, tt, 512);
     forward_ntt(h);
     forward_ntt(tt);
     mq_poly_mul_ntt(tt, h);

@@ -43,6 +43,25 @@ function IsModEquivalent(
     b: nat,
     n: nat): bool extern;
 
+procedure save_r7__r10()
+    requires
+        in_stack_addr_range(sp - 8);
+    
+    modifies
+        mem; flat; sp;
+    reads
+        frames; r10; r9; r8; r7;
+    ensures
+        mem == stack_push_batch(old(mem), old(flat),
+            seq(r7, r8, r9, r10));
+        mem == old(mem).(frames := frames);
+        sp == old(sp) - 8;
+        stack_depth(mem) == stack_depth(old(mem)) + 1;
+{
+    pushm_w(4, r10);
+    assert pushm_w_seq(old(this.ms), GPR(10), 4) == seq(r7, r8, r9, r10);
+}
+
 procedure memset_clear(ghost iter_c: iter_t)
     returns (ghost next_iter_c: iter_t)
 
@@ -135,20 +154,18 @@ returns (ghost next_iter_c: iter_t)
     montmul_inv_pre_lemma(next_iter_c.buff, iter_a.buff, iter_b.buff, rsa);
 }
 
-procedure mont_mul(
+procedure mont_mul_inner(
     ghost iter_c: iter_t,
     ghost iter_a: iter_t,
     ghost iter_b: iter_t,
     ghost iter_n: iter_t,
     ghost rsa: rsa_params)
 returns (ghost next_iter_c: iter_t)
-
     {:frame false}
-    {:noInline}
 
     requires
         in_stack_addr_range(sp);
-        in_stack_addr_range(sp - 32);
+        in_stack_addr_range(sp - 28);
 
         rsa.M0D == 0x71df;
 
@@ -166,22 +183,20 @@ returns (ghost next_iter_c: iter_t)
         rsa_params_inv(rsa);
 
     ensures
-        sp == old(sp);
         r4 == old(r4);
         r5 == old(r5);
         r6 == old(r6);
-        r7 == old(r7);
-        r8 == old(r8);
-        r9 == old(r9);
-        r10 == old(r10);
 
-        mem == old(mem).(heap := heap);
-        heap == old(heap)[next_iter_c.base_ptr := B16(next_iter_c.buff)];
+    ensures
         next_iter_c.base_ptr == iter_c.base_ptr;
-        mvar_iter_inv(heap, next_iter_c, (-1), (-1), (-1));
+        mvar_iter_inv(heap, next_iter_c, iter_c.base_ptr, 0, (-1));
+
+    ensures
+        mem == old(mem).(heap := heap);
+        heap == old(heap)[next_iter_c.base_ptr := heap[iter_c.base_ptr]];
+
         montmul_inv(next_iter_c.buff, iter_a.buff, NUM_WORDS, iter_b.buff, rsa);
 {
-    save_r7__r10();
     ghost var next_iter_a := iter_a;
     next_iter_c := mm_pre(iter_c, iter_a, iter_b, iter_n, rsa);
     ghost var i: nat := 0;
@@ -190,7 +205,7 @@ returns (ghost next_iter_c: iter_t)
 
     while (r9 < r7)
         invariant
-            in_stack_addr_range(sp - 24);
+            in_stack_addr_range(sp - 28);
     
             r4 == old(r4);
             r5 == old(r5);
@@ -227,6 +242,59 @@ returns (ghost next_iter_c: iter_t)
 
     montmul_inv_post_lemma(next_iter_c.buff, iter_a.buff, iter_b.buff, rsa);
     assert mem.frames == loop_mem.frames;
+}
+
+procedure mont_mul(
+    ghost iter_c: iter_t,
+    ghost iter_a: iter_t,
+    ghost iter_b: iter_t,
+    ghost iter_n: iter_t,
+    ghost rsa: rsa_params)
+returns (ghost next_iter_c: iter_t)
+
+    {:frame false}
+    {:noInline}
+
+    requires
+        in_stack_addr_range(sp);
+        in_stack_addr_range(sp - 36);
+
+        rsa.M0D == 0x71df;
+
+        iter_c.base_ptr != iter_n.base_ptr;
+        iter_c.base_ptr != iter_b.base_ptr;
+        iter_c.base_ptr != iter_a.base_ptr;
+    
+        mvar_iter_inv(heap, iter_c, r12, 0, (-1));
+        mvar_iter_inv(heap, iter_a, r13, 0, (-1));
+        mvar_iter_inv(heap, iter_b, r14, 0, (-1));
+
+        symbols?["n"];
+        mvar_iter_inv(heap, iter_n, load_symbol(mem, "n"), 0, rsa.M);
+    
+        rsa_params_inv(rsa);
+
+    ensures
+        sp == old(sp);
+        r4 == old(r4);
+        r5 == old(r5);
+        r6 == old(r6);
+        r7 == old(r7);
+        r8 == old(r8);
+        r9 == old(r9);
+        r10 == old(r10);
+
+    ensures
+        next_iter_c.base_ptr == iter_c.base_ptr;
+        mvar_iter_inv(heap, next_iter_c, iter_c.base_ptr, 0, (-1));
+
+    ensures
+        mem == old(mem).(heap := heap);
+        heap == old(heap)[next_iter_c.base_ptr := heap[iter_c.base_ptr]];
+        montmul_inv(next_iter_c.buff, iter_a.buff, NUM_WORDS, iter_b.buff, rsa);
+{
+    save_r7__r10();
+    next_iter_c := mont_mul_inner(iter_c, iter_a, iter_b, iter_n, rsa);
     assert read_top_frame(mem) == seq(old(r7), old(r8), old(r9), old(r10));
     popm_w(4, r10);
 }

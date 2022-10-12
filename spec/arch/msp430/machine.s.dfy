@@ -53,16 +53,23 @@ module msp_machine {
         (z, update_flags(z, c))
     }
 
-    function method msp_sub(x: uint16, y: uint16): (uint16, flags_t)
+    function method {:opaque} msp_msb(x: uint16): uint1
     {
-        var (z, c) := subb(x, y, 0);
-        (z, update_flags(z, c))
+        bv16_op_s.msb(x)
     }
 
-    function method msp_subc(x: uint16, y: uint16, flags: flags_t): (uint16, flags_t)
+    function method msp_subc(dst: uint16, src: uint16, flags: flags_t): (uint16, flags_t)
     {
-        var (z, c) := subb(x, y, flags.cf);
-        (z, update_flags(z, c))
+        var diff: int := (dst as int) - src - (1 - flags.cf);
+        if diff >= 0 then 
+            (diff, update_flags(diff, 1))
+        else
+            (diff + 65536, update_flags(diff + 65536, 0))
+    }
+
+    function method msp_sub(x: uint16, y: uint16, flags: flags_t): (uint16, flags_t)
+    {
+        msp_subc(x, y, flags.(cf := 0))
     }
 
     datatype state = state(
@@ -144,6 +151,10 @@ module msp_machine {
         | MSP_RRA_W(dst: operand_t)
         | MSP_PUSHM_W(dst: operand_t, n: operand_t)
         | MSP_POPM_W(dst: operand_t, n: operand_t)
+        | MSP_CLRC()
+        | MSP_SETC()
+        | MSP_RRC(dst: operand_t)
+        | MSP_LRA(dst: operand_t)
         // BR
         // RET
         // CALL

@@ -66,7 +66,7 @@ returns (ghost next_iter_ar: iter_t)
 
     requires
         in_stack_addr_range(sp);
-        in_stack_addr_range(sp - 32);
+        in_stack_addr_range(sp - 36);
 
         rsa.M0D == 0x71df;
 
@@ -146,7 +146,7 @@ returns (ghost next_iter_ar: iter_t,
 
     requires
         in_stack_addr_range(sp);
-        in_stack_addr_range(sp - 32);
+        in_stack_addr_range(sp - 36);
 
         rsa.M0D == 0x71df;
 
@@ -219,7 +219,7 @@ ensures
     sp == old(sp);
     r12 == old(r10);
     mem == old(mem);
-    r7 == 0 <==> to_nat(iter_out.buff) >= to_nat(iter_n.buff);
+    r7 == 1 <==> to_nat(iter_out.buff) >= to_nat(iter_n.buff);
 {
     mov_w(r10, r12);
     add_w_imm(384, r12);
@@ -229,6 +229,9 @@ ensures
     ghost var i: nat := 0;
     // assert mvar_iter_inv(heap, next_iter_n, r11, 0, rsa.M);
     ghost var diff := seq_zero(NUM_WORDS);
+    setc();
+    rrc(r6);
+    assert msp_msb(r6) == 1;
 
     subb_inv_pre_lemma(diff, next_iter_out.buff, next_iter_n.buff);
 
@@ -243,24 +246,28 @@ ensures
             mvar_iter_inv(heap, next_iter_n, r11, i, (-1));
             next_iter_n.base_ptr == iter_n.base_ptr;
             seq_len(diff) == NUM_WORDS;
-            subb_inv(diff, flags.cf, next_iter_out.buff, next_iter_n.buff, i);
+            subb_inv(diff, 1-msp_msb(r6), next_iter_out.buff, next_iter_n.buff, i);
 
         decreases r12 - r10;
     {
         next_iter_out := lw_iter(r10, true, r7, next_iter_out);
         next_iter_n := lw_iter(r11, true, r8, next_iter_n);
 
-        let borrow := flags.cf;
+        let borrow := msp_msb(r6);
+        lra(r6);
         subc_w(r8, r7);
         diff := diff[i := r7];
+        let tmp := flags.cf;
+        rrc(r6);
 
-        subb_inv_peri_lemma(diff, flags.cf,
-            next_iter_out.buff, next_iter_n.buff, borrow, i);
+        subb_inv_peri_lemma(diff, 1-msp_msb(r6),
+            next_iter_out.buff, next_iter_n.buff, 1- borrow, i);
 
         i := i + 1;
     }
 
-    subb_inv_post_lemma(diff, flags.cf, next_iter_out.buff, next_iter_n.buff);
+    subb_inv_post_lemma(diff, 1-msp_msb(r6), next_iter_out.buff, next_iter_n.buff);
+    lra(r6);
 
     mov_w_imm(0, r7);
     addc_w(r7, r7);
@@ -280,7 +287,7 @@ returns (ghost next_iter_out: iter_t)
 
     requires
         in_stack_addr_range(sp);
-        in_stack_addr_range(sp - 32);
+        in_stack_addr_range(sp - 36);
 
         rsa.E0 == 16;
         rsa.M0D == 0x71df;
@@ -314,7 +321,7 @@ returns (ghost next_iter_out: iter_t)
     next_iter_out := next_iter_out.(index := 0);
     ge_mod(next_iter_out, iter_n);
 
-    mov_w_imm(0, r8);
+    mov_w_imm(1, r8);
 
     if (r7 == r8) {
         ghost var borrow: nat;
@@ -345,7 +352,7 @@ returns (
 
     requires
         in_stack_addr_range(sp);
-        in_stack_addr_range(sp - 46);
+        in_stack_addr_range(sp - 50);
 
         rsa.E0 == 16;
         rsa.M0D == 0x71df;

@@ -1,4 +1,5 @@
 include "printer.s.dfy"
+include "../../../gen/impl/msp430/falcon/msp_falcon.i.dfy"
 
 import opened msp_machine
 import opened msp_falcon

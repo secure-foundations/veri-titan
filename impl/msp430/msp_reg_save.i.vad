@@ -36,25 +36,24 @@ procedure save_r4__r10()
         == seq(r4, r5, r6, r7, r8, r9, r10);
 }
 
-procedure save_r7__r10()
+procedure save_r6__r10()
     requires
-        in_stack_addr_range(sp - 8);
+        in_stack_addr_range(sp - 10);
     
     modifies
         mem; flat; sp;
     reads
-        frames; r10; r9; r8; r7;
+        frames; r10; r9; r8; r7; r6;
     ensures
         mem == stack_push_batch(old(mem), old(flat),
-            seq(r7, r8, r9, r10));
+            seq(r6, r7, r8, r9, r10));
         mem == old(mem).(frames := frames);
-        sp == old(sp) - 8;
+        sp == old(sp) - 10;
         stack_depth(mem) == stack_depth(old(mem)) + 1;
 {
-    pushm_w(4, r10);
-    assert pushm_w_seq(old(this.ms), GPR(10), 4) == seq(r7, r8, r9, r10);
+    pushm_w(5, r10);
+    assert pushm_w_seq(old(this.ms), GPR(10), 5) == seq(r6, r7, r8, r9, r10);
 }
-
 
 procedure save_r12__r15()
     requires

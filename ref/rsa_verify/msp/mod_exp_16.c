@@ -94,12 +94,12 @@ void mont_mul(uint16_t *c,
 //   printf("\")\n");
 // }
 
-// void print_raw_buff(const uint16_t* a)
-// {
-//   for (int i = 0; i < RSANUMWORDS; i++) {
-//     printf("%x\n", a[i]);  
-//   }
-// }
+void print_raw_buff(const uint16_t* a)
+{
+  for (int i = 0; i < RSANUMWORDS; i++) {
+    printf("%d\n", a[i]);  
+  }
+}
 
 /**
  * In-place public exponentiation.

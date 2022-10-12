@@ -11,6 +11,23 @@ BASE = 2 ** full_bits
 HALF_BASE = int(2 ** half_bits)
 
 # scales well (256 bits+)
+def sub():
+	dst = BitVec("x", full_bits)
+	src = BitVec("y", full_bits)
+	return And(BV2Int(~src  + dst  + 1) == (BV2Int(dst) - BV2Int(src) - 0)  % BASE,
+		 BV2Int(~src  + dst + 0) == (BV2Int(dst) - BV2Int(src) - 1)  % BASE)
+
+def subc():
+	x = BitVec("x", full_bits)
+	y = BitVec("y", full_bits)
+	ci = BitVec("ci", full_bits)
+	co = BitVec("co", 1)
+	ix = BV2Int(x)
+	iy = BV2Int(y)
+	diff = ix - iy - BV2Int(ci)
+	# dd = diff if diff >= 0 else diff + BASE
+	# var bout := if diff >= 0 then 0 else 1;
+	# return Implies(ci ==  ci == 1, BV2Int(x + ~y + ci) == (ix - iy) % BASE)
 
 def bvadd():
 	x = BitVec("x", full_bits)
@@ -160,17 +177,17 @@ def d0inv_2():
 	)
 
 if __name__ == '__main__':
-	try:
-		func = sys.argv[1] + "()"
-		query = eval(func)
-		prove(query)
+	# try:
+	func = sys.argv[1] + "()"
+	query = eval(func)
+	prove(query)
 
-		s = Solver()
-		s.push()
-		s.add(Not(query))
-		print(s.sexpr(), end="")
-		print("(check-sat)")
+	s = Solver()
+	s.push()
+	s.add(Not(query))
+	print(s.sexpr(), end="")
+	print("(check-sat)")
 
-	except:
-		print("usage:\npython bv_exprs.py [query_name] [bit_number]")
-		sys.exit(1)
+	# except:
+	# 	print("usage:\npython bv_exprs.py [query_name] [bit_number]")
+	# 	sys.exit(1)

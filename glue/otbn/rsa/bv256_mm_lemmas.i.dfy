@@ -116,7 +116,6 @@ module bv256_mm_lemmas refines generic_mm_lemmas {
         t0: uint256, t1: uint256, t2: uint256,
         u0: uint256, u1: uint256, u2: uint256,
         wacc: uint256)
-
         requires
             && p0 == otbn_qmul(x, 0, y, 0)
             && p1 == otbn_qmul(x, 1, y, 0)

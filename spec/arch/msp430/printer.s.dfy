@@ -1,7 +1,5 @@
 include "machine.s.dfy"
 include "vale.i.dfy"
-include "../../../gen/impl/msp430/rsa/mod_exp.i.dfy"
-include "../../../gen/impl/msp430/falcon/msp_falcon.i.dfy"
 
 module msp_printer {
     import opened msp_machine
@@ -70,6 +68,14 @@ module msp_printer {
             case MSP_POPM_W(n, dst) =>
                 print("POPM.W\t"); printOperand(n); print(","); printOperand(dst);
                 print("\n");
+            case MSP_CLRC() =>
+                print("CLRC\n");
+            case MSP_SETC() =>
+                print("SETC\n");
+            case MSP_LRA(dst) =>
+                print("LRA\t"); printOperand(dst); print("\n");
+            case MSP_RRC(dst) =>
+                print("RRC\t"); printOperand(dst); print("\n");
     }
     
     method printWhileCond(wcond: cond, lcount: int)

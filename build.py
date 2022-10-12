@@ -3,6 +3,8 @@
 import sys, os, subprocess, re, platform
 from subprocess import PIPE, Popen
 from os.path import exists
+from parse_lib import *
+import json
 
 TOOLS_DIR = "./tools"
 DAFNY_PATH = "./tools/dafny/Binaries/Dafny"
@@ -443,6 +445,19 @@ def replace_string(src, dst):
             file_path = os.path.relpath(os.path.join(root, file))
             replace_string_file(file_path, src, dst)
 
+def get_stats():
+    dfy_files = get_dfy_files(False)
+    # dfy_results = {}
+    for file_name in dfy_files:
+        # print("try parsing: " + file_name)
+        os.system("wc -l " + file_name)
+    #     file = open(file_name)
+    #     data = parse_file(file, file_name, ["lemma", "function", "predicate"])
+    #     dfy_results[file_name] = data
+
+    # with open("raw.json", 'w+') as outfile:
+    #     json.dump(dfy_results, outfile)
+
 ## command line interface
 
 def main():
@@ -469,6 +484,8 @@ def main():
         setup_tools()
     elif option == "replace":
         replace_string(sys.argv[2], sys.argv[3])
+    elif option == "stats":
+        get_stats()
 
 if __name__ == "__main__":
     main()
