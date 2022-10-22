@@ -72,10 +72,10 @@ module msp_printer {
                 print("CLRC\n");
             case MSP_SETC() =>
                 print("SETC\n");
-            case MSP_LRA(dst) =>
-                print("LRA\t"); printOperand(dst); print("\n");
             case MSP_RRC(dst) =>
-                print("RRC\t"); printOperand(dst); print("\n");
+                print("RRC.W\t"); printOperand(dst); print("\n");
+            case MSP_INV_W(dst) =>
+                print("INV.W\t"); printOperand(dst); print("\n");
     }
     
     method printWhileCond(wcond: cond, lcount: int)

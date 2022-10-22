@@ -41,6 +41,10 @@ module msp_machine {
       f.cf
     }
 
+    function method uint16_not(x: uint16): uint16 {
+        not(x)
+    }
+
     function method msp_add(x: uint16, y: uint16): (uint16, flags_t)
     {
         var (z, c) := addc(x, y, 0);
@@ -69,7 +73,7 @@ module msp_machine {
 
     function method msp_sub(x: uint16, y: uint16, flags: flags_t): (uint16, flags_t)
     {
-        msp_subc(x, y, flags.(cf := 0))
+        msp_subc(x, y, flags.(cf := 1))
     }
 
     datatype state = state(
@@ -154,7 +158,7 @@ module msp_machine {
         | MSP_CLRC()
         | MSP_SETC()
         | MSP_RRC(dst: operand_t)
-        | MSP_LRA(dst: operand_t)
+        | MSP_INV_W(dst: operand_t)
         // BR
         // RET
         // CALL

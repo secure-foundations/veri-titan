@@ -88,7 +88,7 @@ returns (ghost iter_tt': iter_t)
         let a := r8;
 
         rla_w(r5);
-        cond_set_Q(r5);
+        cond_set_Q_inv(r5);
 
         add_w(r5, r8);
 
@@ -234,7 +234,15 @@ procedure accumulate(ghost sum: uint32_view_t, ghost asum: nat)
     let cf := flags.cf;
 
     clr_w(r13);
-    subc_w(r13, r13);
+    addc_w(r13, r13);
+    add_w_imm((-1), r13);
+    inv_w(r13);
+
+    assume uint16_not(0) == 0xffff;
+    assume uint16_not(0xffff) == 0;
+
+
+
     bis_w(r13, over);
 
     asum' := accumulate_lemma(v16, sum, sum', cf, r13, old(over), over, asum);
@@ -337,24 +345,24 @@ procedure is_short(
     dw_view_lemma(sum);
 
     assert (s_lh + s_uh * 0x10000 ==
-        sum.lh + sum.uh * 0x10000 - 0x29845d6 + flags.cf * 0x100000000);
+        sum.lh + sum.uh * 0x10000 - 0x29845d6 + (1 - flags.cf) * 0x100000000);
 
-    assert flags.cf == 1 ==> sum.full < 0x29845d6;
-    assert flags.cf == 0 ==> sum.full >= 0x29845d6;
+    // assert flags.cf == 0 ==> sum.full < 0x29845d6;
+    // assert flags.cf == 1 <==> sum.full >= 0x29845d6;
+    let cf := flags.cf;
+    clr_w(r12);
+    assert r12 == 0;
+    subc_w(r12, r12);
+    assert r12 == 0 ==> sum.full >= 0x29845d6;
+    assert r12 == 0xffff ==> sum.full < 0x29845d6;
 
-    clr_w(r14);
-    subc_w(r14, r14);
+    and_w_imm(1, r12);
+
+    assume uint16_and(1, 0) == 0;
+    assume uint16_and(1, 0xffff) == 1;
 
     clr_w(r13);
     add_w_imm((-1), r13);
-
-    assert r13 == 0xFFFF;
-
-    mov_w_imm(0, r12);
-
-    if (r14 == r13) {
-        mov_w_imm(1, r12);
-    }
 
     if (over == r13) {
         mov_w_imm(0, r12);

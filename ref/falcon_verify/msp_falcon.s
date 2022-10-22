@@ -8,13 +8,15 @@ msp_falcon:
   ADD.W	#1024,R10
 
 w_start0:
-	CMP.W	R15,R10
+	CMP.W	R10,R15
 	JGE	w_end0
   MOV.W	@R13+,R5
   MOV.W	R5,R8
   RLA.W	R5
   CLR.W	R5
-  SUBC.W	R5,R5
+  ADDC.W	R5,R5
+  ADD.W	#-1,R5
+  INV.W	R5
   AND.W	#12289,R5
   ADD.W	R5,R8
   MOV.W	R8,0(R15)
@@ -36,7 +38,7 @@ w_end0:
   ADD.W	#1024,R8
 
 w_start1:
-	CMP.W	R10,R8
+	CMP.W	R8,R10
 	JGE	w_end1
   MOV.W	@R10,R12
   MOV.W	@R9+,R13
@@ -55,11 +57,11 @@ w_end1:
   CALL #bit_rev
   MOV.W	R12,R10
   MOV.W	R12,R8
-  MOV.W	&scaling_factors,R9
+  MOV.W	#scaling_factors,R9
   ADD.W	#1024,R8
 
 w_start2:
-	CMP.W	R10,R8
+	CMP.W	R8,R10
 	JGE	w_end2
   MOV.W	@R10,R12
   MOV.W	@R9+,R13
@@ -77,7 +79,7 @@ w_end2:
   ADD.W	#1024,R5
 
 w_start3:
-	CMP.W	R15,R5
+	CMP.W	R5,R15
 	JGE	w_end3
   MOV.W	@R15,R11
   MOV.W	@R6+,R12
@@ -99,7 +101,7 @@ w_end3:
   ADD.W	#1024,R10
 
 w_start4:
-	CMP.W	R12,R10
+	CMP.W	R10,R12
 	JGE	w_end4
   MOV.W	@R12,R5
   MOV.W	#6144,R6
@@ -123,25 +125,29 @@ w_end4:
   CLR.W	R4
 
 w_start5:
-	CMP.W	R7,R8
+	CMP.W	R8,R7
 	JGE	w_end5
   MOV.W	@R5+,R12
   MOV.W	R12,R14
   CLR.W	R13
-  CALL #builtin__mspabi_mpyl
+  CALL #__mspabi_mpyl
   ADD.W	R12,R10
   ADDC.W	R13,R11
   CLR.W	R13
-  SUBC.W	R13,R13
+  ADDC.W	R13,R13
+  ADD.W	#-1,R13
+  INV.W	R13
   AND.W	R13,R4
   MOV.W	@R7+,R12
   MOV.W	R12,R14
   CLR.W	R13
-  CALL #builtin__mspabi_mpyl
+  CALL #__mspabi_mpyl
   ADD.W	R12,R10
   ADDC.W	R13,R11
   CLR.W	R13
-  SUBC.W	R13,R13
+  ADDC.W	R13,R13
+  ADD.W	#-1,R13
+  INV.W	R13
   AND.W	R13,R4
   JMP w_start5
 
@@ -150,27 +156,19 @@ w_end5:
   SUB.W	R14,R10
   MOV.W	#664,R13
   SUBC.W	R13,R11
-  CLR.W	R14
-  SUBC.W	R14,R14
+  CLR.W	R12
+  SUBC.W	R12,R12
+  AND.W	#1,R12
   CLR.W	R13
   ADD.W	#-1,R13
-  MOV.W	#0,R12
-	CMP.W	R14,R13
+	CMP.W	R13,R4
 	JEQ	if_true6
   JMP if_end6
 
 if_true6:
-  MOV.W	#1,R12
-
-if_end6:
-	CMP.W	R4,R13
-	JEQ	if_true7
-  JMP if_end7
-
-if_true7:
   MOV.W	#0,R12
 
-if_end7:
+if_end6:
   POPM.W	#7,R10
   RET
 
@@ -178,19 +176,19 @@ fntt:
   PUSHM.W	#7,R10
   MOV.W	#512,R4
   MOV.W	#1,R5
-  MOV.W	&rev_mixed_powers_mont_table,R14
+  MOV.W	#rev_mixed_powers_mont_table,R14
 
-w_start8:
-	CMP.W	R5,#512
-	JGE	w_end8
+w_start7:
+	CMP.W	#512,R5
+	JGE	w_end7
   MOV.W	R4,R9
   RRA.W	R4
   MOV.W	#0,R6
   MOV.W	#0,R10
 
-w_start9:
-	CMP.W	R6,R5
-	JGE	w_end9
+w_start8:
+	CMP.W	R5,R6
+	JGE	w_end8
   MOV.W	R5,R11
   ADD.W	R6,R11
   ADD.W	R11,R11
@@ -201,9 +199,9 @@ w_start9:
   ADD.W	R14,R11
   MOV.W	@R11,R13
 
-w_start10:
-	CMP.W	R7,R15
-	JGE	w_end10
+w_start9:
+	CMP.W	R15,R7
+	JGE	w_end9
   PUSHM.W	#4,R15
   MOV.W	R7,R15
   ADD.W	R9,R15
@@ -224,8 +222,6 @@ w_start10:
   MOV.W	R12,R14
   ADD.W	#-12289,R14
   ADD.W	R11,R14
-  MOV.W	R14,R13
-  RLA.W	R13
   CLR.W	R13
   SUBC.W	R13,R13
   AND.W	#12289,R13
@@ -233,18 +229,18 @@ w_start10:
   MOV.W	R13,0(R8)
   POPM.W	#4,R15
   ADD.W	#2,R7
-  JMP w_start10
-
-w_end10:
-  ADD.W	R9,R10
-  ADD.W	#1,R6
   JMP w_start9
 
 w_end9:
-  ADD.W	R5,R5
+  ADD.W	R9,R10
+  ADD.W	#1,R6
   JMP w_start8
 
 w_end8:
+  ADD.W	R5,R5
+  JMP w_start7
+
+w_end7:
   POPM.W	#7,R10
   RET
 
@@ -257,22 +253,22 @@ montymul:
   MOV.W	R13,R14
   CLR.W	R13
   CLR.W	R15
-  CALL #builtin__mspabi_mpyl
+  CALL #__mspabi_mpyl
   MOV.W	R12,R9
   MOV.W	R13,R10
   MOV.W	#12287,R13
-  CALL #builtin__mspabi_mpyi
+  CALL #__mspabi_mpyi
   CLR.W	R13
   MOV.W	#12289,R14
-  CALL #builtin__mspabi_mpyl
+  CALL #__mspabi_mpyl
   ADD.W	R9,R12
   ADDC.W	R10,R13
-  MOV.W	#12289,R12
-  SUB.W	R12,R13
+  MOV.W	#12288,R12
+  SUB.W	R13,R12
   CLR.W	R12
   SUBC.W	R12,R12
   AND.W	#12289,R12
-  ADD.W	R12,R13
+  SUB.W	R12,R13
   MOV.W	R13,R12
   MOV.W	R8,R13
   MOV.W	R7,R14
@@ -283,13 +279,13 @@ montymul:
 
 bit_rev:
   PUSHM.W	#6,R10
-  MOV.W	&bit_rev_table_512,R9
+  MOV.W	#bit_rev_table_512,R9
   MOV.W	R9,R10
   ADD.W	#960,R10
 
-w_start11:
-	CMP.W	R9,R10
-	JGE	w_end11
+w_start10:
+	CMP.W	R10,R9
+	JGE	w_end10
   MOV.W	@R9+,R8
   MOV.W	@R9+,R7
   ADD.W	R8,R8
@@ -300,9 +296,9 @@ w_start11:
   MOV.W	@R7,R5
   MOV.W	R5,0(R8)
   MOV.W	R6,0(R7)
-  JMP w_start11
+  JMP w_start10
 
-w_end11:
+w_end10:
   POPM.W	#6,R10
   RET
 
@@ -310,19 +306,19 @@ intt:
   PUSHM.W	#7,R10
   MOV.W	#512,R4
   MOV.W	#1,R5
-  MOV.W	&rev_omega_inv_powers_mont_table,R14
+  MOV.W	#rev_omega_inv_powers_mont_table,R14
 
-w_start12:
-	CMP.W	R5,#512
-	JGE	w_end12
+w_start11:
+	CMP.W	#512,R5
+	JGE	w_end11
   MOV.W	R4,R9
   RRA.W	R4
   MOV.W	#0,R6
   MOV.W	#0,R10
 
-w_start13:
-	CMP.W	R6,R5
-	JGE	w_end13
+w_start12:
+	CMP.W	R5,R6
+	JGE	w_end12
   MOV.W	R5,R11
   ADD.W	R6,R11
   ADD.W	R11,R11
@@ -333,9 +329,9 @@ w_start13:
   ADD.W	R14,R11
   MOV.W	@R11,R13
 
-w_start14:
-	CMP.W	R7,R15
-	JGE	w_end14
+w_start13:
+	CMP.W	R15,R7
+	JGE	w_end13
   PUSHM.W	#4,R15
   MOV.W	R7,R15
   ADD.W	R9,R15
@@ -356,8 +352,6 @@ w_start14:
   MOV.W	R12,R14
   ADD.W	#-12289,R14
   ADD.W	R11,R14
-  MOV.W	R14,R13
-  RLA.W	R13
   CLR.W	R13
   SUBC.W	R13,R13
   AND.W	#12289,R13
@@ -365,18 +359,18 @@ w_start14:
   MOV.W	R13,0(R8)
   POPM.W	#4,R15
   ADD.W	#2,R7
-  JMP w_start14
-
-w_end14:
-  ADD.W	R9,R10
-  ADD.W	#1,R6
   JMP w_start13
 
 w_end13:
-  ADD.W	R5,R5
+  ADD.W	R9,R10
+  ADD.W	#1,R6
   JMP w_start12
 
 w_end12:
+  ADD.W	R5,R5
+  JMP w_start11
+
+w_end11:
   POPM.W	#7,R10
   RET
 

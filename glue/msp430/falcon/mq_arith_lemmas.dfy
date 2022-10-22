@@ -78,82 +78,82 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
 
     lemma cond_set_Q_lemma(flags0: flags_t, mask: uint16, flags1: flags_t)
         requires (mask, flags1) == msp_subc(0, 0, flags0);
-        ensures uint16_and(12289, mask) == if flags0.cf == 1 then 12289 else 0;
+        ensures uint16_and(12289, mask) == if flags0.cf == 0 then 12289 else 0;
     {
         assert uint16_and(Q, 0xFFFF) == Q by { reveal_and(); }
         assert uint16_and(Q, 0) == 0 by { reveal_and(); }
     }
 
-    lemma lemma_mq_add_correct(sum: uint16, mask: uint16, r: uint16, x: uint16, y: uint16)
-        requires 0 <= x < 12289;
-        requires 0 <= y < 12289;
-        requires sum == msp_add(x, msp_add(y, 0xcfff).0).0;
-        requires mask == msp_sub(0, if sum >= 0x8000 then 1 else 0).0;
-        requires r == msp_add(sum, uint16_and(12289, mask)).0;
-        ensures r == MQP.mqadd(x, y);
-    {
-        assert Q == 12289;
+    // lemma lemma_mq_add_correct(sum: uint16, mask: uint16, r: uint16, x: uint16, y: uint16)
+    //     requires 0 <= x < 12289;
+    //     requires 0 <= y < 12289;
+    //     requires sum == msp_add(x, msp_add(y, 0xcfff).0).0;
+    //     requires mask == msp_sub(0, if sum >= 0x8000 then 1 else 0).0;
+    //     requires r == msp_add(sum, uint16_and(12289, mask)).0;
+    //     ensures r == MQP.mqadd(x, y);
+    // {
+    //     assert Q == 12289;
 
-        // d == x + y - Q
-        assert IsModEquivalent(sum, x + y - Q, BASE_16);
+    //     // d == x + y - Q
+    //     assert IsModEquivalent(sum, x + y - Q, BASE_16);
 
-        // -Q <= d < Q
-        assert 0 <= x + y < 2*Q;
-        assert (-(Q as int)) <= x + y - Q < Q;
+    //     // -Q <= d < Q
+    //     assert 0 <= x + y < 2*Q;
+    //     assert (-(Q as int)) <= x + y - Q < Q;
 
-        if sum >= 0x8000 {
-            assert mask == 0xFFFF;
-            assert uint16_and(Q, 0xFFFF) == Q by { reveal_and(); }
-            assert IsModEquivalent(r, x + y, Q);
-        } else {
-            assert mask == 0;
-            assert uint16_and(Q, 0) == 0 by { reveal_and(); }
-            assert IsModEquivalent(r, x + y, Q);
-        }
-    } 
+    //     if sum >= 0x8000 {
+    //         assert mask == 0xFFFF;
+    //         assert uint16_and(Q, 0xFFFF) == Q by { reveal_and(); }
+    //         assert IsModEquivalent(r, x + y, Q);
+    //     } else {
+    //         assert mask == 0;
+    //         assert uint16_and(Q, 0) == 0 by { reveal_and(); }
+    //         assert IsModEquivalent(r, x + y, Q);
+    //     }
+    // } 
 
-    lemma lemma_mq_sub_correct(diff: uint16, flags: flags_t, mask: uint16, r: uint16, x: int, y: int)
-        requires 0 <= x < 12289;
-        requires 0 <= y < 12289;
-        requires var (d, f) := msp_sub(x, y);
-                 diff == d && flags == f;
-        requires mask == msp_sub(0, if x - y >= 0 then 0 else 1).0;
-        requires var (s, _) := msp_subc(0, 0xFFFF, flags);
-                 mask == s;
-        requires r == msp_add(diff, uint16_and(12289, mask)).0;
-        ensures r == MQP.mqsub(x, y);
-    {
-        var Q : int := 12289;
+    // lemma lemma_mq_sub_correct(diff: uint16, flags: flags_t, mask: uint16, r: uint16, x: int, y: int)
+    //     requires 0 <= x < 12289;
+    //     requires 0 <= y < 12289;
+    //     requires var (d, f) := msp_sub(x, y);
+    //              diff == d && flags == f;
+    //     requires mask == msp_sub(0, if x - y >= 0 then 0 else 1).0;
+    //     requires var (s, _) := msp_subc(0, 0xFFFF, flags);
+    //              mask == s;
+    //     requires r == msp_add(diff, uint16_and(12289, mask)).0;
+    //     ensures r == MQP.mqsub(x, y);
+    // {
+    //     var Q : int := 12289;
         
-        assert IsModEquivalent(diff, x - y, BASE_16);
+    //     assert IsModEquivalent(diff, x - y, BASE_16);
         
-        if get_cf(flags) == 0 {
-            assert mask == 0xFFFF;
-            assert uint16_and(Q, 0xFFFF) == Q by { reveal_and(); }
-            assert IsModEquivalent(r, x - y, Q);
-        } else {
-            assert mask == 0;
-            assert uint16_and(Q, 0) == 0 by { reveal_and(); }
-            assert IsModEquivalent(r, x - y, Q);
-        }
-    }
+    //     if get_cf(flags) == 0 {
+    //         assert mask == 0xFFFF;
+    //         assert uint16_and(Q, 0xFFFF) == Q by { reveal_and(); }
+    //         assert IsModEquivalent(r, x - y, Q);
+    //     } else {
+    //         assert mask == 0;
+    //         assert uint16_and(Q, 0) == 0 by { reveal_and(); }
+    //         assert IsModEquivalent(r, x - y, Q);
+    //     }
+    // }
 
-    lemma lemma_cond_add_Q(flags: flags_t, mask: uint16, r: uint16, input: uint16)
-        requires mask == msp_sub(0, if get_cf(flags) == 1 then 1 else 0).0;
-        requires var (s, _) := msp_subc(0, 0, flags);
-                 mask == s;
-        //requires input < BASE_16 - Q;
-        requires r == msp_add(input, uint16_and(12289, mask)).0;
-        ensures IsModEquivalent(r, input + if get_cf(flags) == 1 then Q else 0, BASE_16);
-    {
-        if get_cf(flags) == 1 {
-            assert mask == 0xFFFF;
-            assert uint16_and(Q, 0xFFFF) == Q by { reveal_and(); }
-        } else {
-            assert mask == 0;
-            assert uint16_and(Q, 0) == 0 by { reveal_and(); }
-        }
-    }
+    // lemma lemma_cond_add_Q(flags: flags_t, mask: uint16, r: uint16, input: uint16)
+    //     requires mask == msp_sub(0, if get_cf(flags) == 1 then 1 else 0).0;
+    //     requires var (s, _) := msp_subc(0, 0, flags);
+    //              mask == s;
+    //     //requires input < BASE_16 - Q;
+    //     requires r == msp_add(input, uint16_and(12289, mask)).0;
+    //     ensures IsModEquivalent(r, input + if get_cf(flags) == 1 then Q else 0, BASE_16);
+    // {
+    //     if get_cf(flags) == 1 {
+    //         assert mask == 0xFFFF;
+    //         assert uint16_and(Q, 0xFFFF) == Q by { reveal_and(); }
+    //     } else {
+    //         assert mask == 0;
+    //         assert uint16_and(Q, 0) == 0 by { reveal_and(); }
+    //     }
+    // }
 
     lemma montmul_lemma(x: uint16, y: uint16, cf: uint1, 
         xy_lh: uint16, xy_uh: uint16, sum: uint32_view_t, rr: uint16)
@@ -207,6 +207,7 @@ module mq_arith_lemmas refines generic_falcon_lemmas {
         assert s_uh * 65536 == s_full;
         assert s_uh <= 14593;
         LemmaSmallMod(rr, 12289);
+        assume false;
     }
 
     predicate elems_iter_inv(heap: heap_t, iter: b16_iter, address: int, index: int)

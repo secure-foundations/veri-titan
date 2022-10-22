@@ -51,8 +51,8 @@ procedure cond_set_Q(inout rd: reg)
     modifies
         flags;
     ensures 
-        (old(flags.cf) == 1) ==> rd == 12289;
-        (old(flags.cf) == 0) ==> rd == 0;
+        (old(flags.cf) == 0) ==> rd == 12289;
+        (old(flags.cf) == 1) ==> rd == 0;
 {
     clr_w(rd);
     let flags0 := flags;
@@ -63,27 +63,30 @@ procedure cond_set_Q(inout rd: reg)
     cond_set_Q_lemma(flags0, mask, flags1);
 }
 
-procedure cond_add_Q(inout rd: reg, inout rt: reg)
-    requires
-        @rd != @rt;
+procedure cond_set_Q_inv(inout rd: reg)
     modifies
         flags;
     ensures 
-        (old(flags.cf) == 1) ==> rd == fst(msp_add(old(rd), 12289));
-        (old(flags.cf) == 0) ==> rd == old(rd);
+        (old(flags.cf) == 1) ==> rd == 12289;
+        (old(flags.cf) == 0) ==> rd == 0;
 {
-    cond_set_Q(rt);
-    add_w(rt, rd);
-}
+    clr_w(rd);
+    addc_w(rd, rd);
+    add_w_imm((-1), rd);
 
-// procedure check_int16_sign(inout rd: reg)
-//     modifies
-//         flags;
-//     ensures
-//         to_int16(old(rd)) < 0 <==> flags.cf == 1;
-// {
-//     rla_w(rd);
-// }
+    assert old(flags.cf) == 1 ==> rd == 0;
+    assert old(flags.cf) == 0 ==> rd == 0xffff;
+
+    inv_w(rd);
+
+    assume uint16_not(0) == 0xffff;
+    assume uint16_not(0xffff) == 0;
+
+    and_w_imm(12289, rd);
+
+    assume uint16_and(12289, 0) == 0;
+    assume uint16_and(12289, 0xffff) == 12289;
+}
 
 function rs1_lemma(x: uint16): void extern;
 
@@ -148,8 +151,6 @@ procedure mq_add()
     add_w_imm((-12289), tmp); // tmp <- y - Q
     add_w(x, tmp);    // tmp <- y - Q + x
     // If we're still negative, create a mask of 0xFFFF.  Else, use 0.
-    mov_w(tmp, r);     // r <- tmp
-    rla_w(r);          // carry <- MSB of r
     cond_set_Q(r);
     add_w(tmp, r);     // r <- (Q & mask) + y - Q + x
 }
@@ -227,6 +228,76 @@ procedure dw_add(in rsl: reg, in rsh: reg, inout rdl: reg, inout rdh: reg, ghost
 function montmul_lemma(x: nat, y: nat, cf: uint1, 
     xy_lh: uint16, xy_uh: uint16, sum: uint32_view_t, rr: uint16): void extern;
 
+procedure montymul_inner(ghost x: nat, ghost y: nat)
+    {:frame false}
+    requires
+        x == r12;
+        y == r13;
+
+    requires
+        x < 12289;
+        y < 12289;
+    ensures
+        mem == old(mem);
+
+    ensures
+        r4 == old(r4);
+        r5 == old(r5);
+        r6 == old(r6);
+        r7 == old(r7);
+        r8 == old(r8);
+
+    ensures
+        r12 == montmul(x, y);
+{
+    mov_w(r13, r14);
+    clr_w(r13);
+    clr_w(r15);
+
+    __mspabi_mpyl();
+
+    mov_w(r12, r9);
+    mov_w(r13, r10);
+
+    let xy_lh := r9;
+    let xy_uh := r10;
+
+    mov_w_imm(12287, r13);
+    __mspabi_mpyi();
+
+    clr_w(r13);
+    mov_w_imm(12289, r14);
+
+    __mspabi_mpyl(); 
+
+    ghost var sum := build_dw_view(r12, r13); 
+
+    dw_view_lemma(sum);
+    assert sum.full == mul(xy_lh, 12287) * 12289;
+    assert to_nat(seq(r9, r10)) == x * y;
+
+    sum := dw_add(r9, r10, r12, r13, sum);
+    let cf := flags.cf;
+    let s_uh := r13;
+
+    mov_w_imm(12288, r12);
+    sub_w(r13, r12);
+
+    cond_set_Q(r12);
+
+    assert s_uh >= 12289 ==> r12 == 12289;
+    assert s_uh < 12289 ==> r12 == 0;
+
+    assert r13 == s_uh;
+    sub_w(r12, r13);
+
+    assert s_uh >= 12289 ==> r13 == s_uh - 12289;
+    assert s_uh < 12289 ==> r13 == s_uh;
+
+    mov_w(r13, r12);
+    montmul_lemma(x, y, cf, xy_lh, xy_uh, sum, r12);
+}
+
 procedure montymul(ghost x: nat, ghost y: nat)
     {:frame false}
     {:noInline}
@@ -270,43 +341,7 @@ procedure montymul(ghost x: nat, ghost y: nat)
     mov_w(r15, r6);
     mov_w(r11, r5);
 
-    mov_w(r13, r14);
-    clr_w(r13);
-    clr_w(r15);
-
-    __mspabi_mpyl();
-
-    mov_w(r12, r9);
-    mov_w(r13, r10);
-
-    let xy_lh := r9;
-    let xy_uh := r10;
-
-    mov_w_imm(12287, r13);
-    __mspabi_mpyi();
-
-    clr_w(r13);
-    mov_w_imm(12289, r14);
-
-    __mspabi_mpyl(); 
-
-    ghost var sum := build_dw_view(r12, r13); 
-
-    dw_view_lemma(sum);
-    assert sum.full == mul(xy_lh, 12287) * 12289;
-    assert to_nat(seq(r9, r10)) == x * y;
-
-    sum := dw_add(r9, r10, r12, r13, sum);
-    let cf := flags.cf;
-    let s_uh := r13;
-
-    mov_w_imm(12289, r12);
-    sub_w(r12, r13);
-    assert s_uh < 12289 ==> flags.cf == 1;
-    assert s_uh >= 12289 ==> flags.cf == 0;
-    cond_add_Q(r13, r12);
-    mov_w(r13, r12);
-    montmul_lemma(x, y, cf, xy_lh, xy_uh, sum, r12);
+    montymul_inner(x, y);
 
     mov_w(r8, r13);
     mov_w(r7, r14);

@@ -254,7 +254,7 @@ ensures
         next_iter_n := lw_iter(r11, true, r8, next_iter_n);
 
         let borrow := msp_msb(r6);
-        lra(r6);
+        rla_w(r6);
         subc_w(r8, r7);
         diff := diff[i := r7];
         let tmp := flags.cf;
@@ -267,7 +267,7 @@ ensures
     }
 
     subb_inv_post_lemma(diff, 1-msp_msb(r6), next_iter_out.buff, next_iter_n.buff);
-    lra(r6);
+    rla_w(r6);
 
     mov_w_imm(0, r7);
     addc_w(r7, r7);

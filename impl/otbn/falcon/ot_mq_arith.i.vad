@@ -34,7 +34,6 @@ const Q: nat extern;
 const N: pow2_t extern; 
 
 function mod(a: int, n: int): int extern;
-function addm_correct_lemma(x: uint256, y: uint256, mod: uint256): void extern;
 function subm_correct_lemma(x: uint256, y: uint256, mod: uint256): void extern;
 function xor_clear_lemma(x: uint256, y: uint256): void extern;
 function SFT(left: bool, bytes: uint5): shift_t extern;
@@ -60,7 +59,6 @@ procedure mq_add(inout dst: reg256, in src1: reg256, in src2: reg256)
     ghost var y := src2;
 
     bn_addm(dst, src1, src2);
-    addm_correct_lemma(x, y, wmod);
 }
     
 procedure mq_sub(inout dst: reg256, in src1: reg256, in src2: reg256)
@@ -77,7 +75,6 @@ procedure mq_sub(inout dst: reg256, in src1: reg256, in src2: reg256)
     ghost var y := src2;
 
     bn_subm(dst, src1, src2);
-    subm_correct_lemma(x, y, wmod);
 }
 
 procedure bn_clear(inout dst: reg256)

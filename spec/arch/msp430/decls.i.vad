@@ -408,16 +408,6 @@ procedure rrc(inout rd: reg)
     assume false;    
 }
 
-procedure lra(inout rd: reg)
-    {:instruction Ins(MSP_LRA(Reg(rd)))}
-    modifies
-        flags;
-    ensures
-        flags.cf == old(msp_msb(rd));
-{
-    assume false;    
-}
-
 procedure setc()
     {:instruction Ins(MSP_SETC())}
     modifies
@@ -545,7 +535,20 @@ procedure rla_w(inout rd: reg)
     modifies 
         flags;
     ensures 
+        flags.cf == old(msp_msb(rd));
         get_cf(flags) == (if old(rd) >= 0x8000 then 1 else 0);
+{
+    assume false;
+}
+
+function uint16_not(a: uint16): uint16 extern;
+
+procedure inv_w(inout rd: reg)
+    {:instruction Ins(MSP_INV_W(Reg(rd))) }
+    modifies 
+        flags;
+    ensures
+        rd == uint16_not(old(rd));
 {
     assume false;
 }

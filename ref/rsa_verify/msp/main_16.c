@@ -80,15 +80,15 @@ int main(void) {
   uint16_t out[RSANUMWORDS];
   // compute_rr(RR, workbuf);
   // print_buff("RR", RR, RSANUMWORDS);
-  // mod_pow(out,workbuf,rr,sig);
+  mod_pow(out,workbuf,rr,sig);
 
-  for (int i=0; i<(RSANUMWORDS); i++) {
-    out[i] = 0x5555;
-  }
+  // for (int i=0; i<(RSANUMWORDS); i++) {
+  //   out[i] = 0x5555;
+  // }
   // print_buff("in", out);
   // print_buff("n", n);
-  sub_mod(out);
+  // sub_mod(out);
   // print_buff("out", out);
 
-  print_raw_buff(out);
+  // print_raw_buff(out);
 }

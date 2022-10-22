@@ -5,6 +5,10 @@ include "../../generic_falcon_lemmas.dfy"
 
 module bv256_falcon_lemmas refines generic_falcon_lemmas {
     import MWD = bv256_op_s
+    import opened ot_vale
+    import opened ot_abstraction
+    import opened mem
+    import opened ot_machine
 
     lemma lemma_montymul_correct(x: uint256, y: uint256, prod: uint256, sum: uint256,
         shifted: uint256, diff1: uint256, flags: flags_t, diff2: uint256)
@@ -45,6 +49,66 @@ module bv256_falcon_lemmas refines generic_falcon_lemmas {
             assert shifted * BASE_16 == sum; 
             assert IsModEquivalent(sum, 0, BASE_16);
             assert IsModEquivalent(diff2, shifted, Q);
+        }
+    }
+
+    lemma lemma_elem_prod_bound(x: uint256, y: uint256, r: uint256)
+        requires x < 12289 && y < 12289
+        requires r == x * y
+        ensures r <= 150994944
+    {
+        LemmaMulUpperBound(x, 12288, y, 12288);
+    }
+
+    lemma lemma_small(x:uint256)
+      requires x < BASE_64
+      ensures bv256_op_s.lh(x) % BASE_64 == x
+    {
+        calc{
+            bv256_op_s.lh(x) % BASE_64;
+            { reveal bv256_op_s.lh(); }
+            (x % BASE_256) % BASE_64;
+            { LemmaSmallMod(x, BASE_256); }
+            x % BASE_64;
+            { LemmaSmallMod(x, BASE_64); }
+            x;
+        }
+    }
+
+    lemma lemma_small_mulqacc(x: uint256, y: uint256, r: uint256, old_wacc: uint256, old_flags: flags_t)
+      requires x < BASE_64 && y < BASE_64
+      requires var product := otbn_mulqacc(true, x, 0, y, 0, 0, old_wacc);
+               r == otbn_mulqacc_so(product, 0, true, old_flags).new_dst
+      ensures r == x * y
+    {
+        LemmaMulUpperBound(x, BASE_64 - 1, y, BASE_64 - 1);
+        var product := otbn_mulqacc(true, x, 0, y, 0, 0, old_wacc);
+        calc {
+            product;
+            otbn_shift(otbn_qmul(x, 0, y, 0), SFT(true, 0 * 8));
+            otbn_shift(otbn_qmul(x, 0, y, 0), SFT(true, 0));
+            otbn_qmul(x, 0, y, 0);
+            { reveal otbn_qmul(); }
+            otbn_qsel(x, 0) as uint128 * otbn_qsel(y, 0) as uint128;
+            { reveal otbn_qsel(); }
+            ((bv256_op_s.lh(x) % BASE_64) as uint128) * ((bv256_op_s.lh(y) % BASE_64) as uint128);
+            { lemma_small(x); lemma_small(y); }
+            x as uint128 * y as uint128;
+            x * y;
+        }
+      
+        calc {
+            bv256_op_s.lh(product);
+            { reveal bv256_op_s.lh(); LemmaSmallMod(x, BASE_256); }
+            x * y;
+        }
+      
+        calc {
+            otbn_hwb(0, x * y, true);
+            { reveal otbn_hwb(); }
+            x * y + bv256_op_s.uh(0) * BASE_128;
+            { reveal bv256_op_s.uh(); }
+            x * y;
         }
     }
 

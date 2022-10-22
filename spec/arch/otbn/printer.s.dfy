@@ -40,10 +40,20 @@ method printIns32(ins:ins32)
             printReg32(dst); print(", "); printReg32(src1); print(", "); print(src2);
             print("\n");
 
-        // case SUB(dst, src1, src2) =>
-        //     print ("sub ");
-        //     printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
-        //     print("\n");
+        case SUB(dst, src1, src2) =>
+            print ("sub ");
+            printReg32(dst); print(", "); printReg32(src1); print(", "); printReg32(src2);
+            print("\n");
+
+        case SLLI(dst, src1, shamt) =>
+            print ("slli ");
+            printReg32(dst); print(", "); printReg32(src1); print(", "); print(shamt);
+            print("\n");
+
+        case SRLI(dst, src1, shamt) =>
+            print ("srli ");
+            printReg32(dst); print(", "); printReg32(src1); print(", "); print(shamt);
+            print("\n");
 
         case AND(dst, src1, src2) =>
             print ("and ");
@@ -85,7 +95,11 @@ method printIns32(ins:ins32)
             print ("li ");
             printReg32(dst); print(", "); print(src);
             print("\n");
-        
+
+        case LA(dst, name) => 
+            print ("la ");
+            printReg32(dst); print(", "); print(name);
+            print("\n");
         case CSRRS(grd, csr, grs1) =>
             print ("csrrs ");
             printReg32(grd); print(", "); print(csr); print(", "); printReg32(grs1);
@@ -97,10 +111,8 @@ method printIns32(ins:ins32)
         case UNIMP =>
             print("unimp\n");
 
-        case BN_NOP =>
-            print("nop\n");
-        
-
+        case NOP =>
+            print("nop2\n");
 }
 
 method printShift(shift:shift_t)

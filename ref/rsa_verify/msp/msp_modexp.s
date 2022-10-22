@@ -35,20 +35,25 @@ w_end0:
   MOV.W	R10,R12
   ADD.W	#384,R12
   MOV.W	#n,R11
+  SETC
+  RRC.W	R6
 
 w_start1:
 	CMP.W	R12,R10
 	JGE	w_end1
   MOV.W	@R10+,R7
   MOV.W	@R11+,R8
+  RLA.W	R6
   SUBC.W	R8,R7
+  RRC.W	R6
   JMP w_start1
 
 w_end1:
+  RLA.W	R6
   MOV.W	#0,R7
   ADDC.W	R7,R7
   ADD.W	#-384,R12
-  MOV.W	#0,R8
+  MOV.W	#1,R8
 	CMP.W	R8,R7
 	JEQ	if_true2
   JMP if_end2
@@ -193,22 +198,25 @@ mulaa16:
   RET
 
 sub_mod:
-  PUSHM.W	#4,R10
+  PUSHM.W	#5,R10
   MOV.W	R12,R7
   ADD.W	#384,R7
-  SUBC.W	R9,R9
   MOV.W	#n,R13
+  SETC
+  RRC.W	R6
 
 w_start7:
 	CMP.W	R7,R12
 	JGE	w_end7
   MOV.W	@R12+,R9
   MOV.W	@R13+,R10
+  RLA.W	R6
   SUBC.W	R10,R9
+  RRC.W	R6
   MOV.W	R9,-2(R12)
   JMP w_start7
 
 w_end7:
-  POPM.W	#4,R10
+  POPM.W	#5,R10
   RET
 
