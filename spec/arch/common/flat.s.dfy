@@ -1,39 +1,31 @@
-include "bvop/bv_op.s.dfy"
-include "bvop/bv16_op.s.dfy"
-include "bvop/bv32_op.s.dfy"
-include "bvop/bv256_op.s.dfy"
-// include "crypto/pow2.s.dfy"
+include "../../bvop/bv_op.s.dfy"
+include "../../bvop/bv16_op.s.dfy"
 
 abstract module flat_mem_s(BV: bv_op_s) {
     import opened integers
-    import BS = BV.BVSEQ
 
     import Power
     import Mul
 
     // how many bytes in the word
-    const WORD_BYTES: nat
+    function WORD_BYTES(): (n: nat)
+        ensures n != 0
+        ensures Power.Pow(256, n) == BV.BASE()
 
     // how many words in the memory
-    const MAX_WORDS: nat
+    function MAX_WORDS(): nat
 
     function MAX_BYTES(): nat 
     {
-        Mul.LemmaMulNonnegative(WORD_BYTES, MAX_WORDS);
-        WORD_BYTES * MAX_WORDS
+        Mul.LemmaMulNonnegative(WORD_BYTES(), MAX_WORDS());
+        WORD_BYTES() * MAX_WORDS()
     }
-
-    // obligation
-    lemma word_size_lemma()
-        ensures WORD_BYTES != 0
-        ensures Power.Pow(256, WORD_BYTES) == BS.BASE()
 
     // points to a word with aligment
     predicate ptr_aligned(ptr: nat)
     {
-        word_size_lemma();
-        && ptr % WORD_BYTES == 0
-        && ptr + WORD_BYTES <= MAX_BYTES()
+        && ptr % WORD_BYTES() == 0
+        && ptr + WORD_BYTES() <= MAX_BYTES()
     }
 
     // aligned adddresses only
@@ -41,22 +33,22 @@ abstract module flat_mem_s(BV: bv_op_s) {
 
     const STACK_MAX_WORDS: nat
 
-    const STACK_BOT: aptr
+    function STACK_BOT(): aptr
 
     datatype mem_t = mem_cons(
         // the flat memory, 
-        flat: map<aptr, BS.uint>,
+        flat: map<aptr, BV.uint>,
         // ghost state about memory structure
         ghost split: map<aptr, nat>)
     {
         // single word read/write
 
-        function method read_word(ptr: aptr): BS.uint
+        function method read_word(ptr: aptr): BV.uint
         {
             if ptr in flat then flat[ptr] else 0 
         }
 
-        function method write_word(ptr: aptr, value: BS.uint): mem_t
+        function method write_word(ptr: aptr, value: BV.uint): mem_t
         {
             var flat' := if ptr in flat then flat[ptr := value] else flat;
             mem_cons(flat', split)
@@ -66,7 +58,7 @@ abstract module flat_mem_s(BV: bv_op_s) {
 
         predicate valid_multi_word(ptr: aptr, count: nat)
         {
-            ptr + count * WORD_BYTES <= MAX_BYTES()
+            ptr + count * WORD_BYTES() <= MAX_BYTES()
         }
 
         // assumptions about the initial memory state
@@ -75,16 +67,16 @@ abstract module flat_mem_s(BV: bv_op_s) {
         {
             // the addresses are all mapped
             && (forall i | 0 <= i < len :: 
-                base + i * WORD_BYTES in flat)
+                base + i * WORD_BYTES() in flat)
             // the addresses are all bounded
-            && base + len * WORD_BYTES < MAX_BYTES()
+            && base + len * WORD_BYTES() < MAX_BYTES()
         }
 
         predicate inv()
         {
             // stack region
-            && STACK_BOT in split
-            && split[STACK_BOT] == STACK_MAX_WORDS
+            && STACK_BOT() in split
+            && split[STACK_BOT()] == STACK_MAX_WORDS
             // all the regions are valid
             && (forall base | base in split ::
                 region_valid(base, split[base]))
@@ -95,6 +87,8 @@ abstract module flat_mem_s(BV: bv_op_s) {
     }
 }
 
+module msp_mem_s refines flat_mem_s(bv16_op_s) {
+}
 
     // datatype regions_t = regions_t(regions:, max: nat)
     // {

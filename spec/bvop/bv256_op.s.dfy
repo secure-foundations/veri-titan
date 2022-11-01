@@ -12,11 +12,11 @@ module bv256_seq refines LittleEndianNat
 
 module bv256_op_s refines bv_op_s
 {
-    import opened BVSEQ = bv256_seq 
+    import BVSEQ = bv256_seq 
 
-    lemma base_basic_lemma()
-        ensures BASE() % 2 == 0
+    function method BASE(): nat
     {
+        integers.BASE_256
     }
 
     function method HW_BASE(): nat

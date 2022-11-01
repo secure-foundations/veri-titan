@@ -1,16 +1,16 @@
 include "../../bvop/bv16_op.s.dfy"
-include "flat.s.dfy"
+include "../common/flat.s.dfy"
 
 module msp_machine {
     import opened integers
     import opened bv16_op_s
-    import opened flat
+    import opened msp_mem_s
 
     /* registers definitions */
 
-    // R0 R1, R2 are special 
     type int16 = sint
 
+    // R0 R1, R2 are special 
     type reg_idx = i: nat | 4 <= i <= 15 witness 4
 
     datatype reg_t =  
@@ -79,7 +79,7 @@ module msp_machine {
     datatype state = state(
         regs: regs_t,
         sp: uint16,
-        flat: flat_t,
+        flat: mem_t,
         flags: flags_t,
         ok: bool)
     {
@@ -159,9 +159,6 @@ module msp_machine {
         | MSP_SETC()
         | MSP_RRC(dst: operand_t)
         | MSP_INV_W(dst: operand_t)
-        // BR
-        // RET
-        // CALL
 
     predicate eval_ins(ins: ins_t, s: state, r: state)
     {

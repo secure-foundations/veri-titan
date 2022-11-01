@@ -49,17 +49,20 @@ module integers
 
 abstract module bv_op_s
 {
-    import opened BVSEQ: LittleEndianNat
+    // import opened BVSEQ: LittleEndianNat
     import Mul
     import Power2
 
     import integers
     import opened DivMod
 
-    type uint1 = integers.uint1
+    function method BASE(): (b: nat)
+        ensures b != 0
+        ensures b % 2 == 0
 
-    lemma base_basic_lemma()
-        ensures BASE() % 2 == 0
+    type uint = i: nat | 0 <= i < BASE() witness 0
+
+    type uint1 = integers.uint1
 
     // the signed version of uint
     type sint = i: int | -(BASE()/2 as int) <= i < BASE()/2 as int
@@ -200,7 +203,6 @@ abstract module bv_op_s
 
     function method from_2s_comp(x: uint): sint
     {
-        base_basic_lemma();
         if x < (BASE()/2) then x else x - BASE()
     }
 
@@ -331,123 +333,123 @@ abstract module bv_op_s
         reveal dw_uh();
     }
 
-    function to_nat(xs: seq<uint>): nat
-    {
-        BVSEQ.ToNatRight(xs)
-    }
+//     function to_nat(xs: seq<uint>): nat
+//     {
+//         BVSEQ.ToNatRight(xs)
+//     }
 
-    datatype dw_view_raw = dw_view_cons(
-        lh: uint, uh: uint, full: nat)
+//     datatype dw_view_raw = dw_view_cons(
+//         lh: uint, uh: uint, full: nat)
 
-    type dw_view_t = num: dw_view_raw |
-        && num.full < DW_BASE()
-        && num.lh == dw_lh(num.full)
-        && num.uh == dw_uh(num.full)
-        witness *
+//     type dw_view_t = num: dw_view_raw |
+//         && num.full < DW_BASE()
+//         && num.lh == dw_lh(num.full)
+//         && num.uh == dw_uh(num.full)
+//         witness *
 
-    lemma dw_view_lemma(num: dw_view_t)
-        ensures num.full
-        == to_nat([num.lh, num.uh])
-        == num.lh + num.uh * BASE();
-        ensures DivMod.IsModEquivalent(num.full, num.lh, BASE());
-    {
-        reveal dw_lh();
-        reveal dw_uh();
-        DivMod.LemmaFundamentalDivMod(num.full, BASE());
-        BVSEQ.LemmaSeqLen2([num.lh, num.uh]);
-        dw_split_lemma(num.full);
-        DivMod.LemmaModMultiplesBasicAuto();
-        assert (num.uh * BASE()) % BASE() == 0;
-    }
+//     lemma dw_view_lemma(num: dw_view_t)
+//         ensures num.full
+//         == to_nat([num.lh, num.uh])
+//         == num.lh + num.uh * BASE();
+//         ensures DivMod.IsModEquivalent(num.full, num.lh, BASE());
+//     {
+//         reveal dw_lh();
+//         reveal dw_uh();
+//         DivMod.LemmaFundamentalDivMod(num.full, BASE());
+//         BVSEQ.LemmaSeqLen2([num.lh, num.uh]);
+//         dw_split_lemma(num.full);
+//         DivMod.LemmaModMultiplesBasicAuto();
+//         assert (num.uh * BASE()) % BASE() == 0;
+//     }
 
-    function build_dw_view(lh: uint, uh: uint): dw_view_t
-    {
-        reveal dw_lh();
-        reveal dw_uh();
-        BVSEQ.LemmaSeqLen2([lh, uh]);
-        BVSEQ.LemmaSeqNatBound([lh, uh]);
-        var full := lh + uh * BASE();
-        assert Power.Pow(BASE(), 2) == DW_BASE() by {
-            reveal Power.Pow();
-        }
-        dw_split_lemma(full);
-        DivMod.LemmaFundamentalDivModConverse(full, BASE(), uh, lh);
-        assert lh == dw_lh(full);
-        assert uh == dw_uh(full);
-        dw_view_cons(lh, uh, full)
-    }
+//     function build_dw_view(lh: uint, uh: uint): dw_view_t
+//     {
+//         reveal dw_lh();
+//         reveal dw_uh();
+//         BVSEQ.LemmaSeqLen2([lh, uh]);
+//         BVSEQ.LemmaSeqNatBound([lh, uh]);
+//         var full := lh + uh * BASE();
+//         assert Power.Pow(BASE(), 2) == DW_BASE() by {
+//             reveal Power.Pow();
+//         }
+//         dw_split_lemma(full);
+//         DivMod.LemmaFundamentalDivModConverse(full, BASE(), uh, lh);
+//         assert lh == dw_lh(full);
+//         assert uh == dw_uh(full);
+//         dw_view_cons(lh, uh, full)
+//     }
 
-/* mul_add bounds */
+// /* mul_add bounds */
 
     lemma full_mul_bound_lemma(a: uint, b: uint)
         ensures 0 <= a * b < DW_BASE();
         ensures 0 <= a * b <= (BASE() - 1) * (BASE() - 1)
-    {
-        var full := a * b;
+//     {
+//         var full := a * b;
 
-        assert full <= (BASE() - 1) * (BASE() - 1) by {
-            Mul.LemmaMulUpperBoundAuto();
-        }
+//         assert full <= (BASE() - 1) * (BASE() - 1) by {
+//             Mul.LemmaMulUpperBoundAuto();
+//         }
 
-        assert full < BASE() * BASE() by {
-            calc <= {
-                full;
-                (BASE() - 1) * (BASE() - 1);
-                { Mul.LemmaMulIsDistributiveSubAuto(); }
-                (BASE() - 1) * BASE() - (BASE() - 1);
-                {
-                    Mul.LemmaMulIsCommutativeAuto();
-                    Mul.LemmaMulIsDistributiveSubAuto();
-                }
-                BASE() * BASE() - BASE() - (BASE() - 1);
-                BASE() * BASE() - 2 * BASE() + 1;
-            }
-        }
+//         assert full < BASE() * BASE() by {
+//             calc <= {
+//                 full;
+//                 (BASE() - 1) * (BASE() - 1);
+//                 { Mul.LemmaMulIsDistributiveSubAuto(); }
+//                 (BASE() - 1) * BASE() - (BASE() - 1);
+//                 {
+//                     Mul.LemmaMulIsCommutativeAuto();
+//                     Mul.LemmaMulIsDistributiveSubAuto();
+//                 }
+//                 BASE() * BASE() - BASE() - (BASE() - 1);
+//                 BASE() * BASE() - 2 * BASE() + 1;
+//             }
+//         }
 
-        Mul.LemmaMulStrictlyPositiveAuto();
-    }
+//         Mul.LemmaMulStrictlyPositiveAuto();
+//     }
 
-    lemma mul_add_bound_lemma(a: uint, b: uint, c: uint)
-       ensures a * b + c < DW_BASE();
-    {
-        var u := BASE() - 1;
-        calc {
-            a * b + c;
-            <= { full_mul_bound_lemma(a, b); }
-            u * u + c;
-            <=
-            u * u + u;
-            == { Mul.LemmaMulIsDistributiveAddAuto(); }
-            u * (u + 1); 
-            <  { Mul.LemmaMulLeftInequality(u + 1, u, u + 1); }
-            (u + 1) * (u + 1); 
-            ==
-            DW_BASE();
-        }
-    }
+//     lemma mul_add_bound_lemma(a: uint, b: uint, c: uint)
+//        ensures a * b + c < DW_BASE();
+//     {
+//         var u := BASE() - 1;
+//         calc {
+//             a * b + c;
+//             <= { full_mul_bound_lemma(a, b); }
+//             u * u + c;
+//             <=
+//             u * u + u;
+//             == { Mul.LemmaMulIsDistributiveAddAuto(); }
+//             u * (u + 1); 
+//             <  { Mul.LemmaMulLeftInequality(u + 1, u, u + 1); }
+//             (u + 1) * (u + 1); 
+//             ==
+//             DW_BASE();
+//         }
+//     }
     
-    lemma mul_double_add_bound_lemma(a: uint, b: uint, c: uint, d: uint)
-        ensures a * b + c + d < DW_BASE();
-    {
-        var u := BASE() - 1;
+//     lemma mul_double_add_bound_lemma(a: uint, b: uint, c: uint, d: uint)
+//         ensures a * b + c + d < DW_BASE();
+//     {
+//         var u := BASE() - 1;
 
-        calc {
-            a * b + c + d;
-            <= { full_mul_bound_lemma(a, b); }
-            u * u + c + d;
-            <= u * u + u + u;
-            u * u + 2 * u;
-            < (u * u) + (2 * u) + 1;
-        }
+//         calc {
+//             a * b + c + d;
+//             <= { full_mul_bound_lemma(a, b); }
+//             u * u + c + d;
+//             <= u * u + u + u;
+//             u * u + 2 * u;
+//             < (u * u) + (2 * u) + 1;
+//         }
 
-        calc == {
-            (u + 1) * (u + 1);
-            { Mul.LemmaMulIsDistributiveAdd(u + 1, u, 1); }
-            (u + 1) * u + (u + 1) * 1; 
-            u * (u + 1) + u + 1;
-            { Mul.LemmaMulIsDistributiveAdd(u, u, 1); }
-            (u * u) + (2 * u) + 1;
-        }
-    }
+//         calc == {
+//             (u + 1) * (u + 1);
+//             { Mul.LemmaMulIsDistributiveAdd(u + 1, u, 1); }
+//             (u + 1) * u + (u + 1) * 1; 
+//             u * (u + 1) + u + 1;
+//             { Mul.LemmaMulIsDistributiveAdd(u, u, 1); }
+//             (u * u) + (2 * u) + 1;
+//         }
+//     }
 
 }

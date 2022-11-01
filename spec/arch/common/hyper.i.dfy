@@ -1,13 +1,11 @@
 include "flat.s.dfy"
+include "../../bvop/bv16_op.s.dfy"
 
-abstract module regions_mem_i(BV: bv_op_s) {
+module hyper_mem_i(BV: bv_op_s, FM: flat_mem_s(BV)) {
     import opened integers
-    import FM = flat_mem_s(BV)
-    import BS = FM.BS
-
     import Mul
 
-    type regions_t = map<nat, seq<BS.uint>>
+    type regions_t = map<nat, seq<BV.uint>>
 
     predicate region_index_valid(regions: regions_t, base: nat, i: nat)
     {
@@ -15,13 +13,13 @@ abstract module regions_mem_i(BV: bv_op_s) {
         && 0 <= i < |regions[base]|
     }
 
-    function read_region(regions: regions_t, base: nat, i: nat): BS.uint
+    function read_region(regions: regions_t, base: nat, i: nat): BV.uint
         requires region_index_valid(regions, base, i)
     {
         regions[base][i]
     }
 
-    function wrtie_region(regions: regions_t, base: nat, i: nat, v: BS.uint): regions_t
+    function wrtie_region(regions: regions_t, base: nat, i: nat, v: BV.uint): regions_t
         requires region_index_valid(regions, base, i)
     {
         var region' := regions[base][i := v];
@@ -30,11 +28,11 @@ abstract module regions_mem_i(BV: bv_op_s) {
 
     function as_flat_ptr(base: nat, i: nat): nat
     {
-        Mul.LemmaMulNonnegative(i, FM.WORD_BYTES);
-        base + i * FM.WORD_BYTES
+        Mul.LemmaMulNonnegative(i, FM.WORD_BYTES());
+        base + i * FM.WORD_BYTES()
     }
 
-    function build_stack_region(mem: FM.mem_t, base: nat, len: nat): seq<BS.uint>
+    function build_stack_region(mem: FM.mem_t, base: nat, len: nat): seq<BV.uint>
         requires mem.region_valid(base, len)
     {
         seq(len, i requires 0 <= i < len =>
@@ -48,14 +46,14 @@ abstract module regions_mem_i(BV: bv_op_s) {
             build_stack_region(mem, base, mem.split[base])
     }
 
-    predicate refines_flat(regions: regions_t, mem: FM.mem_t)
+    predicate regions_inv(regions: regions_t, mem: FM.mem_t)
     {
         && mem.inv()
         && regions == build_regions(mem)
     }
 
     lemma read_refinement_lemma(regions: regions_t, base: nat, i: nat, mem: FM.mem_t)
-        requires refines_flat(regions, mem)
+        requires regions_inv(regions, mem)
         requires region_index_valid(regions, base, i)
         ensures FM.ptr_aligned(as_flat_ptr(base, i))
         ensures read_region(regions, base, i) ==
@@ -64,26 +62,17 @@ abstract module regions_mem_i(BV: bv_op_s) {
         assume false;
     }
 
-    lemma write_refinement_lemma(regions: regions_t, base: nat, i: nat, v: BS.uint, mem: FM.mem_t)
-        requires refines_flat(regions, mem)
+    lemma write_refinement_lemma(regions: regions_t, base: nat, i: nat, v: BV.uint, mem: FM.mem_t)
+        requires regions_inv(regions, mem)
         requires region_index_valid(regions, base, i)
         ensures FM.ptr_aligned(as_flat_ptr(base, i))
-        ensures refines_flat(wrtie_region(regions, base, i, v),
+        ensures regions_inv(wrtie_region(regions, base, i, v),
             mem.write_word(as_flat_ptr(base, i), v))
     {
         assume false;
     }
-}
 
-abstract module hyper_mem_i(BV: bv_op_s)
-{
-    import Mul
-
-    import RM = regions_mem_i(BV)
-    import FM = RM.FM
-    import BS = FM.BS
-
-    function {:fuel 1} rev_concat(fs: seq<seq<BS.uint>>): seq<BS.uint>
+    function {:fuel 1} rev_concat(fs: seq<seq<BV.uint>>): seq<BV.uint>
         decreases |fs|
     {
         if |fs| == 0 then
@@ -93,26 +82,30 @@ abstract module hyper_mem_i(BV: bv_op_s)
             fs[index] + rev_concat(fs[..index])
     }
 
+    type heap_t = map<FM.aptr, seq<BV.uint>>
+
+    type frames_t = seq<seq<BV.uint>>
+
     datatype hyper_t = hyper_cons(
-        heap: map<FM.aptr, seq<BS.uint>>,
-        fs: seq<seq<BS.uint>>,
-        free: seq<BS.uint>)
+        heap: heap_t,
+        fs: frames_t,
+        free: seq<BV.uint>)
     {
-        function build_stack_region(): seq<BS.uint>
+        function build_stack_region(): seq<BV.uint>
         {
             free + rev_concat(fs)
         }
 
-        function build_regions(): RM.regions_t
+        function build_regions(): regions_t
         {
-            heap[FM.STACK_BOT := build_stack_region()]
+            heap[FM.STACK_BOT() := build_stack_region()]
         }
 
-        predicate refines_flat(mem: RM.FM.mem_t)
+        predicate refines_flat(mem: FM.mem_t)
         {
             && mem.inv()
-            && FM.STACK_BOT !in heap
-            && RM.refines_flat(build_regions(), mem)
+            && FM.STACK_BOT() !in heap
+            && regions_inv(build_regions(), mem)
         }
 
         function push_frame_(len: nat): hyper_t
@@ -168,14 +161,14 @@ abstract module hyper_mem_i(BV: bv_op_s)
             && i < |fs[|fs| - 1]|
         }
 
-        function write_frame_(i: nat, value: BS.uint): hyper_t
+        function write_frame_(i: nat, value: BV.uint): hyper_t
             requires valid_frame_index(i)
         {
             var fi := |fs| - 1;
             hyper_cons(heap, fs[..fi] + [fs[fi][i := value]], free)
         }
 
-        lemma write_frame_refinement_lemma(i: nat, value: BS.uint)
+        lemma write_frame_refinement_lemma(i: nat, value: BV.uint)
             requires valid_frame_index(i)
             ensures write_frame_(i, value).build_stack_region() ==
                 build_stack_region()[|free| + i := value];
@@ -198,7 +191,7 @@ abstract module hyper_mem_i(BV: bv_op_s)
             }
         }
 
-        function read_frame_(i: nat): BS.uint
+        function read_frame_(i: nat): BV.uint
             requires valid_frame_index(i)
         {
             fs[|fs| - 1][i]
@@ -220,32 +213,32 @@ abstract module hyper_mem_i(BV: bv_op_s)
         }
     }
 
-    datatype iter_t = iter_cons(base_ptr: nat, buff: seq<BS.uint>, index: nat)
+    datatype iter_t = iter_cons(base_ptr: nat, buff: seq<BV.uint>, index: nat)
     {
         function cur_addr(): nat
         {
-            RM.as_flat_ptr(base_ptr, index)
+            as_flat_ptr(base_ptr, index)
         }
     }
 
-    predicate iter_inv(hyper: hyper_t, iter: iter_t)
+    predicate iter_inv(heap: heap_t, iter: iter_t)
     {
         var base_ptr := iter.base_ptr;
-        && base_ptr in hyper.heap
+        && base_ptr in heap
         && iter.index <= |iter.buff|
-        && hyper.heap[base_ptr] == iter.buff
+        && heap[base_ptr] == iter.buff
     }
 
-    predicate iter_safe(hyper: hyper_t, iter: iter_t)
+    predicate iter_safe(heap: heap_t, iter: iter_t)
     {
-        && iter_inv(hyper, iter)
+        && iter_inv(heap, iter)
         && iter.index < |iter.buff|
     }
 
 // iter read
 
-    function read_iter(hyper: hyper_t, iter: iter_t): (v: BS.uint)
-        requires iter_safe(hyper, iter)
+    function read_iter(heap: heap_t, iter: iter_t): (v: BV.uint)
+        requires iter_safe(heap, iter)
     {
         iter.buff[iter.index]
     }
@@ -255,59 +248,59 @@ abstract module hyper_mem_i(BV: bv_op_s)
         iter.(index := if inc then iter.index + 1 else iter.index)
     }
 
-    lemma read_iter_refinement_lemma(hyper: hyper_t, iter: iter_t, mem: RM.FM.mem_t)
-        requires iter_safe(hyper, iter)
+    lemma read_iter_refinement_lemma(hyper: hyper_t, iter: iter_t, mem: FM.mem_t)
+        requires iter_safe(hyper.heap, iter)
         requires hyper.refines_flat(mem)
         ensures FM.ptr_aligned(iter.cur_addr())
-        ensures read_iter(hyper, iter) ==
+        ensures read_iter(hyper.heap, iter) ==
             mem.read_word(iter.cur_addr())
     {
         var regions := hyper.build_regions();
         assert iter.buff == regions[iter.base_ptr];
-        RM.read_refinement_lemma(regions, iter.base_ptr, iter.index, mem);
+        read_refinement_lemma(regions, iter.base_ptr, iter.index, mem);
     }
 
 // iter write
 
-    function write_iter(hyper: hyper_t, iter: iter_t, value: BS.uint):
-        (hyper_t)
-        requires iter_safe(hyper, iter)
+    function write_iter(heap: heap_t, iter: iter_t, value: BV.uint):
+        (heap_t)
+        requires iter_safe(heap, iter)
     {
         var buff' := iter.buff[iter.index := value];
-        hyper.(heap := hyper.heap[iter.base_ptr := buff'])
+        heap[iter.base_ptr := buff']
     }
 
-    function iter_store_next(iter: iter_t, value: BS.uint, inc: bool): iter_t
+    function iter_store_next(iter: iter_t, value: BV.uint, inc: bool): iter_t
         requires iter.index < |iter.buff|
     {
         iter.(index := if inc then iter.index + 1 else iter.index)
             .(buff := iter.buff[iter.index := value])
     }
 
-    lemma write_iter_refinement_lemma(hyper: hyper_t, iter: iter_t, value: BS.uint, mem: RM.FM.mem_t)
+    lemma write_iter_refinement_lemma(hyper: hyper_t, iter: iter_t, value: BV.uint, mem: FM.mem_t)
         returns (hyper': hyper_t)
-        requires iter_safe(hyper, iter)
+        requires iter_safe(hyper.heap, iter)
         requires hyper.refines_flat(mem)
-        ensures hyper' == write_iter(hyper, iter, value)
+        ensures hyper' == hyper.(heap := write_iter(hyper.heap, iter, value))
         ensures FM.ptr_aligned(iter.cur_addr())
         ensures hyper'.refines_flat(mem.write_word(iter.cur_addr(), value))
-        ensures iter_safe(hyper', iter_store_next(iter, value, false))
+        ensures iter_safe(hyper'.heap, iter_store_next(iter, value, false))
     {
         var regions := hyper.build_regions();
         var base := iter.base_ptr;
         var buff := iter.buff;
         var index := iter.index;
         assert buff == regions[base];
-        RM.write_refinement_lemma(regions, base, iter.index, value, mem);
-        hyper' := write_iter(hyper, iter, value);
+        write_refinement_lemma(regions, base, iter.index, value, mem);
+        hyper' := hyper.(heap := write_iter(hyper.heap, iter, value));
         var regions' := hyper'.build_regions();
         assert regions' == regions[base := buff[index := value]];
-        assert regions' == RM.wrtie_region(regions, base, index, value);
+        assert regions' == wrtie_region(regions, base, index, value);
     }
 
 // stack push
 
-    lemma push_refinement_lemma(hyper: hyper_t, len: nat, mem: RM.FM.mem_t)
+    lemma push_refinement_lemma(hyper: hyper_t, len: nat, mem: FM.mem_t)
         returns (hyper': hyper_t)
         requires 0 <= len < |hyper.free|
         requires hyper.refines_flat(mem)
@@ -322,7 +315,7 @@ abstract module hyper_mem_i(BV: bv_op_s)
 
 // stack pop
 
-    lemma pop_refinement_lemma(hyper: hyper_t, len: nat, mem: RM.FM.mem_t)
+    lemma pop_refinement_lemma(hyper: hyper_t, len: nat, mem: FM.mem_t)
         returns (hyper': hyper_t)
         requires |hyper.fs| != 0
         requires hyper.refines_flat(mem)
@@ -337,43 +330,54 @@ abstract module hyper_mem_i(BV: bv_op_s)
 
 // stack read
 
-    lemma read_frame_refinement_lemma(hyper: hyper_t, i: nat, mem: RM.FM.mem_t)
+    lemma read_frame_refinement_lemma(hyper: hyper_t, i: nat, mem: FM.mem_t)
         requires hyper.valid_frame_index(i)
         requires hyper.refines_flat(mem)
-        ensures FM.ptr_aligned(RM.as_flat_ptr(FM.STACK_BOT, i + |hyper.free|))
+        ensures FM.ptr_aligned(as_flat_ptr(FM.STACK_BOT(), i + |hyper.free|))
         ensures hyper.read_frame_(i) ==
-            mem.read_word(RM.as_flat_ptr(FM.STACK_BOT, i + |hyper.free|))
+            mem.read_word(as_flat_ptr(FM.STACK_BOT(), i + |hyper.free|))
     {
         var regions := hyper.build_regions();
-        var base := FM.STACK_BOT;
+        var base := FM.STACK_BOT();
         hyper.read_frame_refinement_lemma(i);
         var j := |hyper.free| + i;
-        RM.read_refinement_lemma(regions, base, j, mem);
+        read_refinement_lemma(regions, base, j, mem);
     }
 
 // stack write
 
-    lemma write_frame_refinement_lemma(hyper: hyper_t, i: nat, value: BS.uint, mem: RM.FM.mem_t)
+    lemma write_frame_refinement_lemma(hyper: hyper_t, i: nat, value: BV.uint, mem: FM.mem_t)
         returns (hyper': hyper_t)
         requires hyper.valid_frame_index(i)
         requires hyper.refines_flat(mem)
         ensures hyper' == hyper.write_frame_(i, value)
-        ensures FM.ptr_aligned(RM.as_flat_ptr(FM.STACK_BOT, i + |hyper.free|))
+        ensures FM.ptr_aligned(as_flat_ptr(FM.STACK_BOT(), i + |hyper.free|))
         ensures hyper'.refines_flat(
-            mem.write_word(RM.as_flat_ptr(FM.STACK_BOT, i + |hyper.free|), value))
+            mem.write_word(as_flat_ptr(FM.STACK_BOT(), i + |hyper.free|), value))
     {
         hyper' := hyper.write_frame_(i, value);
         var regions := hyper.build_regions();
         var regions' := hyper'.build_regions();
-        var base := FM.STACK_BOT;
+        var base := FM.STACK_BOT();
         hyper.write_frame_refinement_lemma(i, value);
         var j := |hyper.free| + i;
         var stack' := regions[base][j := value];
         assert regions' == regions[base := stack'];
-        assert regions' == RM.wrtie_region(regions, base, j, value);
-        RM.write_refinement_lemma(regions, base, j, value, mem);
+        assert regions' == wrtie_region(regions, base, j, value);
+        write_refinement_lemma(regions, base, j, value, mem);
     }
 }
+
+module msp_hyper_i refines hyper_mem_i(
+    bv16_op_s, msp_mem_s)
+{
+}
+
+// module msp_hyper_i refines hyper_mem_i(
+//     bv16_op_s, regions_mem_i(bv16_op_s, msp_mem_s))
+// {
+// }
+
 
 // abstract module test {
 //     import opened integers
@@ -382,7 +386,7 @@ abstract module hyper_mem_i(BV: bv_op_s)
 
 //     import HM = hyper_mem_i(BV32)
 //     import RM = HM.RM
-//     import FM = RM.FM
+//     import FM = FM
 
 //     // import FM = HM.FM
 

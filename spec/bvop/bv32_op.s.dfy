@@ -13,13 +13,12 @@ module bv32_seq refines LittleEndianNat
 
 module bv32_op_s refines bv_op_s
 {
-    import opened BVSEQ = bv32_seq
     import DivModNeg
     import bv16_op_s
 
-    lemma base_basic_lemma()
-        ensures BASE() % 2 == 0
+    function method BASE(): nat
     {
+        integers.BASE_32
     }
 
     // half word base

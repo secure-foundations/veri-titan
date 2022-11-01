@@ -1,20 +1,19 @@
 include "../../../std_lib/src/NonlinearArithmetic/Mul.dfy"
 include "machine.s.dfy"
-include "mem.i.dfy"
+include "../common/hyper.i.dfy"
 
 module msp_vale {
     import opened integers
     import opened msp_machine
-    import opened flat
-    import opened mem
-    import opened stack
+    import opened msp_mem_s
+    import opened msp_hyper_i
 
     import opened Mul
 
     type va_code = code
     type va_codes = codes
 
-    datatype gstate = gstate(ms: state, mem: mem_t)
+    datatype gstate = gstate(ms: state, hyper: hyper_t)
 
     type va_state = gstate
 
@@ -61,8 +60,7 @@ module msp_vale {
 
     function va_update_ok(sM: va_state, sK: va_state): va_state
     {
-        var temp := sM.ms.ok;
-        sK.(ms := sK.ms.(ok := temp))
+        sK.(ms := sK.ms.(ok := sM.ms.ok))
     }
 
     function va_get_reg_t(r: reg_t, s: va_state): uint16
@@ -92,7 +90,7 @@ module msp_vale {
         sK.(ms := sK.ms.(regs := temp))
     }
 
-    function va_get_flat(s: va_state): flat_t
+    function va_get_flat(s: va_state): mem_t
     {
         s.ms.flat
     }
@@ -114,61 +112,52 @@ module msp_vale {
         sK.(ms := sK.ms.(flags := temp))
     }
 
-    function va_get_symbols(s: va_state): map<string, uint16>
+    // function va_get_symbols(s: va_state): map<string, uint16>
+    // {
+    //     s.mem.symbols
+    // }
+
+    function va_get_hyper(s: va_state): hyper_t 
     {
-        s.mem.symbols
+        s.hyper
     }
 
-    function va_get_mem(s: va_state): mem_t
+    function va_update_hyper(sM: va_state, sK: va_state): va_state
     {
-        s.mem
-    }
-
-    function va_update_mem(sM: va_state, sK: va_state): va_state
-    {
-        sK.(mem := sM.mem)
+        sK.(hyper := sM.hyper)
     }
 
     function va_get_heap(s: va_state): heap_t
     {
-        s.mem.heap
+        s.hyper.heap
     }
 
     function va_update_heap(sM: va_state, sK: va_state): va_state
     {
-        sK.(mem := sK.mem.(heap := sM.mem.heap))
+        sK.(hyper := sK.hyper.(heap := sM.hyper.heap))
     }
 
     function va_get_frames(s: va_state): frames_t
     {
-        s.mem.frames
+        s.hyper.fs
     }
 
     function va_update_frames(sM: va_state, sK: va_state): va_state
     {
-        sK.(mem := sK.mem.(frames := sM.mem.frames))
+        sK.(hyper := sK.hyper.(fs := sM.hyper.fs))
     }
 
-    type iter_t = b16_iter
-
-    function cur_ptr(iter: iter_t) : nat 
+    predicate msp_iter_inv(iter: iter_t, heap: heap_t, address: int)
     {
-      iter.cur_ptr()
+        && iter.cur_addr() == address
+        && iter_inv(heap, iter)
     }
 
-    predicate iter_inv(iter: iter_t, heap: heap_t, address: int)
+    predicate msp_iter_safe(iter: iter_t, heap: heap_t, address: int)
     {
-        && iter.cur_ptr() == address
-        && b16_iter_inv(heap, iter)
+        && iter.cur_addr() == address
+        && iter_safe(heap, iter)
     }
-
-    predicate iter_safe(iter: iter_t, heap: heap_t, address: int)
-    {
-        && iter.cur_ptr() == address
-        && b16_iter_safe(heap, iter)
-    }
-
-    // reg
 
     type va_value_reg = uint16
 
@@ -202,11 +191,13 @@ module msp_vale {
     predicate va_state_eq(s0: va_state, s1: va_state)
     {
         // s0 == s1
-        && s0.ms.regs == s1.ms.regs
-        && s0.ms.flat == s1.ms.flat
-        && s0.ms.flags == s1.ms.flags
-        && s0.ms.ok == s1.ms.ok
-        && s0.mem == s1.mem
+        && s0.ms == s1.ms
+        // && s0.ms.regs == s1.ms.regs
+        // && s0.ms.flat == s1.ms.flat
+        // && s0.ms.flags == s1.ms.flags
+        // && s0.ms.ok == s1.ms.ok
+        && s0.hyper.heap == s1.hyper.heap
+        && s0.hyper.fs == s1.hyper.fs
     }
 
     predicate{:opaque} eval_code_opaque(c:code, s0:state, sN:state)
@@ -227,9 +218,9 @@ module msp_vale {
         // ensures valid_state_opaque(s) ==> valid_state(s.ms);
         // ensures valid_state_opaque(s) ==> s.mem.inv(s.ms.flat);
     {
-        && s.ms.read_reg(SP) == s.mem.frames.sp
+        // && s.ms.read_reg(SP) == s.mem.frames.sp
         && valid_state(s.ms)
-        && s.mem.inv(s.ms.flat)
+        && s.hyper.refines_flat(s.ms.flat)
     }
 
     predicate va_require(b0:codes, c1:code, s0: va_state, sN: va_state)
@@ -397,7 +388,7 @@ module msp_vale {
             var r':state :| eval_code(b.hd, s0.ms, r') && eval_block(b.tl, r', r.ms);
             c0 := b.hd;
             b1 := b.tl;
-            r1 := gstate(r', s0.mem);
+            r1 := gstate(r', s0.hyper);
             if valid_state_opaque(s0) {
                 // reveal_valid_state_opaque();
                 code_state_validity(c0, s0.ms, r1.ms);
@@ -480,7 +471,7 @@ module msp_vale {
         ensures  if s.ms.ok && valid_state_opaque(s) then
                     && s'.ms.ok
                     && s == s'
-                    && (s.mem == s'.mem == r'.mem)
+                    && (s.hyper == s'.hyper == r'.hyper)
                     && eval_cond(s.ms, w)
                 else
                     true; //!r.ok;
@@ -499,7 +490,7 @@ module msp_vale {
         if valid_state_opaque(s) {
             var r'':state :| eval_code(c, s.ms, r'') && eval_while(w, c, n - 1, r'', r.ms);
             s' := s;
-            r' := gstate(r'', s.mem);
+            r' := gstate(r'', s.hyper);
             code_state_validity(c, s'.ms, r'');
         } else {
             s' := s.(ms := s.ms.(ok := false));
@@ -518,7 +509,7 @@ module msp_vale {
                     else
                         true)
                     && r'.ms  == r.ms 
-                    && r'.mem  == s.mem
+                    && r'.hyper  == s.hyper
                 else
                     r' == s; //!r.ok;
     {
@@ -530,6 +521,6 @@ module msp_vale {
             r' := s;
             return;
         }
-        r' := r.(mem := s.mem);
+        r' := r.(hyper := s.hyper);
     }
 }
