@@ -21,5 +21,4 @@ output.s
 *.dll
 *.runtimeconfig.json
 tools/
-std_lib/
 *.pyc

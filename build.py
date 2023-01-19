@@ -9,7 +9,7 @@ DAFNY_PATH = "./tools/dafny/Binaries/Dafny"
 VALE_PATH = "./tools/vale/bin/vale"
 DAFNY_LIB_DIR = "./std_lib"
 
-DAFNY_LIB_HASH = "6ce420782487e592dd9925acf715e0d9548bc300"
+DAFNY_LIB_HASH = "****"
 
 # DAFNY_ZIP_LINUX = "dafny-3.0.0-x64-ubuntu-16.04.zip"
 # DAFNY_ZIP_MACOS = "dafny-3.0.0-x64-osx-10.14.2.zip"
@@ -191,20 +191,20 @@ def setup_tools():
     if os.path.exists(DAFNY_PATH):
         print("[INFO] dafny binary already exists")
     else:
-        os.system("cd tools && git clone git@github.com:secure-foundations/dafny.git")
-        os.system(f"cd tools/dafny && git checkout groebner-extension && make exe && make {z3_target}")
+        os.system("cd tools && git clone git@github.com:****/dafny.git")
+        os.system(f"cd tools/dafny && git checkout **** && make exe && make {z3_target}")
 
     if os.path.exists(VALE_PATH):
         print("[INFO] vale binary already exists")
     else:
         os.system("cd tools && git clone git@github.com:project-everest/vale.git")
-        os.system("cd tools/vale && git checkout otbn-custom && bash ./run_scons.sh")
+        os.system("cd tools/vale && git checkout **** && bash ./run_scons.sh")
         os.system("mv tools/vale/bin/vale.exe tools/vale/bin/vale")
 
     if os.path.exists(DAFNY_LIB_DIR):
         print("[INFO] dafny library already exists")
     else:
-        os.system(f"git clone git@github.com:secure-foundations/libraries.git {DAFNY_LIB_DIR} && cd {DAFNY_LIB_DIR} && git checkout {DAFNY_LIB_HASH}")
+        os.system(f"git clone git@github.com:****/libraries.git {DAFNY_LIB_DIR} && cd {DAFNY_LIB_DIR} && git checkout {DAFNY_LIB_HASH}")
 
 # list dependecy 
 

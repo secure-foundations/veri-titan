@@ -1,10 +1,10 @@
-/* Copyright lowRISC Contributors.
- * Copyright 2016 The Chromium OS Authors. All rights reserved.
- * Use of this source code is governed by a BSD-style license that can be
- * found in the LICENSE.dcrypto file.
+/* 
+ * 
+ * 
+ * 
  *
  * Derived from code in
- * https://chromium.googlesource.com/chromiumos/platform/ec/+/refs/heads/main/common/rsa.c
+ * https://****
  */
 
 /**

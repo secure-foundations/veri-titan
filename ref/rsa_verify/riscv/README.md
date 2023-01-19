@@ -33,9 +33,9 @@ exponentiation. A justification for this can be found in [3].
 
 **Assembly**
 Assembyl in the dump file was obtained using `objdump`. Calling conventions
-are standard (see e.g. https://github.com/riscv/riscv-elf-psabi-doc/blob/master/riscv-elf.md)
+are standard (see e.g. https://****
 
 **References**  
-[1] https://doi.ieeecomputersociety.org/10.1109/40.502403  
-[2] https://doi.org/10.1007/978-3-540-39881-3_22  
-[3] https://eprint.iacr.org/2017/1057.pdf  
+[1] https://****  
+[2] https://****  
+[3] https://****  

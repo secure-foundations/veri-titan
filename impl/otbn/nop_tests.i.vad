@@ -394,7 +394,7 @@ procedure loop_function_overlap()
 }
     
 
-/* Examples provided in: https://docs.opentitan.org/hw/ip/otbn/doc/#loop-nesting */
+/* Examples provided in: https://**** */
 procedure otbn_inner_1()
     requires
         true;

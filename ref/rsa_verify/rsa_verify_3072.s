@@ -1,10 +1,10 @@
-/* Copyright lowRISC Contributors.
- * Copyright 2016 The Chromium OS Authors. All rights reserved.
- * Use of this source code is governed by a BSD-style license that can be
- * found in the LICENSE.dcrypto file.
+/* 
+ * 
+ * 
+ * 
  *
  * Derived from code in
- * https://chromium.googlesource.com/chromiumos/platform/ec/+/refs/heads/cr50_stab/chip/g/dcrypto/dcrypto_bn.c
+ * https://****
  */
 
 .text
@@ -93,7 +93,7 @@ mul256_w30xw2:
  * i_th call to this subroutine within one full Montgomery Multiplication run.
  * Step 3 of HAC 14.36 is replaced by the approach to perform the conditional
  * subtraction when the intermediate result is larger than R instead of m. See
- * e.g. https://eprint.iacr.org/2017/1057 section 2.4.2 for a justification.
+ * e.g. https://**** section 2.4.2 for a justification.
  * This does not omit the conditional subtraction.
  * Variable names of HAC are mapped as follows to the ones used in the
  * this library: x=B, y=A, A=C, b=2^WLEN, m=M, R=R, m' = m0', n=N.

@@ -4,7 +4,7 @@ include "../../../gen/impl/otbn/nop_tests.i.dfy"
 /* 
  A module for testing that OTBN code correctly includes NOP
  instructions to avoid LOOP_ERRORs, as described in:
- https://docs.opentitan.org/hw/ip/otbn/doc/#loop-nesting   
+ https://****   
 */
 module test_framework {
     import opened integers
