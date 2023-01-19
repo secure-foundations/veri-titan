@@ -3,8 +3,6 @@
 import sys, os, subprocess, re, platform
 from subprocess import PIPE, Popen
 from os.path import exists
-from parse_lib import *
-import json
 
 TOOLS_DIR = "./tools"
 DAFNY_PATH = "./tools/dafny/Binaries/Dafny"
