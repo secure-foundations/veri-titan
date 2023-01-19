@@ -46,3 +46,8 @@ Contains the cross platform abstract implementations in:
  `glue/generic_mm_lemmas.dfy`
  
 Other folders contains the instantiations of these two modules, maybe with additional platform specific proofs that is required. 
+
+
+### `std_lib`
+
+Contains the dafny standard library.
