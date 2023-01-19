@@ -511,7 +511,7 @@ module ot_machine {
         function method eval_CSRRS(grd: reg32_t, csr: uint12, grs1: reg32_t): state
         {
             var v1 := read_reg32(grs1);
-            // TODO: extend when necessary
+
             if csr != 0x7c0 && csr != 0x7c1 && v1 != 0 then 
                 this.(ok := false)
             else if csr == 0x7c0 then

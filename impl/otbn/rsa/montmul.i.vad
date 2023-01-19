@@ -135,8 +135,6 @@ procedure montmul(ghost vars: mvars)
         mvars_inv(vars, heap, NA, x19, x16, x17, NA, NA);
         montmul_inv(a_view, vars.x_it.buff, NUM_WORDS, vars.y_it.buff, vars.rsa);
 {
-    /* TODO: Can this header comment appear above the procedure? Better yet, can
-       we print the requires/ensures clause in a comment automatically? */
     comment("/**");
     comment(" * Variable-time 3072-bit Montgomery Modular Multiplication");
     comment(" *");

@@ -727,8 +727,6 @@ procedure neg(inout dst: reg32, in src: reg32)
 // Integer Multiplication and Division Extension
 // --------------------------------------------------------------
 
-// todo: mulh mulshu div divu rem remu
-
 procedure mul(inout dst: reg32, in src1: reg32, in src2: reg32)
     {:instruction Ins32(RV_MUL(dst, src1, src2))}
     ensures

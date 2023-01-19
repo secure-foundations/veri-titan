@@ -279,8 +279,6 @@ method printIns256(ins:ins256)
             print("bn.wsrw ");
             print(wsr); print(", "); printReg256(wrs);
             print("\n");
-
-        // case _ => print("TODO256 "); print(ins);
 }
 
 method printWhileCond(wcond: whileCond)
@@ -407,9 +405,6 @@ class Printer {
                 printCode(tbody);
                 printIndent(); print("label_"); print(labelCount); print(":\n");
                 var fsize := codeSize(fbody);
-                if fsize != 0 {
-                    print("TODO else not yet implemented"); 
-                }
                 labelCount := labelCount + 1;
             }
             case While(wcond, wbody) =>
