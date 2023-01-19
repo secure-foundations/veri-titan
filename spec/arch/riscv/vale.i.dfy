@@ -482,7 +482,7 @@ module rv_vale {
             r' := s;
             return;
         }
-        assert eval_while(w, c, n, s.ms, r.ms); // TODO: Dafny reveal/opaque issue
+        assert eval_while(w, c, n, s.ms, r.ms); 
 
         if valid_state_opaque(s) {
             var r'':state :| eval_code(c, s.ms, r'') && eval_while(w, c, n - 1, r'', r.ms);

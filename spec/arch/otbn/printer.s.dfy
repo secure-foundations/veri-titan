@@ -90,7 +90,6 @@ method printIns32(ins:ins32)
         //     printReg32(dst); print(", "); print(src);
         //     print("\n");
 
-        // TODO: this is case-by-case combo of addi and lui, should we print that instead?
         case LI(dst, src) =>
             print ("li ");
             printReg32(dst); print(", "); print(src);
@@ -208,7 +207,7 @@ method printIns256(ins:ins256)
             printShift(shift); print(", "); printFlags(fg);
             print("\n");
 
-        // TODO: fix otbn_subm in ot_machine file
+
         case BN_SUBM(dst, src1, src2) =>
             print("bn.subm ");
             printReg256(dst); print(", "); printReg256(src1); print(", "); printReg256(src2);

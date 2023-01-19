@@ -189,7 +189,7 @@ module ot_machine {
             bv256_op_s.uh(x) / BASE_64
     }
 
-    // TODO: Move lemmas out of the trusted .s.dfy file
+
     lemma uint256_quarter_split_lemma(x: uint256)
         ensures x == otbn_qsel(x, 0) +
             otbn_qsel(x, 1) * BASE_64 + 
@@ -249,7 +249,7 @@ module ot_machine {
         else lh + v * BASE_128
     }
 
-    // TODO: Move lemmas out of the trusted .s.dfy file
+
     lemma otbn_hwb_lemma(x1: uint256, x2: uint256, x3: uint256, lo: uint128, hi: uint128)
         requires x2 == otbn_hwb(x1, lo, true);
         requires x3 == otbn_hwb(x2, hi, false);
