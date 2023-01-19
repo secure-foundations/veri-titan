@@ -394,7 +394,7 @@ procedure loop_function_overlap()
 }
     
 
-/* Examples provided in: https://**** */
+/* Examples provided in: https://place-holder */
 procedure otbn_inner_1()
     requires
         true;

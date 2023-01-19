@@ -33,9 +33,9 @@ exponentiation. A justification for this can be found in [3].
 
 **Assembly**
 Assembyl in the dump file was obtained using `objdump`. Calling conventions
-are standard (see e.g. https://****
+are standard (see e.g. https://place-holder
 
 **References**  
-[1] https://****  
-[2] https://****  
-[3] https://****  
+[1] https://place-holder  
+[2] https://place-holder  
+[3] https://place-holder  

@@ -433,7 +433,7 @@ procedure mont_loop(
     comment("* i_th call to this subroutine within one full Montgomery Multiplication run.");
     comment("* Step 3 of HAC 14.36 is replaced by the approach to perform the conditional");
     comment("* subtraction when the intermediate result is larger than R instead of m. See");
-    comment("* e.g. https://**** section 2.4.2 for a justification.");
+    comment("* e.g. https://place-holder section 2.4.2 for a justification.");
     comment("* This does not omit the conditional subtraction.");
     comment("* Variable names of HAC are mapped as follows to the ones used in the");
     comment("* this library: x=B, y=A, A=C, b=2^WLEN, m=M, R=R, m' = m0', n=N.");

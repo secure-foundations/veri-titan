@@ -4,7 +4,7 @@
  * 
  *
  * Derived from code in
- * https://****
+ * https://place-holder
  */
 
 .text
@@ -93,7 +93,7 @@ mul256_w30xw2:
  * i_th call to this subroutine within one full Montgomery Multiplication run.
  * Step 3 of HAC 14.36 is replaced by the approach to perform the conditional
  * subtraction when the intermediate result is larger than R instead of m. See
- * e.g. https://**** section 2.4.2 for a justification.
+ * e.g. https://place-holder section 2.4.2 for a justification.
  * This does not omit the conditional subtraction.
  * Variable names of HAC are mapped as follows to the ones used in the
  * this library: x=B, y=A, A=C, b=2^WLEN, m=M, R=R, m' = m0', n=N.

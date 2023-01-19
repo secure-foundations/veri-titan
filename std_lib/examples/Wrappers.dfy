@@ -126,7 +126,7 @@ module Demo {
   method TestMyFilesystem() {
     var fs := new MyFilesystem();
     // Note: these verbose "outcome.Failure?" patterns will soon
-    // not be needed any more, see https://****
+    // not be needed any more, see https://place-holder
     var outcome: Result<(), string> := fs.CreateFile("test.txt");
     if outcome.Failure? {
       print outcome.error, "\n";
