@@ -40,8 +40,8 @@ module mq_poly_i(CMQ: ntt_param_s)
         requires 0 < len2
         requires r == list_all_pairs_aux(index, len1, len2)
         ensures |r| == (index + 1) * len2 
-        ensures forall i, j :: 0 <= i <= index && 0 <= j < len2 ==>
-                        0 <= (i*len2 + j) < |r| && r[i*len2 + j] == (i, j)
+        ensures forall i, j :: (0 <= i <= index && 0 <= j < len2) ==>
+                        (0 <= (i*len2 + j) < |r| && r[i*len2 + j] == (i, j))
     {
         forall i, j | 0 <= i <= index && 0 <= j < len2 
             ensures 0 <= i*len2 + j < |r|
