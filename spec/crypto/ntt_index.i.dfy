@@ -299,7 +299,7 @@ module ntt_index {
         }
     }
     
-    predicate {:opaque} is_bit_rev_shuffle(a: seq<nat>, b: seq<nat>, len: pow2_t)
+    predicate is_bit_rev_shuffle(a: seq<nat>, b: seq<nat>, len: pow2_t)
     {
         && (|a| == |b| == len.full)
         && (forall i | 0 <= i < len.full ::
@@ -341,7 +341,7 @@ module ntt_index {
         requires is_bit_rev_shuffle(a, b, len);
         ensures is_bit_rev_shuffle(b, a, len);
     {
-        reveal is_bit_rev_shuffle();
+        /* reveal is_bit_rev_shuffle(); */
         forall i | 0 <= i < len.full
             ensures b[i] == a[bit_rev_int(i, len)]
         {
@@ -357,18 +357,18 @@ module ntt_index {
         }
     }
 
-    predicate {:opaque} is_set_min(x: nat, s: set<nat>)
+    predicate is_set_min(x: nat, s: set<nat>)
     {
         && x in s
         && (forall t | t in s :: x <= t)
     }
 
-    function {:opaque} minimum(s: set<nat>): (x: nat)
+    function minimum(s: set<nat>): (x: nat)
         requires |s| >= 1;
         ensures is_set_min(x, s);
         ensures x in s;
     {
-        reveal is_set_min();
+        /* reveal is_set_min(); */
         var y :| y in s;
         var s' := s - {y};
 
@@ -404,13 +404,13 @@ module ntt_index {
 
         assert y <= x by {
             assert is_set_min(y, s);
-            reveal is_set_min();
+            /* reveal is_set_min(); */
             assert x in s;
         }
 
         assert x <= y by {
             assert is_set_min(x, s);
-            reveal is_set_min();
+            /* reveal is_set_min(); */
             assert y in s;
         }
     }
@@ -421,7 +421,7 @@ module ntt_index {
         set bi: nat | (0 <= bi < len.full && bi == bit_rev_int(bi, len)) :: bi
     }
 
-    function {:opaque} init_unfinished(len: pow2_t): set<nat>
+    function init_unfinished(len: pow2_t): set<nat>
         requires len.full >= 4;
     {
         set bi: nat | (0 <= bi < len.full && bi != bit_rev_int(bi, len)) :: bi
@@ -434,7 +434,7 @@ module ntt_index {
         len: pow2_t,
         ti: nat)
     {
-        predicate {:opaque} rev_view_wf()
+        predicate rev_view_wf()
             ensures rev_view_wf() ==> len.full >= 4
             ensures rev_view_wf() ==> |b| == len.full;
         {
@@ -451,7 +451,7 @@ module ntt_index {
             requires rev_view_wf();
             ensures (bi in finished) != (bi in unfinished)
         {
-            reveal rev_view_wf();
+            /* reveal rev_view_wf(); */
             if bi in finished {
                 assert bi !in unfinished;
             }
@@ -465,7 +465,7 @@ module ntt_index {
             requires bi in finished || bi in unfinished;
             ensures bi < len.full
         {
-            reveal rev_view_wf();
+            /* reveal rev_view_wf(); */
         }
 
         predicate index_is_shuffled(a: seq<nat>, bi: nat)
@@ -496,28 +496,28 @@ module ntt_index {
             if |unfinished| != 0 then get_split_index() else len.full
         }
 
-        predicate {:opaque} finished_shuffle_inv(a: seq<nat>)
+        predicate finished_shuffle_inv(a: seq<nat>)
             requires |a| == len.full;
             requires rev_view_wf()
         {
-            && reveal rev_view_wf();
+            // && /* reveal rev_view_wf(); */
             && (forall bi | bi in finished ::(
                 && bit_rev_int(bi, len) in finished
                 && index_is_shuffled(a, bi)))
         }
 
-        predicate {:opaque} unfinished_shuffle_inv(a: seq<nat>)
+        predicate unfinished_shuffle_inv(a: seq<nat>)
             requires |a| == len.full;
             requires rev_view_wf()
         {
-            && reveal rev_view_wf();
+            // && /* reveal rev_view_wf(); */
             && (forall bi | bi in unfinished :: (
                 && bit_rev_int(bi, len) in unfinished
                 && bi != bit_rev_int(bi, len)
                 && a[bi] == b[bi]))
         }
 
-        predicate {:opaque} shuffle_prefix_inv()
+        predicate shuffle_prefix_inv()
             requires rev_view_wf();
         {
             var split_index := get_split_index_wrap();
@@ -546,12 +546,12 @@ module ntt_index {
         {
             var bi := get_split_index();
             var rbi := bit_rev_int(bi, len);
-            reveal unfinished_shuffle_inv();
+            /* reveal unfinished_shuffle_inv(); */
             assert rbi in unfinished;
             buff_index_state_lemma(rbi);
         }
 
-        static function {:opaque} init_rev_view(a: seq<nat>, len: pow2_t): (r: rev_view)
+        static function init_rev_view(a: seq<nat>, len: pow2_t): (r: rev_view)
             requires |a| == len.full >= 4;
             ensures r.len == len;
             ensures r.rev_view_wf();
@@ -563,8 +563,8 @@ module ntt_index {
             var r := rev_view(a, finished, unfinished, len, 0);
             assert 2 * r.ti == 0;
             assert r.rev_view_wf() by {
-                reveal init_unfinished();
-                reveal r.rev_view_wf();
+                /* reveal init_unfinished(); */
+                /* reveal r.rev_view_wf(); */
             }
             r
         }
@@ -577,14 +577,14 @@ module ntt_index {
             ensures |unfinished| != 0;
             ensures get_split_index() == 1;
         {
-            reveal init_unfinished();
-            reveal init_rev_view();
+            /* reveal init_unfinished(); */
+            /* reveal init_rev_view(); */
             bit_rev_int_basics_lemma(len);
             assert 1 in unfinished;
             assert |unfinished| != 0;
             assert |unfinished| >= 1;
             assert is_set_min(1, unfinished) by {
-                reveal is_set_min();
+                /* reveal is_set_min(); */
             }
             set_min_unique_lemma(unfinished, 1);
             assert minimum(unfinished) == 1;
@@ -596,25 +596,25 @@ module ntt_index {
             ensures this.shuffle_inv(a);
         {
             bit_rev_int_basics_lemma(len);
-            reveal init_unfinished();
+            /* reveal init_unfinished(); */
 
             assert finished_shuffle_inv(a) by {
-                reveal finished_shuffle_inv();
+                /* reveal finished_shuffle_inv(); */
                 forall bi | bi in finished
                     ensures bit_rev_int(bi, len) in finished;
                     ensures index_is_shuffled(a, bi);
                 {
-                    reveal init_rev_view();
+                    /* reveal init_rev_view(); */
                 }
             }
 
             assert unfinished_shuffle_inv(a) by {
-                reveal unfinished_shuffle_inv();
+                /* reveal unfinished_shuffle_inv(); */
                 forall bi | bi in unfinished
                     ensures bit_rev_int(bi, len) in unfinished;
                     ensures a[bi] == a[bi];
                 {
-                    reveal init_rev_view();
+                    /* reveal init_rev_view(); */
                     var bri := bit_rev_int(bi, len);
                     if  bri !in unfinished {
                         assert bri in finished;
@@ -629,7 +629,7 @@ module ntt_index {
             init_unfinished_lemma(a, len);
 
             assert shuffle_prefix_inv() by {
-                reveal shuffle_prefix_inv();
+                /* reveal shuffle_prefix_inv(); */
                 var split_index := get_split_index();
     
                 forall bi | 0 <= bi < split_index
@@ -641,7 +641,7 @@ module ntt_index {
             }
 
             assert 2 * ti == |init_unfinished(len)| - |unfinished| by {
-                reveal init_rev_view();
+                /* reveal init_rev_view(); */
             }
         }
 
@@ -671,7 +671,7 @@ module ntt_index {
                     unfinished - {bi, rbi},
                     len, ti + 1);
                 assert r.rev_view_wf() by {
-                    reveal r.rev_view_wf();
+                    /* reveal r.rev_view_wf(); */
                 }
                 r
             else
@@ -699,7 +699,7 @@ module ntt_index {
                 {
                     next.rev_entry_wf_lemma(bi);
                     if bi in finished {
-                        reveal finished_shuffle_inv();
+                        /* reveal finished_shuffle_inv(); */
                         assert bit_rev_int(bi, len) in finished;
                         assert bit_rev_int(bi, len) in next.finished;
                     } else if bi == sbj {
@@ -718,7 +718,7 @@ module ntt_index {
                     next.rev_entry_wf_lemma(bi);
                     var rbi := bit_rev_int(bi, len);
                     if bi in finished {
-                        reveal finished_shuffle_inv();
+                        /* reveal finished_shuffle_inv(); */
                         bit_rev_unique(bi, sbj, len);
                         bit_rev_symmetric(sbj, len);
                         bit_rev_unique(bi, rsbj, len);
@@ -729,7 +729,7 @@ module ntt_index {
                         assert a[bi] == b[bi] && a[rbi] == b[rbi] by {
                             assert sbj in unfinished;
                             assert rsbj in unfinished;
-                            reveal unfinished_shuffle_inv();
+                            /* reveal unfinished_shuffle_inv(); */
                         }
                         assert next.index_is_shuffled(a, sbj) by {
                             assert a[sbj] == c[rsbj];
@@ -740,7 +740,7 @@ module ntt_index {
                         assert a[bi] == b[bi] && a[rbi] == b[rbi] by {
                             assert sbj in unfinished;
                             assert rsbj in unfinished;
-                            reveal unfinished_shuffle_inv();
+                            /* reveal unfinished_shuffle_inv(); */
                         }
                         bit_rev_symmetric(sbj, len);
                         assert next.index_is_shuffled(a, bi) by {
@@ -749,7 +749,7 @@ module ntt_index {
                         }
                     }
                 }
-                reveal next.finished_shuffle_inv();
+                /* reveal next.finished_shuffle_inv(); */
             }
 
             assert next.unfinished_shuffle_inv(a) by {
@@ -760,7 +760,7 @@ module ntt_index {
                     assert bi != sbj && bi != rsbj;
 
                     var rbi := bit_rev_int(bi, len);
-                    reveal unfinished_shuffle_inv();
+                    /* reveal unfinished_shuffle_inv(); */
                     assert bi in unfinished;
                     assert rbi in unfinished;
 
@@ -779,10 +779,10 @@ module ntt_index {
                 {
                     next.rev_entry_wf_lemma(bi);
                     assert bi in unfinished;
-                    reveal unfinished_shuffle_inv();
+                    /* reveal unfinished_shuffle_inv(); */
                     assert a[bi] == b[bi] == c[bi];
                 }
-                reveal next.unfinished_shuffle_inv();
+                /* reveal next.unfinished_shuffle_inv(); */
             }
 
             assert next.shuffle_prefix_inv() by {
@@ -791,7 +791,7 @@ module ntt_index {
                     ensures bi in next.finished
                 {
                     if bi < sbj {
-                        reveal shuffle_prefix_inv();
+                        /* reveal shuffle_prefix_inv(); */
                         assert bi in finished;
                     } else if bi == sbj || bi == rsbj {
                         assert bi in next.finished;
@@ -802,20 +802,20 @@ module ntt_index {
                             assert bi in unfinished;
                             assert bi in next.unfinished;
                             assert is_set_min(nsbj, next.unfinished);
-                            reveal is_set_min();
+                            /* reveal is_set_min(); */
                             assert false;
                         }
                     }
                 }
 
-                reveal next.shuffle_prefix_inv();
+                /* reveal next.shuffle_prefix_inv(); */
             }
 
             assert 2 * next.ti == |init_unfinished(len)| - |next.unfinished| by {
                 assert sbj in unfinished;
                 assert rsbj in unfinished;
                 assert sbj != rsbj by {
-                    reveal unfinished_shuffle_inv();
+                    /* reveal unfinished_shuffle_inv(); */
                 }
                 LemmaSetSubtractTwoCardinality(unfinished, sbj, rsbj);
                 assert |next.unfinished| == |unfinished| - 2;
@@ -831,12 +831,12 @@ module ntt_index {
         {
             assert |unfinished| == 0;
             assert finished == set bi: nat | (0 <= bi < len.full) :: bi by {
-                reveal rev_view_wf();
+                /* reveal rev_view_wf(); */
             }
 
             assert is_bit_rev_shuffle(a, b, len) by {
-                reveal is_bit_rev_shuffle();
-                reveal finished_shuffle_inv();
+                /* reveal is_bit_rev_shuffle(); */
+                /* reveal finished_shuffle_inv(); */
             }
         }
     }
@@ -863,7 +863,7 @@ module ntt_index {
             r
     }
 
-    predicate {:opaque} table_wf_inner(table: seq<(nat, nat)>, a: seq<nat>, len: pow2_t)
+    predicate table_wf_inner(table: seq<(nat, nat)>, a: seq<nat>, len: pow2_t)
         requires |a| == len.full >= 4;
     {
         && 2 * |table| == |init_unfinished(len)|
@@ -872,7 +872,7 @@ module ntt_index {
             && table[i].1 == bit_rev_int(table[i].0, len))
     }
 
-    predicate {:opaque} table_wf(table: seq<(nat, nat)>, len: pow2_t)
+    predicate table_wf(table: seq<(nat, nat)>, len: pow2_t)
     {
         forall a: seq<nat> | |a| == len.full >= 4 ::
             table_wf_inner(table, a, len)
@@ -883,7 +883,7 @@ module ntt_index {
         requires |a| == len.full >= 4;
         ensures table_wf_inner(table, a, len);
     {
-        reveal table_wf();
+        /* reveal table_wf(); */
     }
 
     method bit_rev(a: seq<nat>, len: pow2_t, table: seq<(nat, nat)>)
@@ -896,7 +896,7 @@ module ntt_index {
         b := a;
         var ti := 0;
         table_wf_lemma(table, a, len);
-        reveal table_wf_inner();
+        /* reveal table_wf_inner(); */
         ghost var view := rev_view.init_rev_view(a, len);
         view.shuffle_inv_pre_lemma(a, len);
 

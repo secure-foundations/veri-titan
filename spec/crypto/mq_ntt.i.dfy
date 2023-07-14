@@ -23,7 +23,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
 
     function x_value(i: nat, d: pow2_t): elem
 
-    predicate {:opaque} t_loop_inv(a: elems, count: pow2_t, coefficients: elems)
+    predicate t_loop_inv(a: elems, count: pow2_t, coefficients: elems)
         requires 0 <= count.exp <= N.exp;
     {
         var sz := PV.block_size(count);
@@ -40,7 +40,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
     {
         assert PV.points_eval_inv(points, poly, x_value, N) by
         {
-            reveal PV.points_eval_suffix_inv();
+            /* reveal PV.points_eval_suffix_inv(); */
             assert N.exp <= N.exp;
             MQP.poly_eval_base_lemma(poly, x_value(0, N));
             assert points[0] == MQP.poly_eval(poly, x_value(0, N));
@@ -51,7 +51,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
         ensures N.exp <= N.exp; // ??
         ensures t_loop_inv(coefficients, N, coefficients);
     {
-        reveal t_loop_inv();
+        /* reveal t_loop_inv(); */
         assert N.exp <= N.exp; // ??
         var sz := PV.block_size(N);
         assert sz.full == 1;
@@ -81,7 +81,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
         requires i < N.full;
         ensures MQP.poly_eval(coeffs, x_value(i, pow2(0))) == a[i]
     {
-        reveal PV.points_eval_suffix_inv();
+        /* reveal PV.points_eval_suffix_inv(); */
     }
 
     lemma t_loop_inv_post_lemma(a: elems, one: pow2_t, coefficients: elems)
@@ -89,7 +89,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
         requires t_loop_inv(a, one, coefficients);
         ensures ntt_eval_all(a, coefficients);
     {
-        reveal t_loop_inv();
+        /* reveal t_loop_inv(); */
         var sz := PV.block_size(one);
         var points := PV.level_points_view(a, sz);
         var polys := PV.level_polys(coefficients, sz);
@@ -100,7 +100,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
         assert points[0] == a;
 
         assert polys[0] == coefficients by {
-            reveal PV.level_polys();
+            /* reveal PV.level_polys(); */
         }
     }
 
@@ -179,7 +179,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
         //         hsize)
         // }
 
-        predicate {:opaque} j_loop_higher_inv(a: elems, hcount: pow2_t, j: nat)
+        predicate j_loop_higher_inv(a: elems, hcount: pow2_t, j: nat)
             requires hcount.exp <= N.exp;
             requires loop_view_wf();
             requires hsize == PV.block_size(hcount);
@@ -189,7 +189,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
                 PV.points_eval_prefix_inv(hpoints[i], higher[bit_rev_int(i, hcount)], x_value, 2*j, hcount))
         }
 
-        predicate {:opaque} j_loop_lower_inv(a: elems, hcount: pow2_t, j: nat)
+        predicate j_loop_lower_inv(a: elems, hcount: pow2_t, j: nat)
             requires hcount.exp <= N.exp;
             requires loop_view_wf();
             requires hsize == PV.block_size(hcount);
@@ -210,7 +210,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
             && j_loop_lower_inv(a, hcount, j)
         }
 
-        predicate {:opaque} s_loop_higher_inv(a: elems, hcount: pow2_t, j: nat, bi: nat)
+        predicate s_loop_higher_inv(a: elems, hcount: pow2_t, j: nat, bi: nat)
             requires hcount.exp <= N.exp;
             requires bi <= hcount.full;
             requires loop_view_wf();
@@ -223,7 +223,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
                 PV.points_eval_prefix_inv(hpoints[i], higher[bit_rev_int(i, hcount)], x_value, 2*j, hcount))
         }
 
-        predicate {:opaque} s_loop_lower_inv(a: elems, hcount: pow2_t, j: nat, bi: nat)
+        predicate s_loop_lower_inv(a: elems, hcount: pow2_t, j: nat, bi: nat)
             requires hcount.exp <= N.exp;
             requires bi <= hcount.full;
             requires loop_view_wf();
@@ -404,9 +404,9 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
 
             assert a[s] == MQP.poly_eval(e_poly, x_value(j, lcount)) by {
                 assert PV.points_eval_suffix_inv(e_points, e_poly, x_value, j, lcount) by {
-                    reveal s_loop_lower_inv();
+                    /* reveal s_loop_lower_inv(); */
                 }
-                reveal PV.points_eval_suffix_inv();
+                /* reveal PV.points_eval_suffix_inv(); */
                 assert a[s] == e_points[j];
             }
 
@@ -415,9 +415,9 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
 
             assert a[s+hcount.full] == MQP.poly_eval(o_poly, x_value(j, lcount)) by {
                 assert PV.points_eval_suffix_inv(o_points, o_poly, x_value, j, lcount) by {
-                    reveal s_loop_lower_inv();
+                    /* reveal s_loop_lower_inv(); */
                 }
-                reveal PV.points_eval_suffix_inv();
+                /* reveal PV.points_eval_suffix_inv(); */
                 assert a[s+hcount.full] == lpoints[bi+hcount.full][j];
             }
         }
@@ -469,7 +469,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
             requires s_loop_update(a, a', hcount, j, bi);
             ensures s_loop_higher_inv(a', hcount, j, bi+1);
         {
-            reveal s_loop_higher_inv();
+            /* reveal s_loop_higher_inv(); */
 
             var s := higher_points_view_index_lemma(a, hcount, j, bi);
             var s' := s+hcount.full;
@@ -507,7 +507,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
             var poly := higher[bit_rev_int(bi, hcount)];
 
             assert PV.points_eval_prefix_inv(right, poly, x_value, 2*j+2, hcount) by {
-                reveal PV.points_eval_prefix_inv();
+                /* reveal PV.points_eval_prefix_inv(); */
                 forall k | 0 <= k < 2*j+2 
                     ensures MQP.poly_eval(poly, x_value(k, hcount)) == right[k];
                 {
@@ -536,7 +536,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
             assert s == PV.point_view_index(bi, j, lsize());
             assert s+hcount.full == PV.point_view_index(bi+hcount.full, j, lsize());
 
-            reveal s_loop_lower_inv();
+            /* reveal s_loop_lower_inv(); */
 
             var lpoints := PV.level_points_view(a, lsize());
             var lpoints' := PV.level_points_view(a', lsize());
@@ -569,7 +569,7 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
 
                 if i == bi || i == bi + hcount.full {
                     assert PV.points_eval_suffix_inv(right, poly, x_value, j+1, count) by {
-                        reveal PV.points_eval_suffix_inv();
+                        /* reveal PV.points_eval_suffix_inv(); */
                         forall k | j + 1 <= k < lsize.full
                             ensures right[k] == left[k];
                             ensures MQP.poly_eval(poly, x_value(k, count)) == right[k];
@@ -615,15 +615,15 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
             ensures s_loop_inv(a, hcount, j, 0);
         {
             assert s_loop_higher_inv(a, hcount, j, 0) by {
-                reveal s_loop_higher_inv();
-                reveal j_loop_higher_inv();
+                /* reveal s_loop_higher_inv(); */
+                /* reveal j_loop_higher_inv(); */
             }
 
             size_count_lemma();
     
             assert s_loop_lower_inv(a, hcount, j, 0) by {
-                reveal s_loop_lower_inv();
-                reveal j_loop_lower_inv();
+                /* reveal s_loop_lower_inv(); */
+                /* reveal j_loop_lower_inv(); */
 
                 var lcount := lcount();
                 var lpoints := PV.level_points_view(a, lsize());
@@ -644,12 +644,12 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
         {
             assert j_loop_higher_inv(a, hcount, j+1) by {
                 var hpoints := PV.level_points_view(a, hsize);
-                reveal s_loop_higher_inv();
+                /* reveal s_loop_higher_inv(); */
                 forall i | 0 <= i < |hpoints|
                     ensures PV.points_eval_prefix_inv(hpoints[i], higher[bit_rev_int(i, hcount)], x_value, 2*j+2, hcount);
                 {
                 }
-                reveal j_loop_higher_inv();
+                /* reveal j_loop_higher_inv(); */
             }
 
             size_count_lemma();
@@ -657,12 +657,12 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
             assert j_loop_lower_inv(a, hcount, j+1) by {
                 var lcount := lcount();
                 var lpoints := PV.level_points_view(a, lsize());
-                reveal s_loop_lower_inv();
+                /* reveal s_loop_lower_inv(); */
                 forall i | 0 <= i < |lpoints|
                     ensures PV.points_eval_suffix_inv(lpoints[i], lower[bit_rev_int(i, lcount)], x_value, j+1, lcount);
                 {
                 }
-                reveal j_loop_lower_inv();
+                /* reveal j_loop_lower_inv(); */
             }
         }
 
@@ -682,21 +682,21 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
                     PV.unifromly_sized_instance_lemma(higher, hsize, bit_rev_int(i, hcount));
                     PV.points_eval_prefix_inv_vacuous_lemma(hpoints[i], higher[bit_rev_int(i, hcount)], x_value, hcount);
                 }
-                reveal j_loop_higher_inv();
+                /* reveal j_loop_higher_inv(); */
             }
     
             assert pow2_double(hcount) == lcount();
 
             assert j_loop_lower_inv(a, hcount, 0) by {
-                reveal t_loop_inv();
+                /* reveal t_loop_inv(); */
                 var lcount := lcount();
                 var lpoints := PV.level_points_view(a, lsize());
                 forall i | 0 <= i < lcount.full
                     ensures PV.points_eval_suffix_inv(lpoints[i], lower[bit_rev_int(i, lcount)], x_value, 0, lcount)
                 {
-                    reveal PV.points_eval_suffix_inv();
+                    /* reveal PV.points_eval_suffix_inv(); */
                 }
-                reveal j_loop_lower_inv();
+                /* reveal j_loop_lower_inv(); */
             }
         }
 
@@ -707,19 +707,19 @@ abstract module mq_ntt_i(MQ: ntt_param_s, MQP: mq_poly_i(MQ), PV: poly_view_i(MQ
             requires hsize == PV.block_size(hcount);
             ensures t_loop_inv(a, hcount, coefficients);
         {
-            reveal j_loop_higher_inv();
+            /* reveal j_loop_higher_inv(); */
             size_count_lemma();
             var hpoints := PV.level_points_view(a, hsize);
 
             forall i | 0 <= i < hcount.full
                 ensures PV.points_eval_inv(hpoints[i], higher[bit_rev_int(i, hcount)], x_value, hcount);
             {
-                reveal PV.points_eval_suffix_inv();
-                reveal PV.points_eval_prefix_inv();
+                /* reveal PV.points_eval_suffix_inv(); */
+                /* reveal PV.points_eval_prefix_inv(); */
             }
 
             assert t_loop_inv(a, hcount, coefficients) by {
-                reveal t_loop_inv();
+                /* reveal t_loop_inv(); */
             }
         }
     }

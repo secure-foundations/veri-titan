@@ -50,7 +50,7 @@ abstract module mq_poly_s(MQNTT: ntt_param_s) {
         else mqadd(s[0], mqsum(s[1..]))
     }
 
-    function {:opaque} poly_eval(a: seq<elem>, x: elem): elem
+    function poly_eval(a: seq<elem>, x: elem): elem
     {
         mqsum(poly_terms(a, x))
     }

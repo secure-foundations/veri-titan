@@ -71,7 +71,7 @@ module poly_view_i(MQ: ntt_param_s) {
         requires i < |blocks|;
         ensures |blocks[i]| == bsize.full;
     {
-        reveal unifromly_sized();
+        /* reveal unifromly_sized(); */
     }
 
     lemma point_view_index_bound_lemma(i: nat, j: nat, bsize: pow2_t)
@@ -154,18 +154,18 @@ module poly_view_i(MQ: ntt_param_s) {
         var count := block_count(bsize).full;
         var vs := seq(count, i requires 0 <= i < count => points_view(a, i, bsize));
         assert unifromly_sized(vs, bsize) by {
-            reveal unifromly_sized();
+            /* reveal unifromly_sized(); */
         }
         vs
     }
 
-    function method {:opaque} build_lower_level_polys(higher: seq<seq<elem>>, bsize: pow2_t): (lower: seq<seq<elem>>)
+    function method build_lower_level_polys(higher: seq<seq<elem>>, bsize: pow2_t): (lower: seq<seq<elem>>)
         requires 1 <= bsize.exp <= N.exp;
         requires unifromly_sized(higher, bsize);
         ensures |higher| * 2 == |lower|;
         ensures unifromly_sized(lower, pow2_half(bsize));
     {
-        reveal unifromly_sized();
+        /* reveal unifromly_sized(); */
         pow2_basics_lemma(bsize);
         block_count_half_lemma(bsize);
         var new_size := pow2_half(bsize);
@@ -175,13 +175,13 @@ module poly_view_i(MQ: ntt_param_s) {
             else MQP.odd_indexed_items(higher[n/2], bsize))
     }
 
-    function method {:opaque} build_higher_level_polys(lower: seq<seq<elem>>, bsize: pow2_t): (higher: seq<seq<elem>>)
+    function method build_higher_level_polys(lower: seq<seq<elem>>, bsize: pow2_t): (higher: seq<seq<elem>>)
         requires 0 <= bsize.exp < N.exp;
         requires unifromly_sized(lower, bsize);
         ensures |higher| * 2 == |lower|;
         ensures unifromly_sized(higher, pow2_double(bsize));
     {
-        reveal unifromly_sized();
+        /* reveal unifromly_sized(); */
         pow2_basics_lemma(bsize);
         var new_size := pow2_double(bsize);
         block_count_half_lemma(new_size);
@@ -195,8 +195,8 @@ module poly_view_i(MQ: ntt_param_s) {
         requires unifromly_sized(lower, bsize);
         ensures build_lower_level_polys(build_higher_level_polys(lower, bsize), pow2_double(bsize)) == lower;
     {
-        reveal build_higher_level_polys();
-        reveal build_lower_level_polys();
+        /* reveal build_higher_level_polys(); */
+        /* reveal build_lower_level_polys(); */
         var higher := build_higher_level_polys(lower, bsize);
         var new_size := pow2_double(bsize);
         assert build_lower_level_polys(higher, new_size) == lower;
@@ -204,14 +204,14 @@ module poly_view_i(MQ: ntt_param_s) {
 
     // construct polys level view 
     // each block is a poly, has bsize coefficients
-    function {:opaque} level_polys(coefficients: elems, bsize: pow2_t): (lps: seq<seq<elem>>)
+    function {:opauque} level_polys(coefficients: elems, bsize: pow2_t): (lps: seq<seq<elem>>)
         requires 0 <= bsize.exp <= N.exp;
         ensures unifromly_sized(lps, bsize);
         decreases N.exp - bsize.exp;
     {
         if bsize.exp == N.exp then
             assert unifromly_sized([coefficients], N) by {
-                reveal unifromly_sized();
+                /* reveal unifromly_sized(); */
             }
             [coefficients]
         else
@@ -254,15 +254,15 @@ module poly_view_i(MQ: ntt_param_s) {
         ensures MQP.even_indexed_items(higher[i], hsize) == lower[2 * i];
         ensures MQP.odd_indexed_items(higher[i], hsize) == lower[2 * i + 1];
     {
-        reveal unifromly_sized();
-        reveal build_lower_level_polys();
+        /* reveal unifromly_sized(); */
+        /* reveal build_lower_level_polys(); */
 
         assert build_lower_level_polys(higher, hsize) == lower by {
-            reveal level_polys();
+            /* reveal level_polys(); */
         }
     }
 
-    predicate {:opaque} points_eval_prefix_inv(points: seq<elem>, poly: seq<elem>, x_value: x_fun, l: nat, count: pow2_t)
+    predicate points_eval_prefix_inv(points: seq<elem>, poly: seq<elem>, x_value: x_fun, l: nat, count: pow2_t)
     {
         && count.exp <= N.exp
         && l <= |points| == |poly| == block_size(count).full
@@ -279,11 +279,11 @@ module poly_view_i(MQ: ntt_param_s) {
             ensures MQP.poly_eval(poly, x_value(i, count)) == points[i];
         {
         }
-        reveal points_eval_prefix_inv();
+        /* reveal points_eval_prefix_inv(); */
     }
 
     // d is the block count
-    predicate {:opaque} points_eval_suffix_inv(points: seq<elem>, poly: seq<elem>, x_value: x_fun, l: nat, count: pow2_t)
+    predicate points_eval_suffix_inv(points: seq<elem>, poly: seq<elem>, x_value: x_fun, l: nat, count: pow2_t)
     {
         && count.exp <= N.exp
         && l <= |points| == |poly| == block_size(count).full

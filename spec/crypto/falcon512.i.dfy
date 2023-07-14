@@ -101,7 +101,7 @@ module falcon_512_i refines
             var right := MQP.poly_terms(p_hat, x);
 
             assert MQP.poly_eval(poly, x_hat) == a[i] by {
-                reveal CPV.points_eval_suffix_inv();
+                /* reveal CPV.points_eval_suffix_inv(); */
                 assert index * 1 == index;
             }
 
@@ -149,7 +149,7 @@ module falcon_512_i refines
             }
 
             assert MQP.poly_eval(p_hat, x) == a[i] by {
-                reveal MQP.poly_eval();
+                /* reveal MQP.poly_eval(); */
                 calc == {
                     MQP.poly_eval(poly, x_hat);
                     MQP.mqsum(left);
@@ -228,7 +228,7 @@ module falcon_512_i refines
                 ensures var x := MQP.mqpow(MQ.OMEGA, i);
                     MQP.mqmul(MQP.poly_eval(a_hat, x), MQP.poly_eval(b_hat, x)) == p1[i];
             {
-                reveal is_bit_rev_shuffle();
+                /* reveal is_bit_rev_shuffle(); */
                 bit_rev_symmetric(i, N);
                 assert p1[i] == p0[bit_rev_int(i, N)];
             }
@@ -238,7 +238,7 @@ module falcon_512_i refines
             ensures var x := MQP.mqpow(MQ.OMEGA_INV, bit_rev_int(i, N));
                 MQP.poly_eval(p1, x) == p2[i];
         {
-            reveal CPV.points_eval_suffix_inv();
+            /* reveal CPV.points_eval_suffix_inv(); */
             assert bit_rev_int(i, N) * 1 == bit_rev_int(i, N);
         }
 
@@ -246,7 +246,7 @@ module falcon_512_i refines
             ensures var x := MQP.mqpow(MQ.OMEGA_INV, i);
                 MQP.poly_eval(p1, x) == p3[i];
         {
-            reveal is_bit_rev_shuffle();
+            /* reveal is_bit_rev_shuffle(); */
             bit_rev_symmetric(i, N);
             assert p3[i] == p2[bit_rev_int(i, N)];
         }

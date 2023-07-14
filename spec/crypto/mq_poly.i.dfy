@@ -274,7 +274,7 @@ module mq_poly_i(CMQ: ntt_param_s)
         seq(|a|, i requires 0 <= i < |a| => mqmul(a[i], mqpow(x, i + k)))
     }
 
-    function method {:opaque} even_indexed_items<T>(a: seq<T>, len: pow2_t): (r: seq<T>)
+    function method even_indexed_items<T>(a: seq<T>, len: pow2_t): (r: seq<T>)
         requires |a| == len.full;
         ensures |r| == len.full / 2;
     {
@@ -282,7 +282,7 @@ module mq_poly_i(CMQ: ntt_param_s)
         seq(len.full/2, n requires 0 <= n < len.full/2 => a[n * 2])
     }
 
-    function method {:opaque} odd_indexed_items<T>(a: seq<T>, len: pow2_t): (r: seq<T>)
+    function method odd_indexed_items<T>(a: seq<T>, len: pow2_t): (r: seq<T>)
         requires |a| == len.full;
         ensures |r| == len.full / 2;
     {
@@ -290,7 +290,7 @@ module mq_poly_i(CMQ: ntt_param_s)
         seq(len.full/2, n requires 0 <= n < len.full/2 => a[n * 2 + 1])
     }
 
-    function method {:opaque} merge_even_odd_indexed_items<T>(a: seq<T>, b: seq<T>, len: pow2_t): (r: seq<T>)
+    function method merge_even_odd_indexed_items<T>(a: seq<T>, b: seq<T>, len: pow2_t): (r: seq<T>)
         requires |a| == |b| == len.full;
         ensures |r| == pow2_double(len).full;
         ensures even_indexed_items(r, pow2_double(len)) == a;
@@ -301,10 +301,10 @@ module mq_poly_i(CMQ: ntt_param_s)
         var r := seq(new_len.full, n requires 0 <= n < new_len.full => 
             if n % 2 == 0 then a[n/2] else b[n/2]);
         assert even_indexed_items(r, new_len) == a by {
-            reveal even_indexed_items();
+            /* reveal even_indexed_items(); */
         }
         assert odd_indexed_items(r, new_len) == b by {
-            reveal odd_indexed_items();
+            /* reveal odd_indexed_items(); */
         }
         r
     }
@@ -482,7 +482,7 @@ module mq_poly_i(CMQ: ntt_param_s)
         requires |a| == 1;
         ensures poly_eval(a, x) == a[0];
     {
-        reveal poly_eval();
+        /* reveal poly_eval(); */
         calc == {
             poly_eval(a, x);
             mqsum(poly_terms(a, x));
@@ -507,7 +507,7 @@ module mq_poly_i(CMQ: ntt_param_s)
         }
     }
 
-    function {:opaque} poly_eval_offset(a: seq<elem>, x: elem, offset: nat): elem
+    function poly_eval_offset(a: seq<elem>, x: elem, offset: nat): elem
     {
         mqsum(poly_offset_terms(a, x, offset))
     }
@@ -515,8 +515,8 @@ module mq_poly_i(CMQ: ntt_param_s)
     lemma poly_eval_offset_zero_lemma(a: seq<elem>, x: elem)
         ensures poly_eval(a, x) == poly_eval_offset(a, x, 0);
     {
-        reveal poly_eval();
-        reveal poly_eval_offset();
+        /* reveal poly_eval(); */
+        /* reveal poly_eval_offset(); */
 
         var left := seq(|a|, i requires 0 <= i < |a| => mqmul(a[i], mqpow(x, i)));
         var right := seq(|a|, i requires 0 <= i < |a| => mqmul(a[i], mqpow(x, i + 0)));
@@ -538,15 +538,15 @@ module mq_poly_i(CMQ: ntt_param_s)
 
         if |a| == 2 {
             assert a_e == [a[0]] by {
-                reveal even_indexed_items();
+                /* reveal even_indexed_items(); */
             }
             assert a_o == [a[1]] by {
-                reveal odd_indexed_items();
+                /* reveal odd_indexed_items(); */
             }
 
             calc == {
                 poly_eval_offset(a, x, 2*offset);
-                    { reveal poly_eval_offset(); }
+                    { /* reveal poly_eval_offset(); */ }
                 mqsum(poly_offset_terms(a, x, 2*offset));
                     {
                     assert poly_offset_terms(a, x, 2*offset) ==
@@ -576,7 +576,7 @@ module mq_poly_i(CMQ: ntt_param_s)
                 mqadd(mqsum([mqmul(a_e[0], mqpow(sqr, offset))]), 
                         mqmul(x, mqsum([mqmul(a_o[0], mqpow(sqr, offset))]))); 
                     { 
-                    reveal poly_eval_offset(); 
+                    /* reveal poly_eval_offset(); */ 
                     assert poly_offset_terms(a_e, sqr, offset) ==
                              [mqmul(a_e[0], mqpow(sqr, offset))];
                     assert poly_offset_terms(a_o, sqr, offset) ==
@@ -614,26 +614,26 @@ module mq_poly_i(CMQ: ntt_param_s)
 
         calc {
             poly_eval_offset(a, x, 2*offset);
-                { reveal poly_eval_offset(); }
+                { /* reveal poly_eval_offset(); */ }
             mqsum(apowers);
                 { 
                     mqsum_adds(apowers[..half.full], apowers[half.full..]);    
                     assert apowers == apowers[..half.full] + apowers[half.full..]; 
                 }
             mqadd(mqsum(apowers[..half.full]), mqsum(apowers[half.full..]));
-                { reveal poly_eval_offset(); }
+                { /* reveal poly_eval_offset(); */ }
             mqadd(poly_eval_offset(a[..half.full], x, 2*offset), poly_eval_offset(a[half.full..], x, half.full + 2*offset));
                 { 
-                    reveal even_indexed_items();
-                    reveal odd_indexed_items();
+                    /* reveal even_indexed_items(); */
+                    /* reveal odd_indexed_items(); */
                     assert even_indexed_items(a[..half.full], half) == a_e[..quarter.full];
                     assert    odd_indexed_items(a[..half.full], half) == a_o[..quarter.full];
                     poly_eval_split_rec_lemma(a[..half.full], a_e[..quarter.full], a_o[..quarter.full], half, x, offset); 
                 }
             mqadd(mqadd(poly_eval_offset(a_e[..quarter.full], sqr, offset), mqmul(x, poly_eval_offset(a_o[..quarter.full], sqr, offset))), poly_eval_offset(a[half.full..], x, half.full + 2*offset));
                 { 
-                    reveal even_indexed_items();
-                    reveal odd_indexed_items();
+                    /* reveal even_indexed_items(); */
+                    /* reveal odd_indexed_items(); */
                     assert even_indexed_items(a[half.full..], half) == a_e[quarter.full..];
                     assert    odd_indexed_items(a[half.full..], half) == a_o[quarter.full..];
                     poly_eval_split_rec_lemma(a[half.full..], a_e[quarter.full..], a_o[quarter.full..], half, x, quarter.full + offset); 
@@ -647,7 +647,7 @@ module mq_poly_i(CMQ: ntt_param_s)
                 { mqmul_distributes(x, poly_eval_offset(a_o[..quarter.full], sqr, offset), poly_eval_offset(a_o[quarter.full..], sqr, quarter.full + offset)); }
             mqadd(mqadd(poly_eval_offset(a_e[..quarter.full], sqr, offset), poly_eval_offset(a_e[quarter.full..], sqr, quarter.full + offset)), 
                     mqmul(x, mqadd(poly_eval_offset(a_o[..quarter.full], sqr, offset), poly_eval_offset(a_o[quarter.full..], sqr, quarter.full + offset)))); 
-                { reveal poly_eval_offset(); }
+                { /* reveal poly_eval_offset(); */ }
             mqadd(mqadd(mqsum(epowers[..quarter.full]), mqsum(epowers[quarter.full..])), mqmul(x, mqadd(mqsum(opowers[..quarter.full]), mqsum(opowers[quarter.full..]))));
                 { 
                     mqsum_adds(epowers[..quarter.full], epowers[quarter.full..]);    
@@ -656,7 +656,7 @@ module mq_poly_i(CMQ: ntt_param_s)
                     assert opowers == opowers[..quarter.full] + opowers[quarter.full..]; 
                 }
             mqadd(mqsum(epowers), mqmul(x, mqsum(opowers)));
-                { reveal poly_eval_offset(); }
+                { /* reveal poly_eval_offset(); */ }
             mqadd(poly_eval_offset(a_e, sqr, offset), mqmul(x, poly_eval_offset(a_o, sqr, offset)));
         }
     }
